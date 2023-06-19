@@ -245,7 +245,6 @@ public abstract class BlockInfo extends Block
             // DatanodeStorageInfos for this block which could be local
             providedStorageInfo = cur;
           }
-          // 遍历到index为2的块-792时，进入到此if。
         } else if (cur.getDatanodeDescriptor() == dn) {
           return cur;
         }

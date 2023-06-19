@@ -195,11 +195,11 @@ public class JvmPauseMonitor extends AbstractService {
 
         if (extraSleepTime > warnThresholdMs) {
           ++numGcWarnThresholdExceeded;
-          LOG.warn(formatMessage(
+          LOG.debug(formatMessage(
               extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
         } else if (extraSleepTime > infoThresholdMs) {
           ++numGcInfoThresholdExceeded;
-          LOG.info(formatMessage(
+          LOG.debug(formatMessage(
               extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
         }
         totalGcExtraSleepTime += extraSleepTime;

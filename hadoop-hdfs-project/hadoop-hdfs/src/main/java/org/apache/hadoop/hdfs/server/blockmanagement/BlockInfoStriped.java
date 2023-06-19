@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -123,19 +123,30 @@ public class BlockInfoStriped extends BlockInfo {
         reportedBlock.getBlockId()) == this.getBlockId(),
         "reported blk_%s does not belong to the group of stored blk_%s",
         reportedBlock.getBlockId(), this.getBlockId());
-    // blockIndex==1
     int blockIndex = BlockIdManager.getBlockIndex(reportedBlock);
-    // index==1
     int index = blockIndex;
-    // 可能拿到dn-01的/data10
     DatanodeStorageInfo old = getStorageInfo(index);
-    // storage为dn-0281的/data12
-    // storage是这次汇报上来的-793这个blockid所在的dsi
     if (old != null && !old.equals(storage)) { // over replicated
       // check if the storage has been stored
+      boolean blockIdNotEquals = false;
+      long blockGroupId = BlockIdManager.convertToStripedID(reportedBlock.getBlockId() - blockIndex);
+      Iterator<BlockInfo> blockIterator = old.getBlockIterator();
+      while (blockIterator.hasNext()) {
+        BlockInfo blockInfo = blockIterator.next();
+        if (!blockInfo.isStriped()) {
+          continue;
+        } else {
+          if (BlockIdManager.convertToStripedID(blockInfo.getBlockId()) == blockGroupId) {
+            if (blockInfo.getBlockId() != reportedBlock.getBlockId()) {
+              blockIdNotEquals = true;
+              break;
+            }
+          }
+        }
+      }
+      // 这里再加上判断条件： old Storage上的blockid与report id相同才行。否则让i=-1.
       int i = findStorageInfo(storage);
-      //int i = findStorageInfo(storage, reportedBlock);
-      if (i == -1) {
+      if (i == -1 || blockIdNotEquals) {
         index = findSlot();
       } else {
         return true;
@@ -158,24 +169,6 @@ public class BlockInfoStriped extends BlockInfo {
     for(int idx = len - 1; idx >= 0; idx--) {
       DatanodeStorageInfo cur = getStorageInfo(idx);
       if (storage.equals(cur)) {
-        return idx;
-      }
-    }
-    return -1;
-  }
-
-  /**
-   * Find specified DatanodeStorageInfo.
-   * @return index or -1 if not found.
-   */
-  int findStorageInfo(DatanodeStorageInfo storageInfo, Block block) {
-//    Block blockOnStorage = getBlockOnStorage(storageInfo);
-//    long blockOnStorageId = blockOnStorage.getBlockId();
-    int len = getCapacity();
-    for (int idx = 0; idx < len; idx++) {
-      DatanodeStorageInfo cur = getStorageInfo(idx);
-//      if (cur == storageInfo && blockOnStorageId == block.getBlockId()) {
-      if (cur == storageInfo) {
         return idx;
       }
     }
