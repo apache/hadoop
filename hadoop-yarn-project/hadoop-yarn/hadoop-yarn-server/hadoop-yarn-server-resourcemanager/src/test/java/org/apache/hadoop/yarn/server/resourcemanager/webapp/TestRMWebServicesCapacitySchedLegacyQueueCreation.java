@@ -18,28 +18,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Guice;
-import com.sun.jersey.api.client.ClientResponse;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.ws.rs.core.MediaType;
 
+import com.sun.jersey.api.client.ClientResponse;
+import org.junit.After;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.Test;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     JerseyTestBase {
@@ -51,13 +50,20 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     super(createWebAppDescriptor());
   }
 
+  @After
+  public void shutDown(){
+    if (rm != null) {
+      rm.stop();
+      rm = null;
+    }
+  }
+
   @Test
   public void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
     Configuration config = createPercentageConfigLegacyAutoCreation();
 
-    initResourceManager(config);
-
+    rm = createMutableRM(config);
     /*
      * mode: percentage
      * managedtest2.autoCreationEligibility: legacy, others.autoCreationEligibility: off
@@ -73,7 +79,8 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
       throws Exception {
     Configuration config = createAbsoluteConfigLegacyAutoCreation();
 
-    initResourceManager(config);
+    rm = createMutableRM(config);
+
     initAutoQueueHandler(8192);
     createQueue("root.managed.queue1");
 
@@ -128,33 +135,5 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
         "admin");
     return createConfiguration(conf);
-  }
-
-  private Configuration createConfiguration(
-      Map<String, String> configs) {
-    Configuration config = new Configuration();
-
-    for (Map.Entry<String, String> entry : configs.entrySet()) {
-      config.set(entry.getKey(), entry.getValue());
-    }
-
-    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-
-    return config;
-  }
-
-  private void initResourceManager(Configuration config) throws IOException {
-    CapacitySchedulerConfiguration conf = createConfig(new CapacitySchedulerConfiguration(config));
-    rm = createMockRM(conf);
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule(rm)));
-    rm.start();
-    //Need to call reinitialize as
-    //MutableCSConfigurationProvider with InMemoryConfigurationStore
-    //somehow does not load the queues properly and falls back to default config.
-    //Therefore CS will think there's only the default queue there.
-    ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
-        rm.getRMContext(), true);
   }
 }

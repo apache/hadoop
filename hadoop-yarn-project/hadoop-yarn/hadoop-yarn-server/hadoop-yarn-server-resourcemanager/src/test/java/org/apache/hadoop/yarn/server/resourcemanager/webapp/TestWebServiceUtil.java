@@ -40,8 +40,10 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.codehaus.jettison.json.JSONException;
@@ -54,6 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -62,9 +65,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.MEMORY_CONFIGURATION_STORE;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS;
 import static org.junit.Assert.assertEquals;
 
-public class TestWebServiceUtil {
+public final class TestWebServiceUtil {
   private TestWebServiceUtil(){
   }
 
@@ -84,6 +89,43 @@ public class TestWebServiceUtil {
       serve("/*").with(GuiceContainer.class);
     }
   }
+
+  public static void runTest(String template, String name,
+      MockRM rm,
+      WebResource resource) throws Exception {
+    final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
+    try {
+      assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
+      MockNM nm1 = rm.registerNode("h1:1234", 8192, 8);
+      rm.registerNode("h2:1234", 8192, 8);
+      if (reinitAfterNodeChane) {
+        reinitialize(rm, rm.getConfig());
+      }
+      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+      rm.registerNode("h3:1234", 8192, 8);
+      MockNM nm4 = rm.registerNode("h4:1234", 8192, 8);
+      if (reinitAfterNodeChane) {
+        reinitialize(rm, rm.getConfig());
+      }
+      assertJsonResponse(sendRequest(resource), String.format(template, name, 32));
+      rm.unRegisterNode(nm1);
+      rm.unRegisterNode(nm4);
+      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+    } finally {
+      rm.close();
+    }
+  }
+  public static boolean isMutableConfig(Configuration config) {
+    return Objects.equals(config.get(SCHEDULER_CONFIGURATION_STORE_CLASS),
+        MEMORY_CONFIGURATION_STORE);
+  }
+
+  public static ClientResponse sendRequest(WebResource resource) {
+    return resource.path("ws").path("v1").path("cluster")
+        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+  }
+
   public static void assertXmlType(ClientResponse response) {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
@@ -127,7 +169,7 @@ public class TestWebServiceUtil {
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
         prettyPrintJson(getResourceAsString(expectedResourceFilename)),
-        prettyPrintJson(actual));
+        actual);
   }
 
   private static String prettyPrintJson(String in) throws JsonProcessingException {
@@ -192,16 +234,6 @@ public class TestWebServiceUtil {
         .contextPath("jersey-guice-filter").servletPath("/").build();
   }
 
-  public static void enrichConfig(Configuration config, String[] newValues) {
-    for (String newValue : newValues) {
-      int index = newValue.indexOf("=");
-      config.set(
-          newValue.substring(0, index).trim(),
-          newValue.substring(index + 1).trim()
-      );
-    }
-  }
-
   public static CapacitySchedulerConfiguration createConfig(CapacitySchedulerConfiguration config) {
     config.set("yarn.scheduler.capacity.root.queues", "a, b, c");
     config.set("yarn.scheduler.capacity.root.a.queues", "a1, a2");
@@ -232,12 +264,41 @@ public class TestWebServiceUtil {
     config.set("yarn.scheduler.capacity.root.a.a1.a1c.leaf-queue-template.capacity", "50");
     return config;
   }
-  public static MockRM createMockRM(CapacitySchedulerConfiguration config) {
-    YarnConfiguration conf = new YarnConfiguration(config);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+
+  public static MockRM createRM(Configuration config) {
+    config.setClass(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class, ResourceScheduler.class);
+    config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-    return new MockRM(conf);
+    MockRM rm = new MockRM(config);
+    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
+    rm.start();
+    return rm;
   }
+
+  public static MockRM createMutableRM(Configuration conf) throws IOException {
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+    MockRM rm = createRM(new CapacitySchedulerConfiguration(conf));
+    reinitialize(rm, conf);
+    return rm;
+  }
+
+  public static void reinitialize(MockRM rm, Configuration conf) throws IOException {
+    // Need to call reinitialize as
+    // MutableCSConfigurationProvider with InMemoryConfigurationStore
+    // somehow does not load the queues properly and falls back to default config.
+    // Therefore CS will think there's only the default queue there.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    cs.reinitialize(conf, rm.getRMContext(), true);
+  }
+
+//  public static MockRM createMockRM(CapacitySchedulerConfiguration config) {
+//    YarnConfiguration conf = new YarnConfiguration(config);
+//    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+//        ResourceScheduler.class);
+//    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+//        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+//    return new MockRM(conf);
+//  }
 }
