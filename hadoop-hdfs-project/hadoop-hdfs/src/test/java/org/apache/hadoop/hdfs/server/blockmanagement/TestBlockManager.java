@@ -2123,80 +2123,82 @@ public class TestBlockManager {
     }
   }
 
+  /**
+   * Test when the numBytes of the block in the block report is set to NO_ACK,
+   * the DataNode processing will not report incremental blocks.
+   */
   @Test(timeout = 360000)
-  public void testSetNoAckBlockInInvalidateBlocks() throws Exception {
-    {
-      Configuration conf = new HdfsConfiguration();
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
-      conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-      FSNamesystem fsn = cluster.getNamesystem();
-      BlockManager bm = fsn.getBlockManager();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      try {
-        // Write file.
-        Path file = new Path("/test");
-        DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
-        DFSTestUtil.waitReplication(fs, file, (short) 1);
-        LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, file).get(0);
-        DatanodeInfo[] loc = lb.getLocations();
-        assertEquals(1, loc.length);
-        List<DataNode> datanodes = cluster.getDataNodes();
-        assertEquals(1, datanodes.size());
-        DataNode datanode = datanodes.get(0);
-        assertEquals(datanode.getDatanodeUuid(), loc[0].getDatanodeUuid());
+  public void testSetNoAckBlockInBlockReport() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    FSNamesystem fsn = cluster.getNamesystem();
+    BlockManager bm = fsn.getBlockManager();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      // Write file.
+      Path file = new Path("/test");
+      DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 1);
+      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, file).get(0);
+      DatanodeInfo[] loc = lb.getLocations();
+      assertEquals(1, loc.length);
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(1, datanodes.size());
+      DataNode datanode = datanodes.get(0);
+      assertEquals(datanode.getDatanodeUuid(), loc[0].getDatanodeUuid());
 
-        MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
-        // Check the IncrementalBlockReportsNumOps of DataNode, it will be 0.
-        assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      // Check the IncrementalBlockReportsNumOps of DataNode, it will be 0.
+      assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
 
-        // Delete file and remove block.
-        fs.delete(file, false);
+      // Delete file and remove block.
+      fs.delete(file, false);
 
-        // Wait for the processing of the marked deleted block to complete.
-        BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(bm);
-        assertNull(bm.getStoredBlock(lb.getBlock().getLocalBlock()));
+      // Wait for the processing of the marked deleted block to complete.
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(bm);
+      assertNull(bm.getStoredBlock(lb.getBlock().getLocalBlock()));
 
-        // Expire heartbeat on the NameNode,and datanode to be marked dead.
-        datanode.setHeartbeatsDisabledForTests(true);
-        cluster.setDataNodeDead(datanode.getDatanodeId());
-        assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      // Expire heartbeat on the NameNode,and datanode to be marked dead.
+      datanode.setHeartbeatsDisabledForTests(true);
+      cluster.setDataNodeDead(datanode.getDatanodeId());
+      assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
-        // Wait for re-registration and heartbeat.
-        datanode.setHeartbeatsDisabledForTests(false);
-        final DatanodeDescriptor dn1Desc = cluster.getNamesystem(0)
-            .getBlockManager().getDatanodeManager()
-            .getDatanode(datanode.getDatanodeId());
-        GenericTestUtils.waitFor(
-            () -> dn1Desc.isAlive() && dn1Desc.isHeartbeatedSinceRegistration(),
-            100, 5000);
+      // Wait for re-registration and heartbeat.
+      datanode.setHeartbeatsDisabledForTests(false);
+      final DatanodeDescriptor dn1Desc = cluster.getNamesystem(0)
+          .getBlockManager().getDatanodeManager()
+          .getDatanode(datanode.getDatanodeId());
+      GenericTestUtils.waitFor(
+          () -> dn1Desc.isAlive() && dn1Desc.isHeartbeatedSinceRegistration(),
+          100, 5000);
 
-        // Trigger BlockReports and block is not exists,
-        // it will add invalidateBlocks and set block size be NO_ACK.
-        cluster.triggerBlockReports();
-        assertTrue(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      // Trigger BlockReports and block is not exists,
+      // it will add invalidateBlocks and set block numBytes be NO_ACK.
+      cluster.triggerBlockReports();
+      assertTrue(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
-        // Trigger schedule blocks for deletion at datanode.
-        int workCount = bm.computeInvalidateWork(1);
-        assertEquals(1, workCount);
-        assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      // Trigger schedule blocks for deletion at datanode.
+      int workCount = bm.computeInvalidateWork(1);
+      assertEquals(1, workCount);
+      assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
-        // Wait for the blocksRemoved value in DataNode to be 1.
-        GenericTestUtils.waitFor(
-            () -> datanode.getMetrics().getBlocksRemoved()  == 1,
-            100, 5000);
+      // Wait for the blocksRemoved value in DataNode to be 1.
+      GenericTestUtils.waitFor(
+          () -> datanode.getMetrics().getBlocksRemoved()  == 1,
+          100, 5000);
 
-        // Trigger immediate deletion report at datanode.
-        cluster.triggerDeletionReports();
+      // Trigger immediate deletion report at datanode.
+      cluster.triggerDeletionReports();
 
-        // Delete block size be NO_ACK and will not deletion block report,
-        // so check the IncrementalBlockReportsNumOps of DataNode still 1.
-        assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
-      } finally {
-        if (cluster != null) {
-          cluster.shutdown();
-        }
+      // Delete block numBytes be NO_ACK and will not deletion block report,
+      // so check the IncrementalBlockReportsNumOps of DataNode still 1.
+      assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }
