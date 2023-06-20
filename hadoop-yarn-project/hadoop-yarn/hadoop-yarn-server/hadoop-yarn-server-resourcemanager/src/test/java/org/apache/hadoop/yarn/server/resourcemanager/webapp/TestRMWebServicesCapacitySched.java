@@ -56,9 +56,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler/")
               .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response.json");
-      assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
-              .get(ClientResponse.class)
-          , "webapp/scheduler-response.json");
+      assertJsonResponse(resource().path("ws/v1/cluster/scheduler").get(ClientResponse.class),
+          "webapp/scheduler-response.json");
       assertXmlResponse(resource().path("ws/v1/cluster/scheduler/")
               .accept(MediaType.APPLICATION_XML).get(ClientResponse.class),
           "webapp/scheduler-response.xml");
