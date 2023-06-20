@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
@@ -284,6 +285,7 @@ public class HttpFSFileSystem extends FileSystem
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
     GETFILELINKSTATUS(HTTP_GET),
     GETSTATUS(HTTP_GET),
+    GETECPOLICIES(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1771,6 +1773,17 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.toFsStatus(json);
+  }
+
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECPOLICIES.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getAllErasureCodingPolicies(json);
   }
 
   @VisibleForTesting

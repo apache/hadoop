@@ -526,6 +526,14 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETECPOLICIES: {
+      FSOperations.FSGetErasureCodingPolicies command =
+          new FSOperations.FSGetErasureCodingPolicies();
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GET_BLOCK_LOCATIONS: {
       long offset = 0;
       long len = Long.MAX_VALUE;
