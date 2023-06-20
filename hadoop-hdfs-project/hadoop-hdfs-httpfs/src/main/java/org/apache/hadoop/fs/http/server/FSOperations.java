@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -2340,6 +2341,32 @@ public final class FSOperations {
       FsStatus fsStatus = fs.getStatus(path);
       HttpFSServerWebApp.get().getMetrics().incrOpsStatus();
       return toJson(fsStatus);
+    }
+  }
+
+  /**
+   * Executor that performs a FSGetErasureCodingPolicies operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetErasureCodingPolicies
+      implements FileSystemAccess.FileSystemExecutor<String> {
+
+    public FSGetErasureCodingPolicies() {
+    }
+
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      Collection<ErasureCodingPolicyInfo> ecPolicyInfos = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        ecPolicyInfos = dfs.getAllErasureCodingPolicies();
+      } else {
+        throw new UnsupportedOperationException("getErasureCodingPolicies is " +
+            "not supported for HttpFs on " + fs.getClass() +
+            ". Please check your fs.defaultFS configuration");
+      }
+      HttpFSServerWebApp.get().getMetrics().incrOpsAllECPolicies();
+      return JsonUtil.toJsonString(ecPolicyInfos.stream().toArray(ErasureCodingPolicyInfo[]::new));
     }
   }
 }
