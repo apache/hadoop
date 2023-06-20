@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.MEMORY_CONFIGURATION_STORE;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 
 public final class TestWebServiceUtil {
@@ -96,14 +97,14 @@ public final class TestWebServiceUtil {
     final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
     try {
       assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
-      MockNM nm1 = rm.registerNode("h1:1234", 8192, 8);
-      rm.registerNode("h2:1234", 8192, 8);
+      MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
+      rm.registerNode("h2:1234", 8 * GB, 8);
       if (reinitAfterNodeChane) {
         reinitialize(rm, rm.getConfig());
       }
       assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
-      rm.registerNode("h3:1234", 8192, 8);
-      MockNM nm4 = rm.registerNode("h4:1234", 8192, 8);
+      rm.registerNode("h3:1234", 8 * GB, 8);
+      MockNM nm4 = rm.registerNode("h4:1234", 8 * GB, 8);
       if (reinitAfterNodeChane) {
         reinitialize(rm, rm.getConfig());
       }
