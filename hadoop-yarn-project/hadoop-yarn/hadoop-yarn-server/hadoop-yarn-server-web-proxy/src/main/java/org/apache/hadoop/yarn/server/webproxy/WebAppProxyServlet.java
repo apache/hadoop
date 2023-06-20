@@ -103,7 +103,7 @@ public class WebAppProxyServlet extends HttpServlet {
   /**
    * HTTP methods.
    */
-  private enum HTTP { GET, POST, HEAD, PUT, DELETE };
+  private enum HTTP { GET, POST, HEAD, PUT, DELETE }
 
   /**
    * Empty Hamlet class.

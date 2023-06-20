@@ -150,7 +150,7 @@ yarn.scheduler.capacity.root.marketing.accessible-node-labels.GPU.capacity=50
 yarn.scheduler.capacity.root.engineering.default-node-label-expression=GPU
 ```
 
-You can see root.engineering/marketing/sales.capacity=33, so each of them can has guaranteed resource equals to 1/3 of resource **without partition**. So each of them can use 1/3 resource of h1..h4, which is 24 * 4 * (1/3) = (32G mem, 32 v-cores).
+You can see root.engineering/marketing/sales.capacity=33, so each of them has guaranteed resource equals to 1/3 of resource **without partition**. So each of them can use 1/3 resource of h1..h4, which is 24 * 4 * (1/3) = (32G mem, 32 v-cores).
 
 And only engineering/marketing queue has permission to access GPU partition (see root.`<queue-name>`.accessible-node-labels).
 

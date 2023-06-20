@@ -114,8 +114,8 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
         file.getFileSystem(job).openFile(file);
     // the start and end of the split may be used to build
     // an input strategy.
-    builder.opt(FS_OPTION_OPENFILE_SPLIT_START, start)
-        .opt(FS_OPTION_OPENFILE_SPLIT_END, end);
+    builder.optLong(FS_OPTION_OPENFILE_SPLIT_START, start)
+        .optLong(FS_OPTION_OPENFILE_SPLIT_END, end);
     FutureIO.propagateOptions(builder, job,
         MRJobConfig.INPUT_FILE_OPTION_PREFIX,
         MRJobConfig.INPUT_FILE_MANDATORY_PREFIX);

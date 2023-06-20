@@ -45,7 +45,7 @@ public class TestDFSStripedOutputStreamUpdatePipeline {
       Path filePath = new Path("/test/file");
       FSDataOutputStream out = dfs.create(filePath);
       try {
-        for (int i = 0; i < Long.MAX_VALUE; i++) {
+        for (int i = 0; i < Integer.MAX_VALUE; i++) {
           out.write(i);
           if (i == 1024 * 1024 * 5) {
             cluster.stopDataNode(0);

@@ -176,13 +176,16 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-      <scope>compile</scope>
+      <!--
+      adding jettison as direct dependency (as jersey-json's jettison dependency is vulnerable with verison 1.1),
+      so those who depends on hadoop-common externally will get the non-vulnerable jettison
+      -->
+      <groupId>org.codehaus.jettison</groupId>
+      <artifactId>jettison</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -198,11 +201,6 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish.grizzly</groupId>
-      <artifactId>grizzly-http-servlet</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -341,6 +339,14 @@
           <artifactId>jmxri</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -654,9 +660,10 @@
                     <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>${basedir}/../../dev-support/bin/shelldocs</executable>
+                    <executable>${shell-executable}</executable>
                     <workingDirectory>src/site/markdown</workingDirectory>
                     <arguments>
+                        <argument>${basedir}/../../dev-support/bin/shelldocs</argument>
                         <argument>--skipprnorep</argument>
                         <argument>--output</argument>
                         <argument>${basedir}/src/site/markdown/UnixShellAPI.md</argument>
@@ -1077,7 +1084,6 @@
                     </goals>
                     <configuration>
                         <executable>${basedir}/../../dev-support/bin/releasedocmaker</executable>
-                        <requiresOnline>true</requiresOnline>
                         <arguments>
                             <argument>--index</argument>
                             <argument>--license</argument>

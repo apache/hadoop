@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
@@ -29,11 +27,14 @@ import java.util.HashMap;
 import java.util.Stack;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class for maintain a set of lock for fsDataSetImpl.
  */
 public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetLock> {
-  public static final Log LOG = LogFactory.getLog(DataSetLockManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(DataSetLockManager.class);
   private final HashMap<String, TrackLog> threadCountMap = new HashMap<>();
   private final LockMap lockMap = new LockMap();
   private boolean isFair = true;

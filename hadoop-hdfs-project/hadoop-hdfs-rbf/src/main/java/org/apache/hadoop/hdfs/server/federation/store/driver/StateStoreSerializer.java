@@ -69,7 +69,9 @@ public abstract class StateStoreSerializer {
 
   /**
    * Create a new record.
+   *
    * @param clazz Class of the new record.
+   * @param <T> Type of the record.
    * @return New record.
    */
   public static <T> T newRecord(Class<T> clazz) {
@@ -78,7 +80,9 @@ public abstract class StateStoreSerializer {
 
   /**
    * Create a new record.
+   *
    * @param clazz Class of the new record.
+   * @param <T> Type of the record.
    * @return New record.
    */
   public abstract <T> T newRecordInstance(Class<T> clazz);
@@ -99,8 +103,10 @@ public abstract class StateStoreSerializer {
 
   /**
    * Deserialize a bytes array into a record.
+   *
    * @param byteArray Byte array to deserialize.
    * @param clazz Class of the record.
+   * @param <T> Type of the record.
    * @return New record.
    * @throws IOException If it cannot deserialize the record.
    */
@@ -109,8 +115,10 @@ public abstract class StateStoreSerializer {
 
   /**
    * Deserialize a string into a record.
+   *
    * @param data String with the data to deserialize.
    * @param clazz Class of the record.
+   * @param <T> Type of the record.
    * @return New record.
    * @throws IOException If it cannot deserialize the record.
    */

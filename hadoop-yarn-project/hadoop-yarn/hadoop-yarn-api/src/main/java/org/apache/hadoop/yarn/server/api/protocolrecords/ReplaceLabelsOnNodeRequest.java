@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
@@ -34,6 +35,15 @@ public abstract class ReplaceLabelsOnNodeRequest {
     ReplaceLabelsOnNodeRequest request =
         Records.newRecord(ReplaceLabelsOnNodeRequest.class);
     request.setNodeToLabels(map);
+    return request;
+  }
+
+  public static ReplaceLabelsOnNodeRequest newInstance(Map<NodeId, Set<String>> map,
+      String subClusterId) {
+    ReplaceLabelsOnNodeRequest request =
+        Records.newRecord(ReplaceLabelsOnNodeRequest.class);
+    request.setNodeToLabels(map);
+    request.setSubClusterId(subClusterId);
     return request;
   }
 
@@ -52,4 +62,22 @@ public abstract class ReplaceLabelsOnNodeRequest {
   @Public
   @Evolving
   public abstract boolean getFailOnUnknownNodes();
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract void setSubClusterId(String subClusterId);
 }

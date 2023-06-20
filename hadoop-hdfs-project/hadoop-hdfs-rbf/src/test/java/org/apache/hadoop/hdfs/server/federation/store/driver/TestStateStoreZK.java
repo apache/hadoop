@@ -18,12 +18,13 @@
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH;
-import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservic
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.CreateMode;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -73,9 +75,10 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
+    conf.setInt(RBFConfigKeys.FEDERATION_STORE_ZK_ASYNC_MAX_THREADS, 10);
 
-    baseZNode = conf.get(FEDERATION_STORE_ZK_PARENT_PATH,
-        FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
+    baseZNode = conf.get(RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH,
+        RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
     getStateStore(conf);
   }
 
@@ -91,6 +94,8 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   @Before
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreZooKeeper = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    stateStoreZooKeeper.setEnableConcurrent(false);
   }
 
   private <T extends BaseRecord> String generateFakeZNode(
@@ -127,32 +132,92 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   }
 
   @Test
+  public void testAsyncPerformance() throws Exception {
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    List<MountTable> insertList = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      MountTable newRecord = generateFakeRecord(MountTable.class);
+      insertList.add(newRecord);
+    }
+    // Insert Multiple on sync mode
+    long startSync = Time.now();
+    stateStoreDriver.putAll(insertList, true, false);
+    long endSync = Time.now();
+    stateStoreDriver.removeAll(MembershipState.class);
+
+    stateStoreDriver.setEnableConcurrent(true);
+    // Insert Multiple on async mode
+    long startAsync = Time.now();
+    stateStoreDriver.putAll(insertList, true, false);
+    long endAsync = Time.now();
+    assertTrue((endSync - startSync) > (endAsync - startAsync));
+  }
+
+  @Test
   public void testGetNullRecord() throws Exception {
-    testGetNullRecord(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testGetNullRecord(stateStoreDriver);
+
+    // test async mode
+    stateStoreDriver.setEnableConcurrent(true);
+    testGetNullRecord(stateStoreDriver);
   }
 
   @Test
   public void testInsert()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testInsert(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testInsert(stateStoreDriver);
+    // test async mode
+    stateStoreDriver.setEnableConcurrent(true);
+    testInsert(stateStoreDriver);
   }
 
   @Test
   public void testUpdate()
       throws IllegalArgumentException, ReflectiveOperationException,
       IOException, SecurityException {
-    testPut(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testPut(stateStoreDriver);
+
+    // test async mode
+    stateStoreDriver.setEnableConcurrent(true);
+    testPut(stateStoreDriver);
   }
 
   @Test
   public void testDelete()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testRemove(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testRemove(stateStoreDriver);
+
+    // test async mode
+    stateStoreDriver.setEnableConcurrent(true);
+    testRemove(stateStoreDriver);
   }
 
   @Test
   public void testFetchErrors()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testFetchErrors(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testFetchErrors(stateStoreDriver);
+
+    // test async mode
+    stateStoreDriver.setEnableConcurrent(true);
+    testFetchErrors(stateStoreDriver);
   }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
+    // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
+    // hence this would be failure to assert that mount table avg load time is higher than -1
+    getStateStoreService().getMetrics().setCacheLoading("MountTable", -1);
+    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 3, -1);
+  }
+
 }

@@ -39,7 +39,7 @@ public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
-    // overrides initialize to avoid weight checks that do no apply for
+    // overrides initialize to avoid weight checks that do not apply for
     // this policy.
     FederationPolicyInitializationContextValidator.validate(policyContext,
         this.getClass().getCanonicalName());

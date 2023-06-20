@@ -262,7 +262,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   /**
    * This is to be called when NodeManager reconnects or goes down. This will
    * remove if NMTokens if present for any running application from cache.
-   * @param nodeId
+   * @param nodeId Node Id.
    */
   public void removeNodeKey(NodeId nodeId) {
     this.writeLock.lock();

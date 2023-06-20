@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
@@ -79,9 +79,9 @@ public class TestLazyPersistPolicy extends LazyPersistTestCase {
 
     makeTestFile(path, 0, true);
     // checkpoint
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
 
     // Stat the file and check that the lazyPersist flag is returned back.

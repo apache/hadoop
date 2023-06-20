@@ -22,8 +22,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Preconditions;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.*;
+import static org.apache.hadoop.util.functional.RemoteIterators.haltableRemoteIterator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -287,6 +290,44 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
 
   }
 
+  @Test
+  public void testHaltableIterator() throws Throwable {
+    final int limit = 4;
+    AtomicInteger count = new AtomicInteger(limit);
+
+    // a countdown of 10, but the halting predicate will fail earlier
+    // if the value of "count" has dropped to zero
+    final RemoteIterator<Long> it =
+        haltableRemoteIterator(
+            rangeExcludingIterator(0, 10),
+            () -> count.get() > 0);
+
+    verifyInvoked(it, limit, (v) -> count.decrementAndGet());
+  }
+
+  @Test
+  public void testHaltableIteratorNoHalt() throws Throwable {
+
+    // a countdown of 10, but the halting predicate will fail earlier
+    // if the value of "count" has dropped to zero
+    final int finish = 10;
+    final RemoteIterator<Long> it =
+        haltableRemoteIterator(
+            rangeExcludingIterator(0, finish),
+            () -> true);
+
+    verifyInvoked(it, finish);
+  }
+
+  @Test
+  public void testRangeExcludingIterator() throws Throwable {
+    verifyInvoked(rangeExcludingIterator(0, 0), 0);
+    verifyInvoked(rangeExcludingIterator(0, -1), 0);
+    verifyInvoked(rangeExcludingIterator(0, 100), 100);
+    intercept(NoSuchElementException.class, () ->
+        rangeExcludingIterator(0, 0).next());
+  }
+
   /**
    * assert that the string value of an object contains the
    * expected text.
@@ -327,6 +368,19 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
         .isEqualTo(length);
   }
 
+  /**
+   * Verify that the iteration completes with a given invocation count.
+   * @param it iterator
+   * @param <T> type.
+   * @param length expected size
+   */
+  protected <T> void verifyInvoked(
+      final RemoteIterator<T> it,
+      final int length)
+        throws IOException {
+    verifyInvoked(it, length, (t) -> { });
+
+  }
   /**
    * Close an iterator if it is iterable.
    * @param it iterator

@@ -631,14 +631,37 @@ hadoop distcp -update -numListstatusThreads 20  \
 Because object stores are slow to list files, consider setting the `-numListstatusThreads` option when performing a `-update` operation
 on a large directory tree (the limit is 40 threads).
 
-When `DistCp -update` is used with object stores,
-generally only the modification time and length of the individual files are compared,
-not any checksums. The fact that most object stores do have valid timestamps
-for directories is irrelevant; only the file timestamps are compared.
-However, it is important to have the clock of the client computers close
-to that of the infrastructure, so that timestamps are consistent between
-the client/HDFS cluster and that of the object store. Otherwise, changed files may be
-missed/copied too often.
+When `DistCp -update` is used with object stores, generally only the
+modification time and length of the individual files are compared, not any
+checksums if the checksum algorithm between the two stores is different.
+
+* The `distcp -update` between two object stores with different checksum
+  algorithm compares the modification times of source and target files along
+  with the file size to determine whether to skip the file copy. The behavior
+  is controlled by the property `distcp.update.modification.time`, which is
+  set to true by default. If the source file is more recently modified than
+  the target file, it is assumed that the content has changed, and the file
+  should be updated.
+  We need to ensure that there is no clock skew between the machines.
+  The fact that most object stores do have valid timestamps for directories
+  is irrelevant; only the file timestamps are compared. However, it is
+  important to have the clock of the client computers close to that of the
+  infrastructure, so that timestamps are consistent between the client/HDFS
+  cluster and that of the object store. Otherwise, changed files may be
+  missed/copied too often.
+
+* `distcp.update.modification.time` would only be used if either of the two
+  stores don't have checksum validation resulting in incompatible checksum
+  comparison between the two. Even if the property is set to true, it won't
+  be used if there is valid checksum comparison between the two stores.
+
+To turn off the modification time check, set this in your core-site.xml
+```xml
+<property>
+        <name>distcp.update.modification.time</name>
+        <value>false</value>
+</property>
+```
 
 **Notes**
 

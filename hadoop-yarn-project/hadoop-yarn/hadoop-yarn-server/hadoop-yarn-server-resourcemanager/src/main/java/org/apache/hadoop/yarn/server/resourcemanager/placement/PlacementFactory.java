@@ -46,6 +46,8 @@ public final class PlacementFactory {
    * @param ruleStr The name of the class to instantiate
    * @param conf The configuration object to set for the rule
    * @return Created class instance
+   * @throws ClassNotFoundException
+   * no definition for the class with the specified name could be found.
    */
   public static PlacementRule getPlacementRule(String ruleStr,
       Configuration conf)

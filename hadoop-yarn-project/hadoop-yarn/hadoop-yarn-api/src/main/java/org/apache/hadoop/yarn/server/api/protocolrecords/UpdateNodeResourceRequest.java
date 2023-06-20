@@ -51,7 +51,18 @@ public abstract class UpdateNodeResourceRequest {
     request.setNodeResourceMap(nodeResourceMap);
     return request;
   }
-  
+
+  @Public
+  @Evolving
+  public static UpdateNodeResourceRequest newInstance(
+      Map<NodeId, ResourceOption> nodeResourceMap, String subClusterId) {
+    UpdateNodeResourceRequest request =
+        Records.newRecord(UpdateNodeResourceRequest.class);
+    request.setNodeResourceMap(nodeResourceMap);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   /**
    * Get the map from <code>NodeId</code> to <code>ResourceOption</code>.
    * @return the map of {@code <NodeId, ResourceOption>}
@@ -68,4 +79,21 @@ public abstract class UpdateNodeResourceRequest {
   @Evolving
   public abstract void setNodeResourceMap(Map<NodeId, ResourceOption> nodeResourceMap);
 
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  @Public
+  @Evolving
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  @Public
+  @Evolving
+  public abstract void setSubClusterId(String subClusterId);
 }

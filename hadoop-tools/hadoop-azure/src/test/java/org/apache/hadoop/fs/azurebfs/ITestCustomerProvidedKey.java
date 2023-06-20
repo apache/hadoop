@@ -99,10 +99,14 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private static final int FILE_SIZE = 10 * ONE_MB;
   private static final int FILE_SIZE_FOR_COPY_BETWEEN_ACCOUNTS = 24 * ONE_MB;
 
+  private boolean isNamespaceEnabled;
+
   public ITestCustomerProvidedKey() throws Exception {
     boolean isCPKTestsEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
     Assume.assumeTrue(isCPKTestsEnabled);
+    isNamespaceEnabled = getConfiguration()
+            .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
   @Test
@@ -203,7 +207,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append with correct CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false, null);
+        0, 0, 5, Mode.APPEND_MODE, false, null, true);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
@@ -248,7 +252,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append without CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false, null);
+        0, 0, 5, Mode.APPEND_MODE, false, null, true);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
@@ -526,7 +530,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
         .renamePath(testFileName, newName, null,
-            getTestTracingContext(fs, false), null, false)
+            getTestTracingContext(fs, false), null, false, isNamespaceEnabled)
         .getOp();
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);

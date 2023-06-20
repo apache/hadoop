@@ -20,8 +20,9 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import java.util.List;
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
 
 public class TestIdentityProviders {
-  public class FakeSchedulable implements Schedulable {
+  public static class FakeSchedulable implements Schedulable {
     public FakeSchedulable() {
     }
 
@@ -61,7 +62,9 @@ public class TestIdentityProviders {
       CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
 
-    assertTrue(providers.size() == 1);
+    assertThat(providers)
+        .describedAs("provider list")
+        .hasSize(1);
 
     IdentityProvider ip = providers.get(0);
     assertNotNull(ip);
@@ -69,14 +72,20 @@ public class TestIdentityProviders {
   }
 
   @Test
-  public void testUserIdentityProvider() throws IOException {
+  public void testUserIdentityProvider() throws Exception {
     UserIdentityProvider uip = new UserIdentityProvider();
-    String identity = uip.makeIdentity(new FakeSchedulable());
+    FakeSchedulable fakeSchedulable = new FakeSchedulable();
+    String identity = uip.makeIdentity(fakeSchedulable);
 
     // Get our username
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String username = ugi.getUserName();
 
     assertEquals(username, identity);
+
+    // FakeSchedulable doesn't override getCallerContext()
+    // accessing it should throw an UnsupportedOperationException
+    LambdaTestUtils.intercept(UnsupportedOperationException.class,
+        "Invalid operation.", fakeSchedulable::getCallerContext);
   }
 }

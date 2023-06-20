@@ -417,6 +417,14 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** How often to retry a ZooKeeper operation  in milliseconds. */
   public static final String ZK_RETRY_INTERVAL_MS =
       ZK_PREFIX + "retry-interval-ms";
+  /** Keystore location for ZooKeeper client connection over SSL. */
+  public static final String ZK_SSL_KEYSTORE_LOCATION = ZK_PREFIX + "ssl.keystore.location";
+  /** Keystore password for ZooKeeper client connection over SSL. */
+  public static final String ZK_SSL_KEYSTORE_PASSWORD = ZK_PREFIX + "ssl.keystore.password";
+  /** Truststore location for ZooKeeper client connection over SSL. */
+  public static final String ZK_SSL_TRUSTSTORE_LOCATION = ZK_PREFIX + "ssl.truststore.location";
+  /** Truststore password for ZooKeeper client connection over SSL.  */
+  public static final String ZK_SSL_TRUSTSTORE_PASSWORD = ZK_PREFIX + "ssl.truststore.password";
   public static final int    ZK_RETRY_INTERVAL_MS_DEFAULT = 1000;
   /** Default domain name resolver for hadoop to use. */
   public static final String HADOOP_DOMAINNAME_RESOLVER_IMPL =

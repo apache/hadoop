@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -349,13 +351,24 @@ public class RouterAdminServer extends AbstractService
     MountTable mountTable = request.getEntry();
     verifyMaxComponentLength(mountTable);
     if (this.mountTableCheckDestination) {
-      List<String> nsIds = verifyFileInDestinations(mountTable);
-      if (!nsIds.isEmpty()) {
-        throw new IllegalArgumentException("File not found in downstream " +
-            "nameservices: " + StringUtils.join(",", nsIds));
-      }
+      verifyFileExistenceInDest(mountTable);
     }
     return getMountTableStore().addMountTableEntry(request);
+  }
+
+  @Override
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    for (MountTable mountTable : mountTables) {
+      verifyMaxComponentLength(mountTable);
+    }
+    if (this.mountTableCheckDestination) {
+      for (MountTable mountTable : mountTables) {
+        verifyFileExistenceInDest(mountTable);
+      }
+    }
+    return getMountTableStore().addMountTableEntries(request);
   }
 
   @Override
@@ -366,11 +379,7 @@ public class RouterAdminServer extends AbstractService
     // Checks max component length limit.
     verifyMaxComponentLength(updateEntry);
     if (this.mountTableCheckDestination) {
-      List<String> nsIds = verifyFileInDestinations(updateEntry);
-      if (!nsIds.isEmpty()) {
-        throw new IllegalArgumentException("File not found in downstream " +
-            "nameservices: " + StringUtils.join(",", nsIds));
-      }
+      verifyFileExistenceInDest(updateEntry);
     }
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =
@@ -406,6 +415,14 @@ public class RouterAdminServer extends AbstractService
           request.getEntry(), e.getMessage());
     }
     return response;
+  }
+
+  private void verifyFileExistenceInDest(MountTable mountTable) throws IOException {
+    List<String> nsIds = verifyFileInDestinations(mountTable);
+    if (!nsIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "File not found in downstream nameservices: " + StringUtils.join(",", nsIds));
+    }
   }
 
   /**

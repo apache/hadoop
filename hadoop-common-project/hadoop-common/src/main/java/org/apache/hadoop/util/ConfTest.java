@@ -46,7 +46,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -230,8 +229,8 @@ public final class ConfTest {
     GenericOptionsParser genericParser = new GenericOptionsParser(args);
     String[] remainingArgs = genericParser.getRemainingArgs();
 
-    Option conf = OptionBuilder.hasArg().create("conffile");
-    Option help = OptionBuilder.withLongOpt("help").create('h');
+    Option conf = Option.builder("conffile").hasArg().build();
+    Option help = Option.builder("h").longOpt("help").hasArg().build();
     Options opts = new Options().addOption(conf).addOption(help);
     CommandLineParser specificParser = new GnuParser();
     CommandLine cmd = null;

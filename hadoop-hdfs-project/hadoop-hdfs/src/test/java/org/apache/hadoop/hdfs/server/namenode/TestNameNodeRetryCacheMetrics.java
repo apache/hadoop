@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.ipc.metrics.RetryCacheMetrics;
 import org.apache.hadoop.conf.Configuration;
@@ -104,9 +104,9 @@ public class TestNameNodeRetryCacheMetrics {
   }
 
   private void trySaveNamespace() throws IOException {
-    filesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    filesystem.setSafeMode(SafeModeAction.ENTER);
     filesystem.saveNamespace();
-    filesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    filesystem.setSafeMode(SafeModeAction.LEAVE);
   }
 
 }

@@ -58,8 +58,8 @@ public abstract class NodeAttributesManager extends AbstractService {
    * impacting other existing attribute mapping. Key would be name of the node
    * and value would be set of Attributes to be mapped.
    *
-   * @param nodeAttributeMapping
-   * @throws IOException
+   * @param nodeAttributeMapping host name to a set of node attributes mapping.
+   * @throws IOException io error occur.
    */
   public abstract void addNodeAttributes(
       Map<String, Set<NodeAttribute>> nodeAttributeMapping) throws IOException;
@@ -69,8 +69,8 @@ public abstract class NodeAttributesManager extends AbstractService {
    * impacting other existing attribute mapping. Key would be name of the node
    * and value would be set of Attributes to be removed.
    *
-   * @param nodeAttributeMapping
-   * @throws IOException
+   * @param nodeAttributeMapping host name to a set of node attributes mapping.
+   * @throws IOException io error occur.
    */
   public abstract void removeNodeAttributes(
       Map<String, Set<NodeAttribute>> nodeAttributeMapping) throws IOException;
@@ -93,6 +93,7 @@ public abstract class NodeAttributesManager extends AbstractService {
    * If the attributeKeys set is null or empty, then mapping for all attributes
    * are returned.
    *
+   * @param attributes attributes set.
    * @return a Map of attributeKeys to a map of hostnames to its attribute
    *         values.
    */
@@ -103,6 +104,7 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * NodeAttribute to AttributeValue Map.
    *
+   * @param hostName host name.
    * @return Map of NodeAttribute to AttributeValue.
    */
   public abstract Map<NodeAttribute, AttributeValue> getAttributesForNode(
@@ -111,6 +113,7 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * Get All node to Attributes list based on filter.
    *
+   * @param prefix filter prefix set.
    * @return List of NodeToAttributes matching filter. If empty
    * or null is passed as argument will return all.
    */
@@ -120,6 +123,7 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * Get all node to Attributes mapping.
    *
+   * @param hostNames host names.
    * @return Map of String to Set of nodesToAttributes matching
    * filter. If empty or null is passed as argument will return all.
    */

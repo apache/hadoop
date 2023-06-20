@@ -15,7 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
+
+/**
+ * This package contains zkClient related classes.
+ */
+@Private
 package org.apache.hadoop.yarn.lib;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 

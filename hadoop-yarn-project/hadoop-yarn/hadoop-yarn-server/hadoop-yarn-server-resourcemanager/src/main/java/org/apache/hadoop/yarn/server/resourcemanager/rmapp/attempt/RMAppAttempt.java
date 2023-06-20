@@ -207,6 +207,14 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   RMAppAttemptState getState();
 
   /**
+   * The previous state of the {@link RMAppAttempt} before the current state.
+   *
+   * @return the previous state of the {@link RMAppAttempt} before the current state
+   * for this application attempt.
+   */
+  RMAppAttemptState getPreviousState();
+
+  /**
    * Create the external user-facing state of the attempt of ApplicationMaster
    * from the current state of the {@link RMAppAttempt}.
    * 
@@ -233,6 +241,8 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    *   </li>
    *   <li>killed by RM because of RM restart or failover.</li>
    * </ul>
+   *
+   * @return attempt retry count.
    */
   boolean shouldCountTowardsMaxAttemptRetry();
   
@@ -250,7 +260,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
 
   /**
    * To capture Launch diagnostics of the app.
-   * @param amLaunchDiagnostics
+   * @param amLaunchDiagnostics amLaunchDiagnostics.
    */
   void updateAMLaunchDiagnostics(String amLaunchDiagnostics);
 

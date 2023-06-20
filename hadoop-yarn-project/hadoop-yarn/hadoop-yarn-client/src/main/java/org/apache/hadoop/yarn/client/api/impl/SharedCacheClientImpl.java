@@ -158,14 +158,8 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   public String getFileChecksum(Path sourceFile)
       throws IOException {
     FileSystem fs = sourceFile.getFileSystem(this.conf);
-    FSDataInputStream in = null;
-    try {
-      in = fs.open(sourceFile);
+    try (FSDataInputStream in = fs.open(sourceFile)) {
       return this.checksum.computeChecksum(in);
-    } finally {
-      if (in != null) {
-        in.close();
-      }
     }
   }
 }

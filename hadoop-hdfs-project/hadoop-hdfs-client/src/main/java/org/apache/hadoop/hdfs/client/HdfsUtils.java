@@ -46,6 +46,7 @@ public class HdfsUtils {
    * @param uri the HDFS URI.  Note that the URI path is ignored.
    * @return true if HDFS is healthy; false, otherwise.
    */
+  @SuppressWarnings("deprecation")
   public static boolean isHealthy(URI uri) {
     //check scheme
     final String scheme = uri.getScheme();
@@ -66,12 +67,12 @@ public class HdfsUtils {
              (DistributedFileSystem) FileSystem.get(uri, conf)) {
       final boolean safemode = fs.setSafeMode(SafeModeAction.SAFEMODE_GET);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Is namenode in safemode? " + safemode + "; uri=" + uri);
+        LOG.debug("Is namenode in safemode? {}; uri={}", safemode, uri);
       }
       return !safemode;
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Got an exception for uri=" + uri, e);
+        LOG.debug("Got an exception for uri={}", uri, e);
       }
       return false;
     }

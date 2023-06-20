@@ -20,6 +20,20 @@
 # Override these to match Apache Hadoop's requirements
 personality_plugins "all,-ant,-gradle,-scalac,-scaladoc"
 
+# These flags are needed to run Yetus against Hadoop on Windows.
+WINDOWS_FLAGS="-Pnative-win
+  -Dhttps.protocols=TLSv1.2
+  -Drequire.openssl
+  -Drequire.test.libhadoop
+  -Dshell-executable=${BASH_EXECUTABLE}
+  -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}
+  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
+  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
+  -Dwindows.cmake.build.type=RelWithDebInfo
+  -Dwindows.build.hdfspp.dll=off
+  -Dwindows.no.sasl=on
+  -Duse.platformToolsetVersion=v142"
+
 ## @description  Globals specific to this personality
 ## @audience     private
 ## @stability    evolving
@@ -87,17 +101,30 @@ function hadoop_order
   echo "${hadoopm}"
 }
 
+## @description  Retrieves the Hadoop project version defined in the root pom.xml
+## @audience     private
+## @stability    evolving
+## @returns      0 on success, 1 on failure
+function load_hadoop_version
+{
+  if [[ -f "${BASEDIR}/pom.xml" ]]; then
+      HADOOP_VERSION=$(grep '<version>' "${BASEDIR}/pom.xml" \
+          | head -1 \
+          | "${SED}"  -e 's|^ *<version>||' -e 's|</version>.*$||' \
+          | cut -f1 -d- )
+      return 0
+    else
+      return 1
+    fi
+}
+
 ## @description  Determine if it is safe to run parallel tests
 ## @audience     private
 ## @stability    evolving
 ## @param        ordering
 function hadoop_test_parallel
 {
-  if [[ -f "${BASEDIR}/pom.xml" ]]; then
-    HADOOP_VERSION=$(grep '<version>' "${BASEDIR}/pom.xml" \
-        | head -1 \
-        | "${SED}"  -e 's|^ *<version>||' -e 's|</version>.*$||' \
-        | cut -f1 -d- )
+  if load_hadoop_version; then
     export HADOOP_VERSION
   else
     return 1
@@ -262,7 +289,10 @@ function hadoop_native_flags
     Windows_NT|CYGWIN*|MINGW*|MSYS*)
       echo \
         "${args[@]}" \
-        -Drequire.snappy -Drequire.openssl -Pnative-win
+        -Drequire.snappy \
+        -Pdist \
+        -Dtar \
+        "${WINDOWS_FLAGS}"
     ;;
     *)
       echo \
@@ -405,7 +435,10 @@ function personality_modules
     extra="${extra} ${flags}"
   fi
 
-  extra="-Ptest-patch ${extra}"
+  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    extra="-Ptest-patch -Pdist -Dtar ${WINDOWS_FLAGS} ${extra}"
+  fi
+
   for module in $(hadoop_order ${ordering}); do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
@@ -548,17 +581,28 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
+  extra="-Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true"
+
+  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    if load_hadoop_version; then
+      export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+    else
+      yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
+    fi
+
+    extra="${WINDOWS_FLAGS} ${extra}"
+  fi
+
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
-      "${modules[@]}" \
-      -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}"
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
-      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
+      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
+      -Dspotbugs.skip=true "${extra}"
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then

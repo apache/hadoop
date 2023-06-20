@@ -22,9 +22,9 @@ package org.apache.hadoop.mapreduce.v2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
+
+import static org.junit.jupiter.api.Assertions.fail;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
@@ -59,16 +59,15 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestRPCFactories {
-  
-  
-  
+
+
   @Test
   public void test() {
     testPbServerFactory();
-    
+
     testPbClientFactory();
   }
   
@@ -86,7 +85,7 @@ public class TestRPCFactories {
       server.start();
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete server");
+      fail("Failed to crete server");
     } finally {
       server.stop();
     }
@@ -112,12 +111,12 @@ public class TestRPCFactories {
         client = (MRClientProtocol) RpcClientFactoryPBImpl.get().getClient(MRClientProtocol.class, 1, NetUtils.getConnectAddress(server), conf);
       } catch (YarnRuntimeException e) {
         e.printStackTrace();
-        Assert.fail("Failed to crete client");
+        fail("Failed to crete client");
       }
       
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete server");
+      fail("Failed to crete server");
     } finally {
       server.stop();
     }     

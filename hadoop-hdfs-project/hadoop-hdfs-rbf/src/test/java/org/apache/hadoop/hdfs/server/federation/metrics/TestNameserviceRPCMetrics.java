@@ -33,8 +33,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor.CONCURRENT;
 import static org.apache.hadoop.hdfs.server.federation.metrics.NameserviceRPCMetrics.NAMESERVICE_RPC_METRICS_PREFIX;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 /**
@@ -132,6 +134,27 @@ public class TestNameserviceRPCMetrics {
         getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns0"));
     assertCounter("ProxyOp", 1L,
         getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns1"));
+  }
+
+  @Test
+  public void testProxyOpCompleteConcurrent() throws IOException {
+
+    long ns0ProxyOpBefore = getLongCounter("ProxyOp",
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns0"));
+    long ns1ProxyOpBefore = getLongCounter("ProxyOp",
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns1"));
+    long concurrentProxyOpBefore = getLongCounter("ProxyOp",
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "concurrent"));
+    // RPC which uses invokeConcurrent.
+    router.getRpcServer().setBalancerBandwidth(1024 * 1024L);
+
+    assertCounter("ProxyOp", ns0ProxyOpBefore + 1,
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns0"));
+    assertCounter("ProxyOp", ns1ProxyOpBefore + 1,
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns1"));
+    assertCounter("ProxyOp", concurrentProxyOpBefore + 1,
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + CONCURRENT));
+
   }
 
 }

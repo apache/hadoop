@@ -32,7 +32,7 @@ public class TestFileLengthOnClusterRestart {
    * Tests the fileLength when we sync the file and restart the cluster and
    * Datanodes not report to Namenode yet.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testFileLengthWithHSyncAndClusterRestartWithOutDNsRegister()
       throws Exception {
     final Configuration conf = new HdfsConfiguration();

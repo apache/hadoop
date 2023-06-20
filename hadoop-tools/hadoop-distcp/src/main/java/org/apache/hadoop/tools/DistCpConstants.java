@@ -142,6 +142,26 @@ public final class DistCpConstants {
       "distcp.blocks.per.chunk";
 
   public static final String CONF_LABEL_USE_ITERATOR = "distcp.use.iterator";
+
+  /**
+   * Enabling {@code distcp -update} to use modification time of source and
+   * target file to check while copying same file with same size but
+   * different content.
+   *
+   * The check would verify if the target file is perceived as older than the
+   * source then it indicates that the source has been recently updated and it
+   * is a newer version than what was synced, so we should not skip the copy.
+   * {@value}
+   */
+  public static final String CONF_LABEL_UPDATE_MOD_TIME =
+      "distcp.update.modification.time";
+
+  /**
+   * Default value for 'distcp.update.modification.time' configuration.
+   */
+  public static final boolean CONF_LABEL_UPDATE_MOD_TIME_DEFAULT =
+      true;
+
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */

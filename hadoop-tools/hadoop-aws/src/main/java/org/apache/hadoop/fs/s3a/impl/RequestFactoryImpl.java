@@ -125,6 +125,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final StorageClass storageClass;
 
   /**
+   * Is multipart upload enabled.
+   */
+  private final boolean isMultipartUploadEnabled;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -137,6 +142,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.requestPreparer = builder.requestPreparer;
     this.contentEncoding = builder.contentEncoding;
     this.storageClass = builder.storageClass;
+    this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
   }
 
   /**
@@ -460,7 +466,10 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
       final String destKey,
-      @Nullable final PutObjectOptions options) {
+      @Nullable final PutObjectOptions options) throws PathIOException {
+    if (!isMultipartUploadEnabled) {
+      throw new PathIOException(destKey, "Multipart uploads are disabled.");
+    }
     final ObjectMetadata objectMetadata = newObjectMetadata(-1);
     maybeSetMetadata(options, objectMetadata);
     final InitiateMultipartUploadRequest initiateMPURequest =
@@ -509,7 +518,7 @@ public class RequestFactoryImpl implements RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException {
@@ -682,6 +691,11 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private PrepareRequest requestPreparer;
 
+    /**
+     * Is Multipart Enabled on the path.
+     */
+    private boolean isMultipartUploadEnabled = true;
+
     private RequestFactoryBuilder() {
     }
 
@@ -765,6 +779,18 @@ public class RequestFactoryImpl implements RequestFactory {
     public RequestFactoryBuilder withRequestPreparer(
         final PrepareRequest value) {
       this.requestPreparer = value;
+      return this;
+    }
+
+    /**
+     * Multipart upload enabled.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withMultipartUploadEnabled(
+        final boolean value) {
+      this.isMultipartUploadEnabled = value;
       return this;
     }
   }

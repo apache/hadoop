@@ -88,7 +88,7 @@ public class S3AReadOpContext extends S3AOpContext {
    * Instantiate.
    * @param path path of read
    * @param invoker invoker for normal retries.
-   * @param stats Fileystem statistics (may be null)
+   * @param stats Filesystem statistics (may be null)
    * @param instrumentation statistics context
    * @param dstFileStatus target file status
    * @param vectoredIOContext context for vectored read operation.

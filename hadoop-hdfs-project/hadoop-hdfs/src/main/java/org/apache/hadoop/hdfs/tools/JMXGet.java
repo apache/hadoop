@@ -39,7 +39,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -247,39 +246,33 @@ public class JMXGet {
   private static CommandLine parseArgs(Options opts, String... args)
   throws IllegalArgumentException {
 
-    OptionBuilder.withArgName("NameNode|DataNode");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify jmx service (NameNode by default)");
-    Option jmx_service = OptionBuilder.create("service");
+    Option jmxService = Option.builder("service")
+        .argName("NameNode|DataNode").hasArg()
+        .desc("specify jmx service (NameNode by default)").build();
 
-    OptionBuilder.withArgName("mbean server");
-    OptionBuilder.hasArg();
-    OptionBuilder
-    .withDescription("specify mbean server (localhost by default)");
-    Option jmx_server = OptionBuilder.create("server");
+    Option jmxServer = Option.builder("server")
+        .argName("mbean server").hasArg()
+        .desc("specify mbean server (localhost by default)").build();
 
-    OptionBuilder.withDescription("print help");
-    Option jmx_help = OptionBuilder.create("help");
+    Option jmxHelp = Option.builder("help").desc("print help").build();
 
-    OptionBuilder.withArgName("mbean server port");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify mbean server port, "
-        + "if missing - it will try to connect to MBean Server in the same VM");
-    Option jmx_port = OptionBuilder.create("port");
+    Option jmxPort = Option.builder("port")
+        .argName("mbean server port")
+        .hasArg().desc("specify mbean server port, "
+        + "if missing - it will try to connect to MBean Server in the same VM").build();
 
-    OptionBuilder.withArgName("VM's connector url");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("connect to the VM on the same machine;"
+    Option jmxLocalVM = Option.builder("localVM")
+        .argName("VM's connector url").hasArg()
+        .desc("connect to the VM on the same machine;"
         + "\n use:\n jstat -J-Djstat.showUnsupported=true -snap <vmpid> | "
         + "grep sun.management.JMXConnectorServer.address\n "
-        + "to find the url");
-    Option jmx_localVM = OptionBuilder.create("localVM");
+        + "to find the url").build();
 
-    opts.addOption(jmx_server);
-    opts.addOption(jmx_help);
-    opts.addOption(jmx_service);
-    opts.addOption(jmx_port);
-    opts.addOption(jmx_localVM);
+    opts.addOption(jmxServer);
+    opts.addOption(jmxHelp);
+    opts.addOption(jmxService);
+    opts.addOption(jmxPort);
+    opts.addOption(jmxLocalVM);
 
     CommandLine commandLine = null;
     CommandLineParser parser = new GnuParser();

@@ -217,6 +217,10 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
         role, jobName(context), jobIdString(context), outputPath);
     S3AFileSystem fs = getDestS3AFS();
+    if (!fs.isMultipartUploadEnabled()) {
+      throw new PathCommitException(outputPath, "Multipart uploads are disabled for the FileSystem,"
+          + " the committer can't proceed.");
+    }
     // set this thread's context with the job ID.
     // audit spans created in this thread will pick
     // up this value., including the commit operations instance

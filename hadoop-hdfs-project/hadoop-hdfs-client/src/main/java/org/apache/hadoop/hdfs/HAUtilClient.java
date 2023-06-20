@@ -135,16 +135,12 @@ public class HAUtilClient {
                 HdfsConstants.HDFS_URI_SCHEME)
                 + "//" + specificToken.getService());
         ugi.addToken(alias, specificToken);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Mapped HA service delegation token for logical URI " +
-              haUri + " to namenode " + singleNNAddr);
-        }
+        LOG.debug("Mapped HA service delegation token for logical URI {}" +
+            " to namenode {}", haUri, singleNNAddr);
       }
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No HA service delegation token found for logical URI " +
-            haUri);
-      }
+      LOG.debug("No HA service delegation token found for logical URI {}",
+          haUri);
     }
   }
 }

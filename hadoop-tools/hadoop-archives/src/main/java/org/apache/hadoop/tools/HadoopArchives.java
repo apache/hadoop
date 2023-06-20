@@ -37,6 +37,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Parser;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.security.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -487,6 +489,11 @@ public class HadoopArchives implements Tool {
           + " should be a directory but is a file");
     }
     conf.set(DST_DIR_LABEL, outputPath.toString());
+    Credentials credentials = conf.getCredentials();
+    Path[] allPaths = new Path[] {parentPath, dest};
+    TokenCache.obtainTokensForNamenodes(credentials, allPaths, conf);
+    conf.setCredentials(credentials);
+
     Path stagingArea;
     try {
       stagingArea = JobSubmissionFiles.getStagingDir(new Cluster(conf), 
@@ -498,11 +505,11 @@ public class HadoopArchives implements Tool {
         NAME+"_"+Integer.toString(new Random().nextInt(Integer.MAX_VALUE), 36));
     FsPermission mapredSysPerms = 
       new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
-    FileSystem.mkdirs(jobDirectory.getFileSystem(conf), jobDirectory,
-                      mapredSysPerms);
+    FileSystem jobfs = jobDirectory.getFileSystem(conf);
+    FileSystem.mkdirs(jobfs, jobDirectory,
+        mapredSysPerms);
     conf.set(JOB_DIR_LABEL, jobDirectory.toString());
     //get a tmp directory for input splits
-    FileSystem jobfs = jobDirectory.getFileSystem(conf);
     Path srcFiles = new Path(jobDirectory, "_har_src_files");
     conf.set(SRC_LIST_LABEL, srcFiles.toString());
     SequenceFile.Writer srcWriter = SequenceFile.createWriter(jobfs, conf,

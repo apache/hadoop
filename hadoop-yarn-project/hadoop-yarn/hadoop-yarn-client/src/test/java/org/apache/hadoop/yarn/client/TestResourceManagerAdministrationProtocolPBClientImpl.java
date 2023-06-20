@@ -106,8 +106,8 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
     Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
 
-    LOG.info("ResourceManager RMAdmin address: "
-            + configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
+    LOG.info("ResourceManager RMAdmin address: {}.",
+            configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
 
     client = new ResourceManagerAdministrationProtocolPBClientImpl(1L,
             getProtocolAddress(configuration), configuration);

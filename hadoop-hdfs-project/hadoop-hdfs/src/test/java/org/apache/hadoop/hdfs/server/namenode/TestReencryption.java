@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
@@ -538,9 +538,9 @@ public class TestReencryption {
 
     final FileEncryptionInfo fei0new = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9new = getFileEncryptionInfo(encFile9);
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     restartClusterDisableReencrypt();
 
     assertKeyVersionEquals(encFile0, fei0new);
@@ -651,9 +651,9 @@ public class TestReencryption {
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForQueuedZones(1);
 
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     // verify after loading from fsimage the command is loaded
     restartClusterDisableReencrypt();
@@ -716,9 +716,9 @@ public class TestReencryption {
     }
 
     // Verify the same is true after loading from FSImage
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     restartClusterDisableReencrypt();
     waitForQueuedZones(numZones - cancelled.size());
@@ -1714,7 +1714,7 @@ public class TestReencryption {
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedFiles(zone.toString(), 5);
 
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     getEzManager().resumeReencryptForTesting();
     for (int i = 0; i < 3; ++i) {
       Thread.sleep(1000);
@@ -1727,7 +1727,7 @@ public class TestReencryption {
       assertEquals(5, zs.getFilesReencrypted());
     }
 
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     // trigger the background thread to run, without having to
     // wait for DFS_NAMENODE_REENCRYPT_SLEEP_INTERVAL_KEY
     getHandler().notifyNewSubmission();

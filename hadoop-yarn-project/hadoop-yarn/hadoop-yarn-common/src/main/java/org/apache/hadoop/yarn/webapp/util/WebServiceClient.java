@@ -46,8 +46,8 @@ public class WebServiceClient {
    * Construct a new WebServiceClient based on the configuration. It will try to
    * load SSL certificates when it is specified.
    *
-   * @param conf
-   * @throws Exception
+   * @param conf configuration.
+   * @throws Exception exception occur.
    */
   public static void initialize(Configuration conf) throws Exception {
     if (instance == null) {
@@ -75,9 +75,9 @@ public class WebServiceClient {
   /**
    * Start SSL factory.
    *
-   * @param conf
-   * @return
-   * @throws Exception
+   * @param conf configuration.
+   * @return SSL factory.
+   * @throws Exception exception occur.
    */
   private static SSLFactory createSSLFactory(Configuration conf)
       throws Exception {

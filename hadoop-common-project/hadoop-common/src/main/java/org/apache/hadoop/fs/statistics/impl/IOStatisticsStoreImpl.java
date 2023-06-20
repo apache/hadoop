@@ -190,7 +190,7 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
       return counter.get();
     } else {
       long l = incAtomicLong(counter, value);
-      LOG.debug("Incrementing counter {} by {} with final value {}",
+      LOG.trace("Incrementing counter {} by {} with final value {}",
           key, value, l);
       return l;
     }

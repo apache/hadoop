@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -287,13 +287,13 @@ public class TestGetBlocks {
       assertEquals(blkLocsSize, locs.length);
       assertFalse(fs.isInSafeMode());
       LOG.info("Entering safe mode");
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       LOG.info("Entered safe mode");
       assertTrue(fs.isInSafeMode());
       getBlocksWithException(namenode, info, replicationFactor, 0,
           RemoteException.class,
           "Cannot execute getBlocks. Name node is in safe mode.");
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
       assertFalse(fs.isInSafeMode());
     }  finally {
       if (fs != null) {

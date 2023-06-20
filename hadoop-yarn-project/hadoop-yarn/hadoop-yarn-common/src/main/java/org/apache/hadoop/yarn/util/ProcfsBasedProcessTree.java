@@ -579,6 +579,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 /**
  * Returns boolean indicating whether pid
  * is in process tree.
+ *
+ * @param pid pid.
+ * @return if true, processTree contains pid, false, processTree does not contain pid.
  */
   public boolean contains(String pid) {
     return processTree.containsKey(pid);
@@ -1000,9 +1003,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   /**
-   * Test the {@link ProcfsBasedProcessTree}
+   * Test the {@link ProcfsBasedProcessTree}.
    *
-   * @param args
+   * @param args the pid arg.
    */
   public static void main(String[] args) {
     if (args.length != 1) {

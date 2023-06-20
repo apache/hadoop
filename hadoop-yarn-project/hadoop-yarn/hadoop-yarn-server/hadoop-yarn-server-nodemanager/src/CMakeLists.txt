@@ -25,8 +25,6 @@ set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoo
 
 set(HADOOP_COMMON_SEC_PATH ${HADOOP_COMMON_PATH}/src/main/native/src/org/apache/hadoop/security)
 
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
 # determine if container-executor.conf.dir is an absolute
 # path in case the OS we're compiling on doesn't have
 # a hook in get_executable. We'll use this define
@@ -159,18 +157,6 @@ add_executable(container-executor
     main/native/container-executor/impl/main.c
 )
 
-# By embedding '$ORIGIN' into the RPATH of container-executor, dlopen will look in
-# the directory containing container-executor. However, $ORIGIN is not supported by
-# all operating systems.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|SunOS")
-    set(RPATH "\$ORIGIN/")
-    if(EXTRA_LIBHADOOP_RPATH)
-        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}/")
-    endif()
-    message("RPATH SET AS ${RPATH}.")
-    set_target_properties(container-executor PROPERTIES INSTALL_RPATH "${RPATH}")
-endif()
-
 target_link_libraries(container-executor
     container
     crypto
@@ -182,19 +168,6 @@ output_directory(container-executor target/usr/local/bin)
 add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
-
-# By embedding '$ORIGIN' into the RPATH of test-container-executor, dlopen will look in
-# the directory containing test-container-executor. However, $ORIGIN is not supported by
-# all operating systems.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|SunOS")
-    set(RPATH "\$ORIGIN/")
-    if(EXTRA_LIBHADOOP_RPATH)
-        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}/")
-    endif()
-    message("RPATH SET AS ${RPATH}.")
-    set_target_properties(test-container-executor PROPERTIES INSTALL_RPATH "${RPATH}")
-endif()
-
 target_link_libraries(test-container-executor
     container
     ${EXTRA_LIBS}

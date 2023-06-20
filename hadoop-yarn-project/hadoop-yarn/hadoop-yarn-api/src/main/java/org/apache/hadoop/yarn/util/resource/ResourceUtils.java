@@ -818,6 +818,28 @@ public class ResourceUtils {
     return res;
   }
 
+  public static Resource multiplyFloor(Resource resource, double multiplier) {
+    Resource newResource = Resource.newInstance(0, 0);
+
+    for (ResourceInformation resourceInformation : resource.getResources()) {
+      newResource.setResourceValue(resourceInformation.getName(),
+          (long) Math.floor(resourceInformation.getValue() * multiplier));
+    }
+
+    return newResource;
+  }
+
+  public static Resource multiplyRound(Resource resource, double multiplier) {
+    Resource newResource = Resource.newInstance(0, 0);
+
+    for (ResourceInformation resourceInformation : resource.getResources()) {
+      newResource.setResourceValue(resourceInformation.getName(),
+          Math.round(resourceInformation.getValue() * multiplier));
+    }
+
+    return newResource;
+  }
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static Resource createResourceFromString(

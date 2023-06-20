@@ -20,13 +20,21 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+
+import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
+import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test AzureBlobFileSystem initialization.
@@ -73,5 +81,29 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
           null));
       assertNotNull("working directory", fs.getWorkingDirectory());
     }
+  }
+
+  @Test
+  public void testFileSystemCapabilities() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    final Path p = new Path("}");
+    // etags always present
+    Assertions.assertThat(fs.hasPathCapability(p, ETAGS_AVAILABLE))
+        .describedAs("path capability %s in %s", ETAGS_AVAILABLE, fs)
+        .isTrue();
+    // readahead always correct
+    Assertions.assertThat(fs.hasPathCapability(p, CAPABILITY_SAFE_READAHEAD))
+        .describedAs("path capability %s in %s", CAPABILITY_SAFE_READAHEAD, fs)
+        .isTrue();
+
+    // etags-over-rename and ACLs are either both true or both false.
+    final boolean etagsAcrossRename = fs.hasPathCapability(p, ETAGS_PRESERVED_IN_RENAME);
+    final boolean acls = fs.hasPathCapability(p, FS_ACLS);
+    Assertions.assertThat(etagsAcrossRename)
+        .describedAs("capabilities %s=%s and %s=%s in %s",
+            ETAGS_PRESERVED_IN_RENAME, etagsAcrossRename,
+            FS_ACLS, acls, fs)
+        .isEqualTo(acls);
   }
 }

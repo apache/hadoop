@@ -242,7 +242,7 @@ class CapacitySchedulerPage extends RmView {
       TBODY<TABLE<Hamlet>> tbody =
           html.table("#userinfo").thead().$class("ui-widget-header").tr().th()
               .$class("ui-state-default").__("User Name").__().th()
-              .$class("ui-state-default").__("Max Resource").__().th()
+              .$class("ui-state-default").__("User Limit Resource").__().th()
               .$class("ui-state-default").__("Weight").__().th()
               .$class("ui-state-default").__("Used Resource").__().th()
               .$class("ui-state-default").__("Max AM Resource").__().th()

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -38,9 +39,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,13 +52,13 @@ public class TestLocalModeWithNewApis {
   
   Configuration conf;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 
@@ -93,8 +94,8 @@ public class TestLocalModeWithNewApis {
 
     String output = readOutput(outDir, conf);
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                 "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", output);
-    
+        "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", output);
+
     outFs.delete(tmpBaseDir, true);
   }
 

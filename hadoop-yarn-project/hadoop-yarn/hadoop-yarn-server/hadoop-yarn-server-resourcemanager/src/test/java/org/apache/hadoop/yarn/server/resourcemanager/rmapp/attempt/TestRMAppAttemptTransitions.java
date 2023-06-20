@@ -311,7 +311,7 @@ public class TestRMAppAttemptTransitions {
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
     when(submissionContext.getQueue()).thenReturn(queue);
-    Resource resource = BuilderUtils.newResource(1536, 1);
+    Resource resource = Resources.createResource(1536);
     ContainerLaunchContext amContainerSpec =
         BuilderUtils.newContainerLaunchContext(null, null,
             null, null, null, null);
@@ -629,7 +629,7 @@ public class TestRMAppAttemptTransitions {
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
-    Resource resource = BuilderUtils.newResource(2048, 1);
+    Resource resource = Resources.createResource(2048);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
     when(container.getResource()).thenReturn(resource);
@@ -1199,7 +1199,7 @@ public class TestRMAppAttemptTransitions {
             RMAppAttemptEventType.ATTEMPT_ADDED));
 
     Container amContainer = mock(Container.class);
-    Resource resource = BuilderUtils.newResource(2048, 1);
+    Resource resource = Resources.createResource(2048);
     when(amContainer.getId()).thenReturn(
         BuilderUtils.newContainerId(myApplicationAttempt.getAppAttemptId(), 1));
     when(amContainer.getResource()).thenReturn(resource);
@@ -1763,7 +1763,7 @@ public class TestRMAppAttemptTransitions {
 
     // Mock the allocation of AM container
     Container container = mock(Container.class);
-    Resource resource = BuilderUtils.newResource(2048, 1);
+    Resource resource = Resources.createResource(2048);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
     when(container.getResource()).thenReturn(resource);

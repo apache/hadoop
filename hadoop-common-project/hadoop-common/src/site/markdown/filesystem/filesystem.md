@@ -501,7 +501,7 @@ Where
       def blocks(FS, p, s, s +  l)  = a list of the blocks containing data(FS, path)[s:s+l]
 
 
-Note that that as `length(FS, f) ` is defined as `0` if `isDir(FS, f)`, the result
+Note that as `length(FS, f) ` is defined as `0` if `isDir(FS, f)`, the result
 of `getFileBlockLocations()` on a directory is `[]`
 
 
@@ -707,7 +707,7 @@ This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
 and potentially confuse file/directory logic. In particular, using `create()` to acquire
 an exclusive lock on a file (whoever creates the file without an error is considered
-the holder of the lock) may not not a safe algorithm to use when working with object stores.
+the holder of the lock) may not be a safe algorithm to use when working with object stores.
 
 * Object stores may create an empty file as a marker when a file is created.
 However, object stores with `overwrite=true` semantics may not implement this atomically,

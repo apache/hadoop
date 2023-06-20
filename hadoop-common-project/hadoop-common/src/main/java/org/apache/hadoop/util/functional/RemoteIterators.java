@@ -192,6 +192,37 @@ public final class RemoteIterators {
   }
 
   /**
+   * Wrap an iterator with one which adds a continuation probe.
+   * This allows work to exit fast without complicated breakout logic
+   * @param iterator source
+   * @param continueWork predicate which will trigger a fast halt if it returns false.
+   * @param <S> source type.
+   * @return a new iterator
+   */
+  public static <S> RemoteIterator<S> haltableRemoteIterator(
+      final RemoteIterator<S> iterator,
+      final CallableRaisingIOE<Boolean> continueWork) {
+    return new HaltableRemoteIterator<>(iterator, continueWork);
+  }
+
+  /**
+   * A remote iterator which simply counts up, stopping once the
+   * value is greater than the value of {@code excludedFinish}.
+   * This is primarily for tests or when submitting work into a TaskPool.
+   * equivalent to
+   * <pre>
+   *   for(long l = start, l &lt; excludedFinish; l++) yield l;
+   * </pre>
+   * @param start start value
+   * @param excludedFinish excluded finish
+   * @return an iterator which returns longs from [start, finish)
+   */
+  public static RemoteIterator<Long> rangeExcludingIterator(
+      final long start, final long excludedFinish) {
+    return new RangeExcludingLongIterator(start, excludedFinish);
+  }
+
+  /**
    * Build a list from a RemoteIterator.
    * @param source source iterator
    * @param <T> type
@@ -391,10 +422,12 @@ public final class RemoteIterators {
   /**
    * Wrapper of another remote iterator; IOStatistics
    * and Closeable methods are passed down if implemented.
+   * This class may be subclassed within the hadoop codebase
+   * if custom iterators are needed.
    * @param <S> source type
    * @param <T> type of returned value
    */
-  private static abstract class WrappingRemoteIterator<S, T>
+  public static abstract class WrappingRemoteIterator<S, T>
       implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
     /**
@@ -715,4 +748,93 @@ public final class RemoteIterators {
       }
     }
   }
+
+  /**
+   * An iterator which allows for a fast exit predicate.
+   * @param <S> source type
+   */
+  private static final class HaltableRemoteIterator<S>
+      extends WrappingRemoteIterator<S, S> {
+
+    /**
+     * Probe as to whether work should continue.
+     */
+    private final CallableRaisingIOE<Boolean> continueWork;
+
+    /**
+     * Wrap an iterator with one which adds a continuation probe.
+     * The probe will be called in the {@link #hasNext()} method, before
+     * the source iterator is itself checked and in {@link #next()}
+     * before retrieval.
+     * That is: it may be called multiple times per iteration.
+     * @param source source iterator.
+     * @param continueWork predicate which will trigger a fast halt if it returns false.
+     */
+    private HaltableRemoteIterator(
+        final RemoteIterator<S> source,
+        final CallableRaisingIOE<Boolean> continueWork) {
+      super(source);
+      this.continueWork = continueWork;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return sourceHasNext();
+    }
+
+    @Override
+    public S next() throws IOException {
+      return sourceNext();
+    }
+
+    @Override
+    protected boolean sourceHasNext() throws IOException {
+      return continueWork.apply() && super.sourceHasNext();
+    }
+  }
+
+  /**
+   * A remote iterator which simply counts up, stopping once the
+   * value is greater than the finish.
+   * This is primarily for tests or when submitting work into a TaskPool.
+   */
+  private static final class RangeExcludingLongIterator implements RemoteIterator<Long> {
+
+    /**
+     * Current value.
+     */
+    private long current;
+
+    /**
+     * End value.
+     */
+    private final long excludedFinish;
+
+    /**
+     * Construct.
+     * @param start start value.
+     * @param excludedFinish halt the iterator once the current value is equal
+     *          to or greater than this.
+     */
+    private RangeExcludingLongIterator(final long start, final long excludedFinish) {
+      this.current = start;
+      this.excludedFinish = excludedFinish;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return current < excludedFinish;
+    }
+
+    @Override
+    public Long next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      final long s = current;
+      current++;
+      return s;
+    }
+  }
+
 }

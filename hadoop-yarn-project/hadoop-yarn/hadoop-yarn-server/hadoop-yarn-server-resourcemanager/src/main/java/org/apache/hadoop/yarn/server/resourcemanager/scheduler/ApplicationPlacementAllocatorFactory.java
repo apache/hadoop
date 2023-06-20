@@ -39,6 +39,9 @@ public class ApplicationPlacementAllocatorFactory {
    *
    * @param appPlacementAllocatorName
    *          allocator class name.
+   * @param appSchedulingInfo app SchedulingInfo.
+   * @param schedulerRequestKey scheduler RequestKey.
+   * @param rmContext RMContext.
    * @return Specific AppPlacementAllocator instance based on type
    */
   public static AppPlacementAllocator<SchedulerNode> getAppPlacementAllocator(

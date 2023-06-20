@@ -611,4 +611,16 @@ public class RouterClientRMService extends AbstractService
   public RouterDelegationTokenSecretManager getRouterDTSecretManager() {
     return routerDTSecretManager;
   }
+
+  @VisibleForTesting
+  public void setRouterDTSecretManager(RouterDelegationTokenSecretManager routerDTSecretManager) {
+    this.routerDTSecretManager = routerDTSecretManager;
+  }
+
+  @VisibleForTesting
+  public void initUserPipelineMap(Configuration conf) {
+    int maxCacheSize = conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
+  }
 }

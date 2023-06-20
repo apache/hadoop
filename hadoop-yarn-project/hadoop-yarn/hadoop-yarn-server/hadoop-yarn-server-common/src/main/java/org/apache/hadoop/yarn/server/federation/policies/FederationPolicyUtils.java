@@ -237,7 +237,7 @@ public final class FederationPolicyUtils {
         }
       }
     }
-    // This can only happen if samplePoint is very close to totoalWeight and
+    // This can only happen if samplePoint is very close to totalWeight and
     // float rounding kicks in during subtractions
     return lastIndex;
   }

@@ -126,6 +126,7 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -808,6 +809,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     resources.put(userjar, lpaths);
     Path nmp = new Path(testDir);
 
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
     Assert.assertTrue(userSetEnv.containsKey("MALLOC_ARENA_MAX"));
@@ -864,6 +866,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     ContainerLaunch launch = new ContainerLaunch(distContext, conf,
         dispatcher, exec, null, container, dirsHandler, containerManager);
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
 
@@ -876,6 +879,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setEnvironment(userSetEnv);
     when(container.getLaunchContext()).thenReturn(containerLaunchContext);
 
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
 
@@ -1478,7 +1482,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
   protected Token createContainerToken(ContainerId cId, Priority priority,
       long createTime) throws InvalidToken {
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = Resources.createResource(1024);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, context.getNodeId().toString(), user,
           r, System.currentTimeMillis() + 10000L, 123, DUMMY_RM_IDENTIFIER,

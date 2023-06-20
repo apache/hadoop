@@ -21,10 +21,10 @@
 USE [FederationStateStore]
 GO
 
-CREATE LOGIN 'FederationUser' with password = 'FederationPassword', default_database=[FederationStateStore] ;
+CREATE LOGIN FederationUser with password = 'Federation@Password', default_database=[FederationStateStore];
 GO
 
-CREATE USER 'FederationUser' FOR LOGIN 'FederationUser' WITH default_schema=dbo;
+CREATE USER FederationUser FOR LOGIN FederationUser WITH default_schema=dbo;
 GO
 
 EXEC sp_addrolemember 'db_owner', 'FederationUser';

@@ -61,21 +61,39 @@ public interface RouterRpcMonitor {
 
   /**
    * Mark a proxy operation as completed.
-   * @param success If the operation was successful.
-   * @param state proxy namenode state.
+   *
+   * @param success if the operation was successful.
+   * @param nsId nameservice id.
+   * @param state namenode state in the federation.
    */
   void proxyOpComplete(boolean success, String nsId, FederationNamenodeServiceState state);
 
   /**
-   * Failed to proxy an operation to a Namenode because it was in standby.
+   * Failed to proxy an operation to a namenode because it was in standby.
+   * @param nsId nameservice id.
    */
   void proxyOpFailureStandby(String nsId);
 
   /**
-   * Failed to proxy an operation to a Namenode because of an unexpected
-   * exception.
+   * Failed to proxy an operation to a namenode because of an unexpected exception.
+   *
+   * @param nsId nameservice id.
    */
   void proxyOpFailureCommunicate(String nsId);
+
+  /**
+   * Rejected to proxy an operation to a namenode.
+   *
+   * @param nsId nameservice id.
+   */
+  void proxyOpPermitRejected(String nsId);
+
+  /**
+   * Accepted to proxy an operation to a namenode.
+   *
+   * @param nsId nameservice id.
+   */
+  void proxyOpPermitAccepted(String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because the client was
@@ -96,6 +114,8 @@ public interface RouterRpcMonitor {
 
   /**
    * Failed to proxy an operation because of no namenodes available.
+   *
+   * @param nsId nameservice id.
    */
   void proxyOpNoNamenodes(String nsId);
 

@@ -25,19 +25,23 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.junit.Assert;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NodeLabelTestBase {
   public static void assertMapEquals(Map<NodeId, Set<String>> expected,
       ImmutableMap<NodeId, Set<String>> actual) {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
     for (NodeId k : expected.keySet()) {
-      Assert.assertTrue(actual.containsKey(k));
+      assertTrue(actual.containsKey(k));
       assertCollectionEquals(expected.get(k), actual.get(k));
     }
   }
@@ -45,9 +49,9 @@ public class NodeLabelTestBase {
   public static void assertLabelInfoMapEquals(
       Map<NodeId, Set<NodeLabel>> expected,
       ImmutableMap<NodeId, Set<NodeLabel>> actual) {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
     for (NodeId k : expected.keySet()) {
-      Assert.assertTrue(actual.containsKey(k));
+      assertTrue(actual.containsKey(k));
       assertNLCollectionEquals(expected.get(k), actual.get(k));
     }
   }
@@ -55,13 +59,13 @@ public class NodeLabelTestBase {
   public static void assertLabelsToNodesEquals(
       Map<String, Set<NodeId>> expected,
       ImmutableMap<String, Set<NodeId>> actual) {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
     for (String k : expected.keySet()) {
-      Assert.assertTrue(actual.containsKey(k));
+      assertTrue(actual.containsKey(k));
       Set<NodeId> expectedS1 = new HashSet<>(expected.get(k));
       Set<NodeId> actualS2 = new HashSet<>(actual.get(k));
-      Assert.assertEquals(expectedS1, actualS2);
-      Assert.assertTrue(expectedS1.containsAll(actualS2));
+      assertEquals(expectedS1, actualS2);
+      assertTrue(expectedS1.containsAll(actualS2));
     }
   }
 
@@ -86,7 +90,7 @@ public class NodeLabelTestBase {
   public static void assertMapContains(Map<NodeId, Set<String>> expected,
       ImmutableMap<NodeId, Set<String>> actual) {
     for (NodeId k : actual.keySet()) {
-      Assert.assertTrue(expected.containsKey(k));
+      assertTrue(expected.containsKey(k));
       assertCollectionEquals(expected.get(k), actual.get(k));
     }
   }
@@ -94,28 +98,28 @@ public class NodeLabelTestBase {
   public static void assertCollectionEquals(Collection<String> expected,
       Collection<String> actual) {
     if (expected == null) {
-      Assert.assertNull(actual);
+      assertNull(actual);
     } else {
-      Assert.assertNotNull(actual);
+      assertNotNull(actual);
     }
     Set<String> expectedSet = new HashSet<>(expected);
     Set<String> actualSet = new HashSet<>(actual);
-    Assert.assertEquals(expectedSet, actualSet);
-    Assert.assertTrue(expectedSet.containsAll(actualSet));
+    assertEquals(expectedSet, actualSet);
+    assertTrue(expectedSet.containsAll(actualSet));
   }
 
   public static void assertNLCollectionEquals(Collection<NodeLabel> expected,
       Collection<NodeLabel> actual) {
     if (expected == null) {
-      Assert.assertNull(actual);
+      assertNull(actual);
     } else {
-      Assert.assertNotNull(actual);
+      assertNotNull(actual);
     }
 
     Set<NodeLabel> expectedSet = new HashSet<>(expected);
     Set<NodeLabel> actualSet = new HashSet<>(actual);
-    Assert.assertEquals(expectedSet, actualSet);
-    Assert.assertTrue(expectedSet.containsAll(actualSet));
+    assertEquals(expectedSet, actualSet);
+    assertTrue(expectedSet.containsAll(actualSet));
   }
 
   @SuppressWarnings("unchecked")
@@ -150,13 +154,13 @@ public class NodeLabelTestBase {
   public static void assertLabelsInfoToNodesEquals(
       Map<NodeLabel, Set<NodeId>> expected,
       ImmutableMap<NodeLabel, Set<NodeId>> actual) {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
     for (NodeLabel k : expected.keySet()) {
-      Assert.assertTrue(actual.containsKey(k));
+      assertTrue(actual.containsKey(k));
       Set<NodeId> expectedS1 = new HashSet<>(expected.get(k));
       Set<NodeId> actualS2 = new HashSet<>(actual.get(k));
-      Assert.assertEquals(expectedS1, actualS2);
-      Assert.assertTrue(expectedS1.containsAll(actualS2));
+      assertEquals(expectedS1, actualS2);
+      assertTrue(expectedS1.containsAll(actualS2));
     }
   }
 }

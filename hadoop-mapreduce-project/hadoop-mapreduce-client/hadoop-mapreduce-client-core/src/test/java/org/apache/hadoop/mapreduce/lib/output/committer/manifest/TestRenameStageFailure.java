@@ -29,7 +29,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
@@ -48,7 +50,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.saveManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getEtag;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobOrTaskStage.FAILED_TO_RENAME_PREFIX;
@@ -82,6 +86,11 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   /** resilient commit expected? */
   private boolean resilientCommit;
 
+  /**
+   * Entry file IO.
+   */
+  private EntryFileIO entryFileIO;
+
   protected boolean isResilientCommit() {
     return resilientCommit;
   }
@@ -109,6 +118,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         = new UnreliableManifestStoreOperations(wrappedOperations);
     setStoreOperations(failures);
     resilientCommit = wrappedOperations.storeSupportsResilientCommit();
+    entryFileIO = new EntryFileIO(getConfiguration());
   }
 
   /**
@@ -232,9 +242,15 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
       LOG.info("Exception raised: {}", ex.toString());
     }
 
+    final LoadedManifestData manifestData = saveManifest(entryFileIO, manifest);
+
     // delete target paths and it works
-    new RenameFilesStage(stageConfig.withDeleteTargetPaths(true))
-        .apply(Pair.of(manifests, Collections.emptySet()));
+    try {
+      new RenameFilesStage(stageConfig.withDeleteTargetPaths(true))
+          .apply(Triple.of(manifestData, Collections.emptySet(), SUCCESS_MARKER_FILE_LIMIT));
+    } finally {
+      manifestData.getEntrySequenceFile().delete();
+    }
 
     // and the new data made it over
     verifyFileContents(fs, dest, sourceData);
@@ -348,9 +364,15 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     IOStatisticsStore iostatistics = stage.getIOStatistics();
     long failures0 = iostatistics.counters().get(RENAME_FAILURES);
 
+    final LoadedManifestData manifestData = saveManifest(entryFileIO, manifest);
     // rename MUST raise an exception.
-    E ex = intercept(exceptionClass, errorText, () ->
-        stage.apply(Pair.of(manifests, Collections.emptySet())));
+    E ex;
+    try {
+      ex = intercept(exceptionClass, errorText, () ->
+          stage.apply(Triple.of(manifestData, Collections.emptySet(), SUCCESS_MARKER_FILE_LIMIT)));
+    } finally {
+      manifestData.getEntrySequenceFile().delete();
+    }
 
     LOG.info("Statistics {}", ioStatisticsToPrettyString(iostatistics));
     // the IOStatistics record the rename as a failure.

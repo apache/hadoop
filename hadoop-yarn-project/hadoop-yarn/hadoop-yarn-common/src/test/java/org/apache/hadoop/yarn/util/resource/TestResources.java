@@ -18,28 +18,30 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import java.io.File;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.File;
-
-import static org.apache.hadoop.yarn.util.resource.Resources.componentwiseMin;
-import static org.apache.hadoop.yarn.util.resource.Resources.componentwiseMax;
 import static org.apache.hadoop.yarn.util.resource.Resources.add;
-import static org.apache.hadoop.yarn.util.resource.Resources.multiplyAndRoundUp;
-import static org.apache.hadoop.yarn.util.resource.Resources.subtract;
+import static org.apache.hadoop.yarn.util.resource.Resources.componentwiseMax;
+import static org.apache.hadoop.yarn.util.resource.Resources.componentwiseMin;
+import static org.apache.hadoop.yarn.util.resource.Resources.fitsIn;
 import static org.apache.hadoop.yarn.util.resource.Resources.multiply;
 import static org.apache.hadoop.yarn.util.resource.Resources.multiplyAndAddTo;
 import static org.apache.hadoop.yarn.util.resource.Resources.multiplyAndRoundDown;
-import static org.apache.hadoop.yarn.util.resource.Resources.fitsIn;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.yarn.util.resource.Resources.multiplyAndRoundUp;
+import static org.apache.hadoop.yarn.util.resource.Resources.subtract;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestResources {
   private static final String INVALID_RESOURCE_MSG = "Invalid resource value";
@@ -75,12 +77,12 @@ public class TestResources {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     setupExtraResourceType();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     deleteResourceTypesFile();
   }
@@ -96,8 +98,9 @@ public class TestResources {
     return ret;
   }
 
-  @Test(timeout = 10000)
-  public void testCompareToWithUnboundedResource() {
+  @Test
+  @Timeout(10000)
+  void testCompareToWithUnboundedResource() {
     unsetExtraResourceType();
     Resource unboundedClone = Resources.clone(ExtendedResources.unbounded());
     assertTrue(unboundedClone
@@ -107,8 +110,9 @@ public class TestResources {
         unboundedClone.compareTo(createResource(0, Integer.MAX_VALUE)) > 0);
   }
 
-  @Test(timeout = 10000)
-  public void testCompareToWithNoneResource() {
+  @Test
+  @Timeout(10000)
+  void testCompareToWithNoneResource() {
     assertTrue(Resources.none().compareTo(createResource(0, 0)) == 0);
     assertTrue(Resources.none().compareTo(createResource(1, 0)) < 0);
     assertTrue(Resources.none().compareTo(createResource(0, 1)) < 0);
@@ -118,8 +122,9 @@ public class TestResources {
     assertTrue(Resources.none().compareTo(createResource(0, 0, 1)) < 0);
   }
 
-  @Test(timeout = 1000)
-  public void testFitsIn() {
+  @Test
+  @Timeout(1000)
+  void testFitsIn() {
     assertTrue(fitsIn(createResource(1, 1), createResource(2, 2)));
     assertTrue(fitsIn(createResource(2, 2), createResource(2, 2)));
     assertFalse(fitsIn(createResource(2, 2), createResource(1, 1)));
@@ -130,8 +135,9 @@ public class TestResources {
     assertTrue(fitsIn(createResource(1, 1, 1), createResource(2, 2, 2)));
   }
 
-  @Test(timeout = 1000)
-  public void testComponentwiseMin() {
+  @Test
+  @Timeout(1000)
+  void testComponentwiseMin() {
     assertEquals(createResource(1, 1),
         componentwiseMin(createResource(1, 1), createResource(2, 2)));
     assertEquals(createResource(1, 1),
@@ -147,7 +153,7 @@ public class TestResources {
   }
 
   @Test
-  public void testComponentwiseMax() {
+  void testComponentwiseMax() {
     assertEquals(createResource(2, 2),
         componentwiseMax(createResource(1, 1), createResource(2, 2)));
     assertEquals(createResource(2, 2),
@@ -165,7 +171,7 @@ public class TestResources {
   }
 
   @Test
-  public void testAdd() {
+  void testAdd() {
     assertEquals(createResource(2, 3),
         add(createResource(1, 1), createResource(1, 2)));
     assertEquals(createResource(3, 2),
@@ -177,7 +183,7 @@ public class TestResources {
   }
 
   @Test
-  public void testSubtract() {
+  void testSubtract() {
     assertEquals(createResource(1, 0),
         subtract(createResource(2, 1), createResource(1, 1)));
     assertEquals(createResource(0, 1),
@@ -189,7 +195,7 @@ public class TestResources {
   }
 
   @Test
-  public void testClone() {
+  void testClone() {
     assertEquals(createResource(1, 1), Resources.clone(createResource(1, 1)));
     assertEquals(createResource(1, 1, 0),
         Resources.clone(createResource(1, 1)));
@@ -200,7 +206,7 @@ public class TestResources {
   }
 
   @Test
-  public void testMultiply() {
+  void testMultiply() {
     assertEquals(createResource(4, 2), multiply(createResource(2, 1), 2));
     assertEquals(createResource(4, 2, 0), multiply(createResource(2, 1), 2));
     assertEquals(createResource(2, 4), multiply(createResource(1, 2), 2));
@@ -209,61 +215,74 @@ public class TestResources {
     assertEquals(createResource(4, 4, 6), multiply(createResource(2, 2, 3), 2));
   }
 
-  @Test(timeout=10000)
-  public void testMultiplyRoundUp() {
+  @Test
+  @Timeout(10000)
+  void testMultiplyRoundUp() {
     final double by = 0.5;
     final String memoryErrorMsg = "Invalid memory size.";
     final String vcoreErrorMsg = "Invalid virtual core number.";
     Resource resource = Resources.createResource(1, 1);
     Resource result = Resources.multiplyAndRoundUp(resource, by);
-    assertEquals(memoryErrorMsg, result.getMemorySize(), 1);
-    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 1);
+    assertEquals(result.getMemorySize(), 1, memoryErrorMsg);
+    assertEquals(result.getVirtualCores(), 1, vcoreErrorMsg);
 
     resource = Resources.createResource(2, 2);
     result = Resources.multiplyAndRoundUp(resource, by);
-    assertEquals(memoryErrorMsg, result.getMemorySize(), 1);
-    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 1);
+    assertEquals(result.getMemorySize(), 1, memoryErrorMsg);
+    assertEquals(result.getVirtualCores(), 1, vcoreErrorMsg);
 
     resource = Resources.createResource(0, 0);
     result = Resources.multiplyAndRoundUp(resource, by);
-    assertEquals(memoryErrorMsg, result.getMemorySize(), 0);
-    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 0);
+    assertEquals(result.getMemorySize(), 0, memoryErrorMsg);
+    assertEquals(result.getVirtualCores(), 0, vcoreErrorMsg);
   }
 
   @Test
-  public void testMultiplyAndRoundUpCustomResources() {
-    assertEquals(INVALID_RESOURCE_MSG, createResource(5, 2, 8),
-        multiplyAndRoundUp(createResource(3, 1, 5), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(5, 2, 0),
-        multiplyAndRoundUp(createResource(3, 1, 0), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(5, 5, 0),
-        multiplyAndRoundUp(createResource(3, 3, 0), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(8, 3, 13),
-        multiplyAndRoundUp(createResource(3, 1, 5), 2.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(8, 3, 0),
-        multiplyAndRoundUp(createResource(3, 1, 0), 2.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(8, 8, 0),
-        multiplyAndRoundUp(createResource(3, 3, 0), 2.5));
+  void testMultiplyAndRoundUpCustomResources() {
+    assertEquals(createResource(5, 2, 8),
+        multiplyAndRoundUp(createResource(3, 1, 5), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(5, 2, 0),
+        multiplyAndRoundUp(createResource(3, 1, 0), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(5, 5, 0),
+        multiplyAndRoundUp(createResource(3, 3, 0), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(8, 3, 13),
+        multiplyAndRoundUp(createResource(3, 1, 5), 2.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(8, 3, 0),
+        multiplyAndRoundUp(createResource(3, 1, 0), 2.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(8, 8, 0),
+        multiplyAndRoundUp(createResource(3, 3, 0), 2.5),
+        INVALID_RESOURCE_MSG);
   }
 
   @Test
-  public void testMultiplyAndRoundDown() {
-    assertEquals(INVALID_RESOURCE_MSG, createResource(4, 1),
-        multiplyAndRoundDown(createResource(3, 1), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(4, 1, 0),
-        multiplyAndRoundDown(createResource(3, 1), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(1, 4),
-        multiplyAndRoundDown(createResource(1, 3), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(1, 4, 0),
-        multiplyAndRoundDown(createResource(1, 3), 1.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(7, 7, 0),
-        multiplyAndRoundDown(createResource(3, 3, 0), 2.5));
-    assertEquals(INVALID_RESOURCE_MSG, createResource(2, 2, 7),
-        multiplyAndRoundDown(createResource(1, 1, 3), 2.5));
+  void testMultiplyAndRoundDown() {
+    assertEquals(createResource(4, 1),
+        multiplyAndRoundDown(createResource(3, 1), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(4, 1, 0),
+        multiplyAndRoundDown(createResource(3, 1), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(1, 4),
+        multiplyAndRoundDown(createResource(1, 3), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(1, 4, 0),
+        multiplyAndRoundDown(createResource(1, 3), 1.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(7, 7, 0),
+        multiplyAndRoundDown(createResource(3, 3, 0), 2.5),
+        INVALID_RESOURCE_MSG);
+    assertEquals(createResource(2, 2, 7),
+        multiplyAndRoundDown(createResource(1, 1, 3), 2.5),
+        INVALID_RESOURCE_MSG);
   }
 
   @Test
-  public void testMultiplyAndAddTo() throws Exception {
+  void testMultiplyAndAddTo() throws Exception {
     unsetExtraResourceType();
     setupExtraResourceType();
     assertEquals(createResource(6, 4),
@@ -283,7 +302,7 @@ public class TestResources {
   }
 
   @Test
-  public void testCreateResourceWithSameLongValue() throws Exception {
+  void testCreateResourceWithSameLongValue() throws Exception {
     unsetExtraResourceType();
     setupExtraResourceType();
 
@@ -294,7 +313,7 @@ public class TestResources {
   }
 
   @Test
-  public void testCreateResourceWithSameIntValue() throws Exception {
+  void testCreateResourceWithSameIntValue() throws Exception {
     unsetExtraResourceType();
     setupExtraResourceType();
 
@@ -305,14 +324,14 @@ public class TestResources {
   }
 
   @Test
-  public void testCreateSimpleResourceWithSameLongValue() {
+  void testCreateSimpleResourceWithSameLongValue() {
     Resource res = ResourceUtils.createResourceWithSameValue(11L);
     assertEquals(11L, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());
   }
 
   @Test
-  public void testCreateSimpleResourceWithSameIntValue() {
+  void testCreateSimpleResourceWithSameIntValue() {
     Resource res = ResourceUtils.createResourceWithSameValue(11);
     assertEquals(11, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());

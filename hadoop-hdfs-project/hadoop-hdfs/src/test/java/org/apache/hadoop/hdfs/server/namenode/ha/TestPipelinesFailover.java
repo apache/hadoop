@@ -210,7 +210,7 @@ public class TestPipelinesFailover {
     doTestWriteOverFailoverWithDnFail(TestScenario.GRACEFUL_FAILOVER);
   }
   
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testWriteOverCrashFailoverWithDnFail() throws Exception {
     doTestWriteOverFailoverWithDnFail(TestScenario.ORIGINAL_ACTIVE_CRASHED);
   }

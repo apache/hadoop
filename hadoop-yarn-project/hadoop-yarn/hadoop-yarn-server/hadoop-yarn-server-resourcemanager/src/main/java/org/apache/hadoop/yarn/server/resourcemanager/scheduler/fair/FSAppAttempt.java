@@ -131,6 +131,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Get metrics reference from containing queue.
+   * @return metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
     return queue.getMetrics();

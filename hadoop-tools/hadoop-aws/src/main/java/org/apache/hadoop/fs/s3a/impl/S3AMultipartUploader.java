@@ -57,7 +57,10 @@ import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Preconditions;
 
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_COMPLETED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_INITIATED;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfCallable;
 
 /**
  * MultipartUploader for S3AFileSystem. This uses the S3 multipart
@@ -122,13 +125,13 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     checkPath(dest);
     String key = context.pathToKey(dest);
     return context.submit(new CompletableFuture<>(),
-        () -> {
+        trackDurationOfCallable(statistics, OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(), () -> {
           String uploadId = writeOperations.initiateMultiPartUpload(key,
               PutObjectOptions.keepingDirs());
           statistics.uploadStarted();
           return BBUploadHandle.from(ByteBuffer.wrap(
               uploadId.getBytes(Charsets.UTF_8)));
-        });
+        }));
   }
 
   @Override
@@ -152,7 +155,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
           UploadPartRequest request = writeOperations.newUploadPartRequest(key,
               uploadIdString, partNumber, (int) lengthInBytes, inputStream,
               null, 0L);
-          UploadPartResult result = writeOperations.uploadPart(request);
+          UploadPartResult result = writeOperations.uploadPart(request, statistics);
           statistics.partPut(lengthInBytes);
           String eTag = result.getETag();
           return BBPartHandle.from(
@@ -206,7 +209,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     // retrieve/create operation state for scalability of completion.
     long finalLen = totalLength;
     return context.submit(new CompletableFuture<>(),
-        () -> {
+        trackDurationOfCallable(statistics, MULTIPART_UPLOAD_COMPLETED.getSymbol(), () -> {
           CompleteMultipartUploadResult result =
               writeOperations.commitUpload(
                   key,
@@ -218,7 +221,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
           byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
           statistics.uploadCompleted();
           return (PathHandle) () -> ByteBuffer.wrap(eTag);
-        });
+        }));
   }
 
   @Override

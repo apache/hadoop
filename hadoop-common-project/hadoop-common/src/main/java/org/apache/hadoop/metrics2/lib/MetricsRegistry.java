@@ -228,6 +228,29 @@ public class MetricsRegistry {
   }
 
   /**
+   * Create a mutable inverse metric that estimates inverse quantiles of a stream of values
+   * @param name of the metric
+   * @param desc metric description
+   * @param sampleName of the metric (e.g., "Ops")
+   * @param valueName of the metric (e.g., "Rate")
+   * @param interval rollover interval of estimator in seconds
+   * @return a new inverse quantile estimator object
+   * @throws MetricsException if interval is not a positive integer
+   */
+  public synchronized MutableQuantiles newInverseQuantiles(String name, String desc,
+      String sampleName, String valueName, int interval) {
+    checkMetricName(name);
+    if (interval <= 0) {
+      throw new MetricsException("Interval should be positive.  Value passed" +
+          " is: " + interval);
+    }
+    MutableQuantiles ret =
+        new MutableInverseQuantiles(name, desc, sampleName, valueName, interval);
+    metricsMap.put(name, ret);
+    return ret;
+  }
+
+  /**
    * Create a mutable metric with stats
    * @param name  of the metric
    * @param desc  metric description
@@ -278,7 +301,7 @@ public class MetricsRegistry {
   }
 
   /**
-   * Create a mutable rate metric (for throughput measurement)
+   * Create a mutable rate metric (for throughput measurement).
    * @param name  of the metric
    * @param desc  description
    * @param extended  produce extended stat (stdev/min/max etc.) if true

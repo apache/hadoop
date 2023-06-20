@@ -19,9 +19,9 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -203,7 +203,7 @@ public class TestRouterRpcSingleNS {
   @Test
   public void testSaveNamespace() throws IOException {
     cluster.getCluster().getFileSystem()
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        .setSafeMode(SafeModeAction.ENTER);
     Boolean saveNamespace = routerProtocol.saveNamespace(0, 0);
 
     assertTrue(saveNamespace);

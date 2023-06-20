@@ -25,13 +25,17 @@ import java.util.List;
 import com.amazonaws.DefaultRequest;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
@@ -65,6 +69,22 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
           throw translateException("test", "/",
               new AuditFailureException("should be translated"));
         });
+  }
+
+  /**
+   * UnsupportedRequest mapping and fail fast outcome.
+   */
+  @Test
+  public void testUnsupportedExceptionTranslation() throws Throwable {
+    final UnsupportedRequestException ex = intercept(UnsupportedRequestException.class, () -> {
+      throw translateException("test", "/",
+          new AuditOperationRejectedException("not supported"));
+    });
+    final S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration(false));
+    final RetryPolicy.RetryAction action = retryPolicy.shouldRetry(ex, 0, 0, true);
+    Assertions.assertThat(action.action)
+        .describedAs("retry policy %s for %s", action, ex)
+        .isEqualTo(RetryPolicy.RetryAction.RetryDecision.FAIL);
   }
 
   /**

@@ -865,7 +865,7 @@ none of the apps match the predicates, an empty list will be returned.
 1. `conffilters` - If specified, matched applications must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
 1. `metricfilters` - If specified, matched applications must have exact matches to the given metric and satisfy the specified relation with the
-  metric value. Metric id must be a string and and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
+  metric value. Metric id must be a string and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
   "(&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;) &lt;op&gt; (&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;)".<br/>
   Here op can be either of AND or OR. And compareop can be either of "eq", "ne", "ene", "gt", "ge", "lt" and "le".<br/>
   "eq" means equals, "ne" means not equals and existence of metric is not required for a match, "ene" means not equals but existence of metric is
@@ -998,7 +998,7 @@ match the predicates, an empty list will be returned.
 1. `conffilters` - If specified, matched applications must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
 1. `metricfilters` - If specified, matched applications must have exact matches to the given metric and satisfy the specified relation with the
-  metric value. Metric id must be a string and and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
+  metric value. Metric id must be a string and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
   "(&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;) &lt;op&gt; (&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;)".<br/>
   Here op can be either of AND or OR. And compareop can be either of "eq", "ne", "ene", "gt", "ge", "lt" and "le".<br/>
   "eq" means equals, "ne" means not equals and existence of metric is not required for a match, "ene" means not equals but existence of metric is
@@ -1205,7 +1205,7 @@ If none of the entities match the predicates, an empty list will be returned.
 1. `conffilters` - If specified, matched entities must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
 1. `metricfilters` - If specified, matched entities must have exact matches to the given metric and satisfy the specified relation with the
-  metric value. Metric id must be a string and and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
+  metric value. Metric id must be a string and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
   "(&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;) &lt;op&gt; (&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;)"<br/>
   Here op can be either of AND or OR. And compareop can be either of "eq", "ne", "ene", "gt", "ge", "lt" and "le".<br/>
   "eq" means equals, "ne" means not equals and existence of metric is not required for a match, "ene" means not equals but existence of metric is
@@ -1341,7 +1341,7 @@ If none of the entities match the predicates, an empty list will be returned.
 1. `conffilters` - If specified, matched entities must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
 1. `metricfilters` - If specified, matched entities must have exact matches to the given metric and satisfy the specified relation with the
-  metric value. Metric id must be a string and and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
+  metric value. Metric id must be a string and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
   "(&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;) &lt;op&gt; (&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;)"<br/>
   Here op can be either of AND or OR. And compareop can be either of "eq", "ne", "ene", "gt", "ge", "lt" and "le".<br/>
   "eq" means equals, "ne" means not equals and existence of metric is not required for a match, "ene" means not equals but existence of metric is

@@ -34,6 +34,8 @@ public class BulkActivitiesInfo {
 
   private ArrayList<ActivitiesInfo> activities = new ArrayList<>();
 
+  private String subClusterId;
+
   public BulkActivitiesInfo() {
     // JAXB needs this
   }
@@ -48,5 +50,13 @@ public class BulkActivitiesInfo {
 
   public void addAll(List<ActivitiesInfo> activitiesInfoList) {
     activities.addAll(activitiesInfoList);
+  }
+
+  public String getSubClusterId() {
+    return subClusterId;
+  }
+
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
   }
 }

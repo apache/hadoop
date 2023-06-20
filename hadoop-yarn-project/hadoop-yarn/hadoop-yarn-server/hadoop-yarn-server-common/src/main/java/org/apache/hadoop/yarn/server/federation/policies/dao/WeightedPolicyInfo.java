@@ -44,7 +44,7 @@ import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
- * This is a DAO class for the configuration of parameteres for federation
+ * This is a DAO class for the configuration of parameters for federation
  * policies. This generalizes several possible configurations as two lists of
  * {@link SubClusterIdInfo} and corresponding weights as a {@link Float}. The
  * interpretation of the weight is left to the logic in the policy.
@@ -85,7 +85,7 @@ public class WeightedPolicyInfo {
    *
    * @return the {@link WeightedPolicyInfo} represented.
    *
-   * @throws FederationPolicyInitializationException if a deserializaiton error
+   * @throws FederationPolicyInitializationException if a deserialization error
    *           occurs.
    */
   public static WeightedPolicyInfo fromByteBuffer(ByteBuffer bb)

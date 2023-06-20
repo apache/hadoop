@@ -17,8 +17,6 @@
 */
 package org.apache.hadoop.examples;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -31,9 +29,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestWordStats {
 
@@ -241,13 +241,14 @@ public class TestWordStats {
     return dir.delete();
   }
 
-  @Before public void setup() throws Exception {
+  @BeforeEach public void setup() throws Exception {
     deleteDir(new File(MEAN_OUTPUT));
     deleteDir(new File(MEDIAN_OUTPUT));
     deleteDir(new File(STDDEV_OUTPUT));
   }
 
-  @Test public void testGetTheMean() throws Exception {
+  @Test
+  void testGetTheMean() throws Exception {
     String args[] = new String[2];
     args[0] = INPUT;
     args[1] = MEAN_OUTPUT;
@@ -261,7 +262,8 @@ public class TestWordStats {
     assertEquals(mean, wr.read(INPUT), 0.0);
   }
 
-  @Test public void testGetTheMedian() throws Exception {
+  @Test
+  void testGetTheMedian() throws Exception {
     String args[] = new String[2];
     args[0] = INPUT;
     args[1] = MEDIAN_OUTPUT;
@@ -275,7 +277,8 @@ public class TestWordStats {
     assertEquals(median, wr.read(INPUT), 0.0);
   }
 
-  @Test public void testGetTheStandardDeviation() throws Exception {
+  @Test
+  void testGetTheStandardDeviation() throws Exception {
     String args[] = new String[2];
     args[0] = INPUT;
     args[1] = STDDEV_OUTPUT;
@@ -289,7 +292,7 @@ public class TestWordStats {
     assertEquals(stddev, wr.read(INPUT), 0.0);
   }
 
-  @AfterClass public static void cleanup() throws Exception {
+  @AfterAll public static void cleanup() throws Exception {
     deleteDir(new File(MEAN_OUTPUT));
     deleteDir(new File(MEDIAN_OUTPUT));
     deleteDir(new File(STDDEV_OUTPUT));

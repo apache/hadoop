@@ -28,8 +28,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
+
+import com.google.inject.Inject;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -49,19 +51,17 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileCo
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.TFileAggregatedLogsBlock;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsBlockForTest;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
-import org.junit.Test;
 
-import static org.mockito.Mockito.*;
-
-import com.google.inject.Inject;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test AggregatedLogsBlock. AggregatedLogsBlock should check user, aggregate a
@@ -73,7 +73,7 @@ public class TestAggregatedLogsBlock {
    * Bad user. User 'owner' is trying to read logs without access
    */
   @Test
-  public void testAccessDenied() throws Exception {
+  void testAccessDenied() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
@@ -89,7 +89,7 @@ public class TestAggregatedLogsBlock {
     HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
     TFileAggregatedLogsBlockForTest aggregatedBlock
         = getTFileAggregatedLogsBlockForTest(configuration, "owner",
-            "container_0_0001_01_000001", "localhost:1234");
+        "container_0_0001_01_000001", "localhost:1234");
     aggregatedBlock.render(block);
 
     block.getWriter().flush();
@@ -100,7 +100,7 @@ public class TestAggregatedLogsBlock {
   }
 
   @Test
-  public void testBlockContainsPortNumForUnavailableAppLog() {
+  void testBlockContainsPortNumForUnavailableAppLog() {
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
 
@@ -125,7 +125,7 @@ public class TestAggregatedLogsBlock {
    * @throws Exception
    */
   @Test
-  public void testBadLogs() throws Exception {
+  void testBadLogs() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
@@ -146,8 +146,8 @@ public class TestAggregatedLogsBlock {
     String out = data.toString();
     assertTrue(out
         .contains("Logs not available for entity. Aggregation may not be "
-        + "complete, Check back later or try to find the container logs "
-        + "in the local directory of nodemanager localhost:1234"));
+            + "complete, Check back later or try to find the container logs "
+            + "in the local directory of nodemanager localhost:1234"));
     assertTrue(out
         .contains("Or see application log at http://localhost:8042"));
 
@@ -160,7 +160,7 @@ public class TestAggregatedLogsBlock {
    * @throws Exception
    */
   @Test
-  public void testAggregatedLogsBlock() throws Exception {
+  void testAggregatedLogsBlock() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
@@ -175,7 +175,7 @@ public class TestAggregatedLogsBlock {
     HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
     TFileAggregatedLogsBlockForTest aggregatedBlock
         = getTFileAggregatedLogsBlockForTest(configuration, "admin",
-            "container_0_0001_01_000001", "localhost:1234");
+        "container_0_0001_01_000001", "localhost:1234");
     aggregatedBlock.render(block);
 
     block.getWriter().flush();
@@ -192,7 +192,7 @@ public class TestAggregatedLogsBlock {
    * @throws Exception
    */
   @Test
-  public void testAggregatedLogsBlockHar() throws Exception {
+  void testAggregatedLogsBlockHar() throws Exception {
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
 
@@ -209,7 +209,7 @@ public class TestAggregatedLogsBlock {
     HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
     TFileAggregatedLogsBlockForTest aggregatedBlock
         = getTFileAggregatedLogsBlockForTest(configuration, "admin",
-            "container_1440536969523_0001_01_000001", "host1:1111");
+        "container_1440536969523_0001_01_000001", "host1:1111");
     aggregatedBlock.render(block);
 
     block.getWriter().flush();
@@ -238,7 +238,7 @@ public class TestAggregatedLogsBlock {
    * @throws Exception
    */
   @Test
-  public void testNoLogs() throws Exception {
+  void testNoLogs() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
     Configuration configuration = getConfiguration();
@@ -255,7 +255,7 @@ public class TestAggregatedLogsBlock {
     HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
     TFileAggregatedLogsBlockForTest aggregatedBlock
         = getTFileAggregatedLogsBlockForTest(configuration, "admin",
-            "container_0_0001_01_000001", "localhost:1234");
+        "container_0_0001_01_000001", "localhost:1234");
     aggregatedBlock.render(block);
 
     block.getWriter().flush();

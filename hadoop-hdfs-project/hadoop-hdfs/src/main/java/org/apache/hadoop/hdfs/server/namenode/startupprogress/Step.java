@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -138,5 +139,15 @@ public class Step implements Comparable<Step> {
   public int hashCode() {
     return new HashCodeBuilder().append(file).append(size).append(type)
       .toHashCode();
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+        .append("file", file)
+        .append("sequenceNumber", sequenceNumber)
+        .append("size", size)
+        .append("type", type)
+        .toString();
   }
 }

@@ -178,13 +178,13 @@ class ReplicaMap {
         for (ReplicaInfo replicaInfo : replicaInfos) {
           replicaSet.add(replicaInfo);
         }
+        if (curSet == null && !replicaSet.isEmpty()) {
+          // Add an entry for block pool if it does not exist already
+          curSet = new LightWeightResizableGSet<>();
+          map.put(bp, curSet);
+        }
         for (ReplicaInfo replicaInfo : replicaSet) {
           checkBlock(replicaInfo);
-          if (curSet == null) {
-            // Add an entry for block pool if it does not exist already
-            curSet = new LightWeightResizableGSet<>();
-            map.put(bp, curSet);
-          }
           curSet.put(replicaInfo);
         }
       }

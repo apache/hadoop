@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -203,6 +204,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** Router using this RPC server. */
   private final Router router;
 
+  /** Alignment context storing state IDs for all namespaces this router serves. */
+  private final RouterStateIdContext routerStateIdContext;
+
   /** The RPC server that listens to requests from clients. */
   private final Server rpcServer;
   /** The address for this RPC server. */
@@ -321,7 +325,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
-    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
+    routerStateIdContext = new RouterStateIdContext(conf);
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -329,7 +333,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setBindAddress(confRpcAddress.getHostName())
         .setPort(confRpcAddress.getPort())
         .setNumHandlers(handlerCount)
-        .setnumReaders(readerCount)
+        .setNumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
         .setAlignmentContext(routerStateIdContext)
@@ -410,7 +414,36 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .forEach(this.dnCache::refresh),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
+
+    Executors
+        .newSingleThreadScheduledExecutor()
+        .scheduleWithFixedDelay(this::clearStaleNamespacesInRouterStateIdContext,
+            0,
+            conf.getLong(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
+                RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT),
+            TimeUnit.MILLISECONDS);
+
     initRouterFedRename();
+  }
+
+  /**
+   * Clear expired namespace in the shared RouterStateIdContext.
+   */
+  private void clearStaleNamespacesInRouterStateIdContext() {
+    try {
+      final Set<String> resolvedNamespaces = namenodeResolver.getNamespaces()
+          .stream()
+          .map(FederationNamespaceInfo::getNameserviceId)
+          .collect(Collectors.toSet());
+
+      routerStateIdContext.getNamespaces().forEach(namespace -> {
+        if (!resolvedNamespaces.contains(namespace)) {
+          routerStateIdContext.removeNamespaceStateId(namespace);
+        }
+      });
+    } catch (IOException e) {
+      LOG.warn("Could not fetch current list of namespaces.", e);
+    }
   }
 
   /**
@@ -508,6 +541,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   BalanceProcedureScheduler getFedRenameScheduler() {
     return this.fedRenameScheduler;
+  }
+
+  /**
+   * Get the routerStateIdContext used by this server.
+   * @return routerStateIdContext
+   */
+  @VisibleForTesting
+  protected RouterStateIdContext getRouterStateIdContext() {
+    return routerStateIdContext;
   }
 
   /**
@@ -1788,18 +1830,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If the path is in a read only mount point.
    */
   private boolean isPathReadOnly(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null && entry.isReadOnly()) {
-          return true;
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isReadOnly();
   }
 
   /**
@@ -1898,18 +1930,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should be in all subclusters.
    */
   boolean isPathAll(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isAll();
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isAll();
   }
 
   /**
@@ -1919,18 +1941,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should support failed subclusters.
    */
   boolean isPathFaultTolerant(final String path) {
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isFaultTolerant();
+  }
+
+  private MountTable getMountTable(final String path){
     if (subclusterResolver instanceof MountTableResolver) {
       try {
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isFaultTolerant();
-        }
+        return mountTable.getMountPoint(path);
       } catch (IOException e) {
         LOG.error("Cannot get mount point", e);
       }
     }
-    return false;
+    return null;
   }
 
   /**

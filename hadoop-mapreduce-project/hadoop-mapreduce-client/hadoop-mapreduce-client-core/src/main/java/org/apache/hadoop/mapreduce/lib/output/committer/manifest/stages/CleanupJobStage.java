@@ -295,7 +295,7 @@ public class CleanupJobStage extends
      * @param statisticName stage name to report
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
-     *        parallel?
+     * parallel?
      * @param suppressExceptions suppress exceptions?
      */
     public Arguments(

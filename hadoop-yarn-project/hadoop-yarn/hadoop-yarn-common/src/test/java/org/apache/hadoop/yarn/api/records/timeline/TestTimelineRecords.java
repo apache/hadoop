@@ -27,12 +27,16 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTimelineRecords {
 
@@ -40,7 +44,7 @@ public class TestTimelineRecords {
       LoggerFactory.getLogger(TestTimelineRecords.class);
 
   @Test
-  public void testEntities() throws Exception {
+  void testEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     for (int j = 0; j < 2; ++j) {
       TimelineEntity entity = new TimelineEntity();
@@ -67,27 +71,27 @@ public class TestTimelineRecords {
     LOG.info("Entities in JSON:");
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entities, true));
 
-    Assert.assertEquals(2, entities.getEntities().size());
+    assertEquals(2, entities.getEntities().size());
     TimelineEntity entity1 = entities.getEntities().get(0);
-    Assert.assertEquals("entity id 0", entity1.getEntityId());
-    Assert.assertEquals("entity type 0", entity1.getEntityType());
-    Assert.assertEquals(2, entity1.getRelatedEntities().size());
-    Assert.assertEquals(2, entity1.getEvents().size());
-    Assert.assertEquals(2, entity1.getPrimaryFilters().size());
-    Assert.assertEquals(2, entity1.getOtherInfo().size());
-    Assert.assertEquals("domain id 0", entity1.getDomainId());
+    assertEquals("entity id 0", entity1.getEntityId());
+    assertEquals("entity type 0", entity1.getEntityType());
+    assertEquals(2, entity1.getRelatedEntities().size());
+    assertEquals(2, entity1.getEvents().size());
+    assertEquals(2, entity1.getPrimaryFilters().size());
+    assertEquals(2, entity1.getOtherInfo().size());
+    assertEquals("domain id 0", entity1.getDomainId());
     TimelineEntity entity2 = entities.getEntities().get(1);
-    Assert.assertEquals("entity id 1", entity2.getEntityId());
-    Assert.assertEquals("entity type 1", entity2.getEntityType());
-    Assert.assertEquals(2, entity2.getRelatedEntities().size());
-    Assert.assertEquals(2, entity2.getEvents().size());
-    Assert.assertEquals(2, entity2.getPrimaryFilters().size());
-    Assert.assertEquals(2, entity2.getOtherInfo().size());
-    Assert.assertEquals("domain id 1", entity2.getDomainId());
+    assertEquals("entity id 1", entity2.getEntityId());
+    assertEquals("entity type 1", entity2.getEntityType());
+    assertEquals(2, entity2.getRelatedEntities().size());
+    assertEquals(2, entity2.getEvents().size());
+    assertEquals(2, entity2.getPrimaryFilters().size());
+    assertEquals(2, entity2.getOtherInfo().size());
+    assertEquals("domain id 1", entity2.getDomainId());
   }
 
   @Test
-  public void testEvents() throws Exception {
+  void testEvents() throws Exception {
     TimelineEvents events = new TimelineEvents();
     for (int j = 0; j < 2; ++j) {
       TimelineEvents.EventsOfOneEntity partEvents =
@@ -107,31 +111,31 @@ public class TestTimelineRecords {
     LOG.info("Events in JSON:");
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(events, true));
 
-    Assert.assertEquals(2, events.getAllEvents().size());
+    assertEquals(2, events.getAllEvents().size());
     TimelineEvents.EventsOfOneEntity partEvents1 = events.getAllEvents().get(0);
-    Assert.assertEquals("entity id 0", partEvents1.getEntityId());
-    Assert.assertEquals("entity type 0", partEvents1.getEntityType());
-    Assert.assertEquals(2, partEvents1.getEvents().size());
+    assertEquals("entity id 0", partEvents1.getEntityId());
+    assertEquals("entity type 0", partEvents1.getEntityType());
+    assertEquals(2, partEvents1.getEvents().size());
     TimelineEvent event11 = partEvents1.getEvents().get(0);
-    Assert.assertEquals("event type 0", event11.getEventType());
-    Assert.assertEquals(2, event11.getEventInfo().size());
+    assertEquals("event type 0", event11.getEventType());
+    assertEquals(2, event11.getEventInfo().size());
     TimelineEvent event12 = partEvents1.getEvents().get(1);
-    Assert.assertEquals("event type 1", event12.getEventType());
-    Assert.assertEquals(2, event12.getEventInfo().size());
+    assertEquals("event type 1", event12.getEventType());
+    assertEquals(2, event12.getEventInfo().size());
     TimelineEvents.EventsOfOneEntity partEvents2 = events.getAllEvents().get(1);
-    Assert.assertEquals("entity id 1", partEvents2.getEntityId());
-    Assert.assertEquals("entity type 1", partEvents2.getEntityType());
-    Assert.assertEquals(2, partEvents2.getEvents().size());
+    assertEquals("entity id 1", partEvents2.getEntityId());
+    assertEquals("entity type 1", partEvents2.getEntityType());
+    assertEquals(2, partEvents2.getEvents().size());
     TimelineEvent event21 = partEvents2.getEvents().get(0);
-    Assert.assertEquals("event type 0", event21.getEventType());
-    Assert.assertEquals(2, event21.getEventInfo().size());
+    assertEquals("event type 0", event21.getEventType());
+    assertEquals(2, event21.getEventInfo().size());
     TimelineEvent event22 = partEvents2.getEvents().get(1);
-    Assert.assertEquals("event type 1", event22.getEventType());
-    Assert.assertEquals(2, event22.getEventInfo().size());
+    assertEquals("event type 1", event22.getEventType());
+    assertEquals(2, event22.getEventInfo().size());
   }
 
   @Test
-  public void testTimelinePutErrors() throws Exception {
+  void testTimelinePutErrors() throws Exception {
     TimelinePutResponse TimelinePutErrors = new TimelinePutResponse();
     TimelinePutError error1 = new TimelinePutError();
     error1.setEntityId("entity id 1");
@@ -149,23 +153,23 @@ public class TestTimelineRecords {
     LOG.info("Errors in JSON:");
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(TimelinePutErrors, true));
 
-    Assert.assertEquals(3, TimelinePutErrors.getErrors().size());
+    assertEquals(3, TimelinePutErrors.getErrors().size());
     TimelinePutError e = TimelinePutErrors.getErrors().get(0);
-    Assert.assertEquals(error1.getEntityId(), e.getEntityId());
-    Assert.assertEquals(error1.getEntityType(), e.getEntityType());
-    Assert.assertEquals(error1.getErrorCode(), e.getErrorCode());
+    assertEquals(error1.getEntityId(), e.getEntityId());
+    assertEquals(error1.getEntityType(), e.getEntityType());
+    assertEquals(error1.getErrorCode(), e.getErrorCode());
     e = TimelinePutErrors.getErrors().get(1);
-    Assert.assertEquals(error1.getEntityId(), e.getEntityId());
-    Assert.assertEquals(error1.getEntityType(), e.getEntityType());
-    Assert.assertEquals(error1.getErrorCode(), e.getErrorCode());
+    assertEquals(error1.getEntityId(), e.getEntityId());
+    assertEquals(error1.getEntityType(), e.getEntityType());
+    assertEquals(error1.getErrorCode(), e.getErrorCode());
     e = TimelinePutErrors.getErrors().get(2);
-    Assert.assertEquals(error2.getEntityId(), e.getEntityId());
-    Assert.assertEquals(error2.getEntityType(), e.getEntityType());
-    Assert.assertEquals(error2.getErrorCode(), e.getErrorCode());
+    assertEquals(error2.getEntityId(), e.getEntityId());
+    assertEquals(error2.getEntityType(), e.getEntityType());
+    assertEquals(error2.getErrorCode(), e.getErrorCode());
   }
 
   @Test
-  public void testTimelineDomain() throws Exception {
+  void testTimelineDomain() throws Exception {
     TimelineDomains domains = new TimelineDomains();
 
     TimelineDomain domain = null;
@@ -185,25 +189,25 @@ public class TestTimelineRecords {
     LOG.info("Domain in JSON:");
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(domains, true));
 
-    Assert.assertEquals(2, domains.getDomains().size());
+    assertEquals(2, domains.getDomains().size());
 
     for (int i = 0; i < domains.getDomains().size(); ++i) {
       domain = domains.getDomains().get(i);
-      Assert.assertEquals("test id " + (i + 1), domain.getId());
-      Assert.assertEquals("test description " + (i + 1),
+      assertEquals("test id " + (i + 1), domain.getId());
+      assertEquals("test description " + (i + 1),
           domain.getDescription());
-      Assert.assertEquals("test owner " + (i + 1), domain.getOwner());
-      Assert.assertEquals("test_reader_user_" + (i + 1) +
+      assertEquals("test owner " + (i + 1), domain.getOwner());
+      assertEquals("test_reader_user_" + (i + 1) +
           " test_reader_group+" + (i + 1), domain.getReaders());
-      Assert.assertEquals("test_writer_user_" + (i + 1) +
+      assertEquals("test_writer_user_" + (i + 1) +
           " test_writer_group+" + (i + 1), domain.getWriters());
-      Assert.assertEquals(new Long(0L), domain.getCreatedTime());
-      Assert.assertEquals(new Long(1L), domain.getModifiedTime());
+      assertEquals(Long.valueOf(0L), domain.getCreatedTime());
+      assertEquals(Long.valueOf(1L), domain.getModifiedTime());
     }
   }
 
   @Test
-  public void testMapInterfaceOrTimelineRecords() throws Exception {
+  void testMapInterfaceOrTimelineRecords() throws Exception {
     TimelineEntity entity = new TimelineEntity();
     List<Map<String, Set<Object>>> primaryFiltersList =
         new ArrayList<Map<String, Set<Object>>>();
@@ -284,36 +288,36 @@ public class TestTimelineRecords {
   }
 
   private static void assertPrimaryFilters(TimelineEntity entity) {
-    Assert.assertNotNull(entity.getPrimaryFilters());
-    Assert.assertNotNull(entity.getPrimaryFiltersJAXB());
-    Assert.assertTrue(entity.getPrimaryFilters() instanceof HashMap);
-    Assert.assertTrue(entity.getPrimaryFiltersJAXB() instanceof HashMap);
-    Assert.assertEquals(
+    assertNotNull(entity.getPrimaryFilters());
+    assertNotNull(entity.getPrimaryFiltersJAXB());
+    assertTrue(entity.getPrimaryFilters() instanceof HashMap);
+    assertTrue(entity.getPrimaryFiltersJAXB() instanceof HashMap);
+    assertEquals(
         entity.getPrimaryFilters(), entity.getPrimaryFiltersJAXB());
   }
 
   private static void assertRelatedEntities(TimelineEntity entity) {
-    Assert.assertNotNull(entity.getRelatedEntities());
-    Assert.assertNotNull(entity.getRelatedEntitiesJAXB());
-    Assert.assertTrue(entity.getRelatedEntities() instanceof HashMap);
-    Assert.assertTrue(entity.getRelatedEntitiesJAXB() instanceof HashMap);
-    Assert.assertEquals(
+    assertNotNull(entity.getRelatedEntities());
+    assertNotNull(entity.getRelatedEntitiesJAXB());
+    assertTrue(entity.getRelatedEntities() instanceof HashMap);
+    assertTrue(entity.getRelatedEntitiesJAXB() instanceof HashMap);
+    assertEquals(
         entity.getRelatedEntities(), entity.getRelatedEntitiesJAXB());
   }
 
   private static void assertOtherInfo(TimelineEntity entity) {
-    Assert.assertNotNull(entity.getOtherInfo());
-    Assert.assertNotNull(entity.getOtherInfoJAXB());
-    Assert.assertTrue(entity.getOtherInfo() instanceof HashMap);
-    Assert.assertTrue(entity.getOtherInfoJAXB() instanceof HashMap);
-    Assert.assertEquals(entity.getOtherInfo(), entity.getOtherInfoJAXB());
+    assertNotNull(entity.getOtherInfo());
+    assertNotNull(entity.getOtherInfoJAXB());
+    assertTrue(entity.getOtherInfo() instanceof HashMap);
+    assertTrue(entity.getOtherInfoJAXB() instanceof HashMap);
+    assertEquals(entity.getOtherInfo(), entity.getOtherInfoJAXB());
   }
 
   private static void assertEventInfo(TimelineEvent event) {
-    Assert.assertNotNull(event);
-    Assert.assertNotNull(event.getEventInfoJAXB());
-    Assert.assertTrue(event.getEventInfo() instanceof HashMap);
-    Assert.assertTrue(event.getEventInfoJAXB() instanceof HashMap);
-    Assert.assertEquals(event.getEventInfo(), event.getEventInfoJAXB());
+    assertNotNull(event);
+    assertNotNull(event.getEventInfoJAXB());
+    assertTrue(event.getEventInfo() instanceof HashMap);
+    assertTrue(event.getEventInfoJAXB() instanceof HashMap);
+    assertEquals(event.getEventInfo(), event.getEventInfoJAXB());
   }
 }

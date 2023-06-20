@@ -19,12 +19,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RouterFederatedStateProto;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.util.ProtoUtil;
 import org.junit.Test;

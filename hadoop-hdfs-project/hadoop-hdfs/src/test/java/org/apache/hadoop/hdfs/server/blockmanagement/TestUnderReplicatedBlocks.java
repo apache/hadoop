@@ -159,9 +159,9 @@ public class TestUnderReplicatedBlocks {
 
       BlockManagerTestUtil.updateState(bm);
       assertTrue("The number of blocks to be replicated should be less than "
-          + "or equal to " + bm.replicationStreamsHardLimit,
+          + "or equal to " + bm.getReplicationStreamsHardLimit(),
           secondDn.getNumberOfBlocksToBeReplicated()
-          <= bm.replicationStreamsHardLimit);
+          <= bm.getReplicationStreamsHardLimit());
       DFSTestUtil.verifyClientStats(conf, cluster);
     } finally {
       cluster.shutdown();

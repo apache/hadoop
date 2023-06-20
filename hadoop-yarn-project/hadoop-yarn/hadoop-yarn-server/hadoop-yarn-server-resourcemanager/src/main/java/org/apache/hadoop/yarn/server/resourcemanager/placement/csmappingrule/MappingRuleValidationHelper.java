@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
@@ -123,8 +124,8 @@ public final class MappingRuleValidationHelper {
       //if the grandparent allows new dynamic creation, the dynamic parent and
       //the dynamic leaf queue can be created as well
       CSQueue grandParentQueue = queueManager.getQueue(grandParentPath);
-      if (grandParentQueue != null && grandParentQueue instanceof ParentQueue &&
-          ((ParentQueue)grandParentQueue).isEligibleForAutoQueueCreation()) {
+      if (grandParentQueue != null && grandParentQueue instanceof AbstractParentQueue &&
+          ((AbstractParentQueue)grandParentQueue).isEligibleForAutoQueueCreation()) {
         //Grandparent is a new dynamic parent queue, which allows deep queue
         //creation
         return ValidationResult.CREATABLE;

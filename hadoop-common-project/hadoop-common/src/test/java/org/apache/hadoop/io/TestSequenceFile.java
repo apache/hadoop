@@ -26,6 +26,9 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -753,6 +756,122 @@ public class TestSequenceFile {
       writer.hflush();
       writer.hsync();
       Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
+    }
+  }
+
+  @Test
+  public void testSerializationUsingWritableNameAlias() throws IOException {
+    Configuration config = new Configuration();
+    config.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, SimpleSerializer.class.getName());
+    Path path = new Path(System.getProperty("test.build.data", "."),
+        "SerializationUsingWritableNameAlias");
+
+    // write with the original serializable class
+    SequenceFile.Writer writer = SequenceFile.createWriter(
+        config,
+        SequenceFile.Writer.file(path),
+        SequenceFile.Writer.keyClass(SimpleSerializable.class),
+        SequenceFile.Writer.valueClass(SimpleSerializable.class));
+
+    int max = 10;
+    try {
+      SimpleSerializable val = new SimpleSerializable();
+      val.setId(-1);
+      for (int i = 0; i < max; i++) {
+        SimpleSerializable key = new SimpleSerializable();
+        key.setId(i);
+        writer.append(key, val);
+      }
+    } finally {
+      writer.close();
+    }
+
+    // override name so it gets forced to the new serializable
+    WritableName.setName(AnotherSimpleSerializable.class, SimpleSerializable.class.getName());
+
+    // read and expect our new serializable, and all the correct values read
+    SequenceFile.Reader reader = new SequenceFile.Reader(
+        config,
+        SequenceFile.Reader.file(path));
+
+    AnotherSimpleSerializable key = new AnotherSimpleSerializable();
+    int count = 0;
+    while (true) {
+      key = (AnotherSimpleSerializable) reader.next(key);
+      if (key == null) {
+        // make sure we exhausted all the ints we wrote
+        assertEquals(count, max);
+        break;
+      }
+      assertEquals(count++, key.getId());
+    }
+  }
+
+  public static class SimpleSerializable implements Serializable {
+
+    private int id;
+
+    public int getId() {
+      return id;
+    }
+
+    public void setId(int id) {
+      this.id = id;
+    }
+  }
+
+  public static class AnotherSimpleSerializable extends SimpleSerializable {
+  }
+
+  public static class SimpleSerializer implements Serialization<SimpleSerializable> {
+
+    @Override
+    public boolean accept(Class<?> c) {
+      return SimpleSerializable.class.isAssignableFrom(c);
+    }
+
+    @Override
+    public Serializer<SimpleSerializable> getSerializer(Class<SimpleSerializable> c) {
+      return new Serializer<SimpleSerializable>() {
+        private DataOutputStream out;
+        @Override
+        public void open(OutputStream out) throws IOException {
+          this.out = new DataOutputStream(out);
+        }
+
+        @Override
+        public void serialize(SimpleSerializable simpleSerializable) throws IOException {
+          out.writeInt(simpleSerializable.getId());
+        }
+
+        @Override
+        public void close() throws IOException {
+          out.close();
+        }
+      };
+    }
+
+    @Override
+    public Deserializer<SimpleSerializable> getDeserializer(Class<SimpleSerializable> c) {
+      return new Deserializer<SimpleSerializable>() {
+        private DataInputStream dis;
+        @Override
+        public void open(InputStream in) throws IOException {
+          dis = new DataInputStream(in);
+        }
+
+        @Override
+        public SimpleSerializable deserialize(SimpleSerializable simpleSerializable)
+            throws IOException {
+          simpleSerializable.setId(dis.readInt());
+          return simpleSerializable;
+        }
+
+        @Override
+        public void close() throws IOException {
+          dis.close();
+        }
+      };
     }
   }
 

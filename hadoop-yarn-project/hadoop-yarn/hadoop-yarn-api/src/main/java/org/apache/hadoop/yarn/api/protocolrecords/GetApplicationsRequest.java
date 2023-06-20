@@ -137,6 +137,7 @@ public abstract class GetApplicationsRequest {
    *
    *
    * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   * @param applicationTypes application types.
    * @return a report of Applications in {@link GetApplicationsRequest}
    */
   @Public
@@ -158,6 +159,7 @@ public abstract class GetApplicationsRequest {
    *
    *
    * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   * @param applicationStates application states.
    * @return  a report of Applications in {@link GetApplicationsRequest}
    */
   @Public
@@ -173,12 +175,14 @@ public abstract class GetApplicationsRequest {
   /**
    * <p>
    * The request from clients to get a report of Applications matching the
-   * giving and application types and application types in the cluster from the
+   * giving and application types and application states in the cluster from the
    * <code>ResourceManager</code>.
    * </p>
    *
    *
    * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   * @param applicationStates application states.
+   * @param applicationTypes application types.
    * @return  a report of Applications in <code>GetApplicationsRequest</code>
    */
   @Public
@@ -309,20 +313,20 @@ public abstract class GetApplicationsRequest {
   public abstract Range<Long> getStartRange();
 
   /**
-   * Set the range of start times to filter applications on
+   * Set the range of start times to filter applications.
    *
-   * @param range
+   * @param range range of start times.
    */
   @Private
   @Unstable
   public abstract void setStartRange(Range<Long> range);
 
   /**
-   * Set the range of start times to filter applications on
+   * Set the range of start times to filter applications.
    *
    * @param begin beginning of the range
    * @param end end of the range
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException if an argument is invalid.
    */
   @Private
   @Unstable
@@ -330,7 +334,7 @@ public abstract class GetApplicationsRequest {
       throws IllegalArgumentException;
 
   /**
-   * Get the range of finish times to filter applications on
+   * Get the range of finish times to filter applications.
    *
    * @return {@link Range} of finish times to filter applications on
    */
@@ -339,38 +343,38 @@ public abstract class GetApplicationsRequest {
   public abstract Range<Long> getFinishRange();
 
   /**
-   * Set the range of finish times to filter applications on
+   * Set the range of finish times to filter applications.
    *
-   * @param range
+   * @param range range of finish times.
    */
   @Private
   @Unstable
   public abstract void setFinishRange(Range<Long> range);
 
   /**
-   * Set the range of finish times to filter applications on
+   * Set the range of finish times to filter applications.
    *
    * @param begin beginning of the range
    * @param end end of the range
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException if an argument is invalid.
    */
   @Private
   @Unstable
   public abstract void setFinishRange(long begin, long end);
 
   /**
-   * Get the tags to filter applications on
+   * Get the tags to filter applications.
    *
-   * @return list of tags to filter on
+   * @return list of tags to filter.
    */
   @Private
   @Unstable
   public abstract Set<String> getApplicationTags();
 
   /**
-   * Set the list of tags to filter applications on
+   * Set the list of tags to filter applications.
    *
-   * @param tags list of tags to filter on
+   * @param tags list of tags to filter.
    */
   @Private
   @Unstable

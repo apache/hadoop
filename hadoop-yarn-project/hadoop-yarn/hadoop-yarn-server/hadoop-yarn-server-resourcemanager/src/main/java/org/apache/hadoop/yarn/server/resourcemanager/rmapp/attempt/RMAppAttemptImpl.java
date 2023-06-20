@@ -2220,13 +2220,22 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public YarnApplicationAttemptState createApplicationAttemptState() {
-    RMAppAttemptState state = getState();
-    // If AppAttempt is in FINAL_SAVING state, return its previous state.
-    if (state.equals(RMAppAttemptState.FINAL_SAVING)) {
-      state = stateBeforeFinalSaving;
+  public RMAppAttemptState getPreviousState() {
+    this.readLock.lock();
+
+    try {
+      return this.stateMachine.getPreviousState();
+    } finally {
+      this.readLock.unlock();
     }
-    return RMServerUtils.createApplicationAttemptState(state);
+  }
+
+  @Override
+  public YarnApplicationAttemptState createApplicationAttemptState() {
+    return RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+        getState(),
+        stateBeforeFinalSaving
+    );
   }
 
   private void launchAttempt(){

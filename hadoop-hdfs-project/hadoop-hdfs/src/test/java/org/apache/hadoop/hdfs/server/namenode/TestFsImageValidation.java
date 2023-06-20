@@ -53,8 +53,8 @@ public class TestFsImageValidation {
       final int errorCount = FsImageValidation.newInstance().run();
       Assert.assertEquals("Error Count: " + errorCount, 0, errorCount);
     } catch (HadoopIllegalArgumentException e) {
-      LOG.warn("The environment variable {} is not set: {}",
-          FsImageValidation.FS_IMAGE, e);
+      LOG.warn("The environment variable " + FsImageValidation.FS_IMAGE
+          + " is not set", e);
     }
   }
 

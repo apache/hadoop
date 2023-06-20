@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.hdfs.server.federation.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.router.RouterHDFSContract;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.metrics.RouterMBean;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,6 +53,7 @@ import static org.junit.Assert.assertEquals;
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS;
+import static org.apache.hadoop.hdfs.server.federation.metrics.TestRBFMetrics.ROUTER_BEAN;
 
 import org.hamcrest.core.StringContains;
 import java.io.IOException;
@@ -76,10 +82,18 @@ public class TestRouterSecurityManager {
     mockDelegationTokenSecretManager.startThreads();
     securityManager =
         new RouterSecurityManager(mockDelegationTokenSecretManager);
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @Rule
   public ExpectedException exceptionRule = ExpectedException.none();
+
+  private Router initializeAndStartRouter(Configuration configuration) {
+    Router router = new Router();
+    router.init(configuration);
+    router.start();
+    return router;
+  }
 
   @Test
   public void testCreateSecretManagerUsingReflection() throws IOException {
@@ -227,9 +241,8 @@ public class TestRouterSecurityManager {
         .build();
 
     conf.addResource(routerConf);
-    Router router = new Router();
-    router.init(conf);
-    router.start();
+
+    Router router = initializeAndStartRouter(conf);
 
     UserGroupInformation ugi =
         UserGroupInformation.createUserForTesting(
@@ -257,6 +270,40 @@ public class TestRouterSecurityManager {
   private static String[] getUserGroupForTesting() {
     String[] groupsForTesting = {"router_group"};
     return groupsForTesting;
+  }
+
+  @Test
+  public void testGetTopTokenRealOwners() throws Exception {
+    // Create conf and start routers with only an RPC service
+    Configuration conf = initSecurity();
+
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+    conf.addResource(routerConf);
+
+    Router router = initializeAndStartRouter(conf);
+
+    // Create credentials
+    UserGroupInformation ugi =
+            UserGroupInformation.createUserForTesting("router", getUserGroupForTesting());
+    RouterSecurityManager.createCredentials(router, ugi, "some_renewer");
+
+    String host = Path.WINDOWS ? "127.0.0.1" : "localhost";
+    String expectedOwner = "router/" + host + "@EXAMPLE.COM";
+
+    // Fetch the top token owners string
+    RouterMBean bean = FederationTestUtils.getBean(
+        ROUTER_BEAN, RouterMBean.class);
+    String topTokenRealOwners = bean.getTopTokenRealOwners();
+
+    // Verify the token details with the expectedOwner
+    JsonNode topTokenRealOwnersList = new ObjectMapper().readTree(topTokenRealOwners);
+    assertEquals("The key:name contains incorrect value " + topTokenRealOwners, expectedOwner,
+        topTokenRealOwnersList.get(0).get("name").asText());
+    // Destroy the cluster
+    RouterHDFSContract.destroyCluster();
   }
 
   @Test

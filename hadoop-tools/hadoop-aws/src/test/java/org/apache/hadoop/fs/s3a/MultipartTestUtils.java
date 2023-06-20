@@ -82,7 +82,7 @@ public final class MultipartTestUtils {
       String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
       UploadPartRequest req = writeHelper.newUploadPartRequest(key, uploadId,
           partNo, len, in, null, 0L);
-      PartETag partEtag = writeHelper.uploadPart(req).getPartETag();
+      PartETag partEtag = writeHelper.uploadPart(req, null).getPartETag();
       LOG.debug("uploaded part etag {}, upid {}", partEtag.getETag(), uploadId);
       return new IdKey(key, uploadId);
     }

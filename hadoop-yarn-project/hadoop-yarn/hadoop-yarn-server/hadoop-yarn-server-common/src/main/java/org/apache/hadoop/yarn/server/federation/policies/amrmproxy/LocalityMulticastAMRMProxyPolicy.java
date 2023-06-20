@@ -290,6 +290,10 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   /**
    * For unit test to override.
+   *
+   * @param bookKeeper bookKeeper
+   * @param allocationId allocationId.
+   * @return SubClusterId.
    */
   protected SubClusterId getSubClusterForUnResolvedRequest(
       AllocationBookkeeper bookKeeper, long allocationId) {

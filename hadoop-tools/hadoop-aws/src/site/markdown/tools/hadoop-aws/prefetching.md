@@ -43,6 +43,10 @@ Multiple blocks may be read in parallel.
 |`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
 |`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
 
+The default size of a block is 8MB, and the minimum allowed block size is 1 byte.
+Decreasing block size will increase the number of blocks to be read for a file.
+A smaller block size may negatively impact performance as the number of prefetches required will increase.
+
 ### Key Components
 
 `S3PrefetchingInputStream` - When prefetching is enabled, S3AFileSystem will return an instance of

@@ -56,7 +56,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       final String queueName, final CSQueue parent, final CSQueue old)
       throws IOException {
     super(queueContext, queueName, parent, old);
-
+    super.setupQueueConfigs(queueContext.getClusterResource());
     shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
         queueContext.getConfiguration()
             .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
@@ -389,9 +389,11 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   }
 
   /**
-   * Asynchronously called from scheduler to apply queue management changes
+   * Asynchronously called from scheduler to apply queue management changes.
    *
-   * @param queueManagementChanges
+   * @param queueManagementChanges QueueManagementChange List.
+   * @throws IOException an I/O exception has occurred.
+   * @throws SchedulerDynamicEditException when validate and apply QueueManagementChanges fails.
    */
   public void validateAndApplyQueueManagementChanges(
       List<QueueManagementChange> queueManagementChanges)

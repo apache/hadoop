@@ -95,6 +95,13 @@ public class WebAppUtils {
    * Runs a certain function against the active RM. The function's first
    * argument is expected to be a string which contains the address of
    * the RM being tried.
+   * @param conf configuration.
+   * @param func throwing bi function.
+   * @param arg T arg.
+   * @param <T> Generic T.
+   * @param <R> Generic R.
+   * @throws Exception exception occurs.
+   * @return instance of Generic R.
    */
   public static <T, R> R execOnActiveRM(Configuration conf,
       ThrowingBiFunction<String, T, R> func, T arg) throws Exception {
@@ -389,7 +396,7 @@ public class WebAppUtils {
    * if url has scheme then it will be returned as it is else it will return
    * url with scheme.
    * @param schemePrefix eg. http:// or https://
-   * @param url
+   * @param url url.
    * @return url with scheme
    */
   public static String getURLWithScheme(String schemePrefix, String url) {
@@ -428,7 +435,8 @@ public class WebAppUtils {
   /**
    * Choose which scheme (HTTP or HTTPS) to use when generating a URL based on
    * the configuration.
-   * 
+   *
+   * @param conf configuration.
    * @return the scheme (HTTP / HTTPS)
    */
   public static String getHttpSchemePrefix(Configuration conf) {
@@ -438,6 +446,8 @@ public class WebAppUtils {
   /**
    * Load the SSL keystore / truststore into the HttpServer builder.
    * @param builder the HttpServer2.Builder to populate with ssl config
+   * @return HttpServer2.Builder instance (passed in as the first parameter)
+   *         after loading SSL stores
    */
   public static HttpServer2.Builder loadSslConfiguration(
       HttpServer2.Builder builder) {

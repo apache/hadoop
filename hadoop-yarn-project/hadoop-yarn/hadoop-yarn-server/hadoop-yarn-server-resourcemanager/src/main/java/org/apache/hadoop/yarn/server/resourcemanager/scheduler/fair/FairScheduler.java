@@ -465,6 +465,12 @@ public class FairScheduler extends
    * Add a new application to the scheduler, with a given id, queue name, and
    * user. This will accept a new app even if the user or queue is above
    * configured limits, but the app will not be marked as runnable.
+   *
+   * @param applicationId  applicationId.
+   * @param queueName queue name.
+   * @param user submit application user.
+   * @param isAppRecovering true, app recover; false, app not recover.
+   * @param placementContext application placement context.
    */
   protected void addApplication(ApplicationId applicationId,
       String queueName, String user, boolean isAppRecovering,
@@ -588,6 +594,10 @@ public class FairScheduler extends
 
   /**
    * Add a new application attempt to the scheduler.
+   *
+   * @param applicationAttemptId application AttemptId.
+   * @param transferStateFromPreviousAttempt transferStateFromPreviousAttempt.
+   * @param isAttemptRecovering true, attempt recovering;false, attempt not recovering.
    */
   protected void addApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,

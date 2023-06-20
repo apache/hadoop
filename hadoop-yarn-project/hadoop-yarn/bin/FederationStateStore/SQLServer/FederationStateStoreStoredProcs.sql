@@ -26,6 +26,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_addApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @storedHomeSubCluster_OUT VARCHAR(256) OUTPUT,
     @rowCount_OUT int OUTPUT
 AS BEGIN
@@ -41,10 +42,14 @@ AS BEGIN
 
                 INSERT INTO [dbo].[applicationsHomeSubCluster] (
                     [applicationId],
-                    [homeSubCluster])
+                    [homeSubCluster],
+                    [createTime],
+                    [applicationContext])
                 VALUES (
                     @applicationId_IN,
-                    @homeSubCluster_IN);
+                    @homeSubCluster_IN,
+                    GETUTCDATE(),
+                    @applicationContext_IN);
             -- End of the IF block
 
             SELECT @rowCount_OUT = @@ROWCOUNT;
@@ -77,6 +82,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_updateApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
@@ -85,7 +91,8 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[applicationsHomeSubCluster]
-            SET [homeSubCluster] = @homeSubCluster_IN
+            SET [homeSubCluster] = @homeSubCluster_IN,
+                [applicationContext] = @applicationContext_IN
             WHERE [applicationId] = @applicationId_IN;
             SELECT @rowCount_OUT = @@ROWCOUNT;
 
@@ -128,7 +135,7 @@ AS BEGIN
                  [createTime],
                  row_number() over(order by [createTime] desc) AS app_rank
              FROM [dbo].[applicationsHomeSubCluster]
-             WHERE [homeSubCluster] = @homeSubCluster_IN OR @homeSubCluster = '') AS applicationsHomeSubCluster
+             WHERE [homeSubCluster] = @homeSubCluster_IN OR @homeSubCluster_IN = '') AS applicationsHomeSubCluster
         WHERE app_rank <= @limit_IN;
 
     END TRY
@@ -151,13 +158,17 @@ GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
-    @homeSubCluster_OUT VARCHAR(256) OUTPUT
+    @homeSubCluster_OUT VARCHAR(256) OUTPUT,
+    @createTime_OUT datetime OUT,
+    @applicationContext_OUT VARBINARY(MAX) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @homeSubCluster_OUT = [homeSubCluster]
+        SELECT @homeSubCluster_OUT = [homeSubCluster],
+            @createTime_OUT = [createTime],
+            @applicationContext_OUT = [applicationContext]
         FROM [dbo].[applicationsHomeSubCluster]
         WHERE [applicationId] = @applicationId_IN;
 
@@ -689,6 +700,346 @@ AS BEGIN
 
     BEGIN CATCH
         ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_addMasterKey]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_addMasterKey];
+GO
+
+CREATE PROCEDURE [dbo].[sp_addMasterKey]
+    @keyId_IN BIGINT,
+    @masterKey_IN VARCHAR(1024),
+    @rowCount_OUT int OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+            -- If application to sub-cluster map doesn't exist, insert it.
+            -- Otherwise don't change the current mapping.
+            IF NOT EXISTS (SELECT TOP 1 *
+                       FROM [dbo].[masterKeys]
+                       WHERE [keyId] = @keyId_IN)
+
+                INSERT INTO [dbo].[masterKeys] (
+                    [keyId],
+                    [masterKey])
+                VALUES (
+                    @keyId_IN,
+                    @masterKey_IN);
+            -- End of the IF block
+
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_getMasterKey]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_getMasterKey];
+GO
+
+CREATE PROCEDURE [dbo].[sp_getMasterKey]
+    @keyId_IN bigint,
+    @masterKey_OUT VARCHAR(1024) OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        SELECT @masterKey_OUT = [masterKey]
+        FROM [dbo].[masterKeys]
+        WHERE [keyId] = @keyId_IN;
+
+    END TRY
+
+    BEGIN CATCH
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_deleteMasterKey]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_deleteMasterKey];
+GO
+
+CREATE PROCEDURE [dbo].[sp_deleteMasterKey]
+    @keyId_IN bigint,
+    @rowCount_OUT int OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+
+            DELETE FROM [dbo].[masterKeys]
+            WHERE [keyId] = @keyId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_addDelegationToken]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_addDelegationToken];
+GO
+
+CREATE PROCEDURE [dbo].[sp_addDelegationToken]
+    @sequenceNum_IN BIGINT,
+    @tokenIdent_IN VARCHAR(1024),
+    @token_IN VARCHAR(1024),
+    @renewDate_IN BIGINT,
+    @rowCount_OUT int OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+            -- If application to sub-cluster map doesn't exist, insert it.
+            -- Otherwise don't change the current mapping.
+            IF NOT EXISTS (SELECT TOP 1 *
+                       FROM [dbo].[delegationTokens]
+                       WHERE [sequenceNum] = @sequenceNum_IN)
+
+                INSERT INTO [dbo].[delegationTokens] (
+                    [sequenceNum],
+                    [tokenIdent],
+                    [token],
+                    [renewDate])
+                VALUES (
+                    @sequenceNum_IN,
+                    @tokenIdent_IN,
+                    @token_IN,
+                    @renewDate_IN);
+            -- End of the IF block
+
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_getDelegationToken]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_getDelegationToken];
+GO
+
+CREATE PROCEDURE [dbo].[sp_getDelegationToken]
+    @sequenceNum_IN BIGINT,
+    @tokenIdent_OUT VARCHAR(1024) OUTPUT,
+    @token_OUT VARCHAR(1024) OUTPUT,
+    @renewDate_OUT BIGINT OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        SELECT @tokenIdent_OUT = [tokenIdent],
+               @token_OUT = [token],
+               @renewDate_OUT = [renewDate]
+        FROM [dbo].[delegationTokens]
+        WHERE [sequenceNum] = @sequenceNum_IN;
+
+    END TRY
+
+    BEGIN CATCH
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_updateDelegationToken]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_updateDelegationToken];
+GO
+
+CREATE PROCEDURE [dbo].[sp_updateDelegationToken]
+    @sequenceNum_IN BIGINT,
+    @tokenIdent_IN VARCHAR(1024),
+    @token_IN VARCHAR(1024),
+    @renewDate_IN BIGINT,
+    @rowCount_OUT BIGINT OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        UPDATE [dbo].[delegationTokens]
+           SET [tokenIdent] = @tokenIdent_IN,
+               [token] = @token_IN,
+               [renewDate] = @renewDate_IN
+        WHERE [sequenceNum] = @sequenceNum_IN;
+        SELECT @rowCount_OUT = @@ROWCOUNT;
+
+    END TRY
+
+    BEGIN CATCH
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_deleteDelegationToken]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_deleteDelegationToken];
+GO
+
+CREATE PROCEDURE [dbo].[sp_deleteDelegationToken]
+    @sequenceNum_IN bigint,
+    @rowCount_OUT int OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+
+            DELETE FROM [dbo].[delegationTokens]
+            WHERE [sequenceNum] = @sequenceNum_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_storeVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_storeVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_storeVersion]
+    @fedVersion_IN VARBINARY(1024),
+    @versionComment_IN VARCHAR(255),
+    @rowCount_OUT BIGINT OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+
+            DELETE FROM [dbo].[versions];
+            INSERT INTO [dbo].[versions] (
+                [fedVersion],
+                [versionComment])
+            VALUES (
+                @fedVersion_IN,
+                @versionComment_IN);
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_getVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_getVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_getVersion]
+    @fedVersion_OUT VARCHAR(1024) OUTPUT,
+    @versionComment_OUT VARCHAR(255) OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        SELECT @fedVersion_OUT = [fedVersion],
+               @versionComment_OUT = [versionComment]
+        FROM [dbo].[versions]
+        LIMIT 1;
+
+    END TRY
+
+    BEGIN CATCH
 
         SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
 

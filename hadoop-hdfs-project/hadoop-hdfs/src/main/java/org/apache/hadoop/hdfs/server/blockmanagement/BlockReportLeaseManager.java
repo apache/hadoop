@@ -267,7 +267,7 @@ class BlockReportLeaseManager {
 
   private synchronized boolean pruneIfExpired(long monotonicNowMs,
                                               NodeData node) {
-    if (monotonicNowMs < node.leaseTimeMs + leaseExpiryMs) {
+    if (monotonicNowMs - node.leaseTimeMs < leaseExpiryMs) {
       return false;
     }
     LOG.info("Removing expired block report lease 0x{} for DN {}.",

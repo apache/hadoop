@@ -22,12 +22,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
@@ -157,7 +157,7 @@ public class TestHAMetrics {
 
       // Save fsimage so that nn does not build up namesystem by replaying
       // edits, but load from the image.
-      ((DistributedFileSystem)fs).setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      ((DistributedFileSystem)fs).setSafeMode(SafeModeAction.ENTER);
       ((DistributedFileSystem)fs).saveNamespace();
 
       // Flip the two namenodes and restart the standby, which will load

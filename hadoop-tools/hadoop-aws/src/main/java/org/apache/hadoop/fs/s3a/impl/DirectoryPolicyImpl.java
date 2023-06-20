@@ -186,11 +186,11 @@ public final class DirectoryPolicyImpl
       policy = DELETE;
       break;
     case DIRECTORY_MARKER_POLICY_KEEP:
-      LOG.info("Directory markers will be kept");
+      LOG.debug("Directory markers will be kept");
       policy = KEEP;
       break;
     case DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
-      LOG.info("Directory markers will be kept on authoritative"
+      LOG.debug("Directory markers will be kept on authoritative"
           + " paths");
       policy = new DirectoryPolicyImpl(MarkerPolicy.Authoritative,
           authoritativeness);

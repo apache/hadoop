@@ -465,7 +465,12 @@ public class Path
    * @return a new path with the suffix added
    */
   public Path suffix(String suffix) {
-    return new Path(getParent(), getName()+suffix);
+    Path parent = getParent();
+    if (parent == null) {
+      return new Path("/", getName() + suffix);
+    }
+
+    return new Path(parent, getName() + suffix);
   }
 
   @Override

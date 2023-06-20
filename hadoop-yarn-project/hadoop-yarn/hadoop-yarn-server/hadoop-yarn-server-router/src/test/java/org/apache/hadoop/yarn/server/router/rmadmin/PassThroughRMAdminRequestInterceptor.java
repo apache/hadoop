@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 
 /**
  * Mock interceptor that does not do anything other than forwarding it to the
@@ -154,4 +156,9 @@ public class PassThroughRMAdminRequestInterceptor
     return getNextInterceptor().mapAttributesToNodes(request);
   }
 
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
+    return getNextInterceptor().deregisterSubCluster(request);
+  }
 }

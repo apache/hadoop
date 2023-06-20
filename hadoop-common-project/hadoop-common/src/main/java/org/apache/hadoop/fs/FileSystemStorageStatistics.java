@@ -47,7 +47,8 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       "bytesReadDistanceOfOneOrTwo",
       "bytesReadDistanceOfThreeOrFour",
       "bytesReadDistanceOfFiveOrLarger",
-      "bytesReadErasureCoded"
+      "bytesReadErasureCoded",
+      "remoteReadTimeMS"
   };
 
   private static class LongStatisticIterator
@@ -107,6 +108,8 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       return data.getBytesReadDistanceOfFiveOrLarger();
     case "bytesReadErasureCoded":
       return data.getBytesReadErasureCoded();
+    case "remoteReadTimeMS":
+      return data.getRemoteReadTimeMS();
     default:
       return null;
     }

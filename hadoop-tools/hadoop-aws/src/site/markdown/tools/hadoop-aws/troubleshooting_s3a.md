@@ -324,7 +324,7 @@ There's two main causes
 
 If you see this and you are trying to use the S3A connector with Spark, then the cause can
 be that the isolated classloader used to load Hive classes is interfering with the S3A
-connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that that
+connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that
 the classes in the aws SDK are loaded from the same classloader which instantiated
 the S3A FileSystem instance:
 
@@ -677,7 +677,7 @@ warning that the SDK resolution chain is in use:
     S3A filesystem client is using the SDK region resolution chain.
 
 2021-06-23 19:56:56,073 [main] WARN  fs.FileSystem (FileSystem.java:createFileSystem(3464)) -
-    Failed to initialize fileystem s3a://osm-pds/planet:
+    Failed to initialize filesystem s3a://osm-pds/planet:
  org.apache.hadoop.fs.s3a.AWSClientIOException: creating AWS S3 client on s3a://osm-pds:
   com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
   Must provide an explicit region in the builder or setup environment to supply a region.:
@@ -1224,7 +1224,7 @@ KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
  to failure.
 
 ```
-2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
+2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize filesystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
 method requires KMS key ID. Use fs.s3a.encryption.key property to set it.
 -ls: CSE-KMS method requires KMS key ID. Use fs.s3a.encryption.key property to

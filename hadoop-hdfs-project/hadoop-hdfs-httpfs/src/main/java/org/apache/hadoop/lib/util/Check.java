@@ -106,13 +106,13 @@ public class Check {
     return list;
   }
 
-  private static final String IDENTIFIER_PATTERN_STR = "[a-zA-z_][a-zA-Z0-9_\\-]*";
+  private static final String IDENTIFIER_PATTERN_STR = "[a-zA-Z_][a-zA-Z0-9_\\-]*";
 
   private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("^" + IDENTIFIER_PATTERN_STR + "$");
 
   /**
    * Verifies a value is a valid identifier,
-   * <code>[a-zA-z_][a-zA-Z0-9_\-]*</code>, up to a maximum length.
+   * <code>[a-zA-Z_][a-zA-Z0-9_\-]*</code>, up to a maximum length.
    *
    * @param value string to check if it is a valid identifier.
    * @param maxLen maximun length.
@@ -130,7 +130,7 @@ public class Check {
     }
     if (!IDENTIFIER_PATTERN.matcher(value).find()) {
       throw new IllegalArgumentException(
-        MessageFormat.format("[{0}] = [{1}] must be '{2}'", name, value, IDENTIFIER_PATTERN_STR));
+        MessageFormat.format("[{0}] = [{1}] must be \"{2}\"", name, value, IDENTIFIER_PATTERN_STR));
     }
     return value;
   }

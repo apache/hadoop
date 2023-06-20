@@ -41,7 +41,7 @@ We cannot ensure complete binary compatibility with the applications that use **
 Not Supported
 -------------
 
-MRAdmin has been removed in MRv2 because because `mradmin` commands no longer exist. They have been replaced by the commands in `rmadmin`. We neither support binary compatibility nor source compatibility for the applications that use this class directly.
+MRAdmin has been removed in MRv2 because `mradmin` commands no longer exist. They have been replaced by the commands in `rmadmin`. We neither support binary compatibility nor source compatibility for the applications that use this class directly.
 
 Tradeoffs between MRv1 Users and Early MRv2 Adopters
 ----------------------------------------------------

@@ -152,24 +152,12 @@
             <include>**/Test*.java</include>
           </includes>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
-          <systemProperties>
-            <property>
-              <name>test.build.data</name>
-              <value>${basedir}/target/test/data</value>
-            </property>
-            <property>
-              <name>hadoop.log.dir</name>
-              <value>target/test/logs</value>
-            </property>
-            <property>
-              <name>org.apache.commons.logging.Log</name>
-              <value>org.apache.commons.logging.impl.SimpleLog</value>
-            </property>
-            <property>
-              <name>org.apache.commons.logging.simplelog.defaultlog</name>
-              <value>warn</value>
-            </property>
-          </systemProperties>
+          <systemPropertyVariables>
+            <test.build.data>${basedir}/target/test/data</test.build.data>
+            <hadoop.log.dir>target/test/logs</hadoop.log.dir>
+            <org.apache.commons.logging.Log>org.apache.commons.logging.impl.SimpleLog</org.apache.commons.logging.Log>
+            <org.apache.commons.logging.simplelog.defaultlog>warn</org.apache.commons.logging.simplelog.defaultlog>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

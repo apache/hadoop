@@ -116,6 +116,16 @@ public class TestCheck extends HTestCase {
     Check.validIdentifier("1", 1, "");
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void validIdentifierInvalid4() throws Exception {
+    Check.validIdentifier("`a", 2, "");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void validIdentifierInvalid5() throws Exception {
+    Check.validIdentifier("[a", 2, "");
+  }
+
   @Test
   public void checkGTZeroGreater() {
     assertEquals(Check.gt0(120, "test"), 120);

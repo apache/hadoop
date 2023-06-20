@@ -66,6 +66,22 @@ public class UpdateNodeResourceRequestPBImpl extends UpdateNodeResourceRequest {
     this.nodeResourceMap.putAll(nodeResourceMap);
   }
 
+  @Override
+  public String getSubClusterId() {
+    UpdateNodeResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
+  }
+
   public UpdateNodeResourceRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();

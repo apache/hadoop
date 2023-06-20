@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -39,6 +40,19 @@ public abstract class NodesToAttributesMappingRequest {
     request.setNodesToAttributes(nodesToAttributes);
     request.setFailOnUnknownNodes(failOnUnknownNodes);
     request.setOperation(operation);
+    return request;
+  }
+
+  public static NodesToAttributesMappingRequest newInstance(
+      AttributeMappingOperationType operation, List<NodeToAttributes> nodesToAttributes,
+      boolean failOnUnknownNodes, String subClusterId) {
+    NodesToAttributesMappingRequest request =
+        Records.newRecord(NodesToAttributesMappingRequest.class);
+    request.setNodesToAttributes(nodesToAttributes);
+    request.setFailOnUnknownNodes(failOnUnknownNodes);
+    request.setOperation(operation);
+    request.setOperation(operation);
+    request.setSubClusterId(subClusterId);
     return request;
   }
 
@@ -66,4 +80,22 @@ public abstract class NodesToAttributesMappingRequest {
   @Public
   @Unstable
   public abstract AttributeMappingOperationType getOperation();
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract void setSubClusterId(String subClusterId);
 }

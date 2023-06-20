@@ -76,7 +76,7 @@ public class TestSharedCacheClientImpl {
         localFs.close();
       }
     } catch (IOException ioe) {
-      LOG.info("IO exception in closing file system)");
+      LOG.info("IO exception in closing file system");
       ioe.printStackTrace();
     }
   }

@@ -23,8 +23,11 @@ import java.nio.ByteBuffer;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_TMP_DIR;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,6 +39,8 @@ public class TestBlockCache extends AbstractHadoopTestBase {
 
   private static final int BUFFER_SIZE = 16;
 
+  private static final Configuration CONF = new Configuration();
+
   @Test
   public void testArgChecks() throws Exception {
     // Should not throw.
@@ -46,7 +51,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
 
     // Verify it throws correctly.
     intercept(IllegalArgumentException.class, "'buffer' must not be null",
-        () -> cache.put(42, null));
+        () -> cache.put(42, null, null, null));
 
 
     intercept(NullPointerException.class, null,
@@ -67,7 +72,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
 
     assertEquals(0, cache.size());
     assertFalse(cache.containsBlock(0));
-    cache.put(0, buffer1);
+    cache.put(0, buffer1, CONF, new LocalDirAllocator(HADOOP_TMP_DIR));
     assertEquals(1, cache.size());
     assertTrue(cache.containsBlock(0));
     ByteBuffer buffer2 = ByteBuffer.allocate(BUFFER_SIZE);
@@ -77,7 +82,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
 
     assertEquals(1, cache.size());
     assertFalse(cache.containsBlock(1));
-    cache.put(1, buffer1);
+    cache.put(1, buffer1, CONF, new LocalDirAllocator(HADOOP_TMP_DIR));
     assertEquals(2, cache.size());
     assertTrue(cache.containsBlock(1));
     ByteBuffer buffer3 = ByteBuffer.allocate(BUFFER_SIZE);

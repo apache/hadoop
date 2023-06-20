@@ -40,18 +40,19 @@ public class ZKClient {
    * the zookeeper client library to 
    * talk to zookeeper 
    * @param string the host
-   * @throws IOException
+   * @throws IOException if there are I/O errors.
    */
   public ZKClient(String string) throws IOException {
     zkClient = new ZooKeeper(string, 30000, new ZKWatcher());
   }
   
   /**
-   * register the service to a specific path
+   * register the service to a specific path.
+   *
    * @param path the path in zookeeper namespace to register to
    * @param data the data that is part of this registration
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException if there are I/O errors.
+   * @throws InterruptedException if any thread has interrupted.
    */
   public void registerService(String path, String data) throws
     IOException, InterruptedException {
@@ -64,13 +65,14 @@ public class ZKClient {
   }
   
   /**
-   * unregister the service. 
+   * unregister the service.
+   *
    * @param path the path at which the service was registered
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException if there are I/O errors.
+   * @throws InterruptedException if any thread has interrupted.
    */
   public void unregisterService(String path) throws IOException,
-    InterruptedException {
+      InterruptedException {
     try {
       zkClient.delete(path, -1);
     } catch(KeeperException ke) {
@@ -79,15 +81,16 @@ public class ZKClient {
   }
 
   /**
-   * list the services registered under a path
+   * list the services registered under a path.
+   *
    * @param path the path under which services are
    * registered
    * @return the list of names of services registered
-   * @throws IOException 
-   * @throws InterruptedException
+   * @throws IOException if there are I/O errors.
+   * @throws InterruptedException if any thread has interrupted.
    */
   public List<String> listServices(String path) throws IOException, 
-    InterruptedException {
+      InterruptedException {
     List<String> children = null;
     try {
       children = zkClient.getChildren(path, false);
@@ -98,14 +101,15 @@ public class ZKClient {
   }
   
   /**
-   * get data published by the service at the registration address
+   * get data published by the service at the registration address.
+   *
    * @param path the path where the service is registered 
    * @return  the data of the registered service
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException if there are I/O errors.
+   * @throws InterruptedException  if any thread has interrupted.
    */
   public String getServiceData(String path) throws IOException,
-    InterruptedException {
+      InterruptedException {
     String data;
     try {
       Stat stat = new Stat();

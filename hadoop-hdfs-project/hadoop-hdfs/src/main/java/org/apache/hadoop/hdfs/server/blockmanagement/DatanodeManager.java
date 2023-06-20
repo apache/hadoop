@@ -253,7 +253,6 @@ public class DatanodeManager {
     final boolean dataNodePeerStatsEnabledVal =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
             DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.maxSlowPeerReportNodes = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT);
@@ -261,9 +260,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
-      startSlowPeerCollector();
-    }
+    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
     this.defaultXferPort = NetUtils.createSocketAddr(
@@ -376,10 +373,16 @@ public class DatanodeManager {
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) :
         new SlowPeerDisabledTracker(conf, timer);
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
+    } else {
+      stopSlowPeerCollector();
+    }
   }
 
   private void startSlowPeerCollector() {
     if (slowPeerCollectorDaemon != null) {
+      LOG.warn("Slow peers collection thread has been started.");
       return;
     }
     slowPeerCollectorDaemon = new Daemon(new Runnable() {
@@ -402,9 +405,11 @@ public class DatanodeManager {
       }
     });
     slowPeerCollectorDaemon.start();
+    LOG.info("Slow peers collection thread start.");
   }
 
   public void stopSlowPeerCollector() {
+    LOG.info("Slow peers collection thread shutdown");
     if (slowPeerCollectorDaemon == null) {
       return;
     }
@@ -413,6 +418,8 @@ public class DatanodeManager {
       slowPeerCollectorDaemon.join();
     } catch (InterruptedException e) {
       LOG.error("Slow peers collection thread did not shutdown", e);
+    } finally {
+      slowPeerCollectorDaemon = null;
     }
   }
 
@@ -1825,28 +1832,41 @@ public class DatanodeManager {
     // Allocate _approximately_ maxTransfers pending tasks to DataNode.
     // NN chooses pending tasks based on the ratio between the lengths of
     // replication and erasure-coded block queues.
-    int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
-    int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
-    int totalBlocks = totalReplicateBlocks + totalECBlocks;
+    int replicationBlocks = nodeinfo.getNumberOfReplicateBlocks();
+    int ecBlocksToBeReplicated = nodeinfo.getNumberOfECBlocksToBeReplicated();
+    int ecBlocksToBeErasureCoded = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = replicationBlocks + ecBlocksToBeReplicated + ecBlocksToBeErasureCoded;
     if (totalBlocks > 0) {
-      int maxTransfers;
+      int maxTransfers = blockManager.getMaxReplicationStreams() - xmitsInProgress;
+      int maxECReplicatedTransfers;
       if (nodeinfo.isDecommissionInProgress()) {
-        maxTransfers = blockManager.getReplicationStreamsHardLimit()
+        maxECReplicatedTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
       } else {
-        maxTransfers = blockManager.getMaxReplicationStreams()
-            - xmitsInProgress;
+        maxECReplicatedTransfers = maxTransfers;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
-      int numECTasks = (int) Math.ceil(
-          (double) (totalECBlocks * maxTransfers) / totalBlocks);
-      LOG.debug("Pending replication tasks: {} erasure-coded tasks: {}.",
-          numReplicationTasks, numECTasks);
+          (double) (replicationBlocks * maxTransfers) / totalBlocks);
+      int numEcReplicatedTasks = (int) Math.ceil(
+              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
+      int numECReconstructedTasks = (int) Math.ceil(
+          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
+      LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
+                      "ec reconstruction tasks: {}.",
+          numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
       // check pending replication tasks
-      List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+      List<BlockTargetPair> pendingReplicationList = nodeinfo.getReplicationCommand(
           numReplicationTasks);
-      if (pendingList != null && !pendingList.isEmpty()) {
+      List<BlockTargetPair> pendingECReplicatedList = nodeinfo.getECReplicatedCommand(
+              numEcReplicatedTasks);
+      List<BlockTargetPair> pendingList = new ArrayList<BlockTargetPair>();
+      if(pendingReplicationList != null && !pendingReplicationList.isEmpty()) {
+        pendingList.addAll(pendingReplicationList);
+      }
+      if(pendingECReplicatedList != null && !pendingECReplicatedList.isEmpty()) {
+        pendingList.addAll(pendingECReplicatedList);
+      }
+      if (!pendingList.isEmpty()) {
         // If the block is deleted, the block size will become
         // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
         // need
@@ -1868,7 +1888,7 @@ public class DatanodeManager {
       }
       // check pending erasure coding tasks
       List<BlockECReconstructionInfo> pendingECList = nodeinfo
-          .getErasureCodeCommand(numECTasks);
+          .getErasureCodeCommand(numECReconstructedTasks);
       if (pendingECList != null && !pendingECList.isEmpty()) {
         cmds.add(new BlockECReconstructionCommand(
             DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
@@ -2089,6 +2109,17 @@ public class DatanodeManager {
       }
 
       @Override
+      public double getInServiceXceiverAverageForVolume() {
+        double avgLoad = 0;
+        final int volumes = heartbeatManager.getInServiceAvailableVolumeCount();
+        if (volumes > 0) {
+          final long xceivers = heartbeatManager.getInServiceXceiverCount();
+          avgLoad = (double)xceivers/volumes;
+        }
+        return avgLoad;
+      }
+
+      @Override
       public Map<StorageType, StorageTypeStats> getStorageTypeStats() {
         return heartbeatManager.getStorageTypeStats();
       }
@@ -2245,5 +2276,10 @@ public class DatanodeManager {
   public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowPeerTracker.setMaxSlowPeersToReport(maxSlowPeersToReport);
+  }
+
+  @VisibleForTesting
+  public boolean isSlowPeerCollectorInitialized() {
+    return slowPeerCollectorDaemon == null;
   }
 }

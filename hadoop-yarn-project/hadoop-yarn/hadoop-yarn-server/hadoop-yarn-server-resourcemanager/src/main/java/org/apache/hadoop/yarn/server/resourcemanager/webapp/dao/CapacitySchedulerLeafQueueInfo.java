@@ -61,7 +61,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected String orderingPolicyDisplayName;
 
   CapacitySchedulerLeafQueueInfo() {
-  };
+  }
 
   CapacitySchedulerLeafQueueInfo(CapacityScheduler cs, AbstractLeafQueue q) {
     super(cs, q);

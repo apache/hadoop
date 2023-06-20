@@ -304,7 +304,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     LOG.debug("The updated fairShare for {} is {}", getName(), fairShare);
   }
 
-  /** Get the steady fair share assigned to this Schedulable. */
+  /**
+   * Get the steady fair share assigned to this Schedulable.
+   * @return the steady fair share assigned to this Schedulable.
+   */
   public Resource getSteadyFairShare() {
     return steadyFairShare;
   }
@@ -364,7 +367,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * To be called holding the scheduler writelock.
    *
-   * @param fairShare
+   * @param fairShare queue's fairshare.
    */
   public void update(Resource fairShare) {
     setFairShare(fairShare);
@@ -407,6 +410,8 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Gets the children of this queue, if any.
+   *
+   * @return the children of this queue.
    */
   public abstract List<FSQueue> getChildQueues();
   
@@ -420,6 +425,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   /**
    * Return the number of apps for which containers can be allocated.
    * Includes apps in subqueues.
+   *
+   * @return the number of apps.
    */
   public abstract int getNumRunnableApps();
   
@@ -447,6 +454,8 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Returns true if queue has at least one app running.
+   *
+   * @return true, if queue has at least one app running; otherwise, false;
    */
   public boolean isActive() {
     return getNumRunnableApps() > 0;

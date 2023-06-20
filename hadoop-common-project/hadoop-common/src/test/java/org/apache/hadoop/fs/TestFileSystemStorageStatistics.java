@@ -52,7 +52,8 @@ public class TestFileSystemStorageStatistics {
       "bytesReadDistanceOfOneOrTwo",
       "bytesReadDistanceOfThreeOrFour",
       "bytesReadDistanceOfFiveOrLarger",
-      "bytesReadErasureCoded"
+      "bytesReadErasureCoded",
+      "remoteReadTimeMS"
   };
 
   private FileSystem.Statistics statistics =
@@ -74,6 +75,7 @@ public class TestFileSystemStorageStatistics {
     statistics.incrementBytesReadByDistance(1, RandomUtils.nextInt(0, 100));
     statistics.incrementBytesReadByDistance(3, RandomUtils.nextInt(0, 100));
     statistics.incrementBytesReadErasureCoded(RandomUtils.nextInt(0, 100));
+    statistics.increaseRemoteReadTime(RandomUtils.nextInt(0, 100));
   }
 
   @Test
@@ -128,6 +130,8 @@ public class TestFileSystemStorageStatistics {
       return statistics.getBytesReadByDistance(5);
     case "bytesReadErasureCoded":
       return statistics.getBytesReadErasureCoded();
+    case "remoteReadTimeMS":
+      return statistics.getRemoteReadTime();
     default:
       return 0;
     }

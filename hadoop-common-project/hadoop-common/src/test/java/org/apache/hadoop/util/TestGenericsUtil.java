@@ -140,7 +140,7 @@ public class TestGenericsUtil {
 
   @Test
   public void testIsLog4jLogger() throws Exception {
-    assertFalse("False if clazz is null", GenericsUtil.isLog4jLogger(null));
+    assertFalse("False if clazz is null", GenericsUtil.isLog4jLogger((Class<?>) null));
     assertTrue("The implementation is Log4j",
         GenericsUtil.isLog4jLogger(TestGenericsUtil.class));
   }

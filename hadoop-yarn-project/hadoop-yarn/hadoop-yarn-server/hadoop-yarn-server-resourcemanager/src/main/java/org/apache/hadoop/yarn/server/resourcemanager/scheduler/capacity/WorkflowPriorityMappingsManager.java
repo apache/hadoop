@@ -56,8 +56,8 @@ public class WorkflowPriorityMappingsManager {
 
   private boolean overrideWithPriorityMappings = false;
   // Map of queue to a map of workflow ID to priority
-  private Map<String, Map<String, WorkflowPriorityMapping>> priorityMappings =
-      new HashMap<String, Map<String, WorkflowPriorityMapping>>();
+  private Map<String, Map<String, Priority>> priorityMappings =
+      new HashMap<>();
 
   public static class WorkflowPriorityMapping {
     String workflowID;
@@ -115,10 +115,9 @@ public class WorkflowPriorityMappingsManager {
    *
    * @return workflowID to priority mappings for a queue
    */
-  public Map<String, Map<String, WorkflowPriorityMapping>>
+  public Map<String, Map<String, Priority>>
       getWorkflowPriorityMappings() {
-    Map<String, Map<String, WorkflowPriorityMapping>> mappings =
-        new HashMap<String, Map<String, WorkflowPriorityMapping>>();
+    Map<String, Map<String, Priority>> mappings = new HashMap<>();
 
     Collection<String> workflowMappings = conf.getWorkflowPriorityMappings();
     for (String workflowMapping : workflowMappings) {
@@ -127,9 +126,9 @@ public class WorkflowPriorityMappingsManager {
       if (mapping != null) {
         if (!mappings.containsKey(mapping.queue)) {
           mappings.put(mapping.queue,
-              new HashMap<String, WorkflowPriorityMapping>());
+              new HashMap<String, Priority>());
         }
-        mappings.get(mapping.queue).put(mapping.workflowID, mapping);
+        mappings.get(mapping.queue).put(mapping.workflowID, mapping.priority);
       }
     }
     return mappings;
@@ -150,8 +149,9 @@ public class WorkflowPriorityMappingsManager {
     }
     WorkflowPriorityMapping mapping;
     try {
-      mapping = new WorkflowPriorityMapping(mappingArray[0], mappingArray[1],
-          Priority.newInstance(Integer.parseInt(mappingArray[2])));
+      //Converting workflow id to lowercase as yarn converts application tags also to lowercase
+      mapping = new WorkflowPriorityMapping(StringUtils.toLowerCase(mappingArray[0]),
+          mappingArray[1], Priority.newInstance(Integer.parseInt(mappingArray[2])));
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(
           "Illegal workflow priority for mapping " + mappingString);
@@ -168,7 +168,7 @@ public class WorkflowPriorityMappingsManager {
     String queuePath = queue.getQueuePath();
     if (priorityMappings.containsKey(queuePath)
         && priorityMappings.get(queuePath).containsKey(workflowID)) {
-      return priorityMappings.get(queuePath).get(workflowID).priority;
+      return priorityMappings.get(queuePath).get(workflowID);
     } else {
       queue = queue.getParent();
       return getMappedPriority(workflowID, queue);

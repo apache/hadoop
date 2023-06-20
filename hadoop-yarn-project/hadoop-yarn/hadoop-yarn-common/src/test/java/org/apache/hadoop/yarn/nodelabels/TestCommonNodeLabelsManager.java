@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,24 +25,31 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   DummyCommonNodeLabelsManager mgr = null;
 
-  @Before
+  @BeforeEach
   public void before() {
     mgr = new DummyCommonNodeLabelsManager();
     Configuration conf = new YarnConfiguration();
@@ -53,13 +58,14 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     mgr.start();
   }
 
-  @After
+  @AfterEach
   public void after() {
     mgr.stop();
   }
 
-  @Test(timeout = 5000)
-  public void testAddRemovelabel() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testAddRemovelabel() throws Exception {
     // Add some label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("hello"));
     verifyNodeLabelAdded(Sets.newHashSet("hello"), mgr.lastAddedlabels);
@@ -68,23 +74,23 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("hello1", "world1"));
     verifyNodeLabelAdded(Sets.newHashSet("hello1", "world1"), mgr.lastAddedlabels);
 
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Sets.newHashSet("hello", "world", "hello1", "world1")));
     try {
       mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("hello1",
           false)));
-      Assert.fail("IOException not thrown on exclusivity change of labels");
+      fail("IOException not thrown on exclusivity change of labels");
     } catch (Exception e) {
-      Assert.assertTrue("IOException is expected when exclusivity is modified",
-          e instanceof IOException);
+      assertTrue(e instanceof IOException,
+          "IOException is expected when exclusivity is modified");
     }
     try {
       mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("hello1",
           true)));
     } catch (Exception e) {
-      Assert.assertFalse(
-          "IOException not expected when no change in exclusivity",
-          e instanceof IOException);
+      assertFalse(
+          e instanceof IOException,
+          "IOException not expected when no change in exclusivity");
     }
     // try to remove null, empty and non-existed label, should fail
     for (String p : Arrays.asList(null, CommonNodeLabelsManager.NO_LABEL, "xx")) {
@@ -94,42 +100,45 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       } catch (IOException e) {
         caught = true;
       }
-      Assert.assertTrue("remove label should fail "
-          + "when label is null/empty/non-existed", caught);
+      assertTrue(caught, "remove label should fail "
+          + "when label is null/empty/non-existed");
     }
 
     // Remove some label
     mgr.removeFromClusterNodeLabels(Arrays.asList("hello"));
     assertCollectionEquals(Sets.newHashSet("hello"), mgr.lastRemovedlabels);
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("world", "hello1", "world1")));
 
     mgr.removeFromClusterNodeLabels(Arrays
         .asList("hello1", "world1", "world"));
-    Assert.assertTrue(mgr.lastRemovedlabels.containsAll(Sets.newHashSet(
+    assertTrue(mgr.lastRemovedlabels.containsAll(Sets.newHashSet(
         "hello1", "world1", "world")));
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
+    assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
   }
 
-  @Test(timeout = 5000)
-  public void testAddlabelWithCase() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testAddlabelWithCase() throws Exception {
     // Add some label, case will not ignore here
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("HeLlO"));
     verifyNodeLabelAdded(Sets.newHashSet("HeLlO"), mgr.lastAddedlabels);
-    Assert.assertFalse(mgr.getClusterNodeLabelNames().containsAll(
+    assertFalse(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("hello")));
   }
 
-  @Test(timeout = 5000)
-  public void testAddlabelWithExclusivity() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testAddlabelWithExclusivity() throws Exception {
     // Add some label, case will not ignore here
     mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("a", false), NodeLabel.newInstance("b", true)));
-    Assert.assertFalse(mgr.isExclusiveNodeLabel("a"));
-    Assert.assertTrue(mgr.isExclusiveNodeLabel("b"));
+    assertFalse(mgr.isExclusiveNodeLabel("a"));
+    assertTrue(mgr.isExclusiveNodeLabel("b"));
   }
 
-  @Test(timeout = 5000)
-  public void testAddInvalidlabel() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testAddInvalidlabel() throws IOException {
     boolean caught = false;
     try {
       Set<String> set = new HashSet<String>();
@@ -138,7 +147,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("null label should not add to repo", caught);
+    assertTrue(caught, "null label should not add to repo");
 
     caught = false;
     try {
@@ -147,7 +156,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
 
-    Assert.assertTrue("empty label should not add to repo", caught);
+    assertTrue(caught, "empty label should not add to repo");
 
     caught = false;
     try {
@@ -155,7 +164,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("invalid label character should not add to repo", caught);
+    assertTrue(caught, "invalid label character should not add to repo");
 
     caught = false;
     try {
@@ -163,7 +172,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("too long label should not add to repo", caught);
+    assertTrue(caught, "too long label should not add to repo");
 
     caught = false;
     try {
@@ -171,7 +180,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("label cannot start with \"-\"", caught);
+    assertTrue(caught, "label cannot start with \"-\"");
 
     caught = false;
     try {
@@ -179,28 +188,29 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("label cannot start with \"_\"", caught);
-    
+    assertTrue(caught, "label cannot start with \"_\"");
+
     caught = false;
     try {
       mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("a^aabbb"));
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("label cannot contains other chars like ^[] ...", caught);
-    
+    assertTrue(caught, "label cannot contains other chars like ^[] ...");
+
     caught = false;
     try {
       mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("aa[a]bbb"));
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("label cannot contains other chars like ^[] ...", caught);
+    assertTrue(caught, "label cannot contains other chars like ^[] ...");
   }
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  @Test(timeout = 5000)
-  public void testAddReplaceRemoveLabelsOnNodes() throws Exception {
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  @Test
+  @Timeout(5000)
+  void testAddReplaceRemoveLabelsOnNodes() throws Exception {
     // set a label on a node, but label doesn't exist
     boolean caught = false;
     try {
@@ -208,8 +218,8 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("trying to set a label to a node but "
-        + "label doesn't exist in repository should fail", caught);
+    assertTrue(caught, "trying to set a label to a node but "
+        + "label doesn't exist in repository should fail");
 
     // set a label on a node, but node is null or empty
     try {
@@ -218,7 +228,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("trying to add a empty node but succeeded", caught);
+    assertTrue(caught, "trying to add a empty node but succeeded");
 
     // set node->label one by one
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
@@ -263,15 +273,16 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     // remove labels on node
     mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
         toNodeId("n2"), toSet("p3"), toNodeId("n3"), toSet("p3")));
-    Assert.assertEquals(0, mgr.getNodeLabels().size());
+    assertEquals(0, mgr.getNodeLabels().size());
     assertMapEquals(mgr.lastNodeToLabels, ImmutableMap.of(toNodeId("n1"),
         CommonNodeLabelsManager.EMPTY_STRING_SET, toNodeId("n2"),
         CommonNodeLabelsManager.EMPTY_STRING_SET, toNodeId("n3"),
         CommonNodeLabelsManager.EMPTY_STRING_SET));
   }
 
-  @Test(timeout = 5000)
-  public void testRemovelabelWithNodes() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testRemovelabelWithNodes() throws Exception {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n2"), toSet("p2")));
@@ -283,21 +294,23 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertCollectionEquals(Arrays.asList("p1"), mgr.lastRemovedlabels);
 
     mgr.removeFromClusterNodeLabels(ImmutableSet.of("p2", "p3"));
-    Assert.assertTrue(mgr.getNodeLabels().isEmpty());
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
+    assertTrue(mgr.getNodeLabels().isEmpty());
+    assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
     assertCollectionEquals(Arrays.asList("p2", "p3"), mgr.lastRemovedlabels);
   }
-  
-  @Test(timeout = 5000) 
-  public void testTrimLabelsWhenAddRemoveNodeLabels() throws IOException {
+
+  @Test
+  @Timeout(5000)
+  void testTrimLabelsWhenAddRemoveNodeLabels() throws IOException {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet(" p1"));
     assertCollectionEquals(toSet("p1"), mgr.getClusterNodeLabelNames());
     mgr.removeFromClusterNodeLabels(toSet("p1 "));
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
+    assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
   }
-  
-  @Test(timeout = 5000) 
-  public void testTrimLabelsWhenModifyLabelsOnNodes() throws IOException {
+
+  @Test
+  @Timeout(5000)
+  void testTrimLabelsWhenModifyLabelsOnNodes() throws IOException {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet(" p1", "p2"));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1 ")));
     assertMapEquals(
@@ -308,49 +321,51 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
         mgr.getNodeLabels(),
         ImmutableMap.of(toNodeId("n1"), toSet("p2")));
     mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("  p2 ")));
-    Assert.assertTrue(mgr.getNodeLabels().isEmpty());
+    assertTrue(mgr.getNodeLabels().isEmpty());
   }
-  
-  @Test(timeout = 5000)
-  public void testReplaceLabelsOnHostsShouldUpdateNodesBelongTo()
+
+  @Test
+  @Timeout(5000)
+  void testReplaceLabelsOnHostsShouldUpdateNodesBelongTo()
       throws IOException {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
     assertMapEquals(
         mgr.getNodeLabels(),
         ImmutableMap.of(toNodeId("n1"), toSet("p1")));
-    
+
     // Replace labels on n1:1 to P2
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2"),
         toNodeId("n1:2"), toSet("p2")));
     assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
         toSet("p1"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
         toSet("p2")));
-    
+
     // Replace labels on n1 to P1, both n1:1/n1 will be P1 now
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
     assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
         toSet("p1"), toNodeId("n1:1"), toSet("p1"), toNodeId("n1:2"),
         toSet("p1")));
-    
+
     // Set labels on n1:1 to P2 again to verify if add/remove works
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2")));
   }
 
   private void assertNodeLabelsDisabledErrorMessage(IOException e) {
-    Assert.assertEquals(CommonNodeLabelsManager.NODE_LABELS_NOT_ENABLED_ERR,
+    assertEquals(CommonNodeLabelsManager.NODE_LABELS_NOT_ENABLED_ERR,
         e.getMessage());
   }
-  
-  @Test(timeout = 5000)
-  public void testNodeLabelsDisabled() throws IOException {
+
+  @Test
+  @Timeout(5000)
+  void testNodeLabelsDisabled() throws IOException {
     DummyCommonNodeLabelsManager mgr = new DummyCommonNodeLabelsManager();
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, false);
     mgr.init(conf);
     mgr.start();
     boolean caught = false;
-    
+
     // add labels
     try {
       mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x"));
@@ -359,9 +374,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
     // check exception caught
-    Assert.assertTrue(caught);
+    assertTrue(caught);
     caught = false;
-    
+
     // remove labels
     try {
       mgr.removeFromClusterNodeLabels(ImmutableSet.of("x"));
@@ -370,9 +385,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
     // check exception caught
-    Assert.assertTrue(caught);
+    assertTrue(caught);
     caught = false;
-    
+
     // add labels to node
     try {
       mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("host", 0),
@@ -382,9 +397,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
     // check exception caught
-    Assert.assertTrue(caught);
+    assertTrue(caught);
     caught = false;
-    
+
     // remove labels from node
     try {
       mgr.removeLabelsFromNode(ImmutableMap.of(NodeId.newInstance("host", 0),
@@ -394,9 +409,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
     // check exception caught
-    Assert.assertTrue(caught);
+    assertTrue(caught);
     caught = false;
-    
+
     // replace labels on node
     try {
       mgr.replaceLabelsOnNode(ImmutableMap.of(NodeId.newInstance("host", 0),
@@ -406,14 +421,15 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       caught = true;
     }
     // check exception caught
-    Assert.assertTrue(caught);
+    assertTrue(caught);
     caught = false;
-    
-    mgr.close();
-  }  
 
-  @Test(timeout = 5000)
-  public void testLabelsToNodes()
+    mgr.close();
+  }
+
+  @Test
+  @Timeout(5000)
+  void testLabelsToNodes()
       throws IOException {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
@@ -421,7 +437,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n1"))));
+            "p1", toSet(toNodeId("n1"))));
     assertLabelsToNodesEquals(
         labelsToNodes, transposeNodeToLabels(mgr.getNodeLabels()));
 
@@ -432,8 +448,8 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n1")),
-        "p2", toSet(toNodeId("n1:1"),toNodeId("n1:2"))));
+            "p1", toSet(toNodeId("n1")),
+            "p2", toSet(toNodeId("n1:1"), toNodeId("n1:2"))));
     assertLabelsToNodesEquals(
         labelsToNodes, transposeNodeToLabels(mgr.getNodeLabels()));
 
@@ -443,7 +459,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n1"),toNodeId("n1:1"),toNodeId("n1:2"))));
+            "p1", toSet(toNodeId("n1"), toNodeId("n1:1"), toNodeId("n1:2"))));
     assertLabelsToNodesEquals(
         labelsToNodes, transposeNodeToLabels(mgr.getNodeLabels()));
 
@@ -455,9 +471,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n1"),toNodeId("n1:2")),
-        "p2", toSet(toNodeId("n1:1")),
-        "p3", toSet(toNodeId("n2"))));
+            "p1", toSet(toNodeId("n1"), toNodeId("n1:2")),
+            "p2", toSet(toNodeId("n1:1")),
+            "p3", toSet(toNodeId("n2"))));
     assertLabelsToNodesEquals(
         labelsToNodes, transposeNodeToLabels(mgr.getNodeLabels()));
 
@@ -467,20 +483,21 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n1"),toNodeId("n1:2")),
-        "p2", toSet(toNodeId("n1:1"))));
+            "p1", toSet(toNodeId("n1"), toNodeId("n1:2")),
+            "p2", toSet(toNodeId("n1:1"))));
     assertLabelsToNodesEquals(
         labelsToNodes, transposeNodeToLabels(mgr.getNodeLabels()));
   }
 
-  @Test(timeout = 5000)
-  public void testLabelsToNodesForSelectedLabels()
+  @Test
+  @Timeout(5000)
+  void testLabelsToNodesForSelectedLabels()
       throws IOException {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
     mgr.addLabelsToNode(
         ImmutableMap.of(
-        toNodeId("n1:1"), toSet("p1"),
-        toNodeId("n1:2"), toSet("p2")));
+            toNodeId("n1:1"), toSet("p1"),
+            toNodeId("n1:2"), toSet("p2")));
     Set<String> setlabels =
         new HashSet<String>(Arrays.asList(new String[]{"p1"}));
     assertLabelsToNodesEquals(mgr.getLabelsToNodes(setlabels),
@@ -493,14 +510,14 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of(
-        "p3", toSet(toNodeId("n1"), toNodeId("n1:1"),toNodeId("n1:2"))));
+            "p3", toSet(toNodeId("n1"), toNodeId("n1:1"), toNodeId("n1:2"))));
 
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n2"), toSet("p2")));
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of(
-        "p2", toSet(toNodeId("n2")),
-        "p3", toSet(toNodeId("n1"), toNodeId("n1:1"),toNodeId("n1:2"))));
+            "p2", toSet(toNodeId("n2")),
+            "p3", toSet(toNodeId("n1"), toNodeId("n1:1"), toNodeId("n1:2"))));
 
     mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
     setlabels =
@@ -508,29 +525,30 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of(
-        "p2", toSet(toNodeId("n2"))));
+            "p2", toSet(toNodeId("n2"))));
 
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n3"), toSet("p1")));
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n3")),
-        "p2", toSet(toNodeId("n2"))));
+            "p1", toSet(toNodeId("n3")),
+            "p2", toSet(toNodeId("n2"))));
 
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n2:2"), toSet("p3")));
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of(
-        "p1", toSet(toNodeId("n3")),
-        "p2", toSet(toNodeId("n2")),
-        "p3", toSet(toNodeId("n2:2"))));
+            "p1", toSet(toNodeId("n3")),
+            "p2", toSet(toNodeId("n2")),
+            "p3", toSet(toNodeId("n2:2"))));
     setlabels = new HashSet<String>(Arrays.asList(new String[]{"p1"}));
     assertLabelsToNodesEquals(mgr.getLabelsToNodes(setlabels),
         ImmutableMap.of("p1", toSet(toNodeId("n3"))));
   }
 
-  @Test(timeout = 5000)
-  public void testNoMoreThanOneLabelExistedInOneHost() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testNoMoreThanOneLabelExistedInOneHost() throws IOException {
     boolean failed = false;
     // As in YARN-2694, we temporarily disable no more than one label existed in
     // one host
@@ -540,14 +558,14 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       failed = true;
     }
-    Assert.assertTrue("Should failed when set > 1 labels on a host", failed);
+    assertTrue(failed, "Should failed when set > 1 labels on a host");
 
     try {
       mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1", "p2")));
     } catch (IOException e) {
       failed = true;
     }
-    Assert.assertTrue("Should failed when add > 1 labels on a host", failed);
+    assertTrue(failed, "Should failed when add > 1 labels on a host");
 
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
     // add a same label to a node, #labels in this node is still 1, shouldn't
@@ -558,20 +576,21 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       failed = true;
     }
-    Assert.assertTrue("Should failed when #labels > 1 on a host after add",
-        failed);
+    assertTrue(failed,
+        "Should failed when #labels > 1 on a host after add");
   }
 
   private void verifyNodeLabelAdded(Set<String> expectedAddedLabelNames,
       Collection<NodeLabel> addedNodeLabels) {
-    Assert.assertEquals(expectedAddedLabelNames.size(), addedNodeLabels.size());
+    assertEquals(expectedAddedLabelNames.size(), addedNodeLabels.size());
     for (NodeLabel label : addedNodeLabels) {
-      Assert.assertTrue(expectedAddedLabelNames.contains(label.getName()));
+      assertTrue(expectedAddedLabelNames.contains(label.getName()));
     }
   }
 
-  @Test(timeout = 5000)
-  public void testReplaceLabelsOnNodeInDistributedMode() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testReplaceLabelsOnNodeInDistributedMode() throws Exception {
     //create new DummyCommonNodeLabelsManager than the one got from @before
     mgr.stop();
     mgr = new DummyCommonNodeLabelsManager();
@@ -587,16 +606,17 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
     Set<String> labelsByNode = mgr.getLabelsByNode(toNodeId("n1"));
 
-    Assert.assertNull(
-        "Labels are not expected to be written to the NodeLabelStore",
-        mgr.lastNodeToLabels);
-    Assert.assertNotNull("Updated labels should be available from the Mgr",
-        labelsByNode);
-    Assert.assertTrue(labelsByNode.contains("p1"));
+    assertNull(
+        mgr.lastNodeToLabels,
+        "Labels are not expected to be written to the NodeLabelStore");
+    assertNotNull(labelsByNode,
+        "Updated labels should be available from the Mgr");
+    assertTrue(labelsByNode.contains("p1"));
   }
 
-  @Test(timeout = 5000)
-  public void testLabelsInfoToNodes() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testLabelsInfoToNodes() throws IOException {
     mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p1", false),
         NodeLabel.newInstance("p2", true), NodeLabel.newInstance("p3", true)));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
@@ -605,8 +625,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
         NodeLabel.newInstance("p1", false), toSet(toNodeId("n1"))));
   }
 
-  @Test(timeout = 5000)
-  public void testGetNodeLabelsInfo() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testGetNodeLabelsInfo() throws IOException {
     mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p1", false),
         NodeLabel.newInstance("p2", true), NodeLabel.newInstance("p3", false)));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p2")));
@@ -617,8 +638,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
         toNodeId("n2"), toSet(NodeLabel.newInstance("p3", false))));
   }
 
-  @Test(timeout = 5000)
-  public void testRemoveNodeLabelsInfo() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testRemoveNodeLabelsInfo() throws IOException {
     mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p1", true)));
     mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p2", true)));
     mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
@@ -628,10 +650,10 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         labelsToNodes,
         ImmutableMap.of(
-        "p2", toSet(toNodeId("n1:1"), toNodeId("n1:0"))));
+            "p2", toSet(toNodeId("n1:1"), toNodeId("n1:0"))));
 
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), new HashSet()));
     Map<String, Set<NodeId>> labelsToNodes2 = mgr.getLabelsToNodes();
-    Assert.assertEquals(labelsToNodes2.get("p2"), null);
+    assertNull(labelsToNodes2.get("p2"));
   }
 }

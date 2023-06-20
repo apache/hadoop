@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -191,11 +192,11 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * Abort multipart uploads under a path: limited to the first
+   * List in-progress multipart uploads under a path: limited to the first
    * few hundred.
-   * @param prefix prefix for uploads to abort
-   * @return a count of aborts
-   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   * @param prefix prefix for uploads to list
+   * @return a list of in-progress multipart uploads
+   * @throws IOException on problems
    */
   List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException;
@@ -233,7 +234,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws IOException;
@@ -244,25 +245,14 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
-      throws IOException;
-
-  /**
-   * PUT an object via the transfer manager.
-   *
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   *
-   * @throws IOException on problems
-   */
-  @Retries.RetryTranslated
-  void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
   /**
@@ -299,11 +289,13 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Upload part of a multi-partition file.
    * @param request request
+   * @param durationTrackerFactory factory for duration tracking
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadPartResult uploadPart(UploadPartRequest request)
+  UploadPartResult uploadPart(UploadPartRequest request,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
   /**

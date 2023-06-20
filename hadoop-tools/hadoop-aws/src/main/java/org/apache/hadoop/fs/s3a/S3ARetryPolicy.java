@@ -31,17 +31,18 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
 
@@ -227,6 +228,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSServiceIOException.class, retryIdempotentCalls);
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
     policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
+
+    // Unsupported requests do not work, however many times you try
+    policyMap.put(UnsupportedRequestException.class, fail);
 
     return policyMap;
   }

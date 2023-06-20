@@ -60,7 +60,6 @@ public class AvroFSInput implements Closeable, SeekableInput {
             FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
         .withFileStatus(status)
         .build());
-    fc.open(p);
   }
 
   @Override

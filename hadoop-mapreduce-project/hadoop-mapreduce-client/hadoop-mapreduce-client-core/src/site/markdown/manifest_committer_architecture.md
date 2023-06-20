@@ -113,7 +113,7 @@ No renaming takes place —the files are left in their original location.
 The directory treewalk is single-threaded, then it is `O(directories)`,
 with each directory listing using one or more paged LIST calls.
 
-This is simple, and for most tasks, the scan is off the critical path of of the job.
+This is simple, and for most tasks, the scan is off the critical path of the job.
 
 Statistics analysis may justify moving to parallel scans in future.
 

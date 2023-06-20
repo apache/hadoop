@@ -412,7 +412,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           return new ExternalBlockReader(accessor, visibleLength, startOffset);
         }
       } catch (Throwable t) {
-        LOG.warn("Failed to construct new object of type " +
+        LOG.warn("Failed to construct new object of type {}",
             cls.getName(), t);
       }
     }
@@ -458,8 +458,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       // which requires us to disable legacy SCR.
       throw ioe;
     }
-    LOG.warn(this + ": error creating legacy BlockReaderLocal.  " +
-        "Disabling legacy local reads.", ioe);
+    LOG.warn("{}: error creating legacy BlockReaderLocal.  " +
+        "Disabling legacy local reads.", this, ioe);
     clientContext.setDisableLegacyBlockReaderLocal();
     return null;
   }
@@ -558,8 +558,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           // Handle an I/O error we got when using a newly created socket.
           // We temporarily disable the domain socket path for a few minutes in
           // this case, to prevent wasting more time on it.
-          LOG.warn(this + ": I/O error requesting file descriptors.  " +
-              "Disabling domain socket " + peer.getDomainSocket(), e);
+          LOG.warn("{}: I/O error requesting file descriptors.  " +
+              "Disabling domain socket {}", this, peer.getDomainSocket(), e);
           IOUtilsClient.cleanupWithLogger(LOG, peer);
           clientContext.getDomainSocketFactory()
               .disableDomainSocketPath(pathInfo.getPath());
@@ -621,7 +621,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         // This indicates an error reading from disk, or a format error.  Since
         // it's not a socket communication problem, we return null rather than
         // throwing an exception.
-        LOG.warn(this + ": error creating ShortCircuitReplica.", e);
+        LOG.warn("{}: error creating ShortCircuitReplica.", this, e);
         return null;
       } finally {
         if (replica == null) {
@@ -631,13 +631,13 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     case ERROR_UNSUPPORTED:
       if (!resp.hasShortCircuitAccessVersion()) {
         LOG.warn("short-circuit read access is disabled for " +
-            "DataNode " + datanode + ".  reason: " + resp.getMessage());
+            "DataNode {}.  reason: {}", datanode, resp.getMessage());
         clientContext.getDomainSocketFactory()
             .disableShortCircuitForPath(pathInfo.getPath());
       } else {
         LOG.warn("short-circuit read access for the file " +
-            fileName + " is disabled for DataNode " + datanode +
-            ".  reason: " + resp.getMessage());
+            "{} is disabled for DataNode {}" +
+            ".  reason: {}", fileName, datanode, resp.getMessage());
       }
       return null;
     case ERROR_ACCESS_TOKEN:
@@ -716,7 +716,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           // We temporarily disable the domain socket path for a few minutes in
           // this case, to prevent wasting more time on it.
           LOG.warn("I/O error constructing remote block reader.  Disabling " +
-              "domain socket " + peer.getDomainSocket(), ioe);
+              "domain socket {}", peer.getDomainSocket(), ioe);
           clientContext.getDomainSocketFactory()
               .disableDomainSocketPath(pathInfo.getPath());
           return null;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.oncrpc;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -26,6 +27,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -129,15 +131,17 @@ public final class RpcUtil {
       RpcInfo info = null;
       try {
         RpcCall callHeader = RpcCall.read(in);
-        ByteBuf dataBuffer = Unpooled.wrappedBuffer(in.buffer()
-            .slice());
+        ByteBuf dataBuffer = buf.slice(b.position(), b.remaining());
 
         info = new RpcInfo(callHeader, dataBuffer, ctx, ctx.channel(),
             remoteAddress);
       } catch (Exception exc) {
         LOG.info("Malformed RPC request from " + remoteAddress);
       } finally {
-        buf.release();
+        // only release buffer if it is not passed to downstream handler
+        if (info == null) {
+          buf.release();
+        }
       }
 
       if (info != null) {
@@ -170,15 +174,18 @@ public final class RpcUtil {
    */
   @ChannelHandler.Sharable
   private static final class RpcUdpResponseStage extends
-      ChannelInboundHandlerAdapter {
+          SimpleChannelInboundHandler<RpcResponse> {
+    public RpcUdpResponseStage() {
+      // do not auto release the RpcResponse message.
+      super(false);
+    }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg)
-        throws Exception {
-      RpcResponse r = (RpcResponse) msg;
-      // TODO: check out https://github.com/netty/netty/issues/1282 for
-      // correct usage
-      ctx.channel().writeAndFlush(r.data());
+    protected void channelRead0(ChannelHandlerContext ctx,
+                                RpcResponse response) throws Exception {
+      ByteBuf buf = Unpooled.wrappedBuffer(response.data());
+      ctx.writeAndFlush(new DatagramPacket(
+              buf, (InetSocketAddress) response.recipient()));
     }
   }
 }

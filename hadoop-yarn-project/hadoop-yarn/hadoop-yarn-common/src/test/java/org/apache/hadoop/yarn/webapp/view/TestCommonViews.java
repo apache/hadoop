@@ -19,36 +19,36 @@
 package org.apache.hadoop.yarn.webapp.view;
 
 import com.google.inject.Injector;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.apache.hadoop.yarn.webapp.view.ErrorPage;
-import org.apache.hadoop.yarn.webapp.view.FooterBlock;
-import org.apache.hadoop.yarn.webapp.view.HeaderBlock;
-import org.apache.hadoop.yarn.webapp.view.JQueryUI;
-
-import org.junit.Test;
 
 public class TestCommonViews {
 
-  @Test public void testErrorPage() {
+  @Test
+  void testErrorPage() {
     Injector injector = WebAppTests.testPage(ErrorPage.class);
 
   }
 
-  @Test public void testHeaderBlock() {
+  @Test
+  void testHeaderBlock() {
     WebAppTests.testBlock(HeaderBlock.class);
   }
 
-  @Test public void testFooterBlock() {
+  @Test
+  void testFooterBlock() {
     WebAppTests.testBlock(FooterBlock.class);
   }
 
-  @Test public void testJQueryUI() {
+  @Test
+  void testJQueryUI() {
     WebAppTests.testBlock(JQueryUI.class);
   }
 
-  @Test public void testInfoBlock() {
+  @Test
+  void testInfoBlock() {
     Injector injector = WebAppTests.createMockInjector(this);
     ResponseInfo info = injector.getInstance(ResponseInfo.class);
   }

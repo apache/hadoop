@@ -266,6 +266,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
       snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
+
+      reclaimContext.setSnapshotToBeDeleted(snapshot);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);

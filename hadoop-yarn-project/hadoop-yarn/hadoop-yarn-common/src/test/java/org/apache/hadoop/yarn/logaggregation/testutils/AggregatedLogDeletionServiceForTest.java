@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.logaggregation.testutils;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
-
-import java.io.IOException;
-import java.util.List;
 
 import static org.apache.hadoop.yarn.logaggregation.testutils.MockRMClientUtils.createMockRMClient;
 

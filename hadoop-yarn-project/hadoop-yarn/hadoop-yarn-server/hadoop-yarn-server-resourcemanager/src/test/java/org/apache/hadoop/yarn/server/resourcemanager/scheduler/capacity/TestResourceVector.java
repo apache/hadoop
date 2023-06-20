@@ -68,7 +68,7 @@ public class TestResourceVector {
   public void testSubtract() {
     ResourceVector lhsResourceVector = ResourceVector.of(13);
     ResourceVector rhsResourceVector = ResourceVector.of(5);
-    lhsResourceVector.subtract(rhsResourceVector);
+    lhsResourceVector.decrement(rhsResourceVector);
 
     Assert.assertEquals(8, lhsResourceVector.getValue(MEMORY_URI), EPSILON);
     Assert.assertEquals(8, lhsResourceVector.getValue(VCORES_URI), EPSILON);
@@ -77,7 +77,7 @@ public class TestResourceVector {
     ResourceVector negativeResourceVector = ResourceVector.of(-100);
 
     // Check whether overflow causes any issues
-    negativeResourceVector.subtract(ResourceVector.of(Float.MAX_VALUE));
+    negativeResourceVector.decrement(ResourceVector.of(Float.MAX_VALUE));
     Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(MEMORY_URI), EPSILON);
     Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(VCORES_URI), EPSILON);
     Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(CUSTOM_RESOURCE),
@@ -111,7 +111,7 @@ public class TestResourceVector {
     Assert.assertNotEquals(resource, resourceVector);
 
     ResourceVector resourceVectorOne = ResourceVector.of(1);
-    resourceVectorOther.subtract(resourceVectorOne);
+    resourceVectorOther.decrement(resourceVectorOne);
 
     Assert.assertEquals(resourceVectorOther, resourceVector);
   }

@@ -204,6 +204,8 @@ public class MountTableRefresherService extends AbstractService {
 
   /**
    * Refresh mount table cache of this router as well as all other routers.
+   *
+   * @throws StateStoreUnavailableException if the state store is not available.
    */
   public void refresh() throws StateStoreUnavailableException {
     RouterStore routerStore = router.getRouterStateManager();

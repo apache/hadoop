@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.federation.policies.router.RejectRouterPoli
  * This class represents a simple implementation of a {@code
  * FederationPolicyManager}.
  *
- * This policy rejects all reuqests for both router and amrmproxy routing. This
+ * This policy rejects all requests for both router and amrmproxy routing. This
  * is to be used to prevent applications in a specific queue (or if used as
  * default for non-configured queues) from accessing cluster resources.
  */

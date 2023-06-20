@@ -21,11 +21,14 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +48,8 @@ import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -104,6 +109,15 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private URLConnectionFactory connectionFactory;
   /** URL scheme to use for JMX calls. */
   private String scheme;
+
+  /** Frequency of updates to JMX report. */
+  private long updateJmxIntervalMs;
+  /** Timestamp of last attempt to update JMX report. */
+  private long lastJmxUpdateAttempt;
+  /** Result of the last successful FsNamesystemMetrics report. */
+  private JSONArray fsNamesystemMetrics;
+  /** Result of the last successful NamenodeInfoMetrics report. */
+  private JSONArray namenodeInfoMetrics;
 
   private String resolvedHost;
   private String originalNnId;
@@ -231,12 +245,23 @@ public class NamenodeHeartbeatService extends PeriodicService {
       this.healthMonitorTimeoutMs = (int) timeoutMs;
     }
 
+    this.updateJmxIntervalMs = conf.getTimeDuration(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
+        DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT, TimeUnit.MILLISECONDS);
+
     super.serviceInit(configuration);
   }
 
   @Override
   public void periodicInvoke() {
-    updateState();
+    try {
+      // Run using the login user credentials
+      SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
+        updateState();
+        return null;
+      });
+    } catch (IOException e) {
+      LOG.error("Cannot update namenode state", e);
+    }
   }
 
   /**
@@ -307,11 +332,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       if (!resolver.registerNamenode(report)) {
         LOG.warn("Cannot register namenode {}", report);
       }
-    } catch (IOException e) {
-      LOG.info("Cannot register namenode in the State Store");
-    } catch (Exception ex) {
-      LOG.error("Unhandled exception updating NN registration for {}",
-          getNamenodeDesc(), ex);
+    } catch (Exception e) {
+      LOG.error("Cannot register namenode {} in the State Store", getNamenodeDesc(), e);
     }
   }
 
@@ -440,8 +462,13 @@ public class NamenodeHeartbeatService extends PeriodicService {
       String address, NamenodeStatusReport report) {
     try {
       // TODO part of this should be moved to its own utility
-      getFsNamesystemMetrics(address, report);
-      getNamenodeInfoMetrics(address, report);
+      if (shouldUpdateJmx()) {
+        this.lastJmxUpdateAttempt = Time.monotonicNow();
+        getFsNamesystemMetrics(address);
+        getNamenodeInfoMetrics(address);
+      }
+      populateFsNamesystemMetrics(this.fsNamesystemMetrics, report);
+      populateNamenodeInfoMetrics(this.namenodeInfoMetrics, report);
     } catch (Exception e) {
       LOG.error("Cannot get stat from {} using JMX", getNamenodeDesc(), e);
     }
@@ -476,16 +503,37 @@ public class NamenodeHeartbeatService extends PeriodicService {
   }
 
   /**
+   * Evaluates whether the JMX report should be refreshed by
+   * calling the Namenode, based on the following conditions:
+   * 1. JMX Updates must be enabled.
+   * 2. The last attempt to update JMX occurred before the
+   *    configured interval (if any).
+   */
+  private boolean shouldUpdateJmx() {
+    if (this.updateJmxIntervalMs < 0) {
+      return false;
+    }
+
+    return Time.monotonicNow() - this.lastJmxUpdateAttempt > this.updateJmxIntervalMs;
+  }
+
+  /**
    * Fetches NamenodeInfo metrics from namenode.
    * @param address Web interface of the Namenode to monitor.
-   * @param report Namenode status report to update with JMX data.
-   * @throws JSONException
    */
-  private void getNamenodeInfoMetrics(String address,
-      NamenodeStatusReport report) throws JSONException {
+  private void getNamenodeInfoMetrics(String address) {
     String query = "Hadoop:service=NameNode,name=NameNodeInfo";
-    JSONArray aux =
-        FederationUtil.getJmx(query, address, connectionFactory, scheme);
+    this.namenodeInfoMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
+  }
+
+  /**
+   * Populates NamenodeInfo metrics into report.
+   * @param aux NamenodeInfo metrics from namenode.
+   * @param report Namenode status report to update with JMX data.
+   * @throws JSONException When an invalid JSONObject is found
+   */
+  private void populateNamenodeInfoMetrics(JSONArray aux, NamenodeStatusReport report)
+      throws JSONException {
     if (aux != null && aux.length() > 0) {
       JSONObject jsonObject = aux.getJSONObject(0);
       String name = jsonObject.getString("name");
@@ -503,14 +551,20 @@ public class NamenodeHeartbeatService extends PeriodicService {
   /**
    * Fetches FSNamesystem* metrics from namenode.
    * @param address Web interface of the Namenode to monitor.
-   * @param report Namenode status report to update with JMX data.
-   * @throws JSONException
    */
-  private void getFsNamesystemMetrics(String address,
-      NamenodeStatusReport report) throws JSONException {
+  private void getFsNamesystemMetrics(String address) {
     String query = "Hadoop:service=NameNode,name=FSNamesystem*";
-    JSONArray aux = FederationUtil.getJmx(
-        query, address, connectionFactory, scheme);
+    this.fsNamesystemMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
+  }
+
+  /**
+   * Populates FSNamesystem* metrics into report.
+   * @param aux FSNamesystem* metrics from namenode.
+   * @param report Namenode status report to update with JMX data.
+   * @throws JSONException When invalid JSONObject is found.
+   */
+  private void populateFsNamesystemMetrics(JSONArray aux, NamenodeStatusReport report)
+      throws JSONException {
     if (aux != null) {
       for (int i = 0; i < aux.length(); i++) {
         JSONObject jsonObject = aux.getJSONObject(i);

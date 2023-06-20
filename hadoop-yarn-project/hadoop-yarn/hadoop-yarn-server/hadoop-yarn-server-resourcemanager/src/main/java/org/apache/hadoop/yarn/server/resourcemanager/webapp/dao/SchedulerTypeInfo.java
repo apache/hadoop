@@ -25,7 +25,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name = "scheduler")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SchedulerTypeInfo {
-  protected SchedulerInfo schedulerInfo;
+  private SchedulerInfo schedulerInfo;
+  private String subClusterId;
 
   public SchedulerTypeInfo() {
   } // JAXB needs this
@@ -36,5 +37,13 @@ public class SchedulerTypeInfo {
 
   public SchedulerInfo getSchedulerInfo() {
     return schedulerInfo;
+  }
+
+  public String getSubClusterId() {
+    return subClusterId;
+  }
+
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
   }
 }

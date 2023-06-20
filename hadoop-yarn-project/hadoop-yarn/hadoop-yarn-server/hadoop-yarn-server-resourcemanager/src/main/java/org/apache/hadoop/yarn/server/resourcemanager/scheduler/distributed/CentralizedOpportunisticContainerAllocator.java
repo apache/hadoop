@@ -77,6 +77,7 @@ public class CentralizedOpportunisticContainerAllocator extends
    * @param tokenSecretManager TokenSecretManager
    * @param maxAllocationsPerAMHeartbeat max number of containers to be
    *                                     allocated in one AM heartbeat
+   * @param nodeQueueLoadMonitor NodeQueueLoadMonitor.
    */
   public CentralizedOpportunisticContainerAllocator(
       BaseContainerTokenSecretManager tokenSecretManager,

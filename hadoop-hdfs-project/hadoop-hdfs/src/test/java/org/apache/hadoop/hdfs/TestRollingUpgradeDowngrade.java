@@ -24,8 +24,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
@@ -99,9 +99,9 @@ public class TestRollingUpgradeDowngrade {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
       NNStorage storage = spy(cluster.getNameNode().getFSImage().getStorage());
       int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
       doReturn(futureVersion).when(storage).getServiceLayoutVersion();

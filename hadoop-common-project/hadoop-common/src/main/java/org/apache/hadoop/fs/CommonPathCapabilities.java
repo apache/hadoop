@@ -163,5 +163,11 @@ public final class CommonPathCapabilities {
   public static final String ETAGS_PRESERVED_IN_RENAME =
       "fs.capability.etags.preserved.in.rename";
 
+  /**
+   * Does this Filesystem support lease recovery operations such as
+   * {@link LeaseRecoverable#recoverLease(Path)} and {@link LeaseRecoverable#isFileClosed(Path)}}?
+   * Value: {@value}.
+   */
+  public static final String LEASE_RECOVERABLE = "fs.capability.lease.recoverable";
 
 }

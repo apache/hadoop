@@ -64,7 +64,7 @@ ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
 RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://dlcdn.apache.org/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.6-bin.zip
+RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.6-bin.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.6-bin.zip -DestinationPath "C:\Maven"
 RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.6\bin"
 ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
@@ -74,8 +74,51 @@ RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.19/cmake-3.19.0
 RUN powershell Expand-Archive -Path $Env:TEMP\cmake-3.19.0-win64-x64.zip -DestinationPath "C:\CMake"
 RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 
+# Install zstd 1.5.4.
+RUN powershell Invoke-WebRequest -Uri https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-v1.5.4-win64.zip -OutFile $Env:TEMP\zstd-v1.5.4-win64.zip
+RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -DestinationPath "C:\ZStd"
+RUN setx PATH "%PATH%;C:\ZStd"
+
+# Install libopenssl 3.1.0 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.0-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar
+RUN powershell mkdir "C:\LibOpenSSL"
+RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
+
+# Install libxxhash 0.8.1 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.1-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar
+RUN powershell mkdir "C:\LibXXHash"
+RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar -C "C:\LibXXHash"
+
+# Install libzstd 1.5.4 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.4-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar
+RUN powershell mkdir "C:\LibZStd"
+RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar -C "C:\LibZStd"
+
+# Install rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/rsync-3.2.7-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar.zst -o $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar
+RUN powershell mkdir "C:\RSync"
+RUN powershell tar -xvf $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar -C "C:\RSync"
+# Copy the dependencies of rsync 3.2.7.
+RUN powershell Copy-Item -Path "C:\LibOpenSSL\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
+RUN powershell Copy-Item -Path "C:\LibXXHash\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
+RUN powershell Copy-Item -Path "C:\LibZStd\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
+RUN powershell Copy-Item -Path "C:\RSync\usr\bin\*" -Destination "C:\Program` Files\Git\usr\bin"
+
+# Install Python 3.10.11.
+RUN powershell Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip -OutFile $Env:TEMP\python-3.10.11-embed-amd64.zip
+RUN powershell Expand-Archive -Path $Env:TEMP\python-3.10.11-embed-amd64.zip -DestinationPath "C:\Python3"
+RUN powershell New-Item -ItemType HardLink -Value "C:\Python3\python.exe" -Path "C:\Python3\python3.exe"
+RUN setx path "%PATH%;C:\Python3"
+
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
+
+RUN git config --global core.longpaths true
+RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
 
 # Define the entry point for the docker container.
 ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe"]

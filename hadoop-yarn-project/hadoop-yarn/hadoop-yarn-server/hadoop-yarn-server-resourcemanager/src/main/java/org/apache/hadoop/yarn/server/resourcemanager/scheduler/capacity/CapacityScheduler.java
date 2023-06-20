@@ -2097,7 +2097,7 @@ public class CapacityScheduler extends
     {
       QueueManagementChangeEvent queueManagementChangeEvent =
           (QueueManagementChangeEvent) event;
-      ParentQueue parentQueue = queueManagementChangeEvent.getParentQueue();
+      AbstractParentQueue parentQueue = queueManagementChangeEvent.getParentQueue();
       try {
         final List<QueueManagementChange> queueManagementChanges =
             queueManagementChangeEvent.getQueueManagementChanges();

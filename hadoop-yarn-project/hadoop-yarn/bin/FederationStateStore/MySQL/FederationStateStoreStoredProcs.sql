@@ -18,7 +18,7 @@
 
 -- Script to generate all the stored procedures for the Federation StateStore in MySQL
 
-USE FederationStateStore
+USE FederationStateStore;
 
 DELIMITER //
 
@@ -89,11 +89,12 @@ END //
 
 CREATE PROCEDURE sp_addApplicationHomeSubCluster(
    IN applicationId_IN varchar(64), IN homeSubCluster_IN varchar(256),
+   IN applicationContext_IN BLOB,
    OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)
 BEGIN
    INSERT INTO applicationsHomeSubCluster
-      (applicationId,homeSubCluster)
-      (SELECT applicationId_IN, homeSubCluster_IN
+      (applicationId, homeSubCluster, createTime, applicationContext)
+      (SELECT applicationId_IN, homeSubCluster_IN, NOW(), applicationContext_IN
        FROM applicationsHomeSubCluster
        WHERE applicationId = applicationId_IN
        HAVING COUNT(*) = 0 );
@@ -105,19 +106,23 @@ END //
 
 CREATE PROCEDURE sp_updateApplicationHomeSubCluster(
    IN applicationId_IN varchar(64),
-   IN homeSubCluster_IN varchar(256), OUT rowCount_OUT int)
+   IN homeSubCluster_IN varchar(256), IN applicationContext_IN BLOB, OUT rowCount_OUT int)
 BEGIN
    UPDATE applicationsHomeSubCluster
-     SET homeSubCluster = homeSubCluster_IN
+     SET homeSubCluster = homeSubCluster_IN,
+         applicationContext = applicationContext_IN
    WHERE applicationId = applicationId_IN;
    SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
 CREATE PROCEDURE sp_getApplicationHomeSubCluster(
    IN applicationId_IN varchar(64),
-   OUT homeSubCluster_OUT varchar(256))
+   OUT homeSubCluster_OUT varchar(256),
+   OUT createTime_OUT datetime,
+   OUT applicationContext_OUT BLOB)
 BEGIN
-   SELECT homeSubCluster INTO homeSubCluster_OUT
+   SELECT homeSubCluster, applicationContext, createTime
+       INTO homeSubCluster_OUT, applicationContext_OUT, createTime_OUT
    FROM applicationsHomeSubCluster
    WHERE applicationId = applicationID_IN;
 END //
@@ -183,7 +188,7 @@ BEGIN
    SELECT ROW_COUNT() INTO rowCount_OUT;
    SELECT homeSubCluster INTO storedHomeSubCluster_OUT
    FROM reservationsHomeSubCluster
-   WHERE applicationId = reservationId_IN;
+   WHERE reservationId = reservationId_IN;
 END //
 
 CREATE PROCEDURE sp_getReservationHomeSubCluster(
@@ -217,6 +222,94 @@ BEGIN
    DELETE FROM reservationsHomeSubCluster
    WHERE reservationId = reservationId_IN;
    SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_addMasterKey(
+   IN keyId_IN bigint, IN masterKey_IN varchar(1024),
+   OUT rowCount_OUT int)
+BEGIN
+   INSERT INTO masterKeys(keyId, masterKey)
+     (SELECT keyId_IN, masterKey_IN
+        FROM masterKeys
+       WHERE keyId = keyId_IN
+      HAVING COUNT(*) = 0);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getMasterKey(
+   IN keyId_IN bigint,
+   OUT masterKey_OUT varchar(1024))
+BEGIN
+   SELECT masterKey INTO masterKey_OUT
+   FROM masterKeys
+   WHERE keyId = keyId_IN;
+END //
+
+CREATE PROCEDURE sp_deleteMasterKey(
+   IN keyId_IN bigint, OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM masterKeys
+   WHERE keyId = keyId_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_addDelegationToken(
+   IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),
+   IN token_IN varchar(1024), IN renewDate_IN bigint,
+   OUT rowCount_OUT int)
+BEGIN
+   INSERT INTO delegationTokens(sequenceNum, tokenIdent, token, renewDate)
+     (SELECT sequenceNum_IN, tokenIdent_IN, token_IN, renewDate_IN
+        FROM delegationTokens
+       WHERE sequenceNum = sequenceNum_IN
+      HAVING COUNT(*) = 0);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getDelegationToken(
+   IN sequenceNum_IN bigint, OUT tokenIdent_OUT varchar(1024),
+   OUT token_OUT varchar(1024), OUT renewDate_OUT bigint)
+BEGIN
+   SELECT tokenIdent, token,  renewDate INTO tokenIdent_OUT, token_OUT, renewDate_OUT
+     FROM delegationTokens
+    WHERE sequenceNum = sequenceNum_IN;
+END //
+
+CREATE PROCEDURE sp_updateDelegationToken(
+   IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),
+   IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)
+BEGIN
+   UPDATE delegationTokens
+      SET tokenIdent = tokenIdent_IN,
+          token = token_IN,
+          renewDate = renewDate_IN
+    WHERE sequenceNum = sequenceNum_IN;
+    SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_deleteDelegationToken(
+   IN sequenceNum_IN bigint, OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM delegationTokens
+   WHERE sequenceNum = sequenceNum_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_storeVersion(
+   IN fedVersion_IN varbinary(1024), IN versionComment_IN varchar(255), OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM versions;
+   INSERT INTO versions (fedVersion, versionComment)
+   VALUES (fedVersion_IN, versionComment_IN);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getVersion(
+   OUT fedVersion_OUT varbinary(1024), OUT versionComment_OUT varchar(255))
+BEGIN
+   SELECT fedVersion, versionComment INTO fedVersion_OUT, versionComment_OUT
+   FROM versions
+   LIMIT 1;
 END //
 
 DELIMITER ;

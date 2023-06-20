@@ -32,7 +32,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -246,30 +245,6 @@ public class IOUtils {
     }
   }
   
-  /**
-   * Close the Closeable objects and <b>ignore</b> any {@link Throwable} or
-   * null pointers. Must only be used for cleanup in exception handlers.
-   *
-   * @param log the log to record problems to at debug level. Can be null.
-   * @param closeables the objects to close
-   * @deprecated use {@link #cleanupWithLogger(Logger, java.io.Closeable...)}
-   * instead
-   */
-  @Deprecated
-  public static void cleanup(Log log, java.io.Closeable... closeables) {
-    for (java.io.Closeable c : closeables) {
-      if (c != null) {
-        try {
-          c.close();
-        } catch(Throwable e) {
-          if (log != null && log.isDebugEnabled()) {
-            log.debug("Exception in closing " + c, e);
-          }
-        }
-      }
-    }
-  }
-
   /**
    * Close the Closeable objects and <b>ignore</b> any {@link Throwable} or
    * null pointers. Must only be used for cleanup in exception handlers.

@@ -21,14 +21,38 @@
 USE [FederationStateStore]
 GO
 
-DROP TABLE [applicationsHomeSubCluster];
+IF OBJECT_ID ( '[sp_deregisterSubCluster]', 'U' ) IS NOT NULL
+  DROP TABLE [sp_deregisterSubCluster];
 GO
 
-DROP TABLE [membership];
+IF OBJECT_ID ( '[membership]', 'U' ) IS NOT NULL
+  DROP TABLE [membership];
 GO
 
-DROP TABLE [policies];
+IF OBJECT_ID ( '[policies]', 'U' ) IS NOT NULL
+  DROP TABLE [policies];
 GO
 
-DROP TABLE [reservationsHomeSubCluster];
+IF OBJECT_ID ( '[applicationsHomeSubCluster]', 'U' ) IS NOT NULL
+  DROP TABLE [applicationsHomeSubCluster];
+GO
+
+IF OBJECT_ID ( '[reservationsHomeSubCluster]', 'U' ) IS NOT NULL
+  DROP TABLE [reservationsHomeSubCluster];
+GO
+
+IF OBJECT_ID ( '[masterKeys]', 'U' ) IS NOT NULL
+  DROP TABLE [masterKeys];
+GO
+
+IF OBJECT_ID ( '[delegationTokens]', 'U' ) IS NOT NULL
+  DROP TABLE [delegationTokens];
+GO
+
+IF OBJECT_ID ( '[sequenceTable]', 'U' ) IS NOT NULL
+  DROP TABLE [sequenceTable];
+GO
+
+IF OBJECT_ID ( '[versions]', 'U' ) IS NOT NULL
+  DROP TABLE [versions];
 GO

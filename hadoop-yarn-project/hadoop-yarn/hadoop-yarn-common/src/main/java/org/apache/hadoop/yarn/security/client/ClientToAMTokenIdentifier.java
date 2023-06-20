@@ -44,7 +44,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   private ClientToAMTokenIdentifierProto proto;
 
   // TODO: Add more information in the tokenID such that it is not
-  // transferrable, more secure etc.
+  // transferable, more secure etc.
 
   public ClientToAMTokenIdentifier() {
   }

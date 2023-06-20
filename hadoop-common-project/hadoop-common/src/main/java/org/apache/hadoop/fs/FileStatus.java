@@ -402,7 +402,8 @@ public class FileStatus implements Writable, Comparable<Object>,
   }
 
   /**
-   * Compare this FileStatus to another FileStatus
+   * Compare this FileStatus to another FileStatus based on lexicographical
+   * order of path.
    * @param   o the FileStatus to be compared.
    * @return  a negative integer, zero, or a positive integer as this object
    *   is less than, equal to, or greater than the specified object.
@@ -412,7 +413,8 @@ public class FileStatus implements Writable, Comparable<Object>,
   }
 
   /**
-   * Compare this FileStatus to another FileStatus.
+   * Compare this FileStatus to another FileStatus based on lexicographical
+   * order of path.
    * This method was added back by HADOOP-14683 to keep binary compatibility.
    *
    * @param   o the FileStatus to be compared.

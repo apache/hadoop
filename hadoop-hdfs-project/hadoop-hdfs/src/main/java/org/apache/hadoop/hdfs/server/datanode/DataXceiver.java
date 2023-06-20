@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import javax.crypto.SecretKey;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -105,7 +105,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  */
 class DataXceiver extends Receiver implements Runnable {
   public static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger CLIENT_TRACE_LOG = DataNode.CLIENT_TRACE_LOG;
   
   private Peer peer;
   private final String remoteAddress; // address of remote side
@@ -426,10 +426,10 @@ class DataXceiver extends Receiver implements Runnable {
             registeredSlotId);
         datanode.shortCircuitRegistry.unregisterSlot(registeredSlotId);
       }
-      if (ClientTraceLog.isInfoEnabled()) {
+      if (CLIENT_TRACE_LOG.isInfoEnabled()) {
         DatanodeRegistration dnR = datanode.getDNRegistrationForBP(blk
             .getBlockPoolId());
-        BlockSender.ClientTraceLog.info(String.format(
+        BlockSender.CLIENT_TRACE_LOG.info(String.format(
             "src: 127.0.0.1, dest: 127.0.0.1, op: REQUEST_SHORT_CIRCUIT_FDS," +
             " blockid: %s, srvID: %s, success: %b",
             blk.getBlockId(), dnR.getDatanodeUuid(), success));
@@ -466,8 +466,8 @@ class DataXceiver extends Receiver implements Runnable {
       bld.build().writeDelimitedTo(socketOut);
       success = true;
     } finally {
-      if (ClientTraceLog.isInfoEnabled()) {
-        BlockSender.ClientTraceLog.info(String.format(
+      if (CLIENT_TRACE_LOG.isInfoEnabled()) {
+        BlockSender.CLIENT_TRACE_LOG.info(String.format(
             "src: 127.0.0.1, dest: 127.0.0.1, op: RELEASE_SHORT_CIRCUIT_FDS," +
             " shmId: %016x%016x, slotIdx: %d, srvID: %s, success: %b",
             slotId.getShmId().getHi(), slotId.getShmId().getLo(),
@@ -526,9 +526,9 @@ class DataXceiver extends Receiver implements Runnable {
       sendShmSuccessResponse(sock, shmInfo);
       success = true;
     } finally {
-      if (ClientTraceLog.isInfoEnabled()) {
+      if (CLIENT_TRACE_LOG.isInfoEnabled()) {
         if (success) {
-          BlockSender.ClientTraceLog.info(String.format(
+          BlockSender.CLIENT_TRACE_LOG.info(String.format(
               "cliID: %s, src: 127.0.0.1, dest: 127.0.0.1, " +
               "op: REQUEST_SHORT_CIRCUIT_SHM," +
               " shmId: %016x%016x, srvID: %s, success: true",
@@ -536,7 +536,7 @@ class DataXceiver extends Receiver implements Runnable {
               shmInfo.getShmId().getLo(),
               datanode.getDatanodeUuid()));
         } else {
-          BlockSender.ClientTraceLog.info(String.format(
+          BlockSender.CLIENT_TRACE_LOG.info(String.format(
               "cliID: %s, src: 127.0.0.1, dest: 127.0.0.1, " +
               "op: REQUEST_SHORT_CIRCUIT_SHM, " +
               "shmId: n/a, srvID: %s, success: false",
@@ -587,13 +587,10 @@ class DataXceiver extends Receiver implements Runnable {
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
       datanode.getDNRegistrationForBP(block.getBlockPoolId());
-    final String clientTraceFmt =
-      clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
-        ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
-            "", "%d", "HDFS_READ", clientName, "%d",
-            dnR.getDatanodeUuid(), block, "%d")
-        : dnR + " Served block " + block + " to " +
-            remoteAddress;
+    final String clientTraceFmt = clientName.length() > 0 && CLIENT_TRACE_LOG.isInfoEnabled() ?
+        String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress, "", "%d", "HDFS_READ",
+            clientName, "%d", dnR.getDatanodeUuid(), block, "%d") :
+        dnR + " Served block " + block + " to " + remoteAddress;
 
     try {
       try {
@@ -636,6 +633,7 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       datanode.metrics.incrTotalReadTime(duration);
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
     } catch ( SocketException ignored ) {
       LOG.trace("{}:Ignoring exception while serving {} to {}",
           dnR, block, remoteAddress, ignored);
@@ -1126,6 +1124,7 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       datanode.metrics.incrTotalReadTime(duration);
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
       
       LOG.info("Copied {} to {}", block, peer.getRemoteAddressString());
     } catch (IOException ioe) {

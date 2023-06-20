@@ -29,7 +29,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
@@ -88,23 +88,23 @@ public class MiniDFSClusterManager {
         .addOption("httpport", true, "NameNode http port (default 0--we choose)")
         .addOption("namenode", true, "URL of the namenode (default "
             + "is either the DFS cluster or a temporary dir)")     
-        .addOption(OptionBuilder
+        .addOption(Option.builder("D")
             .hasArgs()
-            .withArgName("property=value")
-            .withDescription("Options to pass into configuration object")
-            .create("D"))
-        .addOption(OptionBuilder
+            .argName("property=value")
+            .desc("Options to pass into configuration object")
+            .build())
+        .addOption(Option.builder("writeConfig")
             .hasArg()
-            .withArgName("path")
-            .withDescription("Save configuration to this XML file.")
-            .create("writeConfig"))
-         .addOption(OptionBuilder
+            .argName("path")
+            .desc("Save configuration to this XML file.")
+            .build())
+         .addOption(Option.builder("writeDetails")
             .hasArg()
-            .withArgName("path")
-            .withDescription("Write basic information to this JSON file.")
-            .create("writeDetails"))
-        .addOption(OptionBuilder.withDescription("Prints option help.")
-            .create("help"));
+            .argName("path")
+            .desc("Write basic information to this JSON file.")
+            .build())
+        .addOption(Option.builder("help").desc("Prints option help.")
+            .build());
     return options;
   }
 

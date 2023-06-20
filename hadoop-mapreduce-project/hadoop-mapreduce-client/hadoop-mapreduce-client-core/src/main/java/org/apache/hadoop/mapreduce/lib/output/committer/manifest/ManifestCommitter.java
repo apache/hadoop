@@ -58,6 +58,8 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_FAILED_COUNT;
@@ -393,7 +395,9 @@ public class ManifestCommitter extends PathOutputCommitter implements
       marker = result.getJobSuccessData();
       // update the cached success with the new report.
       setSuccessReport(marker);
-
+      // patch in the #of threads as it is useful
+      marker.putDiagnostic(OPT_IO_PROCESSORS,
+          conf.get(OPT_IO_PROCESSORS, Long.toString(OPT_IO_PROCESSORS_DEFAULT)));
     } catch (IOException e) {
       // failure. record it for the summary
       failure = e;
@@ -688,7 +692,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * to date.
    * The report will updated with the current active stage,
    * and if {@code thrown} is non-null, it will be added to the
-   * diagnistics (and the job tagged as a failure).
+   * diagnostics (and the job tagged as a failure).
    * Static for testability.
    * @param activeStage active stage
    * @param config configuration to use.

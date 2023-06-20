@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
@@ -29,10 +31,10 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 @Unstable
 public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
 
-  RefreshServiceAclsRequestProto proto = 
+  private RefreshServiceAclsRequestProto proto =
       RefreshServiceAclsRequestProto.getDefaultInstance();
-  RefreshServiceAclsRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private RefreshServiceAclsRequestProto.Builder builder = null;
+  private boolean viaProto = false;
   
   public RefreshServiceAclsRequestPBImpl() {
     builder = RefreshServiceAclsRequestProto.newBuilder();
@@ -50,6 +52,13 @@ public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
     return proto;
   }
 
+  private synchronized void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = RefreshServiceAclsRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
   @Override
   public int hashCode() {
     return getProto().hashCode();
@@ -57,16 +66,39 @@ public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+
+    if (!(other instanceof RefreshServiceAclsRequest)) {
       return false;
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
-    return false;
+
+    RefreshServiceAclsRequestPBImpl otherImpl = this.getClass().cast(other);
+    return new EqualsBuilder()
+        .append(this.getProto(), otherImpl.getProto())
+        .isEquals();
   }
 
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  @Override
+  public String getSubClusterId() {
+    RefreshServiceAclsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasSubClusterId = p.hasSubClusterId();
+    if (hasSubClusterId) {
+      return p.getSubClusterId();
+    }
+    return null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 }

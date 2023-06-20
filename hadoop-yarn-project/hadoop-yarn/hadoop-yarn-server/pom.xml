@@ -47,5 +47,6 @@
     <module>hadoop-yarn-server-timelineservice-hbase-tests</module>
     <module>hadoop-yarn-server-router</module>
     <module>hadoop-yarn-server-timelineservice-documentstore</module>
+    <module>hadoop-yarn-server-globalpolicygenerator</module>
   </modules>
 </project>

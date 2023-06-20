@@ -152,6 +152,22 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
   }
 
   @Override
+  public String getSubClusterId() {
+    ReplaceLabelsOnNodeRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
+  }
+
+  @Override
   public void setFailOnUnknownNodes(boolean failOnUnknownNodes) {
     maybeInitBuilder();
     builder.setFailOnUnknownNodes(failOnUnknownNodes);
@@ -163,8 +179,7 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
 
   @Override
   public int hashCode() {
-    assert false : "hashCode not designed";
-    return 0;
+    return getProto().hashCode();
   }
   
   @Override

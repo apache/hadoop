@@ -119,6 +119,8 @@ public class MaxRunningAppsEnforcer {
   /**
    * Tracks the given new runnable app for purposes of maintaining max running
    * app limits.
+   *
+   * @param app FSAppAttempt, the given application.
    */
   public void trackRunnableApp(FSAppAttempt app) {
     String user = app.getUser();
@@ -138,6 +140,8 @@ public class MaxRunningAppsEnforcer {
   /**
    * Tracks the given new non runnable app so that it can be made runnable when
    * it would not violate max running app limits.
+   *
+   * @param app FSAppAttempt, the given application.
    */
   public void trackNonRunnableApp(FSAppAttempt app) {
     String user = app.getUser();
@@ -170,6 +174,9 @@ public class MaxRunningAppsEnforcer {
    * 
    * Runs in O(n log(n)) where n is the number of queues that are under the
    * highest queue that went from having no slack to having slack.
+   *
+   * @param queue FSLeafQueue, the given queue.
+   * @param app FSAppAttempt, the given application.
    */
   public void updateRunnabilityOnAppRemoval(FSAppAttempt app, FSLeafQueue queue) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
@@ -271,6 +278,8 @@ public class MaxRunningAppsEnforcer {
   /**
    * Updates the relevant tracking variables after a runnable app with the given
    * queue and user has been removed.
+   *
+   * @param app FSAppAttempt.
    */
   public void untrackRunnableApp(FSAppAttempt app) {
     // Update usersRunnableApps
@@ -292,7 +301,9 @@ public class MaxRunningAppsEnforcer {
   }
   
   /**
-   * Stops tracking the given non-runnable app
+   * Stops tracking the given non-runnable app.
+   *
+   * @param app FSAppAttempt.
    */
   public void untrackNonRunnableApp(FSAppAttempt app) {
     usersNonRunnableApps.remove(app.getUser(), app);
@@ -301,6 +312,9 @@ public class MaxRunningAppsEnforcer {
   /**
    * Traverses the queue hierarchy under the given queue to gather all lists
    * of non-runnable applications.
+   *
+   * @param queue FSQueue
+   * @param appLists FSAppAttempt List.
    */
   private void gatherPossiblyRunnableAppLists(FSQueue queue,
       List<List<FSAppAttempt>> appLists) {

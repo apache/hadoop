@@ -45,6 +45,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.http.HttpConfig;
@@ -1107,5 +1109,19 @@ public class TestDFSUtil {
             + " is not configured.";
     LambdaTestUtils.intercept(IOException.class, expectedErrorMessage,
         ()->DFSUtil.getNNServiceRpcAddressesForCluster(conf));
+  }
+
+  @Test
+  public void testAddTransferRateMetricForValidValues() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
+    verify(mockMetrics).addReadTransferRate(10000);
+  }
+
+  @Test
+  public void testAddTransferRateMetricForInvalidValue() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
+    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
   }
 }

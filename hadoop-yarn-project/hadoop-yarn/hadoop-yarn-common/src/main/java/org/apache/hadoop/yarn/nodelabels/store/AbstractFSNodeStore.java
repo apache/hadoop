@@ -65,10 +65,34 @@ public abstract class AbstractFSNodeStore<M> {
     this.fsWorkingPath = fsStorePath;
     this.manager = mgr;
     initFileSystem(conf);
-    // mkdir of root dir path
-    fs.mkdirs(fsWorkingPath);
+    initNodeStoreRootDirectory(conf);
     this.replication = conf.getInt(YarnConfiguration.FS_STORE_FILE_REPLICATION,
         YarnConfiguration.DEFAULT_FS_STORE_FILE_REPLICATION);
+  }
+
+  private void initNodeStoreRootDirectory(Configuration conf) throws IOException {
+    // mkdir of root dir path with retry logic
+    int maxRetries = conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_RETRIES,
+        YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES);
+    int retryCount = 0;
+    boolean success = false;
+
+    while (!success && retryCount <= maxRetries) {
+      try {
+        success = fs.mkdirs(fsWorkingPath);
+      } catch (IOException e) {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          throw e;
+        }
+        try {
+          Thread.sleep(conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_INTERVAL,
+              YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL));
+        } catch (InterruptedException ie) {
+          throw new RuntimeException(ie);
+        }
+      }
+    }
     LOG.info("Created store directory :" + fsWorkingPath);
   }
 

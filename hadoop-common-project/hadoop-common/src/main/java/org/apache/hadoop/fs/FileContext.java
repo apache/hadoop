@@ -2231,7 +2231,7 @@ public class FileContext implements PathCapabilities {
         InputStream in = awaitFuture(openFile(qSrc)
             .opt(FS_OPTION_OPENFILE_READ_POLICY,
                 FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
-            .opt(FS_OPTION_OPENFILE_LENGTH,
+            .optLong(FS_OPTION_OPENFILE_LENGTH,
                 fs.getLen())   // file length hint for object stores
             .build());
         try (OutputStream out = create(qDst, createFlag)) {

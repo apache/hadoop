@@ -213,7 +213,7 @@ the same correctness guarantees as the v1 algorithm.
    attempt working directory to their final destination path, holding back on
    the final manifestation POST.
 1. A JSON file containing all information needed to complete the upload of all
-   files in the task attempt is written to the Job Attempt directory of of the
+   files in the task attempt is written to the Job Attempt directory of the
    wrapped committer working with HDFS.
 1. Job commit: load in all the manifest files in the HDFS job attempt directory,
    then issued the POST request to complete the uploads. These are parallelised.

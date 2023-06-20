@@ -20,6 +20,14 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.BasePBImplRecordsTest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterResponseProto;
@@ -102,6 +110,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -115,6 +124,14 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(Version.class);
     generateByNewInstance(SubClusterId.class);
     generateByNewInstance(SubClusterInfo.class);
+    generateByNewInstance(Priority.class);
+    generateByNewInstance(URL.class);
+    generateByNewInstance(Resource.class);
+    generateByNewInstance(ContainerRetryContext.class);
+    generateByNewInstance(LocalResource.class);
+    generateByNewInstance(ContainerLaunchContext.class);
+    generateByNewInstance(LogAggregationContext.class);
+    generateByNewInstance(ApplicationSubmissionContext.class);
     generateByNewInstance(ApplicationHomeSubCluster.class);
     generateByNewInstance(SubClusterPolicyConfiguration.class);
     generateByNewInstance(RouterMasterKey.class);
@@ -420,5 +437,55 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
         SubClusterState.SC_RUNNING, Time.now(), capabilityJson);
 
     assertEquals(sc1, sc2);
+  }
+
+  @Test
+  public void testApplicationHomeSubClusterEqual() throws Exception {
+    // Case1, We create 2 ApplicationHomeSubCluster,
+    // all properties are consistent
+    // We expect the result to be equal.
+    ApplicationId appId1 = ApplicationId.newInstance(1, 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+    ApplicationSubmissionContext context1 =
+        ApplicationSubmissionContext.newInstance(appId1, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    long createTime = Time.now();
+    ApplicationHomeSubCluster ahsc1 =
+        ApplicationHomeSubCluster.newInstance(appId1, createTime, subClusterId1, context1);
+
+    ApplicationId appId2 = ApplicationId.newInstance(1, 1);
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC");
+    ApplicationSubmissionContext context2 =
+        ApplicationSubmissionContext.newInstance(appId1, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    ApplicationHomeSubCluster ahsc2 =
+        ApplicationHomeSubCluster.newInstance(appId2, createTime, subClusterId2, context2);
+    assertEquals(ahsc1, ahsc2);
+
+    // Case2, We create 2 ApplicationHomeSubCluster, appId is different
+    // We expect the results to be unequal
+    ApplicationId appId3 = ApplicationId.newInstance(2, 1);
+    ApplicationSubmissionContext context3 =
+        ApplicationSubmissionContext.newInstance(appId3, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    ApplicationHomeSubCluster ahsc3 =
+        ApplicationHomeSubCluster.newInstance(appId3, createTime, subClusterId2, context3);
+    assertNotEquals(ahsc1, ahsc3);
+
+    // Case3, We create 2 ApplicationHomeSubCluster, createTime is different
+    // We expect the results to be unequal
+    long createTime2 = Time.now() + 1000;
+    ApplicationHomeSubCluster ahsc4 =
+        ApplicationHomeSubCluster.newInstance(appId2, createTime2, subClusterId1, context2);
+    assertNotEquals(ahsc1, ahsc4);
+
+    // Case4, We create 2 ApplicationHomeSubCluster, submissionContext is different
+    // We expect the results to be unequal
+    ApplicationHomeSubCluster ahsc5 =
+        ApplicationHomeSubCluster.newInstance(appId2, createTime2, subClusterId2, context3);
+    assertNotEquals(ahsc1, ahsc5);
   }
 }

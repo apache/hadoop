@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -629,7 +628,7 @@ public class FairSchedulerConfiguration extends Configuration {
     final int memory = parseOldStyleResourceMemory(resources);
     final int vcores = parseOldStyleResourceVcores(resources);
     return new ConfigurableResource(
-            BuilderUtils.newResource(memory, vcores));
+            Resources.createResource(memory, vcores));
   }
 
   private static String[] findOldStyleResourcesInSpaceSeparatedInput(

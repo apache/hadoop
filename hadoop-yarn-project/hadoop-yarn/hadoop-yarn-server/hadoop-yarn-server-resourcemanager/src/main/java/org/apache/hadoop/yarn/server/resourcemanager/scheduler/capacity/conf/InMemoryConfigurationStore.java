@@ -112,7 +112,7 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
    * As there is no configuration store for versioning purposes,
    * a conf store version is not applicable.
    * @return null Conf store version not applicable for this store.
-   * @throws Exception
+   * @throws Exception if any exception occurs during getConfStoreVersion.
    */
   @Override
   public Version getConfStoreVersion() throws Exception {
@@ -123,7 +123,7 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
   /**
    * Configuration mutations not logged (i.e. not persisted). As such, they are
    * not persisted and not versioned. Hence, no version information to store.
-   * @throws Exception
+   * @throws Exception if any exception occurs during store Version.
    */
   @Override
   public void storeVersion() throws Exception {

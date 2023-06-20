@@ -77,10 +77,6 @@ public class ConnectionManager {
    * Global federated namespace context for router.
    */
   private final RouterStateIdContext routerStateIdContext;
-  /**
-   * Map from connection pool ID to namespace.
-   */
-  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -101,11 +97,11 @@ public class ConnectionManager {
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
+   * @param routerStateIdContext Federated namespace context for router.
    */
   public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
     this.routerStateIdContext = routerStateIdContext;
-    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -172,10 +168,6 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
-      for (String nsID: connectionPoolToNamespaceMap.values()) {
-        routerStateIdContext.removeNamespaceStateId(nsID);
-      }
-      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
@@ -224,14 +216,14 @@ public class ConnectionManager {
               this.minActiveRatio, protocol,
               new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
-          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
-        long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
-        pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
       }
     }
+
+    long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
+    pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
 
     ConnectionContext conn = pool.getConnection();
 
@@ -450,11 +442,6 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
-            String nsID = connectionPoolToNamespaceMap.get(poolId);
-            connectionPoolToNamespaceMap.remove(poolId);
-            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
-              routerStateIdContext.removeNamespaceStateId(nsID);
-            }
           }
         } finally {
           writeLock.unlock();
@@ -495,7 +482,7 @@ public class ConnectionManager {
                   pool.getMaxSize(), pool);
             }
           } catch (IOException e) {
-            LOG.error("Cannot create a new connection", e);
+            LOG.error("Cannot create a new connection for {} {}", pool, e);
           }
         } catch (InterruptedException e) {
           LOG.error("The connection creator was interrupted");

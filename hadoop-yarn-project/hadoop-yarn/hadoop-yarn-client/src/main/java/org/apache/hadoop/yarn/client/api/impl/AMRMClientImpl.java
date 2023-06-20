@@ -478,11 +478,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         continue;
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("RM has confirmed changed resource allocation for "
-            + "container " + containerId + ". Current resource allocation:"
-            + changedContainer.getContainer().getResource()
-            + ". Remove pending change request:"
-            + pendingChange.get(containerId).getValue());
+        LOG.debug("RM has confirmed changed resource allocation for container {}. " +
+                "Current resource allocation:{}. " +
+                "Remove pending change request:{}",
+                containerId,
+                changedContainer.getContainer().getResource(),
+                pendingChange.get(containerId).getValue());
       }
       pendingChange.remove(containerId);
     }
@@ -495,9 +496,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       String nodeId = token.getNodeId().toString();
       if (LOG.isDebugEnabled()) {
         if (getNMTokenCache().containsToken(nodeId)) {
-          LOG.debug("Replacing token for : " + nodeId);
+          LOG.debug("Replacing token for : {}", nodeId);
         } else {
-          LOG.debug("Received new token for : " + nodeId);
+          LOG.debug("Received new token for : {}", nodeId);
         }
       }
       getNMTokenCache().setToken(nodeId, token.getToken());
@@ -544,8 +545,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       dedupedRacks.addAll(req.getRacks());
       if(req.getRacks().size() != dedupedRacks.size()) {
         Joiner joiner = Joiner.on(',');
-        LOG.warn("ContainerRequest has duplicate racks: "
-            + joiner.join(req.getRacks()));
+        LOG.warn("ContainerRequest has duplicate racks: {}", joiner.join(req.getRacks()));
       }
     }
     Set<String> inferredRacks = resolveRacks(req.getNodes());
@@ -573,8 +573,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       HashSet<String> dedupedNodes = new HashSet<String>(req.getNodes());
       if(dedupedNodes.size() != req.getNodes().size()) {
         Joiner joiner = Joiner.on(',');
-        LOG.warn("ContainerRequest has duplicate nodes: "
-            + joiner.join(req.getNodes()));        
+        LOG.warn("ContainerRequest has duplicate nodes: {}", joiner.join(req.getNodes()));
       }
       for (String node : dedupedNodes) {
         addResourceRequest(req.getPriority(), node,
@@ -636,11 +635,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     Preconditions.checkNotNull(container, "Container cannot be null!!");
     Preconditions.checkNotNull(updateContainerRequest,
         "UpdateContainerRequest cannot be null!!");
-    LOG.info("Requesting Container update : " +
-        "container=" + container + ", " +
-        "updateType=" + updateContainerRequest.getContainerUpdateType() + ", " +
-        "targetCapability=" + updateContainerRequest.getCapability() + ", " +
-        "targetExecType=" + updateContainerRequest.getExecutionType());
+    LOG.info("Requesting Container update : container={}, updateType={}," +
+                    " targetCapability={}, targetExecType={}",
+            container,
+            updateContainerRequest.getContainerUpdateType(),
+            updateContainerRequest.getCapability(),
+            updateContainerRequest.getExecutionType());
     if (updateContainerRequest.getCapability() != null &&
         updateContainerRequest.getExecutionType() == null) {
       validateContainerResourceChangeRequest(
@@ -770,7 +770,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         // Ensure node requests are accompanied by requests for
         // corresponding rack
         if (rack == null) {
-          LOG.warn("Failed to resolve rack for node " + node + ".");
+          LOG.warn("Failed to resolve rack for node {}.", node);
         } else {
           racks.add(rack);
         }
@@ -941,12 +941,13 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     addResourceRequestToAsk(resourceRequestInfo.remoteRequest);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Adding request to ask " + resourceRequestInfo.remoteRequest);
-      LOG.debug("addResourceRequest:" + " applicationId="
-          + " priority=" + priority.getPriority()
-          + " resourceName=" + resourceName + " numContainers="
-          + resourceRequestInfo.remoteRequest.getNumContainers() 
-          + " #asks=" + ask.size());
+      LOG.debug("Adding request to ask {}", resourceRequestInfo.remoteRequest);
+      LOG.debug("addResourceRequest: applicationId= priority={}" +
+                      " resourceName={} numContainers={} #asks={}",
+              priority.getPriority(),
+              resourceName,
+              resourceRequestInfo.remoteRequest.getNumContainers(),
+              ask.size());
     }
   }
 
@@ -972,17 +973,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("AFTER decResourceRequest:"
-              + " allocationRequestId=" + req.getAllocationRequestId()
-              + " priority=" + priority.getPriority()
-              + " resourceName=" + resourceName + " numContainers="
-              + resourceRequestInfo.remoteRequest.getNumContainers()
-              + " #asks=" + ask.size());
+          LOG.debug("AFTER decResourceRequest: allocationRequestId={} " +
+                          "priority={} resourceName={} numContainers={} #asks={}",
+                  req.getAllocationRequestId(), priority.getPriority(),
+                  resourceName,
+                  resourceRequestInfo.remoteRequest.getNumContainers(), ask.size());
         }
       }
     } else {
-      LOG.info("No remoteRequestTable found with allocationRequestId="
-          + req.getAllocationRequestId());
+      LOG.info("No remoteRequestTable found with allocationRequestId={}",
+              req.getAllocationRequestId());
     }
   }
 

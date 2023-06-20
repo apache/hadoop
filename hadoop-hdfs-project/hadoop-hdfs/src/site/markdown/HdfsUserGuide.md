@@ -227,7 +227,7 @@ For command usage, see [namenode](./HDFSCommands.html#namenode).
 Balancer
 --------
 
-HDFS data might not always be be placed uniformly across the DataNode. One common reason is addition of new DataNodes to an existing cluster. While placing new blocks (data for a file is stored as a series of blocks), NameNode considers various parameters before choosing the DataNodes to receive these blocks. Some of the considerations are:
+HDFS data might not always be placed uniformly across the DataNode. One common reason is addition of new DataNodes to an existing cluster. While placing new blocks (data for a file is stored as a series of blocks), NameNode considers various parameters before choosing the DataNodes to receive these blocks. Some of the considerations are:
 
 * Policy to keep one of the replicas of a block on the same node as
   the node that is writing the block.

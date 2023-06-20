@@ -100,6 +100,7 @@ public class PathLocation {
    *
    * @param base The base path location we'd like to prioritize on.
    * @param firstNsId Identifier of the namespace to place first.
+   * @return path location with the prioritized destinations.
    */
   public static PathLocation prioritizeDestination(
       PathLocation base, String firstNsId) {

@@ -40,6 +40,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.function.LongFunction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -445,5 +447,30 @@ public class TestFSPermissionChecker {
       PREFERRED_BLOCK_SIZE);
     parent.addChild(inodeFile);
     return inodeFile;
+  }
+
+  @Test
+  public void testCheckAccessControlEnforcerSlowness() throws Exception {
+    final long thresholdMs = 10;
+    final LongFunction<String> checkAccessControlEnforcerSlowness =
+        elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
+            elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
+            false, "/foo", "mkdir", "client");
+
+    final String m1 = FSPermissionChecker.runCheckPermission(
+        () -> FSPermissionChecker.LOG.info("Fast runner"),
+        checkAccessControlEnforcerSlowness);
+    Assert.assertNull(m1);
+
+    final String m2 = FSPermissionChecker.runCheckPermission(() -> {
+      FSPermissionChecker.LOG.info("Slow runner");
+      try {
+        Thread.sleep(20);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException(e);
+      }
+    }, checkAccessControlEnforcerSlowness);
+    Assert.assertNotNull(m2);
   }
 }

@@ -27,12 +27,12 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.util.Lists;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -80,9 +80,9 @@ public class TestFSImageWithAcl {
     fs.removeAcl(p);
 
     if (persistNamespace) {
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
     }
 
     cluster.restartNameNode();
@@ -247,9 +247,9 @@ public class TestFSImageWithAcl {
   private void restart(DistributedFileSystem fs, boolean persistNamespace)
       throws IOException {
     if (persistNamespace) {
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
     }
 
     cluster.restartNameNode();

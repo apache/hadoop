@@ -122,6 +122,10 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-handler-proxy</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>xml-apis</groupId>
+          <artifactId>xml-apis</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
   </dependencies>

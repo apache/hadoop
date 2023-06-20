@@ -283,12 +283,6 @@ public class INodeFile extends INodeWithAdditionalFields
     setBlocks(that.blocks);
   }
   
-  public INodeFile(INodeFile that, FileDiffList diffs) {
-    this(that);
-    Preconditions.checkArgument(!that.isWithSnapshot());
-    this.addSnapshotFeature(diffs);
-  }
-
   /** @return true unconditionally. */
   @Override
   public final boolean isFile() {
@@ -458,7 +452,16 @@ public class INodeFile extends INodeWithAdditionalFields
     this.addFeature(sf);
     return sf;
   }
-  
+
+  /** Used by FSImage. */
+  public INodeFile loadSnapshotFeature(FileDiffList diffs) {
+    final FileWithSnapshotFeature sf = addSnapshotFeature(diffs);
+    if (!isInCurrentState()) {
+      sf.deleteCurrentFile();
+    }
+    return this;
+  }
+
   /**
    * If feature list contains a {@link FileWithSnapshotFeature}, return it;
    * otherwise, return null.
@@ -1092,7 +1095,12 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final int snapshotId) {
-    super.dumpTreeRecursively(out, prefix, snapshotId);
+    dumpINodeFile(out, prefix, snapshotId);
+  }
+
+  public void dumpINodeFile(PrintWriter out, StringBuilder prefix,
+      final int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");

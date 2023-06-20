@@ -45,7 +45,7 @@ import java.util.function.Supplier;
  */
 public class TestDNFencingWithReplication {
   static {
-    GenericTestUtils.setLogLevel(FSNamesystem.auditLog, Level.WARN);
+    GenericTestUtils.setLogLevel(FSNamesystem.AUDIT_LOG, Level.WARN);
     GenericTestUtils.setLogLevel(Server.LOG, Level.ERROR);
     GenericTestUtils.setLogLevel(RetryInvocationHandler.LOG, Level.ERROR);
   }

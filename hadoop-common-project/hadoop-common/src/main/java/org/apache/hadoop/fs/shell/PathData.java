@@ -633,7 +633,7 @@ public class PathData implements Comparable<PathData> {
     return awaitFuture(fs.openFile(path)
         .opt(FS_OPTION_OPENFILE_READ_POLICY,
             policy)
-        .opt(FS_OPTION_OPENFILE_LENGTH,
+        .optLong(FS_OPTION_OPENFILE_LENGTH,
             stat.getLen())   // file length hint for object stores
         .build());
   }

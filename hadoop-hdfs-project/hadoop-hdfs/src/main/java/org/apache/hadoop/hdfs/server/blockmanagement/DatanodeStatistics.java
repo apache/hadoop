@@ -60,7 +60,9 @@ public interface DatanodeStatistics {
   
   /** @return number of non-decommission(ing|ed) nodes */
   public int getNumDatanodesInService();
-  
+
+  /** @return average xceiver count for writable volumes. */
+  int getInServiceAvailableVolumeCount();
   /**
    * @return the total used space by data nodes for non-DFS purposes
    * such as storing temporary files on the local file system

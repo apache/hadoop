@@ -345,7 +345,7 @@ public class TestWebAppProxyServlet {
     AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
 
     try {
-      //set AHS_ENBALED = false to simulate getting the app report from RM
+      //set AHS_ENABLED = false to simulate getting the app report from RM
       configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           false);
       ApplicationId app = ApplicationId.newInstance(0, 0);
@@ -366,7 +366,7 @@ public class TestWebAppProxyServlet {
               "/cluster" + "/app/" + app.toString();
       assertEquals(proxyConn.getURL().toString(), appAddressInRm);
 
-      //set AHS_ENBALED = true to simulate getting the app report from AHS
+      //set AHS_ENABLED = true to simulate getting the app report from AHS
       configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           true);
       proxyConn = (HttpURLConnection) url.openConnection();
@@ -655,7 +655,7 @@ public class TestWebAppProxyServlet {
     /*
      * If this method is called with isTrackingUrl=false, no tracking url
      * will set in the app report. Hence, there will be a connection exception
-     * when the prxyCon tries to connect.
+     * when the proxyCon tries to connect.
      */
     private FetchedAppReport getDefaultApplicationReport(ApplicationId appId,
         boolean isTrackingUrl) {

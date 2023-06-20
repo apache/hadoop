@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
@@ -75,7 +76,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
@@ -693,9 +693,9 @@ public class TestCacheDirectives {
         .setPath(new Path("/image")).setPool(imagePool).build());
 
       // Save a new image to force a fresh fsimage download
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       dfs.saveNamespace();
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
 
       // Checkpoint again forcing a reload of FSN state
       boolean fetchImage = secondary.doCheckpoint();

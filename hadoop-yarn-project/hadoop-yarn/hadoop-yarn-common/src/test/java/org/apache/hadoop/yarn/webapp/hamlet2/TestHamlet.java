@@ -17,19 +17,27 @@
  */
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
-import java.util.EnumSet;
 import java.io.PrintWriter;
-import org.junit.Test;
+import java.util.EnumSet;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.SubView;
 
-import static org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.*;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.LinkType;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.Media;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.TABLE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class TestHamlet {
 
-  @Test public void testHamlet() {
+  @Test
+  void testHamlet() {
     Hamlet h = newHamlet().
         title("test").
         h1("heading 1").
@@ -69,7 +77,8 @@ public class TestHamlet {
     verify(out, never()).print("</p>");
   }
 
-  @Test public void testTable() {
+  @Test
+  void testTable() {
     Hamlet h = newHamlet().
         title("test table").
         link("style.css");
@@ -90,7 +99,8 @@ public class TestHamlet {
     verify(out, atLeast(1)).print("</tr>");
   }
 
-  @Test public void testEnumAttrs() {
+  @Test
+  void testEnumAttrs() {
     Hamlet h = newHamlet().
         meta_http("Content-type", "text/html; charset=utf-8").
         title("test enum attrs").
@@ -109,7 +119,8 @@ public class TestHamlet {
     verify(out).print(" rel=\"start index\"");
   }
 
-  @Test public void testScriptStyle() {
+  @Test
+  void testScriptStyle() {
     Hamlet h = newHamlet().
         script("a.js").script("b.js").
         style("h1 { font-size: 1.2em }");
@@ -121,7 +132,8 @@ public class TestHamlet {
     verify(out).print(" type=\"text/css\"");
   }
 
-  @Test public void testPreformatted() {
+  @Test
+  void testPreformatted() {
     Hamlet h = newHamlet().
         div().
         i("inline before pre").
@@ -144,7 +156,8 @@ public class TestHamlet {
     @Override public void renderPartial() {}
   }
 
-  @Test public void testSubViews() {
+  @Test
+  void testSubViews() {
     Hamlet h = newHamlet().
         title("test sub-views").
         div("#view1").__(TestView1.class).__().
@@ -153,8 +166,8 @@ public class TestHamlet {
     PrintWriter out = h.getWriter();
     out.flush();
     assertEquals(0, h.nestLevel);
-    verify(out).print("["+ TestView1.class.getName() +"]");
-    verify(out).print("["+ TestView2.class.getName() +"]");
+    verify(out).print("[" + TestView1.class.getName() + "]");
+    verify(out).print("[" + TestView2.class.getName() + "]");
   }
 
   static Hamlet newHamlet() {

@@ -51,7 +51,8 @@ public abstract class AMRMTokenSecretManagerState {
   }
 
   /**
-   * {@link AMRMTokenSecretManager} current Master key
+   * {@link AMRMTokenSecretManager} current Master key.
+   * @return MasterKey.
    */
   @Public
   @Unstable
@@ -62,7 +63,8 @@ public abstract class AMRMTokenSecretManagerState {
   public abstract void setCurrentMasterKey(MasterKey currentMasterKey);
 
   /**
-   * {@link AMRMTokenSecretManager} next Master key
+   * {@link AMRMTokenSecretManager} next Master key.
+   * @return MasterKey.
    */
   @Public
   @Unstable

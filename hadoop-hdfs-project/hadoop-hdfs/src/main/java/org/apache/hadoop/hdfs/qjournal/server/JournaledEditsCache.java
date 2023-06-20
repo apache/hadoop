@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * An in-memory cache of edits in their serialized form. This is used to serve
@@ -121,12 +122,18 @@ class JournaledEditsCache {
   // ** End lock-protected fields **
 
   JournaledEditsCache(Configuration conf) {
+    float fraction = conf.getFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_DEFAULT);
+    Preconditions.checkArgument((fraction > 0 && fraction < 1.0f),
+        String.format("Cache config %s is set at %f, it should be a positive float value, " +
+            "less than 1.0. The recommended value is less than 0.9.",
+            DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, fraction));
     capacity = conf.getInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
-        DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_DEFAULT);
+        (int) (Runtime.getRuntime().maxMemory() * fraction));
     if (capacity > 0.9 * Runtime.getRuntime().maxMemory()) {
       Journal.LOG.warn(String.format("Cache capacity is set at %d bytes but " +
           "maximum JVM memory is only %d bytes. It is recommended that you " +
-          "decrease the cache size or increase the heap size.",
+          "decrease the cache size/fraction or increase the heap size.",
           capacity, Runtime.getRuntime().maxMemory()));
     }
     Journal.LOG.info("Enabling the journaled edits cache with a capacity " +
@@ -277,11 +284,12 @@ class JournaledEditsCache {
         initialize(INVALID_TXN_ID);
         Journal.LOG.warn(String.format("A single batch of edits was too " +
                 "large to fit into the cache: startTxn = %d, endTxn = %d, " +
-                "input length = %d. The capacity of the cache (%s) must be " +
+                "input length = %d. The cache size (%s) or cache fraction (%s) must be " +
                 "increased for it to work properly (current capacity %d)." +
                 "Cache is now empty.",
             newStartTxn, newEndTxn, inputData.length,
-            DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, capacity));
+            DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
+            DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, capacity));
         return;
       }
       if (dataMap.isEmpty()) {
@@ -388,10 +396,11 @@ class JournaledEditsCache {
     } else {
       return new CacheMissException(lowestTxnId - requestedTxnId,
           "Oldest txn ID available in the cache is %d, but requested txns " +
-              "starting at %d. The cache size (%s) may need to be increased " +
-              "to hold more transactions (currently %d bytes containing %d " +
+              "starting at %d. The cache size (%s) or cache fraction (%s) may need to be " +
+              "increased to hold more transactions (currently %d bytes containing %d " +
               "transactions)", lowestTxnId, requestedTxnId,
-          DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, capacity,
+              DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
+              DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, capacity,
           highestTxnId - lowestTxnId + 1);
     }
   }
@@ -412,6 +421,11 @@ class JournaledEditsCache {
       return cacheMissAmount;
     }
 
+  }
+
+  @VisibleForTesting
+  int getCapacity() {
+    return capacity;
   }
 
 }

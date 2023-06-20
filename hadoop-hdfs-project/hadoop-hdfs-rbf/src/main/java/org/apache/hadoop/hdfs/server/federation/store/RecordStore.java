@@ -73,7 +73,7 @@ public abstract class RecordStore<R extends BaseRecord> {
    *
    * @return State Store driver.
    */
-  protected StateStoreDriver getDriver() {
+  public StateStoreDriver getDriver() {
     return this.driver;
   }
 
@@ -82,8 +82,9 @@ public abstract class RecordStore<R extends BaseRecord> {
    *
    * @param clazz The specific interface implementation to create
    * @param driver The {@link StateStoreDriver} implementation in use.
+   * @param <T> Instance of type RecordStore.
    * @return An initialized instance of the specified state store API
-   *         implementation.
+   * implementation.
    */
   public static <T extends RecordStore<?>> T newInstance(
       final Class<T> clazz, final StateStoreDriver driver) {

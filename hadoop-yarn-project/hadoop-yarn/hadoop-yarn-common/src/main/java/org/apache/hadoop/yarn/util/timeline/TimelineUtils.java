@@ -66,9 +66,9 @@ public class TimelineUtils {
    * @param o
    *          an object to serialize
    * @return a JSON string
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonGenerationException
+   * @throws IOException io error occur.
+   * @throws JsonMappingException exception used to signal fatal problems with mapping of content.
+   * @throws JsonGenerationException exception type for exceptions during JSON writing.
    */
   public static String dumpTimelineRecordtoJSON(Object o)
       throws JsonGenerationException, JsonMappingException, IOException {
@@ -83,9 +83,9 @@ public class TimelineUtils {
    * @param pretty
    *          whether in a pretty format or not
    * @return a JSON string
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonGenerationException
+   * @throws IOException io error occur.
+   * @throws JsonMappingException exception used to signal fatal problems with mapping of content.
+   * @throws JsonGenerationException exception type for exceptions during JSON writing.
    */
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {

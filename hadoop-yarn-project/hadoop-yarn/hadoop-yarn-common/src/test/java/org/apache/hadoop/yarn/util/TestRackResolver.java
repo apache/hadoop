@@ -24,16 +24,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRackResolver {
 
@@ -41,7 +44,7 @@ public class TestRackResolver {
       LoggerFactory.getLogger(TestRackResolver.class);
   private static final String invalidHost = "invalidHost";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     RackResolver.reset();
   }
@@ -54,8 +57,7 @@ public class TestRackResolver {
     @Override
     public List<String> resolve(List<String> hostList) {
       // Only one host at a time
-      Assert.assertTrue("hostList size is " + hostList.size(),
-        hostList.size() <= 1);
+      assertTrue(hostList.size() <= 1, "hostList size is " + hostList.size());
       List<String> returnList = new ArrayList<String>();
       if (hostList.isEmpty()) {
         return returnList;
@@ -74,7 +76,7 @@ public class TestRackResolver {
       }
       // I should not be reached again as RackResolver is supposed to do
       // caching.
-      Assert.assertTrue(numHost1 <= 1);
+      assertTrue(numHost1 <= 1);
       return returnList;
     }
 
@@ -112,7 +114,7 @@ public class TestRackResolver {
         // I should not be reached again as RackResolver is supposed to do
         // caching.
       }
-      Assert.assertEquals(returnList.size(), hostList.size());
+      assertEquals(returnList.size(), hostList.size());
       return returnList;
     }
 
@@ -127,11 +129,11 @@ public class TestRackResolver {
   }
 
   @Test
-  public void testCaching() {
+  void testCaching() {
     Configuration conf = new Configuration();
     conf.setClass(
-      CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-      MyResolver.class, DNSToSwitchMapping.class);
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        MyResolver.class, DNSToSwitchMapping.class);
     RackResolver.init(conf);
     try {
       InetAddress iaddr = InetAddress.getByName("host1");
@@ -140,15 +142,15 @@ public class TestRackResolver {
       // Ignore if not found
     }
     Node node = RackResolver.resolve("host1");
-    Assert.assertEquals("/rack1", node.getNetworkLocation());
+    assertEquals("/rack1", node.getNetworkLocation());
     node = RackResolver.resolve("host1");
-    Assert.assertEquals("/rack1", node.getNetworkLocation());
+    assertEquals("/rack1", node.getNetworkLocation());
     node = RackResolver.resolve(invalidHost);
-    Assert.assertEquals(NetworkTopology.DEFAULT_RACK, node.getNetworkLocation());
+    assertEquals(NetworkTopology.DEFAULT_RACK, node.getNetworkLocation());
   }
 
   @Test
-  public void testMultipleHosts() {
+  void testMultipleHosts() {
     Configuration conf = new Configuration();
     conf.setClass(
         CommonConfigurationKeysPublic
@@ -158,9 +160,9 @@ public class TestRackResolver {
     RackResolver.init(conf);
     List<Node> nodes = RackResolver.resolve(
         Arrays.asList("host1", invalidHost, "host2"));
-    Assert.assertEquals("/rack1", nodes.get(0).getNetworkLocation());
-    Assert.assertEquals(NetworkTopology.DEFAULT_RACK,
+    assertEquals("/rack1", nodes.get(0).getNetworkLocation());
+    assertEquals(NetworkTopology.DEFAULT_RACK,
         nodes.get(1).getNetworkLocation());
-    Assert.assertEquals("/rack2", nodes.get(2).getNetworkLocation());
+    assertEquals("/rack2", nodes.get(2).getNetworkLocation());
   }
 }

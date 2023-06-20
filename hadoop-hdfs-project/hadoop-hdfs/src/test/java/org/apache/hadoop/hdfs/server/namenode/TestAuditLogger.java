@@ -258,7 +258,7 @@ public class TestAuditLogger {
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
 
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
-      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       cluster.waitClusterUp();
       final FileSystem fs = cluster.getFileSystem();
       final long time = System.currentTimeMillis();
@@ -568,7 +568,7 @@ public class TestAuditLogger {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster1 = new MiniDFSCluster.Builder(conf).build();
     try {
-      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       cluster1.waitClusterUp();
       FileSystem fs = cluster1.getFileSystem();
       long time = System.currentTimeMillis();
@@ -585,7 +585,7 @@ public class TestAuditLogger {
     conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf).build();
     try {
-      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       cluster2.waitClusterUp();
       FileSystem fs = cluster2.getFileSystem();
       long time = System.currentTimeMillis();
@@ -606,7 +606,7 @@ public class TestAuditLogger {
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
 
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
-      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       cluster.waitClusterUp();
       final FileSystem fs = cluster.getFileSystem();
       final long time = System.currentTimeMillis();

@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 
-import java.io.IOException;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
 /**
  * Extends the RequestInterceptor class and provides common functionality which
@@ -34,6 +34,7 @@ public abstract class AbstractRESTRequestInterceptor
   private Configuration conf;
   private RESTRequestInterceptor nextInterceptor;
   private UserGroupInformation user = null;
+  private RouterClientRMService routerClientRMService = null;
 
   /**
    * Sets the {@link RESTRequestInterceptor} in the chain.
@@ -68,7 +69,7 @@ public abstract class AbstractRESTRequestInterceptor
    */
   @Override
   public void init(String userName) {
-    setupUser(userName);
+    this.user = RouterServerUtil.setupUser(userName);
     if (this.nextInterceptor != null) {
       this.nextInterceptor.init(userName);
     }
@@ -92,35 +93,17 @@ public abstract class AbstractRESTRequestInterceptor
     return this.nextInterceptor;
   }
 
-  /**
-   * Set User information.
-   *
-   * If the username is empty, we will use the Yarn Router user directly.
-   * Do not create a proxy user if user name matches the user name on current UGI.
-   * @param userName userName.
-   */
-  private void setupUser(final String userName) {
-    try {
-      if (userName == null || userName.isEmpty()) {
-        user = UserGroupInformation.getCurrentUser();
-      } else if (UserGroupInformation.isSecurityEnabled()) {
-        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
-      } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
-        user = UserGroupInformation.getCurrentUser();
-      } else {
-        user = UserGroupInformation.createProxyUser(userName,
-            UserGroupInformation.getCurrentUser());
-      }
-    } catch (IOException e) {
-      String message = "Error while creating Router RMAdmin Service for user:";
-      if (user != null) {
-        message += ", user: " + user;
-      }
-      throw new YarnRuntimeException(message, e);
-    }
-  }
-
   public UserGroupInformation getUser() {
     return user;
+  }
+
+  @Override
+  public RouterClientRMService getRouterClientRMService() {
+    return routerClientRMService;
+  }
+
+  @Override
+  public void setRouterClientRMService(RouterClientRMService routerClientRMService) {
+    this.routerClientRMService = routerClientRMService;
   }
 }

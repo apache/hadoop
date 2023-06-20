@@ -228,7 +228,7 @@ Accordingly: *Use if and only if you are confident that the conditions are met.*
 
 ### `fs.s3a.create.header` User-supplied header support
 
-Options with the prefix `fs.s3a.create.header.` will be added to to the
+Options with the prefix `fs.s3a.create.header.` will be added to the
 S3 object metadata as "user defined metadata".
 This metadata is visible to all applications. It can also be retrieved through the
 FileSystem/FileContext `listXAttrs()` and `getXAttrs()` API calls with the prefix `header.`

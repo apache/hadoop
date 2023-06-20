@@ -125,6 +125,7 @@ public abstract class MountTable extends BaseRecord {
    *
    * @param src Source path in the mount entry.
    * @param destinations Name service destinations of the mount point.
+   * @return The MountTable object.
    * @throws IOException If it cannot be created.
    */
   public static MountTable newInstance(final String src,

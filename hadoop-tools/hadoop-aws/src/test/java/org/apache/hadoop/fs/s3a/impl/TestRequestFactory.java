@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -155,7 +156,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    * Create objects through the factory.
    * @param factory factory
    */
-  private void createFactoryObjects(RequestFactory factory) {
+  private void createFactoryObjects(RequestFactory factory) throws IOException {
     String path = "path";
     String path2 = "path2";
     String id = "1";

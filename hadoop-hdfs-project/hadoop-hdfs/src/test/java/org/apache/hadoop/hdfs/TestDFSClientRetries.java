@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsUtils;
@@ -69,7 +70,6 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -1120,7 +1120,7 @@ public class TestDFSClientRetries {
 
       //enter safe mode
       assertTrue(HdfsUtils.isHealthy(uri));
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       assertFalse(HdfsUtils.isHealthy(uri));
       
       //leave safe mode in a new thread
@@ -1131,7 +1131,7 @@ public class TestDFSClientRetries {
             //sleep and then leave safe mode
             TimeUnit.SECONDS.sleep(30);
             assertFalse(HdfsUtils.isHealthy(uri));
-            dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+            dfs.setSafeMode(SafeModeAction.LEAVE);
             assertTrue(HdfsUtils.isHealthy(uri));
           } catch (Exception e) {
             exceptions.add(e);

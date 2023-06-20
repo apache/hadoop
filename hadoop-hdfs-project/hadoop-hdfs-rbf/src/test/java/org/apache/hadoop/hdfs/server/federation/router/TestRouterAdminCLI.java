@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -42,16 +43,20 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MockStateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -163,8 +168,9 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
 
-
     stateStore.loadCache(MountTableStoreImpl.class, true);
+    verifyMountTableContents(src, dest);
+
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
         .newInstance(src);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
@@ -201,6 +207,15 @@ public class TestRouterAdminCLI {
     assertEquals(dest, loc3.getDest());
     assertTrue(mountTable.isReadOnly());
     assertTrue(mountTable.isFaultTolerant());
+  }
+
+  private void verifyMountTableContents(String src, String dest) throws Exception {
+    String[] argv = new String[] {"-ls", "/"};
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response = out.toString();
+    assertTrue("The response should have " + src + ": " + response, response.contains(src));
+    assertTrue("The response should have " + dest + ": " + response, response.contains(dest));
   }
 
   @Test
@@ -839,6 +854,12 @@ public class TestRouterAdminCLI {
         + "[-readonly] [-faulttolerant] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
+        + "\t[-addAll <source1> <nameservice1,nameservice2,...> <destination1> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner1> -group <group1> -mode <mode1>"
+        + " , <source2> <nameservice1,nameservice2,...> <destination2> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner2> -group <group2> -mode <mode2> , ...]\n"
         + "\t[-update <source> [<nameservice1, nameservice2, ...> "
         + "<destination>] [-readonly true|false]"
         + " [-faulttolerant true|false] "
@@ -852,6 +873,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
+        + "\t[-dumpState]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"
@@ -1757,6 +1779,150 @@ public class TestRouterAdminCLI {
     argv = new String[]{"-refreshCallQueue", "redundant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString().contains("No arguments allowed"));
+  }
+
+  @Test
+  public void testDumpState() throws Exception {
+    MockStateStoreDriver driver = new MockStateStoreDriver();
+    driver.clearAll();
+    // Add two records for block1
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha1", "cluster1", "block1", "rpc1",
+        "service1", "lifeline1", "https", "nn01",
+        FederationNamenodeServiceState.ACTIVE, false), false, false);
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha2", "cluster1", "block1", "rpc2",
+        "service2", "lifeline2", "https", "nn02",
+        FederationNamenodeServiceState.STANDBY, false), false, false);
+    Configuration conf = new Configuration();
+    conf.setClass(RBFConfigKeys.FEDERATION_STORE_DRIVER_CLASS,
+        MockStateStoreDriver.class,
+        StateStoreDriver.class);
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    try (PrintStream stream = new PrintStream(buffer)) {
+      RouterAdmin.dumpStateStore(conf, stream);
+    }
+    final String expected =
+        "---- DisabledNameservice ----\n" +
+            "\n" +
+            "---- MembershipState ----\n" +
+            "  ns1-ha1-ns1-routerId:\n" +
+            "    dateCreated: XXX\n" +
+            "    dateModified: XXX\n" +
+            "    routerId: \"routerId\"\n" +
+            "    nameserviceId: \"ns1\"\n" +
+            "    namenodeId: \"ns1-ha1\"\n" +
+            "    clusterId: \"cluster1\"\n" +
+            "    blockPoolId: \"block1\"\n" +
+            "    webAddress: \"nn01\"\n" +
+            "    rpcAddress: \"rpc1\"\n" +
+            "    serviceAddress: \"service1\"\n" +
+            "    lifelineAddress: \"lifeline1\"\n" +
+            "    state: \"ACTIVE\"\n" +
+            "    isSafeMode: false\n" +
+            "    webScheme: \"https\"\n" +
+            "    \n" +
+            "  ns1-ha2-ns1-routerId:\n" +
+            "    dateCreated: XXX\n" +
+            "    dateModified: XXX\n" +
+            "    routerId: \"routerId\"\n" +
+            "    nameserviceId: \"ns1\"\n" +
+            "    namenodeId: \"ns1-ha2\"\n" +
+            "    clusterId: \"cluster1\"\n" +
+            "    blockPoolId: \"block1\"\n" +
+            "    webAddress: \"nn02\"\n" +
+            "    rpcAddress: \"rpc2\"\n" +
+            "    serviceAddress: \"service2\"\n" +
+            "    lifelineAddress: \"lifeline2\"\n" +
+            "    state: \"STANDBY\"\n" +
+            "    isSafeMode: false\n" +
+            "    webScheme: \"https\"\n" +
+            "    \n" +
+            "\n" +
+            "---- MountTable ----\n" +
+            "\n" +
+            "---- RouterState ----";
+    // Replace the time values with XXX
+    assertEquals(expected,
+        buffer.toString().trim().replaceAll("[0-9]{4,}+", "XXX"));
+  }
+
+  @Test
+  public void testAddMultipleMountPointsSuccess() throws Exception {
+    String[] argv =
+        new String[] {"-addAll", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultipleMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultipleMountPoints-03", "ns03", "/dest03"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    validateMountEntry("/testAddMultipleMountPoints-01", 1, new String[] {"/dest01"},
+        new String[] {"ns01"});
+    validateMountEntry("/testAddMultipleMountPoints-02", 2, new String[] {"/dest02", "/dest02"},
+        new String[] {"ns02", "ns03"});
+    validateMountEntry("/testAddMultipleMountPoints-03", 1, new String[] {"/dest03"},
+        new String[] {"ns03"});
+  }
+
+  private static void validateMountEntry(String mountName, int numDest, String[] dest, String[] nss)
+      throws IOException {
+    GetMountTableEntriesRequest request = GetMountTableEntriesRequest.newInstance(mountName);
+    GetMountTableEntriesResponse response =
+        client.getMountTableManager().getMountTableEntries(request);
+    assertEquals(1, response.getEntries().size());
+    List<RemoteLocation> destinations = response.getEntries().get(0).getDestinations();
+    assertEquals(numDest, destinations.size());
+    for (int i = 0; i < numDest; i++) {
+      assertEquals(mountName, destinations.get(i).getSrc());
+      assertEquals(dest[i], destinations.get(i).getDest());
+      assertEquals(nss[i], destinations.get(i).getNameserviceId());
+    }
+  }
+
+  @Test
+  public void testAddMultipleMountPointsFailure() throws Exception {
+    System.setErr(new PrintStream(err));
+
+    String[] argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", ",", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // syntax issue
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // multiple inputs with same mount
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01,/dest02", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // multiple dest entries
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // success
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // mount points were already added
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    assertTrue("The error message should return failed entries",
+        err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
   }
 
   private void addMountTable(String src, String nsId, String dst)

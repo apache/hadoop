@@ -32,21 +32,21 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * Block is queued for upload.
    * @param blockSize block size.
    */
-  void blockUploadQueued(int blockSize);
+  void blockUploadQueued(long blockSize);
 
   /**
    * Queued block has been scheduled for upload.
    * @param timeInQueue time in the queue.
    * @param blockSize block size.
    */
-  void blockUploadStarted(Duration timeInQueue, int blockSize);
+  void blockUploadStarted(Duration timeInQueue, long blockSize);
 
   /**
    * A block upload has completed. Duration excludes time in the queue.
    * @param timeSinceUploadStarted time in since the transfer began.
    * @param blockSize block size
    */
-  void blockUploadCompleted(Duration timeSinceUploadStarted, int blockSize);
+  void blockUploadCompleted(Duration timeSinceUploadStarted, long blockSize);
 
   /**
    *  A block upload has failed. Duration excludes time in the queue.
@@ -57,7 +57,7 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * @param timeSinceUploadStarted time in since the transfer began.
    * @param blockSize block size
    */
-  void blockUploadFailed(Duration timeSinceUploadStarted, int blockSize);
+  void blockUploadFailed(Duration timeSinceUploadStarted, long blockSize);
 
   /**
    * Intermediate report of bytes uploaded.

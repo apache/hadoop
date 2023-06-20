@@ -977,4 +977,26 @@ public class TestHASafeMode {
           () -> miniCluster.transitionToActive(0));
     }
   }
+
+  @Test
+  public void testTransitionToObserverWhenSafeMode() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(config,
+        new File(GenericTestUtils.getRandomizedTempPath()))
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(1)
+        .build()) {
+      miniCluster.waitActive();
+      miniCluster.transitionToStandby(0);
+      miniCluster.transitionToStandby(1);
+      NameNode namenode0 = miniCluster.getNameNode(0);
+      NameNode namenode1 = miniCluster.getNameNode(1);
+      NameNodeAdapter.enterSafeMode(namenode0, false);
+      NameNodeAdapter.enterSafeMode(namenode1, false);
+      LambdaTestUtils.intercept(ServiceFailedException.class,
+          "NameNode still not leave safemode",
+          () -> miniCluster.transitionToObserver(0));
+    }
+  }
 }

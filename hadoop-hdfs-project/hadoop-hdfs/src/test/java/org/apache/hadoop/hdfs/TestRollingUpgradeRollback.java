@@ -22,8 +22,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
@@ -102,10 +102,10 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       Assert.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
       // create new directory
       dfs.mkdirs(bar);
 
@@ -164,10 +164,10 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       Assert.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
       // create new directory
       dfs.mkdirs(bar);
       dfs.close();

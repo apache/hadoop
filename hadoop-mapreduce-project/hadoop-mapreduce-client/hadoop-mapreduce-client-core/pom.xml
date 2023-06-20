@@ -136,10 +136,10 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/mapred-default.xml" todir="src/site/resources"/>
                 <copy file="../../../hadoop-common-project/hadoop-common/src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>

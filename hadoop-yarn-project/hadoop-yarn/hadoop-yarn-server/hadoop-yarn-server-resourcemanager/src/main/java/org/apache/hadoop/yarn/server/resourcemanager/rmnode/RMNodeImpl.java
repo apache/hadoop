@@ -1203,8 +1203,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Put a node in deactivated (decommissioned or shutdown) status.
-   * @param rmNode
-   * @param finalState
+   * @param rmNode RMNode.
+   * @param finalState NodeState.
    */
   public static void deactivateNode(RMNodeImpl rmNode, NodeState finalState) {
 
@@ -1226,8 +1226,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Report node is RUNNING.
-   * @param rmNode
-   * @param containers
+   * @param rmNode RMNode.
+   * @param containers NMContainerStatus List.
    */
   public static void reportNodeRunning(RMNodeImpl rmNode,
       List<NMContainerStatus> containers) {
@@ -1242,8 +1242,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Report node is UNUSABLE and update metrics.
-   * @param rmNode
-   * @param finalState
+   * @param rmNode RMNode.
+   * @param finalState NodeState.
    */
   public static void reportNodeUnusable(RMNodeImpl rmNode,
       NodeState finalState) {

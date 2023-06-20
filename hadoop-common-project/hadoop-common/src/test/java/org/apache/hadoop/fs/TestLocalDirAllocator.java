@@ -548,5 +548,24 @@ public class TestLocalDirAllocator {
             "p1/x", Long.MAX_VALUE - 1), "Expect a DiskErrorException.",
         () -> dirAllocator.getLocalPathForWrite("p1/x", Long.MAX_VALUE - 1, conf));
   }
+
+  /**
+   * Test for HADOOP-18636 LocalDirAllocator cannot recover from directory tree deletion.
+   */
+  @Test(timeout = 30000)
+  public void testDirectoryRecovery() throws Throwable {
+    String dir0 = buildBufferDir(ROOT, 0);
+    String subdir = dir0 + "/subdir1/subdir2";
+
+    conf.set(CONTEXT, subdir);
+    // get local path and an ancestor
+    final Path pathForWrite = dirAllocator.getLocalPathForWrite("file", -1, conf);
+    final Path ancestor = pathForWrite.getParent().getParent();
+
+    // delete that ancestor
+    localFs.delete(ancestor, true);
+    // and expect to get a new file back
+    dirAllocator.getLocalPathForWrite("file2", -1, conf);
+  }
 }
 

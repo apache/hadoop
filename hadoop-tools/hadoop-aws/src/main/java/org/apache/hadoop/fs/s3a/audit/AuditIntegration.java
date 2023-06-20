@@ -21,12 +21,14 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.AccessDeniedException;
 
 import com.amazonaws.HandlerContextAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 import org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManagerS3A;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManagerS3A;
@@ -142,4 +144,20 @@ public final class AuditIntegration {
     request.addHandlerContext(AUDIT_SPAN_HANDLER_CONTEXT, span);
   }
 
+  /**
+   * Translate an audit exception.
+   * @param path path of operation.
+   * @param exception exception
+   * @return the IOE to raise.
+   */
+  public static IOException translateAuditException(String path,
+      AuditFailureException exception) {
+    if (exception instanceof AuditOperationRejectedException) {
+      // special handling of this subclass
+      return new UnsupportedRequestException(path,
+          exception.getMessage(), exception);
+    }
+    return (AccessDeniedException)new AccessDeniedException(path, null,
+        exception.toString()).initCause(exception);
+  }
 }

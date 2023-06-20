@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
@@ -84,7 +85,7 @@ public class CapacitySchedulerInfoHelper {
   public static String getQueueType(CSQueue queue) {
     if (queue instanceof AbstractLeafQueue) {
       return LEAF_QUEUE;
-    } else if (queue instanceof ParentQueue) {
+    } else if (queue instanceof AbstractParentQueue) {
       return PARENT_QUEUE;
     }
     return UNKNOWN_QUEUE;

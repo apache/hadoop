@@ -27,11 +27,13 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -63,24 +65,25 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();
 
+    Configuration conf = S3ATestUtils.prepareTestConfiguration(new Configuration());
     // Should not throw.
-    new S3ACachingInputStream(readContext, attrs, client, stats);
+    new S3ACachingInputStream(readContext, attrs, client, stats, conf, null);
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(null, attrs, client, stats));
+        () -> new S3ACachingInputStream(null, attrs, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, null, client, stats));
+        () -> new S3ACachingInputStream(readContext, null, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, null, stats));
+        () -> new S3ACachingInputStream(readContext, attrs, null, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, client, null));
+        () -> new S3ACachingInputStream(readContext, attrs, client, null, conf, null));
   }
 
   @Test

@@ -286,8 +286,8 @@ public class ConnectionPool {
       }
       this.connections = tmpConnections;
     }
-    LOG.debug("Expected to remove {} connection and actually removed {} connections",
-        num, removed.size());
+    LOG.debug("Expected to remove {} connection and actually removed {} connections "
+        + "for connectionPool: {}", num, removed.size(), connectionPoolId);
     return removed;
   }
 
@@ -420,16 +420,17 @@ public class ConnectionPool {
    * context for a single user/security context. To maximize throughput it is
    * recommended to use multiple connection per user+server, allowing multiple
    * writes and reads to be dispatched in parallel.
-   * @param <T> Input type T.
    *
    * @param conf Configuration for the connection.
    * @param nnAddress Address of server supporting the ClientProtocol.
    * @param ugi User context.
    * @param proto Interface of the protocol.
    * @param enableMultiSocket Enable multiple socket or not.
+   * @param socketIndex Index for FederationConnectionId.
    * @param alignmentContext Client alignment context.
+   * @param <T> Input type T.
    * @return proto for the target ClientProtocol that contains the user's
-   *         security context.
+   * security context.
    * @throws IOException If it cannot be created.
    */
   protected static <T> ConnectionContext newConnection(Configuration conf,

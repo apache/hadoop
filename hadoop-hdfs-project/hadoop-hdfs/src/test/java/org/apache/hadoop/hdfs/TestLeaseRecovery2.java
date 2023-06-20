@@ -493,17 +493,17 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testHardLeaseRecoveryAfterNameNodeRestart() throws Exception {
     hardLeaseRecoveryRestartHelper(false, -1);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testHardLeaseRecoveryAfterNameNodeRestart2() throws Exception {
     hardLeaseRecoveryRestartHelper(false, 1535);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testHardLeaseRecoveryWithRenameAfterNameNodeRestart()
       throws Exception {
     hardLeaseRecoveryRestartHelper(true, -1);

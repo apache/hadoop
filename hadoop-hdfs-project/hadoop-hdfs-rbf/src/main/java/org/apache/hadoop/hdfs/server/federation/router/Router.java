@@ -670,6 +670,9 @@ public class Router extends CompositeService implements
 
   /**
    * Compare router state.
+   *
+   * @param routerState the router service state.
+   * @return true if the given router state is same as the state maintained by the router object.
    */
   public boolean isRouterState(RouterServiceState routerState) {
     return routerState.equals(this.state);
@@ -725,9 +728,10 @@ public class Router extends CompositeService implements
   }
 
   /**
-   * Get the Namenode metrics.
+   * Get the namenode metrics.
    *
-   * @return Namenode metrics.
+   * @return the namenode metrics.
+   * @throws IOException if the namenode metrics are not initialized.
    */
   public NamenodeBeanMetrics getNamenodeMetrics() throws IOException {
     if (this.metrics == null) {
@@ -864,7 +868,8 @@ public class Router extends CompositeService implements
 
   /**
    * Set router configuration.
-   * @param conf
+   *
+   * @param conf the configuration.
    */
   @VisibleForTesting
   public void setConf(Configuration conf) {

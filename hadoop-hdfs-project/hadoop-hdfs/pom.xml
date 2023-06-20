@@ -118,11 +118,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-daemon</groupId>
       <artifactId>commons-daemon</artifactId>
       <scope>compile</scope>
@@ -152,6 +147,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>xerces</groupId>
+          <artifactId>xercesImpl</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -174,11 +173,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -313,10 +307,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>

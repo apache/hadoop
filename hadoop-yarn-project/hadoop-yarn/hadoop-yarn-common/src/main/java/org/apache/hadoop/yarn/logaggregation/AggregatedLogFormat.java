@@ -587,7 +587,7 @@ public class AggregatedLogFormat {
             fileContext.openFile(remoteAppLogFile)
                 .opt(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .opt(FS_OPTION_OPENFILE_LENGTH,
+                .optLong(FS_OPTION_OPENFILE_LENGTH,
                     status.getLen())   // file length hint for object stores
                 .build());
         reader = new TFile.Reader(this.fsDataIStream,
@@ -919,6 +919,7 @@ public class AggregatedLogFormat {
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
@@ -934,7 +935,9 @@ public class AggregatedLogFormat {
      * @param out the output print stream
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
+     * @param bytes log bytes.
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,

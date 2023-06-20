@@ -172,7 +172,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
@@ -952,6 +953,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public NodesToAttributesMappingResponse mapAttributesToNodes(
       NodesToAttributesMappingRequest request)
+      throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
       throws YarnException, IOException {
     return null;
   }

@@ -271,9 +271,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
-   * @param nodeAttributeMapping
-   * @param newAttributesToBeAdded
-   * @param isRemoveOperation : to indicate whether its a remove operation.
+   * Validate for attributes.
+   *
+   * @param nodeAttributeMapping NodeAttribute Mapping
+   * @param newAttributesToBeAdded new Attributes ToBeAdded
+   * @param isRemoveOperation : to indicate whether it's a remove operation.
    * @return Map of String to Map of NodeAttribute to AttributeValue
    * @throws IOException : on invalid mapping in the current request or against
    *           already existing NodeAttributes.
@@ -328,12 +330,13 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
+   * Validate For AttributeType Mismatch.
    *
-   * @param isRemoveOperation
-   * @param attribute
-   * @param newAttributes
-   * @return Whether its a new Attribute added
-   * @throws IOException
+   * @param isRemoveOperation to indicate whether it's a remove operation.
+   * @param attribute NodeAttribute.
+   * @param newAttributes new Attributes.
+   * @return Whether it's a new Attribute added
+   * @throws IOException an I/O exception of some sort has occurred.
    */
   private boolean validateForAttributeTypeMismatch(boolean isRemoveOperation,
       NodeAttribute attribute,

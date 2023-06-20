@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn;
 
 import java.util.Iterator;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
+
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
 /**
  * Utilities to generate fake test apps

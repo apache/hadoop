@@ -62,7 +62,8 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class IOStatisticsSnapshot
-    implements IOStatistics, Serializable, IOStatisticsAggregator {
+    implements IOStatistics, Serializable, IOStatisticsAggregator,
+    IOStatisticsSetters {
 
   private static final long serialVersionUID = -1762522703841538084L;
 
@@ -220,6 +221,33 @@ public final class IOStatisticsSnapshot
   @Override
   public synchronized Map<String, MeanStatistic> meanStatistics() {
     return meanStatistics;
+  }
+
+  @Override
+  public synchronized void setCounter(final String key, final long value) {
+    counters().put(key, value);
+  }
+
+  @Override
+  public synchronized void setGauge(final String key, final long value) {
+    gauges().put(key, value);
+
+  }
+
+  @Override
+  public synchronized void setMaximum(final String key, final long value) {
+    maximums().put(key, value);
+
+  }
+
+  @Override
+  public synchronized void setMinimum(final String key, final long value) {
+    minimums().put(key, value);
+  }
+
+  @Override
+  public void setMeanStatistic(final String key, final MeanStatistic value) {
+    meanStatistics().put(key, value);
   }
 
   @Override

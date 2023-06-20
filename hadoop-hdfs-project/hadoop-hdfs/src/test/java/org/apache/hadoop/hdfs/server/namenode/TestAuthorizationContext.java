@@ -103,7 +103,7 @@ public class TestAuthorizationContext {
         thenReturn(mockEnforcer);
 
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, mockINodeAttributeProvider, false);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider, false, 0);
 
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
@@ -128,7 +128,7 @@ public class TestAuthorizationContext {
 
     // force it to use the new, checkPermissionWithContext API.
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, mockINodeAttributeProvider, true);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider, true, 0);
 
     String operationName = "abc";
     FSPermissionChecker.setOperationType(operationName);

@@ -314,7 +314,8 @@ public final class SecurityUtil {
     
     String keytabFilename = conf.get(keytabFileKey);
     if (keytabFilename == null || keytabFilename.length() == 0) {
-      throw new IOException("Running in secure mode, but config doesn't have a keytab");
+      throw new IOException(
+          "Running in secure mode, but config doesn't have a keytab for key: " + keytabFileKey);
     }
 
     String principalConfig = conf.get(userNameKey, System

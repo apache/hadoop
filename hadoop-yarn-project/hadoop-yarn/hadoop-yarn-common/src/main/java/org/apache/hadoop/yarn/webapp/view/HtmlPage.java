@@ -88,7 +88,7 @@ public abstract class HtmlPage extends TextView {
   }
 
   /**
-   * Render the the HTML page.
+   * Render the HTML page.
    * @param html the page to render data to.
    */
   protected abstract void render(Page.HTML<__> html);

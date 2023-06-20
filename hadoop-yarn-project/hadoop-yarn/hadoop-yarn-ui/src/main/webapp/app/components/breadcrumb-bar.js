@@ -25,7 +25,7 @@ export default Ember.Component.extend({
 
   actions:{
     refresh: function () {
-      this.get("targetObject").send("refresh");
+      this.get("_targetObject").send("refresh");
     }
   }
 

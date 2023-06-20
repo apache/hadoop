@@ -269,7 +269,7 @@ public class FSImageFormatPBSnapshot {
         }
         diffs.addFirst(diff);
       }
-      file.addSnapshotFeature(diffs);
+      file.loadSnapshotFeature(diffs);
       short repl = file.getPreferredBlockReplication();
       for (BlockInfo b : file.getBlocks()) {
         if (b.getReplication() < repl) {
