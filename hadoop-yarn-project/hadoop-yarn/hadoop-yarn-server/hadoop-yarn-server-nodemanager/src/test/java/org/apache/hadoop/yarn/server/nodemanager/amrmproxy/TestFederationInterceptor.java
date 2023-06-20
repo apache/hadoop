@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -177,6 +178,9 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     // Set sub-cluster timeout to 500ms
     conf.setLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
         500);
+
+    // Wait UAM Register Down
+    conf.setBoolean(YarnConfiguration.AMRM_PROXY_WAIT_UAM_REGISTER_DONE, true);
 
     return conf;
   }
@@ -593,6 +597,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         interceptor.recover(recoveredDataMap);
 
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Waiting for SC-1 to time out.
+        GenericTestUtils.waitFor(() -> interceptor.getTimedOutSCs(true).size() == 1, 100, 1000);
+
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
 
@@ -851,7 +859,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         List<Container> containers =
             getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
         for (Container c : containers) {
-          LOG.info("Allocated container " + c.getId());
+          LOG.info("Allocated container {}", c.getId());
         }
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
@@ -885,6 +893,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         int numberOfContainers = 3;
         // Should re-attach secondaries and get the three running containers
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Waiting for SC-1 to time out.
+        GenericTestUtils.waitFor(() -> interceptor.getTimedOutSCs(true).size() == 1, 100, 1000);
+
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
         Assert.assertEquals(numberOfContainers,

@@ -5356,6 +5356,16 @@
 
   <property>
     <description>
+      Whether we wait for uam registration to complete.
+      The default value is false. If we set it to true,
+      the UAM needs to be registered before attempting to allocate a container.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.wait.uam-register.done</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
       YARN Federation supports Non-HA mode.
       If the cluster is not configured with HA but wants to use YARN Federation,
       this option can be used.
