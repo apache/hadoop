@@ -48,6 +48,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.encryption.s3.S3EncryptionClientException;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -169,6 +170,11 @@ public final class S3AUtils {
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
+    if (exception instanceof S3EncryptionClientException) {
+      exception = (SdkException) exception.getCause();
+    }
+
     if (!(exception instanceof AwsServiceException)) {
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {

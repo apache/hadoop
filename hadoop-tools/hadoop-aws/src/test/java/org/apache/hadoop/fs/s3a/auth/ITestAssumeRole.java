@@ -439,7 +439,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
             STATEMENT_ALL_S3,
-            STATEMENT_ALLOW_SSE_KMS_READ));
+            STATEMENT_ALLOW_SSE_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
