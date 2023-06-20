@@ -70,6 +70,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testLandsatBucketRequireUnencrypted() throws Throwable {
+    skipIfClientSideEncryption();
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         getLandsatCSVFile(getConfiguration()));
