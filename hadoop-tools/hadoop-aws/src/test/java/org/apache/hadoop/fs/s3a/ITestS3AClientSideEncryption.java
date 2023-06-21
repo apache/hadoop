@@ -237,7 +237,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
       assertEquals("Mismatch in content length bytes", SMALL_FILE_SIZE,
           encryptedFSFileStatus.getLen());
 
-      intercept(SecurityException.class, "",
+      intercept(AWSClientIOException.class, "Instruction file not found!",
           "SecurityException should be thrown",
           () -> {
             in.read(new byte[SMALL_FILE_SIZE]);
