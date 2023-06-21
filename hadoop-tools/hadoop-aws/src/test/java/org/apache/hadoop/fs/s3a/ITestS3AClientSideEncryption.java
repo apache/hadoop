@@ -238,7 +238,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
           encryptedFSFileStatus.getLen());
 
       intercept(AWSClientIOException.class, "Instruction file not found!",
-          "SecurityException should be thrown",
+          "AWSClientIOException should be thrown",
           () -> {
             in.read(new byte[SMALL_FILE_SIZE]);
             return "Exception should be raised if unencrypted data is read by "
