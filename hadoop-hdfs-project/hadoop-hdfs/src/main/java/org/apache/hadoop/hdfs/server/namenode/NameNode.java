@@ -2242,7 +2242,7 @@ public class NameNode extends ReconfigurableBase implements
     }
 
   }
-
+  
   public boolean isStandbyState() {
     return (state.equals(STANDBY_STATE));
   }
