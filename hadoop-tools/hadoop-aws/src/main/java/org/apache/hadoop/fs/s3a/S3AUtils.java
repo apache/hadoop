@@ -171,6 +171,7 @@ public final class S3AUtils {
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
 
+    // Exceptions from encryption client are wrapped in S3EncryptionClientException, so unwrap.
     if (exception instanceof S3EncryptionClientException) {
       exception = (SdkException) exception.getCause();
     }
