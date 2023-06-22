@@ -49,7 +49,7 @@ public class QueueCLI extends YarnCLI {
 
   public static final String ALLTAG = "all";
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[]  args) throws Exception {
     QueueCLI cli = new QueueCLI();
     cli.setSysOutPrintStream(System.out);
     cli.setSysErrPrintStream(System.err);

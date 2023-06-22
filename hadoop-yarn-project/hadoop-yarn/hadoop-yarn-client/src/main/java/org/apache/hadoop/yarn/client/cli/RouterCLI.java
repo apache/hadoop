@@ -23,6 +23,7 @@ import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ha.HAAdmin.UsageInfo;
@@ -30,6 +31,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
@@ -38,6 +40,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRes
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -45,18 +52,25 @@ public class RouterCLI extends Configured implements Tool {
 
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder().put("-deregisterSubCluster",
-        new UsageInfo("[-sc|subClusterId [subCluster id]]",
-        "deregister subCluster, if the interval between the heartbeat time of the subCluster " +
+        new UsageInfo("[-sc|--subClusterId [subCluster Id]]",
+        "Deregister SubCluster, If the interval between the heartbeat time of the subCluster " +
         "and the current time exceeds the timeout period, " +
         "set the state of the subCluster to SC_LOST")).build();
 
-  // title information
-  private final static String SUB_CLUSTER_ID = "SubClusterId";
-  private final static String DEREGISTER_STATE = "DeregisterState";
-  private final static String LAST_HEARTBEAT_TIME = "LastHeartBeatTime";
-  private final static String INFORMATION = "Information";
-  private final static String SUB_CLUSTER_STATE = "SubClusterState";
-  private static final String DEREGISTER_SUBCLUSTER_PATTERN = "%30s\t%20s\t%30s\t%30s\t%20s";
+  // Command Constant
+  private static final String CMD_EMPTY = "";
+  private static final int EXIT_SUCCESS = 0;
+  private static final int EXIT_ERROR = -1;
+
+  // Command1: deregisterSubCluster
+  // Title information
+  List<String> DEREGISTER_SUBCLUSTER_HEADER = Arrays.asList(
+      "SubCluster Id", "Deregister State", "Last HeartBeatTime", "Information", "SubCluster State");
+  // Constant
+  private static final String OPTION_SC = "sc";
+  private static final String OPTION_SUBCLUSTERID = "subClusterId";
+  private static final String CMD_DEREGISTERSUBCLUSTER = "-deregisterSubCluster";
+  private static final String CMD_HELP = "-help";
 
   public RouterCLI() {
     super();
@@ -109,18 +123,20 @@ public class RouterCLI extends Configured implements Tool {
 
   private static void printHelp() {
     StringBuilder summary = new StringBuilder();
-    summary.append("router-admin is the command to execute ")
-        .append("YARN Federation administrative commands.\n");
-    summary.append("The full syntax is: \n\n")
+    summary.append("routeradmin is the command to execute ")
+        .append("YARN Federation administrative commands.\n")
+        .append("The full syntax is: \n\n")
         .append("routeradmin")
-        .append(" [-deregisterSubCluster [-c|clusterId [subClusterId]]");
-    summary.append(" [-help [cmd]]").append("\n");
+        .append(" [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]")
+        .append(" [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
+
     for (String cmdKey : ADMIN_USAGE.keySet()) {
       buildHelpMsg(cmdKey, helpBuilder);
       helpBuilder.append("\n");
     }
+
     helpBuilder.append("   -help [cmd]: Displays help for the given command or all commands")
         .append(" if none is specified.");
     System.out.println(helpBuilder);
@@ -136,8 +152,8 @@ public class RouterCLI extends Configured implements Tool {
   }
 
   private static void buildUsageMsg(StringBuilder builder) {
-    builder.append("router-admin is only used in Yarn Federation Mode.\n");
-    builder.append("Usage: router-admin\n");
+    builder.append("routeradmin is only used in Yarn Federation Mode.\n");
+    builder.append("Usage: routeradmin\n");
     for (Map.Entry<String, UsageInfo> cmdEntry : ADMIN_USAGE.entrySet()) {
       UsageInfo usageInfo = cmdEntry.getValue();
       builder.append("   ")
@@ -165,11 +181,12 @@ public class RouterCLI extends Configured implements Tool {
 
     Options opts = new Options();
     opts.addOption("deregisterSubCluster", false,
-        "Refresh the hosts information at the ResourceManager.");
-    Option gracefulOpt = new Option("c", "clusterId", true,
-        "Wait for timeout before marking the NodeManager as decommissioned.");
-    gracefulOpt.setOptionalArg(true);
-    opts.addOption(gracefulOpt);
+        "Deregister YARN SubCluster if its heartbeat timeout exceeds half an hour.");
+    Option subClusterOpt = new Option(OPTION_SC, OPTION_SUBCLUSTERID, true,
+        "The sub-cluster can be specified using either the '-sc' or '--subCluster' option. " +
+         " If a sub-cluster fails to report a heartbeat for more than half an hour, it will be marked as 'SC_LOST'.");
+    subClusterOpt.setOptionalArg(true);
+    opts.addOption(subClusterOpt);
 
     CommandLine cliParser;
     try {
@@ -177,11 +194,18 @@ public class RouterCLI extends Configured implements Tool {
     } catch (MissingArgumentException ex) {
       System.out.println("Missing argument for options");
       printUsage(args[0]);
-      return -1;
+      return EXIT_ERROR;
     }
 
-    if (cliParser.hasOption("c")) {
-      String subClusterId = cliParser.getOptionValue("c");
+    String subClusterId = null;
+    if (cliParser.hasOption(OPTION_SC) || cliParser.hasOption(OPTION_SUBCLUSTERID)) {
+      subClusterId = cliParser.getOptionValue(OPTION_SC);
+      if (subClusterId == null) {
+        subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+      }
+    }
+
+    if (StringUtils.isNotBlank(subClusterId)) {
       return deregisterSubCluster(subClusterId);
     } else {
       return deregisterSubCluster();
@@ -190,12 +214,14 @@ public class RouterCLI extends Configured implements Tool {
 
   private int deregisterSubCluster(String subClusterId)
       throws IOException, YarnException {
+    PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+        System.out, Charset.forName(StandardCharsets.UTF_8.name())));
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     DeregisterSubClusterRequest request =
         DeregisterSubClusterRequest.newInstance(subClusterId);
     DeregisterSubClusterResponse response = adminProtocol.deregisterSubCluster(request);
-    System.out.println(String.format(DEREGISTER_SUBCLUSTER_PATTERN,
-        SUB_CLUSTER_ID, DEREGISTER_STATE, LAST_HEARTBEAT_TIME, INFORMATION, SUB_CLUSTER_STATE));
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils("Yarn Federation Deregister SubCluster")
+        .addHeaders(DEREGISTER_SUBCLUSTER_HEADER);
     List<DeregisterSubClusters> deregisterSubClusters = response.getDeregisterSubClusters();
     deregisterSubClusters.forEach(deregisterSubCluster -> {
       String responseSubClusterId = deregisterSubCluster.getSubClusterId();
@@ -203,15 +229,17 @@ public class RouterCLI extends Configured implements Tool {
       String lastHeartBeatTime = deregisterSubCluster.getLastHeartBeatTime();
       String info = deregisterSubCluster.getInformation();
       String subClusterState = deregisterSubCluster.getSubClusterState();
-      System.out.println(String.format(DEREGISTER_SUBCLUSTER_PATTERN,
-          responseSubClusterId, deregisterState, lastHeartBeatTime, info, subClusterState));
+      formattingCLIUtils.addLine(responseSubClusterId, deregisterState,
+          lastHeartBeatTime, info, subClusterState);
     });
-    return 0;
+    writer.print(formattingCLIUtils.render());
+    writer.flush();
+    return EXIT_SUCCESS;
   }
 
   private int deregisterSubCluster() throws IOException, YarnException {
-    deregisterSubCluster("");
-    return 0;
+    deregisterSubCluster(CMD_EMPTY);
+    return EXIT_SUCCESS;
   }
 
   @Override
@@ -222,25 +250,26 @@ public class RouterCLI extends Configured implements Tool {
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
     if (args.length < 1 || !isFederationEnabled) {
-      printUsage("");
-      return -1;
+      printUsage(CMD_EMPTY);
+      return EXIT_ERROR;
     }
 
     String cmd = args[0];
-    if ("-help".equals(cmd)) {
+
+    if (CMD_HELP.equals(cmd)) {
       if (args.length > 1) {
         printUsage(args[1]);
       } else {
         printHelp();
       }
-      return 0;
+      return EXIT_SUCCESS;
     }
 
-    if ("-deregisterSubCluster".equals(cmd)) {
+    if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
       return handleDeregisterSubCluster(args);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   public static void main(String[] args) throws Exception {
