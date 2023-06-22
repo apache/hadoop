@@ -233,7 +233,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
    *                   search all parts
    * @throws Exception on failure
    */
-  private void uploadCommandAssertCount(S3AFileSystem fs, String options[], Path path,
+  private void uploadCommandAssertCount(S3AFileSystem fs, String[] options, Path path,
       int numUploads, int ageSeconds)
       throws Exception {
     List<String> allOptions = new ArrayList<>();
