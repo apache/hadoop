@@ -1389,6 +1389,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   static String validateTmpFilePrefix(String prefix, String suffix) throws IOException
   {
+    // avoid validating multiple times.
+    // if the jvm running is version 9+ then defer to java.io.File validation implementation
+    if(Float.valueOf(System.getProperty("java.class.version")) > 52) {
+      return prefix;
+    }
+
     if(suffix == null) {
       suffix = ".tmp";
     }
