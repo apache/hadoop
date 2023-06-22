@@ -181,7 +181,7 @@ public class TestHAMetrics {
   }
 
   /**
-   * Test the getNameNodeState() API added to NameNode.java
+   * Test the getNameNodeState() API added to NameNode.java.
    *
    * @throws IOException
    */
