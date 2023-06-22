@@ -1654,16 +1654,19 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   //   Test behavior of an app if two same name leaf queue with different queuePath
   //   during work preserving rm restart with %specified mapping Placement Rule.
   //   Test case does following:
-  //1. Submit an apps to queue root.p1.test.
-  //2. During the applications is running, restart the rm and
+  //1. Submit an apps to queue root.joe.test.
+  //2. While the applications is running, restart the rm and
   //   check whether the app submitted to the queue it was submitted initially.
   //3. Verify that application running successfully.
   @Test(timeout = 60000)
   public void testQueueRecoveryOnRMWorkPreservingRestart() throws Exception {
+    if (getSchedulerType() != SchedulerType.CAPACITY) {
+      return;
+    }
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
 
     csConf.setQueues(
-            CapacitySchedulerConfiguration.ROOT, new String[] { "default", "joe", "john" });
+            CapacitySchedulerConfiguration.ROOT, new String[] {"default", "joe", "john"});
     csConf.setCapacity(
             CapacitySchedulerConfiguration.ROOT + "." + "joe", 25);
     csConf.setCapacity(
@@ -1719,8 +1722,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
               PlacementManager placementManager,
               ApplicationSubmissionContext context, String user,
               boolean isRecovery) throws YarnException {
-            return super
-                .placeApplication(newMockRMContext.getQueuePlacementManager(), context, user, isRecovery);
+            return super.placeApplication(
+                    newMockRMContext.getQueuePlacementManager(), context, user, isRecovery);
           }
         };
       }
