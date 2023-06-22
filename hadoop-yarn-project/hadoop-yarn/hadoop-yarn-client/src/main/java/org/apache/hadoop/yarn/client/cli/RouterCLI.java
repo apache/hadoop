@@ -63,8 +63,10 @@ public class RouterCLI extends Configured implements Tool {
   private static final int EXIT_ERROR = -1;
 
   // Command1: deregisterSubCluster
-  // Title information
-  List<String> DEREGISTER_SUBCLUSTER_HEADER = Arrays.asList(
+  private static final String DEREGISTER_SUBCLUSTER_TITLE =
+      "Yarn Federation Deregister SubCluster";
+  // Columns information
+  private static final List<String> DEREGISTER_SUBCLUSTER_HEADER = Arrays.asList(
       "SubCluster Id", "Deregister State", "Last HeartBeatTime", "Information", "SubCluster State");
   // Constant
   private static final String OPTION_SC = "sc";
@@ -176,18 +178,31 @@ public class RouterCLI extends Configured implements Tool {
     ToolRunner.printGenericCommandUsage(System.err);
   }
 
+  /**
+   * According to the parameter Deregister SubCluster.
+   *
+   * @param args parameter array.
+   * @return If the Deregister SubCluster operation is successful,
+   * it will return 0. Otherwise, it will return -1.
+   *
+   * @throws IOException raised on errors performing I/O.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws ParseException Exceptions thrown during parsing of a command-line.
+   */
   private int handleDeregisterSubCluster(String[] args)
       throws IOException, YarnException, ParseException {
 
+    // Prepare Options.
     Options opts = new Options();
     opts.addOption("deregisterSubCluster", false,
-        "Deregister YARN SubCluster if its heartbeat timeout exceeds half an hour.");
+        "Deregister YARN subCluster, if subCluster Heartbeat Timeout.");
     Option subClusterOpt = new Option(OPTION_SC, OPTION_SUBCLUSTERID, true,
-        "The sub-cluster can be specified using either the '-sc' or '--subCluster' option. " +
-         " If a sub-cluster fails to report a heartbeat for more than half an hour, it will be marked as 'SC_LOST'.");
+        "The subCluster can be specified using either the '-sc' or '--subCluster' option. " +
+         " If the subCluster's Heartbeat Timeout, it will be marked as 'SC_LOST'.");
     subClusterOpt.setOptionalArg(true);
     opts.addOption(subClusterOpt);
 
+    // Parse command line arguments.
     CommandLine cliParser;
     try {
       cliParser = new GnuParser().parse(opts, args);
@@ -197,6 +212,7 @@ public class RouterCLI extends Configured implements Tool {
       return EXIT_ERROR;
     }
 
+    // Try to parse the subClusterId.
     String subClusterId = null;
     if (cliParser.hasOption(OPTION_SC) || cliParser.hasOption(OPTION_SUBCLUSTERID)) {
       subClusterId = cliParser.getOptionValue(OPTION_SC);
@@ -205,6 +221,8 @@ public class RouterCLI extends Configured implements Tool {
       }
     }
 
+    // If subClusterId is not empty, try deregisterSubCluster subCluster,
+    // otherwise try deregisterSubCluster all subCluster.
     if (StringUtils.isNotBlank(subClusterId)) {
       return deregisterSubCluster(subClusterId);
     } else {
@@ -220,7 +238,7 @@ public class RouterCLI extends Configured implements Tool {
     DeregisterSubClusterRequest request =
         DeregisterSubClusterRequest.newInstance(subClusterId);
     DeregisterSubClusterResponse response = adminProtocol.deregisterSubCluster(request);
-    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils("Yarn Federation Deregister SubCluster")
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(DEREGISTER_SUBCLUSTER_TITLE)
         .addHeaders(DEREGISTER_SUBCLUSTER_HEADER);
     List<DeregisterSubClusters> deregisterSubClusters = response.getDeregisterSubClusters();
     deregisterSubClusters.forEach(deregisterSubCluster -> {
