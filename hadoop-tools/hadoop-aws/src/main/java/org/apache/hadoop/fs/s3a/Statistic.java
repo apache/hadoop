@@ -539,7 +539,7 @@ public enum Statistic {
       "Rate of S3 request throttling",
       TYPE_QUANTILE),
   STORE_REGION_PROBE(
-      "store_region_probe",
+      StoreStatisticNames.STORE_REGION_PROBE,
       "Store Region Probe",
       TYPE_DURATION
   ),
