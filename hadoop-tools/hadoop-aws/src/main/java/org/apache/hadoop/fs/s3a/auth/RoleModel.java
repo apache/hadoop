@@ -134,7 +134,7 @@ public class RoleModel {
     if (!key.isEmpty()) {
       return new String[] {
           resource(host, key + "/", true),
-          resource(host, key, false),
+          resource(host, key, true),
           resource(host, key + "/", false),
       };
     } else {
