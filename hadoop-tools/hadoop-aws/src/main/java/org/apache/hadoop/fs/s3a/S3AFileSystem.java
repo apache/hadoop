@@ -1369,32 +1369,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   File createTmpFileForWrite(String pathStr, long size,
       Configuration conf) throws IOException {
     initLocalDirAllocatorIfNotInitialized(conf);
-    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
-        size, conf);
+    Path path = directoryAllocator.getLocalPathForWrite(pathStr, size, conf);
     File dir = new File(path.getParent().toUri().getPath());
-//    String prefix = path.getName();
-    String prefix = validateTmpFilePrefix(pathStr.toString(), null);
-    // create a temp file on this directory
-    return File.createTempFile(prefix, null, dir);
+    return safeCreateTempFile(pathStr, null, dir);
   }
 
+  // TODO remove this method when hadoop upgrades to a newer version of java than 1.8
   /**
-   * Ensure that the temp file prefix doesn't exceed the maximum number of characters allowed by
-   * the underlying file system. This validation isn't required in Java 9+ since
+   * Ensure that the temp file prefix and suffix don't exceed the maximum number of characters
+   * allowed by the underlying file system. This validation isn't required in Java 9+ since
    * {@link java.io.File#createTempFile(String, String, File)} automatically truncates file names.
-   * @param prefix
-   * @param suffix
-   * @return validated prefix
+   *
+   * @param prefix prefix for the temporary file
+   * @param suffix suffix for the temporary file
+   * @param dir directory to create the temporary file in
+   * @return a unique temporary file
    * @throws IOException
    */
-  static String validateTmpFilePrefix(String prefix, String suffix) throws IOException
+  static File safeCreateTempFile(String prefix, String suffix, File dir) throws IOException
   {
     // avoid validating multiple times.
     // if the jvm running is version 9+ then defer to java.io.File validation implementation
-    if(Float.valueOf(System.getProperty("java.class.version")) > 52) {
-      return prefix;
+    if(Float.parseFloat(System.getProperty("java.class.version")) >= 53) {
+      return File.createTempFile(prefix, null, dir);
     }
 
+    // if no suffix was defined assume the default
     if(suffix == null) {
       suffix = ".tmp";
     }
@@ -1402,24 +1402,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     prefix = (new File(prefix)).getName();
 
     int prefixLength = prefix.length();
+    int suffixLength = suffix.length();
     int maxRandomSuffixLen = 19; // Long.toUnsignedString(Long.MAX_VALUE).length()
-    int suffixLength = suffix.length();;
 
     String name;
     int nameMax = 255; // unable to access the underlying FS directly, so assume 255
     int excess = prefixLength + maxRandomSuffixLen + suffixLength - nameMax;
-    if (excess > 0) {
-      // Name exceeds the maximum path component length: shorten it
 
+    // shorten the prefix length if the file name exceeds 255 chars
+    if (excess > 0) {
       // Attempt to shorten the prefix length to no less than 3
       prefixLength = shortenSubName(prefixLength, excess, 3);
       prefix = prefix.substring(0, prefixLength);
     }
-    return prefix;
+    // shorten the suffix if the file name still exceeds 255 chars
+    excess = prefixLength + maxRandomSuffixLen + suffixLength - nameMax;
+    if (excess > 0) {
+      // Attempt to shorten the suffix length to no less than 3
+      suffixLength = shortenSubName(suffixLength, excess, 3);
+      suffix = suffix.substring(0, suffixLength);
+    }
+
+    return File.createTempFile(prefix, suffix, dir);
   }
 
-  private static int shortenSubName(int subNameLength, int excess,
-                                    int nameMin) {
+  private static int shortenSubName(int subNameLength, int excess, int nameMin) {
     int newLength = Math.max(nameMin, subNameLength - excess);
     if (newLength < subNameLength) {
       return newLength;
