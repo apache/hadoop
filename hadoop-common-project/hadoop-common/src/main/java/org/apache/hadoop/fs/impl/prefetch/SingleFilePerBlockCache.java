@@ -318,10 +318,8 @@ public class SingleFilePerBlockCache implements BlockCache {
         entry.setNext(head);
         head.setPrevious(entry);
         head = entry;
-      }
-      if (tail != null) {
-        while (tail.getNext() != null) {
-          tail = tail.getNext();
+        if (prev != null && prev.getNext() == null) {
+          tail = prev;
         }
       }
     } finally {
