@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache.FS_PREFETCH_MAX_BLOCKS_COUNT;
+import static org.apache.hadoop.fs.impl.prefetch.Constants.FS_PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;

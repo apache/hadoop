@@ -80,7 +80,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   private Entry head;
 
   /**
-   * Tail of the lined list.
+   * Tail of the linked list.
    */
   private Entry tail;
 
@@ -95,30 +95,10 @@ public class SingleFilePerBlockCache implements BlockCache {
   private final PrefetchingStatistics prefetchingStatistics;
 
   /**
-   * Timeout to be used by close, while acquiring prefetch block write lock.
-   */
-  private static final int PREFETCH_WRITE_LOCK_TIMEOUT = 5;
-
-  /**
-   * Lock timeout unit to be used by the thread while acquiring prefetch block write lock.
-   */
-  private static final TimeUnit PREFETCH_WRITE_LOCK_TIMEOUT_UNIT = TimeUnit.SECONDS;
-
-  /**
    * File attributes attached to any intermediate temporary file created during index creation.
    */
   private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
       ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
-
-  /**
-   * Prefetch max blocks count config.
-   */
-  public static final String FS_PREFETCH_MAX_BLOCKS_COUNT = "fs.prefetch.max.blocks.count";
-
-  /**
-   * Default value for max blocks count config.
-   */
-  private static final int DEFAULT_FS_PREFETCH_MAX_BLOCKS_COUNT = 20;
 
   /**
    * Cache entry.
@@ -229,9 +209,10 @@ public class SingleFilePerBlockCache implements BlockCache {
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
     this.closed = new AtomicBoolean(false);
     this.maxBlocksCount =
-        conf.getInt(FS_PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_FS_PREFETCH_MAX_BLOCKS_COUNT);
+        conf.getInt(
+            Constants.FS_PREFETCH_MAX_BLOCKS_COUNT, Constants.DEFAULT_FS_PREFETCH_MAX_BLOCKS_COUNT);
     Preconditions.checkArgument(this.maxBlocksCount > 0,
-        "prefetch blocks total capacity should be more than 0");
+        Constants.FS_PREFETCH_MAX_BLOCKS_COUNT + " should be more than 0");
     blocks = new ConcurrentHashMap<>();
     blocksLock = new ReentrantReadWriteLock();
   }
@@ -321,6 +302,9 @@ public class SingleFilePerBlockCache implements BlockCache {
         head = entry;
         tail = entry;
       }
+      LOG.debug(
+          "Block num {} to be added to the head. Current head block num: {} and tail block num: {}",
+          entry.blockNumber, head.blockNumber, tail.blockNumber);
       if (entry != head) {
         Entry prev = entry.getPrevious();
         Entry nxt = entry.getNext();
@@ -433,12 +417,13 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   private void deleteBlockFileAndEvictCache(Entry elementToPurge) {
     boolean lockAcquired =
-        elementToPurge.takeLock(Entry.LockType.WRITE, PREFETCH_WRITE_LOCK_TIMEOUT,
-            PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+        elementToPurge.takeLock(Entry.LockType.WRITE, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
+            Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
     if (!lockAcquired) {
       LOG.error("Cache file {} deletion would not be attempted as write lock could not"
-              + " be acquired within {} {}", elementToPurge.path, PREFETCH_WRITE_LOCK_TIMEOUT,
-          PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+              + " be acquired within {} {}", elementToPurge.path,
+          Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
+          Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
     } else {
       try {
         if (Files.deleteIfExists(elementToPurge.path)) {
@@ -496,12 +481,13 @@ public class SingleFilePerBlockCache implements BlockCache {
   private void deleteCacheFiles() {
     int numFilesDeleted = 0;
     for (Entry entry : blocks.values()) {
-      boolean lockAcquired = entry.takeLock(Entry.LockType.WRITE, PREFETCH_WRITE_LOCK_TIMEOUT,
-          PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+      boolean lockAcquired =
+          entry.takeLock(Entry.LockType.WRITE, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
+              Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
       if (!lockAcquired) {
         LOG.error("Cache file {} deletion would not be attempted as write lock could not"
-                + " be acquired within {} {}", entry.path, PREFETCH_WRITE_LOCK_TIMEOUT,
-            PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+                + " be acquired within {} {}", entry.path, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
+            Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
         continue;
       }
       try {
