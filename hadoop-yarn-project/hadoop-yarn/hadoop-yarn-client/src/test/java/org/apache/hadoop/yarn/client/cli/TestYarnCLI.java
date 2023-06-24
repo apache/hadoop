@@ -40,6 +40,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -82,6 +83,7 @@ import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -1774,28 +1776,21 @@ public class TestYarnCLI {
     verify(client).getAllQueues();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter writer = new PrintWriter(baos);
-    writer.print(queueInfos.size() + " queues were found : \n");
-    writer.print("Queue Name\tQueue Path\tState\tCapacity\tCurrent Capacity\t" +
-        "Maximum Capacity\tWeight\tMaximum Parallel Apps\n");
+    String titleString = queueInfos.size() + " queues were found";
+    List<String> headerStrings = Arrays.asList("Queue Name", "Queue Path", "State", "Capacity",
+        "Current Capacity", "Maximum Capacity", "Weight", "Maximum Parallel Apps");
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(titleString)
+        .addHeaders(headerStrings);
+    DecimalFormat df = new DecimalFormat("#.00");
     for (QueueInfo queueInfoe : queueInfos) {
-      writer.print(queueInfoe.getQueueName());
-      writer.print("\t");
-      writer.print(queueInfoe.getQueuePath());
-      writer.print("\t");
-      writer.print(queueInfoe.getQueueState());
-      DecimalFormat df = new DecimalFormat("#.00");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getCurrentCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getMaximumCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getWeight()));
-      writer.print("\t");
-      writer.print(queueInfoe.getMaxParallelApps());
-      writer.print("\n");
+      formattingCLIUtils.addLine(queueInfoe.getQueueName(), queueInfoe.getQueuePath(),
+          queueInfoe.getQueueState(), df.format(queueInfoe.getCapacity() * 100) + "%",
+          df.format(queueInfoe.getCurrentCapacity() * 100) + "%",
+          df.format(queueInfoe.getMaximumCapacity() * 100) + "%",
+          df.format(queueInfoe.getWeight()),
+          queueInfoe.getMaxParallelApps());
     }
+    writer.print(formattingCLIUtils.render());
     writer.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());

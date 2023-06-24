@@ -251,6 +251,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   // the maximum wait time for the first async heart beat response
   private long heartbeatMaxWaitTimeMs;
 
+  private boolean waitUamRegisterDone;
+
   private MonotonicClock clock = new MonotonicClock();
 
   /**
@@ -353,6 +355,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       this.subClusterTimeOut =
           YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
     }
+    this.waitUamRegisterDone = conf.getBoolean(YarnConfiguration.AMRM_PROXY_WAIT_UAM_REGISTER_DONE,
+        YarnConfiguration.DEFAULT_AMRM_PROXY_WAIT_UAM_REGISTER_DONE);
   }
 
   @Override
@@ -1332,6 +1336,18 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       });
       this.uamRegisterFutures.put(scId, future);
     }
+
+    if (this.waitUamRegisterDone) {
+      for (Map.Entry<SubClusterId, Future<?>> entry : this.uamRegisterFutures.entrySet()) {
+        SubClusterId subClusterId = entry.getKey();
+        Future<?> future = entry.getValue();
+        while (!future.isDone()) {
+          LOG.info("subClusterId {} Wait Uam Register done.", subClusterId);
+        }
+      }
+    }
+
+
     return newSubClusters;
   }
 
