@@ -172,8 +172,10 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     //replace query with mix case letters
     final URL url = webhdfs.toUrl(op, p);
     WebHdfsFileSystem.LOG.info("url      = " + url);
+    // Jersey 2 does not allow case sensitive param i.e. op=xyz and Op=xyz are treated
+    // differently
     final URL replaced = new URL(url.toString().replace(op.toQueryString(),
-        "Op=mkDIrs"));
+        "op=mkDIrs"));
     WebHdfsFileSystem.LOG.info("replaced = " + replaced);
 
     //connect with the replaced URL.
