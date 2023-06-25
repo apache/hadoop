@@ -879,8 +879,6 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       SubClusterState subClusterState = subClusterInfo.getState();
       long lastHeartBeat = subClusterInfo.getLastHeartBeat();
       Date lastHeartBeatDate = new Date(lastHeartBeat);
-      String heartBeatTimeOut =
-          conf.get(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME, "30m");
       deregisterSubClusters = DeregisterSubClusters.newInstance(
           reqSubClusterId, "NONE", lastHeartBeatDate.toString(),
           "Normal Heartbeat", subClusterState.name());
@@ -897,7 +895,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           if (deregisterSubClusterFlag) {
             deregisterSubClusters.setDeregisterState("SUCCESS");
             deregisterSubClusters.setSubClusterState("SC_LOST");
-            deregisterSubClusters.setInformation("Heartbeat Time >= " + heartBeatTimeOut);
+            deregisterSubClusters.setInformation("Heartbeat Time >= " +
+                heartbeatExpirationMillis / (1000 * 60) + "minutes");
           } else {
             deregisterSubClusters.setDeregisterState("FAILED");
             deregisterSubClusters.setInformation("DeregisterSubClusters Failed.");
@@ -905,9 +904,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         }
       } else {
         deregisterSubClusters.setDeregisterState("FAILED");
-        deregisterSubClusters.setInformation("Heartbeat Time < " + heartBeatTimeOut +
-            "DeregisterSubCluster does not need to be executed");
-        LOG.warn("SubCluster {} in State {} does not need to update state.",
+        deregisterSubClusters.setInformation("The subCluster is Unusable, " +
+            "So it can't be Deregistered");
+        LOG.warn("The SubCluster {} is Unusable (SubClusterState:{}), So it can't be Deregistered",
             subClusterId, subClusterState);
       }
       return deregisterSubClusters;
