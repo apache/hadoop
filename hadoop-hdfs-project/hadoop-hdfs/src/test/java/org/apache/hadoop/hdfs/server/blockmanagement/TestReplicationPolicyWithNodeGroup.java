@@ -641,7 +641,6 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     dataNodes[2].setRemaining(calculateRemaining(dataNodes[2]));
     replicaList.add(storages[2]);
 
-    storages[4].setRemainingForTests(100 * 1024 * 1024);
     storages[5].setRemainingForTests(512 * 1024);
     dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     replicaList.add(storages[5]);
