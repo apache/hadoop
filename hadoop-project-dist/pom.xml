@@ -106,7 +106,7 @@
           <source>${maven.compile.source}</source>
           <charset>${maven.compile.encoding}</charset>
           <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
-          <destDir>../api</destDir>
+          <destDir>${destDirPath}</destDir>
           <groups>
             <group>
               <title>${project.name} API</title>
@@ -207,6 +207,24 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
+              <execution>
+                <id>choose-javadoc-dest-dir</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <exportAntProperties>true</exportAntProperties>
+                  <target>
+                    <condition property="destDirPath" value="../api" else="${project.build.directory}/api">
+                      <and>
+                        <os family="windows"/>
+                      </and>
+                    </condition>
+                    <echo>destDirPath to use for maven-javadoc-plugin = ${destDirPath}</echo>
+                  </target>
+                </configuration>
+              </execution>
 
               <!-- Pre site -->
               <execution>
