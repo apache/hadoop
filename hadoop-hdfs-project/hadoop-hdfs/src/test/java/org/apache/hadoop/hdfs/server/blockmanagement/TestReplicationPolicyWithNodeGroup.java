@@ -681,6 +681,70 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     assertEquals(chosen, storages[5]);
   }
 
+  /**
+   * Test for the chooseReplicaToDelete are processed based on
+   * block locality, node load and free space.
+   */
+  @Test
+  public void testChooseReplicaToDeleteConsiderLoad() throws Exception {
+    ((BlockPlacementPolicyDefault) replicator).setConsiderLoad2chooseReplicaDeleting(true);
+    List<DatanodeStorageInfo> replicaList = new ArrayList<>();
+    final Map<String, List<DatanodeStorageInfo>> rackMap = new HashMap<>();
+    storages[0].setRemainingForTests(4*1024*1024);
+    dataNodes[0].setRemaining(calculateRemaining(dataNodes[0]));
+    dataNodes[0].setXceiverCount(15);
+    replicaList.add(storages[0]);
+
+    storages[1].setRemainingForTests(3*1024*1024);
+    dataNodes[1].setRemaining(calculateRemaining(dataNodes[1]));
+    dataNodes[1].setXceiverCount(10);
+    replicaList.add(storages[1]);
+
+    storages[2].setRemainingForTests(2*1024*1024);
+    dataNodes[2].setRemaining(calculateRemaining(dataNodes[2]));
+    dataNodes[2].setXceiverCount(5);
+    replicaList.add(storages[2]);
+
+    storages[5].setRemainingForTests(512 * 1024);
+    dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
+    dataNodes[5].setXceiverCount(20);
+    replicaList.add(storages[5]);
+
+    List<DatanodeStorageInfo> first = new ArrayList<>();
+    List<DatanodeStorageInfo> second = new ArrayList<>();
+    replicator.splitNodesWithRack(replicaList,
+        replicaList, rackMap, first, second);
+    assertEquals(3, first.size());
+    assertEquals(1, second.size());
+    List<StorageType> excessTypes = new ArrayList<>();
+    excessTypes.add(StorageType.DEFAULT);
+    DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) replicator)
+        .chooseReplicaToDelete(first, second, excessTypes, rackMap);
+    // Within first set {dataNodes[0], dataNodes[1], dataNodes[2]},
+    // dataNodes[0] and dataNodes[1] are in the same nodegroup,
+    // but dataNodes[1] is chosen as less load.
+    assertEquals(chosen, storages[1]);
+
+    replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
+    assertEquals(2, first.size());
+    assertEquals(1, second.size());
+    // Within first set {dataNodes[0], dataNodes[2]}, dataNodes[2] is chosen
+    // as less load.
+    excessTypes.add(StorageType.DEFAULT);
+    chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
+        first, second, excessTypes, rackMap);
+    assertEquals(chosen, storages[2]);
+
+    replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
+    assertEquals(0, first.size());
+    assertEquals(2, second.size());
+    // Within second set, dataNodes[0] with less load.
+    excessTypes.add(StorageType.DEFAULT);
+    chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
+        first, second, excessTypes, rackMap);
+    assertEquals(chosen, storages[0]);
+  }
+
   private long calculateRemaining(DatanodeDescriptor dataNode) {
     long sum = 0;
     for (DatanodeStorageInfo storageInfo: dataNode.getStorageInfos()){
