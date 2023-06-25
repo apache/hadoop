@@ -1217,10 +1217,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     long minSpace = Long.MAX_VALUE;
     DatanodeStorageInfo minSpaceStorage = null;
 
+    Collection<DatanodeStorageInfo> candidateStorages =
+        pickupReplicaSet(moreThanOne, exactlyOne, rackMap);
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all hearbeats are within the tolerable heartbeat interval
-    for(DatanodeStorageInfo storage : pickupReplicaSet(moreThanOne,
-        exactlyOne, rackMap)) {
+    for (DatanodeStorageInfo storage : candidateStorages) {
       if (!excessTypes.contains(storage.getStorageType())) {
         continue;
       }
