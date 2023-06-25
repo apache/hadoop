@@ -1130,7 +1130,7 @@ public class TestTrash {
     }
 
     @Override
-    public boolean moveToTrash(Path path, boolean force) throws IOException {
+    public boolean moveToTrash(Path path) throws IOException {
       return false;
     }
 
@@ -1191,7 +1191,7 @@ public class TestTrash {
     }
 
     @Override
-    public boolean moveToTrash(Path path, boolean force) throws IOException {
+    public boolean moveToTrash(Path path) throws IOException {
       return false;
     }
 

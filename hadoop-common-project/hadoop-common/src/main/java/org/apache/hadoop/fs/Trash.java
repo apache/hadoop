@@ -137,7 +137,7 @@ public class Trash extends Configured {
    * @throws IOException raised on errors performing I/O.
    */ 
   public boolean moveToTrash(Path path) throws IOException {
-    return trashPolicy.moveToTrash(path, false);
+    return trashPolicy.moveToTrash(path);
   }
 
   /**

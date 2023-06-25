@@ -68,11 +68,10 @@ public abstract class TrashPolicy extends Configured {
   /** 
    * Move a file or directory to the current trash directory.
    * @param path the path.
-   * @param force Whether force moving or not.
    * @return false if the item is already in the trash or trash is disabled
    * @throws IOException raised on errors performing I/O.
    */
-  public abstract boolean moveToTrash(Path path, boolean force) throws IOException;
+  public abstract boolean moveToTrash(Path path) throws IOException;
 
   /** 
    * Create a trash checkpoint.

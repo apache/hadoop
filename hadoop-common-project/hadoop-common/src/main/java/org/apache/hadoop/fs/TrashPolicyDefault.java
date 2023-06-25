@@ -128,7 +128,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @SuppressWarnings("deprecation")
   @Override
-  public boolean moveToTrash(Path path, boolean force) throws IOException {
+  public boolean moveToTrash(Path path) throws IOException {
     if (!isEnabled())
       return false;
 
@@ -141,7 +141,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
     Path trashRoot = fs.getTrashRoot(path);
     Path trashCurrent = new Path(trashRoot, CURRENT);
-    if (qpath.startsWith(trashRoot.toString()) && !force) {
+    if (qpath.startsWith(trashRoot.toString())) {
       return false;                               // already in trash
     }
 
@@ -383,7 +383,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
         if (cleanNonCheckpointUnderTrashRoot) {
-          this.moveToTrash(path, true);
+          fs.delete(path, true);
           LOG.warn("Unexpected item in trash: " + dir + ". Force moving to trash.");
           continue;
         } else {
