@@ -179,9 +179,11 @@ public class KMS {
       int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
       requestURL = requestURL.substring(0, idx);
       LOG.trace("Exiting createKey Method.");
+      // additional head with header("Location", getKeyURI(requestURL, name))
+      // no longer supported by jersey 2
       return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
           .type(MediaType.APPLICATION_JSON)
-          .header("Location", getKeyURI(requestURL, name)).entity(json).build();
+          .entity(json).build();
     } catch (Exception e) {
       LOG.debug("Exception in createKey.", e);
       throw e;
