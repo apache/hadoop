@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -56,6 +57,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
+import static org.apache.hadoop.fs.s3a.auth.RoleModel.resource;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
@@ -145,6 +147,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Path writableDir;
 
   /**
+   * Instruction file created when using CSE, required to be added to policies.
+   */
+  private Path writableDirInstructionFile;
+
+  /**
    * A directory to which restricted roles have only read access.
    */
   private Path readOnlyDir;
@@ -216,6 +223,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     basePath = uniquePath();
     readOnlyDir = new Path(basePath, "readonlyDir");
     writableDir = new Path(basePath, "writableDir");
+    writableDirInstructionFile = new Path(basePath, "writableDir.instruction");
     readOnlyChild = new Path(readOnlyDir, "child");
     noReadDir = new Path(basePath, "noReadDir");
     // the full FS
@@ -225,8 +233,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // create the baseline assumed role
     assumedRoleConfig = createAssumedRoleConfig();
-    bindRolePolicyStatements(assumedRoleConfig,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -365,13 +372,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public void testRenameParentPathNotWriteable() throws Throwable {
     describe("rename with parent paths not writeable; multi=%s", multiDelete);
     final Configuration conf = createAssumedRoleConfig();
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(readOnlyDir))
-            .addResources(directory(writableDir)));
+            .addResources(directory(writableDir))
+            .addResources(resource(writableDirInstructionFile, false, false)));
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(conf);
 
     S3AFileSystem fs = getFileSystem();
@@ -733,8 +740,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // s3:DeleteObjectVersion permission, and attempt rename
     // and then delete.
     Configuration roleConfig = createAssumedRoleConfig();
-    bindRolePolicyStatements(roleConfig,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(roleConfig, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
             .addActions(S3_PATH_RW_OPERATIONS)

@@ -213,7 +213,7 @@ import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.INITIALIZE_SPAN;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_KMS_RW;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
@@ -4222,7 +4222,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // no attempt is made to qualify KMS access; there's no
     // way to predict read keys, and not worried about granting
     // too much encryption access.
-    statements.add(STATEMENT_ALLOW_SSE_KMS_RW);
+    statements.add(STATEMENT_ALLOW_KMS_RW);
 
     return statements;
   }
