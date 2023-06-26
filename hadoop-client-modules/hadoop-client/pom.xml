@@ -70,6 +70,10 @@
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>com.sun.jersey</groupId>
           <artifactId>jersey-server</artifactId>
         </exclusion>
@@ -183,6 +187,10 @@
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
         </exclusion>
@@ -232,6 +240,10 @@
         <exclusion>
           <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.sun.jersey</groupId>
@@ -289,6 +301,10 @@
         <exclusion>
           <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
         </exclusion>
         <exclusion>
           <groupId>io.netty</groupId>

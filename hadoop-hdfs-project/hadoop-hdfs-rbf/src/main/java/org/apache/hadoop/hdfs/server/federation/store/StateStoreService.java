@@ -257,6 +257,7 @@ public class StateStoreService extends CompositeService {
    * Get the record store in this State Store for a given interface.
    *
    * @param recordStoreClass Class of the record store.
+   * @param <T> The type of the record store.
    * @return Registered record store or null if not found.
    */
   public <T extends RecordStore<?>> T getRegisteredRecordStore(
@@ -274,6 +275,8 @@ public class StateStoreService extends CompositeService {
 
   /**
    * Get the list of all RecordStores.
+   *
+   * @param <T> The type of the record stores that are returned.
    * @return a list of each RecordStore.
    */
   @SuppressWarnings("unchecked")

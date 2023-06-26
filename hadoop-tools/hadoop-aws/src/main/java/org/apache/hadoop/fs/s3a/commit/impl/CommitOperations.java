@@ -583,7 +583,7 @@ public class CommitOperations extends AbstractStoreOperation
             localFile,
             offset);
         part.setLastPart(partNumber == numParts);
-        UploadPartResult partResult = writeOperations.uploadPart(part);
+        UploadPartResult partResult = writeOperations.uploadPart(part, statistics);
         offset += uploadPartSize;
         parts.add(partResult.getPartETag());
       }

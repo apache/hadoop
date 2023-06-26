@@ -51,8 +51,8 @@ public enum SubClusterState {
   /** Subcluster has unregistered. */
   SC_UNREGISTERED;
 
-  public boolean isUnusable() {
-    return (this != SC_RUNNING && this != SC_NEW);
+  public boolean isUsable() {
+    return (this == SC_RUNNING || this == SC_NEW);
   }
 
   public boolean isActive() {

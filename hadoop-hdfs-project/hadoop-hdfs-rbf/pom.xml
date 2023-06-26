@@ -122,11 +122,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>HikariCP</artifactId>
     </dependency>
     <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -177,6 +172,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -185,12 +185,9 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <systemProperties>
-            <property>
-              <name>derby.stream.error.file</name>
-              <value>${project.build.directory}/derby.log</value>
-            </property>
-          </systemProperties>
+          <systemPropertyVariables>
+            <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -246,10 +243,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/hdfs-rbf-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -301,6 +298,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <excludePackageNames>
+            org.apache.hadoop.hdfs.federation.protocol.proto:org.apache.hadoop.hdfs.protocol.proto
+          </excludePackageNames>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>

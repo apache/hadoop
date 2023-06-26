@@ -48,8 +48,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
@@ -454,7 +452,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void appendClientPortToCallerContextIfAbsent() {
-    final CallerContext ctx = CallerContext.getCurrent();
+    CallerContext ctx = CallerContext.getCurrent();
     if (isClientPortInfoAbsent(ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
@@ -464,6 +462,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               .setSignature(origSignature)
               .build());
     }
+    ctx = CallerContext.getCurrent();
+    if (isFromProxyUser(ctx)) {
+      CallerContext.setCurrent(
+          new CallerContext.Builder(ctx.getContext(), contextFieldSeparator)
+              .append(CallerContext.PROXY_USER_PORT, String.valueOf(Server.getRemotePort()))
+              .setSignature(ctx.getSignature())
+              .build());
+    }
   }
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
@@ -471,6 +477,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
+  private boolean isFromProxyUser(CallerContext ctx) {
+    return ctx != null && ctx.getContext() != null &&
+        ctx.getContext().contains(CallerContext.REAL_USER_STR);
+  }
   /**
    * Logger for audit events, noting successful FSNamesystem operations. Emits
    * to FSNamesystem.audit at INFO. Each event causes a set of tab-separated
@@ -1069,11 +1079,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  @SuppressWarnings("deprecation")
   private static void checkForAsyncLogEnabledByOldConfigs(Configuration conf) {
-    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.warn("Use log4j properties to enable async log for audit logs. {} is deprecated",
-          DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY);
+    // dfs.namenode.audit.log.async is no longer in use. Use log4j properties instead.
+    if (conf.getBoolean("dfs.namenode.audit.log.async", false)) {
+      LOG.warn("Use log4j properties to enable async log for audit logs. "
+          + "dfs.namenode.audit.log.async is no longer in use.");
     }
   }
 

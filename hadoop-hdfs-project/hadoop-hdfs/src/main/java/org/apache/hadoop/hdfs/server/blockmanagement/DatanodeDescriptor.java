@@ -233,6 +233,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // HB processing can use it to tell if it is the first HB since DN restarted
   private boolean heartbeatedSinceRegistration = false;
 
+  /** The number of volumes that can be written.*/
+  private int numVolumesAvailable = 0;
+
   /**
    * DatanodeDescriptor constructor
    * @param nodeID id of the data node
@@ -411,6 +414,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     long totalNonDfsUsed = 0;
     Set<String> visitedMount = new HashSet<>();
     Set<DatanodeStorageInfo> failedStorageInfos = null;
+    int volumesAvailable = 0;
 
     // Decide if we should check for any missing StorageReport and mark it as
     // failed. There are different scenarios.
@@ -489,7 +493,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
           visitedMount.add(mount);
         }
       }
+      if (report.getRemaining() > 0 && storage.getState() != State.FAILED) {
+        volumesAvailable += 1;
+      }
     }
+    this.numVolumesAvailable = volumesAvailable;
 
     // Update total metrics for the node.
     setCapacity(totalCapacity);
@@ -979,6 +987,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public VolumeFailureSummary getVolumeFailureSummary() {
     return volumeFailureSummary;
+  }
+
+  /**
+   * Return the number of volumes that can be written.
+   * @return the number of volumes that can be written.
+   */
+  public int getNumVolumesAvailable() {
+    return numVolumesAvailable;
   }
 
   /**

@@ -26,6 +26,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_addApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @storedHomeSubCluster_OUT VARCHAR(256) OUTPUT,
     @rowCount_OUT int OUTPUT
 AS BEGIN
@@ -41,10 +42,14 @@ AS BEGIN
 
                 INSERT INTO [dbo].[applicationsHomeSubCluster] (
                     [applicationId],
-                    [homeSubCluster])
+                    [homeSubCluster],
+                    [createTime],
+                    [applicationContext])
                 VALUES (
                     @applicationId_IN,
-                    @homeSubCluster_IN);
+                    @homeSubCluster_IN,
+                    GETUTCDATE(),
+                    @applicationContext_IN);
             -- End of the IF block
 
             SELECT @rowCount_OUT = @@ROWCOUNT;
@@ -77,6 +82,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_updateApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
@@ -85,7 +91,8 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[applicationsHomeSubCluster]
-            SET [homeSubCluster] = @homeSubCluster_IN
+            SET [homeSubCluster] = @homeSubCluster_IN,
+                [applicationContext] = @applicationContext_IN
             WHERE [applicationId] = @applicationId_IN;
             SELECT @rowCount_OUT = @@ROWCOUNT;
 
@@ -151,13 +158,17 @@ GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
-    @homeSubCluster_OUT VARCHAR(256) OUTPUT
+    @homeSubCluster_OUT VARCHAR(256) OUTPUT,
+    @createTime_OUT datetime OUT,
+    @applicationContext_OUT VARBINARY(MAX) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @homeSubCluster_OUT = [homeSubCluster]
+        SELECT @homeSubCluster_OUT = [homeSubCluster],
+            @createTime_OUT = [createTime],
+            @applicationContext_OUT = [applicationContext]
         FROM [dbo].[applicationsHomeSubCluster]
         WHERE [applicationId] = @applicationId_IN;
 
@@ -958,6 +969,77 @@ AS BEGIN
 
     BEGIN CATCH
         ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_storeVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_storeVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_storeVersion]
+    @fedVersion_IN VARBINARY(1024),
+    @versionComment_IN VARCHAR(255),
+    @rowCount_OUT BIGINT OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+
+            DELETE FROM [dbo].[versions];
+            INSERT INTO [dbo].[versions] (
+                [fedVersion],
+                [versionComment])
+            VALUES (
+                @fedVersion_IN,
+                @versionComment_IN);
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_getVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_getVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_getVersion]
+    @fedVersion_OUT VARCHAR(1024) OUTPUT,
+    @versionComment_OUT VARCHAR(255) OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        SELECT @fedVersion_OUT = [fedVersion],
+               @versionComment_OUT = [versionComment]
+        FROM [dbo].[versions]
+        LIMIT 1;
+
+    END TRY
+
+    BEGIN CATCH
 
         SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
 

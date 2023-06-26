@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
@@ -52,7 +54,8 @@ public class S3ACachingBlockManager extends CachingBlockManager {
    * @param blockData information about each block of the S3 file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    * @param streamStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
    * @throws IllegalArgumentException if reader is null.
    */
   public S3ACachingBlockManager(
@@ -60,8 +63,11 @@ public class S3ACachingBlockManager extends CachingBlockManager {
       S3ARemoteObjectReader reader,
       BlockData blockData,
       int bufferPoolSize,
-      S3AInputStreamStatistics streamStatistics) {
-    super(futurePool, blockData, bufferPoolSize, streamStatistics);
+      S3AInputStreamStatistics streamStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
+
+    super(futurePool, blockData, bufferPoolSize, streamStatistics, conf, localDirAllocator);
 
     Validate.checkNotNull(reader, "reader");
 

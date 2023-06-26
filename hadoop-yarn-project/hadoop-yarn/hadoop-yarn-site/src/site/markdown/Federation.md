@@ -91,8 +91,7 @@ of the desirable properties of balance, optimal cluster utilization and global i
 
 This part of the federation system is part of future work in [YARN-5597](https://issues.apache.org/jira/browse/YARN-5597).
 
-
-###Federation State-Store
+### Federation State-Store
 The Federation State defines the additional state that needs to be maintained to loosely couple multiple individual sub-clusters into a single large federated cluster. This includes the following information:
 
 ####Sub-cluster Membership
@@ -255,10 +254,30 @@ Optional:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each Router.
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.router.bind-host` | `0.0.0.0` | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
-| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor. |
+| Property                                          | Example                                                                     | Description                                                                                                                                                                                                                                                                                                           |
+|:--------------------------------------------------|:----------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.bind-host`                           | `0.0.0.0`                                                                   | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
+| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor.                                                                                                                                     |
+
+> Enable ApplicationSubmissionContextInterceptor
+
+- If the `FederationStateStore` is configured with `Zookpeer` storage, the app information will be stored in `Zookpeer`. If the size of the app information exceeds `1MB`, `Zookpeer` may fail. `ApplicationSubmissionContextInterceptor` will check the size of `ApplicationSubmissionContext`, if the size exceeds the limit(default 1MB), an exception will be thrown.
+  - The size of the ApplicationSubmissionContext of the application application_123456789_0001 is above the limit. Size = 1.02 MB.
+
+- The required configuration is as follows:
+
+```
+<property>
+  <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor,
+         org.apache.hadoop.yarn.server.router.clientrm.ApplicationSubmissionContextInterceptor,
+         org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor</value>
+</property>
+<property>
+  <name>yarn.router.asc-interceptor-max-size</name>
+  <value>1MB</value>
+</property>
+```
 
 Optional:
 
@@ -273,6 +292,7 @@ Optional:
 |`yarn.router.submit.interval.time` | `10ms` | The interval between two retry, the default value is 10ms. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
+|`yarn.federation.cache.class` | `org.apache.hadoop.yarn.server.federation.cache.FederationJCache` | The Router caches informations, We can configure the Cache implementation and the default implementation is FederationJCache.|
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
 Security:
@@ -294,6 +314,22 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 | `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
 | `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
 
+Cache:
+
+Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
+We currently provide two Cache implementations: `JCache` and `GuavaCache`.
+
+> JCache
+
+We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project.
+It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
+In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`.
+If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
+
+> GuavaCache
+
+This is a Cache implemented based on the Guava framework.
+If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
 ###ON NMs:
 
@@ -349,3 +385,267 @@ The output from this particular example job should be something like:
 
 The state of the job can also be tracked on the Router Web UI at `routerhost:8089`.
 Note that no change in the code or recompilation of the input jar was required to use federation. Also, the output of this job is the exact same as it would be when run without federation. Also, in order to get the full benefit of federation, use a large enough number of mappers such that more than one cluster is required. That number happens to be 16 in the case of the above example.
+
+How to build a Test Federation Cluster
+--------------------
+
+The purpose of this document is to help users quickly set up a testing environment for YARN Federation. With this testing environment, users can utilize the core functionality of YARN Federation. This is the simplest test cluster setup (based on Linux) with only essential configurations (YARN non-HA mode). We require 3 machines, and each machine should have at least <4C, 8GB> of resources. We only cover YARN configuration in this document. For information on configuring HDFS and ZooKeeper, please refer to other documentation sources.
+
+Test Environment Description:
+- We need to build a HDFS test environment, this part can refer to HDFS documentation. [HDFS SingleCluster](../../hadoop-project-dist/hadoop-common/SingleCluster.html)
+- We need two YARN clusters, each YARN cluster has one RM and one NM, The RM and NM on the same node.
+- We need one ZK cluster(We only need one ZooKeeper node.), this part can refer to Zookeeper documentation. [ZookeeperStarted](https://zookeeper.apache.org/doc/current/zookeeperStarted.html)
+- We need one Router and one Client.
+
+Example of Machine-Role Mapping(Exclude HDFS):
+
+| Machine   | Role          |
+|:----------|:--------------|
+| Machine A | RM1\NM1\ZK1   |
+| Machine B | RM2\NM2       |
+| Machine C | Router\Client |
+
+### YARN-1(ClusterTest-Yarn1)
+
+####  RM-1
+
+- For the ResourceManager, we need to configure the following option:
+
+```xml
+
+<!-- YARN cluster-id -->
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn1</value>
+</property>
+
+<!--
+  We can choose to use FairScheduler or CapacityScheduler. Different schedulers have different configuration.
+  FairScheduler: org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler
+  CapacityScheduler: org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler
+-->
+<property>
+  <name>yarn.resourcemanager.scheduler.class</name>
+  <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+</property>
+
+<!--
+ This configuration option is used to specify the configuration file for FairScheduler.
+ If we are using CapacityScheduler, we don't need to configure this option.
+-->
+<property>
+  <name>yarn.scheduler.fair.allocation.file</name>
+  <value>/path/fair-scheduler.xml</value>
+</property>
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+```
+
+- Start RM
+
+```
+$HADOOP_HOME/bin/yarn --daemon start resourcemanager
+```
+
+#### NM-1
+
+- For the NodeManager, we need to configure the following option:
+
+```xml
+<!-- YARN cluster-id -->
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn1</value>
+</property>
+
+<!-- local dir -->
+<property>
+  <name>yarn.nodemanager.local-dirs</name>
+  <value>path/local</value>
+</property>
+
+<!-- log dir -->
+<property>
+  <name>yarn.nodemanager.log-dirs</name>
+  <value>path/logdir</value>
+</property>
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Disenable YARN Federation FailOver -->
+<property>
+  <name>yarn.federation.failover.enabled</name>
+  <value>false</value>
+</property>
+
+<!-- Enable YARN Federation Non-HA Mode -->
+<property>
+  <name>yarn.federation.non-ha.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+<!-- Enable AmRmProxy. -->
+<property>
+  <name>yarn.nodemanager.amrmproxy.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- interceptors to be run at the amrmproxy -->
+<property>
+  <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.FederationInterceptor</value>
+</property>
+```
+
+- Start NM
+
+```
+$HADOOP_HOME/bin/yarn --daemon start nodemanager
+```
+
+### YARN-2(ClusterTest-Yarn2)
+
+#### RM-2
+
+The RM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
+
+```xml
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn2</value>
+</property>
+```
+
+#### NM-2
+
+The NM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
+
+```xml
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn2</value>
+</property>
+```
+
+After we have finished configuring the `YARN-2` cluster, we can proceed with starting the `YARN-2` cluster.
+
+### Router
+
+- For the Router, we need to configure the following option:
+
+```xml
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+<!-- Configure the FederationClientInterceptor -->
+<property>
+  <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor</value>
+</property>
+
+<!-- Configure the FederationInterceptorREST -->
+<property>
+  <name>yarn.router.webapp.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST</value>
+</property>
+
+<!-- Configure the FederationRMAdminInterceptor -->
+<property>
+  <name>yarn.router.rmadmin.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.rmadmin.FederationRMAdminInterceptor</value>
+</property>
+```
+
+- Start Router
+
+```
+$HADOOP_HOME/bin/yarn --daemon start router
+```
+
+### Yarn-Client
+
+- For the Yarn-Client, we need to configure the following option:
+
+```xml
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Disenable YARN Federation FailOver -->
+<property>
+  <name>yarn.federation.failover.enabled</name>
+  <value>false</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.address,
+   We need to set it to the router address -->
+<property>
+  <name>yarn.resourcemanager.address</name>
+  <value>router-1-Host:8050</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.admin.address,
+   We need to set it to the router address -->
+<property>
+  <name>yarn.resourcemanager.admin.address</name>
+  <value>router-1-Host:8052</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.scheduler.address,
+   We need to set it to the AMRMProxy address -->
+<property>
+  <name>yarn.resourcemanager.scheduler.address</name>
+  <value>localhost:8049</value>
+</property>
+```

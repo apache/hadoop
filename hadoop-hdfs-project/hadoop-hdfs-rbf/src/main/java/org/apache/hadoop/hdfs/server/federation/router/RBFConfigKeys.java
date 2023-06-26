@@ -115,6 +115,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat-state.interval";
   public static final long DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.jmx.interval";
+  public static final long DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT = 0;
 
   // HDFS Router NN client
   public static final String
@@ -254,6 +257,15 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "async.max.threads";
   public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
       -1;
+
+  // HDFS Router-based federation File based store implementation specific configs
+  public static final String FEDERATION_STORE_FILE_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.file.async.threads";
+  public static final int FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT = 0;
+
+  public static final String FEDERATION_STORE_FS_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.fs.async.threads";
+  public static final int FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT = 0;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =

@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -34,6 +33,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -81,11 +83,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Base class for FederationMembershipStateStore implementations.
@@ -403,7 +408,7 @@ public abstract class FederationStateStoreBaseTest {
     ApplicationId appId1 = ApplicationId.newInstance(1, 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
     ApplicationHomeSubCluster ahsc1 =
-        ApplicationHomeSubCluster.newInstance(appId1, subClusterId1);
+        ApplicationHomeSubCluster.newInstance(appId1,  subClusterId1);
 
     ApplicationId appId2 = ApplicationId.newInstance(1, 2);
     SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
@@ -467,6 +472,7 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(10, items.size());
 
     for (ApplicationHomeSubCluster item : items) {
+      appHomeSubClusters.contains(item);
       Assert.assertTrue(appHomeSubClusters.contains(item));
     }
   }
@@ -651,6 +657,16 @@ public abstract class FederationStateStoreBaseTest {
         ApplicationHomeSubCluster.newInstance(appId, subClusterId);
     AddApplicationHomeSubClusterRequest request =
         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
+    stateStore.addApplicationHomeSubCluster(request);
+  }
+
+  void addApplicationHomeSC(ApplicationId appId, SubClusterId subClusterId,
+      ApplicationSubmissionContext submissionContext) throws YarnException {
+    long createTime = Time.now();
+    ApplicationHomeSubCluster ahsc = ApplicationHomeSubCluster.newInstance(
+        appId, createTime, subClusterId, submissionContext);
+    AddApplicationHomeSubClusterRequest request =
+         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
     stateStore.addApplicationHomeSubCluster(request);
   }
 
@@ -1045,23 +1061,55 @@ public abstract class FederationStateStoreBaseTest {
     checkRouterStoreToken(identifier, getStoreTokenResp);
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testGetCurrentVersion() {
-    stateStore.getCurrentVersion();
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testStoreVersion() throws Exception {
     stateStore.storeVersion();
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testLoadVersion() throws Exception {
-    stateStore.loadVersion();
+    stateStore.storeVersion();
+    Version version = stateStore.loadVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testCheckVersion() throws Exception {
     stateStore.checkVersion();
+  }
+
+  @Test
+  public void testGetApplicationHomeSubClusterWithContext() throws Exception {
+    FederationStateStore federationStateStore = this.getStateStore();
+
+    ApplicationId appId = ApplicationId.newInstance(1, 3);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+    ApplicationSubmissionContext context =
+        ApplicationSubmissionContext.newInstance(appId, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    addApplicationHomeSC(appId, subClusterId, context);
+
+    GetApplicationHomeSubClusterRequest getRequest =
+         GetApplicationHomeSubClusterRequest.newInstance(appId, true);
+    GetApplicationHomeSubClusterResponse result =
+         federationStateStore.getApplicationHomeSubCluster(getRequest);
+
+    ApplicationHomeSubCluster applicationHomeSubCluster = result.getApplicationHomeSubCluster();
+
+    assertEquals(appId, applicationHomeSubCluster.getApplicationId());
+    assertEquals(subClusterId, applicationHomeSubCluster.getHomeSubCluster());
+    assertEquals(context, applicationHomeSubCluster.getApplicationSubmissionContext());
   }
 }

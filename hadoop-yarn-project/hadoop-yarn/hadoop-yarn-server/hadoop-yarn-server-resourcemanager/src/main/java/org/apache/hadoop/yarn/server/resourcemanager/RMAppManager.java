@@ -1056,7 +1056,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       LOG.info("Placed application with ID " + context.getApplicationId() +
           " in queue: " + placementContext.getQueue() +
           ", original submission queue was: " + context.getQueue());
-      context.setQueue(placementContext.getQueue());
+      context.setQueue(placementContext.getFullQueuePath());
     }
   }
 

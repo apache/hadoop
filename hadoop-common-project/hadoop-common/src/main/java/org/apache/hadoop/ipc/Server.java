@@ -600,17 +600,18 @@ public abstract class Server {
     }
   }
 
-  void updateMetrics(Call call, long startTime, boolean connDropped) {
+  void updateMetrics(Call call, long processingStartTimeNanos, boolean connDropped) {
     totalRequests.increment();
     // delta = handler + processing + response
-    long deltaNanos = Time.monotonicNowNanos() - startTime;
-    long timestampNanos = call.timestampNanos;
+    long completionTimeNanos = Time.monotonicNowNanos();
+    long deltaNanos = completionTimeNanos - processingStartTimeNanos;
+    long arrivalTimeNanos = call.timestampNanos;
 
     ProcessingDetails details = call.getProcessingDetails();
     // queue time is the delta between when the call first arrived and when it
     // began being serviced, minus the time it took to be put into the queue
     details.set(Timing.QUEUE,
-        startTime - timestampNanos - details.get(Timing.ENQUEUE));
+        processingStartTimeNanos - arrivalTimeNanos - details.get(Timing.ENQUEUE));
     deltaNanos -= details.get(Timing.PROCESSING);
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
@@ -627,15 +628,25 @@ public abstract class Server {
         details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     long waitTime =
         details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     // don't include lock wait for detailed metrics.
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
+    // Overall processing time is from arrival to completion.
+    long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
+        .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
+    rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
+    }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
     }
   }
 
@@ -1087,6 +1098,11 @@ public abstract class Server {
     }
 
     @Override
+    public CallerContext getCallerContext() {
+      return this.callerContext;
+    }
+
+    @Override
     public int getPriorityLevel() {
       return this.priorityLevel;
     }
@@ -1229,6 +1245,7 @@ public abstract class Server {
         setResponseFields(value, responseParams);
         sendResponse();
 
+        details.setReturnStatus(responseParams.returnStatus);
         deltaNanos = Time.monotonicNowNanos() - startNanos;
         details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
