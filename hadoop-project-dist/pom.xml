@@ -106,7 +106,7 @@
           <source>${maven.compile.source}</source>
           <charset>${maven.compile.encoding}</charset>
           <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
-          <destDir>${project.build.directory}/api</destDir>
+          <destDir>${destDirPath}</destDir>
           <groups>
             <group>
               <title>${project.name} API</title>
@@ -207,6 +207,36 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
+              <execution>
+                <id>choose-javadoc-dest-dir</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <exportAntProperties>true</exportAntProperties>
+                  <target>
+                    <!-- destDirPath is where the generated Javadocs will be located.
+                     The value of destDirPath obtained below is used for the "destDir" attribute
+                     in the maven-javadoc-plugin in this pom.xml.
+                     As per HADOOP-8500 and HADOOP-13784, we wanted to dump the javadoc into an
+                     "api" directory that was outside the "site" directory.
+                     Unfortunately, maven-javadoc-plugin doesn't give us a way to do that since
+                     "destDir" is always appended to "reportOutputDirectory". While we can achieve
+                     this using the relative path "../api", it only works for Windows. But it fails
+                     on Linux since the parent directory of "../api" wouldn't yet exist and the
+                     path resolution fails.
+                     Thus, we're going to leverage this approach for Windows and leave the
+                     behaviour on Linux intact.-->
+                    <condition property="destDirPath" value="../api" else="${project.build.directory}/api">
+                      <and>
+                        <os family="windows"/>
+                      </and>
+                    </condition>
+                    <echo>destDirPath to use for maven-javadoc-plugin = ${destDirPath}</echo>
+                  </target>
+                </configuration>
+              </execution>
 
               <!-- Pre site -->
               <execution>
