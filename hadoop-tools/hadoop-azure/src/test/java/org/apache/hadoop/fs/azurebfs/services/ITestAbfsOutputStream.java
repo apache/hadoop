@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.net.URI;
+
 import org.assertj.core.api.Assertions;
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
@@ -81,6 +85,36 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
           "maxConcurrentRequests should be " + maxConcurrentRequests).isEqualTo(maxConcurrentRequests);
       Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued()).describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
           .isEqualTo(maxRequestsToQueue);
+    }
+  }
+
+  /**
+   * Verify the passing of AzureBlobFileSystem reference to AbfsOutputStream
+   * to make sure that the FS instance is not eligible for GC.
+   *
+   */
+  @Test
+  public void testAzureBlobFileSystemBackReferenceInOutputStream()
+      throws Exception {
+    AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
+    fs1.initialize(new URI(getTestUrl()), getRawConfiguration());
+    Path pathFs1 = path(getMethodName() + "1");
+
+    AzureBlobFileSystem fs2 = new AzureBlobFileSystem();
+    fs2.initialize(new URI(getTestUrl()), getRawConfiguration());
+    Path pathFs2 = path(getMethodName() + "2");
+
+    try(AbfsOutputStream out1 = createAbfsOutputStreamWithFlushEnabled(fs1,
+        pathFs1)) {
+      Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
+              + " should have",
+          fs1, out1.getFsBackRef());
+    }
+
+    try(AbfsOutputStream out2 = createAbfsOutputStreamWithFlushEnabled(fs2,
+        pathFs2)) {
+      Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
+          + " should have", fs2, out2.getFsBackRef());
     }
   }
 

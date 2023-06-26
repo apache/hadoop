@@ -192,6 +192,7 @@ public class AzureBlobFileSystem extends FileSystem
             .withAbfsCounters(abfsCounters)
             .withBlockFactory(blockFactory)
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
+            .withAzureBlobFileSystemBackReference(this)
             .build();
 
     this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);

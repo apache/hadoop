@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -126,6 +127,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
 
+  /** ABFS instance to be held by the output stream to avoid GC close. */
+  private final AzureBlobFileSystem fsBackRef;
+
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.client = abfsOutputStreamContext.getClient();
@@ -147,6 +151,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
+    this.fsBackRef = abfsOutputStreamContext.getFsBackRef();
 
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
@@ -765,5 +770,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     sb.append(outputStreamStatistics.toString());
     sb.append("}");
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  AzureBlobFileSystem getFsBackRef() {
+    return fsBackRef;
   }
 }
