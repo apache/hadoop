@@ -1034,7 +1034,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     dataNodes[0].setXceiverCount(20);
     replicaList.add(storages[0]);
 
-    storages[1].setRemainingForTests(3*1024*1024);
+    storages[1].setRemainingForTests(10*1024*1024);
     dataNodes[1].setRemaining(calculateRemaining(dataNodes[1]));
     dataNodes[1].setXceiverCount(10);
     replicaList.add(storages[1]);
@@ -1046,7 +1046,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
     //Even if this node has the most space, because the storage[5] has
     //the lowest it should be chosen in case of block delete.
-    storages[5].setRemainingForTests(512 * 1024);
+    storages[5].setRemainingForTests(5*1024*1024);
     dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     dataNodes[5].setXceiverCount(5);
     replicaList.add(storages[5]);
