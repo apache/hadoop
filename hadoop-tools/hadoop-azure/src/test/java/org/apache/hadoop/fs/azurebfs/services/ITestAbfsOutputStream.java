@@ -106,15 +106,19 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
     try(AbfsOutputStream out1 = createAbfsOutputStreamWithFlushEnabled(fs1,
         pathFs1)) {
+      Assert.assertFalse("BackReference in output stream should not be null",
+          out1.getFsBackRef().isNull());
       Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
               + " should have",
-          fs1, out1.getFsBackRef());
+          fs1, out1.getFsBackRef().getReference());
     }
 
     try(AbfsOutputStream out2 = createAbfsOutputStreamWithFlushEnabled(fs2,
         pathFs2)) {
+      Assert.assertFalse("BackReference in output stream should not be null",
+          out2.getFsBackRef().isNull());
       Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
-          + " should have", fs2, out2.getFsBackRef());
+          + " should have", fs2, out2.getFsBackRef().getReference());
     }
   }
 

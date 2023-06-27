@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -190,7 +191,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private ExecutorService boundedThreadPool;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
-  private AzureBlobFileSystem fsBackRef;
+  private BackReference fsBackRef;
 
   /**
    * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
@@ -1876,7 +1877,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private AbfsCounters abfsCounters;
     private DataBlocks.BlockFactory blockFactory;
     private int blockOutputActiveBlocks;
-    private AzureBlobFileSystem fsBackRef;
+    private BackReference fsBackRef;
 
     public AzureBlobFileSystemStoreBuilder withUri(URI value) {
       this.uri = value;
@@ -1912,8 +1913,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return this;
     }
 
-    public AzureBlobFileSystemStoreBuilder withAzureBlobFileSystemBackReference(
-        AzureBlobFileSystem fsBackRef) {
+    public AzureBlobFileSystemStoreBuilder withBackReference(
+        BackReference fsBackRef) {
       this.fsBackRef = fsBackRef;
       return this;
     }

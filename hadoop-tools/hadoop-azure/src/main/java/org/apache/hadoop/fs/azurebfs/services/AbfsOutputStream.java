@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -128,7 +129,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final ListeningExecutorService executorService;
 
   /** ABFS instance to be held by the output stream to avoid GC close. */
-  private final AzureBlobFileSystem fsBackRef;
+  private final BackReference fsBackRef;
 
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
@@ -773,7 +774,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   }
 
   @VisibleForTesting
-  AzureBlobFileSystem getFsBackRef() {
+  BackReference getFsBackRef() {
     return fsBackRef;
   }
 }
