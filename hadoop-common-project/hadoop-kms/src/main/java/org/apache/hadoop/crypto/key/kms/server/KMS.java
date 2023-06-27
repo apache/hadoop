@@ -39,6 +39,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -112,6 +113,14 @@ public class KMS {
   private static URI getKeyURI(String domain, String keyName) {
     return UriBuilder.fromPath("{a}/{b}/{c}")
         .build(domain, KMSRESTConstants.KEY_RESOURCE, keyName);
+  }
+
+  @OPTIONS
+  public Response handleOptions() {
+    return Response.ok()
+        .header("Allow", "GET")
+        .header("Allow", "OPTIONS")
+        .build();
   }
 
   @POST
