@@ -452,15 +452,15 @@ public class TestQueueParsing {
     CSQueue a = capacityScheduler.getQueue("a");
     Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
-    
+
     CSQueue b1 = capacityScheduler.getQueue("b1");
     Assert.assertEquals(0.2 * 0.5, b1.getAbsoluteCapacity(), DELTA);
-    Assert.assertEquals("Parent B has no MAX_CAP", 
+    Assert.assertEquals("Parent B has no MAX_CAP",
         0.85, b1.getAbsoluteMaximumCapacity(), DELTA);
-    
+
     CSQueue c12 = capacityScheduler.getQueue("c12");
     Assert.assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
-    Assert.assertEquals(0.7 * 0.55 * 0.7, 
+    Assert.assertEquals(0.7 * 0.55 * 0.7,
         c12.getAbsoluteMaximumCapacity(), DELTA);
   }
 
