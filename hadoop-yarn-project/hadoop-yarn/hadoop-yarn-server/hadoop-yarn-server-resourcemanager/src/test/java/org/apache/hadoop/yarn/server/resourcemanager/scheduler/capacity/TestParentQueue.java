@@ -384,7 +384,8 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B, 70.5F);
     queueContext.reinitialize();
 
-    // If the new queue mode is used it's allowed to over allocate the resources, as they'll be scaled down accordingly
+    // If the new queue mode is used it's allowed to over allocate the resources,
+    // as they'll be scaled down accordingly
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     CSQueueStore queues = new CSQueueStore();
@@ -671,7 +672,8 @@ public class TestParentQueue {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have zero-capacity queues under a non-zero parent
+    // If the new queue mode is used it's allowed to have
+    // zero-capacity queues under a non-zero parent
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // set child queues capacity to 0 when parents not 0
@@ -691,7 +693,8 @@ public class TestParentQueue {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have non-zero capacity queues under a zero capacity parent
+    // If the new queue mode is used it's allowed to have
+    // non-zero capacity queues under a zero capacity parent
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // set parent capacity to 0 when child not 0
@@ -729,7 +732,8 @@ public class TestParentQueue {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have non-zero capacity queues under a zero capacity parent
+    // If the new queue mode is used it's allowed to have
+    // non-zero capacity queues under a zero capacity parent
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // set parent capacity to 0 when sum(children) is 50

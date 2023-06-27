@@ -69,7 +69,8 @@ public class TestQueueParsing {
 
     nodeLabelManager = new NullRMNodeLabelsManager();
     nodeLabelManager.init(conf);
-    ((NullRMNodeLabelsManager)nodeLabelManager).setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    ((NullRMNodeLabelsManager)nodeLabelManager)
+        .setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
   }
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
@@ -283,8 +284,8 @@ public class TestQueueParsing {
     conf.setCapacityByLabel(B3, "blue", 25);
   }
 
-  private void setupQueueConfigurationWithLabelsAndReleaseCheck
-          (CapacitySchedulerConfiguration conf) {
+  private void setupQueueConfigurationWithLabelsAndReleaseCheck(
+      CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "red", 100);
@@ -557,8 +558,8 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(rm);
   }
 
-  private void checkQueueLabelsWithLeafQueueDisableElasticity
-          (CapacityScheduler capacityScheduler) {
+  private void checkQueueLabelsWithLeafQueueDisableElasticity(
+      CapacityScheduler capacityScheduler) {
     // queue-A is red, blue
     Assert.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
             .containsAll(ImmutableSet.of("red", "blue")));
@@ -797,11 +798,13 @@ public class TestQueueParsing {
    * doesn't equals to 100%. This expect IllegalArgumentException thrown.
    */
   @Test(expected = ServiceStateException.class)
-  public void testQueueParsingFailWhenSumOfChildrenNonLabeledCapacityNot100Percent() throws Exception {
+  public void testQueueParsingFailWhenSumOfChildrenNonLabeledCapacityNot100Percent()
+      throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
 
-    // If the new queue mode is used it's allowed to leave some of the resources of a parent queue unallocated
+    // If the new queue mode is used it's allowed to leave
+    // some of the resources of a parent queue unallocated
     assumeThat(csConf.isLegacyQueueMode(), is(true));
     setupQueueConfiguration(csConf);
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c2", 5);
@@ -821,7 +824,8 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
 
-    // If the new queue mode is used it's allowed to leave some of the resources of a parent queue unallocated
+    // If the new queue mode is used it's allowed to leave
+    // some of the resources of a parent queue unallocated
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     setupQueueConfigurationWithLabels(csConf);
@@ -838,11 +842,13 @@ public class TestQueueParsing {
    * doesn't equals to 100%. This expect IllegalArgumentException thrown.
    */
   @Test(expected = ServiceStateException.class)
-  public void testQueueParsingWithSumOfChildLabelCapacityNot100PercentWithWildCard() throws Exception {
+  public void testQueueParsingWithSumOfChildLabelCapacityNot100PercentWithWildCard()
+      throws Exception {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
 
-    // If the new queue mode is used it's allowed to leave some of the resources of a parent queue unallocated
+    // If the new queue mode is used it's allowed to leave
+    // some of the resources of a parent queue unallocated
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     setupQueueConfigurationWithLabels(csConf);
@@ -888,11 +894,12 @@ public class TestQueueParsing {
         new CapacitySchedulerConfiguration();
     Set<String> labels = ImmutableSet.of("x", "y", "z");
 
-    // If the new queue mode is used it's allowed to leave some of the resources of a parent queue unallocated
+    // If the new queue mode is used it's allowed to leave
+    // some of the resources of a parent queue unallocated
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
     csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
     csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
     csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
@@ -948,7 +955,7 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
     csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
     csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);

@@ -102,8 +102,10 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
           .getMaximumCapacity(nodeLabel));
       queueCapacities.setAbsoluteMaximumCapacity(nodeLabel, capacities
           .getAbsoluteMaximumCapacity(nodeLabel));
-      setConfiguredMinCapacityVector(nodeLabel, QueueCapacityVector.of(capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
-      setConfiguredMaxCapacityVector(nodeLabel, QueueCapacityVector.of(capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
+      setConfiguredMinCapacityVector(nodeLabel,
+          QueueCapacityVector.of(capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
+      setConfiguredMaxCapacityVector(nodeLabel,
+          QueueCapacityVector.of(capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
           queueContext.getClusterResource());

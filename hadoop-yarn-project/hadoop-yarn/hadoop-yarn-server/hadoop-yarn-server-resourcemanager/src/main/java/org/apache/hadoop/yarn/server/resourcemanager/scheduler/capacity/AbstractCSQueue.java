@@ -465,9 +465,11 @@ public abstract class AbstractCSQueue implements CSQueue {
         }
         // Default to weight 1
         for (String label : parentNodeLabels) {
-          float weightByLabel = queueContext.getConfiguration().getLabeledQueueWeight(queuePath, label);
+          float weightByLabel = queueContext.getConfiguration()
+              .getLabeledQueueWeight(queuePath, label);
           if (weightByLabel == -1) {
-            queueContext.getConfiguration().setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
+            queueContext.getConfiguration()
+                .setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
           }
         }
       }
