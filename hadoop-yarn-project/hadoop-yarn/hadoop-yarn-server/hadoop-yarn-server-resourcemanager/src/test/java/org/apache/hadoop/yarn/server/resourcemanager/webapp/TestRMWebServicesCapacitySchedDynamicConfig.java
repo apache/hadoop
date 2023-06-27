@@ -103,6 +103,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
     try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      // will fail: capacity and normalizedWeight differs (TEMPORARY CHANGE)
       runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
     }
   }
@@ -123,6 +124,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     setupAQC(config, "yarn.scheduler.capacity.root.test2.");
     try (MockRM rm = createMutableRM(config)) {
       rm.registerNode("h1:1234", 32 * GB, 32);
+      // will fail: capacity and normalizedWeight differs (TEMPORARY CHANGE)
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
       createAQC(rm, "test2");

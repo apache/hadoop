@@ -50,6 +50,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testClusterScheduler() throws Exception {
     try (MockRM rm = createRM(createConfig())){
+      // will fail: no cluster resource (TEMPORARY CHANGE)
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
               .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response.json");
@@ -86,6 +87,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           .withUnmanagedAM(false)
           .build()
       );
+      // will fail: 7167, 6 vs 7168, 7 memory, vcores (TEMPORARY CHANGE)
       assertXmlResponse(resource().path("ws/v1/cluster/scheduler")
               .accept(MediaType.APPLICATION_XML).get(ClientResponse.class),
           "webapp/scheduler-response-PerUserResources.xml");
@@ -104,6 +106,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     try (MockRM rm = createRM(conf)) {
       ClientResponse response = resource().path("ws/v1/cluster/scheduler")
           .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      // will fail: no cluster resource (TEMPORARY CHANGE)
       assertXmlResponse(response, "webapp/scheduler-response-NodeLabelDefaultAPI.xml");
     }
   }
