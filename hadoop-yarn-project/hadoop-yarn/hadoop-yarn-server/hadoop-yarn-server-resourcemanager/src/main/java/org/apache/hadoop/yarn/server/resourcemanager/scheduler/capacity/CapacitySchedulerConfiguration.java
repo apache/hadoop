@@ -424,7 +424,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
   private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
-  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
+  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = false;
 
   private ConfigurationProperties configurationProperties;
 
