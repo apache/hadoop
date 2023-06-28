@@ -421,7 +421,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
 
-  private static final QueueCapacityConfigParser queueCapacityConfigParser
+  public static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
   private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
   public static final boolean DEFAULT_LEGACY_QUEUE_MODE = false;

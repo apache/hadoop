@@ -70,12 +70,6 @@ public class CapacitySchedulerInfoHelper {
   private CapacitySchedulerInfoHelper() {}
 
   public static String getMode(CSQueue queue) {
-    // Legacy AQC with absolute mode
-    if ((queue instanceof AutoCreatedLeafQueue) &&
-        queue.getCapacityConfigType() == AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE) {
-      return "absolute";
-    }
-
     final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
         queue.getConfiguredCapacityVector(NO_LABEL).getDefinedCapacityTypes();
     if (definedCapacityTypes.size() == 1) {

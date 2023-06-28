@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.queueCapacityConfigParser;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 /**
@@ -86,7 +87,6 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
       //reset capacities for the leaf queue
       mergeCapacities(capacities, leafQueueTemplate.getResourceQuotas());
-
     } finally {
       writeLock.unlock();
     }
@@ -102,10 +102,6 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
           .getMaximumCapacity(nodeLabel));
       queueCapacities.setAbsoluteMaximumCapacity(nodeLabel, capacities
           .getAbsoluteMaximumCapacity(nodeLabel));
-      setConfiguredMinCapacityVector(nodeLabel,
-          QueueCapacityVector.of(capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
-      setConfiguredMaxCapacityVector(nodeLabel,
-          QueueCapacityVector.of(capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
           queueContext.getClusterResource());
