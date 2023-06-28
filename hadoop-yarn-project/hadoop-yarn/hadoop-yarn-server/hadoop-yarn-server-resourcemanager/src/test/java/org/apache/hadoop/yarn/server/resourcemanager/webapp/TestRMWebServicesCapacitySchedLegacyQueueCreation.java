@@ -54,7 +54,6 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
     try (MockRM rm = createMutableRM(createConfiguration(conf))) {
-      // will fail: no cluster resource (TEMPORARY CHANGE)
       assertJsonResponse(sendRequest(),
           "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
     }
