@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
@@ -34,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
@@ -179,6 +181,15 @@ public class CapacitySchedulerQueueCapacityHandler {
     }
 
     AbstractCSQueue csQueue = (AbstractCSQueue) queue;
+    // Do not override reservations when there are no cluster resources yet
+    if ((csQueue instanceof ReservationQueue ||
+        csQueue instanceof PlanQueue) &&
+        Stream.of(clusterResource.getResources())
+            .map(ResourceInformation::getValue)
+            .noneMatch(num -> num > 0)) {
+      return;
+    }
+
     ResourceCalculator resourceCalculator = csQueue.resourceCalculator;
 
     CSQueue parent = queue.getParent();

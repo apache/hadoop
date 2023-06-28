@@ -390,7 +390,8 @@ public abstract class AbstractCSQueue implements CSQueue {
               QueueCapacityVector.newInstance());
 
       // Preserving the capacities set by Entitlements
-      if (this instanceof ReservationQueue) {
+      if (this instanceof ReservationQueue ||
+          this instanceof PlanQueue) {
         for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
           setConfiguredMinCapacityVector(label,
               QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100,
@@ -400,7 +401,6 @@ public abstract class AbstractCSQueue implements CSQueue {
                   QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
         }
       }
-
 
       // Re-adjust weight when mixed capacity type is used. 5w == [memory=5w, vcores=5w]
       for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
