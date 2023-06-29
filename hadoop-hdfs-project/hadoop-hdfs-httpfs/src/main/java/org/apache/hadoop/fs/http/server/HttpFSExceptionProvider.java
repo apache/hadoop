@@ -27,8 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -81,6 +83,15 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
     } else {
       status = Response.Status.INTERNAL_SERVER_ERROR;
       logErrorFully(status, throwable);
+    }
+    // Jersey 1 internally sets content-type as text/html.
+    // This change is to make the behavior compatible with it.
+    if (throwable instanceof EOFException
+        && "Premature EOF from inputStream after skipping 0 byte(s).".equals(
+        throwable.getMessage())) {
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+          .type(MediaType.TEXT_HTML)
+          .build();
     }
     return createResponse(status, throwable);
   }
