@@ -184,6 +184,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean IO_COMPRESSION_CODEC_LZ4_USELZ4HC_DEFAULT =
       false;
 
+  /** Compression Level for Lz4 highCompressor */
+  public static final String IO_COMPRESSION_CODEC_LZ4_HC_LEVEL_KEY =
+          "io.compression.codec.lz4.hc.level";
+
+  /** Default value for IO_COMPRESSION_CODEC_LZ4_HC_LEVEL_KEY */
+  public static final int IO_COMPRESSION_CODEC_LZ4_HC_LEVEL_DEFAULT = 9;
+
 
 
   /**
