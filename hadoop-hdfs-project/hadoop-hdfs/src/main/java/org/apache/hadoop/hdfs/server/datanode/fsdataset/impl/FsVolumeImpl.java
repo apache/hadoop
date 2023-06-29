@@ -171,7 +171,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.usage = usage;
     if (this.usage != null) {
       reserved = new ReservedSpaceCalculator.Builder(conf)
-          .setUsage(this.usage).setStorageType(storageType).build();
+          .setUsage(this.usage).setStorageType(storageType).setDir(toString()).build();
       boolean fixedSizeVolume = conf.getBoolean(
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);

@@ -168,6 +168,29 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.ARCHIVE, 100000, 5000);
   }
 
+  @Test
+  public void testReservedSpaceAbsolutePerDir() {
+    conf.setClass(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, ReservedSpaceCalculatorAbsolute.class,
+        ReservedSpaceCalculator.class);
+
+    String dir1 = "/data/hdfs1/data";
+    String dir2 = "/data/hdfs2/data";
+    String dir3 = "/data/hdfs3/data";
+
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir1 + ".ssd", 900);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir1, 1800);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir2, 2700);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".ssd", 3600);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY, 4500);
+
+    checkReserved(StorageType.SSD, 10000, 900, dir1);
+    checkReserved(StorageType.DISK, 10000, 1800, dir1);
+    checkReserved(StorageType.SSD, 10000, 2700, dir2);
+    checkReserved(StorageType.DISK, 10000, 2700, dir2);
+    checkReserved(StorageType.SSD, 10000, 3600, dir3);
+    checkReserved(StorageType.DISK, 10000, 4500, dir3);
+  }
+  
   @Test(expected = IllegalStateException.class)
   public void testInvalidCalculator() {
     conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
@@ -179,10 +202,15 @@ public class TestReservedSpaceCalculator {
 
   private void checkReserved(StorageType storageType,
       long totalCapacity, long reservedExpected) {
+      checkReserved(storageType, totalCapacity, reservedExpected, "NULL");
+  }
+
+  private void checkReserved(StorageType storageType,
+      long totalCapacity, long reservedExpected, String dir) {
     when(usage.getCapacity()).thenReturn(totalCapacity);
 
     reserved = new ReservedSpaceCalculator.Builder(conf).setUsage(usage)
-        .setStorageType(storageType).build();
+        .setStorageType(storageType).setDir(dir).build();
     assertEquals(reservedExpected, reserved.getReserved());
   }
 }
