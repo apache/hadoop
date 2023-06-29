@@ -357,7 +357,7 @@ public class TestFSQueueConverter {
             "root.admins",
             "root.users",
             "root.misc"));
-    assertNoValueForQueues(leafs, "auto-queue-creation-v2.enabled",
+    assertNoValueForQueues(leafs, ".auto-queue-creation-v2.enabled",
         csConfig);
   }
 

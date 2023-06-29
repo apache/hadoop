@@ -210,7 +210,7 @@ public class AllocationFileQueueParser {
       } else if (RESERVATION.equals(field.getTagName())) {
         isReservable = true;
         builder.reservableQueues(queueName);
-        builder.configuredQueues(FSQueueType.PARENT, queueName);
+        builder.configuredQueues(FSQueueType.LEAF, queueName);
       } else if (ALLOW_PREEMPTION_FROM.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         if (!Boolean.parseBoolean(text)) {
