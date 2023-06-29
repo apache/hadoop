@@ -109,7 +109,7 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.BAD_REQUEST;
     } else if (e instanceof IllegalArgumentException) {
       s = Response.Status.BAD_REQUEST;
-    } else if (e != null && e.getCause() != null) {
+    } else if (e.getCause() != null) {
       if (e.getCause() instanceof SecurityException) {
         s = Response.Status.FORBIDDEN;
         e = (Exception) e.getCause();

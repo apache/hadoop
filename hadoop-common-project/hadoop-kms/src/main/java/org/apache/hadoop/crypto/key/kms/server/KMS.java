@@ -184,9 +184,9 @@ public class KMS {
         keyVersion = removeKeyMaterial(keyVersion);
       }
       Map json = KMSUtil.toJSON(keyVersion);
-      String requestURL = KMSMDCFilter.getURL();
-      int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
-      requestURL = requestURL.substring(0, idx);
+      //String requestURL = KMSMDCFilter.getURL();
+      //int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
+      //requestURL = requestURL.substring(0, idx);
       LOG.trace("Exiting createKey Method.");
       // additional head with header("Location", getKeyURI(requestURL, name))
       // no longer supported by jersey 2
