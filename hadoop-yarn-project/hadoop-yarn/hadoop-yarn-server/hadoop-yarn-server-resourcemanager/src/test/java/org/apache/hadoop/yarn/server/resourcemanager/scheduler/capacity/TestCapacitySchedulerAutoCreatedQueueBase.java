@@ -487,6 +487,20 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return conf;
   }
 
+  public static void setupQueueConfigurationForSingleFlexibleAutoCreatedLeafQueue(
+          CapacitySchedulerConfiguration conf) {
+
+    //setup new queues with one of them auto enabled
+    // Define top-level queues
+    // Set childQueue for root
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+            new String[] {"c"});
+    conf.setCapacity(C, 100f);
+
+    conf.setUserLimitFactor(C, 1.0f);
+    conf.setAutoQueueCreationV2Enabled(C, true);
+  }
+
   @After
   public void tearDown() throws Exception {
     if (mockRM != null) {
