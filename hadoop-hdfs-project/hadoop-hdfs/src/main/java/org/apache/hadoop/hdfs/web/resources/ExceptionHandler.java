@@ -109,6 +109,29 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.BAD_REQUEST;
     } else if (e instanceof IllegalArgumentException) {
       s = Response.Status.BAD_REQUEST;
+    } else if (e != null && e.getCause() != null) {
+      if (e.getCause() instanceof SecurityException) {
+        s = Response.Status.FORBIDDEN;
+        e = (Exception) e.getCause();
+      } else if (e.getCause() instanceof AuthorizationException) {
+        s = Response.Status.FORBIDDEN;
+        e = (Exception) e.getCause();
+      } else if (e.getCause() instanceof FileNotFoundException) {
+        s = Response.Status.NOT_FOUND;
+        e = (Exception) e.getCause();
+      } else if (e.getCause() instanceof IOException) {
+        s = Response.Status.FORBIDDEN;
+        e = (Exception) e.getCause();
+      } else if (e.getCause() instanceof UnsupportedOperationException) {
+        s = Response.Status.BAD_REQUEST;
+        e = (Exception) e.getCause();
+      } else if (e.getCause() instanceof IllegalArgumentException) {
+        s = Response.Status.BAD_REQUEST;
+        e = (Exception) e.getCause();
+      } else {
+        LOG.warn("INTERNAL_SERVER_ERROR", e);
+        s = Response.Status.INTERNAL_SERVER_ERROR;
+      }
     } else {
       LOG.warn("INTERNAL_SERVER_ERROR", e);
       s = Response.Status.INTERNAL_SERVER_ERROR;
