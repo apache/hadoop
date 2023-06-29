@@ -36,26 +36,25 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
  * Class to test the behavior of Linear Retry policy as well the inheritance
  * between {@link RetryPolicy}, {@link LinearRetryPolicy}, {@link ExponentialRetryPolicy}
  */
-public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
+public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
 
-  private final int MIN_BACKOFF = 500;
-  private final int ONE_SECOND = 1000;
+  private final int STATIC_RETRY_INTERVAL = 2000;
 
-  public TestLinearRetryPolicy() throws Exception {
+  public TestStaticRetryPolicy() throws Exception {
     super();
   }
 
   @Test
-  public void testLinearRetryPolicyInitialization() throws Exception {
+  public void testStaticRetryPolicyInitialization() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
 
-    // Assert that linear retry policy will be used only for CT Failures
+    // Assert that static retry policy will be used only for CT Failures
     RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
+    Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
 
     // For all other possible values of failureReason, Exponential retry is used
     retryPolicy = client.getRetryPolicy("");
@@ -67,49 +66,24 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testLinearRetryIntervalWithDoubleStepUpEnabled() throws Exception {
+  public void testStaticRetryInterval() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED, "true");
-    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
 
     RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
-    Assertions.assertThat(((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled()).isEqualTo(true);
+    Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
 
     Assertions.assertThat(retryPolicy.getRetryInterval(0))
-        .isEqualTo(MIN_BACKOFF);
+        .isEqualTo(STATIC_RETRY_INTERVAL);
     Assertions.assertThat(retryPolicy.getRetryInterval(1))
-        .isEqualTo(2 * MIN_BACKOFF);
+        .isEqualTo(STATIC_RETRY_INTERVAL);
     Assertions.assertThat(retryPolicy.getRetryInterval(2))
-        .isEqualTo(4 * MIN_BACKOFF);
+        .isEqualTo(STATIC_RETRY_INTERVAL);
     Assertions.assertThat(retryPolicy.getRetryInterval(3))
-        .isEqualTo(8 * MIN_BACKOFF);
-  }
-
-  @Test
-  public void testLinearRetryIntervalWithDoubleStepUpDisabled() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED, "false");
-    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
-        .newInstance(getFileSystem().getUri(), config);
-    AbfsClient client = fs.getAbfsStore().getClient();
-
-    RetryPolicy retryPolicy = new LinearRetryPolicy(client.getAbfsConfiguration());
-    Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
-    Assertions.assertThat(((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled()).isEqualTo(false);
-
-    Assertions.assertThat(retryPolicy.getRetryInterval(0))
-        .isEqualTo(MIN_BACKOFF);
-    Assertions.assertThat(retryPolicy.getRetryInterval(1))
-        .isEqualTo(ONE_SECOND + MIN_BACKOFF);
-    Assertions.assertThat(retryPolicy.getRetryInterval(2))
-        .isEqualTo(2 * ONE_SECOND + MIN_BACKOFF);
-    Assertions.assertThat(retryPolicy.getRetryInterval(3))
-        .isEqualTo(3 * ONE_SECOND + MIN_BACKOFF);
+        .isEqualTo(STATIC_RETRY_INTERVAL);
   }
 
   @Test
