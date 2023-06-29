@@ -870,7 +870,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    */
   private DeregisterSubClusters deregisterSubCluster(String reqSubClusterId) {
 
-    DeregisterSubClusters deregisterSubClusters = null;
+    DeregisterSubClusters deregisterSubClusters;
 
     try {
       // Step1. Get subCluster information.
@@ -879,9 +879,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       SubClusterState subClusterState = subClusterInfo.getState();
       long lastHeartBeat = subClusterInfo.getLastHeartBeat();
       Date lastHeartBeatDate = new Date(lastHeartBeat);
-
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-              reqSubClusterId, "UNKNOWN", lastHeartBeatDate.toString(), "", subClusterState.name());
+          reqSubClusterId, "NONE", lastHeartBeatDate.toString(),
+          "Normal Heartbeat", subClusterState.name());
 
       // Step2. Deregister subCluster.
       if (subClusterState.isUsable()) {
@@ -891,11 +891,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         long heartBearTimeInterval = Time.now() - lastHeartBeat;
         if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
           boolean deregisterSubClusterFlag =
-                  federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+              federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
           if (deregisterSubClusterFlag) {
             deregisterSubClusters.setDeregisterState("SUCCESS");
             deregisterSubClusters.setSubClusterState("SC_LOST");
-            deregisterSubClusters.setInformation("Heartbeat Time >= 30 minutes.");
+            deregisterSubClusters.setInformation("Heartbeat Time >= " +
+                heartbeatExpirationMillis / (1000 * 60) + "minutes");
           } else {
             deregisterSubClusters.setDeregisterState("FAILED");
             deregisterSubClusters.setInformation("DeregisterSubClusters Failed.");
@@ -903,16 +904,16 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         }
       } else {
         deregisterSubClusters.setDeregisterState("FAILED");
-        deregisterSubClusters.setInformation("Heartbeat Time < 30 minutes. " +
-            "DeregisterSubCluster does not need to be executed");
-        LOG.warn("SubCluster {} in State {} does not need to update state.",
-                subClusterId, subClusterState);
+        deregisterSubClusters.setInformation("The subCluster is Unusable, " +
+            "So it can't be Deregistered");
+        LOG.warn("The SubCluster {} is Unusable (SubClusterState:{}), So it can't be Deregistered",
+            subClusterId, subClusterState);
       }
       return deregisterSubClusters;
     } catch (YarnException e) {
       LOG.error("SubCluster {} DeregisterSubCluster Failed", reqSubClusterId, e);
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-              reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
+          reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
       return deregisterSubClusters;
     }
   }
