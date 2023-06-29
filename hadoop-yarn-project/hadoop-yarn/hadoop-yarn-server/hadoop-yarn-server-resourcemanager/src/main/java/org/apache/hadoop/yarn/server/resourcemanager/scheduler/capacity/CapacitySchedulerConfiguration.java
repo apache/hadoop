@@ -421,12 +421,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
 
-  public static final QueueCapacityConfigParser queueCapacityConfigParser
+  private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
   private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
   public static final boolean DEFAULT_LEGACY_QUEUE_MODE = false;
 
   private ConfigurationProperties configurationProperties;
+
+  public static QueueCapacityConfigParser getQueueCapacityConfigParser() {
+    return queueCapacityConfigParser;
+  }
 
   public int getMaximumAutoCreatedQueueDepth(String queuePath) {
     return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,

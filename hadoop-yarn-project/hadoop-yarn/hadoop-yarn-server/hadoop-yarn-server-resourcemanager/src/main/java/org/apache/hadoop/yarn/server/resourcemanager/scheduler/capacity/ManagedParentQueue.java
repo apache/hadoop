@@ -41,7 +41,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.queueCapacityConfigParser;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueueCapacityConfigParser;
 
 /**
  * Auto Creation enabled Parent queue. This queue initially does not have any
@@ -359,10 +359,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
               getQueuePath() + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX, label);
       String capacityString = leafConfig.get(leafConfigPath + CAPACITY, "0");
       leafQueue.setConfiguredMinCapacityVector(label,
-          queueCapacityConfigParser.parse(capacityString, leafQueue.getQueuePath()));
+          getQueueCapacityConfigParser().parse(capacityString, leafQueue.getQueuePath()));
       String maxCapacityString = leafConfig.get(leafConfigPath + MAXIMUM_CAPACITY, "100");
       leafQueue.setConfiguredMaxCapacityVector(label,
-          queueCapacityConfigParser.parse(maxCapacityString, leafQueue.getQueuePath()));
+          getQueueCapacityConfigParser().parse(maxCapacityString, leafQueue.getQueuePath()));
     }
   }
 
