@@ -95,6 +95,7 @@ public class AbfsClient implements Closeable {
   private final String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final LinearRetryPolicy linearRetryPolicy;
+  private final StaticRetryPolicy staticRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
@@ -129,6 +130,7 @@ public class AbfsClient implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.linearRetryPolicy = abfsClientContext.getLinearRetryPolicy();
+    this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
@@ -229,12 +231,20 @@ public class AbfsClient implements Closeable {
     return linearRetryPolicy;
   }
 
+  StaticRetryPolicy getStaticRetryPolicy() {
+    return staticRetryPolicy;
+  }
+
   public RetryPolicy getRetryPolicy(final String failureReason) {
-    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
-      && getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
-      return getLinearRetryPolicy();
+    if (!CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)) {
+      return getExponentialRetryPolicy();
     }
-    else {
+
+    if (getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()) {
+      return getStaticRetryPolicy();
+    } else if (getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
+      return getLinearRetryPolicy();
+    } else {
       return getExponentialRetryPolicy();
     }
   }

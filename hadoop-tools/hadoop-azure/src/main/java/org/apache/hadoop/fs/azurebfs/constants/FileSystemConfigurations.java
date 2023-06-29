@@ -41,6 +41,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000;  // 3s
   public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000;  // 30s
   public static final boolean DEFAULT_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
+  public static final boolean DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = 500;  // 500ms
   public static final int DEFAULT_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = 30 * 1000;  // 30s
   public static final boolean DEFAULT_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED = true;

@@ -226,6 +226,7 @@ public class AbfsRestOperation {
       requestHeaders.add(httpHeader);
     }
 
+    // By Default Exponential Retry Policy Will be used
     retryCount = 0;
     retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
@@ -233,9 +234,10 @@ public class AbfsRestOperation {
       try {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
-        LOG.debug("Retrying REST operation {}. RetryCount = {}",
-            operationType, retryCount);
-        Thread.sleep(retryPolicy.getRetryInterval(retryCount));
+        long retryInterval = retryPolicy.getRetryInterval(retryCount);
+        LOG.debug("Rest operation {} failed. failureReason: {}, retryCount = {}, retryPolicy: {}, sleepInterval: {}",
+            operationType, failureReason, retryCount, getRetryPolicyStr(), retryInterval);
+        Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -426,5 +428,9 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  private String getRetryPolicyStr() {
+    return "RetryPolicy";
   }
 }
