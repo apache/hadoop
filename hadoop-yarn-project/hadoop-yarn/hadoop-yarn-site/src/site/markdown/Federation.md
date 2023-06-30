@@ -157,7 +157,7 @@ Configuration
 
   To configure the `YARN` to use the `Federation`, set the following property in the **conf/yarn-site.xml**:
 
-###EVERYWHERE:
+### EVERYWHERE:
 
 These are common configurations that should appear in the **conf/yarn-site.xml** at each machine in the federation.
 
@@ -167,7 +167,7 @@ These are common configurations that should appear in the **conf/yarn-site.xml**
 |`yarn.federation.enabled` | `true` | Whether federation is enabled or not |
 |`yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
 
-####State-Store:
+#### State-Store:
 
 Currently, we support ZooKeeper and SQL based implementations of the state-store.
 
@@ -192,7 +192,7 @@ SQL: one must setup the following parameters:
 
 We provide scripts for **MySQL** and **Microsoft SQL Server**.
 
-> MySQL
+- MySQL
 
 For MySQL, one must download the latest jar version 5.x from [MVN Repository](https://mvnrepository.com/artifact/mysql/mysql-connector-java) and add it to the CLASSPATH.
 Then the DB schema is created by executing the following SQL scripts in the database:
@@ -211,7 +211,7 @@ In the same directory we provide scripts to drop the Stored Procedures, the Tabl
 1. MySQL 5.7
 2. MySQL 8.0
 
-> Microsoft SQL Server
+- Microsoft SQL Server
 
 For SQL-Server, the process is similar, but the jdbc driver is already included.
 SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
@@ -221,10 +221,10 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 1. SQL Server 2008 R2 Enterprise
 2. SQL Server 2012 Enterprise
 3. SQL Server 2016 Enterprise
-4. SQL Server 2017 Enterprise
+4. SQL Server 2017 Enterprise
 5. SQL Server 2019 Enterprise
 
-####Optional:
+#### Optional:
 
 | Property | Example | Description |
 |:---- |:---- |:---- |
@@ -235,7 +235,51 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 |`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
 |`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
-###ON RMs:
+**How to configure policy-manager?**
+
+- Router Policy
+
+  Router Policy defines the logic for determining the routing of an application submission and determines the HomeSubCluster for the application.
+  
+  - HashBasedRouterPolicy
+    - This policy selects a sub-cluster based on the hash of the job's queue name. It is particularly useful when dealing with a large number of queues in a system, providing a default behavior. Furthermore, it ensures that all jobs belonging to the same queue are consistently mapped to the same sub-cluster, which can improve locality and performance.
+  - LoadBasedRouterPolicy
+    - This is a simplified load-balancing policy implementation. The policy utilizes binary weights (0/1 values) to enable or disable each sub-cluster. It selects the sub-cluster with the least load to forward the application traffic, ensuring optimal distribution.
+  - LocalityRouterPolicy
+    - This policy selects the sub-cluster based on the node specified by the client for running its application. Follows these conditions:
+      - It succeeds if
+        - There are three AMContainerResourceRequests in the order NODE, RACK, ANY
+      - Falls back to WeightedRandomRouterPolicy
+        - Null or empty AMContainerResourceRequests;
+        - One AMContainerResourceRequests and it has ANY as ResourceName;
+        - The node is in blacklisted SubClusters.
+      - It fails if
+        - The node does not exist and RelaxLocality is False;
+        - We have an invalid number (not 0, 1 or 3) resource requests
+  
+  
+  - RejectRouterPolicy
+  
+    - This policy simply rejects all incoming requests.
+  
+  
+  
+  - UniformRandomRouterPolicy
+    - This simple policy picks at uniform random among any of the currently active sub-clusters. This policy is easy to use and good for testing.
+  
+  
+  
+  - WeightedRandomRouterPolicy
+    - This policy implements a weighted random sample among currently active sub-clusters.
+  
+
+
+- AMRM Policy
+
+  - BroadcastAMRMProxyPolicy
+
+
+### ON RMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each ResourceManager.
 
@@ -348,6 +392,10 @@ Optional:
 | `yarn.nodemanager.amrmproxy.ha.enable` | `true` | Whether or not the AMRMProxy HA is enabled for multiple application attempt support. |
 | `yarn.federation.statestore.max-connections` | `1` | The maximum number of parallel connections from each AMRMProxy to the state-store. This value is typically lower than the router one, since we have many AMRMProxy that could burn-through many DB connections quickly. |
 | `yarn.federation.cache-ttl.secs` | `300` | The time to leave for the AMRMProxy cache. Typically larger than at the router, as the number of AMRMProxy is large, and we want to limit the load to the centralized state-store. |
+
+### ON GPG:
+
+
 
 Running a Sample Job
 --------------------
