@@ -2165,9 +2165,11 @@ The switch to turn S3A auditing on or off.
 
   <property>
     <name>fs.azure.buffer.dir</name>
-    <value>${hadoop.tmp.dir}/abfs</value>
+    <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/abfs</value>
     <description>Directory path for buffer files needed to upload data blocks
-      in AbfsOutputStream.</description>
+      in AbfsOutputStream.
+      Yarn container path will be used as default value on yarn applications,
+      otherwise fall back to hadoop.tmp.dir </description>
   </property>
 
 <property>
