@@ -2235,23 +2235,23 @@
   </description>
 </property>
 
-<!-- not yet enabled by default.
-
+<!-- use manifest committer for abfs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
   <description>
-    The default committer factory for ABFS is for the manifest committer with
-    abfs-specific tuning.
+    The default committer factory for ABFS is the manifest committer with
+    abfs-specific recovery.
   </description>
 </property>
 
+<!-- use manifest committer for gs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.gs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
   <description>
-    The default committer factory for google cloud storage is for the manifest committer.
+    The default committer factory for google cloud storage is the manifest committer.
   </description>
 </property>
--->
+
 </configuration>

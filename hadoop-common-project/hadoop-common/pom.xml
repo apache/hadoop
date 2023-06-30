@@ -1094,7 +1094,6 @@
                     </goals>
                     <configuration>
                         <executable>${basedir}/../../dev-support/bin/releasedocmaker</executable>
-                        <requiresOnline>true</requiresOnline>
                         <arguments>
                             <argument>--index</argument>
                             <argument>--license</argument>

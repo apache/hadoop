@@ -385,3 +385,267 @@ The output from this particular example job should be something like:
 
 The state of the job can also be tracked on the Router Web UI at `routerhost:8089`.
 Note that no change in the code or recompilation of the input jar was required to use federation. Also, the output of this job is the exact same as it would be when run without federation. Also, in order to get the full benefit of federation, use a large enough number of mappers such that more than one cluster is required. That number happens to be 16 in the case of the above example.
+
+How to build a Test Federation Cluster
+--------------------
+
+The purpose of this document is to help users quickly set up a testing environment for YARN Federation. With this testing environment, users can utilize the core functionality of YARN Federation. This is the simplest test cluster setup (based on Linux) with only essential configurations (YARN non-HA mode). We require 3 machines, and each machine should have at least <4C, 8GB> of resources. We only cover YARN configuration in this document. For information on configuring HDFS and ZooKeeper, please refer to other documentation sources.
+
+Test Environment Description:
+- We need to build a HDFS test environment, this part can refer to HDFS documentation. [HDFS SingleCluster](../../hadoop-project-dist/hadoop-common/SingleCluster.html)
+- We need two YARN clusters, each YARN cluster has one RM and one NM, The RM and NM on the same node.
+- We need one ZK cluster(We only need one ZooKeeper node.), this part can refer to Zookeeper documentation. [ZookeeperStarted](https://zookeeper.apache.org/doc/current/zookeeperStarted.html)
+- We need one Router and one Client.
+
+Example of Machine-Role Mapping(Exclude HDFS):
+
+| Machine   | Role          |
+|:----------|:--------------|
+| Machine A | RM1\NM1\ZK1   |
+| Machine B | RM2\NM2       |
+| Machine C | Router\Client |
+
+### YARN-1(ClusterTest-Yarn1)
+
+####  RM-1
+
+- For the ResourceManager, we need to configure the following option:
+
+```xml
+
+<!-- YARN cluster-id -->
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn1</value>
+</property>
+
+<!--
+  We can choose to use FairScheduler or CapacityScheduler. Different schedulers have different configuration.
+  FairScheduler: org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler
+  CapacityScheduler: org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler
+-->
+<property>
+  <name>yarn.resourcemanager.scheduler.class</name>
+  <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+</property>
+
+<!--
+ This configuration option is used to specify the configuration file for FairScheduler.
+ If we are using CapacityScheduler, we don't need to configure this option.
+-->
+<property>
+  <name>yarn.scheduler.fair.allocation.file</name>
+  <value>/path/fair-scheduler.xml</value>
+</property>
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+```
+
+- Start RM
+
+```
+$HADOOP_HOME/bin/yarn --daemon start resourcemanager
+```
+
+#### NM-1
+
+- For the NodeManager, we need to configure the following option:
+
+```xml
+<!-- YARN cluster-id -->
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn1</value>
+</property>
+
+<!-- local dir -->
+<property>
+  <name>yarn.nodemanager.local-dirs</name>
+  <value>path/local</value>
+</property>
+
+<!-- log dir -->
+<property>
+  <name>yarn.nodemanager.log-dirs</name>
+  <value>path/logdir</value>
+</property>
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Disenable YARN Federation FailOver -->
+<property>
+  <name>yarn.federation.failover.enabled</name>
+  <value>false</value>
+</property>
+
+<!-- Enable YARN Federation Non-HA Mode -->
+<property>
+  <name>yarn.federation.non-ha.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+<!-- Enable AmRmProxy. -->
+<property>
+  <name>yarn.nodemanager.amrmproxy.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- interceptors to be run at the amrmproxy -->
+<property>
+  <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.FederationInterceptor</value>
+</property>
+```
+
+- Start NM
+
+```
+$HADOOP_HOME/bin/yarn --daemon start nodemanager
+```
+
+### YARN-2(ClusterTest-Yarn2)
+
+#### RM-2
+
+The RM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
+
+```xml
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn2</value>
+</property>
+```
+
+#### NM-2
+
+The NM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
+
+```xml
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>ClusterTest-Yarn2</value>
+</property>
+```
+
+After we have finished configuring the `YARN-2` cluster, we can proceed with starting the `YARN-2` cluster.
+
+### Router
+
+- For the Router, we need to configure the following option:
+
+```xml
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- We use ZooKeeper to query/store Federation information. -->
+<property>
+  <name>yarn.federation.state-store.class</name>
+  <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
+</property>
+
+<!-- ZK Address. -->
+<property>
+  <name>hadoop.zk.address</name>
+  <value>zkHost:zkPort</value>
+</property>
+
+<!-- Configure the FederationClientInterceptor -->
+<property>
+  <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor</value>
+</property>
+
+<!-- Configure the FederationInterceptorREST -->
+<property>
+  <name>yarn.router.webapp.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST</value>
+</property>
+
+<!-- Configure the FederationRMAdminInterceptor -->
+<property>
+  <name>yarn.router.rmadmin.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.rmadmin.FederationRMAdminInterceptor</value>
+</property>
+```
+
+- Start Router
+
+```
+$HADOOP_HOME/bin/yarn --daemon start router
+```
+
+### Yarn-Client
+
+- For the Yarn-Client, we need to configure the following option:
+
+```xml
+
+<!-- Enable YARN Federation mode -->
+<property>
+  <name>yarn.federation.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Disenable YARN Federation FailOver -->
+<property>
+  <name>yarn.federation.failover.enabled</name>
+  <value>false</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.address,
+   We need to set it to the router address -->
+<property>
+  <name>yarn.resourcemanager.address</name>
+  <value>router-1-Host:8050</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.admin.address,
+   We need to set it to the router address -->
+<property>
+  <name>yarn.resourcemanager.admin.address</name>
+  <value>router-1-Host:8052</value>
+</property>
+
+<!-- Configure yarn.resourcemanager.scheduler.address,
+   We need to set it to the AMRMProxy address -->
+<property>
+  <name>yarn.resourcemanager.scheduler.address</name>
+  <value>localhost:8049</value>
+</property>
+```

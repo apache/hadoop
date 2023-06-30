@@ -611,6 +611,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <plugin>
         <groupId>org.cyclonedx</groupId>
         <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>${cyclonedx.version}</version>
       </plugin>
     </plugins>
   </build>
@@ -769,6 +770,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 </goals>
               </execution>
             </executions>
+            <configuration>
+              <outputFormat>xml</outputFormat>
+            </configuration>
           </plugin>
         </plugins>
       </build>

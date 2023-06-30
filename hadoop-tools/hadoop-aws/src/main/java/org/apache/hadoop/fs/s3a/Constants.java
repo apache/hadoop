@@ -1088,7 +1088,7 @@ public final class Constants {
    * Default retention policy: {@value}.
    */
   public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
-      DIRECTORY_MARKER_POLICY_DELETE;
+      DIRECTORY_MARKER_POLICY_KEEP;
 
 
   /**

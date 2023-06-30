@@ -3295,8 +3295,11 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo storedBlock = getStoredBlock(block);
     if(storedBlock == null) {
       // If blocksMap does not contain reported block id,
-      // the replica should be removed from the data-node.
-      toInvalidate.add(new Block(block));
+      // The replica should be removed from Datanode, and set NumBytes to BlockCommand.No_ACK to
+      // avoid useless report to NameNode from Datanode when complete to process it.
+      Block invalidateBlock = new Block(block);
+      invalidateBlock.setNumBytes(BlockCommand.NO_ACK);
+      toInvalidate.add(invalidateBlock);
       return null;
     }
     BlockUCState ucState = storedBlock.getBlockUCState();
@@ -3645,7 +3648,8 @@ public class BlockManager implements BlockStatsMXBean {
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
       blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
-          "{} on node {}", reportedBlock, storageInfo.getStorageType(), node);
+          "{} on node {} storageId {}, reportedBlock is {}", reportedBlock,
+          storageInfo.getStorageType(), node, storageInfo.getStorageID(), reportedBlock);
     } else {
       // if the same block is added again and the replica was corrupt
       // previously because of a wrong gen stamp, remove it from the
@@ -3751,9 +3755,24 @@ public class BlockManager implements BlockStatsMXBean {
     // ConcurrentModificationException, when the block is removed from the node
     DatanodeDescriptor[] nodesCopy =
         nodes.toArray(new DatanodeDescriptor[nodes.size()]);
+
+    DatanodeStorageInfo[] storages = null;
+    if (blk.isStriped()) {
+      storages = getStorages(blk);
+    }
+
     for (DatanodeDescriptor node : nodesCopy) {
+      Block blockToInvalidate = reported;
+      if (storages != null && blk.isStriped()) {
+        for (DatanodeStorageInfo s : storages) {
+          if (s.getDatanodeDescriptor().equals(node)) {
+            blockToInvalidate = getBlockOnStorage(blk, s);
+            break;
+          }
+        }
+      }
       try {
-        if (!invalidateBlock(new BlockToMarkCorrupt(reported, blk, null,
+        if (!invalidateBlock(new BlockToMarkCorrupt(blockToInvalidate, blk, null,
             Reason.ANY), node, numberReplicas)) {
           removedFromBlocksMap = false;
         }

@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
@@ -53,6 +55,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
@@ -140,6 +143,14 @@ public class TestJobThroughManifestCommitter
    * Stage config for TA11.
    */
   private StageConfig ta11Config;
+
+  /**
+   * Loaded manifest data, set in job commit and used in validation.
+   * This is static so it can be passed from where it is loaded
+   * {@link #test_0400_loadManifests()} to subsequent tests.
+   */
+  private static LoadedManifestData
+      loadedManifestData;
 
   @Override
   public void setup() throws Exception {
@@ -442,19 +453,24 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0400_loadManifests() throws Throwable {
     describe("Load all manifests; committed must be TA01 and TA10");
+    File entryFile = File.createTempFile("entry", ".seq");
+    LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
+        entryFile, DEFAULT_WRITER_QUEUE_CAPACITY);
     LoadManifestsStage.Result result
-        = new LoadManifestsStage(getJobStageConfig()).apply(true);
-    String summary = result.getSummary().toString();
+        = new LoadManifestsStage(getJobStageConfig()).apply(args);
+
+    loadedManifestData = result.getLoadedManifestData();
+    Assertions.assertThat(loadedManifestData)
+        .describedAs("manifest data from %s", result)
+        .isNotNull();
+
+    final LoadManifestsStage.SummaryInfo stageSummary = result.getSummary();
+    String summary = stageSummary.toString();
     LOG.info("Manifest summary {}", summary);
-    List<TaskManifest> manifests = result.getManifests();
-    Assertions.assertThat(manifests)
-        .describedAs("Loaded manifests in %s", summary)
-        .hasSize(2);
-    Map<String, TaskManifest> manifestMap = toMap(manifests);
-    verifyManifestTaskAttemptID(
-        manifestMap.get(taskAttempt01), taskAttempt01);
-    verifyManifestTaskAttemptID(
-        manifestMap.get(taskAttempt10), taskAttempt10);
+    Assertions.assertThat(stageSummary.getTaskAttemptIDs())
+        .describedAs("Task attempts in %s", summary)
+        .hasSize(2)
+        .contains(taskAttempt01, taskAttempt10);
   }
 
   @Test
@@ -473,19 +489,20 @@ public class TestJobThroughManifestCommitter
   public void test_0420_validateJob() throws Throwable {
     describe("Validate the output of the job through the validation"
         + " stage");
-
+    Assumptions.assumeThat(loadedManifestData)
+        .describedAs("Loaded Manifest Data from earlier stage")
+        .isNotNull();
 
     // load in the success data.
     ManifestSuccessData successData = loadAndPrintSuccessData(
         getFileSystem(),
         getJobStageConfig().getJobSuccessMarkerPath());
 
-    // load manifests stage will load all the task manifests again
-    List<TaskManifest> manifests = new LoadManifestsStage(getJobStageConfig())
-        .apply(true).getManifests();
     // Now verify their files exist, returning the list of renamed files.
-    List<String> committedFiles = new ValidateRenamedFilesStage(getJobStageConfig())
-        .apply(manifests)
+    final List<FileEntry> validatedEntries = new ValidateRenamedFilesStage(getJobStageConfig())
+        .apply(loadedManifestData.getEntrySequenceData());
+
+    List<String> committedFiles = validatedEntries
         .stream().map(FileEntry::getDest)
         .collect(Collectors.toList());
 
@@ -497,24 +514,7 @@ public class TestJobThroughManifestCommitter
     Assertions.assertThat(committedFiles)
         .containsAll(successData.getFilenames());
 
-    // now patch one of the manifest files by editing an entry
-    FileEntry entry = manifests.get(0).getFilesToCommit().get(0);
-    // no longer exists.
-    String oldName = entry.getDest();
-    String newName = oldName + ".missing";
-    entry.setDest(newName);
 
-    // validation will now fail
-    intercept(OutputValidationException.class, ".missing", () ->
-        new ValidateRenamedFilesStage(getJobStageConfig())
-            .apply(manifests));
-
-    // restore the name, but change the size
-    entry.setDest(oldName);
-    entry.setSize(128_000_000);
-    intercept(OutputValidationException.class, () ->
-        new ValidateRenamedFilesStage(getJobStageConfig())
-            .apply(manifests));
   }
 
   @Test
@@ -558,7 +558,7 @@ public class TestJobThroughManifestCommitter
   }
 
   @Test
-  public void test_440_validateSuccessFiles() throws Throwable {
+  public void test_0440_validateSuccessFiles() throws Throwable {
 
     // load in the success data.
     final FileSystem fs = getFileSystem();
@@ -568,6 +568,30 @@ public class TestJobThroughManifestCommitter
     validateGeneratedFiles(fs,
         getJobStageConfig().getDestinationDir(),
         successData, false);
+  }
+
+  /**
+   * Verify that the validation stage will correctly report a failure
+   * if one of the files has as different name.
+   */
+
+  @Test
+  public void test_0450_validationDetectsFailures() throws Throwable {
+    // delete an entry, repeat
+    final List<FileEntry> validatedEntries = new ValidateRenamedFilesStage(getJobStageConfig())
+        .apply(loadedManifestData.getEntrySequenceData());
+    final Path path = validatedEntries.get(0).getDestPath();
+    final Path p2 = new Path(path.getParent(), path.getName() + "-renamed");
+    final FileSystem fs = getFileSystem();
+    fs.rename(path, p2);
+    try {
+      intercept(OutputValidationException.class, () ->
+          new ValidateRenamedFilesStage(getJobStageConfig())
+              .apply(loadedManifestData.getEntrySequenceData()));
+    } finally {
+      // if this doesn't happen, later stages will fail.
+      fs.rename(p2, path);
+    }
   }
 
   @Test
