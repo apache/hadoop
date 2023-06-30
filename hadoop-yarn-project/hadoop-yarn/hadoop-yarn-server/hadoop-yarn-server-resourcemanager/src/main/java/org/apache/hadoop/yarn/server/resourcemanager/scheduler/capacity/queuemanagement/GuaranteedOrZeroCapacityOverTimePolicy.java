@@ -561,8 +561,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       LeafQueueEntitlements leafQueueEntitlements) {
     for (String leafQueue : leafQueuesToBeActivated) {
       QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(leafQueue);
-      CSQueue queue = managedParentQueue.getQueueContext().getQueueManager().getQueue(leafQueue);
-      updateCapacityFromTemplate(capacities, nodeLabel, queue);
+      updateCapacityFromTemplate(capacities, nodeLabel);
     }
   }
 
@@ -719,7 +718,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
         if (availableCapacity >= leafQueueTemplateCapacities
             .getAbsoluteCapacity(nodeLabel)) {
-          updateCapacityFromTemplate(capacities, nodeLabel, leafQueue);
+          updateCapacityFromTemplate(capacities, nodeLabel);
           activate(leafQueue, nodeLabel);
         } else{
           updateToZeroCapacity(capacities, nodeLabel, leafQueue);
@@ -743,7 +742,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private void updateCapacityFromTemplate(QueueCapacities capacities,
-      String nodeLabel, CSQueue leafQueue) {
+      String nodeLabel) {
     capacities.setCapacity(nodeLabel,
         leafQueueTemplateCapacities.getCapacity(nodeLabel));
     capacities.setMaximumCapacity(nodeLabel,
