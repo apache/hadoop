@@ -1158,7 +1158,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
     if (queueContext.getConfiguration().isLegacyQueueMode()) {
-      updateClusterResourceDeprecated(clusterResource, resourceLimits);
+      updateClusterResourceLegacyMode(clusterResource, resourceLimits);
       return;
     }
 
@@ -1172,7 +1172,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-  public void updateClusterResourceDeprecated(Resource clusterResource,
+  public void updateClusterResourceLegacyMode(Resource clusterResource,
                                               ResourceLimits resourceLimits) {
     writeLock.lock();
     try {

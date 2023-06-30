@@ -2011,7 +2011,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
     if (queueContext.getConfiguration().isLegacyQueueMode()) {
-      updateClusterResourceDeprecated(clusterResource, currentResourceLimits);
+      updateClusterResourceLegacyMode(clusterResource, currentResourceLimits);
       return;
     }
 
@@ -2019,7 +2019,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         .updateChildren(clusterResource, getParent());
   }
 
-  public void updateClusterResourceDeprecated(Resource clusterResource,
+  public void updateClusterResourceLegacyMode(Resource clusterResource,
                                               ResourceLimits currentResourceLimits) {
     writeLock.lock();
     try {
