@@ -27,7 +27,6 @@ import java.util.concurrent.Future;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -776,5 +775,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @VisibleForTesting
   BackReference getFsBackRef() {
     return fsBackRef;
+  }
+
+  @VisibleForTesting
+  ListeningExecutorService getExecutorService() {
+    return executorService;
   }
 }

@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
  * Test create operation.
  */
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
+
+  private static final int TEST_EXECUTION_TIMEOUT = 2 * 60 * 1000;
   private static final String TEST_FILE_PATH = "testfile";
 
   public ITestAbfsOutputStream() throws Exception {
@@ -90,36 +93,51 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
   /**
    * Verify the passing of AzureBlobFileSystem reference to AbfsOutputStream
-   * to make sure that the FS instance is not eligible for GC.
-   *
+   * to make sure that the FS instance is not eligible for GC while writing.
    */
-  @Test
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testAzureBlobFileSystemBackReferenceInOutputStream()
       throws Exception {
+
+    byte[] testBytes = new byte[5 * 1024];
+    // Creating an output stream using a FS in a separate method to make the
+    // FS instance used eligible for GC. Since when a method is popped from
+    // the stack frame, it's variables become anonymous, this creates higher
+    // chance of getting Garbage collected.
+    try (AbfsOutputStream out = getStream()) {
+
+      // Every 5KB block written is flushed and a GC is hinted, if the
+      // executor service is shut down in between, the test should fail
+      // indicating premature shutdown while writing.
+      for (int i = 0; i < 5; i++) {
+        out.write(testBytes);
+        out.flush();
+        System.gc();
+        Assertions.assertThat(
+            out.getExecutorService().isShutdown() || out.getExecutorService()
+                .isTerminated())
+            .describedAs("Executor Service should not be closed before "
+                + "OutputStream while writing")
+            .isFalse();
+        Assertions.assertThat(out.getFsBackRef().isNull())
+            .describedAs("BackReference in output stream should not be null")
+            .isFalse();
+      }
+    }
+  }
+
+  /**
+   * Separate method to create an outputStream using a local FS instance so
+   * that once this method has returned, the FS instance can be eligible for GC.
+   *
+   * @return AbfsOutputStream used for writing.
+   */
+  private AbfsOutputStream getStream() throws URISyntaxException, IOException {
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
-    fs1.initialize(new URI(getTestUrl()), getRawConfiguration());
+    fs1.initialize(new URI(getTestUrl()), new Configuration());
     Path pathFs1 = path(getMethodName() + "1");
 
-    AzureBlobFileSystem fs2 = new AzureBlobFileSystem();
-    fs2.initialize(new URI(getTestUrl()), getRawConfiguration());
-    Path pathFs2 = path(getMethodName() + "2");
-
-    try(AbfsOutputStream out1 = createAbfsOutputStreamWithFlushEnabled(fs1,
-        pathFs1)) {
-      Assert.assertFalse("BackReference in output stream should not be null",
-          out1.getFsBackRef().isNull());
-      Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
-              + " should have",
-          fs1, out1.getFsBackRef().getReference());
-    }
-
-    try(AbfsOutputStream out2 = createAbfsOutputStreamWithFlushEnabled(fs2,
-        pathFs2)) {
-      Assert.assertFalse("BackReference in output stream should not be null",
-          out2.getFsBackRef().isNull());
-      Assert.assertEquals("Mismatch in Filesystem reference this outputStream"
-          + " should have", fs2, out2.getFsBackRef().getReference());
-    }
+    return createAbfsOutputStreamWithFlushEnabled(fs1, pathFs1);
   }
 
 }
