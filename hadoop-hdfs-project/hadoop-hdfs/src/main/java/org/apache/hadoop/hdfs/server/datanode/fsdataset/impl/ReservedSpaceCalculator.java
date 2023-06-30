@@ -45,7 +45,7 @@ public abstract class ReservedSpaceCalculator {
 
     private DF usage;
     private StorageType storageType;
-    
+
     private String dir;
 
     public Builder(Configuration conf) {
@@ -62,9 +62,9 @@ public abstract class ReservedSpaceCalculator {
       this.storageType = newStorageType;
       return this;
     }
-    
-    public Builder setDir(String dir) {
-      this.dir = dir;
+
+    public Builder setDir(String newDir) {
+      this.dir = newDir;
       return this;
     }
 
@@ -90,7 +90,7 @@ public abstract class ReservedSpaceCalculator {
   private final DF usage;
   private final Configuration conf;
   private final StorageType storageType;
-  
+
   private final String dir;
 
   ReservedSpaceCalculator(Configuration conf, DF usage,

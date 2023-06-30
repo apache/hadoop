@@ -190,7 +190,7 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.SSD, 10000, 3600, dir3);
     checkReserved(StorageType.DISK, 10000, 4500, dir3);
   }
-  
+
   @Test(expected = IllegalStateException.class)
   public void testInvalidCalculator() {
     conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
@@ -202,7 +202,7 @@ public class TestReservedSpaceCalculator {
 
   private void checkReserved(StorageType storageType,
       long totalCapacity, long reservedExpected) {
-      checkReserved(storageType, totalCapacity, reservedExpected, "NULL");
+    checkReserved(storageType, totalCapacity, reservedExpected, "NULL");
   }
 
   private void checkReserved(StorageType storageType,
