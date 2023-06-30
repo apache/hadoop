@@ -624,7 +624,7 @@ class FSDirWriteFileOp {
       //    timeout, or because of an HA failover. In that case, we know
       //    by the fact that the client is re-issuing the RPC that it
       //    never began to write to the old block. Hence it is safe to
-      //    to return the existing block.
+      //    return the existing block.
       // 3) This is an entirely bogus request/bug -- we should error out
       //    rather than potentially appending a new block with an empty
       //    one in the middle, etc
