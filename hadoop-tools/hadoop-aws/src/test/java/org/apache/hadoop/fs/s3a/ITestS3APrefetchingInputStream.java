@@ -312,7 +312,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     openFS();
 
-    ExecutorService executorService = Executors.newFixedThreadPool(7,
+    ExecutorService executorService = Executors.newFixedThreadPool(5,
         new ThreadFactoryBuilder()
             .setDaemon(true)
             .setNameFormat("testSeeksWithLruEviction-%d")
