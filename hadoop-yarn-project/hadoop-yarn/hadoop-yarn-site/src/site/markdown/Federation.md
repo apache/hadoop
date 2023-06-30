@@ -240,7 +240,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 - Router Policy
 
   Router Policy defines the logic for determining the routing of an application submission and determines the HomeSubCluster for the application.
-  
+
   - HashBasedRouterPolicy
     - This policy selects a sub-cluster based on the hash of the job's queue name. It is particularly useful when dealing with a large number of queues in a system, providing a default behavior. Furthermore, it ensures that all jobs belonging to the same queue are consistently mapped to the same sub-cluster, which can improve locality and performance.
   - LoadBasedRouterPolicy
@@ -256,27 +256,28 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
       - It fails if
         - The node does not exist and RelaxLocality is False;
         - We have an invalid number (not 0, 1 or 3) resource requests
-  
-  
   - RejectRouterPolicy
-  
     - This policy simply rejects all incoming requests.
-  
-  
-  
   - UniformRandomRouterPolicy
     - This simple policy picks at uniform random among any of the currently active sub-clusters. This policy is easy to use and good for testing.
-  
-  
-  
   - WeightedRandomRouterPolicy
     - This policy implements a weighted random sample among currently active sub-clusters.
-  
-
 
 - AMRM Policy
 
+  AMRMProxyPolicy provides the logic to split the resource request list received by AM among RMs.
+
   - BroadcastAMRMProxyPolicy
+    - This policy simply broadcasts each ResourceRequest to all the available sub-clusters.
+  - HomeAMRMProxyPolicy
+    - This policy simply sends the ResourceRequest to the home sub-cluster.
+  - LocalityMulticastAMRMProxyPolicy
+    - Host localized ResourceRequests are always forwarded to the RM that
+      owns the corresponding node, based on the feedback of a SubClusterResolver
+      If the SubClusterResolver cannot resolve
+      this node we default to forwarding the ResourceRequest to the home
+      sub-cluster.
+  - RejectAMRMProxyPolicy
 
 
 ### ON RMs:
