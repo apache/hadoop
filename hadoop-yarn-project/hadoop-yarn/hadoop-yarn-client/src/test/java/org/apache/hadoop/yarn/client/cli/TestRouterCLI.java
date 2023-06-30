@@ -103,15 +103,17 @@ public class TestRouterCLI {
 
   @Test
   public void testHelp() throws Exception {
-    PrintStream oldOutPrintStream = System.out;
-    PrintStream oldErrPrintStream = System.err;
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
     System.setOut(new PrintStream(dataOut));
     System.setErr(new PrintStream(dataErr));
 
     String[] args = {"-help"};
+    rmAdminCLI.run(args);
     assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-help", "-deregisterSubCluster"};
+    rmAdminCLI.run(args);
   }
 
   @Test
@@ -120,7 +122,10 @@ public class TestRouterCLI {
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     System.setOut(new PrintStream(dataOut));
     oldOutPrintStream.println(dataOut);
-    String[] args = {"-deregisterSubCluster", "-c", "SC-1"};
+    String[] args = {"-deregisterSubCluster", "-sc", "SC-1"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-deregisterSubCluster", "--subClusterId", "SC-1"};
     assertEquals(0, rmAdminCLI.run(args));
   }
 
@@ -134,10 +139,17 @@ public class TestRouterCLI {
     String[] args = {"-deregisterSubCluster"};
     assertEquals(0, rmAdminCLI.run(args));
 
-    args = new String[]{"-deregisterSubCluster", "-c"};
+    args = new String[]{"-deregisterSubCluster", "-sc"};
     assertEquals(0, rmAdminCLI.run(args));
 
-    args = new String[]{"-deregisterSubCluster", "-c", ""};
+    args = new String[]{"-deregisterSubCluster", "--sc", ""};
     assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-deregisterSubCluster", "--subClusterId"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-deregisterSubCluster", "--subClusterId", ""};
+    assertEquals(0, rmAdminCLI.run(args));
+
   }
 }

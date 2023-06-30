@@ -153,7 +153,7 @@ public class TestDFSFinalize {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
 
       log("Finalize NN & BP with existing previous dir", numDirs);
-      String bpid = UpgradeUtilities.getCurrentBlockPoolID(cluster);
+      String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");

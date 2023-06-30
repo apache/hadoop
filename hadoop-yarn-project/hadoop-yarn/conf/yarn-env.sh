@@ -158,7 +158,7 @@
 #
 # See ResourceManager for some examples
 #
-#export YARN_ROUTER_OPTS=
+#export YARN_ROUTER_OPTS="-Drouter.audit.logger=INFO,ROUTERAUDIT"
 
 ###
 # Global Policy Generator specific parameters

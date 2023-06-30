@@ -196,6 +196,9 @@
 {#fsn}
   <tr><th>Last Checkpoint Time</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
 {/fsn}
+{#nnstat}
+  <tr><th>Last HA Transition Time</th><td>{@if cond="{LastHATransitionTime} === 0"}Never{:else}{LastHATransitionTime|date_tostring}{/if}</td></tr>
+{/nnstat}
 {#ecstat}
   <tr><th>Enabled Erasure Coding Policies</th><td>{EnabledEcPolicies}</td></tr>
 {/ecstat}
