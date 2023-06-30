@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,14 +83,13 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private static final int TIMEOUT_MILLIS = 5000;
   private static final int INTERVAL_MILLIS = 500;
-  private static final int PREFETCH_MAX_NUM_BLOCKS = 3;
+  private static final int PREFETCH_MAX_BLOCKS_COUNT = 3;
 
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
-    conf.setInt(FS_PREFETCH_MAX_BLOCKS_COUNT, PREFETCH_MAX_NUM_BLOCKS);
+    conf.setInt(FS_PREFETCH_MAX_BLOCKS_COUNT, PREFETCH_MAX_BLOCKS_COUNT);
     return conf;
   }
 
@@ -308,46 +312,106 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     openFS();
 
+    ExecutorService executorService = Executors.newFixedThreadPool(7,
+        new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("testSeeksWithLruEviction-%d")
+            .build());
+
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       ioStats = in.getIOStatistics();
+      
+      // tests to add multiple blocks in the prefetch cache
+      // and let LRU eviction take place as more cache entries
+      // are added with multiple block reads.
 
-      byte[] buffer = new byte[blockSize];
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Don't read block 0 completely
+        try {
+          in.read(buffer, 0, blockSize - S_1K * 10);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Don't read block 0 completely
-      in.read(buffer, 0, blockSize - S_1K * 10);
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Seek to block 1 and don't read completely
+        try {
+          in.seek(blockSize);
+          in.read(buffer, 0, 2 * S_1K);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Seek to block 1 and don't read completely
-      in.seek(blockSize);
-      in.read(buffer, 0, 2 * S_1K);
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Seek to block 2 and don't read completely
+        try {
+          in.seek(blockSize * 2L);
+          in.read(buffer, 0, 2 * S_1K);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Seek to block 2 and don't read completely
-      in.seek(blockSize * 2L);
-      in.read(buffer, 0, 2 * S_1K);
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Seek to block 3 and don't read completely
+        try {
+          in.seek(blockSize * 3L);
+          in.read(buffer, 0, 2 * S_1K);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Seek to block 3 and don't read completely
-      in.seek(blockSize * 3L);
-      in.read(buffer, 0, 2 * S_1K);
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Seek to block 4 and don't read completely
+        try {
+          in.seek(blockSize * 4L);
+          in.read(buffer, 0, 2 * S_1K);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Seek to block 4 and don't read completely
-      in.seek(blockSize * 4L);
-      in.read(buffer, 0, 2 * S_1K);
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // Seek to block 5 and don't read completely
+        try {
+          in.seek(blockSize * 5L);
+          in.read(buffer, 0, 2 * S_1K);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
-      // Seek to block 5 and don't read completely
-      in.seek(blockSize * 5L);
-      in.read(buffer, 0, 2 * S_1K);
-
-      // backward seek, can't use block 0 as it is evicted
-      in.seek(S_1K * 5);
-      in.read();
+      executorService.submit(() -> {
+        byte[] buffer = new byte[blockSize];
+        // backward seek, can't use block 0 as it is evicted
+        try {
+          in.seek(S_1K * 5);
+          in.read();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
 
       // expect 3 blocks as rest are to be evicted by LRU
       LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
         LOG.info("IO stats: {}", ioStats);
         verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE,
-            PREFETCH_MAX_NUM_BLOCKS);
+            PREFETCH_MAX_BLOCKS_COUNT);
       });
       // let LRU evictions settle down, if any
       Thread.sleep(TIMEOUT_MILLIS);
+    } finally {
+      executorService.shutdownNow();
+      executorService.awaitTermination(5, TimeUnit.SECONDS);
     }
     LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
       LOG.info("IO stats: {}", ioStats);
