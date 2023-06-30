@@ -351,12 +351,15 @@ public class TestFSQueueConverter {
         csConfig.getBoolean(
             PREFIX + "root.misc.auto-queue-creation-v2.enabled", false));
 
+    //leaf queue root.admins.alice is removed from the below list
+    //adding reservation to a leaf, it's queueType changes to FSParentQueue
     Set<String> leafs = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root",
             "root.default",
             "root.admins",
             "root.users",
-            "root.misc"));
+            "root.misc",
+            "root.admins.alice"));
     assertNoValueForQueues(leafs, ".auto-queue-creation-v2.enabled",
         csConfig);
   }

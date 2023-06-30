@@ -210,7 +210,10 @@ public class AllocationFileQueueParser {
       } else if (RESERVATION.equals(field.getTagName())) {
         isReservable = true;
         builder.reservableQueues(queueName);
-        builder.configuredQueues(FSQueueType.LEAF, queueName);
+        builder.configuredQueues(FSQueueType.PARENT, queueName);
+        LOG.warn("During fs2cs conversion, we cannot convert the leaf queue "
+            + queueName + " to weight mode without losing the " +
+            "reservation functionality.");
       } else if (ALLOW_PREEMPTION_FROM.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         if (!Boolean.parseBoolean(text)) {
