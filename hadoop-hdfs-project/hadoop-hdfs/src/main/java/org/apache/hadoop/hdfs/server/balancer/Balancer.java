@@ -207,7 +207,7 @@ public class Balancer {
       + "\n\t[-asService]\tRun as a long running service."
       + "\n\t[-sortTopNodes]"
       + "\tSort datanodes based on the utilization so "
-          + "that highly utilized datanodes get scheduled first."
+      + "that highly utilized datanodes get scheduled first."
       + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks.";
 
   @VisibleForTesting
