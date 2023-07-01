@@ -287,7 +287,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
   The PolicyManager is providing a combination of RouterPolicy and AMRMPolicy. Currently, We offer six types of PolicyManagers:
   - HashBroadcastPolicyManager
     - Policy that routes applications via hashing of their queuename, and broadcast resource requests. This picks a HashBasedRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
@@ -296,7 +296,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     ```
   - HomePolicyManager
     - Policy manager which uses the UniformRandomRouterPolicy for the Router and HomeAMRMProxyPolicy as the AMRMProxy policy to find the RM.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
@@ -305,7 +305,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     ```
   - PriorityBroadcastPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a PriorityRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
@@ -314,7 +314,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     ```
   - RejectAllPolicyManager
     - This policy rejects all requests for both router and amrmproxy routing. This picks a RejectRouterPolicy for the router and a RejectAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
@@ -323,7 +323,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     ```
   - UniformBroadcastPolicyManager
     - It combines the basic policies: UniformRandomRouterPolicy and BroadcastAMRMProxyPolicy, which are designed to work together and "spread" the load among sub-clusters uniformly. This simple policy might impose heavy load on the RMs and return more containers than a job requested as all requests are (replicated and) broadcasted.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
@@ -332,7 +332,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     ```
   - WeightedLocalityPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a LocalityRouterPolicy for the router and a LocalityMulticastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy
+    - We configure to use this policy:
     ```xml
       <property>
          <name>yarn.federation.policy-manager</name>
