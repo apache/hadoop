@@ -65,7 +65,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   private final Map<Integer, Entry> blocks;
 
   /**
-   * Total max blocks count, to be considered as baseline for LRU cache.
+   * Total max blocks count, to be considered as baseline for LRU cache eviction.
    */
   private final int maxBlocksCount;
 
@@ -83,6 +83,11 @@ public class SingleFilePerBlockCache implements BlockCache {
    * Tail of the linked list.
    */
   private Entry tail;
+
+  /**
+   * Total size of the linked list.
+   */
+  private int entryListSize;
 
   /**
    * Number of times a block was read from this cache.
@@ -203,16 +208,13 @@ public class SingleFilePerBlockCache implements BlockCache {
    * Constructs an instance of a {@code SingleFilePerBlockCache}.
    *
    * @param prefetchingStatistics statistics for this stream.
-   * @param conf the configuration object.
+   * @param maxBlocksCount max blocks count to be kept in cache at any time.
    */
-  public SingleFilePerBlockCache(PrefetchingStatistics prefetchingStatistics, Configuration conf) {
+  public SingleFilePerBlockCache(PrefetchingStatistics prefetchingStatistics, int maxBlocksCount) {
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
     this.closed = new AtomicBoolean(false);
-    this.maxBlocksCount =
-        conf.getInt(
-            Constants.FS_PREFETCH_MAX_BLOCKS_COUNT, Constants.DEFAULT_FS_PREFETCH_MAX_BLOCKS_COUNT);
-    Preconditions.checkArgument(this.maxBlocksCount > 0,
-        Constants.FS_PREFETCH_MAX_BLOCKS_COUNT + " should be more than 0");
+    this.maxBlocksCount = maxBlocksCount;
+    Preconditions.checkArgument(maxBlocksCount > 0, "maxBlocksCount should be more than 0");
     blocks = new ConcurrentHashMap<>();
     blocksLock = new ReentrantReadWriteLock();
   }
@@ -286,8 +288,22 @@ public class SingleFilePerBlockCache implements BlockCache {
       throw new IllegalStateException(String.format("block %d not found in cache", blockNumber));
     }
     numGets++;
-    addToHeadOfLinkedList(entry);
+    addToLinkedListHead(entry);
     return entry;
+  }
+
+  /**
+   * Helper method to add the given entry to the head of the linked list.
+   *
+   * @param entry Block entry to add.
+   */
+  private void addToLinkedListHead(Entry entry) {
+    blocksLock.writeLock().lock();
+    try {
+      addToHeadOfLinkedList(entry);
+    } finally {
+      blocksLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -296,34 +312,29 @@ public class SingleFilePerBlockCache implements BlockCache {
    * @param entry Block entry to add.
    */
   private void addToHeadOfLinkedList(Entry entry) {
-    blocksLock.writeLock().lock();
-    try {
-      if (head == null) {
-        head = entry;
-        tail = entry;
+    if (head == null) {
+      head = entry;
+      tail = entry;
+    }
+    LOG.debug(
+        "Block num {} to be added to the head. Current head block num: {} and tail block num: {}",
+        entry.blockNumber, head.blockNumber, tail.blockNumber);
+    if (entry != head) {
+      Entry prev = entry.getPrevious();
+      Entry nxt = entry.getNext();
+      if (prev != null) {
+        prev.setNext(nxt);
       }
-      LOG.debug(
-          "Block num {} to be added to the head. Current head block num: {} and tail block num: {}",
-          entry.blockNumber, head.blockNumber, tail.blockNumber);
-      if (entry != head) {
-        Entry prev = entry.getPrevious();
-        Entry nxt = entry.getNext();
-        if (prev != null) {
-          prev.setNext(nxt);
-        }
-        if (nxt != null) {
-          nxt.setPrevious(prev);
-        }
-        entry.setPrevious(null);
-        entry.setNext(head);
-        head.setPrevious(entry);
-        head = entry;
-        if (prev != null && prev.getNext() == null) {
-          tail = prev;
-        }
+      if (nxt != null) {
+        nxt.setPrevious(prev);
       }
-    } finally {
-      blocksLock.writeLock().unlock();
+      entry.setPrevious(null);
+      entry.setNext(head);
+      head.setPrevious(entry);
+      head = entry;
+      if (prev != null && prev.getNext() == null) {
+        tail = prev;
+      }
     }
   }
 
@@ -355,7 +366,7 @@ public class SingleFilePerBlockCache implements BlockCache {
       } finally {
         entry.releaseLock(Entry.LockType.READ);
       }
-      addToHeadOfLinkedList(entry);
+      addToLinkedListHead(entry);
       return;
     }
 
@@ -390,10 +401,11 @@ public class SingleFilePerBlockCache implements BlockCache {
    * @param entry Block entry to add.
    */
   private void addToLinkedListAndEvictIfRequired(Entry entry) {
-    addToHeadOfLinkedList(entry);
     blocksLock.writeLock().lock();
     try {
-      if (blocks.size() > maxBlocksCount && !closed.get()) {
+      addToHeadOfLinkedList(entry);
+      entryListSize++;
+      if (entryListSize > maxBlocksCount && !closed.get()) {
         Entry elementToPurge = tail;
         tail = tail.getPrevious();
         if (tail == null) {
@@ -414,17 +426,18 @@ public class SingleFilePerBlockCache implements BlockCache {
    * @param elementToPurge Block entry to evict.
    */
   private void deleteBlockFileAndEvictCache(Entry elementToPurge) {
-    boolean lockAcquired =
-        elementToPurge.takeLock(Entry.LockType.WRITE, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
-            Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+    boolean lockAcquired = elementToPurge.takeLock(Entry.LockType.WRITE,
+        PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
+        PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
     if (!lockAcquired) {
       LOG.error("Cache file {} deletion would not be attempted as write lock could not"
               + " be acquired within {} {}", elementToPurge.path,
-          Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
-          Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+          PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
+          PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
     } else {
       try {
         if (Files.deleteIfExists(elementToPurge.path)) {
+          entryListSize--;
           prefetchingStatistics.blockRemovedFromFileCache();
           blocks.remove(elementToPurge.blockNumber);
         }
@@ -480,12 +493,13 @@ public class SingleFilePerBlockCache implements BlockCache {
     int numFilesDeleted = 0;
     for (Entry entry : blocks.values()) {
       boolean lockAcquired =
-          entry.takeLock(Entry.LockType.WRITE, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
-              Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+          entry.takeLock(Entry.LockType.WRITE, PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
+              PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
       if (!lockAcquired) {
         LOG.error("Cache file {} deletion would not be attempted as write lock could not"
-                + " be acquired within {} {}", entry.path, Constants.PREFETCH_WRITE_LOCK_TIMEOUT,
-            Constants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
+                + " be acquired within {} {}", entry.path,
+            PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
+            PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
         continue;
       }
       try {

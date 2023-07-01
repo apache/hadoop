@@ -24,29 +24,21 @@ import java.util.concurrent.TimeUnit;
 /**
  * Constants used by prefetch implementations.
  */
-public final class Constants {
+public final class PrefetchConstants {
 
-  private Constants() {
+  private PrefetchConstants() {
   }
 
   /**
-   * Prefetch max blocks count config.
-   */
-  public static final String FS_PREFETCH_MAX_BLOCKS_COUNT = "fs.prefetch.max.blocks.count";
-
-  /**
    * Timeout to be used by close, while acquiring prefetch block write lock.
+   * Value = {@value PREFETCH_WRITE_LOCK_TIMEOUT}
    */
   static final int PREFETCH_WRITE_LOCK_TIMEOUT = 5;
 
   /**
    * Lock timeout unit to be used by the thread while acquiring prefetch block write lock.
+   * Value = {@value PREFETCH_WRITE_LOCK_TIMEOUT_UNIT}
    */
   static final TimeUnit PREFETCH_WRITE_LOCK_TIMEOUT_UNIT = TimeUnit.SECONDS;
-
-  /**
-   * Default value for max blocks count config.
-   */
-  static final int DEFAULT_FS_PREFETCH_MAX_BLOCKS_COUNT = 20;
 
 }
