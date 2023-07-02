@@ -322,6 +322,10 @@ public class SingleFilePerBlockCache implements BlockCache {
     if (entry != head) {
       Entry prev = entry.getPrevious();
       Entry nxt = entry.getNext();
+      // no-op if the block is already evicted
+      if (!blocks.containsKey(entry.blockNumber)) {
+        return;
+      }
       if (prev != null) {
         prev.setNext(nxt);
       }
