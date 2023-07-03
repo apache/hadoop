@@ -862,4 +862,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   long getLimit() {
     return this.limit;
   }
+
+  @VisibleForTesting
+  BackReference getFsBackRef() {
+    return fsBackRef;
+  }
 }

@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -103,6 +105,25 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
       testExceptionInOptimization(fs, testFilePath, fileSize - HUNDRED,
           fileSize / 4, fileContent);
+    }
+  }
+
+  /**
+   * Testing the back reference being passed down to AbfsInputStream.
+   */
+  @Test
+  public void testAzureBlobFileSystemBackReferenceInInputStream()
+      throws IOException {
+    Path path = path(getMethodName());
+    // Create a file then open it to verify if this input stream contains any
+    // back reference.
+    try (FSDataOutputStream out = getFileSystem().create(path);
+        FSDataInputStream in = getFileSystem().open(path)) {
+      AbfsInputStream abfsInputStream = (AbfsInputStream) in.getWrappedStream();
+
+      Assertions.assertThat(abfsInputStream.getFsBackRef().isNull())
+          .describedAs("BackReference in input stream should not be null")
+          .isFalse();
     }
   }
 
