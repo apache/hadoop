@@ -1951,10 +1951,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     lastClusterResource = clusterResource;
 
     // Update maximum applications for the queue and for users
-    updateMaximumApplications(queueContext.getConfiguration().isLegacyQueueMode() ||
-        Stream.of(clusterResource.getResources())
-            .map(ResourceInformation::getValue)
-            .anyMatch(num -> num > 0));
+    final boolean clusterResourceAvailable = Stream.of(clusterResource.getResources())
+        .map(ResourceInformation::getValue)
+        .anyMatch(num -> num > 0);
+    updateMaximumApplications(clusterResourceAvailable);
 
     updateCurrentResourceLimits(resourceLimits, clusterResource);
 
