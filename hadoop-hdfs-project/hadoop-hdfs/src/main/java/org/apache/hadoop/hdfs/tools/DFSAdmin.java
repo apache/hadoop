@@ -453,17 +453,17 @@ public class DFSAdmin extends FsShell {
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
     "\t[-refreshCallQueue]\n" +
     "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-      "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start|status|properties>]\n" +
+    "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start|status|properties>]\n" +
     "\t[-printTopology]\n" +
-      "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
-      "\t[-getVolumeReport datanode_host:ipc_port]\n" +
+    "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
+    "\t[-getVolumeReport datanode_host:ipc_port]\n" +
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
     "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
     "\t[-getBalancerBandwidth <datanode_host:ipc_port>]\n" +
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
-      "\t[-provisionSnapshotTrash <snapshotDir> [-all]]\n" +
+    "\t[-provisionSnapshotTrash <snapshotDir> [-all]]\n" +
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
     "\t[-evictWriters <datanode_host:ipc_port>]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
