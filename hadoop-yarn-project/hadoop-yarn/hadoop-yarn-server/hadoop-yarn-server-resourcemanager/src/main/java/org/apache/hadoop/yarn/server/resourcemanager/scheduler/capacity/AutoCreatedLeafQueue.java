@@ -85,6 +85,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
       //reset capacities for the leaf queue
       mergeCapacities(capacities, leafQueueTemplate.getResourceQuotas());
+
     } finally {
       writeLock.unlock();
     }
