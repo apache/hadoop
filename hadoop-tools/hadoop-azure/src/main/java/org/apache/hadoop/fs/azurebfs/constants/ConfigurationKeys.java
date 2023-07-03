@@ -49,10 +49,11 @@ public final class ConfigurationKeys {
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
   public static final String AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.linear.retry.for.connection.timeout.enabled";
-  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
   public static final String AZURE_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = "fs.azure.io.retry.min.backoff.interval.for.connection.timeout";
   public static final String AZURE_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = "fs.azure.io.retry.max.backoff.interval.for.connection.timeout";
   public static final String AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED = "fs.azure.linear.retry.double.step.up.enabled";
+  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
+  public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
