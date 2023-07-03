@@ -5376,4 +5376,36 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>yarn.federation.gpg.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by gpg to login as its
+      service principal. The principal name is configured with
+      dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal</name>
+    <value></value>
+    <description>
+      The GPG service principal. This is typically set to
+      gpg/_HOST@REALM.TLD. Each GPG will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both GPG setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
 </configuration>
