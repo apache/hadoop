@@ -238,7 +238,7 @@ public class AbfsRestOperation {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
-        LOG.debug("Rest operation {} failed. failureReason: {}, retryCount = {}, retryPolicy: {}, sleepInterval: {}",
+        LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
             operationType, failureReason, retryCount, getRetryPolicyStr(retryPolicy), retryInterval);
         Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
@@ -433,6 +433,11 @@ public class AbfsRestOperation {
     }
   }
 
+  /**
+   * Utility function to get the retry policy used as String for logging purpose.
+   * @param retryPolicy
+   * @return Retry Policy as String
+   */
   @VisibleForTesting
   String getRetryPolicyStr(final RetryPolicy retryPolicy) {
     if (retryPolicy instanceof StaticRetryPolicy) {
