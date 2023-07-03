@@ -26,7 +26,12 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * */
 public class StaticRetryPolicy extends RetryPolicy {
 
-  private static final int STATIC_RETRY_INTERVAL = 2000; // 2s
+  private static final int STATIC_RETRY_INTERVAL_DEFAULT = 2000; // 2s
+
+  /**
+   * Represents the constant retry interval to be used with Static Retry Policy
+   */
+  private int retryInterval;
 
   /**
    * Initializes a new instance of the {@link StaticRetryPolicy} class.
@@ -34,6 +39,7 @@ public class StaticRetryPolicy extends RetryPolicy {
    */
   public StaticRetryPolicy(final int maxIoRetries) {
     super(maxIoRetries);
+    this.retryInterval = STATIC_RETRY_INTERVAL_DEFAULT;
   }
 
   /**
@@ -42,6 +48,7 @@ public class StaticRetryPolicy extends RetryPolicy {
    */
   public StaticRetryPolicy(AbfsConfiguration conf) {
     this(conf.getMaxIoRetries());
+    this.retryInterval = conf.getStaticRetryInterval();
   }
 
   /**
@@ -52,6 +59,6 @@ public class StaticRetryPolicy extends RetryPolicy {
    */
   @Override
   public long getRetryInterval(final int retryCount) {
-    return STATIC_RETRY_INTERVAL;
+    return retryInterval;
   }
 }

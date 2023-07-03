@@ -150,10 +150,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
   private boolean linearRetryForConnectionTimeoutEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
-      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
-  private boolean staticRetryForConnectionTimeoutEnabled;
-
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT,
       DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT)
   private int minBackoffIntervalForConnectionTimeout;
@@ -165,6 +161,14 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED,
       DefaultValue = DEFAULT_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED)
   private boolean linearRetryDoubleStepUpEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean staticRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_INTERVAL,
+      DefaultValue = DEFAULT_STATIC_RETRY_INTERVAL)
+  private int staticRetryInterval;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
@@ -681,6 +685,10 @@ public class AbfsConfiguration{
 
   public boolean getStaticRetryForConnectionTimeoutEnabled() {
     return staticRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getStaticRetryInterval() {
+    return staticRetryInterval;
   }
 
   public int getMinBackoffIntervalMillisecondsForConnectionTimeout() {
