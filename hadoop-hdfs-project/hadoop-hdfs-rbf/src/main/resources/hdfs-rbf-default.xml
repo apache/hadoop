@@ -674,6 +674,15 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.trash-path.created-by.mount-point</name>
+    <value>false</value>
+    <description>
+      Set to true to use the mount point to create trash path
+      when path is the trail associated with the Trash.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.keytab.file</name>
     <value></value>
     <description>

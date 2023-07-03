@@ -24,6 +24,8 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDE
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.io.IOException;
@@ -90,6 +92,8 @@ public class MountTableResolver
   private final StateStoreService stateStore;
   /** Interface to the mount table store. */
   private MountTableStore mountTableStore;
+  /** Configuration for the RPC server. */
+  private Configuration conf;
 
   /** If the tree has been initialized. */
   private boolean init = false;
@@ -131,6 +135,7 @@ public class MountTableResolver
   public MountTableResolver(Configuration conf, Router routerService,
       StateStoreService store) {
     this.router = routerService;
+    this.conf = conf;
     if (store != null) {
       this.stateStore = store;
     } else if (this.router != null) {
@@ -460,9 +465,13 @@ public class MountTableResolver
         this.getLocCacheAccess().increment();
       }
       if (isTrashPath(path)) {
+        boolean useMountPointCreateTrashPath = conf.getBoolean(
+                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
+                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
         List<RemoteLocation> remoteLocations = new ArrayList<>();
         for (RemoteLocation remoteLocation : res.getDestinations()) {
-          remoteLocations.add(new RemoteLocation(remoteLocation, path));
+          remoteLocations.add(new RemoteLocation(remoteLocation,
+                  useMountPointCreateTrashPath ? path : getTrashRoot() + "/Current" + remoteLocation.getDest()));
         }
         return new PathLocation(path, remoteLocations,
             res.getDestinationOrder());
