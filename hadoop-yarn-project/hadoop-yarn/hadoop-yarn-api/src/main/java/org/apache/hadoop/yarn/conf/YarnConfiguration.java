@@ -4366,6 +4366,16 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
   public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = TimeUnit.MINUTES.toMillis(30);
 
+  /** Keytab for GPG. **/
+  public static final String GPG_KEYTAB = FEDERATION_GPG_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the globalpolicygenerator.*/
+  public static final String GPG_PRINCIPAL = FEDERATION_GPG_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn gpg.*/
+  public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
+      "kerberos.principal.hostname";
+
   /**
    * Connection and Read timeout from the Router to RM.
    */

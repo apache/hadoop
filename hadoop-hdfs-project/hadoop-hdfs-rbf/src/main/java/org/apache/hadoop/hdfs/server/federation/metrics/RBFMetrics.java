@@ -874,7 +874,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   /**
    * Fetches the most active namenode memberships for all known nameservices.
-   * The fetched membership may not or may not be active. Excludes expired
+   * The fetched membership may or may not be active. Excludes expired
    * memberships.
    * @throws IOException if the query could not be performed.
    * @return List of the most active NNs from each known nameservice.
