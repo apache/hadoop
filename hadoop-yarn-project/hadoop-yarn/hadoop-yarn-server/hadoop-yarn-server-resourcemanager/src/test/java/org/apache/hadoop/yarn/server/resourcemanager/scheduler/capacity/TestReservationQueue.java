@@ -56,7 +56,7 @@ public class TestReservationQueue {
       new DefaultResourceCalculator();
   private ReservationQueue autoCreatedLeafQueue;
   private PlanQueue planQueue;
-  private Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
+  private final Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
 
   @Before
   public void setup() throws IOException, SchedulerDynamicEditException {
@@ -71,7 +71,6 @@ public class TestReservationQueue {
     when(csQm.getConfiguredNodeLabelsForAllQueues()).thenReturn(labels);
     NullRMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(csConf);
-    clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
     when(csQm.getQueueCapacityHandler()).thenReturn(
         new CapacitySchedulerQueueCapacityHandler(mgr, csConf));
