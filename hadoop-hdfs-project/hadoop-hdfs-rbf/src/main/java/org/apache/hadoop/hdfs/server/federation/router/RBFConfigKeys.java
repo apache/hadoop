@@ -86,6 +86,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final int
       DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT = 10;
 
+  public static final String DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT =
+          FEDERATION_ROUTER_PREFIX + "trash-path.created-by.mount-point";
+  public static final boolean DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT = false;
+
   // HDFS Router heartbeat
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =
       FEDERATION_ROUTER_PREFIX + "heartbeat.enable";
