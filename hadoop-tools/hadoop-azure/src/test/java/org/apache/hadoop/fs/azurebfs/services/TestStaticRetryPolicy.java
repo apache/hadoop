@@ -53,7 +53,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
   @Test
   public void testStaticRetryPolicyInitializationDefault() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    assertInitialization(config, true, true);
+    assertInitialization(config, StaticRetryPolicy.class);
   }
 
   @Test
@@ -61,7 +61,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
     config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
-    assertInitialization(config, true, false);
+    assertInitialization(config, StaticRetryPolicy.class);
   }
 
   @Test
@@ -69,7 +69,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
-    assertInitialization(config, false, true);
+    assertInitialization(config, LinearRetryPolicy.class);
   }
 
   @Test
@@ -77,23 +77,17 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
-    assertInitialization(config, false, false);
+    assertInitialization(config, ExponentialRetryPolicy.class);
   }
 
-  private void assertInitialization(Configuration config, boolean isStatic, boolean isLinear) throws Exception{
+  private void assertInitialization(Configuration config, Class retryPolicyClass) throws Exception{
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
 
     // Assert that static retry policy will be used only for CT Failures
     RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    if (isStatic) {
-      Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
-    } else if(isLinear) {
-      Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
-    } else {
-      Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
-    }
+    Assertions.assertThat(retryPolicy).isInstanceOf(retryPolicyClass);
 
     // For all other possible values of failureReason, Exponential retry is used
     retryPolicy = client.getRetryPolicy("");
