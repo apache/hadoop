@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.function.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -128,6 +129,7 @@ public class TestNameNodeMetricsLogger {
   /**
    * A NameNode that stubs out the NameSystem for testing.
    */
+  @Metrics(context="dfs")
   private static class TestNameNode extends NameNode {
     @Override
     protected void loadNamesystem(Configuration conf) throws IOException {
