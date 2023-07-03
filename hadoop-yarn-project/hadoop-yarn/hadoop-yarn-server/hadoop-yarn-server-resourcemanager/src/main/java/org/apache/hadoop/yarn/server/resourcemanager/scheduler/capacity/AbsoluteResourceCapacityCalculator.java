@@ -44,14 +44,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
     double remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
         label, resourceName);
 
-    double minimumCapacity = context.getCurrentMinimumCapacityEntry(
+    return normalizedRatio * remainingResourceRatio * context.getCurrentMinimumCapacityEntry(
         label).getResourceValue();
-
-    if (normalizedRatio != 0 && !Double.isNaN(remainingResourceRatio)) {
-      return normalizedRatio * remainingResourceRatio * minimumCapacity;
-    }
-
-    return minimumCapacity;
   }
 
   @Override
@@ -67,18 +61,6 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
     CapacitySchedulerQueueCapacityHandler.setQueueCapacities(
         resourceCalculationDriver.getUpdateContext()
             .getUpdatedClusterResource(label), queue, label);
-
-    if (queue.getParent() != null) {
-      // Update absolute maxCapacity (as in fraction of the
-      // whole cluster's resources) with a float calculated from the queue's
-      // maxCapacity and the parent's absoluteMaxCapacity.
-      // absoluteMaxCapacity = maxCapacity * parent's absoluteMaxCapacity
-      queue.getQueueCapacities().setAbsoluteMaximumCapacity(label,
-          queue.getQueueCapacities().getMaximumCapacity(label) *
-              queue.getParent().getQueueCapacities()
-                  .getAbsoluteMaximumCapacity(label));
-    }
-
   }
 
   @Override
