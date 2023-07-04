@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -493,6 +494,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
 
     try {
+      // Check if Executor Service got shutdown before the writes could be
+      // completed.
+      if (hasActiveBlockDataToUpload() && executorService.isShutdown()) {
+        throw new IOException("Executor Service closed before writes could be"
+            + " completed.");
+      }
       flushInternal(true);
     } catch (IOException e) {
       // Problems surface in try-with-resources clauses if
