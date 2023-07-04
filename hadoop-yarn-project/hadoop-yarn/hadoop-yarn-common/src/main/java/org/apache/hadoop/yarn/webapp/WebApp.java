@@ -221,6 +221,10 @@ public abstract class WebApp extends ServletModule {
     route(HTTP.GET, pathSpec, cls, action);
   }
 
+  public void addJerseyResourceConfigs(HttpServer2 server) {
+
+  }
+
   public void route(String pathSpec, Class<? extends Controller> cls) {
     List<String> res = parseRoute(pathSpec);
     router.add(HTTP.GET, res.get(R_PATH), cls, res.get(R_ACTION),
