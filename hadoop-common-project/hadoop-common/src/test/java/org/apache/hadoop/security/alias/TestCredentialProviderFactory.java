@@ -273,19 +273,39 @@ public class TestCredentialProviderFactory {
     final char[] CUSTOM_CREDENTIAL_PASSWORD = { 'c', 'u', 's', 't', 'o', 'm', '.',
         'p', 'a', 's', 's', 'w', 'o', 'r', 'd' };
 
-    // Set provider in default credential path property
-    createCredentialProviderPath(conf, "default.jks",
-        CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
-        DEFAULT_CREDENTIAL_KEY, DEFAULT_CREDENTIAL_PASSWORD);
-    // Set provider in custom credential path property
-    createCredentialProviderPath(conf, "custom.jks",
-        CUSTOM_CREDENTIAL_PROVIDER_KEY, CUSTOM_CREDENTIAL_KEY,
-        CUSTOM_CREDENTIAL_PASSWORD);
-    assertThat(conf.getPassword(DEFAULT_CREDENTIAL_KEY))
-        .isEqualTo(DEFAULT_CREDENTIAL_PASSWORD);
-    assertThat(conf.getPasswordFromCredentialProvider(CUSTOM_CREDENTIAL_KEY,
-        conf.get(CUSTOM_CREDENTIAL_PROVIDER_KEY)))
-            .isEqualTo(CUSTOM_CREDENTIAL_PASSWORD);
+    String defaultJksName = "default.jks";
+    String customJksName = "custom.jks";
+    try {
+      // Set provider in default credential path property
+      createCredentialProviderPath(conf, defaultJksName,
+          CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+          DEFAULT_CREDENTIAL_KEY, DEFAULT_CREDENTIAL_PASSWORD);
+      assertThat(conf.getPassword(DEFAULT_CREDENTIAL_KEY))
+          .isEqualTo(DEFAULT_CREDENTIAL_PASSWORD);
+    } finally {
+      // Clean jks files
+      File defaultJks = new File(tmpDir, defaultJksName);
+      if (defaultJks.exists()) {
+        defaultJks.delete();
+      }
+    }
+
+    try {
+      // Set provider in custom credential path property
+      createCredentialProviderPath(conf, customJksName,
+          CUSTOM_CREDENTIAL_PROVIDER_KEY, CUSTOM_CREDENTIAL_KEY,
+          CUSTOM_CREDENTIAL_PASSWORD);
+
+      assertThat(conf.getPasswordFromCredentialProvider(CUSTOM_CREDENTIAL_KEY,
+          conf.get(CUSTOM_CREDENTIAL_PROVIDER_KEY)))
+              .isEqualTo(CUSTOM_CREDENTIAL_PASSWORD);
+    } finally {
+      // Clean jks files
+      File defaultJks = new File(tmpDir, customJksName);
+      if (defaultJks.exists()) {
+        defaultJks.delete();
+      }
+    }
   }
 
   private void createCredentialProviderPath(Configuration conf, String jksName,
@@ -294,8 +314,6 @@ public class TestCredentialProviderFactory {
     final String ourUrl = LocalJavaKeyStoreProvider.SCHEME_NAME + "://file"
         + jksPath.toUri();
 
-    File file = new File(tmpDir, jksName);
-    file.delete();
     conf.set(credentialProvider, ourUrl);
     CredentialProvider provider = CredentialProviderFactory
         .getProvider(conf, ourUrl);
