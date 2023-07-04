@@ -72,16 +72,8 @@ public abstract class CredentialProviderFactory {
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {
-    return getProviders(conf, CREDENTIAL_PROVIDER_PATH);
-  }
-
-  public static List<CredentialProvider> getProviders(Configuration conf,
-      String providerKey) throws IOException {
     List<CredentialProvider> result = new ArrayList<>();
-    if (providerKey == null || conf.getStringCollection(providerKey) == null) {
-      providerKey = CREDENTIAL_PROVIDER_PATH;
-    }
-    for(String path: conf.getStringCollection(providerKey)) {
+    for(String path: conf.getStringCollection(CREDENTIAL_PROVIDER_PATH)) {
       try {
         URI uri = new URI(path);
         boolean found = false;
@@ -117,5 +109,32 @@ public abstract class CredentialProviderFactory {
       }
     }
     return result;
+  }
+
+  /**
+   * Get CredentialProvider for hive provider path.
+   *
+   * @param conf configuration object
+   * @param credProviderPath provider path
+   * @return credProviderPath object
+   */
+  public static CredentialProvider getProvider(Configuration conf,
+      String credProviderPath) throws IOException {
+    try {
+      URI uri = new URI(credProviderPath);
+      synchronized (serviceLoader) {
+        for (CredentialProviderFactory factory : serviceLoader) {
+          CredentialProvider kp = factory.createProvider(uri, conf);
+          if (kp != null) {
+            return kp;
+          }
+        }
+      }
+    } catch (URISyntaxException error) {
+      throw new IOException(
+          "Failed to get provider for path : " + credProviderPath, error);
+    }
+    throw new IOException(
+        "No CredentialProviderFactory for path " + credProviderPath);
   }
 }

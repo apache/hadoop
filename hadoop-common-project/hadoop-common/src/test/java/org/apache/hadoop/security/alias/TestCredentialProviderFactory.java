@@ -41,6 +41,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -280,13 +281,11 @@ public class TestCredentialProviderFactory {
     createCredentialProviderPath(conf, "custom.jks",
         CUSTOM_CREDENTIAL_PROVIDER_KEY, CUSTOM_CREDENTIAL_KEY,
         CUSTOM_CREDENTIAL_PASSWORD);
-
-    assertTrue("Password should match for default provider path", Arrays.equals(
-        conf.getPassword(DEFAULT_CREDENTIAL_KEY), DEFAULT_CREDENTIAL_PASSWORD));
-
-    assertTrue("Password should match for custom provider path", Arrays.equals(
-        conf.getPassword(CUSTOM_CREDENTIAL_KEY, CUSTOM_CREDENTIAL_PROVIDER_KEY),
-        CUSTOM_CREDENTIAL_PASSWORD));
+    assertThat(conf.getPassword(DEFAULT_CREDENTIAL_KEY))
+        .isEqualTo(DEFAULT_CREDENTIAL_PASSWORD);
+    assertThat(conf.getPasswordFromCredentialProvider(CUSTOM_CREDENTIAL_KEY,
+        conf.get(CUSTOM_CREDENTIAL_PROVIDER_KEY)))
+            .isEqualTo(CUSTOM_CREDENTIAL_PASSWORD);
   }
 
   private void createCredentialProviderPath(Configuration conf, String jksName,
@@ -299,7 +298,7 @@ public class TestCredentialProviderFactory {
     file.delete();
     conf.set(credentialProvider, ourUrl);
     CredentialProvider provider = CredentialProviderFactory
-        .getProviders(conf, credentialProvider).get(0);
+        .getProvider(conf, ourUrl);
     provider.createCredentialEntry(key, value);
     provider.flush();
   }
