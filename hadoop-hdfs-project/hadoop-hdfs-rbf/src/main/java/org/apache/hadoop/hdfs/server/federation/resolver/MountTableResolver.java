@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 
@@ -375,6 +376,23 @@ public class MountTableResolver
   }
 
   /**
+   * If path is a path related to the trash can, return the TrashDate.
+   *
+   * @param path A path.
+   * @return TrashDate that matches TRASH_PATTEN.
+   * @throws IOException
+   */
+  private static String getTrashDate(String path) throws IOException {
+    Pattern pattern = Pattern.compile(
+        "^" + getTrashRoot() + (TRASH_PATTERN) + "/");
+    Matcher matcher = pattern.matcher(path);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return null;
+  }
+
+  /**
    * Subtract a TrashCurrent to get a new path.
    *
    * @param path a path.
@@ -465,13 +483,13 @@ public class MountTableResolver
         this.getLocCacheAccess().increment();
       }
       if (isTrashPath(path)) {
-        boolean useMountPointCreateTrashPath = conf.getBoolean(
-                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
-                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
+        boolean trashMP = conf.getBoolean(
+            DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
+            DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
         List<RemoteLocation> remoteLocations = new ArrayList<>();
         for (RemoteLocation remoteLocation : res.getDestinations()) {
           remoteLocations.add(new RemoteLocation(remoteLocation,
-                  useMountPointCreateTrashPath ? path : getTrashRoot() + "/Current" + remoteLocation.getDest()));
+              trashMP ? path : getTrashRoot() + getTrashDate(path) + remoteLocation.getDest()));
         }
         return new PathLocation(path, remoteLocations,
             res.getDestinationOrder());

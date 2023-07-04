@@ -280,16 +280,16 @@ public class TestRouterTrash {
   }
 
   private void deleteToTrashExistMountPoint() throws IOException,
-          URISyntaxException, InterruptedException {
+      URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
-            Collections.singletonMap(ns0, DST_PATH));
+        Collections.singletonMap(ns0, DST_PATH));
     assertTrue(addMountTable(addEntry));
 
     // current user client
     DFSClient client = nnContext.getClient();
     client.setOwner("/", TEST_USER, TEST_USER);
     UserGroupInformation ugi = UserGroupInformation.
-            createRemoteUser(TEST_USER);
+        createRemoteUser(TEST_USER);
     // test user client
     client = nnContext.getClient(ugi);
     client.mkdirs(DST_PATH, new FsPermission("777"), true);
@@ -305,18 +305,18 @@ public class TestRouterTrash {
     // move to Trash.
     Configuration routerConf = routerContext.getConf();
     FileSystem fs =
-            DFSTestUtil.getFileSystemAs(ugi, routerConf);
+        DFSTestUtil.getFileSystemAs(ugi, routerConf);
     Trash trash = new Trash(fs, routerConf);
     assertTrue(trash.moveToTrash(filePath));
   }
 
   @Test
   public void testTrashPathStructure() throws IOException,
-          URISyntaxException, InterruptedException {
+      URISyntaxException, InterruptedException {
     // Trash path created by dst_path by default.
     deleteToTrashExistMountPoint();
     FileStatus[] fileStatuses = nnFs.listStatus(
-            new Path(TRASH_ROOT + CURRENT + DST_PATH));
+        new Path(TRASH_ROOT + CURRENT + DST_PATH));
     assertEquals(1, fileStatuses.length);
     assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + DST_FILE)));
 
@@ -324,11 +324,11 @@ public class TestRouterTrash {
     tearDown();
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
-            .stateStore()
-            .admin()
-            .rpc()
-            .http()
-            .build();
+        .stateStore()
+        .admin()
+        .rpc()
+        .http()
+        .build();
     conf.set(FS_TRASH_INTERVAL_KEY, "100");
     conf.setBoolean(DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT, true);
     cluster.addRouterOverrides(conf);
@@ -349,7 +349,7 @@ public class TestRouterTrash {
     // Trash path created by mount_point.
     deleteToTrashExistMountPoint();
     fileStatuses = nnFs.listStatus(
-            new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
+        new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
     assertEquals(1, fileStatuses.length);
     assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + FILE)));
   }
