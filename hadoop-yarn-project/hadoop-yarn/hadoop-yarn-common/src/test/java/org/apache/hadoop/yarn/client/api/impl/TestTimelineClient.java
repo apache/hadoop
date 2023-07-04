@@ -28,6 +28,7 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
 
+import net.jodah.failsafe.FailsafeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -228,12 +229,7 @@ public class TestTimelineClient {
       fail("Exception expected! "
           + "Timeline server should be off to run this test. ");
     } catch (RuntimeException ce) {
-      assertTrue(
-          ce.getMessage().contains("Connection retries limit exceeded"),
-          "Handler exception for reason other than retry: " + ce.getMessage());
-      // we would expect this exception here, check if the client has retried
-//      assertTrue(client.connector.connectionRetry.getRetired(),
-//          "Retry filter didn't perform any retries! ");
+      assertException(ce);
     }
   }
 
@@ -268,7 +264,7 @@ public class TestTimelineClient {
             UserGroupInformation.getCurrentUser().getShortUserName());
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertException(ce);
       }
 
       try {
@@ -283,7 +279,7 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertException(ce);
       }
 
       try {
@@ -298,7 +294,7 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertException(ce);
       }
 
       // Test DelegationTokenOperationsRetry on SocketTimeoutException
@@ -313,7 +309,7 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(clientFake, ce);
+        assertException(ce);
       }
     } finally {
       client.stop();
@@ -365,12 +361,11 @@ public class TestTimelineClient {
         + "Timeline server should be off to run this test.");
   }
 
-  private void assertException(TimelineClientImpl client, RuntimeException ce) {
-    assertTrue(ce.getMessage().contains("Connection retries limit exceeded"),
-        "Handler exception for reason other than retry: " + ce.toString());
-    // we would expect this exception here, check if the client has retried
-//    assertTrue(client.connector.connectionRetry.getRetired(),
-//        "Retry filter didn't perform any retries! ");
+  private void assertException(RuntimeException ce) {
+    assertTrue((ce instanceof FailsafeException || ce instanceof ProcessingException) && (
+            ce.getCause() instanceof ConnectException
+                || ce.getCause() instanceof SocketTimeoutException),
+        "Cause should be of type connection exception");
   }
 
   public static Response mockEntityClientResponse(TimelineWriter spyTimelineWriter,
