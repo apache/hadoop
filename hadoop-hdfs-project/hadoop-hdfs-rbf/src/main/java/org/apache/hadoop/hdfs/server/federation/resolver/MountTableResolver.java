@@ -483,6 +483,7 @@ public class MountTableResolver
         this.getLocCacheAccess().increment();
       }
       if (isTrashPath(path)) {
+<<<<<<< HEAD
         boolean trashMP = conf.getBoolean(
             DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
             DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
@@ -490,6 +491,15 @@ public class MountTableResolver
         for (RemoteLocation remoteLocation : res.getDestinations()) {
           remoteLocations.add(new RemoteLocation(remoteLocation,
               trashMP ? path : getTrashRoot() + getTrashDate(path) + remoteLocation.getDest()));
+=======
+        boolean useMountPointCreateTrashPath = conf.getBoolean(
+                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
+                DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
+        List<RemoteLocation> remoteLocations = new ArrayList<>();
+        for (RemoteLocation remoteLocation : res.getDestinations()) {
+          remoteLocations.add(new RemoteLocation(remoteLocation,
+                  useMountPointCreateTrashPath ? path : getTrashRoot() + "/Current" + remoteLocation.getDest()));
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
         }
         return new PathLocation(path, remoteLocations,
             res.getDestinationOrder());

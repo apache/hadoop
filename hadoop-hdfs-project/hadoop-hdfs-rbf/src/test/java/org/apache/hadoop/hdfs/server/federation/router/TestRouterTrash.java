@@ -280,16 +280,26 @@ public class TestRouterTrash {
   }
 
   private void deleteToTrashExistMountPoint() throws IOException,
+<<<<<<< HEAD
       URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
         Collections.singletonMap(ns0, DST_PATH));
+=======
+          URISyntaxException, InterruptedException {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+            Collections.singletonMap(ns0, DST_PATH));
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     assertTrue(addMountTable(addEntry));
 
     // current user client
     DFSClient client = nnContext.getClient();
     client.setOwner("/", TEST_USER, TEST_USER);
     UserGroupInformation ugi = UserGroupInformation.
+<<<<<<< HEAD
         createRemoteUser(TEST_USER);
+=======
+            createRemoteUser(TEST_USER);
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     // test user client
     client = nnContext.getClient(ugi);
     client.mkdirs(DST_PATH, new FsPermission("777"), true);
@@ -305,18 +315,30 @@ public class TestRouterTrash {
     // move to Trash.
     Configuration routerConf = routerContext.getConf();
     FileSystem fs =
+<<<<<<< HEAD
         DFSTestUtil.getFileSystemAs(ugi, routerConf);
+=======
+            DFSTestUtil.getFileSystemAs(ugi, routerConf);
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     Trash trash = new Trash(fs, routerConf);
     assertTrue(trash.moveToTrash(filePath));
   }
 
   @Test
   public void testTrashPathStructure() throws IOException,
+<<<<<<< HEAD
       URISyntaxException, InterruptedException {
     // Trash path created by dst_path by default.
     deleteToTrashExistMountPoint();
     FileStatus[] fileStatuses = nnFs.listStatus(
         new Path(TRASH_ROOT + CURRENT + DST_PATH));
+=======
+          URISyntaxException, InterruptedException {
+    // Trash path created by dst_path by default.
+    deleteToTrashExistMountPoint();
+    FileStatus[] fileStatuses = nnFs.listStatus(
+            new Path(TRASH_ROOT + CURRENT + DST_PATH));
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     assertEquals(1, fileStatuses.length);
     assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + DST_FILE)));
 
@@ -324,11 +346,19 @@ public class TestRouterTrash {
     tearDown();
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
+<<<<<<< HEAD
         .stateStore()
         .admin()
         .rpc()
         .http()
         .build();
+=======
+            .stateStore()
+            .admin()
+            .rpc()
+            .http()
+            .build();
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     conf.set(FS_TRASH_INTERVAL_KEY, "100");
     conf.setBoolean(DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT, true);
     cluster.addRouterOverrides(conf);
@@ -349,7 +379,11 @@ public class TestRouterTrash {
     // Trash path created by mount_point.
     deleteToTrashExistMountPoint();
     fileStatuses = nnFs.listStatus(
+<<<<<<< HEAD
         new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
+=======
+            new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
+>>>>>>> 08d7a689c7852668f1546b49d01d4f2925b86940
     assertEquals(1, fileStatuses.length);
     assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + FILE)));
   }
