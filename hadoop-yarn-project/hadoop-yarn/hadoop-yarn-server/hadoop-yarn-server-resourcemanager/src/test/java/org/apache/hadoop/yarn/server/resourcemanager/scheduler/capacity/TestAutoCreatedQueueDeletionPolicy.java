@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,6 +75,13 @@ public class TestAutoCreatedQueueDeletionPolicy
     csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   @Test

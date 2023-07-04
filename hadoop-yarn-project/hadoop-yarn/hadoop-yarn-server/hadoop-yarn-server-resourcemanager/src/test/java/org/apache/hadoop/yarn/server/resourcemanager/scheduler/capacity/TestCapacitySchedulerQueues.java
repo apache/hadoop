@@ -137,6 +137,7 @@ public class TestCapacitySchedulerQueues {
         null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM(), null));
+    cs.stop();
   }
 
   @Test
@@ -252,6 +253,7 @@ public class TestCapacitySchedulerQueues {
       assertTrue("max allocation exception",
           e.getCause().toString().contains("not be decreased"));
     }
+    cs.stop();
   }
 
   @Test
@@ -286,6 +288,7 @@ public class TestCapacitySchedulerQueues {
       assertTrue("maximum allocation exception",
           e.getCause().getMessage().contains("maximum allocation"));
     }
+    cs.stop();
   }
 
   @Test
@@ -356,6 +359,7 @@ public class TestCapacitySchedulerQueues {
     assertEquals("cluster max capability vcores",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability().getVirtualCores());
+    cs.stop();
   }
 
   @Test
@@ -400,6 +404,7 @@ public class TestCapacitySchedulerQueues {
       assertTrue("max allocation exception",
           e.getCause().toString().contains("not be decreased"));
     }
+    cs.stop();
   }
 
   @Test
@@ -465,6 +470,7 @@ public class TestCapacitySchedulerQueues {
         queueB2.getMaximumAllocation().getMemorySize());
     assertEquals("queue B2 max vcores allocation", 12,
         queueB2.getMaximumAllocation().getVirtualCores());
+    cs.stop();
   }
 
   /**
@@ -701,6 +707,7 @@ public class TestCapacitySchedulerQueues {
     Assert.assertTrue(b1 instanceof AbstractParentQueue);
     Assert.assertEquals(QueueState.RUNNING, b1.getState());
     Assert.assertTrue(!b1.getChildQueues().isEmpty());
+    cs.stop();
   }
 
   @Test
@@ -813,6 +820,7 @@ public class TestCapacitySchedulerQueues {
     assertEquals("max allocation vcores A2",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         queueA2.getMaximumAllocation().getVirtualCores());
+    cs.stop();
   }
 
   @Test
@@ -866,5 +874,6 @@ public class TestCapacitySchedulerQueues {
       assertTrue("maximum allocation exception",
           e.getCause().getMessage().contains("maximum allocation"));
     }
+    cs.stop();
   }
 }

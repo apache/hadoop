@@ -337,6 +337,7 @@ public class TestAbsoluteResourceConfiguration {
     Assert.assertTrue(String.format("Summarized resource %s of all children is greater than " +
         "their parent's %s", res, resParent),
         Resources.lessThan(cs.getResourceCalculator(), cs.getClusterResource(), res, resParent));
+    rm.stop();
   }
 
   @Test
@@ -603,6 +604,7 @@ public class TestAbsoluteResourceConfiguration {
           + "<memory:51200, vCores:5> is less than to its children:"
           + "<memory:102400, vCores:10> for queue:queueA", e.getMessage());
     }
+    rm.stop();
   }
 
   @Test
@@ -654,6 +656,7 @@ public class TestAbsoluteResourceConfiguration {
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }
+    rm.stop();
   }
 
   @Test
@@ -690,6 +693,7 @@ public class TestAbsoluteResourceConfiguration {
     Assert.assertTrue("Children of root have more resource than overall cluster resource",
         Resources.greaterThan(cs.getResourceCalculator(), cs.getClusterResource(),
             root.getEffectiveCapacity(X_LABEL), childrenResource));
+    rm.stop();
   }
 
   @Test

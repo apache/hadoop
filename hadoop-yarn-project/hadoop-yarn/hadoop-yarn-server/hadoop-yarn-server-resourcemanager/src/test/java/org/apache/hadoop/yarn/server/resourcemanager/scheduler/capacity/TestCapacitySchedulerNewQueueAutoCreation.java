@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,6 +100,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   protected void startScheduler() throws Exception {

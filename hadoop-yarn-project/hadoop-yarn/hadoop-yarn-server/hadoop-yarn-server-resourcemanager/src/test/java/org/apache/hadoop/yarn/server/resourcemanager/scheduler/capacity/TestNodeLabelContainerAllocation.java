@@ -1119,6 +1119,7 @@ public class TestNodeLabelContainerAllocation {
         RMNodeLabelsManager.NO_LABEL);
     checkNodePartitionOfRequestedPriority(app.getAppSchedulingInfo(), 2,
         RMNodeLabelsManager.NO_LABEL);
+    rm1.stop();
   }
 
   private void checkNodePartitionOfRequestedPriority(AppSchedulingInfo info,
@@ -2321,6 +2322,7 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am4.getApplicationAttemptId()));
 
+    rm.stop();
   }
 
   @Test
@@ -2410,6 +2412,7 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 1);
     checkNumOfContainersInAnAppOnGivenNode(2, nm1.getNodeId(),
         cs.getApplicationAttempt(am1.getApplicationAttemptId()));
+    rm.stop();
   }
 
   @Test
@@ -2522,6 +2525,7 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 10);
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am2.getApplicationAttemptId()));
+    rm.stop();
   }
 
   @Test
