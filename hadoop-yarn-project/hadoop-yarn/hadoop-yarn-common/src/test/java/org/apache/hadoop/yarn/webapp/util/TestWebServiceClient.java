@@ -22,6 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 
+import javax.ws.rs.core.Response;
+
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -92,9 +94,8 @@ public class TestWebServiceClient {
     URL u = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
     WebServiceClient.initialize(sslConf);
     WebServiceClient client = WebServiceClient.getWebServiceClient();
-    HttpURLConnection conn = client.getHttpURLConnectionFactory()
-        .getHttpURLConnection(u);
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Response response = client.createClient().target(u.toURI()).request().get();
+    assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
     WebServiceClient.destroy();
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));

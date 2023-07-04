@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.net.URI;
 
+import javax.ws.rs.client.Client;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -32,8 +34,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-
-import com.sun.jersey.api.client.Client;
 
 /**
  * A simple writer class for storing Timeline data into Leveldb store.

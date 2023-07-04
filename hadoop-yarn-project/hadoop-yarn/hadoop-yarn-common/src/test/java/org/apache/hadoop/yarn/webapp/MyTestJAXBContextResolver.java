@@ -23,33 +23,30 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
-import javax.xml.bind.JAXBContext;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
 
 import org.apache.hadoop.yarn.webapp.MyTestWebService.MyInfo;
 
 @Singleton
 @Provider
-public class MyTestJAXBContextResolver implements ContextResolver<JAXBContext> {
+public class MyTestJAXBContextResolver implements ContextResolver<ObjectWriter> {
 
-  private JAXBContext context;
+  private ObjectWriter context;
   private final Set<Class> types;
 
   // you have to specify all the dao classes here
   private final Class[] cTypes = { MyInfo.class };
 
-  public MyTestJAXBContextResolver() throws Exception {
-    this.types = new HashSet<Class>(Arrays.asList(cTypes));
-    this.context =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
-          .build(), cTypes);
+  public MyTestJAXBContextResolver() {
+    this.types = new HashSet<>(Arrays.asList(cTypes));
+    this.context = new ObjectMapper().writerFor(MyInfo.class);
   }
 
   @Override
-  public JAXBContext getContext(Class<?> objectType) {
+  public ObjectWriter getContext(Class<?> objectType) {
     return (types.contains(objectType)) ? context : null;
   }
 }

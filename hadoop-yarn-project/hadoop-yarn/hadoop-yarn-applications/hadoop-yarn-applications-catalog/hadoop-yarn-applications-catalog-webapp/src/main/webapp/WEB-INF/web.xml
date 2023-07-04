@@ -79,10 +79,6 @@
         <param-name>jersey.config.server.provider.packages</param-name>
         <param-value>org.apache.hadoop.yarn.appcatalog.controller;com.wordnik.swagger.jaxrs.listing;com.wordnik.swagger.jaxrs.json</param-value>
       </init-param>
-      <init-param>
-        <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
-        <param-value>true</param-value>
-      </init-param>
       <load-on-startup>1</load-on-startup>
     </servlet>
 

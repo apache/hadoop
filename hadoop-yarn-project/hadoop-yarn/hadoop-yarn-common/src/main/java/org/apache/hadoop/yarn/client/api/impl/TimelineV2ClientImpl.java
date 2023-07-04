@@ -24,8 +24,9 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,8 +35,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CancellationException;
 
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,10 +63,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 /**
  * Implementation of timeline v2 client interface.
@@ -288,24 +290,26 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     }
   }
 
-  private ClientResponse doPutObjects(URI base, String path,
-      MultivaluedMap<String, String> params, Object obj) {
-    return connector.getClient().resource(base).path(path).queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class, obj);
+  private Response doPutObjects(URI base, String path,
+      MultivaluedMap<String, String> params,
+      Object obj) {
+    WebTarget webTarget = connector.getClient()
+        .target(base)
+        .path(path);
+    for (Map.Entry<String, List<String>> param : params.entrySet()) {
+      webTarget = webTarget.queryParam(param.getKey(), param.getValue());
+    }
+    return webTarget.request(MediaType.APPLICATION_JSON)
+        .put(Entity.json(obj), Response.class);
   }
 
   protected void putObjects(URI base, String path,
       MultivaluedMap<String, String> params, Object obj)
       throws IOException, YarnException {
-    ClientResponse resp = null;
+    Response resp;
     try {
-      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
-        @Override
-        public ClientResponse run() throws Exception {
-          return doPutObjects(base, path, params, obj);
-        }
-      });
+      resp = authUgi.doAs(
+          (PrivilegedExceptionAction<Response>) () -> doPutObjects(base, path, params, obj));
     } catch (UndeclaredThrowableException ue) {
       Throwable cause = ue.getCause();
       if (cause instanceof IOException) {
@@ -324,24 +328,19 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
       String msg = "Error getting HTTP response from the timeline server.";
       LOG.error(msg);
       throw new YarnException(msg);
-    } else if (resp.getStatusInfo().getStatusCode()
-            == ClientResponse.Status.OK.getStatusCode()) {
+    } else if (resp.getStatusInfo().getStatusCode() == Response.Status.OK.getStatusCode()) {
       try {
         resp.close();
-      } catch(ClientHandlerException che) {
-        LOG.warn("Error closing the HTTP response's inputstream. ", che);
+      } catch (ProcessingException e) {
+        LOG.warn("Error closing the HTTP response's inputstream. ", e);
       }
     } else {
       String msg = "";
       try {
-        String stringType = resp.getEntity(String.class);
+        String stringType = resp.readEntity(String.class);
         msg = "Server response:\n" + stringType;
-      } catch (ClientHandlerException | UniformInterfaceException chuie) {
-        msg = "Error getting entity from the HTTP response."
-                + chuie.getLocalizedMessage();
-      } catch (Throwable t) {
-        msg = "Error getting entity from the HTTP response."
-                + t.getLocalizedMessage();
+      } catch (Throwable e) {
+        msg = "Error getting entity from the HTTP response." + e.getLocalizedMessage();
       } finally {
         msg = "Response from the timeline server is not successful"
                   + ", HTTP error code: " + resp.getStatus()
@@ -394,16 +393,14 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
 
     EntitiesHolder(final TimelineEntities entities, final boolean isSync,
         final boolean subappwrite) {
-      super(new Callable<Void>() {
-        // publishEntities()
-        public Void call() throws Exception {
-          MultivaluedMap<String, String> params = new MultivaluedMapImpl();
-          params.add("appid", getContextAppId().toString());
-          params.add("async", Boolean.toString(!isSync));
-          params.add("subappwrite", Boolean.toString(subappwrite));
-          putObjects("entities", params, entities);
-          return null;
-        }
+      // publishEntities()
+      super(() -> {
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("appid", getContextAppId().toString());
+        params.add("async", Boolean.toString(!isSync));
+        params.add("subappwrite", Boolean.toString(subappwrite));
+        putObjects("entities", params, entities);
+        return null;
       });
       this.entities = entities;
       this.isSync = isSync;

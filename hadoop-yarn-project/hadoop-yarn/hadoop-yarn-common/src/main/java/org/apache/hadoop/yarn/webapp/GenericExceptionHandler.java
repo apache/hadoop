@@ -58,8 +58,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     // Don't catch this as filter forward on 404
     // (ServletContainer.FEATURE_FILTER_FORWARD_ON_404)
     // won't work and the web UI won't work!
-    if (e instanceof com.sun.jersey.api.NotFoundException) {
-      return ((com.sun.jersey.api.NotFoundException) e).getResponse();
+    if (e instanceof javax.ws.rs.NotFoundException) {
+      return ((javax.ws.rs.NotFoundException) e).getResponse();
     }
     // clear content type
     response.setContentType(null);

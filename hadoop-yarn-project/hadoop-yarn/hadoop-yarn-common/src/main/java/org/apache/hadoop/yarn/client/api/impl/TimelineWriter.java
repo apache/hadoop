@@ -24,7 +24,11 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +45,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 
 /**
  * Base writer class to write the Timeline data.
@@ -89,8 +90,8 @@ public abstract class TimelineWriter implements Flushable {
       }
       entitiesContainer.addEntity(entity);
     }
-    ClientResponse resp = doPosting(entitiesContainer, null);
-    return resp.getEntity(TimelinePutResponse.class);
+    Response resp = doPosting(entitiesContainer, null);
+    return resp.readEntity(TimelinePutResponse.class);
   }
 
   public void putDomain(TimelineDomain domain) throws IOException,
@@ -105,16 +106,11 @@ public abstract class TimelineWriter implements Flushable {
   public abstract void putDomain(ApplicationAttemptId appAttemptId,
       TimelineDomain domain) throws IOException, YarnException;
 
-  private ClientResponse doPosting(final Object obj, final String path)
+  private Response doPosting(final Object obj, final String path)
       throws IOException, YarnException {
-    ClientResponse resp;
+    Response resp;
     try {
-      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
-        @Override
-        public ClientResponse run() throws Exception {
-          return doPostingObject(obj, path);
-        }
-      });
+      resp = authUgi.doAs((PrivilegedExceptionAction<Response>) () -> doPostingObject(obj, path));
     } catch (UndeclaredThrowableException e) {
       Throwable cause = e.getCause();
       if (cause instanceof IOException) {
@@ -125,16 +121,15 @@ public abstract class TimelineWriter implements Flushable {
     } catch (InterruptedException ie) {
       throw (IOException)new InterruptedIOException().initCause(ie);
     }
-    if (resp == null ||
-        resp.getStatusInfo().getStatusCode()
-            != ClientResponse.Status.OK.getStatusCode()) {
+    if (resp == null
+        || resp.getStatusInfo().getStatusCode() != Response.Status.OK.getStatusCode()) {
       String msg =
           "Failed to get the response from the timeline server.";
       LOG.error(msg);
       if (resp != null) {
         msg += " HTTP error code: " + resp.getStatus();
-        LOG.debug("HTTP error code: {} Server response : \n{}",
-            resp.getStatus(), resp.getEntity(String.class));
+        LOG.debug("HTTP error code: {} Server response : \n{}", resp.getStatus(),
+            resp.readEntity(String.class));
       }
       throw new YarnException(msg);
     }
@@ -143,20 +138,18 @@ public abstract class TimelineWriter implements Flushable {
 
   @Private
   @VisibleForTesting
-  public ClientResponse doPostingObject(Object object, String path) {
-    WebResource webResource = client.resource(resURI);
+  public Response doPostingObject(Object object, String path) {
+    WebTarget webTarget = client.target(resURI);
     if (path == null) {
       LOG.debug("POST to {}", resURI);
-      ClientResponse r = webResource.accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .post(ClientResponse.class, object);
+      Response r = webTarget.request(MediaType.APPLICATION_JSON)
+          .post(Entity.json(object), Response.class);
       r.bufferEntity();
       return r;
     } else if (path.equals("domain")) {
       LOG.debug("PUT to {}/{}", resURI, path);
-      ClientResponse r = webResource.path(path).accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class, object);
+      Response r = webTarget.path(path).request(MediaType.APPLICATION_JSON)
+          .put(Entity.json(object), Response.class);
       r.bufferEntity();
       return r;
     } else {
