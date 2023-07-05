@@ -105,7 +105,6 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     // the stack frame, it's variables become anonymous, this creates higher
     // chance of getting Garbage collected.
     try (AbfsOutputStream out = getStream()) {
-
       // Every 5KB block written is flushed and a GC is hinted, if the
       // executor service is shut down in between, the test should fail
       // indicating premature shutdown while writing.
