@@ -141,7 +141,9 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateInitialQueueEntitlement(parentQueue, USER0,
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
-      // 6553/16384=0.3999633789 vs 0.4
+      // The new queue calculation mode works from the effective resources
+      // so the absoluteCapacity and the maxApplications differs a little
+      // bit: 6553/16384=0.3999633789 vs 0.4
       final int maxApps = cs.getConfiguration().isLegacyQueueMode() ? 4000 : 3999;
       validateUserAndAppLimits(autoCreatedLeafQueue, maxApps, maxApps);
       validateContainerLimits(autoCreatedLeafQueue, 6, 10240);
@@ -942,7 +944,9 @@ public class TestCapacitySchedulerAutoQueueCreation
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
           USER1);
       validateCapacities(user0Queue, 0.5f, 0.15f, 1.0f, 0.5f);
-      // 6553/16384=0.3999633789 vs 0.4
+      // The new queue calculation mode works from the effective resources
+      // so the absoluteCapacity and the maxApplications differs a little
+      // bit: 6553/16384=0.3999633789 vs 0.4
       final int maxApps = cs.getConfiguration().isLegacyQueueMode() ? 4000 : 3999;
       validateUserAndAppLimits(user0Queue, maxApps, maxApps);
 
