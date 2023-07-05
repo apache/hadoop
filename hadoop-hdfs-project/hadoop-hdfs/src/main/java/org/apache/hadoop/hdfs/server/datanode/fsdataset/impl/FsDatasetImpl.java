@@ -284,7 +284,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long maxDirScannerNotifyCount;
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
-  
+
+  private long lastDirScannerRunTime;
+
   /**
    * An FSDataset has a directory where it loads its data files.
    */
@@ -709,6 +711,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     return lastVolumeFailureDate;
+  }
+
+  @Override
+  public long getLastDirectoryScannerRunTime() {
+    return this.lastDirScannerRunTime;
   }
 
   @Override // FSDatasetMBean
@@ -3810,6 +3817,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return volumes.getVolumes();
+  }
+
+  @Override
+  public void updateLastDirScannerRunTime(long time) {
+    this.lastDirScannerRunTime = time;
   }
 }
 

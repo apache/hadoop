@@ -421,6 +421,11 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
     return 0;
   }
 
+  @Override
+  public long getLastDirectoryScannerRunTime() {
+    return 0L;
+  }
+
   /**
    * Get metrics from the metrics source
    *
@@ -477,4 +482,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
+
+  @Override
+  public void updateLastDirScannerRunTime(long time) {}
 }
