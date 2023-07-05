@@ -463,7 +463,8 @@ public abstract class AbstractCSQueue implements CSQueue {
           queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
               .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
         }
-        // Default to weight 1
+        // For dynamic queue, we will set weight to 1 every time, because it
+        // is possible new labels added to the parent.
         for (String label : parentNodeLabels) {
           float weightByLabel = queueContext.getConfiguration()
               .getLabeledQueueWeight(queuePath, label);
