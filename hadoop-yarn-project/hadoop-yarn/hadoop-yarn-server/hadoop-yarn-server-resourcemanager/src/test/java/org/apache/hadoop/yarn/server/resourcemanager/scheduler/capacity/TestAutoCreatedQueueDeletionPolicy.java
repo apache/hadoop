@@ -71,7 +71,6 @@ public class TestAutoCreatedQueueDeletionPolicy
     csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
     csConf.setAutoQueueCreationV2Enabled("root", true);
     csConf.setAutoQueueCreationV2Enabled("root.a", true);
-    csConf.setAutoQueueCreationV2Enabled("root.e", true);
     csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);

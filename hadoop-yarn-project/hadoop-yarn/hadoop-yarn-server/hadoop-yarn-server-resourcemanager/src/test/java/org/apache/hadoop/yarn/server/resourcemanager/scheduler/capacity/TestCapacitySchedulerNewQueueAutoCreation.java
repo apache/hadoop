@@ -79,8 +79,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   /*
   Create the following structure:
            root
-        /       \
-      a          b
+        /   |   \
+      a     b    e
     /
   a1
    */
