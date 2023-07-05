@@ -4058,6 +4058,20 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  // AMRMProxy Register UAM Retry-Num
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.retry-count";
+  // Register a UAM , we will retry a maximum of 3 times.
+  public static final int DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      3;
+
+  // AMRMProxy Register UAM Retry Interval
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.interval";
+  // Retry Interval, default 100 ms
+  public static final long DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      TimeUnit.MILLISECONDS.toMillis(100);
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
