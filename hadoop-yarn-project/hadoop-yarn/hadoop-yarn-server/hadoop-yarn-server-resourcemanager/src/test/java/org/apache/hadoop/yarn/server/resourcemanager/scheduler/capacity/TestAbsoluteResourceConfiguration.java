@@ -573,11 +573,11 @@ public class TestAbsoluteResourceConfiguration {
     try {
       cs.reinitialize(csConf, rm.getRMContext());
       if (csConf.isLegacyQueueMode()) {
-        Assert.fail();
+        Assert.fail("legacy queue mode does not support mixed queue modes");
       }
     } catch (IOException e) {
       if (!csConf.isLegacyQueueMode()) {
-        Assert.fail();
+        Assert.fail("new queue mode supports mixed queue modes");
       }
       Assert.assertTrue(e.getMessage().contains("Failed to re-init queues"));
     }
@@ -594,11 +594,11 @@ public class TestAbsoluteResourceConfiguration {
     try {
       cs.reinitialize(csConf1, rm.getRMContext());
       if (csConf.isLegacyQueueMode()) {
-        Assert.fail();
+        Assert.fail("legacy queue mode enforces that parent.capacity >= sum(children.capacity)");
       }
     } catch (IOException e) {
       if (!csConf.isLegacyQueueMode()) {
-        Assert.fail();
+        Assert.fail("new queue mode allows that parent.capacity >= sum(children.capacity)");
       }
       Assert.assertEquals("Failed to re-init queues : Parent Queues capacity: "
           + "<memory:51200, vCores:5> is less than to its children:"
