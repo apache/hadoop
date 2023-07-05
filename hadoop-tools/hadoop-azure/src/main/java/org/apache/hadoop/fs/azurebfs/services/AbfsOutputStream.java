@@ -25,7 +25,6 @@ import java.net.HttpURLConnection;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
-import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
