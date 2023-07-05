@@ -389,7 +389,7 @@ public abstract class AbstractCSQueue implements CSQueue {
               this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
               QueueCapacityVector.newInstance());
 
-      // Preserving the capacities set by Entitlements
+      // Preserving the capacities set by Entitlements, see: ReservationSystem.md
       if (this instanceof ReservationQueue ||
           this instanceof PlanQueue) {
         for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
