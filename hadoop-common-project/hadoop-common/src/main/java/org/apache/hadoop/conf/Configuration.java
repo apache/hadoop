@@ -2487,7 +2487,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Try and resolve the provided element name as a credential provider
    * alias from the given provider path.
    * @param name alias of the provisioned credential
-   * @param name credProviderPath path for credential provider
+   * @param credProviderPath path for credential provider
    * @return password or null if not found
    * @throws IOException when error in fetching password
    */

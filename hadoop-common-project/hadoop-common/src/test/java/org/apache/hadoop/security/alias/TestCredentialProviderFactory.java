@@ -20,7 +20,6 @@ package org.apache.hadoop.security.alias;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -263,15 +262,15 @@ public class TestCredentialProviderFactory {
   @Test
   public void testCustomKeyProviderProperty() throws Exception {
     Configuration conf = new Configuration();
-    final String DEFAULT_CREDENTIAL_KEY = "default.credential.key";
-    final char[] DEFAULT_CREDENTIAL_PASSWORD = { 'p', 'a', 's', 's', 'w', 'o',
-        'r', 'd', '1', '2', '3' };
+    final String defaultCredentialKey = "default.credential.key";
+    final char[] defaultCredentialPassword = {'p', 'a', 's', 's', 'w', 'o',
+        'r', 'd', '1', '2', '3'};
 
-    final String CUSTOM_CREDENTIAL_PROVIDER_KEY =
+    final String customCredentialProviderKey =
         "fs.cloud.storage.account.key.provider.path";
-    final String CUSTOM_CREDENTIAL_KEY = "custom.credential.key";
-    final char[] CUSTOM_CREDENTIAL_PASSWORD = { 'c', 'u', 's', 't', 'o', 'm', '.',
-        'p', 'a', 's', 's', 'w', 'o', 'r', 'd' };
+    final String customCredentialKey = "custom.credential.key";
+    final char[] customCredentialPassword = {'c', 'u', 's', 't', 'o', 'm', '.',
+        'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
 
     String defaultJksName = "default.jks";
     String customJksName = "custom.jks";
@@ -279,9 +278,9 @@ public class TestCredentialProviderFactory {
       // Set provider in default credential path property
       createCredentialProviderPath(conf, defaultJksName,
           CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
-          DEFAULT_CREDENTIAL_KEY, DEFAULT_CREDENTIAL_PASSWORD);
-      assertThat(conf.getPassword(DEFAULT_CREDENTIAL_KEY))
-          .isEqualTo(DEFAULT_CREDENTIAL_PASSWORD);
+          defaultCredentialKey, defaultCredentialPassword);
+      assertThat(conf.getPassword(defaultCredentialKey))
+          .isEqualTo(defaultCredentialPassword);
     } finally {
       // Clean jks files
       File defaultJks = new File(tmpDir, defaultJksName);
@@ -293,12 +292,12 @@ public class TestCredentialProviderFactory {
     try {
       // Set provider in custom credential path property
       createCredentialProviderPath(conf, customJksName,
-          CUSTOM_CREDENTIAL_PROVIDER_KEY, CUSTOM_CREDENTIAL_KEY,
-          CUSTOM_CREDENTIAL_PASSWORD);
+          customCredentialProviderKey, customCredentialKey,
+          customCredentialPassword);
 
-      assertThat(conf.getPasswordFromCredentialProvider(CUSTOM_CREDENTIAL_KEY,
-          conf.get(CUSTOM_CREDENTIAL_PROVIDER_KEY)))
-              .isEqualTo(CUSTOM_CREDENTIAL_PASSWORD);
+      assertThat(conf.getPasswordFromCredentialProvider(customCredentialKey,
+          conf.get(customCredentialProviderKey)))
+              .isEqualTo(customCredentialPassword);
     } finally {
       // Clean jks files
       File defaultJks = new File(tmpDir, customJksName);

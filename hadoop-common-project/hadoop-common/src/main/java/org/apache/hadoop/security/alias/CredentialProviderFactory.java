@@ -114,9 +114,10 @@ public abstract class CredentialProviderFactory {
   /**
    * Get CredentialProvider for hive provider path.
    *
-   * @param conf configuration object
+   * @param conf configuration
    * @param credProviderPath provider path
-   * @return credProviderPath object
+   * @return CredentialProvider
+   * @throws IOException
    */
   public static CredentialProvider getProvider(Configuration conf,
       String credProviderPath) throws IOException {
