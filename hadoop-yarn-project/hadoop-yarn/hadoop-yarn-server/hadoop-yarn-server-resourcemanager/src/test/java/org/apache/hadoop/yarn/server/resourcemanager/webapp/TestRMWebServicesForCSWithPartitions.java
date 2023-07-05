@@ -103,6 +103,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
   private static final String DOT = ".";
+  private static final double EPSILON = 1e-1f;
+
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
@@ -571,20 +573,20 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) {
     assertEquals("capacity doesn't match", capacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), 1e-1f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), 1e-1f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), 1e-1f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteCapacity"),
-        1e-1f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteUsedCapacity"),
-        1e-1f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteMaxCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteMaxCapacity"),
-        1e-1f);
+        EPSILON);
   }
 
   private void verifySchedulerInfoJson(JSONObject json)
@@ -756,13 +758,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float maxCapacity, float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) throws JSONException {
     assertEquals("capacity doesn't match", capacity,
-        (float) partitionCapacityInfoJson.getDouble("capacity"), 1e-1f);
+        (float) partitionCapacityInfoJson.getDouble("capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), 1e-1f);
+        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), 1e-1f);
+        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
-        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), 1e-1f);
+        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteUsedCapacity"),
         1e-3f);
