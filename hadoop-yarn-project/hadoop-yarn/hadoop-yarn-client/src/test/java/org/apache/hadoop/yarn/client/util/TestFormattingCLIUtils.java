@@ -40,6 +40,7 @@ public class TestFormattingCLIUtils {
     FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(titleString)
         .addHeaders(headerStrings);
     DecimalFormat df = new DecimalFormat("#.00");
+
     formattingCLIUtils.addLine("queueA", "root.queueA",
         "RUNNING", df.format(0.4 * 100) + "%",
         df.format(0.5 * 100) + "%",
