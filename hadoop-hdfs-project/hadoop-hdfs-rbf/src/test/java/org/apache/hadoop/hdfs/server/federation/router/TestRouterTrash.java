@@ -46,6 +46,7 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
@@ -70,6 +71,8 @@ public class TestRouterTrash {
   private static String ns1;
   private static final String MOUNT_POINT = "/home/data";
   private static final String FILE = MOUNT_POINT + "/file1";
+  private static final String DST_PATH = "/home/dst_data";
+  private static final String DST_FILE = DST_PATH + "/file1";
   private static final String TRASH_ROOT = "/user/" + TEST_USER + "/.Trash";
   private static final String CURRENT = "/Current";
 
@@ -274,6 +277,81 @@ public class TestRouterTrash {
     fileStatuses = nnFs.listStatus(
         new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
     assertEquals(2, fileStatuses.length);
+  }
+
+  private void deleteToTrashExistMountPoint() throws IOException,
+      URISyntaxException, InterruptedException {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns0, DST_PATH));
+    assertTrue(addMountTable(addEntry));
+
+    // current user client
+    DFSClient client = nnContext.getClient();
+    client.setOwner("/", TEST_USER, TEST_USER);
+    UserGroupInformation ugi = UserGroupInformation.
+        createRemoteUser(TEST_USER);
+    // test user client
+    client = nnContext.getClient(ugi);
+    client.mkdirs(DST_PATH, new FsPermission("777"), true);
+    assertTrue(client.exists(DST_PATH));
+    // create test file
+    client.create(DST_FILE, true);
+
+    Path filePath = new Path(FILE);
+    FileStatus[] fileStatuses = routerFs.listStatus(filePath);
+    assertEquals(1, fileStatuses.length);
+    assertEquals(TEST_USER, fileStatuses[0].getOwner());
+
+    // move to Trash.
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs =
+        DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(filePath));
+  }
+
+  @Test
+  public void testTrashPathStructure() throws IOException,
+      URISyntaxException, InterruptedException {
+    // Trash path created by dst_path by default.
+    deleteToTrashExistMountPoint();
+    FileStatus[] fileStatuses = nnFs.listStatus(
+        new Path(TRASH_ROOT + CURRENT + DST_PATH));
+    assertEquals(1, fileStatuses.length);
+    assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + DST_FILE)));
+
+    // Re-build and start a federated cluster with dfs.federation.router.trash-path.created-by.mount-point=true.
+    tearDown();
+    cluster = new StateStoreDFSCluster(false, 2);
+    Configuration conf = new RouterConfigBuilder()
+        .stateStore()
+        .admin()
+        .rpc()
+        .http()
+        .build();
+    conf.set(FS_TRASH_INTERVAL_KEY, "100");
+    conf.setBoolean(DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT, true);
+    cluster.addRouterOverrides(conf);
+    cluster.startCluster();
+    cluster.startRouters();
+    cluster.waitClusterUp();
+
+    ns0 = cluster.getNameservices().get(0);
+    ns1 = cluster.getNameservices().get(1);
+
+    routerContext = cluster.getRandomRouter();
+    routerFs = routerContext.getFileSystem();
+    nnContext = cluster.getNamenode(ns0, null);
+    nnFs = nnContext.getFileSystem();
+    Router router = routerContext.getRouter();
+    mountTable = (MountTableResolver) router.getSubclusterResolver();
+
+    // Trash path created by mount_point.
+    deleteToTrashExistMountPoint();
+    fileStatuses = nnFs.listStatus(
+        new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
+    assertEquals(1, fileStatuses.length);
+    assertTrue(nnFs.exists(new Path(TRASH_ROOT + CURRENT + FILE)));
   }
 
   @Test
