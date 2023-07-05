@@ -157,7 +157,7 @@ if [[ -d "${LIB_DIR}" ]]; then
 
   bundle_native_lib "${ISALBUNDLE}" "isal.lib" "libisal." "${ISALLIB}"
 
-  bundle_native_lib "${PMDKBUNDLE}" "pmdk.lib" "pmdk" "${PMDKLIB}"
+  bundle_native_lib "${PMDKBUNDLE}" "pmdk.lib" "libpmem." "${PMDKLIB}"
 fi
 
 # Windows
