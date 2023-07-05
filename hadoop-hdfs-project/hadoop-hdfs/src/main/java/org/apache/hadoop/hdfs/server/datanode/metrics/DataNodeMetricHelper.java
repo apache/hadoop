@@ -71,8 +71,9 @@ public class DataNodeMetricHelper {
         "blocks failed to cache"), beanClass.getNumBlocksFailedToCache())
       .addGauge(Interns.info("NumBlocksFailedToUnCache", "Datanode number of" +
           " blocks failed in cache eviction"),
-        beanClass.getNumBlocksFailedToUncache());
-
+        beanClass.getNumBlocksFailedToUncache())
+      .addGauge(Interns.info("LastDirectoryScannerRunTime", "Last run time of" +
+          " directory scanner"), beanClass.getLastDirectoryScannerRunTime());
   }
 
 }
