@@ -297,7 +297,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   private CapacitySchedulerConfiguration
       getSchedulerAutoCreatedQueueConfiguration(
-      boolean overrideWithQueueMappings, boolean useFlexibleAQC) throws IOException {
+      boolean overrideWithQueueMappings, boolean useFlexibleAQC) {
     CapacitySchedulerConfiguration schedulerConf =
         new CapacitySchedulerConfiguration(conf);
     if (useFlexibleAQC) {
