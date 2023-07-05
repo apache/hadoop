@@ -235,7 +235,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 |`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
 |`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
-**How to Configure policy-manager ?**
+**How to configure the policy-manager?**
 
 - Router Policy
 
@@ -284,61 +284,37 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 - Policy Manager
 
-  The PolicyManager is providing a combination of RouterPolicy and AMRMPolicy. Currently, We offer six types of PolicyManagers:
-  - HashBroadcastPolicyManager
-    - Policy that routes applications via hashing of their queuename, and broadcast resource requests. This picks a HashBasedRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy:
-    ```xml
+  The PolicyManager is providing a combination of RouterPolicy and AMRMPolicy.
+  
+  We can set policy-manager like this:
+  ```xml
+      <!--
+       We provide 6 PolicyManagers, They have a common prefix: org.apache.hadoop.yarn.server.federation.policies.manager
+       1. HashBroadcastPolicyManager
+       2. HomePolicyManager
+       3. PriorityBroadcastPolicyManager
+       4. RejectAllPolicyManager
+       5. UniformBroadcastPolicyManager
+       6. WeightedLocalityPolicyManager
+      -->
       <property>
          <name>yarn.federation.policy-manager</name>
          <value>org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager</value>
       </property>
-    ```
+  ```
+  
+  - HashBroadcastPolicyManager
+    - Policy that routes applications via hashing of their queuename, and broadcast resource requests. This picks a HashBasedRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
   - HomePolicyManager
     - Policy manager which uses the UniformRandomRouterPolicy for the Router and HomeAMRMProxyPolicy as the AMRMProxy policy to find the RM.
-    - We configure to use this policy:
-    ```xml
-      <property>
-         <name>yarn.federation.policy-manager</name>
-         <value>org.apache.hadoop.yarn.server.federation.policies.manager.HomePolicyManager</value>
-      </property>
-    ```
   - PriorityBroadcastPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a PriorityRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy:
-    ```xml
-      <property>
-         <name>yarn.federation.policy-manager</name>
-         <value>org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager</value>
-      </property>
-    ```
   - RejectAllPolicyManager
     - This policy rejects all requests for both router and amrmproxy routing. This picks a RejectRouterPolicy for the router and a RejectAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy:
-    ```xml
-      <property>
-         <name>yarn.federation.policy-manager</name>
-         <value>org.apache.hadoop.yarn.server.federation.policies.manager.RejectAllPolicyManager</value>
-      </property>
-    ```
   - UniformBroadcastPolicyManager
     - It combines the basic policies: UniformRandomRouterPolicy and BroadcastAMRMProxyPolicy, which are designed to work together and "spread" the load among sub-clusters uniformly. This simple policy might impose heavy load on the RMs and return more containers than a job requested as all requests are (replicated and) broadcasted.
-    - We configure to use this policy:
-    ```xml
-      <property>
-         <name>yarn.federation.policy-manager</name>
-         <value>org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager</value>
-      </property>
-    ```
   - WeightedLocalityPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a LocalityRouterPolicy for the router and a LocalityMulticastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
-    - We configure to use this policy:
-    ```xml
-      <property>
-         <name>yarn.federation.policy-manager</name>
-         <value>org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager</value>
-      </property>
-    ```
 
 ### ON RMs:
 
