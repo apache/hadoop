@@ -51,6 +51,9 @@ import java.util.HashSet;
 
 import java.io.IOException;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assume.assumeThat;
+
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -319,7 +322,10 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
     startScheduler();
-    csConf.setLegacyQueueModeEnabled(true);
+    // If the new queue mode is used it's allowed to
+    // create a new dynamic queue when the sibling is
+    // not in weight mode
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
     csConf.setCapacity("root.a", 50f);
     csConf.setCapacity("root.b", 50f);
     csConf.setCapacity("root.a.a1", 100f);
