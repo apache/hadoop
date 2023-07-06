@@ -496,8 +496,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // Check if Executor Service got shutdown before the writes could be
       // completed.
       if (hasActiveBlockDataToUpload() && executorService.isShutdown()) {
-        throw new IOException("Executor Service closed before writes could be"
-            + " completed.");
+        throw new PathIOException(path, "Executor Service closed before "
+            + "writes could be completed.");
       }
       flushInternal(true);
     } catch (IOException e) {
