@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
@@ -2846,6 +2847,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               LOG.warn("Failed to delete " + diskFile);
             }
           }
+        } else if (BlockIdManager.isStripedBlockID(scanInfo.getBlockId())) {
+          // Two ec blocks with same block group id on one datanode.
+          if (fileIoProvider.delete(vol, diskFile)) {
+            volumeMap.remove(bpid, blockId);
+            LOG.info("Delete duplicated block group EC block {} successfully.",
+                scanInfo.getBlockId());
+            return;
+          }
+          LOG.warn("Failed to delete duplicated ec block {}", diskFile);
         }
       } else {
         // Block refers to a block file that does not exist.

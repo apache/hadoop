@@ -312,7 +312,7 @@ public class BlockIdManager {
    * and the other 60 bits are 1. Group ID is the first 60 bits of any
    * data/parity block id in the same striped block group.
    */
-  static long convertToStripedID(long id) {
+  public static long convertToStripedID(long id) {
     return id & (~HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 
