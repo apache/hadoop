@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -81,7 +82,7 @@ public class TestAutoCreatedQueueDeletionPolicy
             RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        user0AppAttemptId.getApplicationId(), RMAppState.FINISHED);
+        user0AppAttemptId.getApplicationId(), RMAppState.FINISHED, FinalApplicationStatus.FAILED);
     cs.handle(rEvent);
 
     // There are no apps in user0

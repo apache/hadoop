@@ -36,6 +36,7 @@ public class UserMetricsInfo {
   protected int appsRunning;
   protected int appsFailed;
   protected int appsKilled;
+  protected int appsFinalFailed;
   protected int runningContainers;
   protected int pendingContainers;
   protected int reservedContainers;
@@ -67,6 +68,7 @@ public class UserMetricsInfo {
       this.appsRunning = userMetrics.getAppsRunning();
       this.appsFailed = userMetrics.getAppsFailed();
       this.appsKilled = userMetrics.getAppsKilled();
+      this.appsFinalFailed = userMetrics.getAppsFinalFailed();
 
       this.runningContainers = userMetrics.getAllocatedContainers();
       this.pendingContainers = userMetrics.getPendingContainers();
@@ -108,6 +110,10 @@ public class UserMetricsInfo {
 
   public int getAppsKilled() {
     return appsKilled;
+  }
+
+  public int getAppsFinalFailed() {
+    return appsFinalFailed;
   }
 
   public long getReservedMB() {

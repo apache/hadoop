@@ -30,6 +30,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_COMPLETED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_FAILED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_KILLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_FINAL_FAILED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_PENDING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_RUNNING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_SUBMITTED;
@@ -52,6 +53,7 @@ final class AppMetricsChecker {
         .counter(APPS_COMPLETED, 0)
         .counter(APPS_FAILED, 0)
         .counter(APPS_KILLED, 0)
+        .counter(APPS_FINAL_FAILED, 0)
         .counter(UNMANAGED_APPS_SUBMITTED, 0)
         .gaugeInt(UNMANAGED_APPS_PENDING, 0)
         .gaugeInt(UNMANAGED_APPS_RUNNING, 0)
@@ -66,6 +68,7 @@ final class AppMetricsChecker {
     APPS_COMPLETED("AppsCompleted"),
     APPS_FAILED("AppsFailed"),
     APPS_KILLED("AppsKilled"),
+    APPS_FINAL_FAILED("AppsFinalFailed"),
     UNMANAGED_APPS_SUBMITTED("UnmanagedAppsSubmitted"),
     UNMANAGED_APPS_PENDING("UnmanagedAppsPending"),
     UNMANAGED_APPS_RUNNING("UnmanagedAppsRunning"),

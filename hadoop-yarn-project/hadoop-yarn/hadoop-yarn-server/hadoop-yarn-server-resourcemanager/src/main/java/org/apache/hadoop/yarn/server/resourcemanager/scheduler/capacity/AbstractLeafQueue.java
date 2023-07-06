@@ -808,7 +808,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
           queueAllocationSettings.getMinimumAllocation());
 
-      usageTracker.getMetrics().setAMResouceLimit(nodePartition, amResouceLimit);
+      usageTracker.getMetrics().setAMResourceLimit(nodePartition, amResouceLimit);
       usageTracker.getQueueUsage().setAMLimit(nodePartition, amResouceLimit);
       LOG.debug("Queue: {}, node label : {}, queue partition resource : {},"
           + " queue current limit : {}, queue partition usable resource : {},"
@@ -925,7 +925,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         user.getResourceUsage().setAMLimit(partitionName, userAMLimit);
         usageTracker.getMetrics().incAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
-        usageTracker.getMetrics().setAMResouceLimitForUser(partitionName,
+        usageTracker.getMetrics().setAMResourceLimitForUser(partitionName,
             application.getUser(), userAMLimit);
         fsApp.remove();
         LOG.info("Application " + applicationId + " from user: " + application

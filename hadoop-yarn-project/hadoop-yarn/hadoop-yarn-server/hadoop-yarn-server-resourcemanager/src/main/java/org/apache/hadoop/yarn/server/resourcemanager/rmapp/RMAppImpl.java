@@ -1522,7 +1522,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       // need to remove them from scheduler.
       if (app.recoveredFinalState == null) {
         app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId,
-            finalState));
+            finalState, app.getFinalApplicationStatus()));
       }
 
       app.handler.handle(new RMAppManagerEvent(app.applicationId,
