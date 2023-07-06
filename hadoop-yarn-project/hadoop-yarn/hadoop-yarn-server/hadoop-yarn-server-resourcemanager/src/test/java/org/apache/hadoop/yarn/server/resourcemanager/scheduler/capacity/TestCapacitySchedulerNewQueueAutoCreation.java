@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,13 +51,16 @@ import java.util.HashSet;
 
 import java.io.IOException;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assume.assumeThat;
+
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.yarn.server.resourcemanager
           .scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.class);
   public static final int GB = 1024;
-  private static final int MAX_MEMORY = 1200;
+  public static final int MAX_MEMORY = 1200;
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
@@ -75,8 +79,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   /*
   Create the following structure:
            root
-        /       \
-      a          b
+        /   |   \
+      a     b    e
     /
   a1
    */
@@ -99,6 +103,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   protected void startScheduler() throws Exception {
@@ -311,6 +322,10 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
     startScheduler();
+    // If the new queue mode is used it's allowed to
+    // create a new dynamic queue when the sibling is
+    // not in weight mode
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
     csConf.setCapacity("root.a", 50f);
     csConf.setCapacity("root.b", 50f);
     csConf.setCapacity("root.a.a1", 100f);
