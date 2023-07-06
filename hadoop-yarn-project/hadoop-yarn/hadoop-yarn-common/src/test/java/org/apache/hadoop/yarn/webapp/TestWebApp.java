@@ -22,16 +22,21 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.HashMap;
 
 import com.google.inject.Inject;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.webapp.resource.MyTestObjectWriterContextResolver;
+import org.apache.hadoop.yarn.webapp.resource.MyTestWebService;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
@@ -248,13 +253,23 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
+//            bind(MyTestJAXBContextResolver.class);
+//            bind(MyTestWebService.class);
 
             route("/:foo", FooController.class);
             route("/bar/foo", FooController.class, "bar");
             route("/foo/:foo", DefaultController.class);
             route("/foo/bar/:foo", DefaultController.class, "index");
+          }
+
+          @Override
+          public void addJerseyResourceConfigs(HttpServer2 server) {
+//            server.addJerseyResourcePackage(MyTestWebService.class.getPackage().getName() + ";"
+//                + MyTestJAXBContextResolver.class.getPackage().getName(), "/ws1/v1/test/*");
+            ResourceConfig resourceConfig = new ResourceConfig();
+            resourceConfig.register(MyTestObjectWriterContextResolver.class);
+            resourceConfig.register(MyTestWebService.class);
+            server.addJerseyResourceConfig(resourceConfig, "/ws1/v1/test/*", new HashMap<>());
           }
         });
     String baseUrl = baseUrl(app);
@@ -267,8 +282,8 @@ public class TestWebApp {
       assertEquals("default1", getContent(baseUrl + "test/foo/1").trim());
       assertEquals("default2", getContent(baseUrl + "test/foo/bar/2").trim());
       assertEquals(404, getResponseCode(baseUrl + "test/goo"));
-      assertEquals(200, getResponseCode(baseUrl + "ws/v1/test"));
-      assertTrue(getContent(baseUrl + "ws/v1/test").contains("myInfo"));
+      assertEquals(200, getResponseCode(baseUrl + "ws1/v1/test"));
+      assertTrue(getContent(baseUrl + "ws1/v1/test").contains("myInfo"));
     } finally {
       app.stop();
     }
@@ -280,7 +295,7 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestObjectWriterContextResolver.class);
             bind(MyTestWebService.class);
 
             route("/:foo", FooController.class);
@@ -310,7 +325,7 @@ public class TestWebApp {
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
           @Override
           public void setup() {
-            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestObjectWriterContextResolver.class);
             bind(MyTestWebService.class);
           }
         });

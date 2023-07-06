@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.webapp;
+package org.apache.hadoop.yarn.webapp.resource;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -26,12 +26,9 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.google.inject.Singleton;
-
 import org.apache.hadoop.http.JettyUtils;
 
-@Singleton
-@Path("/ws/v1/test")
+@Path("")
 public class MyTestWebService {
   @GET
   @Produces({ MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
@@ -41,7 +38,7 @@ public class MyTestWebService {
 
   @XmlRootElement(name = "myInfo")
   @XmlAccessorType(XmlAccessType.FIELD)
-  static class MyInfo {
+  public static class MyInfo {
     public MyInfo() {
 
     }

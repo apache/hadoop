@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.webapp;
+package org.apache.hadoop.yarn.webapp.resource;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -28,11 +28,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.inject.Singleton;
 
-import org.apache.hadoop.yarn.webapp.MyTestWebService.MyInfo;
+import org.apache.hadoop.yarn.webapp.resource.MyTestWebService.MyInfo;
 
 @Singleton
 @Provider
-public class MyTestJAXBContextResolver implements ContextResolver<ObjectWriter> {
+public class MyTestObjectWriterContextResolver implements ContextResolver<ObjectWriter> {
 
   private ObjectWriter context;
   private final Set<Class> types;
@@ -40,7 +40,7 @@ public class MyTestJAXBContextResolver implements ContextResolver<ObjectWriter> 
   // you have to specify all the dao classes here
   private final Class[] cTypes = { MyInfo.class };
 
-  public MyTestJAXBContextResolver() {
+  public MyTestObjectWriterContextResolver() {
     this.types = new HashSet<>(Arrays.asList(cTypes));
     this.context = new ObjectMapper().writerFor(MyInfo.class);
   }
