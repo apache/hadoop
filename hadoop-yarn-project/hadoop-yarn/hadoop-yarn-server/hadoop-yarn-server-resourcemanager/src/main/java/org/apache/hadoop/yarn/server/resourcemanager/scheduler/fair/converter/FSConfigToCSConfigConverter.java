@@ -217,11 +217,6 @@ public class FSConfigToCSConfigConverter {
           ") nor directly with its own parameter!");
     }
 
-    if (!usePercentages) {
-      LOG.warn("During fs2cs conversion, we cannot convert the leaf queues"
-          + " to weight mode without losing the reservation functionality.");
-    }
-
     // We can now safely override allocation file in conf
     if (fairSchedulerXmlConfig != null) {
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
