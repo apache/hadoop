@@ -285,7 +285,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 - Policy Manager
 
   The PolicyManager is providing a combination of RouterPolicy and AMRMPolicy.
-  
+
   We can set policy-manager like this:
   ```xml
       <!--
@@ -302,7 +302,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
          <value>org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager</value>
       </property>
   ```
-  
+
   - HashBroadcastPolicyManager
     - Policy that routes applications via hashing of their queuename, and broadcast resource requests. This picks a HashBasedRouterPolicy for the router and a BroadcastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
   - HomePolicyManager
