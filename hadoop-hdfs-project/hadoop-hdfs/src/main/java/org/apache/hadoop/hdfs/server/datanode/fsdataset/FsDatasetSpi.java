@@ -693,5 +693,5 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   List<FsVolumeImpl> getVolumeList();
 
-  void updateLastDirScannerRunTime(long time);
+  void updateLastDirScannerFinishTime(long time);
 }

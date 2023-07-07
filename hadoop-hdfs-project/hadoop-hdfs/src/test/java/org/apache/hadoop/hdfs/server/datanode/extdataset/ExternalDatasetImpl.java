@@ -422,7 +422,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public long getLastDirectoryScannerRunTime() {
+  public long getLastDirectoryScannerFinishTime() {
     return 0L;
   }
 
@@ -484,5 +484,5 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void updateLastDirScannerRunTime(long time) {}
+  public void updateLastDirScannerFinishTime(long time) {}
 }
