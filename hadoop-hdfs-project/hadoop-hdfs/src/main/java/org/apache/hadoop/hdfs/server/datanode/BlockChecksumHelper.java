@@ -493,7 +493,8 @@ final class BlockChecksumHelper {
               checksumBlock(block, idx, liveBlkInfo.getToken(),
                   liveBlkInfo.getDn());
             } catch (IOException ioe) {
-              LOG.warn("Exception while reading checksum", ioe);
+              LOG.warn("Exception while reading checksum for block {} at index {} " +
+                  "in blockGroup {}", block, idx, blockGroup, ioe);
               // reconstruct block and calculate checksum for the failed node
               recalculateChecksum(idx, block.getNumBytes());
             }
