@@ -296,7 +296,7 @@ public class TestCredentialProviderFactory {
           customCredentialPassword);
 
       assertThat(conf.getPasswordFromCredentialProvider(customCredentialKey,
-          conf.get(customCredentialProviderKey)))
+          new URI(conf.get(customCredentialProviderKey))))
               .isEqualTo(customCredentialPassword);
     } finally {
       // Clean jks files
@@ -308,14 +308,14 @@ public class TestCredentialProviderFactory {
   }
 
   private void createCredentialProviderPath(Configuration conf, String jksName,
-      String credentialProvider, String key, char[] value) throws IOException {
+      String credentialProvider, String key, char[] value) throws Exception {
     final Path jksPath = new Path(tmpDir.toString(), jksName);
     final String ourUrl = LocalJavaKeyStoreProvider.SCHEME_NAME + "://file"
         + jksPath.toUri();
 
     conf.set(credentialProvider, ourUrl);
     CredentialProvider provider = CredentialProviderFactory
-        .getProvider(conf, ourUrl);
+        .getProvider(conf, new URI(ourUrl));
     provider.createCredentialEntry(key, value);
     provider.flush();
   }

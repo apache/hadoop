@@ -2487,15 +2487,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Try and resolve the provided element name as a credential provider
    * alias from the given provider path.
    * @param name alias of the provisioned credential
-   * @param credProviderPath path for credential provider
+   * @param providerURI The URI of the provider path
    * @return password or null if not found
    * @throws IOException when error in fetching password
    */
-  public char[] getPasswordFromCredentialProvider(String name, String credProviderPath)
+  public char[] getPasswordFromCredentialProvider(String name, URI providerUri)
       throws IOException {
     try {
       CredentialProvider provider = CredentialProviderFactory.getProvider(this,
-          credProviderPath);
+          providerUri);
       if (provider != null) {
         try {
           CredentialEntry entry = getCredentialEntry(provider, name);
@@ -2503,8 +2503,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             return entry.getCredential();
           }
         } catch (IOException ioe) {
-          throw new IOException("Can't get key " + name + " from key provider"
-              + "of type: " + provider.getClass().getName() + ".", ioe);
+          String msg = String.format(
+              "Can't get key %s from key provider of type: %s.", name,
+              provider.getClass().getName());
+          throw NetUtils.wrapWithMessage(ioe, msg);
         }
       }
     } catch (IOException ioe) {

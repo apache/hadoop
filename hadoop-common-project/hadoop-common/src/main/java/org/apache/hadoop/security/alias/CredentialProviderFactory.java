@@ -112,30 +112,24 @@ public abstract class CredentialProviderFactory {
   }
 
   /**
-   * Get CredentialProvider for hive provider path.
+   * Get the CredentialProvider for a given provider URI.
    *
-   * @param conf configuration
-   * @param credProviderPath provider path
-   * @return CredentialProvider
-   * @throws IOException
+   * @param conf The configuration object
+   * @param providerURI The URI of the provider path
+   * @return The CredentialProvider
+   * @throws IOException If an I/O error occurs
    */
   public static CredentialProvider getProvider(Configuration conf,
-      String credProviderPath) throws IOException {
-    try {
-      URI uri = new URI(credProviderPath);
-      synchronized (serviceLoader) {
-        for (CredentialProviderFactory factory : serviceLoader) {
-          CredentialProvider kp = factory.createProvider(uri, conf);
-          if (kp != null) {
-            return kp;
-          }
+      URI providerUri) throws IOException {
+    synchronized (serviceLoader) {
+      for (CredentialProviderFactory factory : serviceLoader) {
+        CredentialProvider kp = factory.createProvider(providerUri, conf);
+        if (kp != null) {
+          return kp;
         }
       }
-    } catch (URISyntaxException error) {
-      throw new IOException(
-          "Failed to get provider for path : " + credProviderPath, error);
     }
     throw new IOException(
-        "No CredentialProviderFactory for path " + credProviderPath);
+        "No CredentialProviderFactory for " + providerUri);
   }
 }
