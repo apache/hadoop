@@ -170,6 +170,13 @@ message DeregisterSubClusterResponseProto {
   repeated DeregisterSubClustersProto deregisterSubClusters = 1;
 }
 
+message SaveFederationQueuePolicyRequestProto {
+  required FederationQueueWeightProto federationQueueWeight = 1;
+}
+
+message SaveFederationQueuePolicyResponseProto {
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

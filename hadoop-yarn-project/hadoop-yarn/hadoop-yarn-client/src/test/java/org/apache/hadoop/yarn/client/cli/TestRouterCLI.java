@@ -19,11 +19,14 @@ package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -34,7 +37,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -151,5 +154,46 @@ public class TestRouterCLI {
     args = new String[]{"-deregisterSubCluster", "--subClusterId", ""};
     assertEquals(0, rmAdminCLI.run(args));
 
+  }
+
+  @Test
+  public void testParsePolicy() throws Exception {
+    // Case1, If policy is empty.
+    String errMsg1 = "The policy cannot be empty or the policy is incorrect. \n" +
+        " Required information to provide: queue,router weight,amrm weight,headroomalpha \n" +
+        " eg. root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0";
+    LambdaTestUtils.intercept(YarnException.class, errMsg1, () ->  rmAdminCLI.parsePolicy(""));
+
+    // Case2, If policy is incomplete, We need 4 items, but only 2 of them are provided.
+    LambdaTestUtils.intercept(YarnException.class, errMsg1,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2:0.9;"));
+
+    // Case3, If policy is incomplete, The weight of a subcluster is missing.
+    String errMsg2 = "The subClusterWeight cannot be empty, and the subClusterWeight size must be 2. (eg.SC-1,0.2)";
+    LambdaTestUtils.intercept(YarnException.class, errMsg2,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2;SC-1:0.1,SC-2;0.3,1.0"));
+
+    // Case4, The policy is complete, but the sum of weights for each subcluster is not equal to 1.
+    String errMsg3 = "The sum of ratios for all subClusters must be equal to 1.";
+    LambdaTestUtils.intercept(YarnException.class, errMsg3,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2:0.8;SC-1:0.1,SC-2;0.3,1.0"));
+
+    // If policy is root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0
+    String policy = "root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
+    FederationQueueWeight federationQueueWeight = rmAdminCLI.parsePolicy(policy);
+    assertNotNull(federationQueueWeight);
+    assertEquals("root.a", federationQueueWeight.getQueue());
+    assertEquals("SC-1:0.7,SC-2:0.3", federationQueueWeight.getRouterWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", federationQueueWeight.getAmrmWeight());
+    assertEquals("1.0", federationQueueWeight.getHeadRoomAlpha());
+  }
+
+  @Test
+  public void testIsNumeric() {
+    String number1 = "1.0";
+    assertTrue(RouterCLI.isNumeric(number1));
+
+    String number2 = "2.x";
+    assertFalse(RouterCLI.isNumeric(number2));
   }
 }

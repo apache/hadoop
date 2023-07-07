@@ -440,6 +440,13 @@ message DeregisterSubClustersProto {
   optional string subClusterState = 5;
 }
 
+message FederationQueueWeightProto {
+  optional string queue = 1;
+  optional string routerWeight = 2;
+  optional string amrmWeight = 3;
+  optional string headRoomAlpha = 4;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
