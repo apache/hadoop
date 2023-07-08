@@ -62,7 +62,7 @@ pipeline {
     }
 
     stages {
-        stage ('build and test across platforms') {
+        stage ('Build and test across platforms') {
             parallel {
                 stage ('Linux') {
                     agent {
@@ -70,7 +70,7 @@ pipeline {
                     }
 
                     stages {
-                        stage ('install yetus') {
+                        stage ('Install Yetus') {
                             steps {
                                 dir("${WORKSPACE}/${YETUS}") {
                                     checkout([
@@ -86,7 +86,7 @@ pipeline {
                         // codebase.
                         // Primarily because YETUS messes up the git branch information and affects the subsequent
                         // optional stages after the first one.
-                        stage ('setup sources') {
+                        stage ('Setup sources') {
                             steps {
                                 dir("${WORKSPACE}/centos-7") {
                                     sh '''#!/usr/bin/env bash
@@ -123,7 +123,7 @@ pipeline {
                         // This stage serves as a means of cross platform validation, which is
                         // really needed to ensure that any C++ related/platform change doesn't
                         // break the Hadoop build on Centos 7.
-                        stage ('precommit-run Centos 7') {
+                        stage ('Pre-commit run Centos 7') {
                             environment {
                                 SOURCEDIR = "${WORKSPACE}/centos-7/src"
                                 PATCHDIR = "${WORKSPACE}/centos-7/out"
@@ -169,7 +169,7 @@ pipeline {
                         // This stage serves as a means of cross platform validation, which is
                         // really needed to ensure that any C++ related/platform change doesn't
                         // break the Hadoop build on Centos 8.
-                        stage ('precommit-run Centos 8') {
+                        stage ('Pre-commit run Centos 8') {
                             environment {
                                 SOURCEDIR = "${WORKSPACE}/centos-8/src"
                                 PATCHDIR = "${WORKSPACE}/centos-8/out"
@@ -215,7 +215,7 @@ pipeline {
                         // This stage serves as a means of cross platform validation, which is
                         // really needed to ensure that any C++ related/platform change doesn't
                         // break the Hadoop build on Debian 10.
-                        stage ('precommit-run Debian 10') {
+                        stage ('Pre-commit run Debian 10') {
                             environment {
                                 SOURCEDIR = "${WORKSPACE}/debian-10/src"
                                 PATCHDIR = "${WORKSPACE}/debian-10/out"
@@ -258,7 +258,7 @@ pipeline {
 
                         // We want to use Ubuntu Focal as our main CI and thus, this stage
                         // isn't optional (runs for all the PRs).
-                        stage ('precommit-run Ubuntu focal') {
+                        stage ('Pre-commit run Ubuntu focal') {
                             environment {
                                 SOURCEDIR = "${WORKSPACE}/ubuntu-focal/src"
                                 PATCHDIR = "${WORKSPACE}/ubuntu-focal/out"
@@ -343,7 +343,7 @@ pipeline {
                     }
 
                     stages {
-                        stage ('install codebases') {
+                        stage ('Install codebases') {
                             steps {
                                 // Yetus
                                 dir("${WORKSPACE}/${YETUS}") {
