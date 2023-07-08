@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.Interns;
@@ -73,8 +74,7 @@ public class DataNodeMetricHelper {
           " blocks failed in cache eviction"),
         beanClass.getNumBlocksFailedToUncache())
       .addGauge(Interns.info("LastDirectoryScannerFinishTime",
-          "Last finish time of directory scanner"),
-          beanClass.getLastDirectoryScannerFinishTime());
+        "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime());
   }
 
 }

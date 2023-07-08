@@ -940,7 +940,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public long getLastDirectoryScannerFinishTime() {
+  public long getLastDirScannerFinishTime() {
     return 0L;
   }
 
@@ -1639,7 +1639,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public void updateLastDirScannerFinishTime(long time) {
+  public void setLastDirScannerFinishTime(long time) {
     throw new UnsupportedOperationException();
   }
 }

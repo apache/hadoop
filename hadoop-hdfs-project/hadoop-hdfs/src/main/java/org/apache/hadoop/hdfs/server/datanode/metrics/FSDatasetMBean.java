@@ -126,5 +126,5 @@ public interface FSDatasetMBean extends MetricsSource {
   /**
    * Returns the last time in milliseconds of directory scanner run.
    */
-  long getLastDirectoryScannerFinishTime();
+  long getLastDirScannerFinishTime();
 }

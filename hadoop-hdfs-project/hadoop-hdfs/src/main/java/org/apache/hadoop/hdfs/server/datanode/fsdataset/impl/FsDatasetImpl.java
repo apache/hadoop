@@ -284,7 +284,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long maxDirScannerNotifyCount;
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
-
   private long lastDirScannerFinishTime;
 
   /**
@@ -714,7 +713,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public long getLastDirectoryScannerFinishTime() {
+  public long getLastDirScannerFinishTime() {
     return this.lastDirScannerFinishTime;
   }
 
@@ -3820,7 +3819,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public void updateLastDirScannerFinishTime(long time) {
+  public void setLastDirScannerFinishTime(long time) {
     this.lastDirScannerFinishTime = time;
   }
 }

@@ -487,7 +487,7 @@ public class DirectoryScanner implements Runnable {
     if (!retainDiffs) {
       clear();
     }
-    dataset.updateLastDirScannerFinishTime(System.currentTimeMillis());
+    dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
   }
 
   /**
