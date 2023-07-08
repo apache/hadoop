@@ -343,23 +343,13 @@ pipeline {
                     }
 
                     stages {
-                        stage ('Install codebases') {
+                        stage ('Install Yetus') {
                             steps {
-                                // Yetus
                                 dir("${WORKSPACE}/${YETUS}") {
                                     checkout([
                                         $class: 'GitSCM',
                                         branches: [[name: "${env.YETUS_VERSION}"]],
                                         userRemoteConfigs: [[ url: "${env.YETUS_REPOSITORY}"]]]
-                                    )
-                                }
-
-                                // Hadoop
-                                dir("${WORKSPACE}/src") {
-                                    checkout([
-                                        $class: 'GitSCM',
-                                        branches: [[name: "${env.BRANCH_NAME}"]],
-                                        userRemoteConfigs: [[ url: "${env.HADOOP_REPOSITORY}"]]]
                                     )
                                 }
                             }
