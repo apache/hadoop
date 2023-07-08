@@ -349,7 +349,7 @@ pipeline {
                                     checkout([
                                         $class: 'GitSCM',
                                         branches: [[name: "${env.YETUS_VERSION}"]],
-                                        userRemoteConfigs: [[ url: "${env.YETUS_REPOSITORY}"]]]
+                                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
                                     )
                                 }
                             }
