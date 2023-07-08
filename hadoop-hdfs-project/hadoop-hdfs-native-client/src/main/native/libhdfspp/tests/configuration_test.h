@@ -113,5 +113,4 @@ void writeDamagedConfig(const std::string& filename, Args... args) {
 }
 }
 
-
 #endif
