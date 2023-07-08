@@ -65,11 +65,11 @@ pipeline {
         stage ('build and test across platforms') {
             parallel {
                 stage ('Linux') {
-                    stages {
-                        agent {
-                            label 'Hadoop'
-                        }
+                    agent {
+                        label 'Hadoop'
+                    }
 
+                    stages {
                         stage ('install yetus') {
                             steps {
                                 dir("${WORKSPACE}/${YETUS}") {
@@ -338,11 +338,11 @@ pipeline {
                 }
 
                 stage ('Windows 10') {
-                    stages {
-                        agent {
-                            label 'Windows'
-                        }
+                    agent {
+                        label 'Windows'
+                    }
 
+                    stages {
                         stage ('install codebases') {
                             steps {
                                 // Yetus
