@@ -21,17 +21,17 @@
 personality_plugins "all,-ant,-gradle,-scalac,-scaladoc"
 
 # These flags are needed to run Yetus against Hadoop on Windows.
-WINDOWS_FLAGS="-Pnative-win
-  -Dhttps.protocols=TLSv1.2
-  -Drequire.openssl
-  -Drequire.test.libhadoop
-  -Dshell-executable=${BASH_EXECUTABLE}
-  -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}
-  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
-  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
-  -Dwindows.cmake.build.type=RelWithDebInfo
-  -Dwindows.build.hdfspp.dll=off
-  -Dwindows.no.sasl=on
+WINDOWS_FLAGS="-Pnative-win \
+  -Dhttps.protocols=TLSv1.2 \
+  -Drequire.openssl \
+  -Drequire.test.libhadoop \
+  -Dshell-executable=${BASH_EXECUTABLE} \
+  -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES} \
+  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES} \
+  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE} \
+  -Dwindows.cmake.build.type=RelWithDebInfo \
+  -Dwindows.build.hdfspp.dll=off \
+  -Dwindows.no.sasl=on \
   -Duse.platformToolsetVersion=v142"
 
 ## @description  Globals specific to this personality
