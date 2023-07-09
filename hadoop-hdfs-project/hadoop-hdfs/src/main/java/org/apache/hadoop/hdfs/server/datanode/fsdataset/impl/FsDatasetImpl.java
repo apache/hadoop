@@ -712,11 +712,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return lastVolumeFailureDate;
   }
 
-  @Override
-  public long getLastDirScannerFinishTime() {
-    return this.lastDirScannerFinishTime;
-  }
-
   @Override // FSDatasetMBean
   public long getEstimatedCapacityLostTotal() {
     long estimatedCapacityLostTotal = 0;
@@ -3816,6 +3811,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return volumes.getVolumes();
+  }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return this.lastDirScannerFinishTime;
   }
 
   @Override

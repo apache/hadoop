@@ -693,5 +693,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   List<FsVolumeImpl> getVolumeList();
 
+  /**
+   * Set the finish time of last directory scan.
+   * @param time
+   */
   void setLastDirScannerFinishTime(long time);
 }
