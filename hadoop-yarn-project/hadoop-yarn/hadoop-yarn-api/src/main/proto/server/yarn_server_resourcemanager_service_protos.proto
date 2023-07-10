@@ -171,7 +171,9 @@ message DeregisterSubClusterResponseProto {
 }
 
 message SaveFederationQueuePolicyRequestProto {
-  required FederationQueueWeightProto federationQueueWeight = 1;
+  required string queue = 1;
+  required FederationQueueWeightProto federationQueueWeight = 2;
+  optional string policyManagerClassName = 3;
 }
 
 message SaveFederationQueuePolicyResponseProto {

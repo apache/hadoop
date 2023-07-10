@@ -84,4 +84,11 @@ public class SubClusterIdInfo {
   public int hashCode() {
     return new HashCodeBuilder().append(this.id).toHashCode();
   }
+
+  @Override
+  public String toString() {
+    return "SubClusterIdInfo{" +
+            "id='" + id + '\'' +
+            '}';
+  }
 }

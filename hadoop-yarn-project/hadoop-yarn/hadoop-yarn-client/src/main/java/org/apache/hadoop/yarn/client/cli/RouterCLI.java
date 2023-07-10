@@ -25,7 +25,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.math3.util.MathUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ha.HAAdmin.UsageInfo;
@@ -66,8 +65,8 @@ public class RouterCLI extends Configured implements Tool {
         "set the state of the subCluster to SC_LOST"))
          // Command2: policy
         .put("-policy",new UsageInfo(
-        "[-l|--list [queue]] | [-s|--save [queue;router weight[SC-1:0.1,SC-2:0.9];amrm weight[SC-1:0.1,SC-2:0.9];headroomalpha]]",
-        "We provide a set of commands for Policy, include list policies and save policies."))
+        "[-s|--save [queue;router weight[SC-1:0.1,SC-2:0.9];amrm weight[SC-1:0.1,SC-2:0.9];headroomalpha]]",
+        "We provide a set of commands for Policy, include list policies,save policies,batch save policies."))
         .build();
 
   // Common Constant
@@ -289,11 +288,8 @@ public class RouterCLI extends Configured implements Tool {
     // Prepare Options.
     Options opts = new Options();
     opts.addOption("policy", false, "");
-    Option listOpt = new Option("l", "list", true, "");
-    listOpt.setOptionalArg(true);
     Option saveOpt = new Option("s", "save", true, "");
     saveOpt.setOptionalArg(true);
-    opts.addOption(listOpt);
     opts.addOption(saveOpt);
 
     // Parse command line arguments.
@@ -304,19 +300,6 @@ public class RouterCLI extends Configured implements Tool {
       System.out.println("Missing argument for options");
       printUsage(args[0]);
       return EXIT_ERROR;
-    }
-
-    // Try to parse the cmd list.
-    if (cliParser.hasOption("l") || cliParser.hasOption("list")) {
-      String queue = cliParser.getOptionValue("l");
-      if (StringUtils.isBlank(queue)) {
-        queue = cliParser.getOptionValue("list");
-      }
-      if (StringUtils.isNotBlank(queue)) {
-        return handleListPolicy(queue);
-      } else {
-        return handleListPolicy();
-      }
     }
 
     // Try to parse the cmd save.

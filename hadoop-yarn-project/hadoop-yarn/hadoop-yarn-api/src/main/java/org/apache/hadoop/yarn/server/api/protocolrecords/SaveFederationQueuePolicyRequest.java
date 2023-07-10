@@ -22,34 +22,49 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * In Yarn Federation mode, this class is used to save the queue policy interface.
+ *
+ * This class stores the queue, the weight of the queue,
+ * and the PolicyManagerClassName information of the queue.
+ */
 @Private
 @Unstable
 public abstract class SaveFederationQueuePolicyRequest {
+
   @Private
   @Unstable
   public static SaveFederationQueuePolicyRequest newInstance(
-      FederationQueueWeight federationQueueWeight) {
+      String queue, FederationQueueWeight federationQueueWeight, String policyManagerClassName) {
     SaveFederationQueuePolicyRequest request =
         Records.newRecord(SaveFederationQueuePolicyRequest.class);
+    request.setQueue(queue);
     request.setFederationQueueWeight(federationQueueWeight);
+    request.setPolicyManagerClassName(policyManagerClassName);
     return request;
   }
 
-  /**
-   * Get the queue.
-   *
-   * @return queue.
-   */
   @Public
   @Unstable
   public abstract FederationQueueWeight getFederationQueueWeight();
 
-  /**
-   * Set the queue.
-   *
-   * @param queue queue.
-   */
   @Private
   @Unstable
-  public abstract void setFederationQueueWeight(FederationQueueWeight queue);
+  public abstract void setFederationQueueWeight(FederationQueueWeight federationQueueWeight);
+
+  @Public
+  @Unstable
+  public abstract String getQueue();
+
+  @Public
+  @Unstable
+  public abstract void setQueue(String queue);
+
+  @Public
+  @Unstable
+  public abstract String getPolicyManagerClassName();
+
+  @Public
+  @Unstable
+  public abstract void setPolicyManagerClassName(String className);
 }

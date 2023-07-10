@@ -32,41 +32,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -76,13 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Collection;
-import java.util.Set;
-import java.util.Date;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
@@ -95,6 +58,10 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationRMAdminInterceptor.class);
+
+  private static final String SEMICOLON = ";";
+  private static final String COMMA = ",";
+  private static final String COLON = ":";
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -855,11 +822,99 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (Exception e) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-              "Unable to deregisterSubCluster due to exception. " + e.getMessage());
+          "Unable to deregisterSubCluster due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrDeregisterSubClusterFailedRetrieved();
     throw new YarnException("Unable to deregisterSubCluster.");
+  }
+
+  /**
+   * Save the Queue Policy for the Federation.
+   *
+   * @param request saveFederationQueuePolicy Request.
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+
+    if (request == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing SaveFederationQueuePolicy request.", null);
+    }
+
+    FederationQueueWeight federationQueueWeight = request.getFederationQueueWeight();
+    if (federationQueueWeight == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing FederationQueueWeight information.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      // Step1, get parameters.
+      String queue = request.getQueue();
+      String amRmWeight = federationQueueWeight.getAmrmWeight();
+      String routerWeight = federationQueueWeight.getRouterWeight();
+      String policyManagerClassName = request.getPolicyManagerClassName();
+      String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+
+      // Step2, parse amRMPolicyWeights.
+      Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
+      LOG.debug("amRMPolicyWeights = {}.", amRMPolicyWeights);
+
+      // Step3, parse routerPolicyWeights.
+      Map<SubClusterIdInfo, Float> routerPolicyWeights = getSubClusterWeightMap(routerWeight);
+      LOG.debug("routerWeights = {}.", amRMPolicyWeights);
+
+      // Step4, Initialize WeightedPolicyInfo.
+      WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+      weightedPolicyInfo.setHeadroomAlpha(Float.parseFloat(headRoomAlpha));
+      weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+      weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+      // Step5, Set SubClusterPolicyConfiguration.
+      SubClusterPolicyConfiguration policyConfiguration =
+          SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
+          weightedPolicyInfo.toByteBuffer());
+      federationFacade.setPolicyConfiguration(policyConfiguration);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededSaveFederationQueuePolicyRetrieved(stopTime - startTime);
+    } catch (Exception e) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to saveFederationQueuePolicy due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+    throw new YarnException("Unable to saveFederationQueuePolicy.");
+  }
+
+  /**
+   * Get the Map of SubClusterWeight.
+   *
+   * This method can parse the Weight information of Router and
+   * the Weight information of AMRMProxy.
+   *
+   * An example of a parsed string is as follows:
+   * SC-1:0.7,SC-2:0.3
+   *
+   * @param policyWeight policyWeight.
+   * @return Map of SubClusterWeight.
+   */
+  private Map<SubClusterIdInfo, Float> getSubClusterWeightMap(String policyWeight) {
+    Map<SubClusterIdInfo, Float> result = new HashMap<>();
+    String[] policyWeights = policyWeight.split(COMMA);
+    for (String policyWeightItem : policyWeights) {
+      String[] subClusterWeight = policyWeightItem.split(COLON);
+      String subClusterId = subClusterWeight[0];
+      SubClusterIdInfo subClusterIdInfo = new SubClusterIdInfo(subClusterId);
+      String weight = subClusterWeight[1];
+      result.put(subClusterIdInfo, Float.valueOf(weight));
+    }
+    return result;
   }
 
   /**
