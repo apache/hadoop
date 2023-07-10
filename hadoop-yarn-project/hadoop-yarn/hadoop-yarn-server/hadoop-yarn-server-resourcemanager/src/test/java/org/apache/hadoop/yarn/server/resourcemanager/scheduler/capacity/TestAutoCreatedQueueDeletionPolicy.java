@@ -17,33 +17,70 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.io.IOException;
+
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerNewQueueAutoCreation.MAX_MEMORY;
+
 public class TestAutoCreatedQueueDeletionPolicy
-    extends TestCapacitySchedulerNewQueueAutoCreation {
+    extends TestCapacitySchedulerAutoCreatedQueueBase {
+  private CapacitySchedulerConfiguration csConf;
   private CapacityScheduler cs;
-  private AutoCreatedQueueDeletionPolicy policy;
+  private final AutoCreatedQueueDeletionPolicy policy = new
+      AutoCreatedQueueDeletionPolicy();
 
-  public void prepareForSchedule() throws Exception{
-    super.startScheduler();
+  private CapacitySchedulerQueueManager autoQueueHandler;
 
-    policy = getPolicy();
-    cs = getCs();
+  /*
+    Create the following structure:
+             root
+          /       \
+        a          b
+      /
+    a1
+  */
+  @Before
+  public void setUp() throws Exception {
+    csConf = new CapacitySchedulerConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
 
-    policy.editSchedule();
-    // There are no queues should be scheduled
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+    // By default, set 3 queues, a/b, and a.a1
+    csConf.setQueues("root", new String[]{"a", "b"});
+    csConf.setNonLabeledQueueWeight("root", 1f);
+    csConf.setNonLabeledQueueWeight("root.a", 1f);
+    csConf.setNonLabeledQueueWeight("root.b", 1f);
+    csConf.setQueues("root.a", new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
+    csConf.setAutoQueueCreationV2Enabled("root", true);
+    csConf.setAutoQueueCreationV2Enabled("root.a", true);
+    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
+    // Test for auto deletion when expired
+    csConf.setAutoExpiredDeletionTime(1);
+  }
 
-    createQueue("root.e.e1");
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   @Test
@@ -91,14 +128,14 @@ public class TestAutoCreatedQueueDeletionPolicy
     long l1 = user0.getLastSubmittedTimestamp();
     GenericTestUtils.waitFor(() -> {
       long duration = (Time.monotonicNow() - l1)/1000;
-      return duration > getCs().
+      return duration > cs.
           getConfiguration().getAutoExpiredDeletionTime();
     }, 100, 2000);
 
     long l2 = e1.getLastSubmittedTimestamp();
     GenericTestUtils.waitFor(() -> {
       long duration = (Time.monotonicNow() - l2)/1000;
-      return duration > getCs().
+      return duration > cs.
           getConfiguration().getAutoExpiredDeletionTime();
     }, 100, 2000);
 
@@ -151,7 +188,7 @@ public class TestAutoCreatedQueueDeletionPolicy
     long l3 = e.getLastSubmittedTimestamp();
     GenericTestUtils.waitFor(() -> {
       long duration = (Time.monotonicNow() - l3)/1000;
-      return duration > getCs().
+      return duration > cs.
           getConfiguration().getAutoExpiredDeletionTime();
     }, 100, 2000);
     policy.editSchedule();
@@ -179,6 +216,42 @@ public class TestAutoCreatedQueueDeletionPolicy
     Assert.assertEquals(policy.getSentForDeletion().size(), 0);
     e = (AbstractCSQueue) cs.getQueue("root.e");
     Assert.assertNull(e);
+  }
+
+  public void prepareForSchedule() throws Exception{
+    startScheduler();
+
+    policy.editSchedule();
+    // There are no queues should be scheduled
+    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
+    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+
+    createQueue("root.e.e1");
+  }
+
+  protected void startScheduler() throws Exception {
+    try (RMNodeLabelsManager mgr = new NullRMNodeLabelsManager()) {
+      mgr.init(csConf);
+      mockRM = new MockRM(csConf) {
+        protected RMNodeLabelsManager createNodeLabelManager() {
+          return mgr;
+        }
+      };
+
+      cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      cs.updatePlacementRules();
+      // Policy for new auto created queue's auto deletion when expired
+      policy.init(cs.getConfiguration(), cs.getRMContext(), cs);
+      mockRM.start();
+      cs.start();
+      autoQueueHandler = cs.getCapacitySchedulerQueueManager();
+      mockRM.registerNode("h1:1234", MAX_MEMORY * GB);
+    }
+  }
+
+  protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
+      IOException {
+    return autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 }
 

@@ -33,6 +33,7 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -105,6 +106,13 @@ public class TestReservations {
     CapacityScheduler spyCs = new CapacityScheduler();
     cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();
+  }
+
+  @After
+  public void tearDown() {
+    if (cs != null) {
+      cs.stop();
+    }
   }
 
   private void setup(CapacitySchedulerConfiguration csConf) throws Exception {
