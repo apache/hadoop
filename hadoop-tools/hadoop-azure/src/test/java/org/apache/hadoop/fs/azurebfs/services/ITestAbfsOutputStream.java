@@ -28,9 +28,11 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 /**
  * Test create operation.
@@ -122,6 +124,28 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             .describedAs("BackReference in output stream should not be null")
             .isFalse();
       }
+    }
+  }
+
+  /**
+   * Verify AbfsOutputStream close() behaviour of throwing a PathIOE when the
+   * FS instance is closed before the stream.
+   */
+  @Test
+  public void testAbfsOutputStreamClosingFsBeforeStream()
+      throws Exception {
+    AzureBlobFileSystem fs = new AzureBlobFileSystem();
+    fs.initialize(new URI(getTestUrl()), new Configuration());
+    Path pathFs = path(getMethodName());
+    byte[] inputBytes = new byte[5 * 1024];
+    try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,
+        pathFs)) {
+      out.write(inputBytes);
+      fs.close();
+      // verify that output stream close after fs.close() would raise a
+      // pathIOE containing the path being written to.
+      LambdaTestUtils
+          .intercept(PathIOException.class, getMethodName(), out::close);
     }
   }
 
