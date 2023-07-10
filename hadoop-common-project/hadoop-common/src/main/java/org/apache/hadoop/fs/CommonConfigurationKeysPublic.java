@@ -219,8 +219,9 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String  FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY = "fs.trash.clean.trashroot.enable";
-  /** Default value for FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY */
+  public static final String  FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY =
+      "fs.trash.clean.trashroot.enable";
+  /** Default value for FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY. */
   public static final boolean FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT = false;
   /**
    * @see
