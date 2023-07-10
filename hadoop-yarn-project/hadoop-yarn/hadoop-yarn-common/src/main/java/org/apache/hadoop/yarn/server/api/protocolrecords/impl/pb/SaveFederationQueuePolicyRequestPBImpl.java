@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 
 @Private
 @Unstable
-public class SaveFederationQueuePolicyRequestImpl extends SaveFederationQueuePolicyRequest {
+public class SaveFederationQueuePolicyRequestPBImpl extends SaveFederationQueuePolicyRequest {
 
   private SaveFederationQueuePolicyRequestProto proto =
       SaveFederationQueuePolicyRequestProto.getDefaultInstance();
@@ -37,11 +37,11 @@ public class SaveFederationQueuePolicyRequestImpl extends SaveFederationQueuePol
   private boolean viaProto = false;
   private FederationQueueWeight federationQueueWeight = null;
 
-  public SaveFederationQueuePolicyRequestImpl() {
+  public SaveFederationQueuePolicyRequestPBImpl() {
     builder = SaveFederationQueuePolicyRequestProto.newBuilder();
   }
 
-  public SaveFederationQueuePolicyRequestImpl(SaveFederationQueuePolicyRequestProto proto) {
+  public SaveFederationQueuePolicyRequestPBImpl(SaveFederationQueuePolicyRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -70,7 +70,7 @@ public class SaveFederationQueuePolicyRequestImpl extends SaveFederationQueuePol
       return false;
     }
 
-    SaveFederationQueuePolicyRequestImpl otherImpl = this.getClass().cast(other);
+    SaveFederationQueuePolicyRequestPBImpl otherImpl = this.getClass().cast(other);
     return new EqualsBuilder()
         .append(this.getProto(), otherImpl.getProto())
         .isEquals();

@@ -37,7 +37,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -108,8 +111,8 @@ public class TestRouterCLI {
   public void testHelp() throws Exception {
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
-    // System.setOut(new PrintStream(dataOut));
-    // System.setErr(new PrintStream(dataErr));
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
 
     String[] args = {"-help"};
     rmAdminCLI.run(args);

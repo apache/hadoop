@@ -48,7 +48,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class RouterCLI extends Configured implements Tool {
 
