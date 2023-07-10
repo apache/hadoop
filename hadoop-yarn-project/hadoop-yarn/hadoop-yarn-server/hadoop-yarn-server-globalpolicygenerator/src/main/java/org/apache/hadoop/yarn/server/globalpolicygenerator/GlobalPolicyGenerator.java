@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,11 +28,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner.SubClusterCleaner;
 import org.slf4j.Logger;
@@ -68,6 +73,12 @@ public class GlobalPolicyGenerator extends CompositeService {
     this.gpgContext = new GPGContextImpl();
   }
 
+  protected void doSecureLogin() throws IOException {
+    Configuration config = getConfig();
+    SecurityUtil.login(config, YarnConfiguration.GPG_KEYTAB,
+        YarnConfiguration.GPG_PRINCIPAL, getHostName(config));
+  }
+
   protected void initAndStart(Configuration conf, boolean hasToReboot) {
     // Remove the old hook if we are rebooting.
     if (hasToReboot && null != gpgShutdownHook) {
@@ -99,6 +110,12 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   @Override
   protected void serviceStart() throws Exception {
+    try {
+      doSecureLogin();
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed GPG login", e);
+    }
+
     super.serviceStart();
 
     // Scheduler SubClusterCleaner service
@@ -154,6 +171,23 @@ public class GlobalPolicyGenerator extends CompositeService {
     } else {
       LOG.warn("Federation is not enabled. The gpg cannot start.");
     }
+  }
+
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(YarnConfiguration.GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
   }
 
   public static void main(String[] argv) {

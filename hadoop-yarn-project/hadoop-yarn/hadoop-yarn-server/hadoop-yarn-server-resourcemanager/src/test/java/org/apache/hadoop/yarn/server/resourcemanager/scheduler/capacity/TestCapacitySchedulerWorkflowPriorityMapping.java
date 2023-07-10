@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
+import org.junit.After;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -55,6 +56,13 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestCapacitySchedulerWorkflowPriorityMapping {
   private MockRM mockRM = null;
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+  }
 
   private static void setWorkFlowPriorityMappings(
       CapacitySchedulerConfiguration conf) {

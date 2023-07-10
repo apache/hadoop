@@ -93,7 +93,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(mgr);
+        new CapacitySchedulerQueueCapacityHandler(mgr, csConf);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, emptyLabelResource);
 
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
