@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
@@ -65,6 +66,13 @@ public final class CapacitySchedulerTestUtilities {
   public static final int GB = 1024;
 
   private CapacitySchedulerTestUtilities() {
+  }
+
+  public static void setQueueHandler(CapacitySchedulerContext cs) {
+    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(
+        cs.getConfiguration(), cs.getRMContext().getNodeLabelManager(),
+        new AppPriorityACLsManager(cs.getConfiguration()));
+    when(cs.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
   }
 
   @SuppressWarnings("unchecked")

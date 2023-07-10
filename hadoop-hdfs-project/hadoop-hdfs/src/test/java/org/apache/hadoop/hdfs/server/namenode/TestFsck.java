@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1679,6 +1680,91 @@ public class TestFsck {
     //check in maintenance node are not printed when not requested
     fsckOut = runFsck(conf, 4, false, "/", "-blockId", bIds[0]);
     assertFalse(fsckOut.contains(NamenodeFsck.IN_MAINTENANCE_STATUS));
+  }
+
+  /**
+   * Test for blockIdCK with datanode staleness.
+   */
+  @Test
+  public void testBlockIdCKStaleness() throws Exception {
+    final short replFactor = 1;
+    final long blockSize = 512;
+    Configuration configuration = new Configuration();
+
+    // Shorten dfs.namenode.stale.datanode.interval for easier testing.
+    configuration.setLong(DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY, 5000);
+    configuration.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    configuration.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, replFactor);
+
+    String[] racks = {"/rack1", "/rack2"};
+    String[] hosts = {"host1", "host2"};
+
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(configuration, builderBaseDir)
+        .hosts(hosts).racks(racks).build();
+    assertNotNull("Failed Cluster Creation", cluster);
+    cluster.waitClusterUp();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    assertNotNull("Failed to get FileSystem", fs);
+
+    try {
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName(getClass().getSimpleName()).setNumFiles(1).build();
+
+      // Create one file.
+      final String pathString = new String("/testfile");
+      final Path path = new Path(pathString);
+      util.createFile(fs, path, 1024L, replFactor, 1024L);
+      util.waitReplication(fs, path, replFactor);
+      StringBuilder sb = new StringBuilder();
+      for (LocatedBlock lb: util.getAllBlocks(fs, path)) {
+        sb.append(lb.getBlock().getLocalBlock().getBlockName() + " ");
+      }
+      String[] bIds = sb.toString().split(" ");
+
+      // Make sure datanode is HEALTHY before down.
+      String outStr = runFsck(configuration, 0, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
+      DatanodeManager dnm = bm.getDatanodeManager();
+      DatanodeDescriptor dn = dnm.getDatanode(cluster.getDataNodes().get(0)
+          .getDatanodeId());
+      final String dnName = dn.getXferAddr();
+
+      // Make the block on datanode enter stale state.
+      cluster.stopDataNode(0);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            DatanodeInfo datanodeInfo = null;
+            for (DatanodeInfo info : fs.getDataNodeStats()) {
+              if (dnName.equals(info.getXferAddr())) {
+                datanodeInfo = info;
+              }
+            }
+            if (datanodeInfo != null && datanodeInfo.isStale(5000)) {
+              return true;
+            }
+          } catch (Exception e) {
+            LOG.warn("Unexpected exception: " + e);
+            return false;
+          }
+          return false;
+        }
+      }, 500, 30000);
+      outStr = runFsck(configuration, 6, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.STALE_STATUS));
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   /**
