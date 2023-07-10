@@ -53,7 +53,6 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   private final DatanodeStorage storage = new DatanodeStorage(
       DatanodeStorage.generateUuid(), DatanodeStorage.State.NORMAL,
       StorageType.DEFAULT);
-  private long lastDirScannerFinishTime;
 
   @Override
   public FsVolumeReferences getFsVolumeReferences() {
@@ -484,8 +483,4 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
     return 0L;
   }
 
-  @Override
-  public void setLastDirScannerFinishTime(long time) {
-
-  }
 }

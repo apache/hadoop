@@ -251,6 +251,13 @@ public class TestFsDatasetImpl {
   }
 
   @Test
+  public void testSetLastDirScannerFinishTime() throws IOException {
+    assertEquals(dataset.getLastDirScannerFinishTime(), 0L);
+    dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
+    assertNotEquals(0L, dataset.getLastDirScannerFinishTime());
+  }
+
+  @Test
   public void testAddVolumes() throws IOException {
     final int numNewVolumes = 3;
     final int numExistingVolumes = getNumVolumes();

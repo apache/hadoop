@@ -124,7 +124,7 @@ public interface FSDatasetMBean extends MetricsSource {
   public long getNumBlocksFailedToUncache();
 
   /**
-   * Returns the last time in milliseconds of directory scanner run.
+   * Returns the last time in milliseconds when the directory scanner successfully ran.
    */
   long getLastDirScannerFinishTime();
 }
