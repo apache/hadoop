@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttr.NameSpace;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
@@ -47,6 +49,10 @@ public class XAttrHelper {
    * Both name and namespace are case sensitive.
    */
   public static XAttr buildXAttr(String name, byte[] value) {
+    return buildXAttr(name, value, null);
+  }
+
+  public static XAttr buildXAttr(String name, byte[] value, final EnumSet<XAttrSetFlag> flag) {
     Preconditions.checkNotNull(name, "XAttr name cannot be null.");
 
     final int prefixIndex = name.indexOf(".");
@@ -78,8 +84,13 @@ public class XAttrHelper {
           "prefixed with user/trusted/security/system/raw, followed by a '.'");
     }
 
+    boolean isNumerable = false;
+    if (flag != null && flag.contains(XAttrSetFlag.ENUM_VALUE)) {
+      isNumerable = true;
+    }
+
     return (new XAttr.Builder()).setNameSpace(ns).setName(name.
-        substring(prefixIndex + 1)).setValue(value).build();
+        substring(prefixIndex + 1)).setValue(value).setEnumerable(isNumerable).build();
   }
 
   /**

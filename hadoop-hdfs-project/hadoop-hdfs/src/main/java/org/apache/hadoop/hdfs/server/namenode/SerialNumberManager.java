@@ -30,7 +30,7 @@ public enum SerialNumberManager {
   GLOBAL(),
   USER(PermissionStatusFormat.USER, AclEntryStatusFormat.NAME),
   GROUP(PermissionStatusFormat.GROUP, AclEntryStatusFormat.NAME),
-  XATTR(XAttrFormat.NAME);
+  XATTR(XAttrFormat.NAME, XAttrValueFormat.VALUE);
 
   private static final SerialNumberManager[] values = values();
   private static final int maxEntryBits;

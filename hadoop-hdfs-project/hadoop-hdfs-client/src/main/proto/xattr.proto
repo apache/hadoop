@@ -33,11 +33,13 @@ message XAttrProto {
   required XAttrNamespaceProto namespace = 1;
   required string name = 2;
   optional bytes value = 3;
+  optional bool enumerable = 4;
 }
   
 enum XAttrSetFlagProto {
   XATTR_CREATE     = 0x01;
   XATTR_REPLACE    = 0x02;
+  XATTR_ENUMERABLE = 0x04;
 }
 
 message SetXAttrRequestProto {

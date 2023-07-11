@@ -50,7 +50,8 @@ public class XAttrFeature implements INode.Feature {
       ImmutableList.Builder<XAttr> b = null;
       for (XAttr attr : xAttrs) {
         if (attr.getValue() == null ||
-            attr.getValue().length <= PACK_THRESHOLD) {
+            attr.getValue().length <= PACK_THRESHOLD ||
+            attr.isEnumerable()) {
           toPack.add(attr);
         } else {
           if (b == null) {

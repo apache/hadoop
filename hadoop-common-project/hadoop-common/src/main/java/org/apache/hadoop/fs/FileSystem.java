@@ -3241,8 +3241,32 @@ public abstract class FileSystem extends Configured
    */
   public void setXAttr(Path path, String name, byte[] value)
       throws IOException {
-    setXAttr(path, name, value, EnumSet.of(XAttrSetFlag.CREATE,
-        XAttrSetFlag.REPLACE));
+    setXAttr(path, name, value, false);
+  }
+
+  /**
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @param enumValue if value is enumerable
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default outcome).
+   */
+  public void setXAttr(Path path, String name, byte[] value, boolean enumValue)
+          throws IOException {
+    EnumSet<XAttrSetFlag> flags = EnumSet.of(XAttrSetFlag.CREATE,
+            XAttrSetFlag.REPLACE);
+    if (enumValue) {
+      flags.add(XAttrSetFlag.ENUM_VALUE);
+    }
+    setXAttr(path, name, value, flags);
   }
 
   /**

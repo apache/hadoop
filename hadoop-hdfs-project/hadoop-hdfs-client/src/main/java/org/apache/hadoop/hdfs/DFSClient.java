@@ -2906,7 +2906,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
     try (TraceScope ignored = newPathTraceScope("setXAttr", src)) {
-      namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value), flag);
+      namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value, flag), flag);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           FileNotFoundException.class,

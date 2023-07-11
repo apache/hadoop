@@ -19,10 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.hdfs.XAttrHelper;
 
 import org.apache.hadoop.util.Preconditions;
@@ -38,8 +41,9 @@ import org.apache.hadoop.hdfs.util.LongBitFormat;
  */
 
 public enum XAttrFormat implements LongBitFormat.Enum {
-  RESERVED(null, 5),
-  NS_EXT(RESERVED.BITS, 1),
+  RESERVED(null, 4),
+  NUMERABLE(RESERVED.BITS, 1),
+  NS_EXT(NUMERABLE.BITS, 1),
   NAME(NS_EXT.BITS, 24),
   NS(NAME.BITS, 2);
 
@@ -72,17 +76,23 @@ public enum XAttrFormat implements LongBitFormat.Enum {
     return SerialNumberManager.XATTR.getString(nid);
   }
 
+  public static boolean isNumerable(int record) {
+    return (int)NUMERABLE.BITS.retrieve(record) == 1;
+  }
+
   static int toInt(XAttr a) {
     int nid = SerialNumberManager.XATTR.getSerialNumber(a.getName());
     int nsOrd = a.getNameSpace().ordinal();
     long value = NS.BITS.combine(nsOrd & NS_MASK, 0L);
     value = NS_EXT.BITS.combine(nsOrd >>> NS_EXT_SHIFT, value);
     value = NAME.BITS.combine(nid, value);
+    value = NUMERABLE.BITS.combine(a.isEnumerable() ? 1 : 0, value);
     return (int)value;
   }
 
   static XAttr toXAttr(int record, byte[] value,
                        SerialNumberManager.StringTable stringTable) {
+    assert NUMERABLE.BITS.retrieve(record) == 0;
     int nid = (int)NAME.BITS.retrieve(record);
     String name = SerialNumberManager.XATTR.getString(nid, stringTable);
     return new XAttr.Builder()
@@ -90,6 +100,18 @@ public enum XAttrFormat implements LongBitFormat.Enum {
         .setName(name)
         .setValue(value)
         .build();
+  }
+
+  static XAttr toXAttr(int record, int valueInt,
+                       SerialNumberManager.StringTable stringTable) {
+    assert NUMERABLE.BITS.retrieve(record) == 1;
+    int nid = (int)NAME.BITS.retrieve(record);
+    String name = SerialNumberManager.XATTR.getString(nid, stringTable);
+    return new XAttr.Builder()
+            .setNameSpace(getNamespace(record))
+            .setName(name)
+            .setValue(XAttrValueFormat.getValue(valueInt))
+            .build();
   }
 
   /**
@@ -111,13 +133,23 @@ public enum XAttrFormat implements LongBitFormat.Enum {
       i += 4;
       builder.setNameSpace(XAttrFormat.getNamespace(v));
       builder.setName(XAttrFormat.getName(v));
-      int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
-      i += 2;
-      if (vlen > 0) {
-        byte[] value = new byte[vlen];
-        System.arraycopy(attrs, i, value, 0, vlen);
-        builder.setValue(value);
-        i += vlen;
+      boolean isEnumerable = XAttrFormat.isNumerable(v);
+      builder.setEnumerable(isEnumerable);
+      if (!isEnumerable) {
+        int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
+        i += 2;
+        if (vlen > 0) {
+          byte[] value = new byte[vlen];
+          System.arraycopy(attrs, i, value, 0, vlen);
+          builder.setValue(value);
+          i += vlen;
+        }
+      } else {
+        // big-endian
+        v = Ints.fromBytes(attrs[i], attrs[i + 1],
+                attrs[i + 2], attrs[i + 3]);
+        i += 4;
+        builder.setValue(XAttrValueFormat.getValue(v));
       }
       xAttrs.add(builder.build());
     }
@@ -145,19 +177,40 @@ public enum XAttrFormat implements LongBitFormat.Enum {
       i += 4;
       XAttr.NameSpace namespace = XAttrFormat.getNamespace(v);
       String name = XAttrFormat.getName(v);
-      int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
-      i += 2;
-      if (xAttr.getNameSpace() == namespace &&
-          xAttr.getName().equals(name)) {
-        if (vlen > 0) {
-          byte[] value = new byte[vlen];
-          System.arraycopy(attrs, i, value, 0, vlen);
-          return new XAttr.Builder().setNameSpace(namespace).
-              setName(name).setValue(value).build();
-        }
-        return xAttr;
+      boolean isEnumerable = XAttrFormat.isNumerable(v);
+      // If enumerable, tmpInt is int for XAttrValueFormat
+      // It not enumerable, tmpInt is for vlen
+      int tmpInt;
+      if (isEnumerable) {
+        // big-endian
+        tmpInt = Ints.fromBytes(attrs[i], attrs[i + 1],
+                attrs[i + 2], attrs[i + 3]);
+        i += 4;
+      } else {
+        tmpInt = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
+        i += 2;
       }
-      i += vlen;
+      if (xAttr.getNameSpace() == namespace &&
+              xAttr.getName().equals(name)) {
+        if (isEnumerable) {
+          return new XAttr.Builder().setNameSpace(namespace).
+                  setName(name).
+                  setValue(XAttrValueFormat.getValue(tmpInt)).
+                  build();
+        } else {
+          if (tmpInt > 0) {
+            byte[] value = new byte[tmpInt];
+            System.arraycopy(attrs, i, value, 0, tmpInt);
+            return new XAttr.Builder().setNameSpace(namespace).
+                    setName(name).setValue(value).build();
+          }
+          return xAttr;
+        }
+      } else {
+        if (!isEnumerable) {
+          i += tmpInt;
+        }
+      }
     }
     return null;
   }
@@ -178,13 +231,18 @@ public enum XAttrFormat implements LongBitFormat.Enum {
         // big-endian
         int v = XAttrFormat.toInt(a);
         out.write(Ints.toByteArray(v));
-        int vlen = a.getValue() == null ? 0 : a.getValue().length;
-        Preconditions.checkArgument(vlen < XATTR_VALUE_LEN_MAX,
-            "The length of xAttr values is too long.");
-        out.write((byte)(vlen >> 8));
-        out.write((byte)(vlen));
-        if (vlen > 0) {
-          out.write(a.getValue());
+        if (!a.isEnumerable()) {
+          int vlen = a.getValue() == null ? 0 : a.getValue().length;
+          Preconditions.checkArgument(vlen < XATTR_VALUE_LEN_MAX,
+                  "The length of xAttr values is too long.");
+          out.write((byte) (vlen >> 8));
+          out.write((byte) (vlen));
+          if (vlen > 0) {
+            out.write(a.getValue());
+          }
+        } else {
+          out.write(Ints.toByteArray(
+                  SerialNumberManager.XATTR.getSerialNumber(new String(a.getValue(), StandardCharsets.UTF_8))));
         }
       }
     } catch (IOException e) {

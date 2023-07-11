@@ -38,7 +38,13 @@ public enum XAttrSetFlag {
    * Replace a existing xattr.
    * If the xattr does not exist, exception will be thrown.
    */
-  REPLACE((short) 0x02);
+  REPLACE((short) 0x02),
+
+  /**
+   * Value is enumerable.
+   * Value will be stored efficiently.
+   */
+  ENUM_VALUE((short) 0x04);
 
   private final short flag;
 
