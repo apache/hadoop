@@ -311,7 +311,7 @@ class OfflineImageReconstructor {
       if (str == null) {
         return false;
       }
-      return true;
+      return Boolean.parseBoolean(str);
     }
 
     String getRemainingKeyNames() {
