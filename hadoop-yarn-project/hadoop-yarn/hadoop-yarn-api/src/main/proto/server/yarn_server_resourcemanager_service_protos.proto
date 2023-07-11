@@ -177,6 +177,7 @@ message SaveFederationQueuePolicyRequestProto {
 }
 
 message SaveFederationQueuePolicyResponseProto {
+  required string message = 1;
 }
 
 //////////////////////////////////////////////////////////////////

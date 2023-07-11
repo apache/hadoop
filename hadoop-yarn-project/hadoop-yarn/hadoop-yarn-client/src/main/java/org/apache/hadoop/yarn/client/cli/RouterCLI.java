@@ -333,6 +333,7 @@ public class RouterCLI extends Configured implements Tool {
       SaveFederationQueuePolicyRequest request = parsePolicy(policy);
       ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
       SaveFederationQueuePolicyResponse response = adminProtocol.saveFederationQueuePolicy(request);
+      System.out.println(response.getMessage());
       return EXIT_SUCCESS;
     } catch (YarnException | IOException e) {
       LOG.error("handleSavePolicy error.", e);

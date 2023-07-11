@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
@@ -27,4 +28,19 @@ public abstract class SaveFederationQueuePolicyResponse {
   public static SaveFederationQueuePolicyResponse newInstance() {
     return Records.newRecord(SaveFederationQueuePolicyResponse.class);
   }
+
+  public static SaveFederationQueuePolicyResponse newInstance(String msg) {
+    SaveFederationQueuePolicyResponse response =
+        Records.newRecord(SaveFederationQueuePolicyResponse.class);
+    response.setMessage(msg);
+    return response;
+  }
+
+  @Public
+  @Unstable
+  public abstract String getMessage();
+
+  @Public
+  @Unstable
+  public abstract void setMessage(String msg);
 }

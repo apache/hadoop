@@ -641,6 +641,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         SaveFederationQueuePolicyRequest.newInstance(queue, federationQueueWeight, policyTypeName);
     SaveFederationQueuePolicyResponse response = interceptor.saveFederationQueuePolicy(request);
     assertNotNull(response);
+    assertEquals("save policy success.", response.getMessage());
 
     FederationStateStoreFacade federationFacade = interceptor.getFederationFacade();
     SubClusterPolicyConfiguration policyConfiguration = federationFacade.getPolicyConfiguration(queue);
