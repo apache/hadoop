@@ -97,9 +97,9 @@ public class RouterCLI extends Configured implements Tool {
   private static final String CMD_HELP = "-help";
 
   // Command2: policy
-  // list
-  //
-  //
+  // save policy
+  private static final String OPTION_S = "s";
+  private static final String OPTION_SAVE = "save";
 
   public RouterCLI() {
     super();
@@ -309,10 +309,10 @@ public class RouterCLI extends Configured implements Tool {
     }
 
     // Try to parse the cmd save.
-    if (cliParser.hasOption("s") || cliParser.hasOption("save")) {
-      String policy = cliParser.getOptionValue("s");
+    if (cliParser.hasOption(OPTION_S) || cliParser.hasOption(OPTION_SAVE)) {
+      String policy = cliParser.getOptionValue(OPTION_S);
       if (StringUtils.isBlank(policy)) {
-        policy = cliParser.getOptionValue("save");
+        policy = cliParser.getOptionValue(OPTION_SAVE);
       }
     }
 
@@ -369,8 +369,8 @@ public class RouterCLI extends Configured implements Tool {
     checkSubClusterQueueWeightRatioValid(amrmWeight);
     checkHeadRoomAlphaValid(headroomalpha);
 
-    FederationQueueWeight federationQueueWeight = FederationQueueWeight.newInstance(
-        queue, routerWeight, amrmWeight, headroomalpha);
+    FederationQueueWeight federationQueueWeight =
+         FederationQueueWeight.newInstance(routerWeight, amrmWeight, headroomalpha);
     return federationQueueWeight;
   }
 

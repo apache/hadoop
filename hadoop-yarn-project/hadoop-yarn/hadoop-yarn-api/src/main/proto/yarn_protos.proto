@@ -441,10 +441,9 @@ message DeregisterSubClustersProto {
 }
 
 message FederationQueueWeightProto {
-  optional string queue = 1;
-  optional string routerWeight = 2;
-  optional string amrmWeight = 3;
-  optional string headRoomAlpha = 4;
+  optional string routerWeight = 1;
+  optional string amrmWeight = 2;
+  optional string headRoomAlpha = 3;
 }
 
 ////////////////////////////////////////////////////////////////////////

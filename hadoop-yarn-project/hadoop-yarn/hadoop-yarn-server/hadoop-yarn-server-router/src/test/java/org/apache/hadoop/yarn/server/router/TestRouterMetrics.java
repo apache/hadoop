@@ -623,6 +623,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getGroupsForUser call");
       metrics.incrGetGroupsForUserFailedRetrieved();
     }
+
+    public void getSaveFederationQueuePolicyFailedRetrieved() {
+      LOG.info("Mocked: failed refreshClusterMaxPriority call");
+      metrics.incrSaveFederationQueuePolicyFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -951,6 +956,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful GetGroupsForUsers call with duration {}",
           duration);
       metrics.succeededGetGroupsForUsersRetrieved(duration);
+    }
+
+    public void getSaveFederationQueuePolicyRetrieved(long duration) {
+      LOG.info("Mocked: successful SaveFederationQueuePolicy call with duration {}",
+          duration);
+      metrics.succeededSaveFederationQueuePolicyRetrieved(duration);
     }
   }
 
@@ -2207,5 +2218,27 @@ public class TestRouterMetrics {
         metrics.getNumSucceededGetGroupsForUsersRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededGetGroupsForUsersRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyFailedRetrieved() {
+    long totalBadBefore = metrics.getSaveFederationQueuePolicyFailedRetrieved();
+    badSubCluster.getSaveFederationQueuePolicyFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getSaveFederationQueuePolicyFailedRetrieved());
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededSaveFederationQueuePolicyRetrieved();
+    goodSubCluster.getSaveFederationQueuePolicyRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededSaveFederationQueuePolicyRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededSaveFederationQueuePolicyRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getSaveFederationQueuePolicyRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededSaveFederationQueuePolicyRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededSaveFederationQueuePolicyRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

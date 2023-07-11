@@ -31,23 +31,14 @@ public abstract class FederationQueueWeight {
 
   @Private
   @Unstable
-  public static FederationQueueWeight newInstance(String queue, String routerWeight,
+  public static FederationQueueWeight newInstance(String routerWeight,
       String amrmWeight, String headRoomAlpha) {
     FederationQueueWeight federationQueueWeight = Records.newRecord(FederationQueueWeight.class);
-    federationQueueWeight.setQueue(queue);
     federationQueueWeight.setRouterWeight(routerWeight);
     federationQueueWeight.setAmrmWeight(amrmWeight);
     federationQueueWeight.setHeadRoomAlpha(headRoomAlpha);
     return federationQueueWeight;
   }
-
-  @Public
-  @Unstable
-  public abstract String getQueue();
-
-  @Public
-  @Unstable
-  public abstract void setQueue(String queue);
 
   @Public
   @Unstable

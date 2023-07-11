@@ -581,18 +581,17 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
 
   @Test
   public void testSaveFederationQueuePolicyErrorRequest() throws Exception {
-    // null request1.
+    // null request.
     LambdaTestUtils.intercept(YarnException.class, "Missing SaveFederationQueuePolicy request.",
         () -> interceptor.saveFederationQueuePolicy(null));
 
-    // null request2.
+    // federationQueueWeight is null.
     LambdaTestUtils.intercept(IllegalArgumentException.class, "FederationQueueWeight cannot be null.",
         () -> SaveFederationQueuePolicyRequest.newInstance("root.a", null, "-"));
 
-    // null request3.
+    // queue is null
     FederationQueueWeight federationQueueWeight =
-        FederationQueueWeight.newInstance(
-        "", "SC-1:0.7,SC-2:0.3", "SC-1:0.7,SC-2:0.3", "1.0");
+        FederationQueueWeight.newInstance("SC-1:0.7,SC-2:0.3", "SC-1:0.7,SC-2:0.3", "1.0");
     SaveFederationQueuePolicyRequest request =
         SaveFederationQueuePolicyRequest.newInstance("", federationQueueWeight, "-");
     LambdaTestUtils.intercept(YarnException.class, "Missing Queue information.",

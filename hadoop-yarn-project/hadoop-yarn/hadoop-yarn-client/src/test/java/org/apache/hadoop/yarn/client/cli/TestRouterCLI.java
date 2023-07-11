@@ -185,7 +185,6 @@ public class TestRouterCLI {
     String policy = "root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
     FederationQueueWeight federationQueueWeight = rmAdminCLI.parsePolicy(policy);
     assertNotNull(federationQueueWeight);
-    assertEquals("root.a", federationQueueWeight.getQueue());
     assertEquals("SC-1:0.7,SC-2:0.3", federationQueueWeight.getRouterWeight());
     assertEquals("SC-1:0.6,SC-2:0.4", federationQueueWeight.getAmrmWeight());
     assertEquals("1.0", federationQueueWeight.getHeadRoomAlpha());
