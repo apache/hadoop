@@ -2322,6 +2322,15 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.server.handler.queue.size</name>
+  <value>100</value>
+  <description>
+    Indicates how many calls per handler are allowed in the queue. This value can
+    determine the maximum call queue size by multiplying the number of handler threads.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting

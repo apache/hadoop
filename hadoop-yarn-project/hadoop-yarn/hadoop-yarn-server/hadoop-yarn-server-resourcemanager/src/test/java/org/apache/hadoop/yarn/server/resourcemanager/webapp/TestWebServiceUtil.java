@@ -96,7 +96,10 @@ public final class TestWebServiceUtil {
       WebResource resource) throws Exception {
     final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
     try {
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
+      // capacity is not set when there are no cluster resources available yet
+      if (((CapacityScheduler)rm.getResourceScheduler()).getConfiguration().isLegacyQueueMode()) {
+        assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
+      }
       MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
       rm.registerNode("h2:1234", 8 * GB, 8);
       if (reinitAfterNodeChane) {
