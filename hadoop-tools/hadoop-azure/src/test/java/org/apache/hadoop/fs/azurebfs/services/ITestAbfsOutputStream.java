@@ -100,7 +100,6 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testAzureBlobFileSystemBackReferenceInOutputStream()
       throws Exception {
-
     byte[] testBytes = new byte[5 * 1024];
     // Creating an output stream using a FS in a separate method to make the
     // FS instance used eligible for GC. Since when a method is popped from
