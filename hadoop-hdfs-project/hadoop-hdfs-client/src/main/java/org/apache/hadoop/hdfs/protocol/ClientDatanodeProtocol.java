@@ -199,4 +199,9 @@ public interface ClientDatanodeProtocol {
    * @throws IOException - Throws if there is no such key
    */
   String getDiskBalancerSetting(String key) throws IOException;
+
+  /**
+   * Trigger an instant run of directory scanner if it's not running currently.
+   */
+  String triggerDirectoryScanner() throws IOException;
 }

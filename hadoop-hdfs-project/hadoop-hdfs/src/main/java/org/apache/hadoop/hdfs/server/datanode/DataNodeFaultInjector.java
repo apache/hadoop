@@ -162,4 +162,6 @@ public class DataNodeFaultInjector {
    * Just delay delete replica a while.
    */
   public void delayDeleteReplica() {}
+
+  public void throwIOExceptionWhenReconcile() throws IOException {}
 }
