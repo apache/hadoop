@@ -930,6 +930,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       federationFacade.setPolicyConfiguration(policyConfiguration);
       long stopTime = clock.getTime();
       routerMetrics.succeededSaveFederationQueuePolicyRetrieved(stopTime - startTime);
+      return SaveFederationQueuePolicyResponse.newInstance();
     } catch (Exception e) {
       routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,

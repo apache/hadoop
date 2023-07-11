@@ -23,10 +23,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
-import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -111,14 +108,17 @@ public class TestRouterCLI {
   public void testHelp() throws Exception {
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
-    // System.setOut(new PrintStream(dataOut));
-    // System.setErr(new PrintStream(dataErr));
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
 
     String[] args = {"-help"};
     rmAdminCLI.run(args);
     assertEquals(0, rmAdminCLI.run(args));
 
     args = new String[]{"-help", "-deregisterSubCluster"};
+    rmAdminCLI.run(args);
+
+    args = new String[]{"-help", "-policy"};
     rmAdminCLI.run(args);
   }
 
@@ -183,7 +183,8 @@ public class TestRouterCLI {
 
     // If policy is root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0
     String policy = "root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
-    FederationQueueWeight federationQueueWeight = rmAdminCLI.parsePolicy(policy);
+    SaveFederationQueuePolicyRequest request = rmAdminCLI.parsePolicy(policy);
+    FederationQueueWeight federationQueueWeight = request.getFederationQueueWeight();
     assertNotNull(federationQueueWeight);
     assertEquals("SC-1:0.7,SC-2:0.3", federationQueueWeight.getRouterWeight());
     assertEquals("SC-1:0.6,SC-2:0.4", federationQueueWeight.getAmrmWeight());

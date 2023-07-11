@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +72,9 @@ public class RouterCLI extends Configured implements Tool {
         .put("-policy", new UsageInfo(
         "[-s|--save [queue;router weight;amrm weight;headroomalpha]]",
         "We provide a set of commands for Policy:" +
-        " Include list policies, save policies, batch save policies." +
+        " Include list policies, save policies, batch save policies. " +
+        " (Note: The policy type will be directly read from the" +
+        " yarn.federation.policy-manager in the local yarn-site.xml.)" +
         " eg. (routeradmin -policy [-s|--save] root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0)"))
         .build();
 
@@ -100,6 +104,7 @@ public class RouterCLI extends Configured implements Tool {
   // save policy
   private static final String OPTION_S = "s";
   private static final String OPTION_SAVE = "save";
+  private static final String CMD_POLICY = "-policy";
 
   public RouterCLI() {
     super();
@@ -293,8 +298,10 @@ public class RouterCLI extends Configured implements Tool {
 
     // Prepare Options.
     Options opts = new Options();
-    opts.addOption("policy", false, "");
-    Option saveOpt = new Option("s", "save", true, "");
+    opts.addOption("policy", false,
+    "We provide a set of commands for Policy Include list policies, save policies, batch save policies.");
+    Option saveOpt = new Option(OPTION_S, OPTION_SAVE, true,
+    "We will save the policy information of the queue, including queue and weight information");
     saveOpt.setOptionalArg(true);
     opts.addOption(saveOpt);
 
@@ -313,26 +320,21 @@ public class RouterCLI extends Configured implements Tool {
       String policy = cliParser.getOptionValue(OPTION_S);
       if (StringUtils.isBlank(policy)) {
         policy = cliParser.getOptionValue(OPTION_SAVE);
+        return handleSavePolicy(policy);
       }
     }
 
-    return 0;
-  }
-
-  private int handleListPolicy(String queue) {
-    return 0;
-  }
-
-  private int handleListPolicy() {
-    return 0;
+    return EXIT_ERROR;
   }
 
   private int handleSavePolicy(String policy) {
     LOG.info("Save Federation Policy = {}.", policy);
     try {
-      FederationQueueWeight federationQueueWeight = parsePolicy(policy);
+      SaveFederationQueuePolicyRequest request = parsePolicy(policy);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      SaveFederationQueuePolicyResponse response = adminProtocol.saveFederationQueuePolicy(request);
       return EXIT_SUCCESS;
-    } catch (YarnException e) {
+    } catch (YarnException | IOException e) {
       LOG.error("handleSavePolicy error.", e);
       return EXIT_ERROR;
     }
@@ -348,7 +350,7 @@ public class RouterCLI extends Configured implements Tool {
    * otherwise an exception will be thrown.
    * @throws YarnException exceptions from yarn servers.
    */
-  protected FederationQueueWeight parsePolicy(String policy) throws YarnException {
+  protected SaveFederationQueuePolicyRequest parsePolicy(String policy) throws YarnException {
 
     String[] policyItems = policy.split(SEMICOLON);
     if (policyItems == null || policyItems.length != 4) {
@@ -370,8 +372,13 @@ public class RouterCLI extends Configured implements Tool {
     checkHeadRoomAlphaValid(headroomalpha);
 
     FederationQueueWeight federationQueueWeight =
-         FederationQueueWeight.newInstance(routerWeight, amrmWeight, headroomalpha);
-    return federationQueueWeight;
+        FederationQueueWeight.newInstance(routerWeight, amrmWeight, headroomalpha);
+    String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
+        YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
+    SaveFederationQueuePolicyRequest request = SaveFederationQueuePolicyRequest.newInstance(
+        queue, federationQueueWeight, policyManager);
+
+    return request;
   }
 
   /**
@@ -458,6 +465,10 @@ public class RouterCLI extends Configured implements Tool {
 
     if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
       return handleDeregisterSubCluster(args);
+    }
+
+    if (CMD_POLICY.equals(cmd)) {
+      return handlePolicy(args);
     }
 
     return EXIT_SUCCESS;
