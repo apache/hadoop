@@ -344,6 +344,10 @@ public class TestFSQueueConverter {
     assertTrue("root.admins autocreate v2 flag",
         csConfig.getBoolean(
             PREFIX + "root.admins.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.admins.alice autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.admins.alice.auto-queue-creation-v2.enabled",
+                false));
     assertTrue("root.users autocreate v2 flag",
         csConfig.getBoolean(
             PREFIX + "root.users.auto-queue-creation-v2.enabled", false));
@@ -355,7 +359,6 @@ public class TestFSQueueConverter {
     //adding reservation to a leaf, it's queueType changes to FSParentQueue
     Set<String> leafs = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root",
-            "root.default",
             "root.admins",
             "root.users",
             "root.misc",
