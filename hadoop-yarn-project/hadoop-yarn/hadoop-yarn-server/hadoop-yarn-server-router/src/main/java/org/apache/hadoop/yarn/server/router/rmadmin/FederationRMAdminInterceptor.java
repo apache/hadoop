@@ -103,7 +103,6 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationRMAdminInterceptor.class);
 
-  private static final String SEMICOLON = ";";
   private static final String COMMA = ",";
   private static final String COLON = ":";
 
@@ -896,10 +895,15 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RouterServerUtil.logAndThrowException("Missing FederationQueueWeight information.", null);
     }
 
+    String queue = request.getQueue();
+    if (StringUtils.isBlank(queue)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing Queue information.", null);
+    }
+
     try {
       long startTime = clock.getTime();
       // Step1, get parameters.
-      String queue = request.getQueue();
       String amRmWeight = federationQueueWeight.getAmrmWeight();
       String routerWeight = federationQueueWeight.getRouterWeight();
       String policyManagerClassName = request.getPolicyManagerClassName();

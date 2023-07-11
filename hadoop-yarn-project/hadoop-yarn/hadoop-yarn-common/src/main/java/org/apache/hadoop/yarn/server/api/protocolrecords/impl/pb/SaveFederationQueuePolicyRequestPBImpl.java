@@ -91,8 +91,8 @@ public class SaveFederationQueuePolicyRequestPBImpl extends SaveFederationQueueP
 
   @Override
   public void setFederationQueueWeight(FederationQueueWeight pFederationQueueWeight) {
-    if (federationQueueWeight == null) {
-      throw new IllegalArgumentException("federationQueueWeight cannot be null");
+    if (pFederationQueueWeight == null) {
+      throw new IllegalArgumentException("FederationQueueWeight cannot be null.");
     }
     maybeInitBuilder();
     this.federationQueueWeight = pFederationQueueWeight;

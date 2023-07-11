@@ -65,11 +65,13 @@ public class RouterCLI extends Configured implements Tool {
         "[-sc|--subClusterId [subCluster Id]]",
         "Deregister SubCluster, If the interval between the heartbeat time of the subCluster " +
         "and the current time exceeds the timeout period, " +
-        "set the state of the subCluster to SC_LOST"))
+        "set the state of the subCluster to SC_LOST."))
          // Command2: policy
-        .put("-policy",new UsageInfo(
-        "[-s|--save [queue;router weight[SC-1:0.1,SC-2:0.9];amrm weight[SC-1:0.1,SC-2:0.9];headroomalpha]]",
-        "We provide a set of commands for Policy, include list policies,save policies,batch save policies."))
+        .put("-policy", new UsageInfo(
+        "[-s|--save [queue;router weight;amrm weight;headroomalpha]]",
+        "We provide a set of commands for Policy:" +
+        " Include list policies, save policies, batch save policies." +
+        " eg. (routeradmin -policy [-s|--save] root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0)"))
         .build();
 
   // Common Constant
@@ -153,9 +155,10 @@ public class RouterCLI extends Configured implements Tool {
     summary.append("routeradmin is the command to execute ")
         .append("YARN Federation administrative commands.\n")
         .append("The full syntax is: \n\n")
-        .append("routeradmin")
-        .append(" [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]")
-        .append(" [-help [cmd]]").append("\n");
+        .append("routeradmin\n")
+        .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
+        .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha]]\n")
+        .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
 
