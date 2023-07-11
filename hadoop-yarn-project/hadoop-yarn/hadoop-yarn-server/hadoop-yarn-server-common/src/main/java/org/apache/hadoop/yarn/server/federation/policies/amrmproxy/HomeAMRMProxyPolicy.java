@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -71,5 +72,14 @@ public class HomeAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     List<ResourceRequest> resourceRequestsCopy =
         new ArrayList<>(resourceRequests);
     return Collections.singletonMap(homeSubcluster, resourceRequestsCopy);
+  }
+
+  @Override
+  public void addAMRMClientRelayer(SubClusterId subClusterId,
+      AMRMClientRelayer relayer) throws YarnException {
+  }
+
+  @Override
+  public void shutdown() {
   }
 }

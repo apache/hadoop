@@ -245,6 +245,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   /** The policy used to split requests among sub-clusters. */
   private FederationAMRMProxyPolicy policyInterpreter;
+  private final Object policyInterpreterLock = new Object();
 
   private FederationRegistryClient registryClient;
 
@@ -314,9 +315,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     ApplicationId appId = this.attemptId.getApplicationId();
     this.homeSubClusterId =
         SubClusterId.newInstance(YarnConfiguration.getClusterId(conf));
-    this.homeRMRelayer = new AMRMClientRelayer(createHomeRMProxy(appContext,
-        ApplicationMasterProtocol.class, appOwner), appId,
-        this.homeSubClusterId.toString());
+    this.homeRMRelayer = new AMRMClientRelayer(
+        createHomeRMProxy(appContext, ApplicationMasterProtocol.class,
+            appOwner), conf, appId, this.homeSubClusterId.toString());
 
     this.homeHeartbeartHandler =
         createHomeHeartbeartHandler(conf, appId, this.homeRMRelayer);
@@ -882,6 +883,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       this.threadpool = null;
     }
 
+    if (this.policyInterpreter != null) {
+      this.policyInterpreter.shutdown();
+    }
+
     // Stop the home heartbeat thread
     this.homeHeartbeartHandler.shutdown();
     this.homeRMRelayer.shutdown();
@@ -1292,8 +1297,13 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 getApplicationContext().getUser(), homeSubClusterId.toString(),
                 true, subClusterId, originalSubmissionContext);
 
-            secondaryRelayers.put(subClusterId,
-                uamPool.getAMRMClientRelayer(subClusterId));
+            // Propagate the new subcluster info
+            AMRMClientRelayer relayer =
+                uamPool.getAMRMClientRelayer(subClusterId);
+            secondaryRelayers.put(subClusterId, relayer);
+            synchronized (policyInterpreterLock) {
+              policyInterpreter.addAMRMClientRelayer(scId, relayer);
+            }
 
             uamResponse = uamPool.registerApplicationMaster(subClusterId,
                 amRegistrationRequest);

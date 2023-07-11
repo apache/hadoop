@@ -139,12 +139,12 @@ public class TestAMRMClientRelayerMetrics {
 
     this.mockAMS = new MockApplicationMasterService();
 
-    this.homeRelayer = new AMRMClientRelayer(this.mockAMS,
+    this.homeRelayer = new AMRMClientRelayer(this.mockAMS, conf,
         ApplicationId.newInstance(0, 0), this.homeID);
     this.homeRelayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
 
-    this.uamRelayer = new AMRMClientRelayer(this.mockAMS,
+    this.uamRelayer = new AMRMClientRelayer(this.mockAMS, conf,
         ApplicationId.newInstance(0, 0), this.uamID);
     this.uamRelayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
