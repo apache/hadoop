@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
 /**
@@ -50,6 +52,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private boolean optimizeFooterRead;
 
   private boolean bufferedPreadDisabled;
+
+  /** A BackReference to the FS instance that created this OutputStream. */
+  private BackReference fsBackRef;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -122,6 +127,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withAbfsBackRef(
+      final BackReference fsBackRef) {
+    this.fsBackRef = fsBackRef;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -179,5 +190,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isBufferedPreadDisabled() {
     return bufferedPreadDisabled;
+  }
+
+  public BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }

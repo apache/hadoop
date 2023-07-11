@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -189,6 +190,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
 
+  /** ABFS instance reference to be held by the store to avoid GC close. */
+  private BackReference fsBackRef;
+
   /**
    * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
    * Built using the {@link AzureBlobFileSystemStoreBuilder} with parameters
@@ -202,6 +206,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
     final String accountName = authorityParts[1];
+    this.fsBackRef = abfsStoreBuilder.fsBackRef;
 
     leaseRefs = Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -711,6 +716,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withExecutorService(new SemaphoredDelegatingExecutor(boundedThreadPool,
                 blockOutputActiveBlocks, true))
             .withTracingContext(tracingContext)
+            .withAbfsBackRef(fsBackRef)
             .build();
   }
 
@@ -818,6 +824,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
+            .withAbfsBackRef(fsBackRef)
             .build();
   }
 
@@ -1871,6 +1878,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private AbfsCounters abfsCounters;
     private DataBlocks.BlockFactory blockFactory;
     private int blockOutputActiveBlocks;
+    private BackReference fsBackRef;
 
     public AzureBlobFileSystemStoreBuilder withUri(URI value) {
       this.uri = value;
@@ -1903,6 +1911,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     public AzureBlobFileSystemStoreBuilder withBlockOutputActiveBlocks(
         int value) {
       this.blockOutputActiveBlocks = value;
+      return this;
+    }
+
+    public AzureBlobFileSystemStoreBuilder withBackReference(
+        BackReference fsBackRef) {
+      this.fsBackRef = fsBackRef;
       return this;
     }
 
