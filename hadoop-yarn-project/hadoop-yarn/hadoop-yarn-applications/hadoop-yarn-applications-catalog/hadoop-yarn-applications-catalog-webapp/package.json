@@ -19,6 +19,9 @@
         "shelljs": "^0.2.6",
         "apidoc": "0.17.7"
     },
+    "resolutions": {
+        "triple-beam": "1.3.0"
+    },
     "scripts": {
         "prestart": "npm install & mvn clean package",
         "pretest": "npm install"
