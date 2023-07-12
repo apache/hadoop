@@ -87,8 +87,6 @@ public class SubClusterIdInfo {
 
   @Override
   public String toString() {
-    return "SubClusterIdInfo{" +
-            "id='" + id + '\'' +
-            '}';
+    return "SubClusterIdInfo{ id='" + id + '\'' + '}';
   }
 }
