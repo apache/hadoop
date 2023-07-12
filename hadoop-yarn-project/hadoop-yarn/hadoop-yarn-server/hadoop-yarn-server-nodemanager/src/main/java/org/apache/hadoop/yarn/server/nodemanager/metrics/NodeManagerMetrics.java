@@ -118,6 +118,11 @@ public class NodeManagerMetrics {
   @Metric("Container localization time in milliseconds")
       MutableRate localizationDurationMillis;
 
+  @Metric("# of nm dispatcher event queue size")
+  MutableGaugeInt nmDispatcherEventQueueSize;
+  @Metric("# of scheduler dispatcher event queue size")
+  MutableGaugeInt schedulerDispatcherEventQueueSize;
+
   // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
@@ -480,5 +485,21 @@ public class NodeManagerMetrics {
 
   public void localizationComplete(long downloadMillis) {
     localizationDurationMillis.add(downloadMillis);
+  }
+
+  public int getNmDispatcherEventQueueSize() {
+    return nmDispatcherEventQueueSize.value();
+  }
+
+  public void setNmDispatcherEventQueueSize(int nmDispatcherEventQueueSize) {
+    this.nmDispatcherEventQueueSize.set(nmDispatcherEventQueueSize);
+  }
+
+  public int getSchedulerEventQueueSize() {
+    return schedulerDispatcherEventQueueSize.value();
+  }
+
+  public void setSchedulerEventQueueSize(int schedulerEventQueueSize) {
+    this.schedulerDispatcherEventQueueSize.set(schedulerEventQueueSize);
   }
 }
