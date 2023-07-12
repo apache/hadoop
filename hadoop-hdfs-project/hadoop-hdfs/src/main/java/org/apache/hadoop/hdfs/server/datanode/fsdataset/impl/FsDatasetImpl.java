@@ -284,7 +284,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long maxDirScannerNotifyCount;
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
-  private long lastDirScannerFinishTime;
+  private volatile long lastDirScannerFinishTime;
 
   /**
    * An FSDataset has a directory where it loads its data files.
