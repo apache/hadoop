@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
@@ -477,7 +479,9 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   protected void writeFile(Path path, ByteBuffer buffer) throws IOException {
     buffer.rewind();
-    try (WritableByteChannel writeChannel = Files.newByteChannel(path, CREATE_OPTIONS)) {
+    try (WritableByteChannel writeChannel = Files.newByteChannel(path, CREATE_OPTIONS);
+             DurationInfo d = new DurationInfo(LOG, "Writing %d bytes to %s",
+                 buffer.remaining(), path)) {
       while (buffer.hasRemaining()) {
         writeChannel.write(buffer);
       }
@@ -607,7 +611,11 @@ public class SingleFilePerBlockCache implements BlockCache {
     return sb.toString();
   }
 
-  private static final String CACHE_FILE_PREFIX = "fs-cache-";
+  /**
+   *  Prefix for cache files: {@value}.
+   */
+  @VisibleForTesting
+  public static final String CACHE_FILE_PREFIX = "fs-cache-";
 
   /**
    * Determine if the cache space is available on the local FS.

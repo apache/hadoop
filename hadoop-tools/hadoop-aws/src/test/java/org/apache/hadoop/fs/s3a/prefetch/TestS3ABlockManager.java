@@ -80,7 +80,7 @@ public class TestS3ABlockManager extends AbstractHadoopTestBase {
       ByteBuffer buffer = data.getBuffer();
       long startOffset = blockData.getStartOffset(b);
       for (int i = 0; i < BLOCK_SIZE; i++) {
-        assertEquals(startOffset + i, buffer.get());
+        assertEquals("buffer value at offset " + i, startOffset + i, buffer.get());
       }
     }
   }

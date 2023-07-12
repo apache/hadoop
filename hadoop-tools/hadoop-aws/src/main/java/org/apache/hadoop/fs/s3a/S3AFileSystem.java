@@ -1916,7 +1916,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         prefetchBlockCount)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
-    return roc.build();
+    return roc;
   }
 
   /**
@@ -2475,8 +2475,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
-      return S3AFileSystem.this.createReadContext(fileStatus,
-          auditSpan);
+      return S3AFileSystem.this.createReadContext(fileStatus, auditSpan)
+          .build();
     }
 
     @Override

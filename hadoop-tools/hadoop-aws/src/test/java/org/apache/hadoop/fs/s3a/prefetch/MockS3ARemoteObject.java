@@ -27,6 +27,8 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -36,7 +38,9 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 /**
  * A mock s3 file with some fault injection.
  */
-class MockS3ARemoteObject extends S3ARemoteObject {
+public class MockS3ARemoteObject extends S3ARemoteObject {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MockS3ARemoteObject.class);
 
   private byte[] contents;
 
@@ -54,7 +58,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
 
   MockS3ARemoteObject(int size, boolean throwExceptionOnOpen) {
     super(
-        S3APrefetchFakes.createReadContext(null, KEY, size, 1, 1),
+        S3APrefetchFakes.createReadContext(null, "s3a://" + BUCKET + "/" + KEY, size, 1, 1),
         S3APrefetchFakes.createObjectAttributes(BUCKET, KEY, size),
         S3APrefetchFakes.createInputStreamCallbacks(BUCKET),
         EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS,
@@ -75,6 +79,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
     if (throwExceptionOnOpen) {
+      LOG.debug("Raising IOException in open({}, {})", offset, size);
       throwExceptionOnOpen = false;
       throw new IOException("Throwing because throwExceptionOnOpen is true ");
     }

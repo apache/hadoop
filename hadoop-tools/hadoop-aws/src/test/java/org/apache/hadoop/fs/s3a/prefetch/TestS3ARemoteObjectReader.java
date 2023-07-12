@@ -100,11 +100,11 @@ public class TestS3ARemoteObjectReader extends AbstractHadoopTestBase {
         int numBytesRead = reader.read(buffer, startOffset, readSize);
         int expectedNumBytesRead = Math.min(readSize, remainingSize);
         expectedNumBytesRead = Math.min(bufferSize, expectedNumBytesRead);
-        assertEquals(expectedNumBytesRead, numBytesRead);
+        assertEquals("bytes read", expectedNumBytesRead, numBytesRead);
 
         byte[] bytes = buffer.array();
         for (int i = 0; i < expectedNumBytesRead; i++) {
-          assertEquals(startOffset + i, bytes[i]);
+          assertEquals("byte value", startOffset + i, bytes[i]);
         }
       }
     }

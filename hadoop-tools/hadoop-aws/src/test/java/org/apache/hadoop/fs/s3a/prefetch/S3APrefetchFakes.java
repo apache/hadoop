@@ -350,6 +350,13 @@ public final class S3APrefetchFakes {
     public void close() throws IOException {
       this.files.clear();
     }
+
+    @Override
+    public String toString() {
+      return "FakeS3FilePerBlockCache{" +
+          "fileCount=" + fileCount +
+          "} " + super.toString();
+    }
   }
 
   private static final Random RANDOM = new Random();

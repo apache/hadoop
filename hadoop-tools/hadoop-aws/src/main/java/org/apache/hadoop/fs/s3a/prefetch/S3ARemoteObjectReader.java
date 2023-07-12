@@ -109,8 +109,10 @@ public class S3ARemoteObjectReader implements Closeable {
     this.streamStatistics.readOperationStarted(offset, size);
     Invoker invoker = this.remoteObject.getReadInvoker();
 
+    final String path = this.remoteObject.getPath();
     int invokerResponse =
-        invoker.retry("read", this.remoteObject.getPath(), true,
+        invoker.retry(String.format("read %s [%d-%d]", path, offset, size),
+            path, true,
             trackDurationOfOperation(streamStatistics,
                 STREAM_READ_REMOTE_BLOCK_READ, () -> {
                   try {
@@ -129,6 +131,10 @@ public class S3ARemoteObjectReader implements Closeable {
 
     int numBytesRead = buffer.position();
     buffer.limit(numBytesRead);
+    if (numBytesRead != size) {
+      // fewer bytes came back; log at debug
+      LOG.debug("Expected to read {} bytes but got {}", size, numBytesRead);
+    }
     this.remoteObject.getStatistics()
         .readOperationCompleted(size, numBytesRead);
 

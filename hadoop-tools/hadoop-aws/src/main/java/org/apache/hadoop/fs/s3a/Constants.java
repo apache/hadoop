@@ -1467,13 +1467,13 @@ public final class Constants {
   // 64 MB of heap space (8 blocks x 8 MB each).
 
   /**
-   * The size of a single prefetched block in number of bytes.
+   * The size of a single prefetched block in number of bytes: {@value}.
    */
   public static final String PREFETCH_BLOCK_SIZE_KEY = "fs.s3a.prefetch.block.size";
   public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 8 * 1024 * 1024;
 
   /**
-   * Maximum number of blocks prefetched at any given time.
+   * Maximum number of blocks prefetched at any given time: {@value}.
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;

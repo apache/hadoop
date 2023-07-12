@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.Optional;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +34,7 @@ import javax.annotation.Nullable;
 import org.apache.hadoop.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.Optional.empty;
 
 /**
  * Read-specific operation context struct.
@@ -78,11 +81,25 @@ public class S3AReadOpContext extends S3AOpContext {
   // S3 reads are prefetched asynchronously using this future pool.
   private ExecutorServiceFuturePool futurePool;
 
-  // Size in bytes of a single prefetch block.
-  private final int prefetchBlockSize;
+  /**
+   * Size in bytes of a single prefetch block.
+   */
+  private int prefetchBlockSize;
 
-  // Size of prefetch queue (in number of blocks).
-  private final int prefetchBlockCount;
+  /**
+   * Size of prefetch queue (in number of blocks).
+   */
+  private int prefetchBlockCount;
+
+  /**
+   * Where does the read start from, if known.
+   */
+  private Optional<Long> splitStart = empty();
+
+  /**
+   * What is the split end, if known?
+   */
+  private Optional<Long> splitEnd = empty();
 
   /**
    * Instantiate.
@@ -281,6 +298,62 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   public int getPrefetchBlockCount() {
     return this.prefetchBlockCount;
+  }
+
+  /**
+   * Where does the read start from, if known.
+   * @return split start.
+   */
+  public Optional<Long> getSplitStart() {
+    return splitStart;
+  }
+
+  /**
+   * Set split start.
+   * @param value new value -must not be null
+   * @return the builder
+   */
+  public S3AReadOpContext withSplitStart(final Optional<Long> value) {
+    splitStart = requireNonNull(value);
+    return this;
+  }
+
+  /**
+   * Set split end.
+   * @param value new value -must not be null
+   * @return the builder
+   */
+  public S3AReadOpContext withSplitEnd(final Optional<Long> value) {
+    splitEnd = requireNonNull(value);
+    return this;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public S3AReadOpContext withPrefetchBlockSize(final int value) {
+    prefetchBlockSize = value;
+    return this;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public S3AReadOpContext withPrefetchBlockCount(final int value) {
+    prefetchBlockCount = value;
+    return this;
+  }
+
+  /**
+   * What is the split end, if known?
+   * @return split end.
+   */
+  public Optional<Long> getSplitEnd() {
+    return splitEnd;
   }
 
   @Override

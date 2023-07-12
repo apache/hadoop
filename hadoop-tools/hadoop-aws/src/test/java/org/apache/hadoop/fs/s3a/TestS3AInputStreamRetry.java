@@ -185,7 +185,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
         s3AFileStatus,
-        NoopSpan.INSTANCE);
+        NoopSpan.INSTANCE)
+        .build();
 
     return new S3AInputStream(
         s3AReadOpContext,

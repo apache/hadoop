@@ -32,18 +32,29 @@ import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkState;
+
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
  * The entire file is read into memory before reads can begin.
  *
- * Use of this class is recommended only for small files that can fit
- * entirely in memory.
+ * Use of this class is recommended only for small files.
+ * When {@link #unbuffer()} is called, the memory is released.
  */
 public class S3AInMemoryInputStream extends S3ARemoteInputStream {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInMemoryInputStream.class);
 
+  /**
+   * The file size; cut down from long.
+   */
+  private final int fileSize;
+
+  /**
+   * Buffer containing the read data.
+   */
   private ByteBuffer buffer;
 
   /**
@@ -64,10 +75,36 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
       S3AInputStream.InputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
     super(context, s3Attributes, client, streamStatistics);
-    int fileSize = (int) s3Attributes.getLen();
-    this.buffer = ByteBuffer.allocate(fileSize);
+    final long len = s3Attributes.getLen();
+    checkArgument(len < Integer.MAX_VALUE && len >= 0,
+        "Unsupported file size: %s", len);
+    fileSize = (int) len;
+    LOG.debug("Created in memory input stream for {} (size = {})", this.getName(),
+        fileSize);
+  }
+
+  /**
+   * Allocates a buffer for the input stream.
+   *
+   * @throws IllegalStateException if the buffer is already allocated.
+   */
+  private void allocateBuffer() {
+    checkState(buffer == null, "buffer for {} already allocated", getName());
+    buffer = ByteBuffer.allocate(fileSize);
+    getS3AStreamStatistics().memoryAllocated(fileSize);
     LOG.debug("Created in-memory input stream for {} (size = {})",
         getName(), fileSize);
+  }
+
+  /**
+   * Set the buffer to null so that GC will clean it up.
+   * Harmless to call on a released buffer.
+   */
+  private void releaseBuffer() {
+    if (buffer != null) {
+      getS3AStreamStatistics().memoryFreed(fileSize);
+      buffer = null;
+    }
   }
 
   /**
@@ -85,6 +122,9 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
 
     if (getBlockData().getFileSize() == 0) {
       return false;
+    }
+    if (buffer == null) {
+      allocateBuffer();
     }
 
     FilePosition filePosition = getFilePosition();
@@ -105,4 +145,12 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
 
     return filePosition.buffer().hasRemaining();
   }
+
+  @Override
+  protected boolean closeStream(final boolean unbuffer) {
+    final boolean b = super.closeStream(unbuffer);
+    releaseBuffer();
+    return b;
+  }
+
 }

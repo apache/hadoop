@@ -397,6 +397,33 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE,
       "Gauge of active memory in use",
       TYPE_GAUGE),
+  STREAM_READ_BLOCK_FETCH_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_BLOCK_FETCH_OPERATIONS,
+      "Tracker/Gauge of active block fetches",
+      TYPE_DURATION),
+  STREAM_READ_BLOCK_ACQUIRE_AND_READ(
+      StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ,
+      "Time spent blocked waiting for blocks prefetch/read to complete",
+      TYPE_DURATION),
+
+  /* Stream read block prefetch/cache gauges */
+  /* As with all gauges; aggregation is of limited value */
+  STREAM_READ_BLOCK_CACHE_ENABLED(
+      StreamStatisticNames.STREAM_READ_BLOCK_CACHE_ENABLED,
+        "gauge to signal the stream caches blocks",
+      TYPE_GAUGE),
+  STREAM_READ_BLOCK_PREFETCH_ENABLED(
+      StreamStatisticNames.STREAM_READ_BLOCK_PREFETCH_ENABLED,
+        "gauge to signal the stream prefetches blocks",
+      TYPE_GAUGE),
+  STREAM_READ_BLOCK_PREFETCH_LIMIT(
+      StreamStatisticNames.STREAM_READ_BLOCK_PREFETCH_LIMIT,
+        "gauge to log prefetch limit",
+      TYPE_GAUGE),
+  STREAM_READ_BLOCK_SIZE(
+      StreamStatisticNames.STREAM_READ_BLOCK_SIZE,
+        "gauge to log stream block read size",
+      TYPE_GAUGE),
 
   /* Stream Write statistics */
 

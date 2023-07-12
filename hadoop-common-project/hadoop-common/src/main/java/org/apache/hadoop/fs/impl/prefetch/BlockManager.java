@@ -125,8 +125,9 @@ public abstract class BlockManager implements Closeable {
 
   /**
    * Requests cancellation of any previously issued prefetch requests.
+   * @param reason why?
    */
-  public void cancelPrefetches() {
+  public void cancelPrefetches(final CancelReason reason) {
     // Do nothing because we do not support prefetches.
   }
 
@@ -141,5 +142,17 @@ public abstract class BlockManager implements Closeable {
 
   @Override
   public void close() {
+  }
+
+  /**
+   * Reason for cancelling prefetches.
+   */
+  public enum CancelReason {
+    /** Stream has switched to random IO. */
+    RandomIO,
+    /** Stream closed completely. */
+    Close,
+    /** Stream unbuffered. */
+    Unbuffer
   }
 }
