@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.logaggregation.tracker.NMLogAggregationStatusTracker;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -298,10 +299,15 @@ public class TestAppLogAggregatorImpl {
 
     final FileContext fakeLfs = mock(FileContext.class);
     final Path remoteLogDirForApp = new Path(REMOTE_LOG_FILE.getAbsolutePath());
+    LogAggregationTFileController format = spy(
+        new LogAggregationTFileController());
+    NodeManagerMetrics metrics = NodeManagerMetrics.create();
+
+    format.initialize(config, "TFile");
     return new AppLogAggregatorInTest(dispatcher, deletionService,
         config, applicationId, ugi, nodeId, dirsService,
         remoteLogDirForApp, appAcls, logAggregationContext,
-        context, fakeLfs, recoveredLogInitedTimeMillis, tFileController);
+        context, fakeLfs, recoveredLogInitedTimeMillis, tFileController, metrics);
   }
 
   /**
@@ -421,11 +427,11 @@ public class TestAppLogAggregatorImpl {
         Map<ApplicationAccessType, String> appAcls,
         LogAggregationContext logAggregationContext, Context context,
         FileContext lfs, long recoveredLogInitedTime,
-        LogAggregationTFileController format) throws IOException {
+        LogAggregationTFileController format, NodeManagerMetrics metrics) throws IOException {
       super(dispatcher, deletionService, conf, appId, ugi, nodeId,
           dirsHandler, remoteNodeLogFileForApp, appAcls,
           logAggregationContext, context, lfs, -1, recoveredLogInitedTime,
-          format);
+          format, metrics);
       this.applicationId = appId;
       this.deletionService = deletionService;
       this.logValue = ArgumentCaptor.forClass(LogValue.class);
