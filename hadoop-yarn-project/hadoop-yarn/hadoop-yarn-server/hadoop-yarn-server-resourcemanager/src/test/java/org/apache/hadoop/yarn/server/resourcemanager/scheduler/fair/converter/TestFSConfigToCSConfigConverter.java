@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.DYNAMIC_MAX_ASSIGN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CAPACITY_PERCENTAGE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_CAPACITY;
@@ -33,7 +32,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.WARNING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -197,8 +195,8 @@ public class TestFSConfigToCSConfigConverter {
 
     assertEquals("root.users user-limit-factor", 1.0f,
             conf.getUserLimitFactor("root.users"), 0.0f);
-    assertEquals("root.users auto-queue-creation-v2.enabled", "true",
-            conf.get(PREFIX + "root.users.auto-queue-creation-v2.enabled"));
+    assertEquals("root.users auto-queue-creation-v2.enabled", true,
+            conf.isAutoQueueCreationV2Enabled( "root.users"));
 
     assertEquals("root.default user-limit-factor", -1.0f,
             conf.getUserLimitFactor("root.default"), 0.0f);
@@ -208,8 +206,8 @@ public class TestFSConfigToCSConfigConverter {
 
     assertEquals("root.admins.bob user-limit-factor", -1.0f,
             conf.getUserLimitFactor("root.admins.bob"), 0.0f);
-    assertNull("root.admin.bob auto-queue-creation-v2.enabled should be null",
-            conf.get(PREFIX + "root.admin.bob.auto-queue-creation-v2.enabled"));
+    assertEquals("root.admin.bob auto-queue-creation-v2.enabled", false,
+            conf.isAutoQueueCreationV2Enabled("root.admin.bob"));
   }
 
   @Test

@@ -178,9 +178,9 @@ public class TestFSQueueConverter {
             "root.misc"));
 
     for (String queue : leafs) {
-      String key = PREFIX + queue + ".queues";
+      key = PREFIX + queue + ".queues";
       assertNull("Key " + key + " has value, but it should be null",
-        csConfig.getQueues(queue));
+          csConfig.getQueues(queue));
     }
 
   }
@@ -393,9 +393,7 @@ public class TestFSQueueConverter {
     assertTrue("root.admins autocreate v2 flag",
         csConfig.isAutoQueueCreationV2Enabled("root.admins"));
     assertTrue("root.admins.alice autocreate v2 flag",
-        csConfig.getBoolean(
-            PREFIX + "root.admins.alice.auto-queue-creation-v2.enabled",
-                false));
+        csConfig.isAutoQueueCreationV2Enabled("root.admins.alice"));
     assertTrue("root.users autocreate v2 flag",
         csConfig.isAutoQueueCreationV2Enabled("root.users"));
     assertTrue("root.misc autocreate v2 flag",

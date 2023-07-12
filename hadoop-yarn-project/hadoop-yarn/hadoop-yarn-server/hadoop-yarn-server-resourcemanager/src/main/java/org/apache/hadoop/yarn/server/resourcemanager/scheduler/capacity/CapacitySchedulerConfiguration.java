@@ -1873,7 +1873,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         + MAX_PARALLEL_APPLICATIONS);
 
     return (maxParallelAppsForUser != null) ?
-        Integer.parseInt(maxParallelAppsForUser)
+        Integer.valueOf(maxParallelAppsForUser)
         : getDefaultMaxParallelAppsPerUser();
   }
 
@@ -1886,7 +1886,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         + MAX_PARALLEL_APPLICATIONS);
 
     return (maxParallelAppsForQueue != null) ?
-        Integer.parseInt(maxParallelAppsForQueue)
+        Integer.valueOf(maxParallelAppsForQueue)
         : getDefaultMaxParallelAppsPerQueue();
   }
 
