@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.junit.After;
 import org.junit.Before;
@@ -579,7 +580,6 @@ public class TestTrash {
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     FileSystem fs = FileSystem.getLocal(conf);
     conf.set("fs.defaultFS", fs.getUri().toString());
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     conf.setLong(FS_TRASH_INTERVAL_KEY, 0); // disabled
     assertFalse(new Trash(conf).isEnabled());
 
@@ -636,7 +636,6 @@ public class TestTrash {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set("fs.defaultFS", "invalid://host/bar/foo");
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     trashNonDefaultFS(conf);
   }
 
@@ -646,7 +645,6 @@ public class TestTrash {
 
     // Test plugged TrashPolicy
     conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     Trash trash = new Trash(conf);
     assertTrue(trash.getTrashPolicy().getClass().equals(TestTrashPolicy.class));
   }
@@ -678,7 +676,6 @@ public class TestTrash {
         RawLocalFileSystem.class,
         FileSystem.class);
     conf.setLong(FS_TRASH_INTERVAL_KEY, 1); // 1 min
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     FileSystem fs = FileSystem.get(conf);
     verifyMoveEmptyDirToTrash(fs, conf);
   }
@@ -696,7 +693,6 @@ public class TestTrash {
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_INTERVAL_KEY, "50"); // in milliseconds for test
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     Trash trash = new Trash(conf);
     // create 5 checkpoints
     for(int i=0; i<5; i++) {
@@ -725,7 +721,6 @@ public class TestTrash {
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_INTERVAL_KEY, "0.2");
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     verifyTrashPermission(FileSystem.getLocal(conf), conf);
   }
 
@@ -738,7 +733,6 @@ public class TestTrash {
     conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
     FileSystem fs = FileSystem.getLocal(conf);
     conf.set("fs.default.name", fs.getUri().toString());
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     
     Trash trash = new Trash(conf);
 
@@ -797,10 +791,10 @@ public class TestTrash {
    * Test trash emptier can whether delete non-checkpoint dir or not.
    * @throws Exception
    */
-  @Test
-  public void testTrashEmptierWithNonCheckpointDir() throws Exception {
+  @Test()
+  public void testTrashEmptierCleanDirNotInCheckpointDir() throws Exception {
     Configuration conf = new Configuration();
-    // Trash with 12 second deletes and 6 seconds checkpoints
+    // Trash with 12 second deletes and 6 seconds checkpoints.
     conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
@@ -810,7 +804,7 @@ public class TestTrash {
 
     Trash trash = new Trash(conf);
 
-    // Start Emptier in background
+    // Start Emptier in background.
     Runnable emptier = trash.getEmptier();
     Thread emptierThread = new Thread(emptier);
     emptierThread.start();
@@ -819,39 +813,25 @@ public class TestTrash {
     shell.setConf(conf);
     shell.init();
 
-    // First create a new directory with mkdirs
-    Path myPath = new Path(TEST_DIR, "test/mkdirs");
-    mkdir(fs, myPath);
     // Make sure the .Trash dir existed.
     mkdir(fs, shell.getCurrentTrashDir());
     assertTrue(fs.exists(shell.getCurrentTrashDir()));
+    // Create a directory under .Trash directly.
+    Path myPath = new Path(shell.getCurrentTrashDir().getParent(), "test_dirs");
+    mkdir(fs, myPath);
+    assertTrue(fs.exists(myPath));
 
-    int fileIndex = 0;
-    int loopCount = 10;
-    while (fileIndex < loopCount) {
-      // Create a file with a new name
-      Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
-      writeFile(fs, myFile, 10);
-
-      // Move the file to trash root.
-      String[] args = new String[3];
-      args[0] = "-mv";
-      args[1] = myFile.toString();
-      args[2] = shell.getCurrentTrashDir().getParent().toString();
-      int val = -1;
-      try {
-        val = shell.run(args);
-      } catch (Exception e) {
-        System.err.println("Exception raised from Trash.run " +
-            e.getLocalizedMessage());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          return !fs.exists(myPath);
+        } catch (IOException e) {
+          // Do nothing.
+        }
+        return false;
       }
-      assertTrue(val == 0);
-    }
-    Thread.sleep(18000);
-
-    Path trashDir = shell.getCurrentTrashDir();
-    FileStatus[] files = fs.listStatus(trashDir.getParent());
-    assertTrue(files.length <= 1);
+    }, 6000, 60000);
     emptierThread.interrupt();
     emptierThread.join();
   }
@@ -1129,7 +1109,7 @@ public class TestTrash {
       return false;
     }
 
-    @Override
+    @Override 
     public boolean moveToTrash(Path path) throws IOException {
       return false;
     }

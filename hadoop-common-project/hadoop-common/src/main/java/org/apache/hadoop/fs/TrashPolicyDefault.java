@@ -384,7 +384,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       } catch (ParseException e) {
         if (cleanNonCheckpointUnderTrashRoot) {
           fs.delete(path, true);
-          LOG.warn("Unexpected item in trash: " + dir + ". Force moving to trash.");
+          LOG.warn("Unexpected item in trash: " + dir + ". Force to delete it.");
           continue;
         } else {
           LOG.warn("Unexpected item in trash: " + dir + ". Ignoring.");

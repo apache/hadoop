@@ -70,7 +70,7 @@ public abstract class TrashPolicy extends Configured {
    * @param path the path.
    * @return false if the item is already in the trash or trash is disabled
    * @throws IOException raised on errors performing I/O.
-   */
+   */ 
   public abstract boolean moveToTrash(Path path) throws IOException;
 
   /** 
