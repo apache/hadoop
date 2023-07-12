@@ -103,7 +103,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         "dummy.dfs.core.windows.net");
     AbfsThrottlingIntercept intercept;
-    AbfsClient abfsClient = TestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration);
+    AbfsClient abfsClient = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration);
     intercept = abfsClient.getIntercept();
     Assertions.assertThat(intercept)
         .describedAs("AbfsNoOpThrottlingIntercept instance expected")
@@ -114,7 +114,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     // On disabling throttling AbfsClientThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration1 = new AbfsConfiguration(configuration,
         "dummy1.dfs.core.windows.net");
-    AbfsClient abfsClient1 = TestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);
+    AbfsClient abfsClient1 = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);
     intercept = abfsClient1.getIntercept();
     Assertions.assertThat(intercept)
         .describedAs("AbfsClientThrottlingIntercept instance expected")

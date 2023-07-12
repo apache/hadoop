@@ -543,6 +543,8 @@ public class QueueManager {
   
   /**
    * Gets a queue by name.
+   * @param name queue name.
+   * @return queue objects, FSQueue.
    */
   public FSQueue getQueue(String name) {
     name = ensureRootPrefix(name);
@@ -553,6 +555,10 @@ public class QueueManager {
 
   /**
    * Return whether a queue exists already.
+   *
+   * @param name queue name.
+   * @return Returns true if the queue exists,
+   * otherwise returns false.
    */
   public boolean exists(String name) {
     name = ensureRootPrefix(name);
@@ -563,6 +569,7 @@ public class QueueManager {
   
   /**
    * Get a collection of all leaf queues.
+   * @return a collection of all leaf queues.
    */
   public Collection<FSLeafQueue> getLeafQueues() {
     synchronized (queues) {
@@ -572,6 +579,7 @@ public class QueueManager {
   
   /**
    * Get a collection of all queues.
+   * @return a collection of all queues.
    */
   public Collection<FSQueue> getQueues() {
     synchronized (queues) {

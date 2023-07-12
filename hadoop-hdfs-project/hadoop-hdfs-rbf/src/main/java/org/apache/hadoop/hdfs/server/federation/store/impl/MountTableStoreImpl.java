@@ -33,6 +33,9 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
@@ -117,7 +120,9 @@ public class MountTableStoreImpl extends MountTableStore {
       AddMountTableEntryResponse response =
           AddMountTableEntryResponse.newInstance();
       response.setStatus(status);
-      updateCacheAllRouters();
+      if (status) {
+        updateCacheAllRouters();
+      }
       return response;
     } else {
       AddMountTableEntryResponse response =
@@ -125,6 +130,32 @@ public class MountTableStoreImpl extends MountTableStore {
       response.setStatus(false);
       return response;
     }
+  }
+
+  @Override
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    if (mountTables == null || mountTables.size() == 0) {
+      AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
+      response.setStatus(false);
+      response.setFailedRecordsKeys(Collections.emptyList());
+      return response;
+    }
+    for (MountTable mountTable : mountTables) {
+      mountTable.validate();
+      final String src = mountTable.getSourcePath();
+      checkMountTablePermission(src);
+    }
+    StateStoreOperationResult result = getDriver().putAll(mountTables, false, true);
+    boolean status = result.isOperationSuccessful();
+    AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
+    response.setStatus(status);
+    response.setFailedRecordsKeys(result.getFailedRecordsKeys());
+    if (status) {
+      updateCacheAllRouters();
+    }
+    return response;
   }
 
   @Override
@@ -139,7 +170,9 @@ public class MountTableStoreImpl extends MountTableStore {
       UpdateMountTableEntryResponse response =
           UpdateMountTableEntryResponse.newInstance();
       response.setStatus(status);
-      updateCacheAllRouters();
+      if (status) {
+        updateCacheAllRouters();
+      }
       return response;
     } else {
       UpdateMountTableEntryResponse response =
@@ -170,7 +203,9 @@ public class MountTableStoreImpl extends MountTableStore {
     RemoveMountTableEntryResponse response =
         RemoveMountTableEntryResponse.newInstance();
     response.setStatus(status);
-    updateCacheAllRouters();
+    if (status) {
+      updateCacheAllRouters();
+    }
     return response;
   }
 

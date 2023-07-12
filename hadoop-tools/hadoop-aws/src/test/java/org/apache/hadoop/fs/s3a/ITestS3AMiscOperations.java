@@ -114,7 +114,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
           new ByteArrayInputStream("PUT".getBytes()),
           metadata);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs()));
+          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs(), null));
       assertPathDoesNotExist("put object was created", path);
     }
   }

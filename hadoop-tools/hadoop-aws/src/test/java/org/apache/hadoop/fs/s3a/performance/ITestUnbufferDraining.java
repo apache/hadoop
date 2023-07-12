@@ -160,7 +160,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     int offset = FILE_SIZE - READAHEAD + 1;
     try (FSDataInputStream in = getBrittleFS().openFile(st.getPath())
         .withFileStatus(st)
-        .must(ASYNC_DRAIN_THRESHOLD, 1)
+        .mustLong(ASYNC_DRAIN_THRESHOLD, 1)
         .build().get()) {
       describe("Initiating unbuffer with async drain\n");
       for (int i = 0; i < ATTEMPTS; i++) {
@@ -235,9 +235,11 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     // open the file at the beginning with a whole file read policy,
     // so even with s3a switching to random on unbuffer,
     // this always does a full GET
+    // also provide a floating point string for the threshold, to
+    // verify it is safely parsed
     try (FSDataInputStream in = getBrittleFS().openFile(st.getPath())
         .withFileStatus(st)
-        .must(ASYNC_DRAIN_THRESHOLD, 1)
+        .must(ASYNC_DRAIN_THRESHOLD, "1.0")
         .must(FS_OPTION_OPENFILE_READ_POLICY,
             FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
         .build().get()) {

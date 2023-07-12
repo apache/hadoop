@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -199,8 +201,8 @@ public class TestParentQueue {
               " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
-        if (queue instanceof ParentQueue) {
-          ((ParentQueue)queue).allocateResource(clusterResource, 
+        if (queue instanceof AbstractParentQueue) {
+          ((AbstractParentQueue)queue).allocateResource(clusterResource,
               allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
@@ -381,6 +383,10 @@ public class TestParentQueue {
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.5F);
     queueContext.reinitialize();
+
+    // If the new queue mode is used it's allowed to over allocate the resources,
+    // as they'll be scaled down accordingly
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
@@ -665,7 +671,11 @@ public class TestParentQueue {
   public void testQueueCapacitySettingChildZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
-    
+
+    // If the new queue mode is used it's allowed to have
+    // zero-capacity queues under a non-zero parent
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
+
     // set child queues capacity to 0 when parents not 0
     csConf.setCapacity(Q_B + "." + B1, 0);
     csConf.setCapacity(Q_B + "." + B2, 0);
@@ -682,7 +692,11 @@ public class TestParentQueue {
   public void testQueueCapacitySettingParentZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
-    
+
+    // If the new queue mode is used it's allowed to have
+    // non-zero capacity queues under a zero capacity parent
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
+
     // set parent capacity to 0 when child not 0
     csConf.setCapacity(Q_B, 0);
     csConf.setCapacity(Q_A, 60);
@@ -717,6 +731,10 @@ public class TestParentQueue {
       throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
+
+    // If the new queue mode is used it's allowed to have
+    // non-zero capacity queues under a zero capacity parent
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // set parent capacity to 0 when sum(children) is 50
     // and allow zero capacity sum
@@ -1086,8 +1104,15 @@ public class TestParentQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    Resource QUEUE_B_RESOURCE_70PERC = Resource.newInstance(7 * 1024, 27);
-    Resource QUEUE_A_RESOURCE_30PERC = Resource.newInstance(3 * 1024, 12);
+    // Legacy mode uses the ResourceCalculator.lessThan() function for comparison
+    //      DefaultResourceCalculator only compares the memory
+    //      DominantResourceCalculator compares the dominants
+    // While the non-legacy mode compares the resources individually
+    // Further details: YARN-11507
+    Resource QUEUE_B_RESOURCE_70PERC =
+        Resource.newInstance(7 * 1024, csConf.isLegacyQueueMode() ? 27 : 22);
+    Resource QUEUE_A_RESOURCE_30PERC =
+        Resource.newInstance(3 * 1024, csConf.isLegacyQueueMode() ? 12 : 10);
     assertEquals(a.getQueueResourceQuotas().getConfiguredMinResource(),
         QUEUE_A_RESOURCE);
     assertEquals(b.getQueueResourceQuotas().getConfiguredMinResource(),

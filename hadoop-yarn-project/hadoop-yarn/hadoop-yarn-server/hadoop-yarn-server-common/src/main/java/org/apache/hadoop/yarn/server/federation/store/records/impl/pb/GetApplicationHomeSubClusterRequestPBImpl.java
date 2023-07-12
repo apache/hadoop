@@ -130,6 +130,18 @@ public class GetApplicationHomeSubClusterRequestPBImpl
     builder.setApplicationId(convertToProtoFormat(applicationId));
   }
 
+  @Override
+  public boolean getContainsAppSubmissionContext() {
+    GetApplicationHomeSubClusterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getContainsAppSubmissionContext();
+  }
+
+  @Override
+  public void setContainsAppSubmissionContext(boolean containsAppSubmissionContext) {
+    maybeInitBuilder();
+    builder.setContainsAppSubmissionContext(containsAppSubmissionContext);
+  }
+
   private ApplicationId convertFromProtoFormat(ApplicationIdProto appId) {
     return new ApplicationIdPBImpl(appId);
   }

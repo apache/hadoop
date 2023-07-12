@@ -217,6 +217,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      RM_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -384,7 +394,8 @@ public class YarnConfiguration extends Configuration {
   /** The expiry interval for application master reporting.*/
   public static final String RM_AM_EXPIRY_INTERVAL_MS = 
     YARN_PREFIX  + "am.liveness-monitor.expiry-interval-ms";
-  public static final int DEFAULT_RM_AM_EXPIRY_INTERVAL_MS = 600000;
+  public static final long DEFAULT_RM_AM_EXPIRY_INTERVAL_MS =
+      TimeUnit.MINUTES.toMillis(15);
 
   /** How long to wait until a node manager is considered dead.*/
   public static final String RM_NM_EXPIRY_INTERVAL_MS = 
@@ -531,7 +542,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String GLOBAL_RM_AM_MAX_ATTEMPTS =
       RM_PREFIX + "am.global.max-attempts";
-  
+
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
@@ -587,7 +598,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
   public static final int
       DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
-  
+
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.exclude-path";
@@ -1200,6 +1211,19 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
 
   /**
+   * When non empty, untracked nodes are deleted only if their state is one of
+   * the states defined by this config. When empty, all the states are eligible
+   * for removal
+   * Eligible states are defined by enum values here:
+   * @see org.apache.hadoop.yarn.api.records.NodeState
+   * Example: LOST,DECOMMISSIONED
+   */
+  public static final String RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE =
+      RM_PREFIX + "node-removal-untracked.node-selective-states-to-remove";
+  public static final String[]
+      DEFAULT_RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE = {};
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
@@ -1527,7 +1551,7 @@ public class YarnConfiguration extends Configuration {
       + "log-aggregation.debug.filesize";
   public static final long DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE
       = 100 * 1024 * 1024;
-  
+
   /**
    * How long to wait between aggregated log retention checks. If set to
    * a value {@literal <=} 0 then the value is computed as one-tenth of the
@@ -2177,7 +2201,7 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_HEALTH_CHECK_TIMEOUT_MS =
       2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
 
-  /** Health check script time out period.*/  
+  /** Health check script time out period.*/
   public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE =
       NM_PREFIX + "health-checker.%s.timeout-ms";
   
@@ -2898,7 +2922,7 @@ public class YarnConfiguration extends Configuration {
   /** Binding address for the web proxy. */
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
-  
+
   /**
    * YARN Service Level Authorization
    */
@@ -3051,6 +3075,10 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.enabled";
   public static final boolean DEFAULT_AMRM_PROXY_ENABLED = false;
 
+  public static final String AMRM_PROXY_WAIT_UAM_REGISTER_DONE =
+      NM_PREFIX + "amrmproxy.wait.uam-register.done";
+  public static final boolean DEFAULT_AMRM_PROXY_WAIT_UAM_REGISTER_DONE = false;
+
   public static final String AMRM_PROXY_ADDRESS = NM_PREFIX
       + "amrmproxy.address";
   public static final int DEFAULT_AMRM_PROXY_PORT = 8049;
@@ -3069,6 +3097,10 @@ public class YarnConfiguration extends Configuration {
   public static final String AMRM_PROXY_HA_ENABLED = NM_PREFIX
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
+
+  // Enable NM Dispatcher Metric default False.
+  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
+  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
 
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
@@ -3952,9 +3984,18 @@ public class YarnConfiguration extends Configuration {
   public static final String FEDERATION_ENABLED = FEDERATION_PREFIX + "enabled";
   public static final boolean DEFAULT_FEDERATION_ENABLED = false;
 
+  public static final String FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER =
+      FEDERATION_PREFIX + "failover.random.order";
+
+  public static final boolean DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER = false;
+
   public static final String FEDERATION_FAILOVER_ENABLED =
       FEDERATION_PREFIX + "failover.enabled";
   public static final boolean DEFAULT_FEDERATION_FAILOVER_ENABLED = true;
+
+  public static final String FEDERATION_NON_HA_ENABLED =
+      FEDERATION_PREFIX + "non-ha.enabled";
+  public static final boolean DEFAULT_FEDERATION_NON_HA_ENABLED = false;
 
   public static final String FEDERATION_STATESTORE_CLIENT_CLASS =
       FEDERATION_PREFIX + "state-store.class";
@@ -3999,6 +4040,11 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FEDERATION_CLUSTER_RESOLVER_CLASS =
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
+
+  public static final String FEDERATION_FACADE_CACHE_CLASS =
+      FEDERATION_PREFIX + "cache.class";
+  public static final String DEFAULT_FEDERATION_FACADE_CACHE_CLASS =
+      "org.apache.hadoop.yarn.server.federation.cache.FederationJCache";
 
   // the maximum wait time for the first async heartbeat response
   public static final String FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS =
@@ -4055,6 +4101,43 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_STATESTORE_SQL_PREFIX + "max-connections";
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
+
+  /** Database connection pool minimum number of connections. **/
+  public static final String FEDERATION_STATESTORE_SQL_MINIMUMIDLE =
+      FEDERATION_STATESTORE_SQL_PREFIX + "minimum-idle";
+
+  /** The default value of the minimum number of connections in the database connection pool. **/
+  public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE = 1;
+
+  /** The name of the database connection pool. **/
+  public static final String FEDERATION_STATESTORE_POOL_NAME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "pool-name";
+
+  /** The default name of the database connection pool. **/
+  public static final String DEFAULT_FEDERATION_STATESTORE_POOL_NAME =
+      "YARN-Federation-DataBasePool";
+
+  /** The maximum lifetime of a database connection. **/
+  public static final String FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "max-life-time";
+
+  /** Database connection maximum lifetime. **/
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Database connection idle timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "idle-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      TimeUnit.MINUTES.toMillis(10);
+
+  /** Database connection timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONNECTION_TIMEOUT =
+      FEDERATION_STATESTORE_SQL_PREFIX + "conn-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME =
+      TimeUnit.SECONDS.toMillis(10);
 
   public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
       FEDERATION_PREFIX + "state-store.max-applications";
@@ -4250,6 +4333,13 @@ public class YarnConfiguration extends Configuration {
           + "DefaultRequestInterceptorREST";
 
   /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
+
+  /**
    * The interceptor class used in FederationInterceptorREST should return
    * partial AppReports.
    */
@@ -4257,6 +4347,34 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "partial-result.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
+
+  private static final String FEDERATION_GPG_PREFIX = FEDERATION_PREFIX + "gpg.";
+
+  // The number of threads to use for the GPG scheduled executor service
+  public static final String GPG_SCHEDULED_EXECUTOR_THREADS =
+      FEDERATION_GPG_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS = 10;
+
+  // The interval at which the subcluster cleaner runs, -1 means disabled
+  public static final String GPG_SUBCLUSTER_CLEANER_INTERVAL_MS =
+      FEDERATION_GPG_PREFIX + "subcluster.cleaner.interval-ms";
+  public static final long DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS =
+      TimeUnit.MILLISECONDS.toMillis(-1);
+
+  // The expiration time for a subcluster heartbeat, default is 30 minutes
+  public static final String GPG_SUBCLUSTER_EXPIRATION_MS =
+      FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
+  public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = TimeUnit.MINUTES.toMillis(30);
+
+  /** Keytab for GPG. **/
+  public static final String GPG_KEYTAB = FEDERATION_GPG_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the globalpolicygenerator.*/
+  public static final String GPG_PRINCIPAL = FEDERATION_GPG_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn gpg.*/
+  public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
+      "kerberos.principal.hostname";
 
   /**
    * Connection and Read timeout from the Router to RM.
@@ -4298,6 +4416,28 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED =
       ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
   public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
+
+  /** Router SubCluster Cleaner Thread Clean Interval Time. **/
+  public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      ROUTER_PREFIX + "subcluster.cleaner.interval.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      TimeUnit.SECONDS.toMillis(60);
+
+  /** Router SubCluster Timeout Allowed by Router. **/
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Router Thread Pool Schedule Thread Number. **/
+  public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
+      ROUTER_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS = 1;
+
+  /** Enable DeregisterSubCluster, enabled by default. **/
+  public static final String ROUTER_DEREGISTER_SUBCLUSTER_ENABLED =
+      ROUTER_PREFIX + "deregister.subcluster.enabled";
+  public static final boolean DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED = true;
 
   ////////////////////////////////
   // CSI Volume configs
@@ -4855,6 +4995,30 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "workflow-id.tag-prefix";
   public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
       "workflowid:";
+
+  public static final String APPS_CACHE_ENABLE = YARN_PREFIX + "apps.cache.enable";
+  public static final boolean DEFAULT_APPS_CACHE_ENABLE = false;
+
+  // The size of cache for RMWebServices.getApps when yarn.apps.cache.enable = true,
+  // default is 1000
+  public static final String APPS_CACHE_SIZE = YARN_PREFIX + "apps.cache.size";
+  public static final int DEFAULT_APPS_CACHE_SIZE = 1000;
+
+  // The expire time of cache for RMWebServices.getApps when yarn.apps.cache.enable = true,
+  // default is 30s
+  public static final String APPS_CACHE_EXPIRE = YARN_PREFIX + "apps.cache.expire";
+  public static final String DEFAULT_APPS_CACHE_EXPIRE = "30s";
+
+  /** Enabled trigger log-dir deletion by size for NonAggregatingLogHandler. */
+  public static final String NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = NM_PREFIX +
+      "log.trigger.delete.by-size.enabled";
+  public static final boolean DEFAULT_NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = false;
+
+  /** Trigger log-dir deletion when the total log size of an app is greater than
+   *  yarn.nodemanager.log.delete.threshold.
+   *  Depends on yarn.nodemanager.log.trigger.delete.by-size.enabled = true. */
+  public static final String NM_LOG_DELETE_THRESHOLD = NM_PREFIX + "log.delete.threshold";
+  public static final long DEFAULT_NM_LOG_DELETE_THRESHOLD = 100L * 1024 * 1024 * 1024;
 
   public YarnConfiguration() {
     super();

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +33,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -79,11 +83,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Base class for FederationMembershipStateStore implementations.
@@ -98,10 +105,10 @@ public abstract class FederationStateStoreBaseTest {
   protected abstract FederationStateStore createStateStore();
 
   protected abstract void checkRouterMasterKey(DelegationKey delegationKey,
-      RouterMasterKey routerMasterKey) throws YarnException, IOException;
+      RouterMasterKey routerMasterKey) throws YarnException, IOException, SQLException;
 
   protected abstract void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
-      RouterStoreToken token) throws YarnException, IOException;
+      RouterStoreToken token) throws YarnException, IOException, SQLException;
 
   private Configuration conf;
 
@@ -163,12 +170,9 @@ public abstract class FederationStateStoreBaseTest {
 
     SubClusterDeregisterRequest deregisterRequest = SubClusterDeregisterRequest
         .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED);
-    try {
-      stateStore.deregisterSubCluster(deregisterRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage().startsWith("SubCluster SC not found"));
-    }
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC not found", () -> stateStore.deregisterSubCluster(deregisterRequest));
   }
 
   @Test
@@ -265,13 +269,9 @@ public abstract class FederationStateStoreBaseTest {
     SubClusterHeartbeatRequest heartbeatRequest = SubClusterHeartbeatRequest
         .newInstance(subClusterId, SubClusterState.SC_RUNNING, "capability");
 
-    try {
-      stateStore.subClusterHeartbeat(heartbeatRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("SubCluster SC does not exist; cannot heartbeat"));
-    }
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC does not exist; cannot heartbeat",
+        () -> stateStore.subClusterHeartbeat(heartbeatRequest));
   }
 
   // Test FederationApplicationHomeSubClusterStore
@@ -408,7 +408,7 @@ public abstract class FederationStateStoreBaseTest {
     ApplicationId appId1 = ApplicationId.newInstance(1, 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
     ApplicationHomeSubCluster ahsc1 =
-        ApplicationHomeSubCluster.newInstance(appId1, subClusterId1);
+        ApplicationHomeSubCluster.newInstance(appId1,  subClusterId1);
 
     ApplicationId appId2 = ApplicationId.newInstance(1, 2);
     SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
@@ -472,6 +472,7 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(10, items.size());
 
     for (ApplicationHomeSubCluster item : items) {
+      appHomeSubClusters.contains(item);
       Assert.assertTrue(appHomeSubClusters.contains(item));
     }
   }
@@ -656,6 +657,16 @@ public abstract class FederationStateStoreBaseTest {
         ApplicationHomeSubCluster.newInstance(appId, subClusterId);
     AddApplicationHomeSubClusterRequest request =
         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
+    stateStore.addApplicationHomeSubCluster(request);
+  }
+
+  void addApplicationHomeSC(ApplicationId appId, SubClusterId subClusterId,
+      ApplicationSubmissionContext submissionContext) throws YarnException {
+    long createTime = Time.now();
+    ApplicationHomeSubCluster ahsc = ApplicationHomeSubCluster.newInstance(
+        appId, createTime, subClusterId, submissionContext);
+    AddApplicationHomeSubClusterRequest request =
+         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
     stateStore.addApplicationHomeSubCluster(request);
   }
 
@@ -937,16 +948,17 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testStoreNewToken() throws IOException, YarnException {
+  public void testStoreNewToken() throws IOException, YarnException, SQLException {
     // prepare parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     int sequenceNumber = 1;
     identifier.setSequenceNumber(sequenceNumber);
     Long renewDate = Time.now();
+    String tokenInfo = "tokenInfo";
 
     // store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
 
@@ -957,33 +969,33 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertNotNull(storeTokenResp);
     Assert.assertEquals(storeToken.getRenewDate(), storeTokenResp.getRenewDate());
     Assert.assertEquals(storeToken.getTokenIdentifier(), storeTokenResp.getTokenIdentifier());
+    Assert.assertEquals(storeToken.getTokenInfo(), storeTokenResp.getTokenInfo());
 
-    checkRouterStoreToken(identifier, storeToken);
     checkRouterStoreToken(identifier, storeTokenResp);
   }
 
   @Test
-  public void testUpdateStoredToken() throws IOException, YarnException {
+  public void testUpdateStoredToken() throws IOException, YarnException, SQLException {
     // prepare saveToken parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
     int sequenceNumber = 2;
+    String tokenInfo = "tokenInfo";
     identifier.setSequenceNumber(sequenceNumber);
     Long renewDate = Time.now();
 
     // store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
     Assert.assertNotNull(routerRMTokenResponse);
 
     // prepare updateToken parameters
     Long renewDate2 = Time.now();
-    int sequenceNumber2 = 3;
-    identifier.setSequenceNumber(sequenceNumber2);
+    String tokenInfo2 = "tokenInfo2";
 
     // update rm-token
-    RouterStoreToken updateToken = RouterStoreToken.newInstance(identifier, renewDate2);
+    RouterStoreToken updateToken = RouterStoreToken.newInstance(identifier, renewDate2, tokenInfo2);
     RouterRMTokenRequest updateTokenRequest = RouterRMTokenRequest.newInstance(updateToken);
     RouterRMTokenResponse updateTokenResponse = stateStore.updateStoredToken(updateTokenRequest);
 
@@ -992,6 +1004,7 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertNotNull(updateTokenResp);
     Assert.assertEquals(updateToken.getRenewDate(), updateTokenResp.getRenewDate());
     Assert.assertEquals(updateToken.getTokenIdentifier(), updateTokenResp.getTokenIdentifier());
+    Assert.assertEquals(updateToken.getTokenInfo(), updateTokenResp.getTokenInfo());
 
     checkRouterStoreToken(identifier, updateTokenResp);
   }
@@ -1004,9 +1017,10 @@ public abstract class FederationStateStoreBaseTest {
     int sequenceNumber = 3;
     identifier.setSequenceNumber(sequenceNumber);
     Long renewDate = Time.now();
+    String tokenInfo = "tokenInfo";
 
     // store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
     Assert.assertNotNull(routerRMTokenResponse);
@@ -1021,16 +1035,17 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException, SQLException {
     // prepare saveToken parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner4"), new Text("renewer4"), new Text("realuser4"));
     int sequenceNumber = 4;
     identifier.setSequenceNumber(sequenceNumber);
     Long renewDate = Time.now();
+    String tokenInfo = "tokenInfo";
 
     // store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
     Assert.assertNotNull(routerRMTokenResponse);
@@ -1041,8 +1056,60 @@ public abstract class FederationStateStoreBaseTest {
     RouterStoreToken getStoreTokenResp = getRouterRMTokenResp.getRouterStoreToken();
     Assert.assertNotNull(getStoreTokenResp);
     Assert.assertEquals(getStoreTokenResp.getRenewDate(), storeToken.getRenewDate());
-    Assert.assertEquals(getStoreTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
+    Assert.assertEquals(storeToken.getTokenInfo(), getStoreTokenResp.getTokenInfo());
 
     checkRouterStoreToken(identifier, getStoreTokenResp);
+  }
+
+  @Test
+  public void testGetCurrentVersion() {
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
+  }
+
+  @Test
+  public void testStoreVersion() throws Exception {
+    stateStore.storeVersion();
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
+  }
+
+  @Test
+  public void testLoadVersion() throws Exception {
+    stateStore.storeVersion();
+    Version version = stateStore.loadVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
+  }
+
+  @Test
+  public void testCheckVersion() throws Exception {
+    stateStore.checkVersion();
+  }
+
+  @Test
+  public void testGetApplicationHomeSubClusterWithContext() throws Exception {
+    FederationStateStore federationStateStore = this.getStateStore();
+
+    ApplicationId appId = ApplicationId.newInstance(1, 3);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+    ApplicationSubmissionContext context =
+        ApplicationSubmissionContext.newInstance(appId, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    addApplicationHomeSC(appId, subClusterId, context);
+
+    GetApplicationHomeSubClusterRequest getRequest =
+         GetApplicationHomeSubClusterRequest.newInstance(appId, true);
+    GetApplicationHomeSubClusterResponse result =
+         federationStateStore.getApplicationHomeSubCluster(getRequest);
+
+    ApplicationHomeSubCluster applicationHomeSubCluster = result.getApplicationHomeSubCluster();
+
+    assertEquals(appId, applicationHomeSubCluster.getApplicationId());
+    assertEquals(subClusterId, applicationHomeSubCluster.getHomeSubCluster());
+    assertEquals(context, applicationHomeSubCluster.getApplicationSubmissionContext());
   }
 }

@@ -23,11 +23,10 @@
 
 ###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
 
-1. This release can safely list/index/read S3 buckets where "empty directory"
-markers are retained.
-
-1. This release can be configured to retain these directory makers at the
-expense of being backwards incompatible.
+This release does not delete directory markers when creating
+files or directories underneath.
+This is incompatible with versions of the Hadoop S3A client released
+before 2021.
 
 Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
 full details.
@@ -1108,6 +1107,7 @@ options are covered in [Testing](./testing.md).
   <value>8MB</value>
   <description>
       The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
   </description>
 </property>
 
@@ -1726,7 +1726,9 @@ The "fast" output stream
 
 1.  Uploads large files as blocks with the size set by
     `fs.s3a.multipart.size`. That is: the threshold at which multipart uploads
-    begin and the size of each upload are identical.
+    begin and the size of each upload are identical. This behavior can be enabled
+    or disabled by using the flag `fs.s3a.multipart.uploads.enabled` which by
+    default is set to true.
 1.  Buffers blocks to disk (default) or in on-heap or off-heap memory.
 1.  Uploads blocks in parallel in background threads.
 1.  Begins uploading blocks as soon as the buffered data exceeds this partition

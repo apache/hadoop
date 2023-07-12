@@ -126,6 +126,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String ENTERING_MAINTENANCE_STATUS =
       "is ENTERING MAINTENANCE";
   public static final String IN_MAINTENANCE_STATUS = "is IN MAINTENANCE";
+  public static final String STALE_STATUS = "is STALE";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   public static final String UNDEFINED = "undefined";
@@ -370,6 +371,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.print(ENTERING_MAINTENANCE_STATUS);
     } else if (this.showMaintenanceState && dn.isInMaintenance()) {
       out.print(IN_MAINTENANCE_STATUS);
+    } else if (dn.isStale(this.staleInterval)) {
+      out.print(STALE_STATUS);
     } else {
       out.print(HEALTHY_STATUS);
     }

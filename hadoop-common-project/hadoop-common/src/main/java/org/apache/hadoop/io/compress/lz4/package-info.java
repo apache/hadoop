@@ -15,6 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Implementation of compression/decompression for the LZ4
+ * compression algorithm.
+ *
+ * @see <a href="http://code.google.com/p/lz4/">LZ4</a>
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.io.compress.lz4;

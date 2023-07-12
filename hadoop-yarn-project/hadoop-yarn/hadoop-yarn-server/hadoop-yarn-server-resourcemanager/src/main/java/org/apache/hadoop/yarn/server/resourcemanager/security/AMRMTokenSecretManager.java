@@ -24,10 +24,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -76,7 +78,9 @@ public class AMRMTokenSecretManager extends
       new HashSet<ApplicationAttemptId>();
 
   /**
-   * Create an {@link AMRMTokenSecretManager}
+   * Create an {@link AMRMTokenSecretManager}.
+   * @param conf configuration.
+   * @param rmContext rm context.
    */
   public AMRMTokenSecretManager(Configuration conf, RMContext rmContext) {
     this.rmContext = rmContext;
@@ -88,11 +92,18 @@ public class AMRMTokenSecretManager extends
             YarnConfiguration.DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
     // Adding delay = 1.5 * expiry interval makes sure that all active AMs get
     // the updated shared-key.
-    this.activationDelay =
-        (long) (conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS) * 1.5);
-    LOG.info("AMRMTokenKeyRollingInterval: " + this.rollingInterval
-        + "ms and AMRMTokenKeyActivationDelay: " + this.activationDelay + " ms");
+    String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+    if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
+      this.activationDelay = (long) (conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS) * 1.5);
+    } else {
+      this.activationDelay =
+          (long) (conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS) * 1.5);
+    }
+
+    LOG.info("AMRMTokenKeyRollingInterval: {} ms and AMRMTokenKeyActivationDelay: {} ms",
+        this.rollingInterval, this.activationDelay);
     if (rollingInterval <= activationDelay * 2) {
       throw new IllegalArgumentException(
           YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
@@ -219,6 +230,8 @@ public class AMRMTokenSecretManager extends
 
   /**
    * Populate persisted password of AMRMToken back to AMRMTokenSecretManager.
+   * @param token AMRMTokenIdentifier.
+   * @throws IOException an I/O exception has occurred.
    */
   public void addPersistedPassword(Token<AMRMTokenIdentifier> token)
       throws IOException {

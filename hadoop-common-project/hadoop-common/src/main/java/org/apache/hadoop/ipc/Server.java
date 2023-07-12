@@ -600,17 +600,18 @@ public abstract class Server {
     }
   }
 
-  void updateMetrics(Call call, long startTime, boolean connDropped) {
+  void updateMetrics(Call call, long processingStartTimeNanos, boolean connDropped) {
     totalRequests.increment();
     // delta = handler + processing + response
-    long deltaNanos = Time.monotonicNowNanos() - startTime;
-    long timestampNanos = call.timestampNanos;
+    long completionTimeNanos = Time.monotonicNowNanos();
+    long deltaNanos = completionTimeNanos - processingStartTimeNanos;
+    long arrivalTimeNanos = call.timestampNanos;
 
     ProcessingDetails details = call.getProcessingDetails();
     // queue time is the delta between when the call first arrived and when it
     // began being serviced, minus the time it took to be put into the queue
     details.set(Timing.QUEUE,
-        startTime - timestampNanos - details.get(Timing.ENQUEUE));
+        processingStartTimeNanos - arrivalTimeNanos - details.get(Timing.ENQUEUE));
     deltaNanos -= details.get(Timing.PROCESSING);
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
@@ -627,15 +628,25 @@ public abstract class Server {
         details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     long waitTime =
         details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     // don't include lock wait for detailed metrics.
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
+    // Overall processing time is from arrival to completion.
+    long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
+        .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
+    rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
+    }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
     }
   }
 
@@ -1087,6 +1098,11 @@ public abstract class Server {
     }
 
     @Override
+    public CallerContext getCallerContext() {
+      return this.callerContext;
+    }
+
+    @Override
     public int getPriorityLevel() {
       return this.priorityLevel;
     }
@@ -1229,6 +1245,7 @@ public abstract class Server {
         setResponseFields(value, responseParams);
         sendResponse();
 
+        details.setReturnStatus(responseParams.returnStatus);
         deltaNanos = Time.monotonicNowNanos() - startNanos;
         details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
@@ -1985,11 +2002,26 @@ public abstract class Server {
     private long lastContact;
     private int dataLength;
     private Socket socket;
+
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
-    private String hostAddress;
-    private int remotePort;
-    private InetAddress addr;
+
+    /**
+     * Client Host IP address from where the socket connection is being established to the Server.
+     */
+    private final String hostAddress;
+    /**
+     * Client remote port used for the given socket connection.
+     */
+    private final int remotePort;
+    /**
+     * Address to which the socket is connected to.
+     */
+    private final InetAddress addr;
+    /**
+     * Client Host address from where the socket connection is being established to the Server.
+     */
+    private final String hostName;
     
     IpcConnectionContextProto connectionContext;
     String protocolName;
@@ -2033,8 +2065,12 @@ public abstract class Server {
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
+        this.hostName = this.hostAddress;
       } else {
+        // host IP address
         this.hostAddress = addr.getHostAddress();
+        // host name for the IP address
+        this.hostName = addr.getHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<RpcCall>();
@@ -2050,7 +2086,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return getHostAddress() + ":" + remotePort; 
+      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
@@ -2463,19 +2499,18 @@ public abstract class Server {
             return -1;
           }
 
-          if(!RpcConstants.HEADER.equals(dataLengthBuffer)) {
-            LOG.warn("Incorrect RPC Header length from {}:{} "
-                + "expected length: {} got length: {}",
-                hostAddress, remotePort, RpcConstants.HEADER, dataLengthBuffer);
+          if (!RpcConstants.HEADER.equals(dataLengthBuffer)) {
+            LOG.warn("Incorrect RPC Header length from {}:{} / {}:{}. Expected: {}. Actual: {}",
+                hostName, remotePort, hostAddress, remotePort, RpcConstants.HEADER,
+                dataLengthBuffer);
             setupBadVersionResponse(version);
             return -1;
           }
           if (version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
-            LOG.warn("Version mismatch from " +
-                     hostAddress + ":" + remotePort +
-                     " got version " + version + 
-                     " expected version " + CURRENT_VERSION);
+            LOG.warn("Version mismatch from {}:{} / {}:{}. "
+                    + "Expected version: {}. Actual version: {} ", hostName,
+                remotePort, hostAddress, remotePort, CURRENT_VERSION, version);
             setupBadVersionResponse(version);
             return -1;
           }

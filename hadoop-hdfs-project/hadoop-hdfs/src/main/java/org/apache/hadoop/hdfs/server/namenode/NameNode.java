@@ -25,8 +25,6 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 
 import java.util.Set;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -80,6 +78,8 @@ import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -254,6 +254,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
+@Metrics(context="dfs")
 public class NameNode extends ReconfigurableBase implements
     NameNodeStatusMXBean, TokenVerifier<DelegationTokenIdentifier> {
   static{
@@ -427,8 +428,7 @@ public class NameNode extends ReconfigurableBase implements
 
   private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
 
-  public static final Log MetricsLog =
-      LogFactory.getLog("NameNodeMetricsLog");
+  public static final String METRICS_LOG_NAME = "NameNodeMetricsLog";
 
   protected FSNamesystem namesystem; 
   protected final NamenodeRole role;
@@ -949,13 +949,11 @@ public class NameNode extends ReconfigurableBase implements
       return;
     }
 
-    MetricsLoggerTask.makeMetricsLoggerAsync(MetricsLog);
-
     // Schedule the periodic logging.
     metricsLoggerTimer = new ScheduledThreadPoolExecutor(1);
     metricsLoggerTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(
         false);
-    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(MetricsLog,
+    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG_NAME,
         "NameNode", (short) 128),
         metricsLoggerPeriodSec,
         metricsLoggerPeriodSec,
@@ -1151,6 +1149,7 @@ public class NameNode extends ReconfigurableBase implements
         DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE,
         DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT);
     this.started.set(true);
+    DefaultMetricsSystem.instance().register(this);
   }
 
   private void stopAtException(Exception e){
@@ -1221,6 +1220,7 @@ public class NameNode extends ReconfigurableBase implements
         levelDBAliasMapServer.close();
       }
     }
+    started.set(false);
     tracer.close();
   }
 
@@ -2054,6 +2054,26 @@ public class NameNode extends ReconfigurableBase implements
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
+  }
+
+  /**
+   * Emit Namenode HA service state as an integer so that one can monitor NN HA
+   * state based on this metric.
+   *
+   * @return  0 when not fully started
+   *          1 for active or standalone (non-HA) NN
+   *          2 for standby
+   *          3 for observer
+   *
+   * These are the same integer values for the HAServiceState enum.
+   */
+  @Metric({"NameNodeState", "Namenode HA service state"})
+  public int getNameNodeState() {
+    if (!isStarted() || state == null) {
+      return HAServiceState.INITIALIZING.ordinal();
+    }
+
+    return state.getServiceState().ordinal();
   }
 
   /**

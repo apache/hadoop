@@ -145,7 +145,7 @@ public abstract class YarnClientUtils {
 
             // Now we only support one property, which is exclusive, so check if
             // key = exclusive and value = {true/false}
-            if (key.equals("exclusive")
+            if ("exclusive".equals(key)
                 && ImmutableSet.of("true", "false").contains(value)) {
               exclusive = Boolean.parseBoolean(value);
             } else {

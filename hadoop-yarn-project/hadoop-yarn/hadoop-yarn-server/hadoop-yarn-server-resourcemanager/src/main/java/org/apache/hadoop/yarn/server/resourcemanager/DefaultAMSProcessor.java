@@ -407,7 +407,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         RMNode rmNode = rmNodeEntry.getKey();
         SchedulerNodeReport schedulerNodeReport =
             getScheduler().getNodeReport(rmNode.getNodeID());
-        Resource used = BuilderUtils.newResource(0, 0);
+        Resource used = Resources.createResource(0);
         int numContainers = 0;
         if (schedulerNodeReport != null) {
           used = schedulerNodeReport.getUsedResource();

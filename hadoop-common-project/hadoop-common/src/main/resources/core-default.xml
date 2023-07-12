@@ -920,6 +920,16 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.native.enabled</name>
+  <value>true</value>
+  <description>
+    Used to decide whether to enable native codec. If set to false, native codec
+    would not be created and ISA-L support would be disabled. Recommend to set to
+    false when your CPU does not support ISA-L.
+  </description>
+</property>
+
   <!-- file system properties -->
 
 <property>
@@ -2155,9 +2165,11 @@ The switch to turn S3A auditing on or off.
 
   <property>
     <name>fs.azure.buffer.dir</name>
-    <value>${hadoop.tmp.dir}/abfs</value>
+    <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/abfs</value>
     <description>Directory path for buffer files needed to upload data blocks
-      in AbfsOutputStream.</description>
+      in AbfsOutputStream.
+      Yarn container path will be used as default value on yarn applications,
+      otherwise fall back to hadoop.tmp.dir </description>
   </property>
 
 <property>
@@ -2306,6 +2318,15 @@ The switch to turn S3A auditing on or off.
   than 0, and ipc.client.ping is set to true, and this rpc-timeout is greater than
   the value of ipc.ping.interval, the effective value of the rpc-timeout is
   rounded up to multiple of ipc.ping.interval.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.handler.queue.size</name>
+  <value>100</value>
+  <description>
+    Indicates how many calls per handler are allowed in the queue. This value can
+    determine the maximum call queue size by multiplying the number of handler threads.
   </description>
 </property>
 
@@ -3914,6 +3935,35 @@ The switch to turn S3A auditing on or off.
         the ZK CLI).
     </description>
   </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.location</name>
+    <description>
+      Keystore location for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.password</name>
+    <description>
+      Keystore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.location</name>
+    <decription>
+        Truststore location for ZooKeeper client connection over SSL.
+    </decription>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.password</name>
+    <description>
+      Truststore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
   <property>
     <name>hadoop.system.tags</name>
     <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT

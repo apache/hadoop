@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_INSTANTIATED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_STARTED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_INITIATED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -73,8 +74,11 @@ public final class S3AMultipartUploaderStatisticsImpl
             MULTIPART_UPLOAD_PART_PUT_BYTES.getSymbol(),
             MULTIPART_UPLOAD_ABORTED.getSymbol(),
             MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED.getSymbol(),
-            MULTIPART_UPLOAD_COMPLETED.getSymbol(),
             MULTIPART_UPLOAD_STARTED.getSymbol())
+        .withDurationTracking(
+            MULTIPART_UPLOAD_COMPLETED.getSymbol(),
+            OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+            MULTIPART_UPLOAD_PART_PUT.getSymbol())
         .build();
     setIOStatistics(st);
   }
@@ -96,13 +100,12 @@ public final class S3AMultipartUploaderStatisticsImpl
 
   @Override
   public void partPut(final long lengthInBytes) {
-    inc(MULTIPART_UPLOAD_PART_PUT, 1);
     inc(MULTIPART_UPLOAD_PART_PUT_BYTES, lengthInBytes);
   }
 
   @Override
   public void uploadCompleted() {
-    inc(MULTIPART_UPLOAD_COMPLETED, 1);
+    // duration tracking updates the statistics
   }
 
   @Override

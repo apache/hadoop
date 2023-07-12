@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -167,8 +168,9 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
 
-
     stateStore.loadCache(MountTableStoreImpl.class, true);
+    verifyMountTableContents(src, dest);
+
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
         .newInstance(src);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
@@ -205,6 +207,15 @@ public class TestRouterAdminCLI {
     assertEquals(dest, loc3.getDest());
     assertTrue(mountTable.isReadOnly());
     assertTrue(mountTable.isFaultTolerant());
+  }
+
+  private void verifyMountTableContents(String src, String dest) throws Exception {
+    String[] argv = new String[] {"-ls", "/"};
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response = out.toString();
+    assertTrue("The response should have " + src + ": " + response, response.contains(src));
+    assertTrue("The response should have " + dest + ": " + response, response.contains(dest));
   }
 
   @Test
@@ -843,6 +854,12 @@ public class TestRouterAdminCLI {
         + "[-readonly] [-faulttolerant] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
+        + "\t[-addAll <source1> <nameservice1,nameservice2,...> <destination1> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner1> -group <group1> -mode <mode1>"
+        + " , <source2> <nameservice1,nameservice2,...> <destination2> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner2> -group <group2> -mode <mode2> , ...]\n"
         + "\t[-update <source> [<nameservice1, nameservice2, ...> "
         + "<destination>] [-readonly true|false]"
         + " [-faulttolerant true|false] "
@@ -1828,6 +1845,84 @@ public class TestRouterAdminCLI {
     // Replace the time values with XXX
     assertEquals(expected,
         buffer.toString().trim().replaceAll("[0-9]{4,}+", "XXX"));
+  }
+
+  @Test
+  public void testAddMultipleMountPointsSuccess() throws Exception {
+    String[] argv =
+        new String[] {"-addAll", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultipleMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultipleMountPoints-03", "ns03", "/dest03"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    validateMountEntry("/testAddMultipleMountPoints-01", 1, new String[] {"/dest01"},
+        new String[] {"ns01"});
+    validateMountEntry("/testAddMultipleMountPoints-02", 2, new String[] {"/dest02", "/dest02"},
+        new String[] {"ns02", "ns03"});
+    validateMountEntry("/testAddMultipleMountPoints-03", 1, new String[] {"/dest03"},
+        new String[] {"ns03"});
+  }
+
+  private static void validateMountEntry(String mountName, int numDest, String[] dest, String[] nss)
+      throws IOException {
+    GetMountTableEntriesRequest request = GetMountTableEntriesRequest.newInstance(mountName);
+    GetMountTableEntriesResponse response =
+        client.getMountTableManager().getMountTableEntries(request);
+    assertEquals(1, response.getEntries().size());
+    List<RemoteLocation> destinations = response.getEntries().get(0).getDestinations();
+    assertEquals(numDest, destinations.size());
+    for (int i = 0; i < numDest; i++) {
+      assertEquals(mountName, destinations.get(i).getSrc());
+      assertEquals(dest[i], destinations.get(i).getDest());
+      assertEquals(nss[i], destinations.get(i).getNameserviceId());
+    }
+  }
+
+  @Test
+  public void testAddMultipleMountPointsFailure() throws Exception {
+    System.setErr(new PrintStream(err));
+
+    String[] argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", ",", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // syntax issue
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // multiple inputs with same mount
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01,/dest02", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // multiple dest entries
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // success
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // mount points were already added
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    assertTrue("The error message should return failed entries",
+        err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
   }
 
   private void addMountTable(String src, String nsId, String dst)

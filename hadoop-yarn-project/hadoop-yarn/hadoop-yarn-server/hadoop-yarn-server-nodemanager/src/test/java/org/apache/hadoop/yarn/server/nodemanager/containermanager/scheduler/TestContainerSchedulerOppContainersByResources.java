@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerSchedulerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -161,7 +161,7 @@ public class TestContainerSchedulerOppContainersByResources
         recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
-            user, BuilderUtils.newResource(2048, 1),
+            user, Resources.createResource(2048),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
@@ -170,7 +170,7 @@ public class TestContainerSchedulerOppContainersByResources
         recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
-            user, BuilderUtils.newResource(2048, 1),
+            user, Resources.createResource(2048),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
 
@@ -219,7 +219,7 @@ public class TestContainerSchedulerOppContainersByResources
           recordFactory.newRecordInstance(ContainerLaunchContext.class),
           createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
               context.getNodeId(),
-              user, BuilderUtils.newResource(512, 1),
+              user, Resources.createResource(512),
               context.getContainerTokenSecretManager(), null,
               ExecutionType.OPPORTUNISTIC)));
     }

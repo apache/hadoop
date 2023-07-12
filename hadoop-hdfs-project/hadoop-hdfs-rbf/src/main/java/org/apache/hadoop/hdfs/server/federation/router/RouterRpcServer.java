@@ -333,7 +333,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setBindAddress(confRpcAddress.getHostName())
         .setPort(confRpcAddress.getPort())
         .setNumHandlers(handlerCount)
-        .setnumReaders(readerCount)
+        .setNumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
         .setAlignmentContext(routerStateIdContext)
@@ -1830,18 +1830,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If the path is in a read only mount point.
    */
   private boolean isPathReadOnly(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null && entry.isReadOnly()) {
-          return true;
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isReadOnly();
   }
 
   /**
@@ -1940,18 +1930,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should be in all subclusters.
    */
   boolean isPathAll(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isAll();
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isAll();
   }
 
   /**
@@ -1961,18 +1941,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should support failed subclusters.
    */
   boolean isPathFaultTolerant(final String path) {
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isFaultTolerant();
+  }
+
+  private MountTable getMountTable(final String path){
     if (subclusterResolver instanceof MountTableResolver) {
       try {
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isFaultTolerant();
-        }
+        return mountTable.getMountPoint(path);
       } catch (IOException e) {
         LOG.error("Cannot get mount point", e);
       }
     }
-    return false;
+    return null;
   }
 
   /**

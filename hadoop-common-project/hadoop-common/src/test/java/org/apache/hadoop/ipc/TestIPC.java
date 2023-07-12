@@ -1168,6 +1168,10 @@ public class TestIPC {
 
     call(client, addr, serviceClass, conf);
     Connection connection = server.getConnections()[0];
+    LOG.info("Connection is from: {}", connection);
+    assertEquals(
+        "Connection string representation should include both IP address and Host name", 2,
+        connection.toString().split(" / ").length);
     int serviceClass2 = connection.getServiceClass();
     assertFalse(noChanged ^ serviceClass == serviceClass2);
     client.stop();
@@ -1336,7 +1340,7 @@ public class TestIPC {
   /**
    * Test the retry count while used in a retry proxy.
    */
-  @Test(timeout=60000)
+  @Test(timeout=100000)
   public void testRetryProxy() throws IOException {
     final Client client = new Client(LongWritable.class, conf);
     
@@ -1722,6 +1726,47 @@ public class TestIPC {
   @Test
   public void testProxyUserBinding() throws Exception {
     checkUserBinding(true);
+  }
+
+  @Test(timeout=60000)
+  public void testUpdateAddressEnsureResolved() throws Exception {
+    // start server
+    Server server = new TestServer(1, false);
+    server.start();
+
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory)
+        .createSocket();
+    Client client = new Client(LongWritable.class, conf, mockFactory);
+    InetSocketAddress address =
+        new InetSocketAddress("localhost", NetUtils.getFreeSocketPort());
+    ConnectionId remoteId = getConnectionId(address, 100, conf);
+    try {
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
+
+      assertFalse(address.isUnresolved());
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+
+      NetUtils.addStaticResolution("localhost", "host.invalid");
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
+
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+    } finally {
+      client.stop();
+      server.stop();
+    }
   }
 
   private void checkUserBinding(boolean asProxy) throws Exception {

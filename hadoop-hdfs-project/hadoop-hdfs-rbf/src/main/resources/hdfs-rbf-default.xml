@@ -362,7 +362,8 @@
       Class to implement the State Store. There are three implementation classes currently
       being supported:
       org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
-      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl and
       org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
       These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
       By default it uses the ZooKeeper as the default State Store.
@@ -374,6 +375,26 @@
     <value>60000</value>
     <description>
       How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.parent-path</name>
+    <value>/hdfs-federation</value>
+    <description>
+      The parent path of zookeeper for StateStoreZooKeeperImpl.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.async.max.threads</name>
+    <value>-1</value>
+    <description>
+      Max threads number of StateStoreZooKeeperImpl in async mode.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      Default value is -1, which means StateStoreZooKeeperImpl is working in sync mode.
+      Use positive integer value to enable async mode.
     </description>
   </property>
 
@@ -447,6 +468,16 @@
       If true, get namenode heartbeats and send into the State Store.
       If not explicitly specified takes the same value as for
        dfs.federation.router.heartbeat.enable.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.namenode.heartbeat.jmx.interval</name>
+    <value>0</value>
+    <description>
+      How often the Router should request JMX reports from the Namenode in miliseconds.
+      If this value is 0, it will request JMX reports every time a Namenode report is requested.
+      If this value is negative, it will disable JMX reports from the Namenode.
     </description>
   </property>
 
@@ -864,4 +895,42 @@
       of namespaces in use and the latency of the msync requests.
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.state.id.refresh.period</name>
+    <value>15s</value>
+    <description>
+      Period to refresh namespace stateID using active namenode. This ensures the
+      namespace stateID is refresh even when an observer is trailing behind.
+      If this is below 0, the auto-refresh is disabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.file.async.threads</name>
+    <value>0</value>
+    <description>
+      Max threads used by StateStoreFileImpl to access state store files concurrently.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl.
+      Default value is 0, which means StateStoreFileImpl would work in sync mode, meaning it
+      would access one file at a time.
+      Use positive integer value to enable concurrent files access.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.fs.async.threads</name>
+    <value>0</value>
+    <description>
+      Max threads used by StateStoreFileSystemImpl to access state store files from the given
+      filesystem concurrently.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl.
+      Default value is 0, which means StateStoreFileSystemImpl would work in sync mode, meaning it
+      would access one file from the filesystem at a time.
+      Use positive integer value to enable concurrent files access from the given filesystem.
+    </description>
+  </property>
+
 </configuration>

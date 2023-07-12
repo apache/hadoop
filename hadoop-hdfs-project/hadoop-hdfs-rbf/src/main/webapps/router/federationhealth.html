@@ -123,9 +123,10 @@
     <th>DataNodes usages% (Min/Median/Max/stdDev)</th>
     <td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td>
   </tr>
-  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveNodes} (Decommissioned: {NumDecomLiveNodes})</td></tr>
-  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadNodes} (Decommissioned: {NumDecomDeadNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveNodes} (Decommissioned: {NumDecomLiveNodes}, In Maintenance: {NumInMaintenanceLiveDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadNodes} (Decommissioned: {NumDecomDeadNodes}, In Maintenance: {NumInMaintenanceDeadDataNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningNodes}</td></tr>
+  <tr><th><a href="#tab-datanode">Entering Maintenance Nodes</a></th><td> {NumEnteringMaintenanceDataNodes}</td></tr>
   <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{NumOfBlocksUnderReplicated}</td></tr>
   <tr><th>Number of Blocks Pending Deletion</th><td>{NumOfBlocksPendingDeletion}</td></tr>
 </table>
@@ -383,6 +384,7 @@
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
+    <td></td>
     <td></td>
     <td></td>
     <td></td>

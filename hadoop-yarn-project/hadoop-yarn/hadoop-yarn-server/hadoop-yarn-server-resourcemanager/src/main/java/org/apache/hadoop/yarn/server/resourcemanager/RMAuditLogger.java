@@ -489,6 +489,7 @@ public class RMAuditLogger {
    * @param description Some additional information as to why the operation
    *                    failed.
    * @param appId ApplicationId in which operation was performed.
+   * @param attemptId Application Attempt Id in which operation was performed.
    *
    * <br><br>
    * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter

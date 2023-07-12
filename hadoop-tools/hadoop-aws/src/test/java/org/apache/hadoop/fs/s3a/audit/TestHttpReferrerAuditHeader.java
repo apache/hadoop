@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.Before;
@@ -36,6 +38,7 @@ import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.*;
@@ -104,16 +107,8 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
-    assertMapContains(params, PARAM_PRINCIPAL,
-        UserGroupInformation.getCurrentUser().getUserName());
-    assertMapContains(params, PARAM_FILESYSTEM_ID, auditor.getAuditorId());
-    assertMapContains(params, PARAM_OP, OPERATION);
-    assertMapContains(params, PARAM_PATH, PATH_1);
-    assertMapContains(params, PARAM_PATH2, PATH_2);
-    String threadID = CommonAuditContext.currentThreadID();
-    assertMapContains(params, PARAM_THREAD0, threadID);
-    assertMapContains(params, PARAM_THREAD1, threadID);
-    assertMapContains(params, PARAM_ID, span.getSpanId());
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, PATH_1, PATH_2, threadId, span);
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
@@ -135,16 +130,8 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     AuditSpan span = getManager().createSpan(OPERATION, p1, p2);
     long ts = span.getTimestamp();
     Map<String, String> params = issueRequestAndExtractParameters();
-    assertMapContains(params, PARAM_PRINCIPAL,
-        UserGroupInformation.getCurrentUser().getUserName());
-    assertMapContains(params, PARAM_FILESYSTEM_ID, auditor.getAuditorId());
-    assertMapContains(params, PARAM_OP, OPERATION);
-    assertMapContains(params, PARAM_PATH, p1);
-    assertMapContains(params, PARAM_PATH2, p2);
-    String threadID = CommonAuditContext.currentThreadID();
-    assertMapContains(params, PARAM_THREAD0, threadID);
-    assertMapContains(params, PARAM_THREAD1, threadID);
-    assertMapContains(params, PARAM_ID, span.getSpanId());
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, p1, p2, threadId, span);
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
@@ -348,6 +335,62 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
     assertMapNotContains(params, PARAM_RANGE);
+  }
+
+  @Test
+  public void testHttpReferrerForBulkDelete() throws Throwable {
+    AuditSpan span = span();
+    long ts = span.getTimestamp();
+    DeleteObjectsRequest request = headForBulkDelete(
+        "key_01",
+        "key_02",
+        "key_03");
+    Map<String, String> headers
+        = request.getCustomRequestHeaders();
+    assertThat(headers)
+        .describedAs("Custom headers")
+        .containsKey(HEADER_REFERRER);
+    String header = headers.get(HEADER_REFERRER);
+    LOG.info("Header is {}", header);
+    Map<String, String> params
+        = HttpReferrerAuditHeader.extractQueryParameters(header);
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, PATH_1, PATH_2, threadId, span);
+    assertMapContains(params, DELETE_KEYS_SIZE, "3");
+    assertThat(span.getTimestamp())
+        .describedAs("Timestamp of " + span)
+        .isEqualTo(ts);
+    assertMapNotContains(params, PARAM_RANGE);
+
+    assertMapContains(params, PARAM_TIMESTAMP,
+        Long.toString(ts));
+  }
+
+  /**
+   * Utility to compare common params from the referer header.
+   *
+   * @param params map of params extracted from the header.
+   * @param path1 first path.
+   * @param path2 second path.
+   * @param threadID thread id.
+   * @param span audit span object.
+   * @throws IOException if login fails and/or current user cannot be retrieved.
+   */
+  private void compareCommonHeaders(final Map<String, String> params,
+      final String path1,
+      final String path2,
+      final String threadID,
+      final AuditSpan span) throws IOException {
+    assertMapContains(params, PARAM_PRINCIPAL,
+        UserGroupInformation.getCurrentUser().getUserName());
+    assertMapContains(params, PARAM_FILESYSTEM_ID,
+        auditor.getAuditorId());
+    assertMapContains(params, PARAM_OP, OPERATION);
+    assertMapContains(params, PARAM_PATH, path1);
+    assertMapContains(params, PARAM_PATH2, path2);
+    assertMapContains(params, PARAM_THREAD0, threadID);
+    assertMapContains(params, PARAM_THREAD1, threadID);
+    assertMapContains(params, PARAM_ID, span.getSpanId());
   }
 
   /**

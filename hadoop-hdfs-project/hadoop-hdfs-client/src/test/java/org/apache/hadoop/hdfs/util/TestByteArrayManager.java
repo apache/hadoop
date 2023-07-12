@@ -342,7 +342,7 @@ public class TestByteArrayManager {
           }
 
           if ((i & 0xFF) == 0) {
-            LOG.info("randomRecycler sleep, i=" + i);
+            LOG.info("randomRecycler sleep, i={}", i);
             sleepMs(100);
           }
         }

@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -69,8 +70,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -147,9 +146,9 @@ public class TestFSImage {
           .of(SyncFlag.UPDATE_LENGTH));
 
       // checkpoint
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
 
       cluster.restartNameNode();
       cluster.waitActive();
@@ -363,9 +362,9 @@ public class TestFSImage {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       DistributedFileSystem fs = cluster.getFileSystem();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
       File currentDir = FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0).get(
           0);
       File fsimage = FSImageTestUtil.findNewestImageFile(currentDir
@@ -405,9 +404,9 @@ public class TestFSImage {
       long atimeLink = hdfs.getFileLinkStatus(link).getAccessTime();
 
       // save namespace and restart cluster
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      hdfs.setSafeMode(SafeModeAction.ENTER);
       hdfs.saveNamespace();
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      hdfs.setSafeMode(SafeModeAction.LEAVE);
       cluster.shutdown();
       cluster = new MiniDFSCluster.Builder(conf).format(false)
           .numDataNodes(1).build();
@@ -526,9 +525,9 @@ public class TestFSImage {
       DFSTestUtil.writeFile(fs, file_3_2, new String(bytes));
 
       // Save namespace and restart NameNode
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
 
       cluster.restartNameNodes();
       fs = cluster.getFileSystem();
@@ -805,9 +804,9 @@ public class TestFSImage {
           .of(SyncFlag.UPDATE_LENGTH));
 
       // checkpoint
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
 
       cluster.restartNameNode();
       cluster.waitActive();
@@ -864,9 +863,9 @@ public class TestFSImage {
       DFSTestUtil.enableAllECPolicies(fs);
 
       // Save namespace and restart NameNode
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
 
       cluster.restartNameNodes();
       cluster.waitActive();
@@ -887,9 +886,9 @@ public class TestFSImage {
       newPolicy = ret[0].getPolicy();
 
       // Save namespace and restart NameNode
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
 
       cluster.restartNameNodes();
       cluster.waitActive();
@@ -935,9 +934,9 @@ public class TestFSImage {
 
 
     // Save namespace and restart NameNode
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
     cluster.waitActive();
@@ -957,9 +956,9 @@ public class TestFSImage {
     // 2. Disable an erasure coding policy
     fs.disableErasureCodingPolicy(ecPolicy.getName());
     // Save namespace and restart NameNode
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
     cluster.waitActive();
@@ -995,9 +994,9 @@ public class TestFSImage {
 
     fs.removeErasureCodingPolicy(ecPolicy.getName());
     // Save namespace and restart NameNode
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
     cluster.waitActive();
@@ -1059,9 +1058,9 @@ public class TestFSImage {
     }
 
     // checkpoint
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNode();
     cluster.waitActive();
@@ -1202,9 +1201,9 @@ public class TestFSImage {
     SnapshotTestHelper.dumpTree2File(fsdir, preRestartTree);
 
     // checkpoint
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNode();
     cluster.waitActive();
