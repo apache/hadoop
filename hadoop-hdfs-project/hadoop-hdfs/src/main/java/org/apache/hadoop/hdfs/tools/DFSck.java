@@ -404,6 +404,8 @@ public class DFSck extends Configured implements Tool {
       errCode = 4;
     } else if (lastLine.endsWith(NamenodeFsck.ENTERING_MAINTENANCE_STATUS)) {
       errCode = 5;
+    } else if (lastLine.endsWith(NamenodeFsck.STALE_STATUS)) {
+      errCode = 6;
     }
     return errCode;
   }

@@ -376,7 +376,7 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
       update(assertionBuilder, UPDATE_RESOURCE);
       Assert.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when " +
           "set up");
-    } catch (IllegalStateException ignored) {
+    } catch (IOException ignored) {
     }
   }
 

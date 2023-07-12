@@ -254,6 +254,7 @@ public class TestCSAllocateCustomResource {
         (metrics.getCustomResourceCapability()
             .get(GPU_URI)).longValue(), 0);
     ClusterMetrics.destroy();
+    rm.stop();
   }
 
   /**

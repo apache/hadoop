@@ -11,6 +11,7 @@
 *.patch
 *.diff
 .idea
+.vscode
 .svn
 .classpath
 .project

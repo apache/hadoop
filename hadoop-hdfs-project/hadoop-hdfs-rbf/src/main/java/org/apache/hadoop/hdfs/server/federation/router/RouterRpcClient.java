@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
+import static org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor.CONCURRENT;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -1572,7 +1573,9 @@ public class RouterRpcClient {
           results.add(new RemoteResult<>(location, ioe));
         }
       }
-
+      if (rpcMonitor != null) {
+        rpcMonitor.proxyOpComplete(true, CONCURRENT, null);
+      }
       return results;
     } catch (RejectedExecutionException e) {
       if (rpcMonitor != null) {

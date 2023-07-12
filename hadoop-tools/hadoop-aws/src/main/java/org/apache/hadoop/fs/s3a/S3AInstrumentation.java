@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.s3a.statistics.impl.AbstractS3AStatisticsSource;
 import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
-import org.apache.hadoop.fs.s3a.statistics.impl.ForwardingIOStatisticsStore;
+import org.apache.hadoop.fs.statistics.impl.ForwardingIOStatisticsStore;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;

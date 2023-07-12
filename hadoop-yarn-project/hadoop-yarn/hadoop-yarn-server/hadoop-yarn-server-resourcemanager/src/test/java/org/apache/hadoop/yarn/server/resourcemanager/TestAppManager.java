@@ -283,7 +283,7 @@ public class TestAppManager extends AppManagerTestBase{
     setupDispatcher(rmContext, conf);
   }
 
-  private static PlacementManager createMockPlacementManager(
+  public static PlacementManager createMockPlacementManager(
       String userRegex, String placementQueue, String placementParentQueue
   ) throws YarnException {
     PlacementManager placementMgr = mock(PlacementManager.class);
