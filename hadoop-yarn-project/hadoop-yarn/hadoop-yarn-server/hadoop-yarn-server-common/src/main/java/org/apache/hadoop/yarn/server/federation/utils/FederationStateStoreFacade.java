@@ -321,7 +321,7 @@ public final class FederationStateStoreFacade {
   public void setPolicyConfiguration(SubClusterPolicyConfiguration policyConf)
       throws YarnException {
     stateStore.setPolicyConfiguration(
-       SetSubClusterPolicyConfigurationRequest.newInstance(policyConf));
+        SetSubClusterPolicyConfigurationRequest.newInstance(policyConf));
   }
 
   /**

@@ -619,7 +619,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         () -> interceptor.saveFederationQueuePolicy(null));
 
     // federationQueueWeight is null.
-    LambdaTestUtils.intercept(IllegalArgumentException.class, "FederationQueueWeight cannot be null.",
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class, "FederationQueueWeight cannot be null.",
         () -> SaveFederationQueuePolicyRequest.newInstance("root.a", null, "-"));
 
     // queue is null
@@ -644,7 +645,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     assertEquals("save policy success.", response.getMessage());
 
     FederationStateStoreFacade federationFacade = interceptor.getFederationFacade();
-    SubClusterPolicyConfiguration policyConfiguration = federationFacade.getPolicyConfiguration(queue);
+    SubClusterPolicyConfiguration policyConfiguration =
+        federationFacade.getPolicyConfiguration(queue);
     assertNotNull(policyConfiguration);
     assertEquals(queue, policyConfiguration.getQueue());
 

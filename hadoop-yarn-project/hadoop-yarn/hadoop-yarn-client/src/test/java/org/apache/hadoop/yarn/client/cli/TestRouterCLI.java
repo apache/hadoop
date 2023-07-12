@@ -172,7 +172,8 @@ public class TestRouterCLI {
         () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2:0.9;"));
 
     // Case3, If policy is incomplete, The weight of a subcluster is missing.
-    String errMsg2 = "The subClusterWeight cannot be empty, and the subClusterWeight size must be 2. (eg.SC-1,0.2)";
+    String errMsg2 = "The subClusterWeight cannot be empty, " +
+        "and the subClusterWeight size must be 2. (eg.SC-1,0.2)";
     LambdaTestUtils.intercept(YarnException.class, errMsg2,
         () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2;SC-1:0.1,SC-2;0.3,1.0"));
 

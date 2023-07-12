@@ -48,7 +48,7 @@ public class SaveFederationQueuePolicyRequestPBImpl extends SaveFederationQueueP
 
   private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
-        builder = SaveFederationQueuePolicyRequestProto.newBuilder(proto);
+      builder = SaveFederationQueuePolicyRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -146,7 +146,7 @@ public class SaveFederationQueuePolicyRequestPBImpl extends SaveFederationQueueP
   }
 
   private FederationQueueWeightProto convertToProtoFormat(
-      FederationQueueWeight federationQueueWeight) {
+    FederationQueueWeight federationQueueWeight) {
     return ((FederationQueueWeightPBImpl) federationQueueWeight).getProto();
   }
 

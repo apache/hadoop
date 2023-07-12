@@ -165,8 +165,8 @@ public class PassThroughRMAdminRequestInterceptor
   }
 
   @Override
-  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(SaveFederationQueuePolicyRequest request)
-      throws YarnException, IOException {
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
     return getNextInterceptor().saveFederationQueuePolicy(request);
   }
 }

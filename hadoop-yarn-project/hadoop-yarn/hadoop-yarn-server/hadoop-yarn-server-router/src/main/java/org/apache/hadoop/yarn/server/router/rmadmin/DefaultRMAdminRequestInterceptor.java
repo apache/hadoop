@@ -234,8 +234,8 @@ public class DefaultRMAdminRequestInterceptor
   }
 
   @Override
-  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(SaveFederationQueuePolicyRequest request)
-      throws YarnException, IOException {
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
     return rmAdminProxy.saveFederationQueuePolicy(request);
   }
 }
