@@ -884,6 +884,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
       SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
 
+    // Parameter validation.
+
     if (request == null) {
       routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing SaveFederationQueuePolicy request.", null);
@@ -901,13 +903,20 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RouterServerUtil.logAndThrowException("Missing Queue information.", null);
     }
 
+    String amRmWeight = federationQueueWeight.getAmrmWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
+
+    String routerWeight = federationQueueWeight.getRouterWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerWeight);
+
+    String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+    FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
+
     try {
       long startTime = clock.getTime();
       // Step1, get parameters.
-      String amRmWeight = federationQueueWeight.getAmrmWeight();
-      String routerWeight = federationQueueWeight.getRouterWeight();
       String policyManagerClassName = request.getPolicyManagerClassName();
-      String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+
 
       // Step2, parse amRMPolicyWeights.
       Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
@@ -953,7 +962,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    * @param policyWeight policyWeight.
    * @return Map of SubClusterWeight.
    */
-  private Map<SubClusterIdInfo, Float> getSubClusterWeightMap(String policyWeight) {
+  private Map<SubClusterIdInfo, Float> getSubClusterWeightMap(String policyWeight)
+      throws YarnException {
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(policyWeight);
     Map<SubClusterIdInfo, Float> result = new HashMap<>();
     String[] policyWeights = policyWeight.split(COMMA);
     for (String policyWeightItem : policyWeights) {

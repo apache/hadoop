@@ -24,7 +24,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ha.HAAdmin.UsageInfo;
@@ -52,8 +51,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkHeadRoomAlphaValid;
+import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkSubClusterQueueWeightRatioValid;
 
 public class RouterCLI extends Configured implements Tool {
 
@@ -80,8 +81,6 @@ public class RouterCLI extends Configured implements Tool {
 
   // Common Constant
   private static final String SEMICOLON = ";";
-  private static final String COMMA = ",";
-  private static final String COLON = ":";
 
   // Command Constant
   private static final String CMD_EMPTY = "";
@@ -322,8 +321,8 @@ public class RouterCLI extends Configured implements Tool {
       String policy = cliParser.getOptionValue(OPTION_S);
       if (StringUtils.isBlank(policy)) {
         policy = cliParser.getOptionValue(OPTION_SAVE);
-        return handleSavePolicy(policy);
       }
+      return handleSavePolicy(policy);
     }
 
     return EXIT_ERROR;
@@ -382,65 +381,6 @@ public class RouterCLI extends Configured implements Tool {
         queue, federationQueueWeight, policyManager);
 
     return request;
-  }
-
-  /**
-   * Check if the subCluster Queue Weight Ratio are valid.
-   *
-   * This method can be used to validate RouterPolicyWeight and AMRMPolicyWeight.
-   *
-   * @param subClusterWeight the weight ratios of subClusters.
-   * @return If the validation is successful, return true. Otherwise, an exception will be thrown.
-   * @throws YarnException exceptions from yarn servers.
-   */
-  private void checkSubClusterQueueWeightRatioValid(String subClusterWeight) throws YarnException {
-    // The subClusterWeight cannot be empty.
-    if (StringUtils.isBlank(subClusterWeight)) {
-      throw new YarnException("subClusterWeight can't be empty!");
-    }
-
-    // SC-1:0.7,SC-2:0.3 -> [SC-1:0.7,SC-2:0.3]
-    String[] subClusterWeights = subClusterWeight.split(COMMA);
-    Map<String, Double> subClusterWeightMap = new LinkedHashMap<>();
-    for (String subClusterWeightItem : subClusterWeights) {
-      // SC-1:0.7 -> [SC-1,0.7]
-      // We require that the parsing result is not empty and must have a length of 2.
-      String[] subClusterWeightItems = subClusterWeightItem.split(COLON);
-      if (subClusterWeightItems == null || subClusterWeightItems.length != 2) {
-        throw new YarnException("The subClusterWeight cannot be empty," +
-            " and the subClusterWeight size must be 2. (eg.SC-1,0.2)");
-      }
-      subClusterWeightMap.put(subClusterWeightItems[0], Double.valueOf(subClusterWeightItems[1]));
-    }
-
-    // The sum of weight ratios for subClusters must be equal to 1.
-    double sum = subClusterWeightMap.values().stream().mapToDouble(Double::doubleValue).sum();
-    boolean isValid = Math.abs(sum - 1.0) < 1e-6; // Comparing with a tolerance of 1e-6
-
-    if (!isValid) {
-      throw new YarnException("The sum of ratios for all subClusters must be equal to 1.");
-    }
-  }
-
-  /**
-   * Check if HeadRoomAlpha is a number and is between 0 and 1.
-   *
-   * @param headRoomAlpha headroomalpha.
-   * @throws YarnException exceptions from yarn servers.
-   */
-  private void checkHeadRoomAlphaValid(String headRoomAlpha) throws YarnException {
-    if (!isNumeric(headRoomAlpha)) {
-      throw new YarnException("HeadRoomAlpha must be a number.");
-    }
-
-    double dHeadRoomAlpha = Double.parseDouble(headRoomAlpha);
-    if (!(dHeadRoomAlpha >= 0 && dHeadRoomAlpha <= 1)) {
-      throw new YarnException("HeadRoomAlpha must be between 0-1.");
-    }
-  }
-
-  protected static boolean isNumeric(String value) {
-    return NumberUtils.isCreatable(value);
   }
 
   @Override

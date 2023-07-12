@@ -36,8 +36,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -52,6 +50,7 @@ public class TestRouterCLI {
   public void setup() throws Exception {
 
     admin = mock(ResourceManagerAdministrationProtocol.class);
+
     when(admin.deregisterSubCluster(any(DeregisterSubClusterRequest.class)))
         .thenAnswer((Answer<DeregisterSubClusterResponse>) invocationOnMock -> {
           // Step1. parse subClusterId.
@@ -64,6 +63,14 @@ public class TestRouterCLI {
           } else {
             return generateAllSubClusterData();
           }
+        });
+
+    when(admin.saveFederationQueuePolicy(any(SaveFederationQueuePolicyRequest.class)))
+        .thenAnswer((Answer<SaveFederationQueuePolicyResponse>) invocationOnMock -> {
+          // Step1. parse subClusterId.
+          Object obj = invocationOnMock.getArgument(0);
+          SaveFederationQueuePolicyRequest request = (SaveFederationQueuePolicyRequest) obj;
+          return SaveFederationQueuePolicyResponse.newInstance("success");
         });
 
     Configuration config = new Configuration();
@@ -193,11 +200,16 @@ public class TestRouterCLI {
   }
 
   @Test
-  public void testIsNumeric() {
-    String number1 = "1.0";
-    assertTrue(RouterCLI.isNumeric(number1));
+  public void testSavePolicy() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
 
-    String number2 = "2.x";
-    assertFalse(RouterCLI.isNumeric(number2));
+    String[] args = {"-policy", "-s", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-policy", "-save", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
+    assertEquals(0, rmAdminCLI.run(args));
   }
 }
