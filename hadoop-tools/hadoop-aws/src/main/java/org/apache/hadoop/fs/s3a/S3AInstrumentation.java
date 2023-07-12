@@ -220,6 +220,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           storeBuilder.withDurationTracking(stat.getSymbol());
         });
 
+    // plus any gauges which are also counters; the auto-registration
+    // doesn't handle these.
+    storeBuilder.withGauges(StreamStatisticNames.STREAM_READ_BLOCK_FETCH_OPERATIONS);
+
     //todo need a config for the quantiles interval?
     int interval = 1;
     throttleRateQuantile = quantiles(STORE_IO_THROTTLE_RATE,
@@ -888,8 +892,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
               StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE)
-          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
+          .withGauges(
+              STREAM_READ_GAUGE_INPUT_POLICY,
+              STREAM_READ_BLOCK_CACHE_ENABLED.getSymbol(),
+              STREAM_READ_BLOCK_FETCH_OPERATIONS.getSymbol(),
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
+              STREAM_READ_BLOCK_PREFETCH_ENABLED.getSymbol(),
+              STREAM_READ_BLOCK_PREFETCH_LIMIT.getSymbol(),
+              STREAM_READ_BLOCK_SIZE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
               STREAM_READ_ACTIVE_MEMORY_IN_USE.getSymbol()
               )
@@ -901,7 +911,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
               StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
               StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ,
-              StreamStatisticNames.STREAM_FILE_CACHE_EVICTION)
+              StreamStatisticNames.STREAM_FILE_CACHE_EVICTION,
+              StreamStatisticNames.STREAM_READ_BLOCK_FETCH_OPERATIONS)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -1388,6 +1399,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
+    public DurationTracker blockFetchOperationStarted() {
+      return trackDuration(StreamStatisticNames.STREAM_READ_BLOCK_FETCH_OPERATIONS);
+    }
+
+    @Override
     public void blockAddedToFileCache() {
       incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, 1);
     }
@@ -1408,6 +1424,26 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
+    public void fetchOperationCompleted(final boolean prefetch, final long bytesFetched) {
+      if (prefetch) {
+        incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
+      }
+      if (bytesFetched > 0) {
+        totalBytesRead.addAndGet(bytesFetched);
+      }
+    }
+
+    /**
+     * {@inheritDoc}.
+     * If the byte counter is positive, increment bytesRead.
+     */
+    @Override
+    public void bytesReadFromBuffer(long bytes) {
+      if (bytes > 0) {
+        bytesRead.addAndGet(bytes);
+      }
+    }
+    @Override
     public void memoryAllocated(int size) {
       incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, size);
     }
@@ -1415,6 +1451,39 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void memoryFreed(int size) {
       incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, -size);
+    }
+
+    @Override
+    public void setPrefetchState(final boolean prefetchEnabled,
+        final int blocks,
+        final int blocksize) {
+      setGaugeToBoolean(STREAM_READ_BLOCK_PREFETCH_ENABLED, prefetchEnabled);
+      setGauge(STREAM_READ_BLOCK_PREFETCH_LIMIT, blocks);
+      setGauge(STREAM_READ_BLOCK_SIZE, blocksize);
+    }
+
+    @Override
+    public void setPrefetchDiskCachingState(final boolean cacheEnabled) {
+      setGaugeToBoolean(STREAM_READ_BLOCK_CACHE_ENABLED, cacheEnabled);
+    }
+
+    /**
+     * Set a gauge.
+     * @param st statistic
+     * @param value value
+     */
+    private void setGauge(final Statistic st, final long value) {
+      localIOStatistics().setGauge(st.getSymbol(), value);
+    }
+
+    /**
+     * Set a gauge to a boolean value, mapping true to 1, false to 0,
+     * in the classic C Language style.
+     * @param st statistic
+     * @param flag flag to use.
+     */
+    private void setGaugeToBoolean(final Statistic st, final boolean flag) {
+      setGauge(st, flag ? 1 : 0);
     }
   }
 

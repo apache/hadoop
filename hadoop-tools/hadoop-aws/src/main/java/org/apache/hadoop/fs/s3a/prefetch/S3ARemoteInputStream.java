@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
@@ -42,6 +45,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static java.util.Objects.requireNonNull;
@@ -50,8 +54,8 @@ import static java.util.Objects.requireNonNull;
  * Provides an {@link InputStream} that allows reading from an S3 file.
  */
 public abstract class S3ARemoteInputStream
-    extends InputStream
-    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+    extends FSInputStream
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource, CanUnbuffer {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ARemoteInputStream.class);
@@ -74,7 +78,13 @@ public abstract class S3ARemoteInputStream
   /**
    * Indicates whether the stream has been closed.
    */
-  private volatile boolean closed;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
+
+  /**
+   * Indicates whether resources have been freed, used when the stream is closed
+   * via unbuffer.
+   */
+  private final AtomicBoolean underlyingResourcesClosed = new AtomicBoolean(true);
 
   /**
    * Internal position within the file. Updated lazily
@@ -109,6 +119,9 @@ public abstract class S3ARemoteInputStream
 
   private final IOStatistics ioStatistics;
 
+  /** Aggregator used to aggregate per thread IOStatistics. */
+  private final IOStatisticsAggregator threadIOStatistics;
+
   /**
    * Initializes a new instance of the {@code S3ARemoteInputStream} class.
    *
@@ -132,25 +145,31 @@ public abstract class S3ARemoteInputStream
     this.client = requireNonNull(client);
     this.streamStatistics = requireNonNull(streamStatistics);
     this.ioStatistics = streamStatistics.getIOStatistics();
-    this.name = S3ARemoteObject.getPath(s3Attributes);
+    this.name = context.getPath().toUri().toString();
     this.changeTracker = new ChangeTracker(
         this.name,
         context.getChangeDetectionPolicy(),
         this.streamStatistics.getChangeTrackerStatistics(),
         s3Attributes);
+    this.threadIOStatistics = requireNonNull(context.getIOStatisticsAggregator());
+    this.nextReadPos = 0;
 
     setInputPolicy(context.getInputPolicy());
     setReadahead(context.getReadahead());
 
+    initializeUnderlyingResources();
+  }
+  /**
+   * Initializes those resources that the stream uses but are released during unbuffer.
+   */
+  protected final void initializeUnderlyingResources() {
+    underlyingResourcesClosed.set(false);
     long fileSize = s3Attributes.getLen();
     int bufferSize = context.getPrefetchBlockSize();
-
-    this.blockData = new BlockData(fileSize, bufferSize);
-    this.fpos = new FilePosition(fileSize, bufferSize);
-    this.remoteObject = getS3File();
-    this.reader = new S3ARemoteObjectReader(remoteObject);
-
-    this.nextReadPos = 0;
+    remoteObject = getS3File();
+    reader = new S3ARemoteObjectReader(remoteObject);
+    blockData = new BlockData(fileSize, bufferSize);
+    fpos = new FilePosition(fileSize, bufferSize);
   }
 
   /**
@@ -180,7 +199,7 @@ public abstract class S3ARemoteInputStream
    * @param readahead the number of bytes to read ahead each time..
    */
   @Override
-  public synchronized void setReadahead(Long readahead) {
+  public final void setReadahead(Long readahead) {
     // We support read head by prefetching therefore we ignore the supplied value.
     if (readahead != null) {
       Validate.checkNotNegative(readahead, "readahead");
@@ -196,7 +215,8 @@ public abstract class S3ARemoteInputStream
   @Override
   public boolean hasCapability(String capability) {
     return capability.equalsIgnoreCase(StreamCapabilities.IOSTATISTICS)
-        || capability.equalsIgnoreCase(StreamCapabilities.READAHEAD);
+        || capability.equalsIgnoreCase(StreamCapabilities.READAHEAD)
+        || capability.equalsIgnoreCase(StreamCapabilities.UNBUFFER);
   }
 
   /**
@@ -215,6 +235,11 @@ public abstract class S3ARemoteInputStream
   @Override
   public int available() throws IOException {
     throwIfClosed();
+
+    // buffer is closed.
+    if (underlyingResourcesClosed.get()) {
+      return 0;
+    }
 
     // Update the current position in the current buffer, if possible.
     if (!fpos.setAbsolute(nextReadPos)) {
@@ -339,49 +364,67 @@ public abstract class S3ARemoteInputStream
       numBytesRemaining -= bytesToRead;
       numBytesRead += bytesToRead;
     }
-
     return numBytesRead;
   }
 
-  protected S3ARemoteObject getFile() {
+  /**
+   * Forward to superclass after updating the {@code readFully()} IOStatistics.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readFully(final long position,
+      final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    throwIfClosed();
+    validatePositionedReadArgs(position, buffer, offset, length);
+    streamStatistics.readFullyOperationStarted(position, length);
+    super.readFully(position, buffer, offset, length);
+  }
+
+  protected final S3ARemoteObject getRemoteObject() {
     return remoteObject;
   }
 
-  protected S3ARemoteObjectReader getReader() {
+  protected final S3ARemoteObjectReader getReader() {
     return reader;
   }
 
-  protected S3ObjectAttributes getS3ObjectAttributes() {
+  protected final S3ObjectAttributes getS3ObjectAttributes() {
     return s3Attributes;
   }
 
-  protected FilePosition getFilePosition() {
+  protected final FilePosition getFilePosition() {
     return fpos;
   }
 
-  protected String getName() {
+  protected final String getName() {
     return name;
   }
 
-  protected boolean isClosed() {
-    return closed;
+  protected final boolean isClosed() {
+    return closed.get();
   }
 
-  protected long getNextReadPos() {
+  protected final boolean underlyingResourcesClosed() {
+    return underlyingResourcesClosed.get();
+  }
+
+  protected final long getNextReadPos() {
     return nextReadPos;
   }
 
-  protected BlockData getBlockData() {
+  protected final BlockData getBlockData() {
     return blockData;
   }
 
-  protected S3AReadOpContext getContext() {
+  protected final S3AReadOpContext getContext() {
     return context;
   }
 
   private void incrementBytesRead(int bytesRead) {
     if (bytesRead > 0) {
-      streamStatistics.bytesRead(bytesRead);
+      streamStatistics.bytesReadFromBuffer(bytesRead);
       if (getContext().getStats() != null) {
         getContext().getStats().incrementBytesRead(bytesRead);
       }
@@ -399,6 +442,11 @@ public abstract class S3ARemoteInputStream
     );
   }
 
+  /**
+   * Get string info on offset, mapping to block number:offset
+   * @param offset absolute position
+   * @return a string of block number and offset, with a block number of "-1:" if the offset is invalid.
+   */
   protected String getOffsetStr(long offset) {
     int blockNumber = -1;
 
@@ -409,6 +457,36 @@ public abstract class S3ARemoteInputStream
     return String.format("%d:%d", blockNumber, offset);
   }
 
+  @Override
+  public synchronized void unbuffer() {
+    LOG.debug("{}: unbuffered", getName());
+    if (closeStream(true)) {
+      getS3AStreamStatistics().unbuffered();
+    }
+  }
+
+  /**
+   * Close the stream in close() or unbuffer().
+   * @param unbuffer is this an unbuffer operation?
+   * @return true if the stream was closed; false means it was already closed.
+   */
+  protected boolean closeStream(final boolean unbuffer) {
+
+    if (underlyingResourcesClosed.getAndSet(true)) {
+      return false;
+    }
+
+    // release all the blocks
+    blockData = null;
+
+    reader.close();
+    reader = null;
+    // trigger GC.
+    remoteObject = null;
+    fpos.invalidate();
+    return true;
+  }
+
   /**
    * Closes this stream and releases all acquired resources.
    *
@@ -416,20 +494,17 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public void close() throws IOException {
-    if (closed) {
+    if (closed.getAndSet(true)) {
       return;
     }
-    closed = true;
+    closeStream(false);
 
-    blockData = null;
-    reader.close();
-    reader = null;
-    remoteObject = null;
-    fpos.invalidate();
     try {
       client.close();
     } finally {
       streamStatistics.close();
+      // Collect ThreadLevel IOStats
+      threadIOStatistics.aggregate(streamStatistics.getIOStatistics());
     }
     client = null;
   }
@@ -452,7 +527,7 @@ public abstract class S3ARemoteInputStream
   }
 
   protected void throwIfClosed() throws IOException {
-    if (closed) {
+    if (closed.get()) {
       throw new IOException(
           name + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -479,7 +554,7 @@ public abstract class S3ARemoteInputStream
   }
 
   @Override
-  public long skip(long n) {
-    throw new UnsupportedOperationException("skip not supported");
+  public boolean seekToNewSource(long targetPos) throws IOException {
+    return false;
   }
 }

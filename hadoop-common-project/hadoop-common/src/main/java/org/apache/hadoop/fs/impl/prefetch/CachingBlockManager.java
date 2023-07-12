@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -39,18 +40,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static java.util.Objects.requireNonNull;
 
 import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Provides read access to the underlying file one block at a time.
- * Improve read performance by prefetching and locall caching blocks.
+ * Improve read performance by prefetching and locally caching blocks.
  */
 public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
+
+  private static final LogExactlyOnce LOG_CACHING_DISABLED = new LogExactlyOnce(LOG);
   private static final int TIMEOUT_MINUTES = 60;
 
   /**
@@ -85,7 +90,10 @@ public abstract class CachingBlockManager extends BlockManager {
    */
   private final BlockOperations ops;
 
-  private boolean closed;
+  /**
+   * True if the manager has been closed.
+   */
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * If a single caching operation takes more than this time (in seconds),
@@ -132,8 +140,9 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     this.ops = new BlockOperations();
-    this.ops.setDebug(false);
+    this.ops.setDebug(LOG.isDebugEnabled());
     this.localDirAllocator = blockManagerParameters.getLocalDirAllocator();
+    prefetchingStatistics.setPrefetchDiskCachingState(true);
   }
 
   /**
@@ -152,7 +161,7 @@ public abstract class CachingBlockManager extends BlockManager {
     boolean done;
 
     do {
-      if (closed) {
+      if (isClosed()) {
         throw new IOException("this stream is already closed");
       }
 
@@ -214,7 +223,7 @@ public abstract class CachingBlockManager extends BlockManager {
    */
   @Override
   public void release(BufferData data) {
-    if (closed) {
+    if (isClosed()) {
       return;
     }
 
@@ -227,16 +236,14 @@ public abstract class CachingBlockManager extends BlockManager {
 
   @Override
   public synchronized void close() {
-    if (closed) {
+    if (closed.getAndSet(true)) {
       return;
     }
-
-    closed = true;
 
     final BlockOperations.Operation op = ops.close();
 
     // Cancel any prefetches in progress.
-    cancelPrefetches();
+    cancelPrefetches(CancelReason.Close);
 
     cleanupWithLogger(LOG, cache);
 
@@ -257,15 +264,18 @@ public abstract class CachingBlockManager extends BlockManager {
   public void requestPrefetch(int blockNumber) {
     checkNotNegative(blockNumber, "blockNumber");
 
-    if (closed) {
+    if (isClosed()) {
       return;
     }
 
     // We initiate a prefetch only if we can acquire a buffer from the shared pool.
+    LOG.debug("Requesting prefetch for block {}", blockNumber);
     BufferData data = bufferPool.tryAcquire(blockNumber);
     if (data == null) {
+      LOG.debug("no buffer acquired for block {}", blockNumber);
       return;
     }
+    LOG.debug("acquired {}", data);
 
     // Opportunistic check without locking.
     if (!data.stateEqualsOneOf(BufferData.State.BLANK)) {
@@ -290,16 +300,26 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Requests cancellation of any previously issued prefetch requests.
+   * If the reason was switching to random IO, any active prefetched blocks
+   * are still cached.
+   * @param reason why were prefetches cancelled?
    */
   @Override
-  public void cancelPrefetches() {
+  public void cancelPrefetches(final CancelReason reason) {
+    LOG.debug("Cancelling prefetches: {}", reason);
     BlockOperations.Operation op = ops.cancelPrefetches();
 
-    for (BufferData data : bufferPool.getAll()) {
-      // We add blocks being prefetched to the local cache so that the prefetch is not wasted.
-      if (data.stateEqualsOneOf(BufferData.State.PREFETCHING, BufferData.State.READY)) {
-        requestCaching(data);
+    if (reason == CancelReason.RandomIO) {
+      for (BufferData data : bufferPool.getAll()) {
+        // We add blocks being prefetched to the local cache so that the prefetch is not wasted.
+        // this only done if the reason is random IO-related, not due to close/unbuffer
+        if (data.stateEqualsOneOf(BufferData.State.PREFETCHING, BufferData.State.READY)) {
+          requestCaching(data);
+        }
       }
+    } else {
+      // free the buffers
+      bufferPool.getAll().forEach(BufferData::setDone);
     }
 
     ops.end(op);
@@ -310,7 +330,7 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         readBlock(data, false, BufferData.State.BLANK);
       } catch (IOException e) {
-        LOG.error("error reading block {}", data.getBlockNumber(), e);
+        LOG.debug("error reading block {}", data.getBlockNumber(), e);
         throw e;
       }
     }
@@ -331,13 +351,14 @@ public abstract class CachingBlockManager extends BlockManager {
   private void readBlock(BufferData data, boolean isPrefetch, BufferData.State... expectedState)
       throws IOException {
 
-    if (closed) {
+    if (isClosed()) {
       return;
     }
 
     BlockOperations.Operation op = null;
     DurationTracker tracker = null;
 
+    int bytesFetched = 0;
     synchronized (data) {
       try {
         if (data.stateEqualsOneOf(BufferData.State.DONE, BufferData.State.READY)) {
@@ -361,6 +382,7 @@ public abstract class CachingBlockManager extends BlockManager {
           tracker = prefetchingStatistics.prefetchOperationStarted();
           op = ops.prefetch(data.getBlockNumber());
         } else {
+          tracker = prefetchingStatistics.blockFetchOperationStarted();
           op = ops.getRead(data.getBlockNumber());
         }
 
@@ -371,6 +393,7 @@ public abstract class CachingBlockManager extends BlockManager {
         read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
+        bytesFetched = size;
       } catch (Exception e) {
         if (isPrefetch && tracker != null) {
           tracker.failed();
@@ -384,14 +407,39 @@ public abstract class CachingBlockManager extends BlockManager {
           ops.end(op);
         }
 
-        if (isPrefetch) {
-          prefetchingStatistics.prefetchOperationCompleted();
-          if (tracker != null) {
-            tracker.close();
-          }
+        // update the statistics
+        prefetchingStatistics.fetchOperationCompleted(isPrefetch, bytesFetched);
+        if (tracker != null) {
+          tracker.close();
+          LOG.debug("fetch completed: {}", tracker);
         }
       }
     }
+  }
+
+  /**
+   * True if the manager has been closed.
+   */
+  private boolean isClosed() {
+    return closed.get();
+  }
+
+  /**
+   * Disable caching; updates stream statistics and logs exactly once
+   * at info.
+   * @param endOp operation which measured the duration of the write.
+   */
+  private void disableCaching(final BlockOperations.End endOp) {
+    if (!cachingDisabled.getAndSet(true)) {
+      String message = String.format(
+          "Caching disabled because of slow operation (%.1f sec)", endOp.duration());
+      LOG_CACHING_DISABLED.info(message);
+      prefetchingStatistics.setPrefetchDiskCachingState(false);
+    }
+  }
+
+  private boolean isCachingDisabled() {
+    return cachingDisabled.get();
   }
 
   /**
@@ -420,43 +468,54 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  private static final BufferData.State[] EXPECTED_STATE_AT_CACHING =
-      new BufferData.State[] {
-          BufferData.State.PREFETCHING, BufferData.State.READY
-      };
+  /**
+   * Required state of a block for it to be cacheable.
+   */
+  private static final BufferData.State[] EXPECTED_STATE_AT_CACHING = {
+      BufferData.State.PREFETCHING, BufferData.State.READY
+  };
 
   /**
    * Requests that the given block should be copied to the local cache.
+   * If the stream is closed or caching disabled, the request is denied.
+   * <p>
+   * If the block is in being prefetched, the
+   * <p>
    * The block must not be accessed by the caller after calling this method
-   * because it will released asynchronously relative to the caller.
-   *
+   * because it may be released asynchronously relative to the caller.
+   * <p>
+   * @param data the block to cache..
    * @throws IllegalArgumentException if data is null.
    */
   @Override
   public void requestCaching(BufferData data) {
-    if (closed) {
-      return;
-    }
+    Validate.checkNotNull(data, "data");
 
-    if (cachingDisabled.get()) {
+    final int blockNumber = data.getBlockNumber();
+    LOG.debug("Block {}: request caching of {}", blockNumber, data);
+
+    if (isClosed() || isCachingDisabled()) {
       data.setDone();
       return;
     }
 
-    Validate.checkNotNull(data, "data");
-
     // Opportunistic check without locking.
     if (!data.stateEqualsOneOf(EXPECTED_STATE_AT_CACHING)) {
+      LOG.debug("Block {}: Block in wrong state to cache: {}",
+          blockNumber, data.getState());
       return;
     }
 
     synchronized (data) {
       // Reconfirm state after locking.
       if (!data.stateEqualsOneOf(EXPECTED_STATE_AT_CACHING)) {
+        LOG.debug("Block {}: Block in wrong state to cache: {}",
+            blockNumber, data.getState());
         return;
       }
 
       if (cache.containsBlock(data.getBlockNumber())) {
+        LOG.debug("Block {}: Block is already in cache", blockNumber);
         data.setDone();
         return;
       }
@@ -486,29 +545,38 @@ public abstract class CachingBlockManager extends BlockManager {
     prefetchingStatistics.executorAcquired(
         Duration.between(taskQueuedStartTime, Instant.now()));
 
-    if (closed) {
+    if (isClosed()) {
       return;
     }
 
-    if (cachingDisabled.get()) {
+    final int blockNumber = data.getBlockNumber();
+    LOG.debug("Block {}: Preparing to cache block", blockNumber);
+
+    if (isCachingDisabled()) {
+      LOG.debug("Block {}: Preparing caching disabled, not prefetching", blockNumber);
       data.setDone();
       return;
     }
+    LOG.debug("Block {}: awaiting any read to complete", blockNumber);
 
     try {
-      blockFuture.get(TIMEOUT_MINUTES, TimeUnit.MINUTES);
+      // wait for data; state of caching may change during this period.
+      awaitFuture(blockFuture, TIMEOUT_MINUTES, TimeUnit.MINUTES);
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
+        LOG.debug("Block {}: prefetch failure", blockNumber);
         return;
       }
-    } catch (Exception e) {
-      LOG.info("error waiting on blockFuture: {}. {}", data, e.getMessage());
-      LOG.debug("error waiting on blockFuture: {}", data, e);
+    } catch (IOException | TimeoutException e) {
+      LOG.info("Error fetching block: {}. {}", data, e.toString());
+      LOG.debug("Error fetching block: {}", data, e);
       data.setDone();
       return;
     }
 
-    if (cachingDisabled.get()) {
+    if (isCachingDisabled()) {
+      // caching was disabled while waiting fro the read to complete.
+      LOG.debug("Block {}: caching disabled while reading data", blockNumber);
       data.setDone();
       return;
     }
@@ -518,34 +586,32 @@ public abstract class CachingBlockManager extends BlockManager {
     synchronized (data) {
       try {
         if (data.stateEqualsOneOf(BufferData.State.DONE)) {
+          LOG.debug("Block {}: block no longer in use; not adding", blockNumber);
           return;
         }
 
-        if (cache.containsBlock(data.getBlockNumber())) {
+        if (cache.containsBlock(blockNumber)) {
+          LOG.debug("Block {}: already in cache; not adding", blockNumber);
           data.setDone();
           return;
         }
 
-        op = ops.addToCache(data.getBlockNumber());
+        op = ops.addToCache(blockNumber);
         ByteBuffer buffer = data.getBuffer().duplicate();
         buffer.rewind();
-        cachePut(data.getBlockNumber(), buffer);
+        cachePut(blockNumber, buffer);
         data.setDone();
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
-        LOG.info("error adding block to cache after wait: {}. {}", data, e.getMessage());
-        LOG.debug("error adding block to cache after wait: {}", data, e);
+        LOG.info("error adding block to cache: {}. {}", data, e.getMessage());
+        LOG.debug("error adding block to cache: {}", data, e);
         data.setDone();
       }
 
       if (op != null) {
         BlockOperations.End endOp = (BlockOperations.End) ops.end(op);
         if (endOp.duration() > SLOW_CACHING_THRESHOLD) {
-          if (!cachingDisabled.getAndSet(true)) {
-            String message = String.format(
-                "Caching disabled because of slow operation (%.1f sec)", endOp.duration());
-            LOG.warn(message);
-          }
+          disableCaching(endOp);
         }
       }
     }
@@ -556,9 +622,10 @@ public abstract class CachingBlockManager extends BlockManager {
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
-    if (closed) {
+    if (isClosed()) {
       return;
     }
+    LOG.debug("Block {}: Caching", buffer);
 
     cache.put(blockNumber, buffer, conf, localDirAllocator);
   }
@@ -642,6 +709,9 @@ public abstract class CachingBlockManager extends BlockManager {
 
     sb.append("pool: ");
     sb.append(bufferPool.toString());
+
+    sb.append("; numReadErrors: ").append(numReadErrors.get());
+    sb.append("; numCachingErrors: ").append(numCachingErrors.get());
 
     return sb.toString();
   }

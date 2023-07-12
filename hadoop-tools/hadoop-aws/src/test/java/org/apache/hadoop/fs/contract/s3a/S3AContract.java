@@ -18,14 +18,20 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.closeIfUncached;
+
 /**
  * The contract of S3A: only enabled if the test bucket is provided.
+ * If the configuration supplied disabled caching of the test filesystem,
+ * then it will be closed in {@link #teardown()}.
  */
 public class S3AContract extends AbstractBondedFSContract {
 
@@ -71,5 +77,16 @@ public class S3AContract extends AbstractBondedFSContract {
   @Override
   public Path getTestPath() {
     return S3ATestUtils.createTestPath(super.getTestPath());
+  }
+
+  /**
+   * teardown: If the fs was created without caching,
+   * close it.
+   * @throws IOException if the superclass teardown raises it.
+   */
+  @Override
+  public void teardown() throws IOException {
+    closeIfUncached(getTestFileSystem());
+    super.teardown();
   }
 }

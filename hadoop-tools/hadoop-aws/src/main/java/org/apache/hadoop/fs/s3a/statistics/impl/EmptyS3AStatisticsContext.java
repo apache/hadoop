@@ -232,6 +232,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void fetchOperationCompleted(final boolean prefetch, final long bytesFetched) {
+
+    }
+
+    @Override
     public void blockAddedToFileCache() {
 
     }

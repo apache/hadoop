@@ -93,6 +93,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -105,6 +107,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalDataFile;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
@@ -451,6 +454,24 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Assume scale tests are enabled.
+   * Uses {@link #getTestPropertyBool(Configuration, String, boolean)}
+   * to resolve the option.
+   *
+   * @param conf configuration examine.
+   * @throws AssumptionViolatedException if disabled.
+   */
+  public static void assumeScaleTestsEnabled(Configuration conf) {
+    boolean enabled = getTestPropertyBool(
+        conf,
+        KEY_SCALE_TESTS_ENABLED,
+        DEFAULT_SCALE_TESTS_ENABLED);
+    assume("Scale test disabled: to enable set property " +
+        KEY_SCALE_TESTS_ENABLED,
+        enabled);
+  }
+
+  /**
    * Verify the class of an exception. If it is not as expected, rethrow it.
    * Comparison is on the exact class, not subclass-of inference as
    * offered by {@code instanceof}.
@@ -482,6 +503,20 @@ public final class S3ATestUtils {
    */
   public static void disableFilesystemCaching(Configuration conf) {
     conf.setBoolean(FS_S3A_IMPL_DISABLE_CACHE, true);
+  }
+
+  /**
+   * Close any filesystem which is uncached (that is,
+   * if it's configuration has disabled caching and then
+   * instantiated via {@code Filesystem.get()}
+   * It does not work for any FS created by a {@code new} +
+   * {@code initialize()} sequence in test code.
+   * @param fs filesystem to close; nullable.
+   */
+  public static void closeIfUncached(FileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE, false)) {
+      cleanupWithLogger(LOG, fs);
+    }
   }
 
   /**
@@ -698,10 +733,32 @@ public final class S3ATestUtils {
 
     boolean prefetchEnabled =
         getTestPropertyBool(conf, PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
-    conf.setBoolean(PREFETCH_ENABLED_KEY, prefetchEnabled);
+    setPrefetchOption(conf, prefetchEnabled);
 
     return conf;
   }
+
+  /**
+   * Unset base/bucket prefetch options and set to the supplied option instead.
+   * @param conf configuration
+   * @param prefetch prefetch option
+   * @return the modified configuration.
+   */
+  public static Configuration setPrefetchOption(final Configuration conf,
+      final boolean prefetch) {
+    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, prefetch);
+    return conf;
+  }
+
+  /**
+   * The prefetch parameters to expose in a parameterized
+   * test to turn prefetching on/off.
+   */
+  public static final Collection<Object[]> PREFETCH_OPTIONS =
+      Collections.unmodifiableList(Arrays.asList(new Object[][] {
+          {true}, {false}
+      }));
 
   /**
    * build dir.
@@ -882,6 +939,7 @@ public final class S3ATestUtils {
 
   /**
    * Remove any values from the test bucket and the base values too.
+   * If there is no configured test bucket, only unset the base values.
    * @param conf config
    * @param options list of fs.s3a options to remove
    */
@@ -891,7 +949,10 @@ public final class S3ATestUtils {
     for (String option : options) {
       conf.unset(option);
     }
-    removeBaseAndBucketOverrides(getTestBucketName(conf), conf, options);
+    if (conf.get(TEST_FS_S3A_NAME) != null) {
+      removeBaseAndBucketOverrides(getTestBucketName(conf), conf, options);
+    }
+
   }
 
   /**

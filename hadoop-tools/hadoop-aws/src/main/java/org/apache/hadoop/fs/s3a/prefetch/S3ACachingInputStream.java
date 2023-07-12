@@ -52,12 +52,18 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ACachingInputStream.class);
 
+  public static final int BLOCKS_TO_PREFETCH_AFTER_SEEK = 1;
+
   /**
-   * Number of blocks queued for prefching.
+   * Number of blocks queued for prefetching.
    */
   private final int numBlocksToPrefetch;
 
-  private final BlockManager blockManager;
+  private final Configuration conf;
+
+  private final LocalDirAllocator localDirAllocator;
+
+  private BlockManager blockManager;
 
   /**
    * Initializes a new instance of the {@code S3ACachingInputStream} class.
@@ -79,35 +85,77 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       S3AInputStreamStatistics streamStatistics,
       Configuration conf,
       LocalDirAllocator localDirAllocator) {
+
     super(context, s3Attributes, client, streamStatistics);
+    this.conf = conf;
+    this.localDirAllocator = localDirAllocator;
+    this.numBlocksToPrefetch = getContext().getPrefetchBlockCount();
+    demandCreateBlockManager();
 
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
-    int bufferPoolSize = this.numBlocksToPrefetch + 1;
-    BlockManagerParameters blockManagerParamsBuilder =
-        new BlockManagerParameters()
-            .withFuturePool(this.getContext().getFuturePool())
-            .withBlockData(this.getBlockData())
-            .withBufferPoolSize(bufferPoolSize)
-            .withConf(conf)
-            .withLocalDirAllocator(localDirAllocator)
-            .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
-            .withPrefetchingStatistics(getS3AStreamStatistics())
-            .withTrackerFactory(getS3AStreamStatistics());
-    this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
-        this.getReader());
+
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
         fileSize);
+    streamStatistics.setPrefetchState(
+        true,
+        numBlocksToPrefetch,
+        context.getPrefetchBlockSize());
+  }
+
+  /**
+   * Demand create the block manager.
+   */
+  private synchronized void demandCreateBlockManager() {
+    if (blockManager == null) {
+      LOG.debug("{}: creating block manager", getName());    int bufferPoolSize = this.numBlocksToPrefetch + BLOCKS_TO_PREFETCH_AFTER_SEEK;
+          BlockManagerParameters blockManagerParamsBuilder =
+              new BlockManagerParameters()
+                  .withFuturePool(this.getContext().getFuturePool())
+                  .withBlockData(this.getBlockData())
+                  .withBufferPoolSize(bufferPoolSize)
+                  .withConf(conf)
+                  .withLocalDirAllocator(localDirAllocator)
+                  .withMaxBlocksCount(
+                      conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+                  .withPrefetchingStatistics(getS3AStreamStatistics())
+                  .withTrackerFactory(getS3AStreamStatistics());
+          this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
+              this.getReader());
+    }
   }
 
   @Override
   public void close() throws IOException {
     // Close the BlockManager first, cancelling active prefetches,
     // deleting cached files and freeing memory used by buffer pool.
-    blockManager.close();
-    super.close();
-    LOG.info("closed: {}", getName());
+    if (!isClosed()) {
+      closeBlockManager();
+      super.close();
+      LOG.info("closed: {}", getName());
+    }
+  }
+
+  /**
+   * Close the stream and the block manager.
+   * @param unbuffer is this an unbuffer operation?
+   * @return true if the stream was closed.
+   */
+  @Override
+  protected boolean closeStream(final boolean unbuffer) {
+    final boolean b = super.closeStream(unbuffer);
+    closeBlockManager();
+    return b;
+  }
+
+  /**
+   * Close the block manager and set to null, if
+   * it is not already in this state.
+   */
+  private synchronized void closeBlockManager() {
+    if (blockManager != null) {
+      blockManager.close();
+    }
   }
 
   @Override
@@ -115,9 +163,11 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     if (isClosed()) {
       return false;
     }
+    demandCreateBlockManager();
 
     long readPos = getNextReadPos();
     if (!getBlockData().isValidOffset(readPos)) {
+      // the block exists
       return false;
     }
 
@@ -130,31 +180,47 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       return true;
     }
 
+    boolean resetPrefetching;
+
+    // We are jumping out of the current buffer.
+    // if the buffer data is valid, decide whether to cache it or not.
     if (filePosition.isValid()) {
-      // We are jumping out of the current buffer. There are two cases to consider:
+
+      // There are two cases to consider:
       if (filePosition.bufferFullyRead()) {
         // This buffer was fully read:
         // it is very unlikely that this buffer will be needed again;
         // therefore we release the buffer without caching.
         blockManager.release(filePosition.data());
       } else {
+        // there's been a partial read.
         // We will likely need this buffer again (as observed empirically for Parquet)
         // therefore we issue an async request to cache this buffer.
         blockManager.requestCaching(filePosition.data());
       }
       filePosition.invalidate();
+      // prefetch policy is based on read order
+      resetPrefetching = outOfOrderRead;
+    } else {
+      // the data wasn't valid.
+      // do not treat this as an OOO read: leave all
+      // TODO: get the policy right. we want to
+      // leave prefetches alone if they are equal to or later than the current read pos
+      // but do abort any which have been skipped.
+      resetPrefetching = false;
     }
 
     int prefetchCount;
-    if (outOfOrderRead) {
+    if (resetPrefetching) {
       LOG.debug("lazy-seek({})", getOffsetStr(readPos));
-      blockManager.cancelPrefetches();
+      blockManager.cancelPrefetches(BlockManager.CancelReason.RandomIO);
 
       // We prefetch only 1 block immediately after a seek operation.
-      prefetchCount = 1;
+      prefetchCount = BLOCKS_TO_PREFETCH_AFTER_SEEK;
     } else {
       // A sequential read results in a prefetch.
-      prefetchCount = numBlocksToPrefetch;
+      // but
+      prefetchCount = numBlocksToPrefetch ;
     }
 
     int toBlockNumber = getBlockData().getBlockNumber(readPos);
@@ -178,16 +244,30 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
 
   @Override
   public String toString() {
-    if (isClosed()) {
-      return "closed";
-    }
-
     StringBuilder sb = new StringBuilder();
     sb.append(String.format("%s%n", super.toString()));
-    sb.append(blockManager.toString());
+    if (isClosed()) {
+      sb.append("closed");
+    } else {
+      sb.append("file position: ").append(getFilePosition());
+      // block manager may be null.
+      sb.append("; block manager: ").append(blockManager);
+    }
     return sb.toString();
   }
 
+  /**
+   * Construct an instance of a {@code S3ACachingBlockManager}.
+   *
+   * @param futurePool asynchronous tasks are performed in this pool.
+   * @param reader reader that reads from S3 file.
+   * @param blockData information about each block of the S3 file.
+   * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   * @param configuration the configuration.
+   * @param dirAllocator the local dir allocator instance.
+   * @return the block manager
+   * @throws IllegalArgumentException if reader is null.
+   */
   protected BlockManager createBlockManager(
       @Nonnull final BlockManagerParameters blockManagerParameters,
       final S3ARemoteObjectReader reader) {

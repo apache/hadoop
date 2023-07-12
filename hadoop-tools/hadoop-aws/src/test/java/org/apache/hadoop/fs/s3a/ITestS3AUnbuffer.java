@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
@@ -35,6 +36,8 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPrefetchOption;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_TOTAL_BYTES;
@@ -49,12 +52,19 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringif
  * {@link org.apache.hadoop.fs.contract.s3a.ITestS3AContractUnbuffer} tests,
  * these tests leverage the fact that isObjectStreamOpen exposes if the
  * underlying stream has been closed or not.
+ * Disables prefetching as the behaviors are so different that the stats are
+ * not assertable.
  */
 public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   public static final int FILE_LENGTH = 16;
 
   private Path dest;
+
+  @Override
+  protected Configuration createConfiguration() {
+    return setPrefetchOption(super.createConfiguration(), false);
+  }
 
   @Override
   public void setup() throws Exception {
@@ -75,7 +85,6 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     // Open file, read half the data, and then call unbuffer
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       skipIfCannotUnbuffer(inputStream);
-      assertTrue(inputStream.getWrappedStream() instanceof S3AInputStream);
       int bytesToRead = 8;
       readAndAssertBytesRead(inputStream, bytesToRead);
       assertTrue(isObjectStreamOpen(inputStream));
@@ -178,9 +187,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     totalBytesRead.assertDiffEquals(expectedTotalBytesRead);
 
     // Validate that the input stream stats are correct when the file is closed
-    S3AInputStreamStatistics streamStatistics = ((S3AInputStream) inputStream
-        .getWrappedStream())
-        .getS3AStreamStatistics();
+    S3AInputStreamStatistics streamStatistics = getInputStreamStatistics(inputStream);
     Assertions.assertThat(streamStatistics)
         .describedAs("Stream statistics %s", streamStatistics)
         .hasFieldOrPropertyWithValue("bytesRead",

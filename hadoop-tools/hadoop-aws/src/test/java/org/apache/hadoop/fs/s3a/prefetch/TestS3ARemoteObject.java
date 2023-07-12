@@ -22,6 +22,8 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
@@ -35,14 +37,26 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 public class TestS3ARemoteObject extends AbstractHadoopTestBase {
 
-  private final ExecutorService threadPool = Executors.newFixedThreadPool(1);
+  private ExecutorService threadPool = Executors.newFixedThreadPool(1);
 
-  private final ExecutorServiceFuturePool futurePool =
+  private ExecutorServiceFuturePool futurePool =
       new ExecutorServiceFuturePool(threadPool);
 
   private final S3AInputStream.InputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
+  @Before
+  public void setup() {
+    threadPool = Executors.newFixedThreadPool(4);
+    futurePool = new ExecutorServiceFuturePool(threadPool);
+  }
+
+  @After
+  public void teardown() {
+    if (threadPool != null) {
+      threadPool.shutdown();
+    }
+  }
   @Test
   public void testArgChecks() throws Exception {
     S3AReadOpContext readContext =

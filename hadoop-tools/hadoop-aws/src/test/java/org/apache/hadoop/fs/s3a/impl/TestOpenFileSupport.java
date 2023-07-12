@@ -358,7 +358,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
   public void testSplitEndSetsLength() throws Throwable {
     long bigFile = 2L ^ 34;
     assertOpenFile(FS_OPTION_OPENFILE_SPLIT_END, Long.toString(bigFile))
-        .matches(p -> p.getSplitEnd() == bigFile, "split end")
+        .matches(p -> p.getSplitEnd().get() == bigFile, "split end")
         .matches(p -> p.getFileLength() == -1, "file length")
         .matches(p -> p.getStatus() == null, "status");
   }
@@ -385,8 +385,8 @@ public class TestOpenFileSupport extends HadoopTestBase {
         new OpenFileParameters()
             .withMandatoryKeys(s)
             .withOptions(conf)))
-        .matches(p -> p.getSplitStart() == 0, "split start")
-        .matches(p -> p.getSplitEnd() == splitEnd, "split end")
+        .matches(p -> !p.getSplitStart().isPresent(), "split start")
+        .matches(p -> !p.getSplitEnd().isPresent(), "split end")
         .matches(p -> p.getStatus().getLen() == len, "file length");
   }
 

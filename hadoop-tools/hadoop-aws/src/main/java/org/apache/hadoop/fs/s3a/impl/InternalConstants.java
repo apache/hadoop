@@ -122,6 +122,8 @@ public final class InternalConstants {
     Set<String> keys = Stream.of(
         Constants.ASYNC_DRAIN_THRESHOLD,
         Constants.INPUT_FADVISE,
+        Constants.PREFETCH_BLOCK_COUNT_KEY,
+        Constants.PREFETCH_BLOCK_SIZE_KEY,
         Constants.READAHEAD_RANGE)
         .collect(Collectors.toSet());
     keys.addAll(FS_OPTION_OPENFILE_STANDARD_OPTIONS);
