@@ -37,7 +37,9 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 
@@ -173,6 +175,10 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
         super.cachePut(blockNumber, buffer);
       }
     }
+
+    public Configuration getConf() {
+      return CONF;
+    }
   }
 
   // @Ignore
@@ -285,8 +291,11 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       blockManager.requestCaching(data);
     }
 
-    waitForCaching(blockManager, blockData.getNumBlocks());
-    assertEquals(blockData.getNumBlocks(), blockManager.numCached());
+    waitForCaching(blockManager, Math.min(blockData.getNumBlocks(),
+        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)));
+    assertEquals(Math.min(blockData.getNumBlocks(),
+            conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)),
+        blockManager.numCached());
     assertEquals(0, this.totalErrors(blockManager));
   }
 
@@ -330,8 +339,11 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       }
 
       blockManager.requestCaching(data);
-      waitForCaching(blockManager, expectedNumSuccesses);
-      assertEquals(expectedNumSuccesses, blockManager.numCached());
+      waitForCaching(blockManager, Math.min(expectedNumSuccesses, blockManager.getConf()
+          .getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)));
+      assertEquals(Math.min(expectedNumSuccesses, blockManager.getConf()
+              .getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)),
+          blockManager.numCached());
 
       if (forceCachingFailure) {
         assertEquals(expectedNumErrors, this.totalErrors(blockManager));
