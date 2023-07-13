@@ -78,13 +78,12 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private static final int TIMEOUT_MILLIS = 5000;
   private static final int INTERVAL_MILLIS = 500;
-  private static final int PREFETCH_MAX_BLOCKS = 3;
 
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
-    conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, PREFETCH_MAX_BLOCKS);
     return conf;
   }
 

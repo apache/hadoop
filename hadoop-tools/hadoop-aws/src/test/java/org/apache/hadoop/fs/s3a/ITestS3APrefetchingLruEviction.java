@@ -88,6 +88,8 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_MAX_BLOCKS_COUNT);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
     conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, Integer.parseInt(maxBlocks));
     return conf;
@@ -128,95 +130,47 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
       // and let LRU eviction take place as more cache entries
       // are added with multiple block reads.
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Don't read block 0 completely
-        try {
-          in.read(buffer, 0, blockSize - S_1K * 10);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Don't read block 0 completely
+      executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
+          in,
+          0,
+          blockSize - S_1K * 10));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Seek to block 1 and don't read completely
-        try {
-          in.seek(blockSize);
-          in.read(buffer, 0, 2 * S_1K);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Seek to block 1 and don't read completely
+      executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
+          in,
+          blockSize,
+          2 * S_1K));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Seek to block 2 and don't read completely
-        try {
-          in.seek(blockSize * 2L);
-          in.read(buffer, 0, 2 * S_1K);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Seek to block 2 and don't read completely
+      executorService.submit(() -> readFullyWithSeek(countDownLatch,
+          in,
+          blockSize * 2L,
+          2 * S_1K));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Seek to block 3 and don't read completely
-        try {
-          in.seek(blockSize * 3L);
-          in.read(buffer, 0, 2 * S_1K);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Seek to block 3 and don't read completely
+      executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
+          in,
+          blockSize * 3L,
+          2 * S_1K));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Seek to block 4 and don't read completely
-        try {
-          in.seek(blockSize * 4L);
-          in.read(buffer, 0, 2 * S_1K);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Seek to block 4 and don't read completely
+      executorService.submit(() -> readFullyWithSeek(countDownLatch,
+          in,
+          blockSize * 4L,
+          2 * S_1K));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // Seek to block 5 and don't read completely
-        try {
-          in.seek(blockSize * 5L);
-          in.read(buffer, 0, 2 * S_1K);
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // Seek to block 5 and don't read completely
+      executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
+          in,
+          blockSize * 5L,
+          2 * S_1K));
 
-      executorService.submit(() -> {
-        byte[] buffer = new byte[blockSize];
-        // backward seek, can't use block 0 as it is evicted
-        try {
-          in.seek(S_1K * 5);
-          in.read();
-          countDownLatch.countDown();
-          return true;
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
+      // backward seek, can't use block 0 as it is evicted
+      executorService.submit(() -> readFullyWithSeek(countDownLatch,
+          in,
+          S_1K * 5,
+          2 * S_1K));
 
       countDownLatch.await();
 
@@ -236,6 +190,53 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
       LOG.info("IO stats: {}", ioStats);
       verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
     });
+  }
+
+  /**
+   * Read the bytes from the given position in the stream to a new buffer using the positioned
+   * readable.
+   *
+   * @param countDownLatch count down latch to mark the operation completed.
+   * @param in input stream.
+   * @param position position in the given input stream to seek from.
+   * @param len the number of bytes to read.
+   * @return true if the read operation is successful.
+   */
+  private boolean readFullyWithPositionedRead(CountDownLatch countDownLatch, FSDataInputStream in,
+      long position, int len) {
+    byte[] buffer = new byte[blockSize];
+    // Don't read block 0 completely
+    try {
+      in.readFully(position, buffer, 0, len);
+      countDownLatch.countDown();
+      return true;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /**
+   * Read the bytes from the given position in the stream to a new buffer using seek followed by
+   * input stream read.
+   *
+   * @param countDownLatch count down latch to mark the operation completed.
+   * @param in input stream.
+   * @param position position in the given input stream to seek from.
+   * @param len the number of bytes to read.
+   * @return true if the read operation is successful.
+   */
+  private boolean readFullyWithSeek(CountDownLatch countDownLatch, FSDataInputStream in,
+      long position, int len) {
+    byte[] buffer = new byte[blockSize];
+    // Don't read block 0 completely
+    try {
+      in.seek(position);
+      in.readFully(buffer, 0, len);
+      countDownLatch.countDown();
+      return true;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
 }

@@ -1278,14 +1278,14 @@ public final class Constants {
 
   /**
    * Prefetch max blocks count config.
-   * Value = {@value PREFETCH_MAX_BLOCKS_COUNT}
+   * Value = {@value}
    */
   public static final String PREFETCH_MAX_BLOCKS_COUNT = "fs.s3a.prefetch.max.blocks.count";
 
   /**
    * Default value for max blocks count config.
-   * Value = {@value DEFAULT_PREFETCH_MAX_BLOCKS_COUNT}
+   * Value = {@value}
    */
-  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 10;
+  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
 }
