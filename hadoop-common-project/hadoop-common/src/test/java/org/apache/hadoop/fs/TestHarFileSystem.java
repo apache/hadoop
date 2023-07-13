@@ -198,7 +198,7 @@ public class TestHarFileSystem {
     public void setXAttr(Path path, String name, byte[] value)
         throws IOException;
 
-    public void setXAttr(Path path, String name, byte[] value, boolean numerable)
+    void setXAttr(Path path, String name, byte[] value, boolean numerable)
         throws IOException;
 
     public void setXAttr(Path path, String name, byte[] value,

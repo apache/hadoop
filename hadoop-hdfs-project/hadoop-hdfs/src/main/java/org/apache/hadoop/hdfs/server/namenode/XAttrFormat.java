@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.util.LongBitFormat;
  * incompatible.
  *
  */
-@SuppressWarnings("checkstyle:PatternVariableName")
+@SuppressWarnings("checkstyle:MemberName")
 public enum XAttrFormat implements LongBitFormat.Enum {
   RESERVED(null, 4),
   NUMERABLE(RESERVED.BITS, 1),
