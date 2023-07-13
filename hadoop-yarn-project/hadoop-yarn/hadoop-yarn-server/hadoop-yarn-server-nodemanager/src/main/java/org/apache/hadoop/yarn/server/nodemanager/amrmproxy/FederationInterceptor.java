@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -87,6 +88,7 @@ import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
+import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
@@ -251,6 +253,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   // the maximum wait time for the first async heart beat response
   private long heartbeatMaxWaitTimeMs;
 
+  private int registerUamRetryNum;
+
+  private long registerUamRetryInterval;
+
   private boolean waitUamRegisterDone;
 
   private MonotonicClock clock = new MonotonicClock();
@@ -355,6 +361,24 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       this.subClusterTimeOut =
           YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
     }
+
+    this.registerUamRetryNum = conf.getInt(
+        YarnConfiguration.FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT,
+        YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT);
+    if (this.registerUamRetryNum <= 0) {
+      LOG.info("{} configured to be {}, should be positive. Using default of {}.",
+          YarnConfiguration.FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT,
+          this.subClusterTimeOut,
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT);
+      this.registerUamRetryNum =
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT;
+    }
+
+    this.registerUamRetryInterval = conf.getTimeDuration(
+        YarnConfiguration.FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL,
+        YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL,
+        TimeUnit.MILLISECONDS);
+
     this.waitUamRegisterDone = conf.getBoolean(YarnConfiguration.AMRM_PROXY_WAIT_UAM_REGISTER_DONE,
         YarnConfiguration.DEFAULT_AMRM_PROXY_WAIT_UAM_REGISTER_DONE);
   }
@@ -701,7 +725,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     if (this.finishAMCalled) {
       LOG.warn("FinishApplicationMaster already called by {}, skip heartbeat "
-          + "processing and return dummy response" + this.attemptId);
+          + "processing and return dummy response.", this.attemptId);
       return RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
     }
 
@@ -1255,85 +1279,77 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // Check to see if there are any new sub-clusters in this request
     // list and create and register Unmanaged AM instance for the new ones
     List<SubClusterId> newSubClusters = new ArrayList<>();
-    for (SubClusterId subClusterId : requests.keySet()) {
-      if (!subClusterId.equals(this.homeSubClusterId)
-          && !this.uamPool.hasUAMId(subClusterId.getId())) {
-        newSubClusters.add(subClusterId);
 
+    requests.keySet().stream().forEach(subClusterId -> {
+      String id = subClusterId.getId();
+      if (!subClusterId.equals(this.homeSubClusterId) && !this.uamPool.hasUAMId(id)) {
+        newSubClusters.add(subClusterId);
         // Set sub-cluster to be timed out initially
-        lastSCResponseTime.put(subClusterId,
-            clock.getTime() - subClusterTimeOut);
+        lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
       }
-    }
+    });
 
     this.uamRegisterFutures.clear();
+
     for (final SubClusterId scId : newSubClusters) {
-      Future<?> future = this.threadpool.submit(new Runnable() {
-        @Override
-        public void run() {
-          String subClusterId = scId.getId();
 
-          // Create a config loaded with federation on and subclusterId
-          // for each UAM
-          YarnConfiguration config = new YarnConfiguration(getConf());
-          FederationProxyProviderUtil.updateConfForFederation(config,
-              subClusterId);
+      Future<?> future = this.threadpool.submit(() -> {
 
-          RegisterApplicationMasterResponse uamResponse = null;
-          Token<AMRMTokenIdentifier> token = null;
-          try {
-            ApplicationId applicationId = attemptId.getApplicationId();
-            ApplicationSubmissionContext originalSubmissionContext =
-                federationFacade.getApplicationSubmissionContext(applicationId);
+        String subClusterId = scId.getId();
 
-            // For appNameSuffix, use subClusterId of the home sub-cluster
-            token = uamPool.launchUAM(subClusterId, config,
-                applicationId, amRegistrationResponse.getQueue(),
-                getApplicationContext().getUser(), homeSubClusterId.toString(),
-                true, subClusterId, originalSubmissionContext);
+        // Create a config loaded with federation on and subclusterId
+        // for each UAM
+        YarnConfiguration config = new YarnConfiguration(getConf());
+        FederationProxyProviderUtil.updateConfForFederation(config, subClusterId);
+        ApplicationId applicationId = attemptId.getApplicationId();
 
-            secondaryRelayers.put(subClusterId,
-                uamPool.getAMRMClientRelayer(subClusterId));
+        RegisterApplicationMasterResponse uamResponse;
+        Token<AMRMTokenIdentifier> token;
 
-            uamResponse = uamPool.registerApplicationMaster(subClusterId,
-                amRegistrationRequest);
-          } catch (Throwable e) {
-            LOG.error("Failed to register application master: " + subClusterId
-                + " Application: " + attemptId, e);
-            // TODO: UAM registration for this sub-cluster RM
-            // failed. For now, we ignore the resource requests and continue
-            // but we need to fix this and handle this situation. One way would
-            // be to send the request to another RM by consulting the policy.
-            return;
+        // LaunchUAM And RegisterApplicationMaster
+        try {
+          TokenAndRegisterResponse result =
+              ((FederationActionRetry<TokenAndRegisterResponse>) (retryCount) ->
+              launchUAMAndRegisterApplicationMaster(config, subClusterId, applicationId)).
+              runWithRetries(registerUamRetryNum, registerUamRetryInterval);
+
+          token = result.getToken();
+          uamResponse = result.getResponse();
+        } catch (Throwable e) {
+          LOG.error("Failed to register application master: {} Application: {}.",
+              subClusterId, attemptId, e);
+          return;
+        }
+
+        uamRegistrations.put(scId, uamResponse);
+
+        LOG.info("Successfully registered unmanaged application master: {} " +
+            "ApplicationId: {}.", subClusterId, attemptId);
+
+        // Allocate Request
+        try {
+          uamPool.allocateAsync(subClusterId, requests.get(scId),
+              new HeartbeatCallBack(scId, true));
+        } catch (Throwable e) {
+          LOG.error("Failed to allocate async to {} Application: {}.",
+              subClusterId, attemptId, e);
+        }
+
+        // Save the UAM token in registry or NMSS
+        try {
+          if (registryClient != null) {
+            registryClient.writeAMRMTokenForUAM(applicationId, subClusterId, token);
+          } else if (getNMStateStore() != null) {
+            getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
+                NMSS_SECONDARY_SC_PREFIX + subClusterId,
+                token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
           }
-          uamRegistrations.put(scId, uamResponse);
-          LOG.info("Successfully registered unmanaged application master: "
-              + subClusterId + " ApplicationId: " + attemptId);
-
-          try {
-            uamPool.allocateAsync(subClusterId, requests.get(scId),
-                new HeartbeatCallBack(scId, true));
-          } catch (Throwable e) {
-            LOG.error("Failed to allocate async to " + subClusterId
-                + " Application: " + attemptId, e);
-          }
-
-          // Save the UAM token in registry or NMSS
-          try {
-            if (registryClient != null) {
-              registryClient.writeAMRMTokenForUAM(attemptId.getApplicationId(),
-                  subClusterId, token);
-            } else if (getNMStateStore() != null) {
-              getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
-                  NMSS_SECONDARY_SC_PREFIX + subClusterId,
-                  token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
-            }
-          } catch (Throwable e) {
-            LOG.error("Failed to persist UAM token from " + subClusterId
-                + " Application: " + attemptId, e);
-          }
+        } catch (Throwable e) {
+          LOG.error("Failed to persist UAM token from {} Application {}",
+              subClusterId, attemptId, e);
         }
       });
+
       this.uamRegisterFutures.put(scId, future);
     }
 
@@ -1347,8 +1363,32 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
-
     return newSubClusters;
+  }
+
+  protected TokenAndRegisterResponse launchUAMAndRegisterApplicationMaster(
+      YarnConfiguration config, String subClusterId, ApplicationId applicationId)
+      throws IOException, YarnException {
+
+    // Prepare parameter information
+    ApplicationSubmissionContext originalSubmissionContext =
+        federationFacade.getApplicationSubmissionContext(applicationId);
+    String submitter = getApplicationContext().getUser();
+    String homeRM = homeSubClusterId.toString();
+    String queue = amRegistrationResponse.getQueue();
+
+    // For appNameSuffix, use subClusterId of the home sub-cluster
+    Token<AMRMTokenIdentifier> token = uamPool.launchUAM(subClusterId, config, applicationId,
+        queue, submitter, homeRM, true, subClusterId, originalSubmissionContext);
+
+    // Set the relationship between SubCluster and AMRMClientRelayer.
+    secondaryRelayers.put(subClusterId, uamPool.getAMRMClientRelayer(subClusterId));
+
+    // RegisterApplicationMaster
+    RegisterApplicationMasterResponse uamResponse =
+        uamPool.registerApplicationMaster(subClusterId, amRegistrationRequest);
+
+    return new TokenAndRegisterResponse(token, uamResponse);
   }
 
   /**

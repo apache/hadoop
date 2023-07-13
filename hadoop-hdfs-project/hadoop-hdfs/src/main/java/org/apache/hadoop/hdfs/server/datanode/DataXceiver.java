@@ -186,8 +186,8 @@ class DataXceiver extends Receiver implements Runnable {
     if (br == null) {
       return;
     }
-    // This doesn't need to be in a critical section. Althogh the client
-    // can resue the connection to issue a different request, trying sending
+    // This doesn't need to be in a critical section. Although the client
+    // can reuse the connection to issue a different request, trying sending
     // an OOB through the recently closed block receiver is harmless.
     LOG.info("Sending OOB to peer: {}", peer);
     br.sendOOB();

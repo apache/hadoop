@@ -4058,6 +4058,20 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  // AMRMProxy Register UAM Retry-Num
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.retry-count";
+  // Register a UAM , we will retry a maximum of 3 times.
+  public static final int DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      3;
+
+  // AMRMProxy Register UAM Retry Interval
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.interval";
+  // Retry Interval, default 100 ms
+  public static final long DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      TimeUnit.MILLISECONDS.toMillis(100);
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
@@ -4365,6 +4379,16 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_SUBCLUSTER_EXPIRATION_MS =
       FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
   public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = TimeUnit.MINUTES.toMillis(30);
+
+  /** Keytab for GPG. **/
+  public static final String GPG_KEYTAB = FEDERATION_GPG_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the globalpolicygenerator.*/
+  public static final String GPG_PRINCIPAL = FEDERATION_GPG_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn gpg.*/
+  public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
+      "kerberos.principal.hostname";
 
   /**
    * Connection and Read timeout from the Router to RM.

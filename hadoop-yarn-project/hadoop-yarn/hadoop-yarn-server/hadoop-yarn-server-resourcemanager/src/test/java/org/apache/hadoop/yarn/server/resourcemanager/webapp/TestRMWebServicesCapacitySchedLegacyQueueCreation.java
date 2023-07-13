@@ -49,11 +49,12 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
       throws Exception {
     Map<String, String> conf = new HashMap<>();
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
-    conf.put("yarn.scheduler.capacity.root.default.capacity", "20");
-    conf.put("yarn.scheduler.capacity.root.managed.capacity", "80");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "25");
+    conf.put("yarn.scheduler.capacity.root.managed.capacity", "75");
     conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
     try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(),
           "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
     }

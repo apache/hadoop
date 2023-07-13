@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.store.DataBlocks;
 
 /**
@@ -64,6 +65,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private ExecutorService executorService;
 
   private TracingContext tracingContext;
+
+  /** A BackReference to the FS instance that created this OutputStream. */
+  private BackReference fsBackRef;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -154,6 +158,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   public AbfsOutputStreamContext withTracingContext(
       final TracingContext tracingContext) {
     this.tracingContext = tracingContext;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withAbfsBackRef(
+      final BackReference fsBackRef) {
+    this.fsBackRef = fsBackRef;
     return this;
   }
 
@@ -260,5 +270,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public TracingContext getTracingContext() {
     return tracingContext;
+  }
+
+  public BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }
