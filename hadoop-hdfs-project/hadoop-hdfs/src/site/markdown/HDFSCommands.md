@@ -390,6 +390,7 @@ Usage:
         hdfs dfsadmin [-fetchImage <local directory>]
         hdfs dfsadmin [-allowSnapshot <snapshotDir>]
         hdfs dfsadmin [-disallowSnapshot <snapshotDir>]
+        hdfs dfsadmin [-provisionSnapshotTrash <snapshotDir> [-all]]
         hdfs dfsadmin [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
         hdfs dfsadmin [-evictWriters <datanode_host:ipc_port>]
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
@@ -428,6 +429,7 @@ Usage:
 | `-fetchImage` \<local directory\> | Downloads the most recent fsimage from the NameNode and saves it in the specified local directory. |
 | `-allowSnapshot` \<snapshotDir\> | Allowing snapshots of a directory to be created. If the operation completes successfully, the directory becomes snapshottable. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-disallowSnapshot` \<snapshotDir\> | Disallowing snapshots of a directory to be created. All snapshots of the directory must be deleted before disallowing snapshots. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
+| `-provisionSnapshotTrash` \<snapshotDir\> [-all] | Provision trash root in one or all snapshottable directories. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-shutdownDatanode` \<datanode\_host:ipc\_port\> [upgrade] | Submit a shutdown request for the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-shutdownDatanode) for the detail. |
 | `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
