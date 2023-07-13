@@ -555,15 +555,17 @@ public class AggregatedLogFormat {
       } catch (Exception e) {
         LOG.warn("Exception closing writer", e);
       } finally {
-        try {
-          this.fsDataOStream.close();
-        } catch (DSQuotaExceededException e) {
-          LOG.error("Exception in closing {}",
-              this.fsDataOStream.getClass(), e);
-          throw e;
-        } catch (Throwable e) {
-          LOG.error("Exception in closing {}",
-              this.fsDataOStream.getClass(), e);
+        if (this.fsDataOStream != null) {
+          try {
+            this.fsDataOStream.close();
+          } catch (DSQuotaExceededException e) {
+            LOG.error("Exception in closing {}",
+                this.fsDataOStream.getClass(), e);
+            throw e;
+          } catch (Throwable e) {
+            LOG.error("Exception in closing {}",
+                this.fsDataOStream.getClass(), e);
+          }
         }
       }
     }
