@@ -135,18 +135,18 @@ class XAttrCommands extends FsCommand {
     public static final String NAME = SET_FATTR;
     public static final String USAGE = "{-n name [-v value [-e]] | -x name} <path>";
     public static final String DESCRIPTION =
-      "Sets an extended attribute name and value for a file or directory.\n" +
-      "-n name: The extended attribute name.\n" +
-      "-v value: The extended attribute value. There are three different " +
-      "encoding methods for the value. If the argument is enclosed in double " +
-      "quotes, then the value is the string inside the quotes. If the " +
-      "argument is prefixed with 0x or 0X, then it is taken as a hexadecimal " +
-      "number. If the argument begins with 0s or 0S, then it is taken as a " +
-      "base64 encoding.\n" +
-      "-e: if set, means the value is enumerable, HDFS will try to store it " +
-      "efficiently.\n" +
-      "-x name: Remove the extended attribute.\n" +
-      "<path>: The file or directory.\n";
+        "Sets an extended attribute name and value for a file or directory.\n" +
+        "-n name: The extended attribute name.\n" +
+        "-v value: The extended attribute value. There are three different " +
+        "encoding methods for the value. If the argument is enclosed in double " +
+        "quotes, then the value is the string inside the quotes. If the " +
+        "argument is prefixed with 0x or 0X, then it is taken as a hexadecimal " +
+        "number. If the argument begins with 0s or 0S, then it is taken as a " +
+        "base64 encoding.\n" +
+        "-e: if set, means the value is enumerable, HDFS will try to store it " +
+        "efficiently.\n" +
+        "-x name: Remove the extended attribute.\n" +
+        "<path>: The file or directory.\n";
 
     private String name = null;
     private byte[] value = null;

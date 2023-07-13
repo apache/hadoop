@@ -5587,7 +5587,10 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "NAMESPACE",
           xAttr.getNameSpace().toString());
       XMLUtils.addSaxString(contentHandler, "NAME", xAttr.getName());
-      XMLUtils.addSaxString(contentHandler, "NUMERABLE", String.valueOf(xAttr.isEnumerable()));
+      if (xAttr.isEnumerable()) {
+        XMLUtils.addSaxString(contentHandler, "NUMERABLE",
+            String.valueOf(xAttr.isEnumerable()));
+      }
       if (xAttr.getValue() != null) {
         try {
           XMLUtils.addSaxString(contentHandler, "VALUE",
@@ -5611,7 +5614,8 @@ public abstract class FSEditLogOp {
     for (Stanza a: stanzas) {
       XAttr.Builder builder = new XAttr.Builder();
       builder.setNameSpace(XAttr.NameSpace.valueOf(a.getValue("NAMESPACE"))).
-          setName(a.getValue("NAME")).setEnumerable(Boolean.parseBoolean(a.getValue("NUMERABLE")));
+          setName(a.getValue("NAME")).
+          setEnumerable(Boolean.parseBoolean(a.getValueOrNull("NUMERABLE")));
       String v = a.getValueOrNull("VALUE");
       if (v != null) {
         try {

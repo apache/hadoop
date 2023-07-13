@@ -91,8 +91,8 @@ public class XAttr {
       return this;
     }
 
-    public Builder setEnumerable(boolean numerable) {
-      this.numerable = numerable;
+    public Builder setEnumerable(boolean isNumerable) {
+      this.numerable = isNumerable;
       return this;
     }
 

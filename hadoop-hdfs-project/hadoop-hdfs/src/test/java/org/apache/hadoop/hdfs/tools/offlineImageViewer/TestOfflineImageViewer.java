@@ -322,7 +322,7 @@ public class TestOfflineImageViewer {
       // as UTF8
       hdfs.setXAttr(xattr, "user.a4", new byte[]{ -0x3d, 0x28 });
       // Set enumerable attribute
-      hdfs.setXAttr(xattr, "user.a5", new byte[]{ 0x37, 0x38, 0x39 }, true);
+      hdfs.setXAttr(xattr, "user.a5", new byte[]{0x37, 0x38, 0x39}, true);
       writtenFiles.put(xattr.toString(), hdfs.getFileStatus(xattr));
       // Set ACLs
       hdfs.setAcl(

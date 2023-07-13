@@ -19,13 +19,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.XAttr;
-import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.hdfs.XAttrHelper;
 
 import org.apache.hadoop.util.Preconditions;
@@ -39,7 +37,7 @@ import org.apache.hadoop.hdfs.util.LongBitFormat;
  * incompatible.
  *
  */
-
+@SuppressWarnings("checkstyle:PatternVariableName")
 public enum XAttrFormat implements LongBitFormat.Enum {
   RESERVED(null, 4),
   NUMERABLE(RESERVED.BITS, 1),
@@ -242,7 +240,8 @@ public enum XAttrFormat implements LongBitFormat.Enum {
           }
         } else {
           out.write(Ints.toByteArray(
-                  SerialNumberManager.XATTR.getSerialNumber(new String(a.getValue(), StandardCharsets.UTF_8))));
+              SerialNumberManager.XATTR.getSerialNumber(
+                  new String(a.getValue(), StandardCharsets.UTF_8))));
         }
       }
     } catch (IOException e) {
