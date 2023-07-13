@@ -639,7 +639,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "-");
     LambdaTestUtils.intercept(YarnException.class,
         "The sum of ratios for all subClusters must be equal to 1.",
-         () -> interceptor.saveFederationQueuePolicy(request2));
+        () -> interceptor.saveFederationQueuePolicy(request2));
   }
 
   @Test

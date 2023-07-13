@@ -298,11 +298,11 @@ public class RouterCLI extends Configured implements Tool {
     // Prepare Options.
     Options opts = new Options();
     opts.addOption("policy", false,
-    "We provide a set of commands for Policy Include list policies, " +
-    "save policies, batch save policies.");
+      "We provide a set of commands for Policy Include list policies, " +
+      "save policies, batch save policies.");
     Option saveOpt = new Option(OPTION_S, OPTION_SAVE, true,
-    "We will save the policy information of the queue, " +
-    "including queue and weight information");
+        "We will save the policy information of the queue, " +
+        "including queue and weight information");
     saveOpt.setOptionalArg(true);
     opts.addOption(saveOpt);
 

@@ -28,9 +28,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 @Unstable
 public class SaveFederationQueuePolicyResponsePBImpl extends SaveFederationQueuePolicyResponse {
 
-  SaveFederationQueuePolicyResponseProto proto =
+  private SaveFederationQueuePolicyResponseProto proto =
       SaveFederationQueuePolicyResponseProto.getDefaultInstance();
-  SaveFederationQueuePolicyResponseProto.Builder builder = null;
+  private SaveFederationQueuePolicyResponseProto.Builder builder = null;
   private boolean viaProto = false;
 
   public SaveFederationQueuePolicyResponsePBImpl() {

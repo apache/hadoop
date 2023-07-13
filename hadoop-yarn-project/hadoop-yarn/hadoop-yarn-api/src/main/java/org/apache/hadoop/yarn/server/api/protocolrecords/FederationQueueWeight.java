@@ -35,6 +35,34 @@ import java.util.Map;
 @Unstable
 public abstract class FederationQueueWeight {
 
+  /**
+   * The FederationQueueWeight object consists of three parts:
+   * routerWeight, amrmWeight, and headRoomAlpha.
+   *
+   * @param routerWeight Weight for routing applications to different subclusters.
+   * We will route the application to different subclusters based on the configured weights.
+   * Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.7 for SC-1 and 0.3 for SC-2,
+   * the application will be allocated in such a way
+   * that 70% of the applications will be assigned to SC-1 and 30% to SC-2.
+   *
+   * @param amrmWeight Weight for resource request from ApplicationMaster (AM) to
+   * different subclusters' Resource Manager (RM).
+   * Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.6 for SC-1 and 0.4 for SC-2,
+   * When AM requesting resources,
+   * 60% of the requests will be made to the Resource Manager (RM) of SC-1 and 40% to the RM of SC-2.
+   *
+   * @param headRoomAlpha
+   * used by policies that balance weight-based and load-based considerations in their decisions.
+   * For policies that use this parameter,
+   *
+   * values close to 1 indicate that most of the decision
+   * should be based on currently observed headroom from various sub-clusters,
+   *
+   * values close to zero, indicate that the decision should be
+   * mostly based on weights and practically ignore current load.
+   *
+   * @return FederationQueueWeight
+   */
   @Private
   @Unstable
   public static FederationQueueWeight newInstance(String routerWeight,
@@ -79,7 +107,6 @@ public abstract class FederationQueueWeight {
    * This method can be used to validate RouterPolicyWeight and AMRMPolicyWeight.
    *
    * @param subClusterWeight the weight ratios of subClusters.
-   * @return If the validation is successful, return true. Otherwise, an exception will be thrown.
    * @throws YarnException exceptions from yarn servers.
    */
   public static void checkSubClusterQueueWeightRatioValid(String subClusterWeight)
