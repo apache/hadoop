@@ -724,6 +724,8 @@ Usage: `hdfs debug verifyEC -file <file>`
 |:---- |:---- |
 | [`-file` *EC-file*] | HDFS EC file to be verified. |
 
+Verify the correctness of erasure coding on an erasure coded file.
+
 dfsadmin with ViewFsOverloadScheme
 ----------------------------------
 
