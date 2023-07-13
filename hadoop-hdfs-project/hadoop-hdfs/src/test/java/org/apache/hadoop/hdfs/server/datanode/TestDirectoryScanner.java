@@ -1313,10 +1313,11 @@ public class TestDirectoryScanner {
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
+      final DataNode dn = cluster.getDataNodes().get(0);
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
-      assertEquals(fds.getLastDirScannerFinishTime(), 0L);
-      Thread.sleep(4000);
-      assertNotEquals(0L, fds.getLastDirScannerFinishTime());
+      long lastDirScannerFinishTime = fds.getLastDirScannerFinishTime();
+      dn.getDirectoryScanner().run();
+      assertNotEquals(lastDirScannerFinishTime, fds.getLastDirScannerFinishTime());
     } finally {
       cluster.shutdown();
     }
