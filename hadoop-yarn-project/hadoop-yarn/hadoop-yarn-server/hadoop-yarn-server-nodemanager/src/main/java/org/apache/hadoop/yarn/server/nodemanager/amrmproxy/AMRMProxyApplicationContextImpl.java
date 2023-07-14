@@ -53,7 +53,7 @@ public class AMRMProxyApplicationContextImpl implements
    * @param nmContext NM context
    * @param conf configuration
    * @param applicationAttemptId attempt id
-   * @param user user name of the application
+   * @param user username of the application
    * @param amrmToken amrmToken issued by RM
    * @param localToken amrmToken issued by AMRMProxy
    * @param credentials application credentials
@@ -144,7 +144,7 @@ public class AMRMProxyApplicationContextImpl implements
   }
 
   @Override
-  public Context getNMCotext() {
+  public Context getNMContext() {
     return nmContext;
   }
 

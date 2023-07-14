@@ -448,7 +448,7 @@ public class AMRMProxyService extends CompositeService implements
    * Initializes the request interceptor pipeline for the specified application.
    *
    * @param applicationAttemptId attempt id
-   * @param user user name
+   * @param user username
    * @param amrmToken amrmToken issued by RM
    * @param localToken amrmToken issued by AMRMProxy
    * @param recoveredDataMap the recovered states for AMRMProxy from NMSS
@@ -741,7 +741,7 @@ public class AMRMProxyService extends CompositeService implements
             YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
             YarnConfiguration.DEFAULT_AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE);
 
-    List<String> interceptorClassNames = new ArrayList<String>();
+    List<String> interceptorClassNames = new ArrayList<>();
     Collection<String> tempList =
         StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {
