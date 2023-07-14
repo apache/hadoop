@@ -324,7 +324,7 @@ We will provide a set of commands to view and save queue policies.
 
 The Queue Policy(SubClusterPolicyConfiguration) include the following:
 
-| Property       | Description                                                           | 
+| Property       | Description                                                           |
 |:---------------|:----------------------------------------------------------------------|
 | `queue`        | `Queue for Job submission`                                            |
 | `policyType`   | `Policy Manager Class name, Default is UniformBroadcastPolicyManager` |
@@ -334,8 +334,8 @@ WeightedPolicyInfo include the following:
 
 - RouterWeight
 
-  Weight for routing applications to different subclusters. We will route the application to different subclusters based on the configured weights. 
-  Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.7 for SC-1 and 0.3 for SC-2, 
+  Weight for routing applications to different subclusters. We will route the application to different subclusters based on the configured weights.
+  Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.7 for SC-1 and 0.3 for SC-2,
   the application will be allocated in such a way that 70% of the applications will be assigned to SC-1 and 30% to SC-2.
 
 - AmRMWeight
