@@ -968,8 +968,7 @@ public class DataNode extends ReconfigurableBase
       if (property.equals(DFS_DISK_BALANCER_ENABLED)) {
         if (newVal != null && !newVal.equalsIgnoreCase("true")
             && !newVal.equalsIgnoreCase("false")) {
-          throw new IllegalArgumentException("Not a valid Boolean value for " + property +
-              " in reconfDiskBalancerParameters");
+          throw new IllegalArgumentException("Not a valid Boolean value for " + property);
         }
         boolean enable = (newVal == null ? DFS_DISK_BALANCER_ENABLED_DEFAULT :
             Boolean.parseBoolean(newVal));
@@ -4249,6 +4248,7 @@ public class DataNode extends ReconfigurableBase
     return volumeInfoList;
   }
 
+  @VisibleForTesting
   public DiskBalancer getDiskBalancer() throws IOException {
     if (this.diskBalancer == null) {
       throw new IOException("DiskBalancer is not initialized");

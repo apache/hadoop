@@ -364,7 +364,7 @@ public class DiskBalancer {
   /**
    * Sets maximum amount of time disk balancer plan is valid.
    *
-   * @param planValidityInterval
+   * @param planValidityInterval - maximum amount of time in the unit of milliseconds.
    */
   public void setPlanValidityInterval(long planValidityInterval) {
     this.config.setTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
@@ -373,9 +373,9 @@ public class DiskBalancer {
   }
 
   /**
-   * Gets maximum amount of time disk balancer plan is valid, then milliseconds is assumed.
+   * Gets maximum amount of time disk balancer plan is valid.
    *
-   * @return long
+   * @return the maximum amount of time in milliseconds.
    */
   @VisibleForTesting
   public long getPlanValidityInterval() {
@@ -383,10 +383,9 @@ public class DiskBalancer {
   }
 
   /**
-   * Gets maximum amount of time disk balancer plan is valid in config,
-   * then milliseconds is assumed.
+   * Gets maximum amount of time disk balancer plan is valid in config
    *
-   * @return long
+   * @return the maximum amount of time in milliseconds.
    */
   @VisibleForTesting
   public long getPlanValidityIntervalInConfig() {
