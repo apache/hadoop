@@ -977,8 +977,8 @@
 <property>
   <name>fs.trash.clean.trashroot.enable</name>
   <value>false</value>
-  <description>Whether clean some directories or files
-    at home of Trash which are not under checkpoint directory or not.
+  <description>Whether clean some directories and files
+    in Trash home which are not under checkpoint directory.
   </description>
 </property>
 

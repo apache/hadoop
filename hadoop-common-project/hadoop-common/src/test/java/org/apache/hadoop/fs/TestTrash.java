@@ -788,7 +788,7 @@ public class TestTrash {
   }
 
   /**
-   * Test trash emptier can whether delete non-checkpoint dir or not.
+   * Test trash emptier can delete non-checkpoint dir or not.
    * @throws Exception
    */
   @Test()
