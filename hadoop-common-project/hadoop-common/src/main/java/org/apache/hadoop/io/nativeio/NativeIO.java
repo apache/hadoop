@@ -1162,4 +1162,6 @@ public class NativeIO {
 
   private static native void copyFileUnbuffered0(String src, String dst)
       throws NativeIOException;
+
+  public static native String getDiskName(String path) throws IOException;
 }

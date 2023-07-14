@@ -448,4 +448,12 @@ public interface FsVolumeSpi
   FileIoProvider getFileIoProvider();
 
   DataNodeVolumeMetrics getMetrics();
+
+  /**
+   * Get the utility of disk. The value is between 0 and 100,
+   * 0 means the volume is idle, 100 means the volume is very busy.
+   *
+   * @return The utility of disk.
+   */
+  int getVolumeIOUtil();
 }

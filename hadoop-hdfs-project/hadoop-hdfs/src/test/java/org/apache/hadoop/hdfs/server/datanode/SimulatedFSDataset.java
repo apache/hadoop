@@ -703,6 +703,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public int getVolumeIOUtil() {
+      return 0;
+    }
+
+    @Override
     public VolumeCheckResult check(VolumeCheckContext context)
         throws Exception {
       return VolumeCheckResult.HEALTHY;
@@ -1631,6 +1636,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return null;
+  }
+
+  @Override
+  public int getStorageLocationDiskUtil(StorageLocation location) {
+    return 0;
   }
 }
 

@@ -20,6 +20,11 @@
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO_POSIX.h"
 #include "exception.h"
+/*
+ * Throw a java.IO.IOException, generating the message from errno.
+ * NB. this is also used form windows_secure_container_executor.c
+ */
+extern void throw_ioe(JNIEnv* env, int errnum);
 
 #ifdef UNIX
 #include <assert.h>
@@ -47,6 +52,84 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "config.h"
+#include <signal.h>
+#include <linux/kdev_t.h>
+#include <string.h>
+#include <time.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <sys/utsname.h>
+#define MAX_NAME_LEN 128
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
+void read_diskstats_stat_work(JNIEnv *env, char *diskstats, unsigned int pmajor, unsigned int pminor, char *diskName)
+{
+  FILE *fp;
+  char line[256], dev_name[MAX_NAME_LEN];
+  int i;
+  unsigned int ios_pgr, tot_ticks, rq_ticks, wr_ticks, dc_ticks, fl_ticks;
+  unsigned long rd_ios, rd_merges_or_rd_sec, rd_ticks_or_wr_sec, wr_ios;
+  unsigned long wr_merges, rd_sec_or_wr_ios, wr_sec;
+  unsigned long dc_ios, dc_merges, dc_sec, fl_ios;
+  unsigned int major, minor;
+
+  if ((fp = fopen(diskstats, "r")) == NULL) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  }
+
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    /* major minor name rio rmerge rsect ruse wio wmerge wsect wuse running use aveq dcio dcmerge dcsect dcuse flio fltm */
+    i = sscanf(line, "%u %u %s %lu %lu %lu %lu %lu %lu %lu %u %u %u %u %lu %lu %lu %u %lu %u",
+          &major, &minor, dev_name,
+          &rd_ios, &rd_merges_or_rd_sec, &rd_sec_or_wr_ios, &rd_ticks_or_wr_sec,
+          &wr_ios, &wr_merges, &wr_sec, &wr_ticks, &ios_pgr, &tot_ticks, &rq_ticks,
+          &dc_ios, &dc_merges, &dc_sec, &dc_ticks,
+          &fl_ios, &fl_ticks);
+    if (pmajor == major && pminor == minor) {
+      strncpy(diskName, dev_name, MAX_NAME_LEN);
+      fclose(fp);
+      return;
+    }
+  }
+  if(fclose(fp) != 0) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  }
+
+cleanup:
+  return;
+}
+
+JNIEXPORT jstring JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_getDiskName
+  (JNIEnv *env, jclass class, jstring j_str) {
+  struct stat buf;
+  const char *c_str = NULL;
+  char diskName[MAX_NAME_LEN] = {0};
+  jboolean isCopy;
+  c_str = (*env)->GetStringUTFChars(env, j_str, &isCopy);
+  // judge whether this str parameter is null or not should in java code.
+  if(c_str == NULL) {
+    return NULL;
+  }
+  if (unlikely(stat(c_str, &buf) == -1)) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  } else {
+    unsigned int major = MAJOR(buf.st_dev);
+    unsigned int minor = MINOR(buf.st_dev);
+    read_diskstats_stat_work(env, "/proc/diskstats", major, minor, diskName);
+    (*env)->ReleaseStringUTFChars(env, j_str, c_str);
+    return (*env)->NewStringUTF(env, diskName);
+  }
+
+cleanup:
+  if (c_str != NULL) {
+    (*env)->ReleaseStringUTFChars(env, j_str, c_str);
+  }
+  return NULL;
+}
 #endif
 
 #ifdef WINDOWS
@@ -91,12 +174,6 @@ jobject pw_lock_object;
 static jclass pmem_region_clazz = NULL;
 static jmethodID pmem_region_ctor = NULL;
 #endif
-
-/*
- * Throw a java.IO.IOException, generating the message from errno.
- * NB. this is also used form windows_secure_container_executor.c
- */
-extern void throw_ioe(JNIEnv* env, int errnum);
 
 // Internal functions
 #ifdef UNIX
