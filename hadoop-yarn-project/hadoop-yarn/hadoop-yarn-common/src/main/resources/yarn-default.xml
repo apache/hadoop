@@ -5408,4 +5408,22 @@
     </description>
   </property>
 
+  <property>
+    <description>
+      The number of retry for Register UAM.
+      The default value is 3.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.retry-count</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      Interval between retry for Register UAM.
+      The default value is 100ms.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.interval</name>
+    <value>100ms</value>
+  </property>
+
 </configuration>

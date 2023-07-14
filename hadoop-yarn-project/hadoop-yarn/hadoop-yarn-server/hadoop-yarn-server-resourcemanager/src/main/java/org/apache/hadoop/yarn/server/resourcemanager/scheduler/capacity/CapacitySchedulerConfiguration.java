@@ -428,6 +428,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private ConfigurationProperties configurationProperties;
 
+  public static QueueCapacityConfigParser getQueueCapacityConfigParser() {
+    return queueCapacityConfigParser;
+  }
+
   public int getMaximumAutoCreatedQueueDepth(String queuePath) {
     return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
         getInt(PREFIX + MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH));

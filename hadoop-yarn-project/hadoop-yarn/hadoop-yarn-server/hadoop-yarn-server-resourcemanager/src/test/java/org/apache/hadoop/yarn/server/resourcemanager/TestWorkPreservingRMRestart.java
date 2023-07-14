@@ -297,11 +297,16 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   private CapacitySchedulerConfiguration
       getSchedulerAutoCreatedQueueConfiguration(
-      boolean overrideWithQueueMappings) throws IOException {
+      boolean overrideWithQueueMappings, boolean useFlexibleAQC) {
     CapacitySchedulerConfiguration schedulerConf =
         new CapacitySchedulerConfiguration(conf);
-    TestCapacitySchedulerAutoCreatedQueueBase
-        .setupQueueConfigurationForSingleAutoCreatedLeafQueue(schedulerConf);
+    if (useFlexibleAQC) {
+      TestCapacitySchedulerAutoCreatedQueueBase
+              .setupQueueConfigurationForSingleFlexibleAutoCreatedLeafQueue(schedulerConf);
+    } else {
+      TestCapacitySchedulerAutoCreatedQueueBase
+              .setupQueueConfigurationForSingleAutoCreatedLeafQueue(schedulerConf);
+    }
     TestCapacitySchedulerAutoCreatedQueueBase.setupQueueMappings(schedulerConf,
         "c", overrideWithQueueMappings, new int[] {0, 1});
     return schedulerConf;
@@ -1798,16 +1803,29 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   }
 
   @Test(timeout = 30000)
+  public void testDynamicFlexibleAutoCreatedQueueRecoveryWithDefaultQueue()
+          throws Exception {
+    //if queue name is not specified, it should submit to 'default' queue
+    testDynamicAutoCreatedQueueRecovery(USER1, null, true);
+  }
+
+  @Test(timeout = 30000)
   public void testDynamicAutoCreatedQueueRecoveryWithDefaultQueue()
       throws Exception {
     //if queue name is not specified, it should submit to 'default' queue
-    testDynamicAutoCreatedQueueRecovery(USER1, null);
+    testDynamicAutoCreatedQueueRecovery(USER1, null, false);
+  }
+
+  @Test(timeout = 30000)
+  public void testDynamicFlexibleAutoCreatedQueueRecoveryWithOverrideQueueMappingFlag()
+          throws Exception {
+    testDynamicAutoCreatedQueueRecovery(USER1, USER1, true);
   }
 
   @Test(timeout = 30000)
   public void testDynamicAutoCreatedQueueRecoveryWithOverrideQueueMappingFlag()
       throws Exception {
-    testDynamicAutoCreatedQueueRecovery(USER1, USER1);
+    testDynamicAutoCreatedQueueRecovery(USER1, USER1, false);
   }
 
   // Test work preserving recovery of apps running on auto-created queues.
@@ -1820,7 +1838,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 6. Verify the scheduler state like attempt info,
   // 7. Verify the queue/user metrics for the dynamic auto-created queue.
 
-  public void testDynamicAutoCreatedQueueRecovery(String user, String queueName)
+  public void testDynamicAutoCreatedQueueRecovery(
+      String user, String queueName, boolean useFlexibleAQC)
       throws Exception {
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
@@ -1830,9 +1849,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 1. Set up dynamic auto-created queue.
     CapacitySchedulerConfiguration schedulerConf = null;
     if (queueName == null || queueName.equals(DEFAULT_QUEUE)) {
-      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(false);
+      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(false, useFlexibleAQC);
     } else{
-      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(true);
+      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(true, useFlexibleAQC);
     }
     int containerMemory = 1024;
     Resource containerResource = Resource.newInstance(containerMemory, 1);
