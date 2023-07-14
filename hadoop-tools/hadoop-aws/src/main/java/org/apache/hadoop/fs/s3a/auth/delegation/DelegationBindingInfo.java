@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
-import java.util.Optional;
-
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.security.token.Token;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +32,9 @@ public final class DelegationBindingInfo {
    */
   private AWSCredentialProviderList credentialProviders;
 
+  /**
+   * Get list of credential providers.
+   */
   public AWSCredentialProviderList getCredentialProviders() {
     return credentialProviders;
   }
