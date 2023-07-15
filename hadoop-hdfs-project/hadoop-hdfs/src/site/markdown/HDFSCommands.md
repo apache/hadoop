@@ -452,6 +452,7 @@ Usage:
 
       hdfs dfsrouteradmin
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-addAll <source1> <nameservice1,nameservice2,...> <destination1> [-readonly] [-faulttolerant][-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner1> -group <group1> -mode <mode1> , <source2> <nameservice1,nameservice2,...> <destination2> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner2> -group <group2> -mode <mode2> , ...]
           [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls [-d] <path>]
@@ -718,11 +719,13 @@ Recover the lease on the specified path. The path must reside on an HDFS file sy
 
 ### `verifyEC`
 
-Usage: `hdfs debug verifyEC -file <file>`
+Usage: `hdfs debug verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | [`-file` *EC-file*] | HDFS EC file to be verified. |
+| [`-blockId` *blk_Id*] | Specify the blk_Id to verify a block group of the file. |
+| [`-skipFailureBlocks`] | Specify will skip any block group failures during verify and continues verify all block groups of the file, the default is not to skip failure blocks . |
 
 Verify the correctness of erasure coding on an erasure coded file.
 
