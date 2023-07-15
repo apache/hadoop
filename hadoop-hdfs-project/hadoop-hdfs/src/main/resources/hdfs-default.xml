@@ -4722,6 +4722,15 @@
   </property>
 
   <property>
+    <name>dfs.datanode.data.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that can utilize for reading block.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
     <value>0</value>
     <description>
