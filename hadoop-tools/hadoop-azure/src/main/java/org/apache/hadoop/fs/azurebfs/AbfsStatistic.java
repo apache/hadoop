@@ -109,7 +109,16 @@ public enum AbfsStatistic {
       "Number of times rename operation failed due to metadata being "
           + "incomplete"),
   RENAME_PATH_ATTEMPTS("rename_path_attempts",
-      "Number of times we attempt to rename a path internally");
+      "Number of times we attempt to rename a path internally"),
+
+  TRASH_CREATE_CHECKPOINT(StoreStatisticNames.TRASH_CREATE_CHECKPOINT,
+      "Create trash checkpoint"),
+
+  TRASH_DELETE_CHECKPOINT(StoreStatisticNames.TRASH_DELETE_CHECKPOINT,
+      "Delete trash checkpoint"),
+
+  TRASH_MOVE_TO_TRASH(StoreStatisticNames.TRASH_MOVE_TO_TRASH,
+      "Move to trash");
 
   private String statName;
   private String statDescription;
