@@ -383,7 +383,7 @@ public class DiskBalancer {
   }
 
   /**
-   * Gets maximum amount of time disk balancer plan is valid in config
+   * Gets maximum amount of time disk balancer plan is valid in config.
    *
    * @return the maximum amount of time in milliseconds.
    */
