@@ -786,6 +786,15 @@ public class TestTrash {
     emptierThread.join();
   }
 
+  @Test
+  public void testTrashHomeDir() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    conf.set(FS_TRASH_HOME_DIR_PREFIX_KEY,
+        new Path(TEST_DIR, "testTrashHomeDir").toUri().getPath());
+    trashShell(conf, TEST_DIR, null, null);
+  }
+
   @After
   public void tearDown() throws IOException {
     File trashDir = new File(TEST_DIR.toUri().getPath());
