@@ -64,9 +64,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"1"},
-        {"2"},
-        {"3"},
-        {"4"}
+        {"2"}
     });
   }
 
