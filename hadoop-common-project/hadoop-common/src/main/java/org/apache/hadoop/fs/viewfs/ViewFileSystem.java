@@ -1926,12 +1926,41 @@ public class ViewFileSystem extends FileSystem {
     SAME_FILESYSTEM_ACROSS_MOUNTPOINT
   }
 
+  private void closeChildFileSystems(FileSystem fs) throws IOException {
+    if (fs != null) {
+      FileSystem[] childFs = fs.getChildFileSystems();
+      for (FileSystem child : childFs) {
+        if (child != null) {
+          String disableCacheName = String.format("fs.%s.impl.disable.cache",
+              child.getUri().getScheme());
+          if (config.getBoolean(disableCacheName, false)) {
+            child.close();
+          }
+        }
+      }
+    }
+  }
+
   @Override
   public void close() throws IOException {
     super.close();
     if (enableInnerCache && cache != null) {
       cache.closeAll();
       cache.clear();
+    }
+
+    if (!enableInnerCache) {
+      for (InodeTree.MountPoint<FileSystem> mountPoint :
+          fsState.getMountPoints()) {
+        FileSystem targetFs = mountPoint.target.getTargetFileSystemForClose();
+        closeChildFileSystems(targetFs);
+      }
+
+      if (fsState.isRootInternalDir() &&
+          fsState.getRootFallbackLink() != null) {
+        closeChildFileSystems(
+            fsState.getRootFallbackLink().getTargetFileSystem());
+      }
     }
   }
 }
