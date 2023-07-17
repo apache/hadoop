@@ -30,6 +30,7 @@ import org.apache.hadoop.ha.HAAdmin.UsageInfo;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -298,8 +299,8 @@ public class RouterCLI extends Configured implements Tool {
     // Prepare Options.
     Options opts = new Options();
     opts.addOption("policy", false,
-      "We provide a set of commands for Policy Include list policies, " +
-      "save policies, batch save policies.");
+        "We provide a set of commands for Policy Include list policies, " +
+        "save policies, batch save policies.");
     Option saveOpt = new Option(OPTION_S, OPTION_SAVE, true,
         "We will save the policy information of the queue, " +
         "including queue and weight information");
@@ -344,8 +345,9 @@ public class RouterCLI extends Configured implements Tool {
 
   /**
    * We will parse the policy, and it has specific formatting requirements.
-   * 1. queue,router weight,amrm weight,headroomalpha.
-   * 2. the sum of weights for all subclusters in routerWeight/amrmWeight should be 1.
+   *
+   * 1. queue,router weight,amrm weight,headroomalpha {@link FederationQueueWeight}.
+   * 2. the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
    *
    * @param policy queue weight.
    * @return If the conversion is correct, we will get the FederationQueueWeight,

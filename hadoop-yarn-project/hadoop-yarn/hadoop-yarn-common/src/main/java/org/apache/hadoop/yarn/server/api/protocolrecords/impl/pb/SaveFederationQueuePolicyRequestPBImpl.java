@@ -146,8 +146,8 @@ public class SaveFederationQueuePolicyRequestPBImpl extends SaveFederationQueueP
   }
 
   private FederationQueueWeightProto convertToProtoFormat(
-      FederationQueueWeight federationQueueWeight) {
-    return ((FederationQueueWeightPBImpl) federationQueueWeight).getProto();
+      FederationQueueWeight pFederationQueueWeight) {
+    return ((FederationQueueWeightPBImpl) pFederationQueueWeight).getProto();
   }
 
   private FederationQueueWeight convertFromProtoFormat(
