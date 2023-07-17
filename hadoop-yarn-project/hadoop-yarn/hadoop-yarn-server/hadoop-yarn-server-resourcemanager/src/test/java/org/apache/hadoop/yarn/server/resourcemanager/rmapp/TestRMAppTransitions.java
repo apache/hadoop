@@ -965,13 +965,13 @@ public class TestRMAppTransitions {
 
   @Test
   public void testAcquiredReleased() throws IOException {
-    RMApp application = testCreateAppAccepted(null);
+    RMApp application = testCreateAppSubmittedNoRecovery(null);
     NodeId nodeId = NodeId.newInstance("host", 1234);
     application.handle(
         new RMAppRunningOnNodeEvent(application.getApplicationId(), nodeId, true));
     Map<NodeId, LogAggregationReport> logAggregationReportsForApp =
         application.getLogAggregationReportsForApp();
-    assertEquals(1, logAggregationReportsForApp.size());
+    assertEquals(0, logAggregationReportsForApp.size());
   }
 
   @Test
