@@ -49,4 +49,15 @@ public class LogExactlyOnce {
       log.error(format, args);
     }
   }
+
+  /**
+   * Log at DEBUG if nothing has been logged yet.
+   * @param format format string
+   * @param args arguments
+   */
+  public void debug(String format, Object...args) {
+    if (!logged.getAndSet(true)) {
+      log.debug(format, args);
+    }
+  }
 }
