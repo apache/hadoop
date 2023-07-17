@@ -332,7 +332,8 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       newlyFinished = getCompletedContainerIds(allocateResponse.getCompletedContainersStatuses());
       containersForReleasedContainerIds.addAll(newlyFinished);
       LOG.info("Number of containers received in this request: {}.", newlyFinished.size());
-      LOG.info("Total number of containers received: {}.", containersForReleasedContainerIds.size());
+      LOG.info("Total number of containers received: {}.",
+          containersForReleasedContainerIds.size());
       Thread.sleep(10);
     }
 

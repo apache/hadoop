@@ -102,7 +102,7 @@ public abstract class BaseAMRMProxyTest {
   private MockAMRMProxyService amrmProxyService;
 
   // Thread pool used for asynchronous operations
-  private final static ExecutorService threadpool = Executors.newCachedThreadPool();
+  private final ExecutorService threadpool = Executors.newCachedThreadPool();
   private Configuration conf;
   private AsyncDispatcher dispatcher;
   private Context nmContext;
@@ -280,17 +280,17 @@ public abstract class BaseAMRMProxyTest {
     final ApplicationUserInfo ugi = getApplicationUserInfo(testAppId);
 
     return ugi.getUser().doAs((PrivilegedExceptionAction<RegisterApplicationMasterResponse>) () -> {
-        getAMRMProxyService().initApp(ugi.getAppAttemptId(),
-          ugi.getUser().getUserName());
+      getAMRMProxyService().initApp(ugi.getAppAttemptId(),
+      ugi.getUser().getUserName());
 
-          final RegisterApplicationMasterRequest req =
-              Records.newRecord(RegisterApplicationMasterRequest.class);
-          req.setHost(Integer.toString(testAppId));
-          req.setRpcPort(testAppId);
-          req.setTrackingUrl("");
+      final RegisterApplicationMasterRequest req =
+          Records.newRecord(RegisterApplicationMasterRequest.class);
+      req.setHost(Integer.toString(testAppId));
+      req.setRpcPort(testAppId);
+      req.setTrackingUrl("");
 
-          RegisterApplicationMasterResponse response = getAMRMProxyService().registerApplicationMaster(req);
-          return response;
+      RegisterApplicationMasterResponse response = getAMRMProxyService().registerApplicationMaster(req);
+      return response;
      });
   }
 
@@ -393,7 +393,8 @@ public abstract class BaseAMRMProxyTest {
                     testContext);
               } catch (Throwable ex) {
                 response = null;
-                LOG.error("Failed to finish application master with test context: {}.", testContext);
+                LOG.error("Failed to finish application master with test context: {}.",
+                    testContext);
               }
               return response;
         });

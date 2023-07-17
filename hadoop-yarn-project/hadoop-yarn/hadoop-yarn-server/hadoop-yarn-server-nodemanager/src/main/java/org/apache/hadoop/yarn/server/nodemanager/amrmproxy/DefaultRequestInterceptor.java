@@ -97,8 +97,8 @@ public final class DefaultRequestInterceptor extends
       throws IOException, InterruptedException {
     if (appContext.getNMContext().isDistributedSchedulingEnabled()) {
       return user.doAs((PrivilegedExceptionAction<DistributedSchedulingAMProtocol>) () -> {
-          setAMRMTokenService(conf);
-          return ServerRMProxy.createRMProxy(conf, DistributedSchedulingAMProtocol.class);
+        setAMRMTokenService(conf);
+        return ServerRMProxy.createRMProxy(conf, DistributedSchedulingAMProtocol.class);
       });
     } else {
       return user.doAs(
