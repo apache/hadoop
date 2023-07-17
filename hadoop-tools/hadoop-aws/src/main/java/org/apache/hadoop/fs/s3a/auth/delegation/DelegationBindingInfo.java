@@ -34,6 +34,7 @@ public final class DelegationBindingInfo {
 
   /**
    * Get list of credential providers.
+   * @return list of credential providers
    */
   public AWSCredentialProviderList getCredentialProviders() {
     return credentialProviders;
