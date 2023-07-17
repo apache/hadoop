@@ -975,6 +975,14 @@
 </property>
 
 <property>
+  <name>fs.trash.clean.trashroot.enable</name>
+  <value>false</value>
+  <description>Whether clean some directories and files
+    in Trash home which are not under checkpoint directory.
+  </description>
+</property>
+
+<property>
   <name>fs.protected.directories</name>
   <value></value>
   <description>A comma-separated list of directories which cannot

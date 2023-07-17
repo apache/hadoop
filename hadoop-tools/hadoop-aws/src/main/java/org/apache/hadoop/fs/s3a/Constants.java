@@ -1276,4 +1276,16 @@ public final class Constants {
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
       "fs.s3a.capability.multipart.uploads.enabled";
 
+  /**
+   * Prefetch max blocks count config.
+   * Value = {@value}
+   */
+  public static final String PREFETCH_MAX_BLOCKS_COUNT = "fs.s3a.prefetch.max.blocks.count";
+
+  /**
+   * Default value for max blocks count config.
+   * Value = {@value}
+   */
+  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
+
 }
