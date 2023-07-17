@@ -692,4 +692,10 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Get the volume list.
    */
   List<FsVolumeImpl> getVolumeList();
+
+  /**
+   * Set the last time in milliseconds when the directory scanner successfully ran.
+   * @param time the last time in milliseconds when the directory scanner successfully ran.
+   */
+  default void setLastDirScannerFinishTime(long time) {}
 }

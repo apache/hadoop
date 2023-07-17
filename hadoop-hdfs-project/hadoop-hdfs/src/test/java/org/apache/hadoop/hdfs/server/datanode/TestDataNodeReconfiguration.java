@@ -46,6 +46,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -57,6 +61,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
@@ -793,5 +798,57 @@ public class TestDataNodeReconfiguration {
     lastCounter = counter;
     Thread.sleep(5000);
     assertTrue(counter > lastCounter);
+  }
+
+  @Test
+  public void testDiskBalancerParameters() throws Exception {
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Verify DFS_DISK_BALANCER_ENABLED.
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.disk.balancer.enabled from 'true' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DISK_BALANCER_ENABLED, "text"));
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_ENABLED, null);
+      assertEquals(dn.getConf().getBoolean(DFS_DISK_BALANCER_ENABLED,
+              DFS_DISK_BALANCER_ENABLED_DEFAULT), dn.getDiskBalancer().isDiskBalancerEnabled());
+
+      // Set DFS_DISK_BALANCER_ENABLED to false.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_ENABLED, "false");
+      assertFalse(dn.getDiskBalancer().isDiskBalancerEnabled());
+
+      // Set DFS_DISK_BALANCER_ENABLED to true.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_ENABLED, "true");
+      assertTrue(dn.getDiskBalancer().isDiskBalancerEnabled());
+
+      // Verify DFS_DISK_BALANCER_PLAN_VALID_INTERVAL.
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.disk.balancer.plan.valid.interval from " +
+              "'1d' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "text"));
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, null);
+      assertEquals(dn.getConf().getTimeDuration(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+          DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS),
+          dn.getDiskBalancer().getPlanValidityInterval());
+      assertEquals(dn.getConf().getTimeDuration(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS),
+          dn.getDiskBalancer().getPlanValidityIntervalInConfig());
+
+      // Set value is 6 then 6 milliseconds.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "" + 6);
+      assertEquals(6, dn.getDiskBalancer().getPlanValidityInterval());
+      assertEquals(6, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
+
+      // Set value with time unit.
+      dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "1m");
+      assertEquals(60000, dn.getDiskBalancer().getPlanValidityInterval());
+      assertEquals(60000, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
+    }
   }
 }

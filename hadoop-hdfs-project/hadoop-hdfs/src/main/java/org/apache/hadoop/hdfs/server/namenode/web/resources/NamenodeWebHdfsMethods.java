@@ -33,6 +33,7 @@ import java.util.Base64.Encoder;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import javax.servlet.ServletContext;
@@ -1411,6 +1412,11 @@ public class NamenodeWebHdfsMethods {
     case GETECPOLICIES: {
       ErasureCodingPolicyInfo[] ecPolicyInfos = cp.getErasureCodingPolicies();
       final String js = JsonUtil.toJsonString(ecPolicyInfos);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECCODECS: {
+      Map<String, String> ecCodecs = cp.getErasureCodingCodecs();
+      final String js = JsonUtil.toJsonString("ErasureCodingCodecs", ecCodecs);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
