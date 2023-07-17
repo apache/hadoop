@@ -518,7 +518,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policyName> -path <path> [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
