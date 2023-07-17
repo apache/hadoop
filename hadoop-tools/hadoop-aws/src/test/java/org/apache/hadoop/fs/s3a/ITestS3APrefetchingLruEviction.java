@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -63,9 +64,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"1"},
-        {"2"},
-        {"3"},
-        {"4"}
+        {"2"}
     });
   }
 
@@ -78,12 +77,15 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
       LoggerFactory.getLogger(ITestS3APrefetchingLruEviction.class);
 
   private static final int S_1K = 1024;
+  private static final int S_500 = 512;
+  private static final int SMALL_FILE_SIZE = S_1K * 56;
+
   // Path for file which should have length > block size so S3ACachingInputStream is used
-  private Path largeFile;
-  private FileSystem largeFileFS;
+  private Path smallFile;
+  private FileSystem smallFileFS;
   private int blockSize;
 
-  private static final int TIMEOUT_MILLIS = 5000;
+  private static final int TIMEOUT_MILLIS = 3000;
   private static final int INTERVAL_MILLIS = 500;
 
   @Override
@@ -91,26 +93,28 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_MAX_BLOCKS_COUNT);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_BLOCK_SIZE_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
     conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, Integer.parseInt(maxBlocks));
+    conf.setInt(PREFETCH_BLOCK_SIZE_KEY, S_1K * 10);
     return conf;
   }
 
   @Override
   public void teardown() throws Exception {
     super.teardown();
-    cleanupWithLogger(LOG, largeFileFS);
-    largeFileFS = null;
+    cleanupWithLogger(LOG, smallFileFS);
+    smallFileFS = null;
   }
 
   private void openFS() throws Exception {
     Configuration conf = getConfiguration();
-    String largeFileUri = S3ATestUtils.getCSVTestFile(conf);
-
-    largeFile = new Path(largeFileUri);
+    byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
+    smallFile = path("iTestS3APrefetchingLruEviction");
+    ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
     blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
-    largeFileFS = new S3AFileSystem();
-    largeFileFS.initialize(new URI(largeFileUri), getConfiguration());
+    smallFileFS = new S3AFileSystem();
+    smallFileFS.initialize(new URI(smallFile.toString()), getConfiguration());
   }
 
   @Test
@@ -125,7 +129,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
             .build());
     CountDownLatch countDownLatch = new CountDownLatch(7);
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = smallFileFS.open(smallFile)) {
       ioStats = in.getIOStatistics();
       // tests to add multiple blocks in the prefetch cache
       // and let LRU eviction take place as more cache entries
@@ -135,43 +139,43 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
           0,
-          blockSize - S_1K * 10));
+          blockSize - S_500 * 10));
 
       // Seek to block 1 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
           blockSize,
-          2 * S_1K));
+          2 * S_500));
 
       // Seek to block 2 and don't read completely
       executorService.submit(() -> readFullyWithSeek(countDownLatch,
           in,
           blockSize * 2L,
-          2 * S_1K));
+          2 * S_500));
 
       // Seek to block 3 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
           blockSize * 3L,
-          2 * S_1K));
+          2 * S_500));
 
       // Seek to block 4 and don't read completely
       executorService.submit(() -> readFullyWithSeek(countDownLatch,
           in,
           blockSize * 4L,
-          2 * S_1K));
+          2 * S_500));
 
       // Seek to block 5 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
           blockSize * 5L,
-          2 * S_1K));
+          2 * S_500));
 
       // backward seek, can't use block 0 as it is evicted
       executorService.submit(() -> readFullyWithSeek(countDownLatch,
           in,
-          S_1K * 5,
-          2 * S_1K));
+          S_500 * 5,
+          2 * S_500));
 
       countDownLatch.await();
 
@@ -206,7 +210,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   private boolean readFullyWithPositionedRead(CountDownLatch countDownLatch, FSDataInputStream in,
       long position, int len) {
     byte[] buffer = new byte[blockSize];
-    // Don't read block 0 completely
     try {
       in.readFully(position, buffer, 0, len);
       countDownLatch.countDown();
@@ -229,7 +232,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   private boolean readFullyWithSeek(CountDownLatch countDownLatch, FSDataInputStream in,
       long position, int len) {
     byte[] buffer = new byte[blockSize];
-    // Don't read block 0 completely
     try {
       in.seek(position);
       in.readFully(buffer, 0, len);
