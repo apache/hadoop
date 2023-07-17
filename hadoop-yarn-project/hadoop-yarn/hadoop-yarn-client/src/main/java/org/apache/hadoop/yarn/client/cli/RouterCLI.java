@@ -30,7 +30,6 @@ import org.apache.hadoop.ha.HAAdmin.UsageInfo;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
