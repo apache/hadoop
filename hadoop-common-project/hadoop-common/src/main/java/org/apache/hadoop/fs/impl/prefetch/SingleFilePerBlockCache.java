@@ -271,12 +271,12 @@ public class SingleFilePerBlockCache implements BlockCache {
   protected int readFile(Path path, ByteBuffer buffer) throws IOException {
     int numBytesRead = 0;
     int numBytes;
-    FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
-    while ((numBytes = channel.read(buffer)) > 0) {
-      numBytesRead += numBytes;
+    try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
+      while ((numBytes = channel.read(buffer)) > 0) {
+        numBytesRead += numBytes;
+      }
+      buffer.limit(buffer.position());
     }
-    buffer.limit(buffer.position());
-    channel.close();
     return numBytesRead;
   }
 
@@ -460,11 +460,11 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   protected void writeFile(Path path, ByteBuffer buffer) throws IOException {
     buffer.rewind();
-    WritableByteChannel writeChannel = Files.newByteChannel(path, CREATE_OPTIONS);
-    while (buffer.hasRemaining()) {
-      writeChannel.write(buffer);
+    try (WritableByteChannel writeChannel = Files.newByteChannel(path, CREATE_OPTIONS)) {
+      while (buffer.hasRemaining()) {
+        writeChannel.write(buffer);
+      }
     }
-    writeChannel.close();
   }
 
   /**
