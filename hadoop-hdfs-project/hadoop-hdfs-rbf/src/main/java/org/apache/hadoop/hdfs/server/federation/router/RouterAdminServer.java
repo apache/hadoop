@@ -362,6 +362,9 @@ public class RouterAdminServer extends AbstractService
     List<MountTable> mountTables = request.getEntries();
     for (MountTable mountTable : mountTables) {
       verifyMaxComponentLength(mountTable);
+      if (mountTableExists(mountTable)) {
+        throw new IOException("Mountable " + mountTable.getSourcePath() + " already exists.");
+      }
     }
     if (this.mountTableCheckDestination) {
       for (MountTable mountTable : mountTables) {
@@ -423,6 +426,20 @@ public class RouterAdminServer extends AbstractService
       throw new IllegalArgumentException(
           "File not found in downstream nameservices: " + StringUtils.join(",", nsIds));
     }
+  }
+
+  /** Return true if the input mountTable exists, else return false.
+   *
+   * @param mountTable mountTable needs to be checked
+   */
+  private boolean mountTableExists(MountTable mountTable) throws IOException {
+    ActiveNamenodeResolver resolver = router.getNamenodeResolver();
+    if (resolver instanceof MountTableResolver) {
+      MountTableResolver mResolver = (MountTableResolver) resolver;
+      MountTable oldEntry = mResolver.getMountPoint(mountTable.getSourcePath());
+      return oldEntry != null;
+    }
+    return false;
   }
 
   /**

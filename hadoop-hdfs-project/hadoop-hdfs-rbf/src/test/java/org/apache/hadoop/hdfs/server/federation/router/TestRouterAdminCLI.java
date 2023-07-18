@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.creat
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -161,6 +162,8 @@ public class TestRouterAdminCLI {
 
   @Test
   public void testAddMountTable() throws Exception {
+    // Re-set system out for testing.
+    System.setErr(new PrintStream(err));
     String nsId = "ns0,ns1";
     String src = "/test-addmounttable";
     String dest = "/addmounttable";
@@ -188,25 +191,12 @@ public class TestRouterAdminCLI {
     assertFalse(mountTable.isReadOnly());
     assertFalse(mountTable.isFaultTolerant());
 
-    // test mount table update behavior
-    dest = dest + "-new";
-    argv = new String[] {"-add", src, nsId, dest, "-readonly",
-        "-faulttolerant", "-order", "HASH_ALL"};
-    assertEquals(0, ToolRunner.run(admin, argv));
-    stateStore.loadCache(MountTableStoreImpl.class, true);
-
-    getResponse = client.getMountTableManager()
-        .getMountTableEntries(getRequest);
-    mountTable = getResponse.getEntries().get(0);
-    assertEquals(4, mountTable.getDestinations().size());
-    RemoteLocation loc2 = mountTable.getDestinations().get(2);
-    assertEquals("ns0", loc2.getNameserviceId());
-    assertEquals(dest, loc2.getDest());
-    RemoteLocation loc3 = mountTable.getDestinations().get(3);
-    assertEquals("ns1", loc3.getNameserviceId());
-    assertEquals(dest, loc3.getDest());
-    assertTrue(mountTable.isReadOnly());
-    assertTrue(mountTable.isFaultTolerant());
+    // Test mount table update behavior.
+    err.reset();
+    String newDest = dest + "-new";
+    argv = new String[] {"-add", src, nsId, newDest, "-readonly"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("MountTable entry:/test-addmounttable already exists."));
   }
 
   private void verifyMountTableContents(String src, String dest) throws Exception {
@@ -220,6 +210,8 @@ public class TestRouterAdminCLI {
 
   @Test
   public void testAddMountTableNotNormalized() throws Exception {
+    // Re-set system out for testing.
+    System.setErr(new PrintStream(err));
     String nsId = "ns0";
     String src = "/test-addmounttable-notnormalized";
     String srcWithSlash = src + "/";
@@ -243,19 +235,12 @@ public class TestRouterAdminCLI {
     assertFalse(mountTable.isReadOnly());
     assertFalse(mountTable.isFaultTolerant());
 
-    // test mount table update behavior
-    dest = dest + "-new";
-    argv = new String[] {"-add", srcWithSlash, nsId, dest, "-readonly"};
-    assertEquals(0, ToolRunner.run(admin, argv));
-    stateStore.loadCache(MountTableStoreImpl.class, true);
-
-    getResponse = client.getMountTableManager()
-        .getMountTableEntries(getRequest);
-    mountTable = getResponse.getEntries().get(0);
-    assertEquals(2, mountTable.getDestinations().size());
-    assertEquals(nsId, mountTable.getDestinations().get(1).getNameserviceId());
-    assertEquals(dest, mountTable.getDestinations().get(1).getDest());
-    assertTrue(mountTable.isReadOnly());
+    // Test mount table update behavior.
+    String newDest = dest + "-new";
+    argv = new String[] {"-add", srcWithSlash, nsId, newDest, "-readonly"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains(
+        "MountTable entry:/test-addmounttable-notnormalized already exists"));
   }
 
   @Test
@@ -734,6 +719,15 @@ public class TestRouterAdminCLI {
     // verify read permission by executing other commands
     verifyExecutionResult("/testpath2-1", true, -1, -1);
 
+    // verify superuser can update and remove read only mount table
+    remoteUser = UserGroupInformation.createRemoteUser(superUser);
+    UserGroupInformation.setLoginUser(remoteUser);
+    verifyExecutionResult("/testpath2-1", true, 0, 0);
+
+    // use normal user as current user to test
+    remoteUser = UserGroupInformation.createRemoteUser(TEST_USER);
+    UserGroupInformation.setLoginUser(remoteUser);
+
     // add new mount table with only write permission
     argv = new String[] {"-add", "/testpath2-2", "ns0", "/testdir2-2",
         "-owner", TEST_USER, "-group", TEST_USER, "-mode", "0255"};
@@ -758,14 +752,14 @@ public class TestRouterAdminCLI {
    *          target mount table
    * @param canRead
    *          whether you can list mount tables under specified mount
-   * @param addCommandCode
-   *          expected return code of add command executed for specified mount
+   * @param updateCommandCode
+   *          expected return code of update command executed for specified mount
    * @param rmCommandCode
    *          expected return code of rm command executed for specified mount
    * @throws Exception
    */
   private void verifyExecutionResult(String mount, boolean canRead,
-      int addCommandCode, int rmCommandCode) throws Exception {
+      int updateCommandCode, int rmCommandCode) throws Exception {
     String[] argv = null;
     stateStore.loadCache(MountTableStoreImpl.class, true);
 
@@ -776,8 +770,8 @@ public class TestRouterAdminCLI {
     assertEquals(canRead, out.toString().contains(mount));
 
     // execute add/update command
-    argv = new String[] {"-add", mount, "ns0", mount + "newdir"};
-    assertEquals(addCommandCode, ToolRunner.run(admin, argv));
+    argv = new String[] {"-update", mount, "ns0", mount + "newdir"};
+    assertEquals(updateCommandCode, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     // execute remove command
@@ -793,7 +787,8 @@ public class TestRouterAdminCLI {
     String[] argv = new String[] {"-add", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue("Wrong message: " + out, out.toString().contains(
-        "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+        "\t[-add <source> <nameservice1, nameservice2, ...> "
+            + "<one destination or the same number of destinations as nameservices> "
             + "[-readonly] [-faulttolerant] "
             + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
             + "-owner <owner> -group <group> -mode <mode>]"));
@@ -802,7 +797,8 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-update", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue("Wrong message: " + out, out.toString().contains(
-        "\t[-update <source> [<nameservice1, nameservice2, ...> <destination>] "
+        "\t[-update <source> [<nameservice1, nameservice2, ...> "
+            + "<one destination or the same number of destinations as nameservices>] "
             + "[-readonly true|false] [-faulttolerant true|false] "
             + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
             + "-owner <owner> -group <group> -mode <mode>]"));
@@ -850,18 +846,22 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     String expected = "Usage: hdfs dfsrouteradmin :\n"
-        + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+        + "\t[-add <source> <nameservice1, nameservice2, ...> "
+        + "<one destination or the same number of destinations as nameservices> "
         + "[-readonly] [-faulttolerant] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
-        + "\t[-addAll <source1> <nameservice1,nameservice2,...> <destination1> "
+        + "\t[-addAll <source1> <nameservice1, nameservice2, ...> "
+        + "<one destination or the same number of destinations as nameservices> "
         + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner1> -group <group1> -mode <mode1>"
-        + " , <source2> <nameservice1,nameservice2,...> <destination2> "
+        + " , <source2> <nameservice1, nameservice2, ...> "
+        + "<one destination or the same number of destinations as nameservices> "
         + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner2> -group <group2> -mode <mode2> , ...]\n"
         + "\t[-update <source> [<nameservice1, nameservice2, ...> "
-        + "<destination>] [-readonly true|false]"
+        + "<one destination or the same number of destinations as nameservices>]"
+        + " [-readonly true|false]"
         + " [-faulttolerant true|false] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
@@ -1416,7 +1416,7 @@ public class TestRouterAdminCLI {
   public void testUpdateChangeAttributes() throws Exception {
     // Add a mount table firstly
     String nsId = "ns0";
-    String src = "/mount";
+    String src = "/updateChangeAttributes";
     String dest = "/dest";
     String[] argv = new String[] {"-add", src, nsId, dest, "-readonly",
         "-order", "HASH_ALL"};
@@ -1923,6 +1923,99 @@ public class TestRouterAdminCLI {
 
     assertTrue("The error message should return failed entries",
         err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
+  }
+
+  @Test
+  public void testAddMultipleDestinations() throws Exception {
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns0", false));
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns1", false));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    String[] argv = new String[] {"-add", "/addMultipleDestination", "ns01,ns02", "/tmp0"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-add", "/addMultipleDestination1", "ns01,ns02", "/tmp1,/tmp2"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-add", "/addMultipleDestination", "ns01,ns02", "/tmp3,/tmp4"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("MountTable entry:/addMultipleDestination already exists."));
+    err.reset();
+
+    argv = new String[] {"-add", "/addMultipleDestination2", "ns01", "/tmp5,/tmp6"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("Invalid number of namespaces and destinations"));
+    err.reset();
+
+    argv = new String[] {"-add", "/addMultipleDestination2", "ns01,ns02", "/tmp7,/tmp8,/tmp9"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("Invalid number of namespaces and destinations"));
+    err.reset();
+  }
+
+  @Test
+  public void testUpdateMultipleDestinations() throws Exception {
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns0", false));
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns1", false));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    String[] argv = new String[] {"-add", "/updateMultipleDestination0", "ns01,ns02", "/tmp0"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-update", "/updateMultipleDestination0", "ns0,ns1", "/tmp0_1,/tmp0_2"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-update", "/updateMultipleDestination0", "ns01,ns02", "/tmp1"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-update", "/updateMultipleDestination0", "ns01,ns02",
+        "/tmp1,/tmp2,/tmp3"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("Invalid number of namespaces and destinations"));
+    err.reset();
+  }
+
+  @Test
+  public void testAddAllMultipleDestinations() throws Exception {
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns0", false));
+    assertNotNull(router.getNamenodeResolver()
+        .getNamenodesForNameserviceId("ns1", false));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    String[] argv = new String[] {"-addAll", "/addAllMultipleDestination3", "ns01,ns02",
+        "/tmp3_1,/tmp3_2", ",", "/multipleDestination4", "ns01,ns02", "/tmp4_1"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    err.reset();
+
+    argv = new String[] {"-addAll", "/addAllMultipleDestination5", "ns01,ns02", "/tmp5_1,/tmp5_2",
+        ",", "/multipleDestination6", "ns01,ns02", "/tmp6_1,/tmp6_2,/tmp6_3"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("Invalid number of namespaces and destinations"));
+    err.reset();
   }
 
   private void addMountTable(String src, String nsId, String dst)

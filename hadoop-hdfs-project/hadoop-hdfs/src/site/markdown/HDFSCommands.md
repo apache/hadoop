@@ -451,8 +451,9 @@ Runs the DFS router. See [Router](../hadoop-hdfs-rbf/HDFSRouterFederation.html#R
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
-          [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-add <source> <nameservice1, nameservice2, ...> <one destination or the same number of destinations as nameservices> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-addAll <source1> <nameservice1, nameservice2,...> <one destination or the same number of destinations as nameservices> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner1> -group <group1> -mode <mode1> , <source2> <nameservice1,nameservice2,...> <one destination or the same number of destinations as nameservices> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner2> -group <group2> -mode <mode2> , ...]
+          [-update <source> [<nameservice1, nameservice2, ...> <one destination or the same number of destinations as nameservices>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls [-d] <path>]
           [-getDestination <path>]
@@ -470,7 +471,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
+| `-add` *source* *nameservices* *destination* | Add a mount table entry. |
 | `-update` *source* *nameservices* *destination* | Update a mount table entry attributes. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|

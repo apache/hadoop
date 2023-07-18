@@ -198,15 +198,6 @@ public abstract class MountTable extends BaseRecord {
   public abstract void setDestinations(List<RemoteLocation> dests);
 
   /**
-   * Add a new destination to this mount table entry.
-   *
-   * @param nsId Name service identifier.
-   * @param path Path in the remote name service.
-   * @return If the destination was added.
-   */
-  public abstract boolean addDestination(String nsId, String path);
-
-  /**
    * Check if the entry is read only.
    *
    * @return If the entry is read only.

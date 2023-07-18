@@ -31,4 +31,16 @@
     <Method name="setNss" />
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
+  <!-- Only to be used by Router Admin while preparing for bulk add request -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.tools.federation.AddMountAttributes" />
+    <Method name="getDestinations" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <!-- Only to be used by Router Admin while preparing for bulk add request -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.tools.federation.AddMountAttributes" />
+    <Method name="setDestinations" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
 </FindBugsFilter>

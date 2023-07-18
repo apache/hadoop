@@ -130,27 +130,6 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
   }
 
   @Override
-  public boolean addDestination(String nsId, String path) {
-    // Check if the location is already there
-    List<RemoteLocation> dests = getDestinations();
-    for (RemoteLocation dest : dests) {
-      if (dest.getNameserviceId().equals(nsId) && dest.getDest().equals(path)) {
-        return false;
-      }
-    }
-
-    // Add it to the existing list
-    Builder builder = this.translator.getBuilder();
-    RemoteLocationProto.Builder itemBuilder =
-        RemoteLocationProto.newBuilder();
-    itemBuilder.setNameserviceId(nsId);
-    itemBuilder.setPath(path);
-    RemoteLocationProto item = itemBuilder.build();
-    builder.addDestinations(item);
-    return true;
-  }
-
-  @Override
   public void setDateModified(long time) {
     this.translator.getBuilder().setDateModified(time);
   }
