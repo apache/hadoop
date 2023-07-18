@@ -461,6 +461,7 @@ Usage:
           [-setStorageTypeQuota <path> -storageType <storage type> <quota in bytes or quota size string>]
           [-clrQuota <path>]
           [-clrStorageTypeQuota <path>]
+          [-dumpState]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
