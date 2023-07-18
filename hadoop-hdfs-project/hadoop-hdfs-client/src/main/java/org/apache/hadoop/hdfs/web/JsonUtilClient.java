@@ -75,6 +75,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -865,6 +866,15 @@ public class JsonUtilClient {
     String state = getString(m, "state", "DISABLE");
     final ErasureCodingPolicyState ecPolicyState = ErasureCodingPolicyState.valueOf(state);
     return new ErasureCodingPolicyInfo(ecPolicy, ecPolicyState);
+  }
+
+  public static Map<String, String> getErasureCodeCodecs(Map<?, ?> json) {
+    Map<String, String> map = new HashMap<>();
+    Map<?, ?> m = (Map<?, ?>) json.get("ErasureCodingCodecs");
+    m.forEach((key, value) -> {
+      map.put((String) key, (String) value);
+    });
+    return map;
   }
 
   private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(

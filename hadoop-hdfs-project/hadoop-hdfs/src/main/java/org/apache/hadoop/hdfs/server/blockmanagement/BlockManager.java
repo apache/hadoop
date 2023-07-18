@@ -1696,7 +1696,7 @@ public class BlockManager implements BlockStatsMXBean {
   public boolean isSufficientlyReplicated(BlockInfo b) {
     // Compare against the lesser of the minReplication and number of live DNs.
     final int liveReplicas = countNodes(b).liveReplicas();
-    if (liveReplicas >= minReplication) {
+    if (hasMinStorage(b, liveReplicas)) {
       return true;
     }
     // getNumLiveDataNodes() is very expensive and we minimize its use by

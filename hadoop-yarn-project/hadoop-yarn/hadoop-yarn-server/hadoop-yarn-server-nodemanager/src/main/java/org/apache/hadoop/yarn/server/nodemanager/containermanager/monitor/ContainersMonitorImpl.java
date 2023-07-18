@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
@@ -497,6 +498,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     public void run() {
 
       while (!stopped && !Thread.currentThread().isInterrupted()) {
+        long start = Time.monotonicNow();
         // Print the processTrees for debugging.
         if (LOG.isDebugEnabled()) {
           StringBuilder tmp = new StringBuilder("[ ");
@@ -587,6 +589,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         // Save the aggregated utilization of the containers
         setContainersUtilization(trackedContainersUtilization);
 
+        long duration = Time.monotonicNow() - start;
+        LOG.debug("Finished monitoring container cost {} ms", duration);
+
         // Publish the container utilization metrics to node manager
         // metrics system.
         NodeManagerMetrics nmMetrics = context.getNodeManagerMetrics();
@@ -597,6 +602,7 @@ public class ContainersMonitorImpl extends AbstractService implements
               trackedContainersUtilization.getVirtualMemory());
           nmMetrics.setContainerCpuUtilization(
               trackedContainersUtilization.getCPU());
+          nmMetrics.addContainerMonitorCostTime(duration);
         }
 
         try {

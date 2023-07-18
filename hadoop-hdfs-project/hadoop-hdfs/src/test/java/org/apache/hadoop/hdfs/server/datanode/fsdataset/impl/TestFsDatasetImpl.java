@@ -238,7 +238,6 @@ public class TestFsDatasetImpl {
     for (String bpid : BLOCK_POOL_IDS) {
       dataset.addBlockPool(bpid, conf);
     }
-
     assertEquals(NUM_INIT_VOLUMES, getNumVolumes());
     assertEquals(0, dataset.getNumFailedVolumes());
   }
@@ -248,6 +247,13 @@ public class TestFsDatasetImpl {
     manager.lockLeakCheck();
     // make sure no lock Leak.
     assertNull(manager.getLastException());
+  }
+
+  @Test
+  public void testSetLastDirScannerFinishTime() throws IOException {
+    assertEquals(dataset.getLastDirScannerFinishTime(), 0L);
+    dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
+    assertNotEquals(0L, dataset.getLastDirScannerFinishTime());
   }
 
   @Test
