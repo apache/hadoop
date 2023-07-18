@@ -448,7 +448,7 @@ public class AMRMProxyService extends CompositeService implements
    * Initializes the request interceptor pipeline for the specified application.
    *
    * @param applicationAttemptId attempt id
-   * @param user username
+   * @param user user name
    * @param amrmToken amrmToken issued by RM
    * @param localToken amrmToken issued by AMRMProxy
    * @param recoveredDataMap the recovered states for AMRMProxy from NMSS

@@ -266,8 +266,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     // The release containers returned by the mock resource managers will be
     // aggregated and returned back to us, and we can check if total request size
     // and returned size are the same
-    List<ContainerId> containersForReleasedContainerIds =
-            new ArrayList<>();
+    List<ContainerId> containersForReleasedContainerIds = new ArrayList<>();
     List<ContainerId> newlyFinished = getCompletedContainerIds(
         allocateResponse.getCompletedContainersStatuses());
     containersForReleasedContainerIds.addAll(newlyFinished);

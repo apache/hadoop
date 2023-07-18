@@ -1069,17 +1069,14 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
               secondaryRelayers.put(subClusterId.getId(),
                   uamPool.getAMRMClientRelayer(subClusterId.getId()));
 
-              response = uamPool.registerApplicationMaster(
-                  subClusterId.getId(), amRegistrationRequest);
+              response = uamPool.registerApplicationMaster(subClusterId.getId(),
+                  amRegistrationRequest);
 
               // Set sub-cluster to be timed out initially
-              lastSCResponseTime.put(subClusterId,
-                  clock.getTime() - subClusterTimeOut);
+              lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
 
-              if (response != null
-                  && response.getContainersFromPreviousAttempts() != null) {
-                cacheAllocatedContainers(
-                    response.getContainersFromPreviousAttempts(),
+              if (response != null && response.getContainersFromPreviousAttempts() != null) {
+                cacheAllocatedContainers(response.getContainersFromPreviousAttempts(),
                     subClusterId);
               }
               LOG.info("UAM {} reattached for {}", subClusterId, appId);
