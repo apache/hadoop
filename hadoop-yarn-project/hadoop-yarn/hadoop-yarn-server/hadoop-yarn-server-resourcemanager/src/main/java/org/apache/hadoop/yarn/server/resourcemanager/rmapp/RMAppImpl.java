@@ -1092,7 +1092,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         app.logAggregation.addReportIfNecessary(
             nodeAddedEvent.getNodeId(), app.getApplicationId());
       } else {
-        LOG.warn(String.format("Log aggregation will be skipped for nodeId: %s and appId: %s",
+        LOG.warn(String.format("Not considering container for log aggregation "
+                + "while it is in an ACQUIRED state for nodeId: %s and appId: %s",
             nodeAddedEvent.getNodeId(), app.getApplicationId()));
       }
     }
