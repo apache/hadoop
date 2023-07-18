@@ -280,8 +280,7 @@ public abstract class BaseAMRMProxyTest {
     final ApplicationUserInfo ugi = getApplicationUserInfo(testAppId);
 
     return ugi.getUser().doAs((PrivilegedExceptionAction<RegisterApplicationMasterResponse>) () -> {
-      getAMRMProxyService().initApp(ugi.getAppAttemptId(),
-      ugi.getUser().getUserName());
+      getAMRMProxyService().initApp(ugi.getAppAttemptId(), ugi.getUser().getUserName());
 
       final RegisterApplicationMasterRequest req =
           Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -289,9 +288,10 @@ public abstract class BaseAMRMProxyTest {
       req.setRpcPort(testAppId);
       req.setTrackingUrl("");
 
-      RegisterApplicationMasterResponse response = getAMRMProxyService().registerApplicationMaster(req);
+      RegisterApplicationMasterResponse response =
+          getAMRMProxyService().registerApplicationMaster(req);
       return response;
-     });
+    });
   }
 
   /**
@@ -397,7 +397,7 @@ public abstract class BaseAMRMProxyTest {
                     testContext);
               }
               return response;
-        });
+            });
 
     Assert.assertEquals("Number of responses received does not match with request",
         testContexts.size(), responses.size());
