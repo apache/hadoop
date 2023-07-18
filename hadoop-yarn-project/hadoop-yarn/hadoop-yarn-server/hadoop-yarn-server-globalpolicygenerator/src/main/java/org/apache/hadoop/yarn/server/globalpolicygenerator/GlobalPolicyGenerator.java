@@ -136,9 +136,27 @@ public class GlobalPolicyGenerator extends CompositeService {
     }
 
     // Schedule PolicyGenerator
-    long policyGeneratorIntervalMillis = config.getTimeDuration(
-        YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_GPG_POLICY_GENERATOR_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    // We recommend using yarn.federation.gpg.policy.generator.interval
+    // instead of yarn.federation.gpg.policy.generator.interval-ms
+
+    // To ensure compatibility,
+    // let's first obtain the value of "yarn.federation.gpg.policy.generator.interval-ms."
+    long policyGeneratorIntervalMillis = 0L;
+    String generatorIntervalMS = config.get(YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL_MS);
+    if (generatorIntervalMS != null) {
+      LOG.warn("yarn.federation.gpg.policy.generator.interval-ms is deprecated property, " +
+          " we better set it yarn.federation.gpg.policy.generator.interval.");
+      policyGeneratorIntervalMillis = Long.parseLong(generatorIntervalMS);
+    }
+
+    // If it is not available, let's retrieve
+    // the value of "yarn.federation.gpg.policy.generator.interval" instead.
+    if (policyGeneratorIntervalMillis == 0) {
+      policyGeneratorIntervalMillis = config.getTimeDuration(
+          YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL,
+          YarnConfiguration.DEFAULT_GPG_POLICY_GENERATOR_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+
     if(policyGeneratorIntervalMillis > 0){
       this.scheduledExecutorService.scheduleAtFixedRate(this.policyGenerator,
           0, policyGeneratorIntervalMillis, TimeUnit.MILLISECONDS);

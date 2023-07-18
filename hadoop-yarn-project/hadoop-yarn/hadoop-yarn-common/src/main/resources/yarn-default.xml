@@ -5430,8 +5430,18 @@
     <description>
       The interval at which the policy generator runs, default is one hour
     </description>
-    <name>yarn.federation.gpg.policy.generator.interval-ms</name>
+    <name>yarn.federation.gpg.policy.generator.interval</name>
     <value>1h</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the policy generator runs, default is one hour.
+      This is an deprecated property, We better set it
+      `yarn.federation.gpg.policy.generator.interval`.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval-ms</name>
+    <value>3600000</value>
   </property>
 
   <property>

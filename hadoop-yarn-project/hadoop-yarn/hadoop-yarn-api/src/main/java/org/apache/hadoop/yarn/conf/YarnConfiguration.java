@@ -4394,9 +4394,15 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_GPG_PREFIX + "policy.generator.";
 
   /** The interval at which the policy generator runs, default is one hour. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL =
+      FEDERATION_GPG_POLICY_PREFIX + "interval";
+  public static final long DEFAULT_GPG_POLICY_GENERATOR_INTERVAL = TimeUnit.HOURS.toMillis(1);
+
+  /** The interval at which the policy generator runs, default is one hour.
+   *  This is an deprecated property, We better set it
+   *  `yarn.federation.gpg.policy.generator.interval`. */
   public static final String GPG_POLICY_GENERATOR_INTERVAL_MS =
       FEDERATION_GPG_POLICY_PREFIX + "interval-ms";
-  public static final long DEFAULT_GPG_POLICY_GENERATOR_INTERVAL_MS = TimeUnit.HOURS.toMillis(1);
 
   /**
    * The configured policy generator class, runs NoOpGlobalPolicy by
