@@ -30,7 +30,9 @@ public class RMAppRunningOnNodeEvent extends RMAppEvent {
   }
 
   public RMAppRunningOnNodeEvent(
-      ApplicationId appId, NodeId node, boolean createdFromAcquiredState
+      ApplicationId appId,
+      NodeId node,
+      boolean createdFromAcquiredState
   ) {
     super(appId, RMAppEventType.APP_RUNNING_ON_NODE);
     this.node = node;
