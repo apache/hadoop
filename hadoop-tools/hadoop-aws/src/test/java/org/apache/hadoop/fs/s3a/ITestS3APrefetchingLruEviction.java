@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
@@ -83,10 +82,10 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   // Path for file which should have length > block size so S3ACachingInputStream is used
   private Path smallFile;
   private FileSystem smallFileFS;
-  private int blockSize;
 
   private static final int TIMEOUT_MILLIS = 3000;
   private static final int INTERVAL_MILLIS = 500;
+  private static final int BLOCK_SIZE = S_1K * 10;
 
   @Override
   public Configuration createConfiguration() {
@@ -96,7 +95,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_BLOCK_SIZE_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
     conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, Integer.parseInt(maxBlocks));
-    conf.setInt(PREFETCH_BLOCK_SIZE_KEY, S_1K * 10);
+    conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     return conf;
   }
 
@@ -112,7 +111,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
     smallFile = path("iTestS3APrefetchingLruEviction");
     ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
-    blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
     smallFileFS = new S3AFileSystem();
     smallFileFS.initialize(new URI(smallFile.toString()), getConfiguration());
   }
@@ -139,36 +137,36 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
           0,
-          blockSize - S_500 * 10));
+          BLOCK_SIZE - S_500 * 10));
 
       // Seek to block 1 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
-          blockSize,
+          BLOCK_SIZE,
           2 * S_500));
 
       // Seek to block 2 and don't read completely
       executorService.submit(() -> readFullyWithSeek(countDownLatch,
           in,
-          blockSize * 2L,
+          BLOCK_SIZE * 2L,
           2 * S_500));
 
       // Seek to block 3 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
-          blockSize * 3L,
+          BLOCK_SIZE * 3L,
           2 * S_500));
 
       // Seek to block 4 and don't read completely
       executorService.submit(() -> readFullyWithSeek(countDownLatch,
           in,
-          blockSize * 4L,
+          BLOCK_SIZE * 4L,
           2 * S_500));
 
       // Seek to block 5 and don't read completely
       executorService.submit(() -> readFullyWithPositionedRead(countDownLatch,
           in,
-          blockSize * 5L,
+          BLOCK_SIZE * 5L,
           2 * S_500));
 
       // backward seek, can't use block 0 as it is evicted
@@ -209,7 +207,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
    */
   private boolean readFullyWithPositionedRead(CountDownLatch countDownLatch, FSDataInputStream in,
       long position, int len) {
-    byte[] buffer = new byte[blockSize];
+    byte[] buffer = new byte[BLOCK_SIZE];
     try {
       in.readFully(position, buffer, 0, len);
       countDownLatch.countDown();
@@ -231,7 +229,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
    */
   private boolean readFullyWithSeek(CountDownLatch countDownLatch, FSDataInputStream in,
       long position, int len) {
-    byte[] buffer = new byte[blockSize];
+    byte[] buffer = new byte[BLOCK_SIZE];
     try {
       in.seek(position);
       in.readFully(buffer, 0, len);
