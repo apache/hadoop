@@ -1092,10 +1092,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         app.logAggregation.addReportIfNecessary(
             nodeAddedEvent.getNodeId(), app.getApplicationId());
       } else {
-        LOG.warn(String.format("Not considering container for log aggregation "
-                + "while app is transitioning from ACQUIRED directly to RELEASED "
-                + "for nodeId: %s and appId: %s",
-            nodeAddedEvent.getNodeId(), app.getApplicationId()));
+        LOG.debug("Not considering node for log aggregation yet. nodeId: {}, appId: {}",
+            nodeAddedEvent.getNodeId(), app.getApplicationId());
       }
     }
   }
