@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.net.URI;
-
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,13 +95,11 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     largeFileFS = null;
   }
 
-  private void openFS(String fileName) throws Exception {
-    Configuration conf = getConfiguration();
+  private void createLargeFile() throws Exception {
     byte[] data = ContractTestUtils.dataset(S_1K * 72, 'x', 26);
-    largeFile = path(fileName);
+    largeFile = methodPath();
+    largeFileFS = getFileSystem();
     ContractTestUtils.writeDataset(getFileSystem(), largeFile, data, data.length, 16, true);
-    largeFileFS = new S3AFileSystem();
-    largeFileFS.initialize(new URI(largeFile.toString()), getConfiguration());
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
     numBlocks = calculateNumBlocks(largeFileSize, BLOCK_SIZE);
@@ -121,7 +117,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   public void testReadLargeFileFully() throws Throwable {
     describe("read a large file fully, uses S3ACachingInputStream");
     IOStatistics ioStats;
-    openFS("testReadLargeFileFully");
+    createLargeFile();
 
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       ioStats = in.getIOStatistics();
@@ -154,7 +150,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     describe("read a large file using readFully(position,buffer,offset,length),"
         + " uses S3ACachingInputStream");
     IOStatistics ioStats;
-    openFS("testReadLargeFileFullyLazySeek");
+    createLargeFile();
 
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       ioStats = in.getIOStatistics();
@@ -185,7 +181,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   public void testRandomReadLargeFile() throws Throwable {
     describe("random read on a large file, uses S3ACachingInputStream");
     IOStatistics ioStats;
-    openFS("testRandomReadLargeFile");
+    createLargeFile();
 
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       ioStats = in.getIOStatistics();

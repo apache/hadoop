@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
@@ -106,19 +105,17 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     smallFileFS = null;
   }
 
-  private void openFS() throws Exception {
-    Configuration conf = getConfiguration();
+  private void createSmallFile() throws Exception {
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
-    smallFile = path("iTestS3APrefetchingLruEviction");
+    smallFile = methodPath();
+    smallFileFS = getFileSystem();
     ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
-    smallFileFS = new S3AFileSystem();
-    smallFileFS.initialize(new URI(smallFile.toString()), getConfiguration());
   }
 
   @Test
   public void testSeeksWithLruEviction() throws Throwable {
     IOStatistics ioStats;
-    openFS();
+    createSmallFile();
 
     ExecutorService executorService = Executors.newFixedThreadPool(5,
         new ThreadFactoryBuilder()
