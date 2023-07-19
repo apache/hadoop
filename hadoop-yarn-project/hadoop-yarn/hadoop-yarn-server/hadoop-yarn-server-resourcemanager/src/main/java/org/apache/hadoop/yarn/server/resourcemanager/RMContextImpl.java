@@ -74,7 +74,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
  * <ul>
  * <li>serviceContext : These services called as <b>Always On</b> services.
  * Services that need to run always irrespective of the HA state of the RM.</li>
- * <li>activeServiceCotext : Active services context. Services that need to run
+ * <li>activeServiceContext : Active services context. Services that need to run
  * only on the Active RM.</li>
  * </ul>
  * <p>
