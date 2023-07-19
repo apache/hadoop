@@ -2866,6 +2866,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The given storage is reporting all its blocks.
    * Update the (storage{@literal -->}block list) and
    * (block{@literal -->}storage list) maps.
+   * totalReportNum -> totalStorageReportsNum
+   * currentReportNum -> currentStorageReportIndex
    *
    * @return true if all known storages of the given DN have finished reporting.
    * @throws IOException
@@ -2873,7 +2875,9 @@ public class BlockManager implements BlockStatsMXBean {
   public boolean processReport(final DatanodeID nodeID,
       final DatanodeStorage storage,
       final BlockListAsLongs newReport,
-      BlockReportContext context) throws IOException {
+      BlockReportContext context,
+      int totalReportNum,
+      int currentReportNum) throws IOException {
     namesystem.writeLock();
     final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
@@ -2904,7 +2908,8 @@ public class BlockManager implements BlockStatsMXBean {
       }
       if (namesystem.isInStartupSafeMode()
           && !StorageType.PROVIDED.equals(storageInfo.getStorageType())
-          && storageInfo.getBlockReportCount() > 0) {
+          && storageInfo.getBlockReportCount() > 0
+          && totalReportNum == currentReportNum) {
         blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
