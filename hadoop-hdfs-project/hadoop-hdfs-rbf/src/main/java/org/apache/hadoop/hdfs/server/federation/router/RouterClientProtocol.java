@@ -80,7 +80,6 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
-import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -1932,16 +1931,14 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     Set<FederationNamespaceInfo> allNamespaces = namenodeResolver.getNamespaces();
     RemoteMethod method = new RemoteMethod("msync");
-    Set<FederationNamespaceInfo> namespacesWithAnObserverNamenode = new HashSet<>();
+    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = new HashSet<>();
     for (FederationNamespaceInfo ns : allNamespaces) {
-      boolean hasObserver = namenodeResolver.getNamenodesForNameserviceId(ns.getNameserviceId(), true)
-          .stream()
-          .anyMatch(n -> n.getState().equals(FederationNamenodeServiceState.OBSERVER));
-      if (hasObserver) {
-        namespacesWithAnObserverNamenode.add(ns);
+      boolean isObserverReadEligible = rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId());
+      if (isObserverReadEligible) {
+        namespacesEligibleForObserverReads.add(ns);
       }
     }
-    rpcClient.invokeConcurrent(namespacesWithAnObserverNamenode, method);
+    rpcClient.invokeConcurrent(namespacesEligibleForObserverReads, method);
   }
 
   @Override

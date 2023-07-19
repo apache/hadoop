@@ -874,12 +874,18 @@ public class TestObserverWithRouter {
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testMsyncOnlyToNamespacesWithObserver(ConfigSetting configSetting) throws Exception {
+    Configuration confOverride = new Configuration(false);
+    String namespaceWithObserverReadsDisabled = "ns0";
+    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, namespaceWithObserverReadsDisabled);
+    startUpCluster(2, confOverride);
+
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
 
     // Switch observers in first nameservice to standbys.
-    cluster.switchToStandby(cluster.getNameservices().get(0), NAMENODES[2]);
-    cluster.switchToStandby(cluster.getNameservices().get(0), NAMENODES[3]);
+    cluster.switchToStandby(namespaceWithObserverReadsDisabled, NAMENODES[2]);
+    cluster.switchToStandby(namespaceWithObserverReadsDisabled, NAMENODES[3]);
 
     // Refresh namenode registrations.
     MockResolver mockResolver = (MockResolver) routerContext.getRouter().getNamenodeResolver();
