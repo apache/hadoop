@@ -165,6 +165,7 @@ message RpcResponseHeaderProto {
   // The client should not interpret these bytes, but only
   // forward them to the router using RpcRequestHeaderProto.routerFederatedState.
   optional bytes routerFederatedState = 10;
+  optional ExceptionReconstructParamsProto exceptionReconstructParams = 11;
 }
 
 message RpcSaslProto {
@@ -189,4 +190,8 @@ message RpcSaslProto {
   required SaslState state = 2;
   optional bytes token     = 3;
   repeated SaslAuth auths  = 4;
+}
+
+message ExceptionReconstructParamsProto {
+  repeated string param = 1;
 }

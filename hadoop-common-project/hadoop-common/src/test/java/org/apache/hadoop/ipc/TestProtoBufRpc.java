@@ -56,6 +56,8 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for testing protocol buffer based RPC mechanism.
@@ -329,7 +331,30 @@ public class TestProtoBufRpc extends TestRpcBase {
           .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
     }
   }
-  
+
+  @Test (timeout=5000)
+  public void testProtoBufReconstructableException() throws Exception {
+    //No test with legacy
+    assumeFalse(testWithLegacy);
+    TestRpcService client = getClient(addr, conf);
+
+    try {
+      client.error3(null, newEmptyRequest());
+    } catch (ServiceException se) {
+      assertThat(se.getCause()).isInstanceOf(RemoteException.class);
+      RemoteException re = (RemoteException) se.getCause();
+      assertThat(re.getClassName())
+          .isEqualTo(TestReconstructableException.class.getName());
+      IOException ex = re.unwrapRemoteException(TestReconstructableException.class);
+      assertTrue(ex instanceof TestReconstructableException);
+      assertEquals("field1", ((TestReconstructableException) ex).getField1());
+      assertEquals("field2", ((TestReconstructableException) ex).getField2());
+      assertThat(re.getMessage()).contains("field1field2");
+      assertThat(re.getErrorCode())
+          .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
+    }
+  }
+
   @Test(timeout=6000)
   public void testExtraLongRpc() throws Exception {
     //No test with legacy

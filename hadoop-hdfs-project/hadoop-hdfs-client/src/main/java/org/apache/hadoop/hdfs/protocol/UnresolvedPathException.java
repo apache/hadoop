@@ -22,13 +22,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.ReconstructableException;
 
 /**
  * Thrown when a symbolic link is encountered in a path.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class UnresolvedPathException extends UnresolvedLinkException {
+public final class UnresolvedPathException extends UnresolvedLinkException
+    implements ReconstructableException<UnresolvedPathException> {
   private static final long serialVersionUID = 1L;
   private String path;        // The path containing the link
   private String preceding;   // The path part preceding the link
@@ -75,5 +77,18 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
       return msg;
     }
     return getResolvedPath().toString();
+  }
+
+  @Override
+  public UnresolvedPathException reconstruct(String... params) {
+    if (params.length != 4) {
+      return null;
+    }
+    return new UnresolvedPathException(params[0], params[1], params[2], params[3]);
+  }
+
+  @Override
+  public String[] getReconstructParams() {
+    return new String[]{path, preceding, remainder, linkTarget};
   }
 }

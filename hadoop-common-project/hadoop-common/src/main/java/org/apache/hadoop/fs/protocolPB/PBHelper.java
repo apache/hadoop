@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.protocolPB;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.ReconstructableException;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructParamsProto;
 import org.apache.hadoop.util.StringInterner;
 
 import java.io.IOException;
@@ -134,4 +136,14 @@ public final class PBHelper {
     return bld.build();
   }
 
+  public static ExceptionReconstructParamsProto getReconstructParams(Throwable t) {
+    if (t instanceof ReconstructableException) {
+      ExceptionReconstructParamsProto.Builder builder = ExceptionReconstructParamsProto.newBuilder();
+      for (String str: ((ReconstructableException<?>)t).getReconstructParams()) {
+        builder.addParam(str);
+      }
+      return builder.build();
+    }
+    return null;
+  }
 }
