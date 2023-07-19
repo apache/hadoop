@@ -212,7 +212,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException If it cannot get the delegation token.
    */
   public Map<FederationNamespaceInfo, Token<DelegationTokenIdentifier>>
-  getDelegationTokens(Text renewer) throws IOException {
+      getDelegationTokens(Text renewer) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
     return null;
   }
@@ -265,7 +265,7 @@ public class RouterClientProtocol implements ClientProtocol {
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
       CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
-      String storagePolicy)
+      String storagePolicyName)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
@@ -287,7 +287,7 @@ public class RouterClientProtocol implements ClientProtocol {
             long.class, CryptoProtocolVersion[].class,
             String.class, String.class},
         new RemoteParam(), masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
+        replication, blockSize, supportedVersions, ecPolicyName, storagePolicyName);
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(src, true);
     RemoteLocation createLocation = null;
@@ -1933,7 +1933,8 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("msync");
     Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = new HashSet<>();
     for (FederationNamespaceInfo ns : allNamespaces) {
-      boolean isObserverReadEligible = rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId());
+      boolean isObserverReadEligible = rpcClient
+          .isNamespaceObserverReadEligible(ns.getNameserviceId());
       if (isObserverReadEligible) {
         namespacesEligibleForObserverReads.add(ns);
       }
