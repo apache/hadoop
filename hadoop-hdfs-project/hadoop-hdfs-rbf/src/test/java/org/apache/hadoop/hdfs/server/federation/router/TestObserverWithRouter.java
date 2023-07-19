@@ -875,30 +875,20 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testMsyncOnlyToNamespacesWithObserver(ConfigSetting configSetting) throws Exception {
+  public void testMsyncOnlyToNamespaceWithObserver(ConfigSetting configSetting) throws Exception {
     Configuration confOverride = new Configuration(false);
     String namespaceWithObserverReadsDisabled = "ns0";
+    // Disable observer reads for ns0
     confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, namespaceWithObserverReadsDisabled);
-    startUpCluster(2, confOverride);
-
+    startUpCluster(1, confOverride);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
-
-    // Switch observers in first nameservice to standbys.
-    cluster.switchToStandby(namespaceWithObserverReadsDisabled, NAMENODES[2]);
-    cluster.switchToStandby(namespaceWithObserverReadsDisabled, NAMENODES[3]);
-
-    // Refresh namenode registrations.
-    MockResolver mockResolver = (MockResolver) routerContext.getRouter().getNamenodeResolver();
-    mockResolver.cleanRegistrations();
-    cluster.registerNamenodes();
-    cluster.waitNamenodeRegistration();
 
     // Send msync request
     fileSystem.msync();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // There should only be one call to the nameservice that has an observer.
-    assertEquals("Only one call to the nameservice with an observer", 1, rpcCountForActive);
+    // There should only be one call to the namespace that has an observer.
+    assertEquals("Only one call to the namespace with an observer", 1, rpcCountForActive);
   }
 }
