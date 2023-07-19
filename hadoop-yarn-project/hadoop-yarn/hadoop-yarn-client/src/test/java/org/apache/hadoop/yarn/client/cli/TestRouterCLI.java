@@ -19,11 +19,16 @@ package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -35,6 +40,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -49,6 +55,7 @@ public class TestRouterCLI {
   public void setup() throws Exception {
 
     admin = mock(ResourceManagerAdministrationProtocol.class);
+
     when(admin.deregisterSubCluster(any(DeregisterSubClusterRequest.class)))
         .thenAnswer((Answer<DeregisterSubClusterResponse>) invocationOnMock -> {
           // Step1. parse subClusterId.
@@ -61,6 +68,14 @@ public class TestRouterCLI {
           } else {
             return generateAllSubClusterData();
           }
+        });
+
+    when(admin.saveFederationQueuePolicy(any(SaveFederationQueuePolicyRequest.class)))
+        .thenAnswer((Answer<SaveFederationQueuePolicyResponse>) invocationOnMock -> {
+          // Step1. parse subClusterId.
+          Object obj = invocationOnMock.getArgument(0);
+          SaveFederationQueuePolicyRequest request = (SaveFederationQueuePolicyRequest) obj;
+          return SaveFederationQueuePolicyResponse.newInstance("success");
         });
 
     Configuration config = new Configuration();
@@ -114,6 +129,9 @@ public class TestRouterCLI {
 
     args = new String[]{"-help", "-deregisterSubCluster"};
     rmAdminCLI.run(args);
+
+    args = new String[]{"-help", "-policy"};
+    rmAdminCLI.run(args);
   }
 
   @Test
@@ -151,5 +169,52 @@ public class TestRouterCLI {
     args = new String[]{"-deregisterSubCluster", "--subClusterId", ""};
     assertEquals(0, rmAdminCLI.run(args));
 
+  }
+
+  @Test
+  public void testParsePolicy() throws Exception {
+    // Case1, If policy is empty.
+    String errMsg1 = "The policy cannot be empty or the policy is incorrect. \n" +
+        " Required information to provide: queue,router weight,amrm weight,headroomalpha \n" +
+        " eg. root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0";
+    LambdaTestUtils.intercept(YarnException.class, errMsg1, () ->  rmAdminCLI.parsePolicy(""));
+
+    // Case2, If policy is incomplete, We need 4 items, but only 2 of them are provided.
+    LambdaTestUtils.intercept(YarnException.class, errMsg1,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2:0.9;"));
+
+    // Case3, If policy is incomplete, The weight of a subcluster is missing.
+    String errMsg2 = "The subClusterWeight cannot be empty, " +
+        "and the subClusterWeight size must be 2. (eg.SC-1,0.2)";
+    LambdaTestUtils.intercept(YarnException.class, errMsg2,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2;SC-1:0.1,SC-2;0.3,1.0"));
+
+    // Case4, The policy is complete, but the sum of weights for each subcluster is not equal to 1.
+    String errMsg3 = "The sum of ratios for all subClusters must be equal to 1.";
+    LambdaTestUtils.intercept(YarnException.class, errMsg3,
+        () ->  rmAdminCLI.parsePolicy("root.a;SC-1:0.1,SC-2:0.8;SC-1:0.1,SC-2;0.3,1.0"));
+
+    // If policy is root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0
+    String policy = "root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
+    SaveFederationQueuePolicyRequest request = rmAdminCLI.parsePolicy(policy);
+    FederationQueueWeight federationQueueWeight = request.getFederationQueueWeight();
+    assertNotNull(federationQueueWeight);
+    assertEquals("SC-1:0.7,SC-2:0.3", federationQueueWeight.getRouterWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", federationQueueWeight.getAmrmWeight());
+    assertEquals("1.0", federationQueueWeight.getHeadRoomAlpha());
+  }
+
+  @Test
+  public void testSavePolicy() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+
+    String[] args = {"-policy", "-s", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-policy", "-save", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
+    assertEquals(0, rmAdminCLI.run(args));
   }
 }
