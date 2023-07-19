@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +25,8 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.junit.Test;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestViewFileSystemClose extends AbstractHadoopTestBase {
 
