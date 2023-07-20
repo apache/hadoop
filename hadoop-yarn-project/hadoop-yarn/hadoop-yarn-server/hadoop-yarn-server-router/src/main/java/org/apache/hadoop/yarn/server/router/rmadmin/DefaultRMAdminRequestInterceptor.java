@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -208,5 +210,11 @@ public class DefaultRMAdminRequestInterceptor
   public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
       throws YarnException, IOException {
     return rmAdminProxy.deregisterSubCluster(request);
+  }
+
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+    return rmAdminProxy.saveFederationQueuePolicy(request);
   }
 }

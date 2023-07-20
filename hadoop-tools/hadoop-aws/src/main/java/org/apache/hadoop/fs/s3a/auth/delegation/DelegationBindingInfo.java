@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,34 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.fs.s3a.auth.delegation;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 
-public class RMAppRunningOnNodeEvent extends RMAppEvent {
-  private final NodeId node;
-  private final boolean createdFromAcquiredState;
+import static java.util.Objects.requireNonNull;
 
-  public RMAppRunningOnNodeEvent(ApplicationId appId, NodeId node) {
-    this(appId, node, false);
+/**
+ * Binding information returned by the token provider.
+ */
+public final class DelegationBindingInfo {
+
+  /**
+   * List of credential providers.
+   */
+  private AWSCredentialProviderList credentialProviders;
+
+  /**
+   * Get list of credential providers.
+   * @return list of credential providers
+   */
+  public AWSCredentialProviderList getCredentialProviders() {
+    return credentialProviders;
   }
 
-  public RMAppRunningOnNodeEvent(
-      ApplicationId appId,
-      NodeId node,
-      boolean createdFromAcquiredState
-  ) {
-    super(appId, RMAppEventType.APP_RUNNING_ON_NODE);
-    this.node = node;
-    this.createdFromAcquiredState = createdFromAcquiredState;
-  }
-  
-  public NodeId getNodeId() {
-    return node;
-  }
-
-  public boolean isCreatedFromAcquiredState() {
-    return createdFromAcquiredState;
+  /**
+   * Set builder value.
+   * @param value non null value
+   * @return the builder
+   */
+  public DelegationBindingInfo withCredentialProviders(final AWSCredentialProviderList value) {
+    credentialProviders = requireNonNull(value);
+    return this;
   }
 }
