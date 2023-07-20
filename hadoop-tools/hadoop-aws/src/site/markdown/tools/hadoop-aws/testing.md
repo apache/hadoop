@@ -346,8 +346,6 @@ Example: test with `markers=keep`
 mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=keep
 ```
 
-This is the default and does not need to be explicitly set.
-
 Example: test with `markers=delete`
 
 ```
