@@ -105,6 +105,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
 
   private void createSmallFile() throws Exception {
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
+    // Path for file which should have length > block size so S3ACachingInputStream is used
     Path smallFile = methodPath();
     smallFileFS = getFileSystem();
     ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
