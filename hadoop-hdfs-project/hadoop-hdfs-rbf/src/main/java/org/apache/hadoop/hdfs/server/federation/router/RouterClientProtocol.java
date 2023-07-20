@@ -144,7 +144,7 @@ public class RouterClientProtocol implements ClientProtocol {
   private volatile long serverDefaultsLastUpdate;
   private final long serverDefaultsValidityPeriod;
 
-  /** Caching the set of nameservices that are eligible for observer reads */
+  /** Caching the set of nameservices that are eligible for observer reads. */
   private final LoadingCache<Set<FederationNamespaceInfo>, Set<FederationNamespaceInfo>>
       crsNameservicesCache;
 
