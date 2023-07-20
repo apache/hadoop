@@ -1957,7 +1957,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * Determines which nameservices have observer reads enabled.
    * @return A set of nameservices that are eligible for observer reads.
-   * @throws IOException
+   * @throws IOException If there is an error getting the nameservices.
    */
   private Set<FederationNamespaceInfo> getNameservicesEligibleForObserverReads()
       throws IOException {
