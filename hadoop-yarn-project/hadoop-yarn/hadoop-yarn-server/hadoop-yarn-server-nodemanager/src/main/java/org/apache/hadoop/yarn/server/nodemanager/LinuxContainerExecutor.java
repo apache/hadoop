@@ -791,7 +791,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
       // In ContainerExecutionException -1 is the default value for the exit code.
       // If it remained unset, we can treat the signalling as interrupted.
-      if (retCode == -1) {
+      if (retCode == ContainerExecutionException.getDefaultExitCode()) {
         throw new InterruptedIOException("Signalling container " + pid + " with "
             + signal + " is interrupted; output: " + e.getOutput() + " and exitCode: "
             + retCode);
