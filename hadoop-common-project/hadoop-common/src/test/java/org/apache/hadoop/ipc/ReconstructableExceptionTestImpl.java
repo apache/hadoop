@@ -23,25 +23,25 @@ import java.io.IOException;
 /**
  * Test class of ReconstructableException.
  */
-public class TestReconstructableException extends IOException
-    implements ReconstructableException<TestReconstructableException> {
+public class ReconstructableExceptionTestImpl extends IOException
+    implements ReconstructableException<ReconstructableExceptionTestImpl> {
 
   private String field1;
   private String field2;
 
-  public TestReconstructableException(String msg) {
+  public ReconstructableExceptionTestImpl(String msg) {
     super(msg);
   }
 
-  public TestReconstructableException(String param1, String param2) {
+  public ReconstructableExceptionTestImpl(String param1, String param2) {
     super(param1 + param2);
     field1 = param1;
     field2 = param2;
   }
 
   @Override
-  public TestReconstructableException reconstruct(String... params) {
-    return new TestReconstructableException(params[0], params[1]);
+  public ReconstructableExceptionTestImpl reconstruct(String... params) {
+    return new ReconstructableExceptionTestImpl(params[0], params[1]);
   }
 
   @Override

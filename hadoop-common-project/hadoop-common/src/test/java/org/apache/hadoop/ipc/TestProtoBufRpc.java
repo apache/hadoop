@@ -344,11 +344,11 @@ public class TestProtoBufRpc extends TestRpcBase {
       assertThat(se.getCause()).isInstanceOf(RemoteException.class);
       RemoteException re = (RemoteException) se.getCause();
       assertThat(re.getClassName())
-          .isEqualTo(TestReconstructableException.class.getName());
-      IOException ex = re.unwrapRemoteException(TestReconstructableException.class);
-      assertTrue(ex instanceof TestReconstructableException);
-      assertEquals("field1", ((TestReconstructableException) ex).getField1());
-      assertEquals("field2", ((TestReconstructableException) ex).getField2());
+          .isEqualTo(ReconstructableExceptionTestImpl.class.getName());
+      IOException ex = re.unwrapRemoteException(ReconstructableExceptionTestImpl.class);
+      assertThat(ex).isInstanceOf(ReconstructableExceptionTestImpl.class);
+      assertEquals("field1", ((ReconstructableExceptionTestImpl) ex).getField1());
+      assertEquals("field2", ((ReconstructableExceptionTestImpl) ex).getField2());
       assertThat(re.getMessage()).contains("field1field2");
       assertThat(re.getErrorCode())
           .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);

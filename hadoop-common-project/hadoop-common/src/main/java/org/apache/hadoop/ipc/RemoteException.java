@@ -37,35 +37,36 @@ public class RemoteException extends IOException {
   private final ExceptionReconstructParamsProto exceptionReconstructParams;
   
   /**
-   * @param className wrapped exception, may be null
-   * @param msg may be null
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
    */
   public RemoteException(String className, String msg) {
     this(className, msg, null);
   }
   
   /**
-   * @param className wrapped exception, may be null
-   * @param msg may be null
-   * @param erCode may be null
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
+   * @param erCode may be null.
    */
   public RemoteException(String className, String msg, RpcErrorCodeProto erCode) {
     this(className, msg, erCode, null);
   }
 
   /**
-   * @param className wrapped exception, may be null
-   * @param msg may be null
-   * @param erCode may be null
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
+   * @param erCode may be null.
    */
   public RemoteException(String className, String msg, RpcErrorCodeProto erCode,
                          ExceptionReconstructParamsProto paramsProto) {
     super(msg);
     this.className = className;
-    if (erCode != null)
+    if (erCode != null) {
       errorCode = erCode.getNumber();
-    else 
+    } else {
       errorCode = UNSPECIFIED_ERROR;
+    }
     this.exceptionReconstructParams = paramsProto;
   }
   

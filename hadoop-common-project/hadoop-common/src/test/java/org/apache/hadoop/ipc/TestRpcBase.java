@@ -407,7 +407,8 @@ public class TestRpcBase {
     public TestProtos.EmptyResponseProto error3(
         RpcController unused, TestProtos.EmptyRequestProto request)
         throws ServiceException {
-      throw new ServiceException("error", new TestReconstructableException("field1", "field2"));
+      throw new ServiceException("error",
+          new ReconstructableExceptionTestImpl("field1", "field2"));
     }
 
     @Override
