@@ -1955,8 +1955,8 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Determines with nameservices has observer reads enabled.
-   * @return A set of nameservices eligible for observer reads.
+   * Determines which nameservices have observer reads enabled.
+   * @return A set of nameservices that are eligible for observer reads.
    * @throws IOException
    */
   private Set<FederationNamespaceInfo> getNameservicesEligibleForObserverReads()
