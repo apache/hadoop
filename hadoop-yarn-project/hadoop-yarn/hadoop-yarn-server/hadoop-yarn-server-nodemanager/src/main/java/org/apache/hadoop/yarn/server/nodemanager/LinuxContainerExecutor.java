@@ -788,7 +788,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.warn("Error in signalling container {} with {}; exit = {}",
           pid, signal, retCode, e);
       logOutput(e.getOutput());
-      
+
       // In ContainerExecutionException -1 is the default value for the exit code.
       // If it remained unset, we can treat the signalling as interrupted.
       if (retCode == -1) {
