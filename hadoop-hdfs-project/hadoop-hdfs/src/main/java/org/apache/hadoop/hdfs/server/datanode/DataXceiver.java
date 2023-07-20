@@ -848,6 +848,7 @@ class DataXceiver extends Receiver implements Runnable {
           mirrorOut.flush();
 
           DataNodeFaultInjector.get().writeBlockAfterFlush();
+          DataNodeFaultInjector.get().incrementDatanodeNetworkErrors(this);
 
           // read connect ack (only for clients, not for replication req)
           if (isClient) {
@@ -1379,6 +1380,11 @@ class DataXceiver extends Receiver implements Runnable {
   
   private void incrDatanodeNetworkErrors() {
     datanode.incrDatanodeNetworkErrors(remoteAddressWithoutPort);
+  }
+
+  @VisibleForTesting
+  public void incrDatanodeNetworkErrorsWithPort() {
+    datanode.incrDatanodeNetworkErrors(remoteAddress);
   }
 
   /**
