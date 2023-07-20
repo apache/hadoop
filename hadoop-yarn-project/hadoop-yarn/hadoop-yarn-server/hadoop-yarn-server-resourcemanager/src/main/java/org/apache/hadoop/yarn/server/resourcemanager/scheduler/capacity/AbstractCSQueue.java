@@ -448,7 +448,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     // Set properties from parent template
     if (parent instanceof AbstractParentQueue && isDynamicQueue()) {
       ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
+          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
+                  this instanceof AbstractLeafQueue);
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
           AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
