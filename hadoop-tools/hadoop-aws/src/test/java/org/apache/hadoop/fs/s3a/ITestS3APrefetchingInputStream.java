@@ -65,7 +65,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   private static final int S_1K = S_500 * 2;
   private static final int S_1M = S_1K * S_1K;
   private int numBlocks;
-  private Path largeFile;
   private FileSystem largeFileFS;
 
   // Size should be > block size so S3ACachingInputStream is used
@@ -97,7 +96,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private void createLargeFile() throws Exception {
     byte[] data = ContractTestUtils.dataset(S_1K * 72, 'x', 26);
-    largeFile = methodPath();
+    Path largeFile = methodPath();
     largeFileFS = getFileSystem();
     ContractTestUtils.writeDataset(getFileSystem(), largeFile, data, data.length, 16, true);
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
@@ -119,7 +118,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -152,7 +151,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -183,7 +182,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[BLOCK_SIZE];
