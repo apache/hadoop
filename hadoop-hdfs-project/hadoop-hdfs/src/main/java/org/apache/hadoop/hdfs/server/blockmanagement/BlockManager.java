@@ -2866,6 +2866,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The given storage is reporting all its blocks.
    * Update the (storage{@literal -->}block list) and
    * (block{@literal -->}storage list) maps.
+   * totalReportNum -> totalStorageReportsNum
+   * currentReportNum -> currentStorageReportIndex
    *
    * @return true if all known storages of the given DN have finished reporting.
    * @throws IOException
