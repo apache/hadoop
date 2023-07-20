@@ -1800,6 +1800,9 @@ public class RouterRpcClient {
    * @return whether the 'method' is a read-only operation.
    */
   private static boolean isReadCall(Method method) {
+    if (method == null) {
+      return false;
+    }
     if (!method.isAnnotationPresent(ReadOnly.class)) {
       return false;
     }
