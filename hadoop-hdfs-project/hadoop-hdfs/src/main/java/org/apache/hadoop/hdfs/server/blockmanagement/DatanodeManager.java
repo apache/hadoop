@@ -1701,9 +1701,11 @@ public class DatanodeManager {
       // Skip stale nodes during recovery
       final List<DatanodeStorageInfo> recoveryLocations =
           new ArrayList<>(storages.length);
-      for (DatanodeStorageInfo storage : storages) {
-        if (!storage.getDatanodeDescriptor().isStale(staleInterval)) {
-          recoveryLocations.add(storage);
+      final List<Integer> storageIdx = new ArrayList<>(storages.length);
+      for (int i = 0; i < storages.length; ++i) {
+        if (!storages[i].getDatanodeDescriptor().isStale(staleInterval)) {
+          recoveryLocations.add(storages[i]);
+          storageIdx.add(i);
         }
       }
       // If we are performing a truncate recovery than set recovery fields
@@ -1736,7 +1738,8 @@ public class DatanodeManager {
         rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
             uc.getBlockRecoveryId());
         if (b.isStriped()) {
-          rBlock = new RecoveringStripedBlock(rBlock, uc.getBlockIndices(),
+          rBlock = new RecoveringStripedBlock(rBlock,
+              uc.getBlockIndicesForSpecifiedStorages(storageIdx),
               ((BlockInfoStriped) b).getErasureCodingPolicy());
         }
       }
