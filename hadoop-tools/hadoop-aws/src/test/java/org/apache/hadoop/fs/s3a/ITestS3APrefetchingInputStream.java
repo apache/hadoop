@@ -46,7 +46,6 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_A
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPENED;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS;
-import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Test the prefetching input stream, validates that the underlying S3ACachingInputStream and
@@ -65,7 +64,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   private static final int S_1K = S_500 * 2;
   private static final int S_1M = S_1K * S_1K;
   private int numBlocks;
-  private FileSystem largeFileFS;
 
   // Size should be > block size so S3ACachingInputStream is used
   private long largeFileSize;
@@ -87,17 +85,10 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     return conf;
   }
 
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    cleanupWithLogger(LOG, largeFileFS);
-    largeFileFS = null;
-  }
-
   private void createLargeFile() throws Exception {
     byte[] data = ContractTestUtils.dataset(S_1K * 72, 'x', 26);
     Path largeFile = methodPath();
-    largeFileFS = getFileSystem();
+    FileSystem largeFileFS = getFileSystem();
     ContractTestUtils.writeDataset(getFileSystem(), largeFile, data, data.length, 16, true);
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
@@ -118,7 +109,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -151,7 +142,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -182,7 +173,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     IOStatistics ioStats;
     createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(methodPath())) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[BLOCK_SIZE];

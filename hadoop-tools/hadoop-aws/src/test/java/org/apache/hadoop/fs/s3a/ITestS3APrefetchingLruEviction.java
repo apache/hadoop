@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
@@ -48,7 +47,6 @@ import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE;
-import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Test the prefetching input stream with LRU cache eviction on S3ACachingInputStream.
@@ -78,8 +76,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   private static final int S_500 = 512;
   private static final int SMALL_FILE_SIZE = S_1K * 56;
 
-  private FileSystem smallFileFS;
-
   private static final int TIMEOUT_MILLIS = 3000;
   private static final int INTERVAL_MILLIS = 500;
   private static final int BLOCK_SIZE = S_1K * 10;
@@ -96,25 +92,13 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     return conf;
   }
 
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    cleanupWithLogger(LOG, smallFileFS);
-    smallFileFS = null;
-  }
-
-  private void createSmallFile() throws Exception {
-    byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
-    // Path for file which should have length > block size so S3ACachingInputStream is used
-    Path smallFile = methodPath();
-    smallFileFS = getFileSystem();
-    ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
-  }
-
   @Test
   public void testSeeksWithLruEviction() throws Throwable {
     IOStatistics ioStats;
-    createSmallFile();
+    byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
+    // Path for file which should have length > block size so S3ACachingInputStream is used
+    Path smallFile = methodPath();
+    ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
 
     ExecutorService executorService = Executors.newFixedThreadPool(5,
         new ThreadFactoryBuilder()
@@ -123,7 +107,7 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
             .build());
     CountDownLatch countDownLatch = new CountDownLatch(7);
 
-    try (FSDataInputStream in = smallFileFS.open(methodPath())) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
       // tests to add multiple blocks in the prefetch cache
       // and let LRU eviction take place as more cache entries
