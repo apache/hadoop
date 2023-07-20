@@ -70,19 +70,35 @@ public class CapacitySchedulerInfoHelper {
   private CapacitySchedulerInfoHelper() {}
 
   public static String getMode(CSQueue queue) {
-    final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
-        queue.getConfiguredCapacityVector(NO_LABEL).getDefinedCapacityTypes();
-    if (definedCapacityTypes.size() == 1) {
-      QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
-      if (Objects.requireNonNull(next) == PERCENTAGE) {
-        return "percentage";
-      } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
+    if (((AbstractCSQueue) queue).getQueueContext().getConfiguration().isLegacyQueueMode()) {
+      if (queue.getCapacityConfigType() ==
+              AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE) {
         return "absolute";
-      } else if (next == QueueCapacityVector.ResourceUnitCapacityType.WEIGHT) {
-        return "weight";
+      } else if (queue.getCapacityConfigType() ==
+              AbstractCSQueue.CapacityConfigType.PERCENTAGE) {
+        float weight = queue.getQueueCapacities().getWeight();
+        if (weight == -1) {
+          //-1 indicates we are not in weight mode
+          return "percentage";
+        } else {
+          return "weight";
+        }
       }
-    } else if (definedCapacityTypes.size() > 1) {
-      return "mixed";
+    } else {
+      final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
+              queue.getConfiguredCapacityVector(NO_LABEL).getDefinedCapacityTypes();
+      if (definedCapacityTypes.size() == 1) {
+        QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
+        if (Objects.requireNonNull(next) == PERCENTAGE) {
+          return "percentage";
+        } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
+          return "absolute";
+        } else if (next == QueueCapacityVector.ResourceUnitCapacityType.WEIGHT) {
+          return "weight";
+        }
+      } else if (definedCapacityTypes.size() > 1) {
+        return "mixed";
+      }
     }
 
     return "unknown";
