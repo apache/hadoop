@@ -178,4 +178,10 @@ public class DataNodeFaultInjector {
    * leaving a stale copy of {@link DirectoryScanner#diffs}.
    */
   public void waitUntilStorageRemoved() {}
+
+  /*
+   * Increase DatanodeNetworkErrors.
+   * @param dataXceiver
+   */
+  public void incrementDatanodeNetworkErrors(DataXceiver dataXceiver) {}
 }
