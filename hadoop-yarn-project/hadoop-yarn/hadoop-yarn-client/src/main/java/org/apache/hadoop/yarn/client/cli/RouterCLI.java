@@ -38,6 +38,11 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -48,14 +53,34 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkHeadRoomAlphaValid;
+import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkSubClusterQueueWeightRatioValid;
+
 public class RouterCLI extends Configured implements Tool {
 
+
+  private static final Logger LOG = LoggerFactory.getLogger(RouterCLI.class);
+
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
-      ImmutableMap.<String, UsageInfo>builder().put("-deregisterSubCluster",
-        new UsageInfo("[-sc|--subClusterId [subCluster Id]]",
+      ImmutableMap.<String, UsageInfo>builder()
+         // Command1: deregisterSubCluster
+        .put("-deregisterSubCluster", new UsageInfo(
+        "[-sc|--subClusterId [subCluster Id]]",
         "Deregister SubCluster, If the interval between the heartbeat time of the subCluster " +
         "and the current time exceeds the timeout period, " +
-        "set the state of the subCluster to SC_LOST")).build();
+        "set the state of the subCluster to SC_LOST."))
+         // Command2: policy
+        .put("-policy", new UsageInfo(
+        "[-s|--save [queue;router weight;amrm weight;headroomalpha]]",
+        "We provide a set of commands for Policy:" +
+        " Include list policies, save policies, batch save policies. " +
+        " (Note: The policy type will be directly read from the" +
+        " yarn.federation.policy-manager in the local yarn-site.xml.)" +
+        " eg. (routeradmin -policy [-s|--save] root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0)"))
+        .build();
+
+  // Common Constant
+  private static final String SEMICOLON = ";";
 
   // Command Constant
   private static final String CMD_EMPTY = "";
@@ -73,6 +98,12 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_SUBCLUSTERID = "subClusterId";
   private static final String CMD_DEREGISTERSUBCLUSTER = "-deregisterSubCluster";
   private static final String CMD_HELP = "-help";
+
+  // Command2: policy
+  // save policy
+  private static final String OPTION_S = "s";
+  private static final String OPTION_SAVE = "save";
+  private static final String CMD_POLICY = "-policy";
 
   public RouterCLI() {
     super();
@@ -128,9 +159,10 @@ public class RouterCLI extends Configured implements Tool {
     summary.append("routeradmin is the command to execute ")
         .append("YARN Federation administrative commands.\n")
         .append("The full syntax is: \n\n")
-        .append("routeradmin")
-        .append(" [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]")
-        .append(" [-help [cmd]]").append("\n");
+        .append("routeradmin\n")
+        .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
+        .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha]]\n")
+        .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
 
@@ -260,6 +292,98 @@ public class RouterCLI extends Configured implements Tool {
     return EXIT_SUCCESS;
   }
 
+  private int handlePolicy(String[] args)
+      throws IOException, YarnException, ParseException {
+
+    // Prepare Options.
+    Options opts = new Options();
+    opts.addOption("policy", false,
+        "We provide a set of commands for Policy Include list policies, " +
+        "save policies, batch save policies.");
+    Option saveOpt = new Option(OPTION_S, OPTION_SAVE, true,
+        "We will save the policy information of the queue, " +
+        "including queue and weight information");
+    saveOpt.setOptionalArg(true);
+    opts.addOption(saveOpt);
+
+    // Parse command line arguments.
+    CommandLine cliParser;
+    try {
+      cliParser = new GnuParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      System.out.println("Missing argument for options");
+      printUsage(args[0]);
+      return EXIT_ERROR;
+    }
+
+    // Try to parse the cmd save.
+    if (cliParser.hasOption(OPTION_S) || cliParser.hasOption(OPTION_SAVE)) {
+      String policy = cliParser.getOptionValue(OPTION_S);
+      if (StringUtils.isBlank(policy)) {
+        policy = cliParser.getOptionValue(OPTION_SAVE);
+      }
+      return handleSavePolicy(policy);
+    }
+
+    return EXIT_ERROR;
+  }
+
+  private int handleSavePolicy(String policy) {
+    LOG.info("Save Federation Policy = {}.", policy);
+    try {
+      SaveFederationQueuePolicyRequest request = parsePolicy(policy);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      SaveFederationQueuePolicyResponse response = adminProtocol.saveFederationQueuePolicy(request);
+      System.out.println(response.getMessage());
+      return EXIT_SUCCESS;
+    } catch (YarnException | IOException e) {
+      LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
+  }
+
+  /**
+   * We will parse the policy, and it has specific formatting requirements.
+   *
+   * 1. queue,router weight,amrm weight,headroomalpha {@link FederationQueueWeight}.
+   * 2. the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
+   *
+   * @param policy queue weight.
+   * @return If the conversion is correct, we will get the FederationQueueWeight,
+   * otherwise an exception will be thrown.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  protected SaveFederationQueuePolicyRequest parsePolicy(String policy) throws YarnException {
+
+    String[] policyItems = policy.split(SEMICOLON);
+    if (policyItems == null || policyItems.length != 4) {
+      throw new YarnException("The policy cannot be empty or the policy is incorrect. \n" +
+          " Required information to provide: queue,router weight,amrm weight,headroomalpha \n" +
+          " eg. root.a;SC-1:0.7,SC-2:0.3;SC-1:0.7,SC-2:0.3;1.0");
+    }
+
+    String queue = policyItems[0];
+    String routerWeight = policyItems[1];
+    String amrmWeight = policyItems[2];
+    String headroomalpha = policyItems[3];
+
+    LOG.info("Policy: [Queue = {}, RouterWeight = {}, AmRmWeight = {}, Headroomalpha = {}]",
+        queue, routerWeight, amrmWeight, headroomalpha);
+
+    checkSubClusterQueueWeightRatioValid(routerWeight);
+    checkSubClusterQueueWeightRatioValid(amrmWeight);
+    checkHeadRoomAlphaValid(headroomalpha);
+
+    FederationQueueWeight federationQueueWeight =
+        FederationQueueWeight.newInstance(routerWeight, amrmWeight, headroomalpha);
+    String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
+        YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
+    SaveFederationQueuePolicyRequest request = SaveFederationQueuePolicyRequest.newInstance(
+        queue, federationQueueWeight, policyManager);
+
+    return request;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf = getConf() == null ?
@@ -285,6 +409,10 @@ public class RouterCLI extends Configured implements Tool {
 
     if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
       return handleDeregisterSubCluster(args);
+    }
+
+    if (CMD_POLICY.equals(cmd)) {
+      return handlePolicy(args);
     }
 
     return EXIT_SUCCESS;

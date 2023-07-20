@@ -56,8 +56,15 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioning
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.junit.Assert;
@@ -66,6 +73,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -602,5 +610,94 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     assertNotNull(groups);
     assertEquals(1, groups.length);
     assertEquals("admin", groups[0]);
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyErrorRequest() throws Exception {
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class, "Missing SaveFederationQueuePolicy request.",
+        () -> interceptor.saveFederationQueuePolicy(null));
+
+    // federationQueueWeight is null.
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class, "FederationQueueWeight cannot be null.",
+        () -> SaveFederationQueuePolicyRequest.newInstance("root.a", null, "-"));
+
+    // queue is null
+    FederationQueueWeight federationQueueWeight =
+        FederationQueueWeight.newInstance("SC-1:0.7,SC-2:0.3", "SC-1:0.7,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request =
+        SaveFederationQueuePolicyRequest.newInstance("", federationQueueWeight, "-");
+    LambdaTestUtils.intercept(YarnException.class, "Missing Queue information.",
+        () -> interceptor.saveFederationQueuePolicy(request));
+
+    // routerWeight / amrmWeight
+    // The sum of the routerWeight is not equal to 1.
+    FederationQueueWeight federationQueueWeight2 = FederationQueueWeight.newInstance(
+        "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request2 =
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "-");
+    LambdaTestUtils.intercept(YarnException.class,
+        "The sum of ratios for all subClusters must be equal to 1.",
+        () -> interceptor.saveFederationQueuePolicy(request2));
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyRequest() throws IOException, YarnException {
+
+    // We design unit tests, including 2 SubCluster (SC-1, SC-2)
+    // Router Weight: SC-1=0.7,SC-2=0.3
+    // AMRM Weight: SC-1=0.6,SC-2=0.4
+    // headRoomAlpha: 1.0
+    String queue = "root.a";
+    String subCluster1 = "SC-1";
+    String subCluster2 = "SC-2";
+    String routerWeight = "SC-1:0.7,SC-2:0.3";
+    String amrmWeight = "SC-1:0.6,SC-2:0.4";
+    String headRoomAlpha = "1.0";
+
+    // Step1. Write FederationQueue information to stateStore.
+    String policyTypeName = WeightedLocalityPolicyManager.class.getCanonicalName();
+    FederationQueueWeight federationQueueWeight =
+        FederationQueueWeight.newInstance(routerWeight, amrmWeight, headRoomAlpha);
+    SaveFederationQueuePolicyRequest request =
+        SaveFederationQueuePolicyRequest.newInstance(queue, federationQueueWeight, policyTypeName);
+    SaveFederationQueuePolicyResponse response = interceptor.saveFederationQueuePolicy(request);
+    assertNotNull(response);
+    assertEquals("save policy success.", response.getMessage());
+
+    // Step2. We query Policy information from FederationStateStore.
+    FederationStateStoreFacade federationFacade = interceptor.getFederationFacade();
+    SubClusterPolicyConfiguration policyConfiguration =
+        federationFacade.getPolicyConfiguration(queue);
+    assertNotNull(policyConfiguration);
+    assertEquals(queue, policyConfiguration.getQueue());
+
+    ByteBuffer params = policyConfiguration.getParams();
+    assertNotNull(params);
+    WeightedPolicyInfo weightedPolicyInfo = WeightedPolicyInfo.fromByteBuffer(params);
+    assertNotNull(weightedPolicyInfo);
+
+    SubClusterIdInfo sc1 = new SubClusterIdInfo(subCluster1);
+    SubClusterIdInfo sc2 = new SubClusterIdInfo(subCluster2);
+
+    // Step3. We will compare the accuracy of routerPolicyWeights and amrmPolicyWeights.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = weightedPolicyInfo.getRouterPolicyWeights();
+    Float sc1Weight = routerPolicyWeights.get(sc1);
+    assertNotNull(sc1Weight);
+    assertEquals(0.7f, sc1Weight.floatValue(), 0.00001);
+
+    Float sc2Weight = routerPolicyWeights.get(sc2);
+    assertNotNull(sc2Weight);
+    assertEquals(0.3f, sc2Weight.floatValue(), 0.00001);
+
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights = weightedPolicyInfo.getAMRMPolicyWeights();
+    Float sc1AMRMWeight = amrmPolicyWeights.get(sc1);
+    assertNotNull(sc1AMRMWeight);
+    assertEquals(0.6f, sc1AMRMWeight.floatValue(), 0.00001);
+
+    Float sc2AMRMWeight = amrmPolicyWeights.get(sc2);
+    assertNotNull(sc2AMRMWeight);
+    assertEquals(0.4f, sc2AMRMWeight.floatValue(), 0.00001);
   }
 }

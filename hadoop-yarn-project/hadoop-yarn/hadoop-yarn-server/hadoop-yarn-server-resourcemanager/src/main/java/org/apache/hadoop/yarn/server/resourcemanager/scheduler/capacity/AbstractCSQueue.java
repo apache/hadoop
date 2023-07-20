@@ -518,21 +518,27 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       CapacityConfigType localType = CapacityConfigType.NONE;
 
-      // TODO: revisit this later
-      //  AbstractCSQueue.CapacityConfigType has only None, Percentage and Absolute mode
-      final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
-          getConfiguredCapacityVector(label).getDefinedCapacityTypes();
-      if (definedCapacityTypes.size() == 1) {
-        QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
-        if (Objects.requireNonNull(next) == PERCENTAGE) {
-          localType = CapacityConfigType.PERCENTAGE;
-        } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
-          localType = CapacityConfigType.ABSOLUTE_RESOURCE;
-        } else if (next == WEIGHT) {
+      if (queueContext.getConfiguration().isLegacyQueueMode()) {
+        localType = checkConfigTypeIsAbsoluteResource(
+                getQueuePath(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
+                : CapacityConfigType.PERCENTAGE;
+      } else {
+        // TODO: revisit this later
+        //  AbstractCSQueue.CapacityConfigType has only None, Percentage and Absolute mode
+        final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
+                getConfiguredCapacityVector(label).getDefinedCapacityTypes();
+        if (definedCapacityTypes.size() == 1) {
+          QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
+          if (Objects.requireNonNull(next) == PERCENTAGE) {
+            localType = CapacityConfigType.PERCENTAGE;
+          } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
+            localType = CapacityConfigType.ABSOLUTE_RESOURCE;
+          } else if (next == WEIGHT) {
+            localType = CapacityConfigType.PERCENTAGE;
+          }
+        } else { // Mixed type
           localType = CapacityConfigType.PERCENTAGE;
         }
-      } else { // Mixed type
-        localType = CapacityConfigType.PERCENTAGE;
       }
 
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {

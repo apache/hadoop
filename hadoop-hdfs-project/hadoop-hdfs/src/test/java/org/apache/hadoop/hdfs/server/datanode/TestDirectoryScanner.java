@@ -23,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -1302,6 +1303,24 @@ public class TestDirectoryScanner {
     StorageLocation sl = StorageLocation.parse(realBlkFile.toString());
     localReplica.updateWithReplica(sl);
     assertEquals(realBlkFile, localReplica.getBlockFile());
+  }
+
+  @Test(timeout = 60000)
+  public void testLastDirScannerFinishTimeIsUpdated() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 3L);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      final DataNode dn = cluster.getDataNodes().get(0);
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      long lastDirScannerFinishTime = fds.getLastDirScannerFinishTime();
+      dn.getDirectoryScanner().run();
+      assertNotEquals(lastDirScannerFinishTime, fds.getLastDirScannerFinishTime());
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   public long getRandomBlockId() {

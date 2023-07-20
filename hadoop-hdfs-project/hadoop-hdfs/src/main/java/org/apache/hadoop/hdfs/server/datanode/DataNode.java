@@ -77,6 +77,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
@@ -356,7 +360,9 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY,
               FS_DU_INTERVAL_KEY,
               FS_GETSPACEUSED_JITTER_KEY,
-              FS_GETSPACEUSED_CLASSNAME));
+              FS_GETSPACEUSED_CLASSNAME,
+              DFS_DISK_BALANCER_ENABLED,
+              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -706,6 +712,9 @@ public class DataNode extends ReconfigurableBase
     case FS_GETSPACEUSED_JITTER_KEY:
     case FS_GETSPACEUSED_CLASSNAME:
       return reconfDfsUsageParameters(property, newVal);
+    case DFS_DISK_BALANCER_ENABLED:
+    case DFS_DISK_BALANCER_PLAN_VALID_INTERVAL:
+      return reconfDiskBalancerParameters(property, newVal);
     default:
       break;
     }
@@ -947,6 +956,44 @@ public class DataNode extends ReconfigurableBase
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
     } catch (IllegalArgumentException | IOException | ClassNotFoundException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfDiskBalancerParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result = null;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      if (property.equals(DFS_DISK_BALANCER_ENABLED)) {
+        if (newVal != null && !newVal.equalsIgnoreCase("true")
+            && !newVal.equalsIgnoreCase("false")) {
+          throw new IllegalArgumentException("Not a valid Boolean value for " + property);
+        }
+        boolean enable = (newVal == null ? DFS_DISK_BALANCER_ENABLED_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        getDiskBalancer().setDiskBalancerEnabled(enable);
+        result = Boolean.toString(enable);
+      } else if (property.equals(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL)) {
+        if (newVal == null) {
+          // set to default
+          long defaultInterval = getConf().getTimeDuration(
+              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT,
+              TimeUnit.MILLISECONDS);
+          getDiskBalancer().setPlanValidityInterval(defaultInterval);
+          result = DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
+        } else {
+          long newInterval = getConf()
+              .getTimeDurationHelper(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+                  newVal, TimeUnit.MILLISECONDS);
+          getDiskBalancer().setPlanValidityInterval(newInterval);
+          result = newVal;
+        }
+      }
+      LOG.info("RECONFIGURE* changed {} to {}", property, result);
+      return result;
+    } catch (IllegalArgumentException | IOException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
   }
@@ -4201,7 +4248,8 @@ public class DataNode extends ReconfigurableBase
     return volumeInfoList;
   }
 
-  private DiskBalancer getDiskBalancer() throws IOException {
+  @VisibleForTesting
+  public DiskBalancer getDiskBalancer() throws IOException {
     if (this.diskBalancer == null) {
       throw new IOException("DiskBalancer is not initialized");
     }
