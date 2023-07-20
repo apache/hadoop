@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
-import java.util.HashSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -1931,14 +1930,10 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     Set<FederationNamespaceInfo> allNamespaces = namenodeResolver.getNamespaces();
     RemoteMethod method = new RemoteMethod("msync");
-    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = new HashSet<>();
-    for (FederationNamespaceInfo ns : allNamespaces) {
-      boolean isObserverReadEligible = rpcClient
-          .isNamespaceObserverReadEligible(ns.getNameserviceId());
-      if (isObserverReadEligible) {
-        namespacesEligibleForObserverReads.add(ns);
-      }
-    }
+    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = allNamespaces
+        .stream()
+        .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
+        .collect(Collectors.toSet());
     rpcClient.invokeConcurrent(namespacesEligibleForObserverReads, method);
   }
 
