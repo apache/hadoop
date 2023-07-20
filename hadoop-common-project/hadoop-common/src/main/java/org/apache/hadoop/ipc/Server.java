@@ -1303,7 +1303,8 @@ public abstract class Server {
         // effectively discarded since the wait count won't hit zero
         call = new RpcCall(this);
         setupResponse(call, status, RpcErrorCodeProto.ERROR_RPC_SERVER,
-            null, t.getClass().getName(), StringUtils.stringifyException(t), PBHelper.getReconstructParams(t));
+            null, t.getClass().getName(), StringUtils.stringifyException(t),
+            PBHelper.getReconstructParams(t));
       } else {
         setupResponse(call, call.responseParams.returnStatus,
             call.responseParams.detailedErr, call.rv,
@@ -1382,6 +1383,7 @@ public abstract class Server {
      * Holds response parameters. Defaults set to work for successful
      * invocations
      */
+    @SuppressWarnings("checkstyle:VisibilityModifier")
     private class ResponseParams {
       String errorClass = null;
       String error = null;
@@ -3526,7 +3528,9 @@ public abstract class Server {
       headerBuilder.setExceptionClassName(errorClass);
       headerBuilder.setErrorMsg(error);
       headerBuilder.setErrorDetail(erCode);
-      headerBuilder.setExceptionReconstructParams(paramsProto);
+      if (paramsProto != null) {
+        headerBuilder.setExceptionReconstructParams(paramsProto);
+      }
       setupResponse(call, headerBuilder.build(), null);
     }
   }

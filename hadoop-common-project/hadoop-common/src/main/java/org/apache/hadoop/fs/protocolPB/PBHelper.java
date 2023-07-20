@@ -138,7 +138,8 @@ public final class PBHelper {
 
   public static ExceptionReconstructParamsProto getReconstructParams(Throwable t) {
     if (t instanceof ReconstructableException && t instanceof IOException) {
-      ExceptionReconstructParamsProto.Builder builder = ExceptionReconstructParamsProto.newBuilder();
+      ExceptionReconstructParamsProto.Builder builder =
+          ExceptionReconstructParamsProto.newBuilder();
       for (String str: ((ReconstructableException<?>)t).getReconstructParams()) {
         builder.addParam(str);
       }

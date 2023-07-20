@@ -1238,7 +1238,8 @@ public class Client implements AutoCloseable {
           if (erCode == null) {
              LOG.warn("Detailed error code not set by server on rpc error");
           }
-          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode, paramsProto);
+          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode,
+              paramsProto);
           if (status == RpcStatusProto.ERROR) {
             final Call call = calls.remove(callId);
             call.setException(re);
