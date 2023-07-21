@@ -743,8 +743,8 @@ public class DataNode extends ReconfigurableBase
         getXferServer().setMaxXceiverCount(threads);
       } else if (property.equals(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY)) {
         Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
-        long bandwidthPerSec = (newVal == null ? DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT :
-            Long.parseLong(newVal));
+        long bandwidthPerSec = (newVal == null ?
+            DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT : Long.parseLong(newVal));
         DataTransferThrottler transferThrottler = null;
         if (bandwidthPerSec > 0) {
           transferThrottler = new DataTransferThrottler(bandwidthPerSec);
