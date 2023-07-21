@@ -759,12 +759,12 @@ public class TestLinuxContainerExecutor {
     ContainerSignalContext signalContext = new ContainerSignalContext.Builder().build();
     ContainerExecutionException testException =
         new ContainerExecutionException("exceptionWithoutExitCode");
-    
+
     doNothing().when(containerExecutor).verifyUsernamePattern(any());
     doThrow(testException)
         .when(containerRuntime)
         .signalContainer(any(ContainerRuntimeContext.class));
-    
+
     assertThrows(InterruptedIOException.class,
         () -> containerExecutor.signalContainer(signalContext));
   }

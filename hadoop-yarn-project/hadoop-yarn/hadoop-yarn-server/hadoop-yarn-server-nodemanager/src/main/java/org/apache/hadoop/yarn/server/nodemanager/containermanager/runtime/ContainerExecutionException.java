@@ -87,7 +87,7 @@ public class ContainerExecutionException extends YarnException {
   public String getErrorOutput() {
     return errorOutput;
   }
-  
+
   public static int getDefaultExitCode() {
     return EXIT_CODE_UNSET;
   }
