@@ -26,7 +26,7 @@ import java.io.IOException;
 public class ReconstructableExceptionTestImpl extends IOException
     implements ReconstructableException<ReconstructableExceptionTestImpl> {
 
-  private String field1;
+  private int field1;
   private String field2;
 
   public ReconstructableExceptionTestImpl(String msg) {
@@ -35,7 +35,7 @@ public class ReconstructableExceptionTestImpl extends IOException
 
   public ReconstructableExceptionTestImpl(String param1, String param2) {
     super(param1 + param2);
-    field1 = param1;
+    field1 = Integer.parseInt(param1);
     field2 = param2;
   }
 
@@ -46,10 +46,10 @@ public class ReconstructableExceptionTestImpl extends IOException
 
   @Override
   public String[] getReconstructParams() {
-    return new String[]{field1, field2};
+    return new String[]{String.valueOf(field1), field2};
   }
 
-  public String getField1() {
+  public int getField1() {
     return field1;
   }
 

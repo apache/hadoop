@@ -138,12 +138,16 @@ public final class PBHelper {
 
   public static ExceptionReconstructParamsProto getReconstructParams(Throwable t) {
     if (t instanceof ReconstructableException && t instanceof IOException) {
-      ExceptionReconstructParamsProto.Builder builder =
-          ExceptionReconstructParamsProto.newBuilder();
-      for (String str: ((ReconstructableException<?>)t).getReconstructParams()) {
-        builder.addParam(str);
+      try {
+        ExceptionReconstructParamsProto.Builder builder =
+            ExceptionReconstructParamsProto.newBuilder();
+        for (String str : ((ReconstructableException<?>) t).getReconstructParams()) {
+          builder.addParam(str);
+        }
+        return builder.build();
+      } catch (Exception e) {
+        // We might get NPE or other exceptions, we just return null here.
       }
-      return builder.build();
     }
     return null;
   }

@@ -57,7 +57,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for testing protocol buffer based RPC mechanism.
@@ -347,9 +346,9 @@ public class TestProtoBufRpc extends TestRpcBase {
           .isEqualTo(ReconstructableExceptionTestImpl.class.getName());
       IOException ex = re.unwrapRemoteException(ReconstructableExceptionTestImpl.class);
       assertThat(ex).isInstanceOf(ReconstructableExceptionTestImpl.class);
-      assertEquals("field1", ((ReconstructableExceptionTestImpl) ex).getField1());
+      assertEquals(1, ((ReconstructableExceptionTestImpl) ex).getField1());
       assertEquals("field2", ((ReconstructableExceptionTestImpl) ex).getField2());
-      assertThat(re.getMessage()).contains("field1field2");
+      assertThat(re.getMessage()).contains("1field2");
       assertThat(re.getErrorCode())
           .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
     }
