@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 @SuppressWarnings({"checkstyle:visibilitymodifier", "checkstyle:hiddenfield"})
 public final class FSQueueConverterBuilder {
   FSConfigToCSConfigRuleHandler ruleHandler;
-  CapacitySchedulerConfiguration capacitySchedulerConfig;
+  CapacitySchedulerConfiguration capacitySchedulerConfig; 
   boolean preemptionEnabled;
   boolean sizeBasedWeight;
   Resource clusterResource;
