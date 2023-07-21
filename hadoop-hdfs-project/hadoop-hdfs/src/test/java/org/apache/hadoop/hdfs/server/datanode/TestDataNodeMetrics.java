@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +72,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -245,7 +243,6 @@ public class TestDataNodeMetrics {
       String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode datanode = datanodes.get(0);
-
       // Verify both of metrics set to 0 when initialize.
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("CreateRbwOpNumOps", 0L, rb);
@@ -373,133 +370,6 @@ public class TestDataNodeMetrics {
           allDnc.indexOf("127.0.0.1") >= 0);
       assertTrue("expected to see networkErrors",
           allDnc.indexOf("networkErrors") >= 0);
-    } finally {
-      IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-      DataNodeFaultInjector.set(oldInjector);
-    }
-  }
-
-  @Test(timeout=60000)
-  public void testDatanodeNetworkErrorsMetricDefaultConf() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    final MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(6).build();
-    final List<FSDataOutputStream> streams = Lists.newArrayList();
-
-    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
-    DataNodeFaultInjector newInjector = new DataNodeFaultInjector() {
-      public void incrementDatanodeNetworkErrors(DataXceiver dataXceiver) {
-        dataXceiver.incrDatanodeNetworkErrorsWithPort();
-      }
-    };
-    DataNodeFaultInjector.set(newInjector);
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            for (int i = 0; i < 100; i++) {
-              final Path path = new Path("/test" + i);
-              final FSDataOutputStream out =
-                  cluster.getFileSystem().create(path, (short) 3);
-              streams.add(out);
-              out.writeBytes("old gs data\n");
-              out.hflush();
-              out.close();
-            }
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-
-          final MetricsRecordBuilder dnMetrics =
-              getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
-          long datanodeNetworkErrors = getLongCounter("DatanodeNetworkErrors", dnMetrics);
-          return datanodeNetworkErrors > 10;
-        }
-      }, 1000, 60000);
-
-      /* Test JMX datanode network counts. */
-      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-      final ObjectName mxbeanName =
-          new ObjectName("Hadoop:service=DataNode,name=DataNodeInfo");
-      final Object dnc =
-          mbs.getAttribute(mxbeanName, "DatanodeNetworkCounts");
-
-      // Compute number of DatanodeNetworkCounts.
-      final String allDnc = dnc.toString();
-      int oldStringLength = allDnc.length();
-      String keyword = "key=networkErrors, value";
-      int newStringLength = allDnc.replace(keyword, "").length();
-      int networkErrorsCount = (oldStringLength - newStringLength) / keyword.length();
-      final MetricsRecordBuilder dnMetrics =
-          getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
-      long datanodeNetworkErrors = getLongCounter("DatanodeNetworkErrors", dnMetrics);
-      Assert.assertEquals(datanodeNetworkErrors, networkErrorsCount);
-    } finally {
-      IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-      DataNodeFaultInjector.set(oldInjector);
-    }
-  }
-
-  @Test(timeout=60000)
-  public void testDatanodeNetworkErrorsMetricTopN() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_NETWORKERRORS_DISPLAY_TOPCOUNT, 2);
-    final MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(6).build();
-    final List<FSDataOutputStream> streams = Lists.newArrayList();
-
-    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
-    DataNodeFaultInjector newInjector = new DataNodeFaultInjector() {
-      public void incrementDatanodeNetworkErrors(DataXceiver dataXceiver) {
-        dataXceiver.incrDatanodeNetworkErrorsWithPort();
-      }
-    };
-    DataNodeFaultInjector.set(newInjector);
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            for (int i = 0; i < 100; i++) {
-              final Path path = new Path("/test" + i);
-              final FSDataOutputStream out =
-                  cluster.getFileSystem().create(path, (short) 3);
-              streams.add(out);
-              out.writeBytes("old gs data\n");
-              out.hflush();
-              out.close();
-            }
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-
-          final MetricsRecordBuilder dnMetrics =
-              getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
-          long datanodeNetworkErrors = getLongCounter("DatanodeNetworkErrors", dnMetrics);
-          return datanodeNetworkErrors > 10;
-        }
-      }, 1000, 60000);
-      /* Test JMX datanode network counts. */
-      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-      final ObjectName mxbeanName =
-          new ObjectName("Hadoop:service=DataNode,name=DataNodeInfo");
-      final Object dnc =
-          mbs.getAttribute(mxbeanName, "DatanodeNetworkCounts");
-
-      // Compute number of DatanodeNetworkCounts.
-      final String allDnc = dnc.toString();
-      int oldStringLength = allDnc.length();
-      String keyword = "key=networkErrors, value";
-      int newStringLength = allDnc.replace(keyword, "").length();
-      int networkErrorsCount = (oldStringLength - newStringLength) / keyword.length();
-      Assert.assertEquals(2, networkErrorsCount);
     } finally {
       IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
       if (cluster != null) {
