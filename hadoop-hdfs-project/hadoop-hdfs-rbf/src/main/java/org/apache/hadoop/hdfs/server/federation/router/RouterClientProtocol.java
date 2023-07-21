@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
-import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -94,9 +93,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,10 +139,6 @@ public class RouterClientProtocol implements ClientProtocol {
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
   private final long serverDefaultsValidityPeriod;
-
-  /** Caching the set of nameservices that are eligible for observer reads. */
-  private final LoadingCache<Set<FederationNamespaceInfo>, Set<FederationNamespaceInfo>>
-      crsNameservicesCache;
 
   /** If it requires response from all subclusters. */
   private final boolean allowPartialList;
@@ -202,18 +194,6 @@ public class RouterClientProtocol implements ClientProtocol {
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
     this.rbfRename = new RouterFederationRename(rpcServer, conf);
-
-    this.crsNameservicesCache = CacheBuilder.newBuilder()
-        .maximumSize(1)
-        .build(new CacheLoader<Set<FederationNamespaceInfo>,
-                    Set<FederationNamespaceInfo>>() {
-          @Override
-          public Set<FederationNamespaceInfo> load(Set<FederationNamespaceInfo> allNameservices) {
-            return allNameservices.stream()
-                .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
-                .collect(Collectors.toSet());
-          }
-        });
   }
 
   @Override
@@ -1949,31 +1929,13 @@ public class RouterClientProtocol implements ClientProtocol {
   public void msync() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     // Only msync to nameservices with observer reads enabled.
-    Set<FederationNamespaceInfo> nss = getNameservicesEligibleForObserverReads();
+    Set<FederationNamespaceInfo> allNamespaces = namenodeResolver.getNamespaces();
     RemoteMethod method = new RemoteMethod("msync");
-    rpcClient.invokeConcurrent(nss, method);
-  }
-
-  /**
-   * Determines which nameservices have observer reads enabled.
-   * @return A set of nameservices that are eligible for observer reads.
-   * @throws IOException If there is an error getting the nameservices.
-   */
-  private Set<FederationNamespaceInfo> getNameservicesEligibleForObserverReads()
-      throws IOException {
-    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads;
-    try {
-      namespacesEligibleForObserverReads = crsNameservicesCache
-          .get(namenodeResolver.getNamespaces());
-    } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof IOException) {
-        throw (IOException) cause;
-      } else {
-        throw new IOException(cause);
-      }
-    }
-    return namespacesEligibleForObserverReads;
+    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = allNamespaces
+        .stream()
+        .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
+        .collect(Collectors.toSet());
+    rpcClient.invokeConcurrent(namespacesEligibleForObserverReads, method);
   }
 
   @Override
