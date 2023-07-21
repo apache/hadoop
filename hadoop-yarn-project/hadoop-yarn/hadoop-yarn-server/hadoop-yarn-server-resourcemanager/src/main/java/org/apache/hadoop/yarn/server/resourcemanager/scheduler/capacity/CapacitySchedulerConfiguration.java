@@ -506,7 +506,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public float getMaximumApplicationMasterResourcePercent() {
-    return getFloat(PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX,
+    return getFloat(MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
   }
 
@@ -1226,14 +1226,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configurationProperties = new ConfigurationProperties(props);
   }
 
-  public void setQueueMaximumAllocationMb(String queue, String value) {
+  public void setQueueMaximumAllocationMb(String queue, int value) {
     String queuePrefix = getQueuePrefix(queue);
-    set(queuePrefix + MAXIMUM_ALLOCATION_MB, value);
+    setInt(queuePrefix + MAXIMUM_ALLOCATION_MB, value);
   }
 
-  public void setQueueMaximumAllocationVcores(String queue, String value) {
+  public void setQueueMaximumAllocationVcores(String queue, int value) {
     String queuePrefix = getQueuePrefix(queue);
-    set(queuePrefix + MAXIMUM_ALLOCATION_VCORES, value);
+    setInt(queuePrefix + MAXIMUM_ALLOCATION_VCORES, value);
   }
 
   public long getQueueMaximumAllocationMb(String queue) {
@@ -1846,17 +1846,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
-  public void setDefaultMaxParallelAppsPerQueue(String value) {
-    set(PREFIX + MAX_PARALLEL_APPLICATIONS, value);
+  public void setDefaultMaxParallelApps(int value) {
+    setInt(PREFIX + MAX_PARALLEL_APPLICATIONS, value);
   }
 
-  public Integer getDefaultMaxParallelAppsPerQueue() {
+  public Integer getDefaultMaxParallelApps() {
     return getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
         DEFAULT_MAX_PARALLEL_APPLICATIONS);
   }
 
-  public void setDefaultMaxParallelAppsPerUser(String value) {
-    set(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS, value);
+  public void setDefaultMaxParallelAppsPerUser(int value) {
+    setInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS, value);
   }
 
   public Integer getDefaultMaxParallelAppsPerUser() {
@@ -1887,7 +1887,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
     return (maxParallelAppsForQueue != null) ?
         Integer.valueOf(maxParallelAppsForQueue)
-        : getDefaultMaxParallelAppsPerQueue();
+        : getDefaultMaxParallelApps();
   }
 
   public boolean getAllowZeroCapacitySum(String queue) {

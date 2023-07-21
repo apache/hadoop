@@ -374,15 +374,15 @@ public class FSConfigToCSConfigConverter {
 
   private void emitDefaultQueueMaxParallelApplications() {
     if (queueMaxAppsDefault != Integer.MAX_VALUE) {
-      capacitySchedulerConfig.setDefaultMaxParallelAppsPerQueue(
-          String.valueOf(queueMaxAppsDefault));
+      capacitySchedulerConfig.setDefaultMaxParallelApps(
+          queueMaxAppsDefault);
     }
   }
 
   private void emitDefaultUserMaxParallelApplications() {
     if (userMaxAppsDefault != Integer.MAX_VALUE) {
       capacitySchedulerConfig.setDefaultMaxParallelAppsPerUser(
-          String.valueOf(userMaxAppsDefault));
+          userMaxAppsDefault);
     }
   }
 

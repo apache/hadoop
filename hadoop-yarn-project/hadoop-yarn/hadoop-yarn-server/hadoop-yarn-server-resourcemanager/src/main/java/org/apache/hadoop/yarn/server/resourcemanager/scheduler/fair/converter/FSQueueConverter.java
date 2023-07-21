@@ -16,10 +16,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -179,7 +176,7 @@ public class FSQueueConverter {
     Resource maxAllocation = queue.getMaximumContainerAllocation();
 
     if (isNotUnboundedResource(maxAllocation)) {
-      long parentMaxVcores = Integer.MIN_VALUE;
+      int parentMaxVcores = Integer.MIN_VALUE;
       long parentMaxMemory = Integer.MIN_VALUE;
 
       if (queue.getParent() != null) {
@@ -191,16 +188,16 @@ public class FSQueueConverter {
         }
       }
 
-      long maxVcores = maxAllocation.getVirtualCores();
+      int maxVcores = maxAllocation.getVirtualCores();
       long maxMemory = maxAllocation.getMemorySize();
 
       // only emit max allocation if it differs from the parent's setting
       if (maxVcores != parentMaxVcores || maxMemory != parentMaxMemory) {
         capacitySchedulerConfig.setQueueMaximumAllocationMb(
-            queueName, String.valueOf(maxMemory));
+            queueName, (int) maxMemory);
 
         capacitySchedulerConfig.setQueueMaximumAllocationVcores(
-            queueName, String.valueOf(maxVcores));
+            queueName, maxVcores);
       }
     }
   }

@@ -282,7 +282,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Default max parallel apps", 15,
-        conf.getDefaultMaxParallelAppsPerQueue(), 0);
+        conf.getDefaultMaxParallelApps(), 0);
   }
 
   @Test
