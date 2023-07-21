@@ -250,7 +250,7 @@ public class TestWebApp {
   @Test
   void testCustomRoutes() throws Exception {
     WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
+        WebApps.$for("test", TestWebApp.class, this, "ws1").start(new WebApp() {
           @Override
           public void setup() {
 //            bind(MyTestJAXBContextResolver.class);
@@ -269,7 +269,7 @@ public class TestWebApp {
             ResourceConfig resourceConfig = new ResourceConfig();
             resourceConfig.register(MyTestObjectWriterContextResolver.class);
             resourceConfig.register(MyTestWebService.class);
-            server.addJerseyResourceConfig(resourceConfig, "/ws1/v1/test/*", new HashMap<>());
+            server.addJerseyResourceConfig(resourceConfig, "/ws/v1/test/*", new HashMap<>());
           }
         });
     String baseUrl = baseUrl(app);
@@ -282,8 +282,8 @@ public class TestWebApp {
       assertEquals("default1", getContent(baseUrl + "test/foo/1").trim());
       assertEquals("default2", getContent(baseUrl + "test/foo/bar/2").trim());
       assertEquals(404, getResponseCode(baseUrl + "test/goo"));
-      assertEquals(200, getResponseCode(baseUrl + "ws1/v1/test"));
-      assertTrue(getContent(baseUrl + "ws1/v1/test").contains("myInfo"));
+      assertEquals(200, getResponseCode(baseUrl + "ws/v1/test"));
+      assertTrue(getContent(baseUrl + "ws/v1/test").contains("myInfo"));
     } finally {
       app.stop();
     }
