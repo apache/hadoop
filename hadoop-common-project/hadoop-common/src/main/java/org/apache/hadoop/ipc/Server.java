@@ -96,7 +96,7 @@ import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
-import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructParamsProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcKindProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -1277,7 +1277,7 @@ public abstract class Server {
       }
       responseParams.errorClass = t.getClass().getName();
       responseParams.error = StringUtils.stringifyException(t);
-      responseParams.exceptionReconstructParams = PBHelper.getReconstructParams(t);
+      responseParams.exceptionReconstruct = PBHelper.getReconstructProto(t);
       // Remove redundant error class name from the beginning of the
       // stack trace
       String exceptionHdr = responseParams.errorClass + ": ";
@@ -1304,13 +1304,13 @@ public abstract class Server {
         call = new RpcCall(this);
         setupResponse(call, status, RpcErrorCodeProto.ERROR_RPC_SERVER,
             null, t.getClass().getName(), StringUtils.stringifyException(t),
-            PBHelper.getReconstructParams(t));
+            PBHelper.getReconstructProto(t));
       } else {
         setupResponse(call, call.responseParams.returnStatus,
             call.responseParams.detailedErr, call.rv,
             call.responseParams.errorClass,
             call.responseParams.error,
-            call.responseParams.exceptionReconstructParams);
+            call.responseParams.exceptionReconstruct);
       }
       connection.sendResponse(call);
     }
@@ -1365,7 +1365,7 @@ public abstract class Server {
           setupResponse(this, responseParams.returnStatus,
               responseParams.detailedErr,
               null, responseParams.errorClass, responseParams.error,
-              responseParams.exceptionReconstructParams);
+              responseParams.exceptionReconstruct);
         } catch (IOException e) {
           // For synchronous calls, application code is done once it has
           // returned from a method. It does not expect to receive an error.
@@ -1389,8 +1389,7 @@ public abstract class Server {
       String error = null;
       RpcErrorCodeProto detailedErr = null;
       RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
-
-      ExceptionReconstructParamsProto exceptionReconstructParams = null;
+      ExceptionReconstructProto exceptionReconstruct = null;
     }
 
     @Override
@@ -2427,7 +2426,7 @@ public abstract class Server {
     private void doSaslReply(Exception ioe) throws IOException {
       setupResponse(authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
-          null, ioe.getClass().getName(), ioe.getMessage(), PBHelper.getReconstructParams(ioe));
+          null, ioe.getClass().getName(), ioe.getMessage(), PBHelper.getReconstructProto(ioe));
       sendResponse(authFailedCall);
     }
 
@@ -2814,7 +2813,7 @@ public abstract class Server {
         final RpcCall call = new RpcCall(this, callId, retry);
         setupResponse(call,
             rse.getRpcStatusProto(), rse.getRpcErrorCodeProto(), null,
-            t.getClass().getName(), t.getMessage(), PBHelper.getReconstructParams(t));
+            t.getClass().getName(), t.getMessage(), PBHelper.getReconstructProto(t));
         sendResponse(call);
       }
     }
@@ -3492,7 +3491,7 @@ public abstract class Server {
    */
   private void setupResponse(
       RpcCall call, RpcStatusProto status, RpcErrorCodeProto erCode,
-      Writable rv, String errorClass, String error, ExceptionReconstructParamsProto paramsProto)
+      Writable rv, String errorClass, String error, ExceptionReconstructProto paramsProto)
           throws IOException {
     // fatal responses will cause the reader to close the connection.
     if (status == RpcStatusProto.FATAL) {
@@ -3521,7 +3520,7 @@ public abstract class Server {
         setupResponse(call, RpcStatusProto.ERROR,
             RpcErrorCodeProto.ERROR_SERIALIZING_RESPONSE,
             null, t.getClass().getName(),
-            StringUtils.stringifyException(t), PBHelper.getReconstructParams(t));
+            StringUtils.stringifyException(t), PBHelper.getReconstructProto(t));
         return;
       }
     } else { // Rpc Failure
@@ -3529,7 +3528,7 @@ public abstract class Server {
       headerBuilder.setErrorMsg(error);
       headerBuilder.setErrorDetail(erCode);
       if (paramsProto != null) {
-        headerBuilder.setExceptionReconstructParams(paramsProto);
+        headerBuilder.setExceptionReconstruct(paramsProto);
       }
       setupResponse(call, headerBuilder.build(), null);
     }

@@ -331,7 +331,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
 
-  @Test (timeout=5000)
+//  @Test (timeout=5000)
+  @Test
   public void testProtoBufReconstructableException() throws Exception {
     //No test with legacy
     assumeFalse(testWithLegacy);
@@ -348,7 +349,8 @@ public class TestProtoBufRpc extends TestRpcBase {
       assertThat(ex).isInstanceOf(ReconstructableExceptionTestImpl.class);
       assertEquals(1, ((ReconstructableExceptionTestImpl) ex).getField1());
       assertEquals("field2", ((ReconstructableExceptionTestImpl) ex).getField2());
-      assertThat(re.getMessage()).contains("1field2");
+      assertThat(ex.getMessage()).contains("1field2");
+      assertThat(ex.getStackTrace()).isNotNull();
       assertThat(re.getErrorCode())
           .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
     }

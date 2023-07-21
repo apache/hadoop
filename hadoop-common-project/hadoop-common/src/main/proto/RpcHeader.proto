@@ -166,7 +166,7 @@ message RpcResponseHeaderProto {
   // forward them to the router using RpcRequestHeaderProto.routerFederatedState.
   optional bytes routerFederatedState = 10;
   // Used to rebuild exceptions on client side.
-  optional ExceptionReconstructParamsProto exceptionReconstructParams = 11;
+  optional ExceptionReconstructProto exceptionReconstruct = 11;
 }
 
 message RpcSaslProto {
@@ -193,6 +193,7 @@ message RpcSaslProto {
   repeated SaslAuth auths  = 4;
 }
 
-message ExceptionReconstructParamsProto {
+message ExceptionReconstructProto {
   repeated string param = 1;
+  optional bytes stacktrace = 2;
 }
