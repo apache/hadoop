@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.junit.Rule;
@@ -41,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.junit.Assert.*;
 
@@ -98,7 +98,7 @@ public class ITestS3AAWSCredentialsProvider {
     try {
       createFailingFS(conf);
     } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(CONSTRUCTOR_EXCEPTION, e);
+      GenericTestUtils.assertExceptionContains(InstantiationIOException.CONSTRUCTOR_EXCEPTION, e);
     }
   }
 

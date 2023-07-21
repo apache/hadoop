@@ -464,6 +464,16 @@
                     <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict AWS v1 imports to adapter code</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.adapter.V1ToV2AwsCredentialProviderAdapter</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>com.amazonaws.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
               </rules>
             </configuration>
           </execution>
@@ -497,7 +507,7 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>

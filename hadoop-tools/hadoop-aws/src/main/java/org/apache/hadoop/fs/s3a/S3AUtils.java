@@ -75,6 +75,10 @@ import java.util.concurrent.ExecutionException;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.instantiationException;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unsupportedConstructor;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -89,9 +93,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 public final class S3AUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AUtils.class);
-  static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
-  static final String INSTANTIATION_EXCEPTION
-      = "instantiation exception";
 
   static final String ENDPOINT_KEY = "Endpoint";
 
@@ -562,15 +563,57 @@ public final class S3AUtils {
    * @return instance of the specified class
    * @throws IOException on any problem
    */
-  @SuppressWarnings("unchecked")
   public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
-      Configuration conf, @Nullable URI uri, Class<?> interfaceImplemented, String methodName,
+      Configuration conf, @Nullable URI uri, Class<InstanceT> interfaceImplemented, String methodName,
       String configKey) throws IOException {
 
     String className = instanceClass.getName();
+    return getInstanceFromReflection(className,conf, uri ,interfaceImplemented, methodName,configKey);
+  }
 
+  /***
+   * Creates an instance of a class using reflection. The
+   * class must implement one of the following means of construction, which are
+   * attempted in order:
+   *
+   * <ol>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting
+   *    org.apache.hadoop.conf.Configuration</li>
+   * <li>a public static method named as per methodName, that accepts no
+   *    arguments and returns an instance of
+   *    specified type, or</li>
+   * <li>a public default constructor.</li>
+   * </ol>
+   *
+   * @param className name of class for which instance is to be created
+   * @param conf configuration
+   * @param uri URI of the FS
+   * @param interfaceImplemented interface that this class implements
+   * @param methodName name of factory method to be invoked
+   * @param configKey config key under which this class is specified
+   * @param <InstanceT> Instance of class
+   * @return instance of the specified class
+   * @throws IOException on any problem
+   */
+  @SuppressWarnings("unchecked")
+  public static <InstanceT> InstanceT getInstanceFromReflection(String className,
+      Configuration conf,
+      @Nullable URI uri,
+      Class<? extends InstanceT> interfaceImplemented,
+      String methodName,
+      String configKey) throws IOException {
     try {
-      Constructor cons = null;
+      Class<?> instanceClass = S3AUtils.class.getClassLoader().loadClass(className);
+      if (Modifier.isAbstract(instanceClass.getModifiers())) {
+        throw isAbstract(className, configKey);
+      }
+      if (!interfaceImplemented.isAssignableFrom(instanceClass)) {
+        throw isNotInstanceOf(className, interfaceImplemented.getName(), configKey);
+
+      }
+      Constructor cons;
       if (conf != null) {
         // new X(uri, conf)
         cons = getConstructor(instanceClass, URI.class, Configuration.class);
@@ -598,10 +641,7 @@ public final class S3AUtils {
       }
 
       // no supported constructor or factory method found
-      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-          + ".  A class specified in %s must provide a public constructor "
-          + "of a supported signature, or a public factory method named "
-          + "create that accepts no arguments.", className, configKey));
+      throw unsupportedConstructor(className, configKey);
     } catch (InvocationTargetException e) {
       Throwable targetException = e.getTargetException();
       if (targetException == null) {
@@ -613,13 +653,13 @@ public final class S3AUtils {
         throw translateException("Instantiate " + className, "", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + targetException,
-            targetException);
+        throw instantiationException(className , configKey,  targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + e, e);
+      throw instantiationException(className , configKey, e);
     }
+
   }
 
 

@@ -230,7 +230,7 @@ import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.INITIALIZE_SPAN;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderSet;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderList;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
@@ -952,7 +952,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       uaSuffix = tokens.getUserAgentField();
     } else {
       // DT support is disabled, so create the normal credential chain
-      credentials = createAWSCredentialProviderSet(name, conf);
+      credentials = createAWSCredentialProviderList(name, conf);
     }
     LOG.debug("Using credential provider {}", credentials);
     Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(

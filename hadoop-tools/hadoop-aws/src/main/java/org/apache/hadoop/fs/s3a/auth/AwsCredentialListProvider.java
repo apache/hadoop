@@ -19,18 +19,18 @@
 package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
-import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -39,31 +39,30 @@ import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsPro
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider;
+import org.apache.hadoop.fs.s3a.adapter.AwsV1BindingSupport;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 
-import static org.apache.hadoop.fs.s3a.Constants.AWS_AUTH_CLASS_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.adapter.AwsV1BindingSupport.isAwsV1SdkAvailable;
 
 /**
  * This class provides methods to create the list of AWS credential providers.
  */
 public final class AwsCredentialListProvider {
 
-  private AwsCredentialListProvider() {
-  }
-
   private static final Logger LOG = LoggerFactory.getLogger(AwsCredentialListProvider.class);
 
-  public static final String NOT_AWS_PROVIDER =
-      "does not implement AWSCredentialsProvider";
-  public static final String NOT_AWS_V2_PROVIDER =
-      "does not implement AwsCredentialsProvider";
-  public static final String ABSTRACT_PROVIDER =
-      "is abstract and therefore cannot be created";
+  /**
+   * A v1 entry has been remapped. warn once about this and then shut up.
+   */
+  private static final LogExactlyOnce LOG_REMAPPED_ENTRY = new LogExactlyOnce(LOG);
 
   /**
    * Error message when the AWS provider list built up contains a forbidden
@@ -84,6 +83,24 @@ public final class AwsCredentialListProvider {
           EnvironmentVariableCredentialsProvider.class,
           IAMInstanceCredentialsProvider.class));
 
+  public static final String V1_ENVIRONMENT_CREDENTIALS =
+      "com.amazonaws.auth.EnvironmentVariableCredentialsProvider";
+
+  public static final String V1_EC2_CONTAINER_CREDENTIALS =
+      "com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper";
+
+  public static final String V1_EC2_IAM_CREDENTIALS =
+      "com.amazonaws.auth.InstanceProfileCredentialsProvider";
+
+  public static final String V1_ANONYMOUS_CREDENTIALS =
+      "com.amazonaws.auth.AnonymousAWSCredentials";
+
+  public static final String V2_EC2_IAM_CREDENTIALS =
+      IAMInstanceCredentialsProvider.class.getName();
+
+  public static final String V2_ENVIRONMENT_CREDENTIALS =
+      EnvironmentVariableCredentialsProvider.class.getName();
+
   /**
    * Create the AWS credentials from the providers, the URI and
    * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
@@ -93,7 +110,7 @@ public final class AwsCredentialListProvider {
    * @throws IOException Problems loading the providers (including reading
    * secrets from credential files).
    */
-  public static AWSCredentialProviderList createAWSCredentialProviderSet(
+  public static AWSCredentialProviderList createAWSCredentialProviderList(
       @Nullable URI binding,
       Configuration conf) throws IOException {
     // this will reject any user:secret entries in the URI
@@ -115,32 +132,36 @@ public final class AwsCredentialListProvider {
    * @param conf configuration
    * @param key key
    * @param defaultValue list of default values
-   * @return the list of classes, possibly empty
+   * @return the list of classes, empty if the default list is empty and
+   * there was no match for the key in the configuration.
    * @throws IOException on a failure to load the list.
    */
-  private static List<Class<?>> loadAWSProviderClasses(Configuration conf,
+  private static Collection<String> loadAWSProviderClasses(Configuration conf,
       String key,
       Class<?>... defaultValue) throws IOException {
-    try {
-      return Arrays.asList(conf.getClasses(key, defaultValue));
-    } catch (RuntimeException e) {
-      Throwable c = e.getCause() != null ? e.getCause() : e;
-      throw new IOException("From option " + key + ' ' + c, c);
+    final Collection<String> classnames = conf.getTrimmedStringCollection(key);
+    if (classnames.isEmpty()) {
+      // empty list; return the defaults
+      return Arrays.stream(defaultValue).map(c -> c.getName()).collect(Collectors.toList());
+    } else {
+      return classnames;
     }
   }
 
   /**
    * Maps V1 credential providers to either their equivalent SDK V2 class or hadoop provider.
    */
-  private static Map<String, Class> initCredentialProvidersMap() {
-    Map<String, Class> v1v2CredentialProviderMap = new HashMap<>();
+  private static Map<String, String> initCredentialProvidersMap() {
+    Map<String, String> v1v2CredentialProviderMap = new HashMap<>();
 
-    v1v2CredentialProviderMap.put("EnvironmentVariableCredentialsProvider",
-        EnvironmentVariableCredentialsProvider.class);
-    v1v2CredentialProviderMap.put("EC2ContainerCredentialsProviderWrapper",
-        IAMInstanceCredentialsProvider.class);
-    v1v2CredentialProviderMap.put("InstanceProfileCredentialsProvider",
-        IAMInstanceCredentialsProvider.class);
+    v1v2CredentialProviderMap.put(V1_ENVIRONMENT_CREDENTIALS,
+        V2_ENVIRONMENT_CREDENTIALS);
+    v1v2CredentialProviderMap.put(V1_EC2_CONTAINER_CREDENTIALS,
+        V2_EC2_IAM_CREDENTIALS);
+    v1v2CredentialProviderMap.put(V1_EC2_IAM_CREDENTIALS,
+        V2_EC2_IAM_CREDENTIALS);
+    v1v2CredentialProviderMap.put(V1_ANONYMOUS_CREDENTIALS,
+        AnonymousAWSCredentialsProvider.NAME);
 
     return v1v2CredentialProviderMap;
   }
@@ -164,120 +185,88 @@ public final class AwsCredentialListProvider {
       final Set<Class<?>> forbidden) throws IOException {
 
     // build up the base provider
-    List<Class<?>> awsClasses = loadAWSProviderClasses(conf,
+    Collection<String> awsClasses = loadAWSProviderClasses(conf,
         key,
         defaultValues.toArray(new Class[defaultValues.size()]));
 
-    Map<String, Class> v1v2CredentialProviderMap = initCredentialProvidersMap();
-    // and if the list is empty, switch back to the defaults.
-    // this is to address the issue that configuration.getClasses()
-    // doesn't return the default if the config value is just whitespace.
-    if (awsClasses.isEmpty()) {
-      awsClasses = defaultValues;
-    }
-    // iterate through, checking for blacklists and then instantiating
+    Map<String, String> v1v2CredentialProviderMap = initCredentialProvidersMap();
+
+    // iterate through, checking for forbidden values and then instantiating
     // each provider
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
-    for (Class<?> aClass : awsClasses) {
+    for (String className : awsClasses) {
+      if (v1v2CredentialProviderMap.containsKey(className)) {
+        // mapping
 
-      if (forbidden.contains(aClass)) {
+        final String mapped = v1v2CredentialProviderMap.get(className);
+        LOG_REMAPPED_ENTRY.warn("Credentials option {} contains AWS v1 SDK entry {}; mapping to {}",
+            key, className, mapped);
+        className = mapped;
+      }
+      // now scan the forbidden list. doing this after any mappings ensures the v1 names
+      // are also blocked
+      if (forbidden.contains(className)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
-            + " in option " + key + ": " + aClass);
+            + " in option " + key + ": " + className);
       }
 
-      if (v1v2CredentialProviderMap.containsKey(aClass.getSimpleName()) &&
-          aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)){
-        providers.add(createAWSV2CredentialProvider(conf,
-            v1v2CredentialProviderMap.get(aClass.getSimpleName()), binding));
-      } else if (AWSCredentialsProvider.class.isAssignableFrom(aClass)) {
-        providers.add(createAWSV1CredentialProvider(conf,
-            aClass, binding));
-      } else {
-        providers.add(createAWSV2CredentialProvider(conf, aClass, binding));
+      try {
+        providers.add(createAWSV2CredentialProvider(conf, className, binding));
+      } catch (InstantiationIOException e) {
+        // failed to create a v2; try to see if it is a v1
+        if (e.getKind() == InstantiationIOException.Kind.IsNotImplementation) {
+          if (isAwsV1SdkAvailable()) {
+            // try to create v1
+            LOG.debug("Failed to create {} as v2 credentials, trying to instantiate as v1",
+                className);
+            try {
+            final AwsCredentialsProvider provider =
+                AwsV1BindingSupport.createAWSV1CredentialProvider(conf, className, binding);
+            LOG_REMAPPED_ENTRY.warn("Credentials option {} contains AWS v1 SDK entry {}",
+                key, className);
+            providers.add(provider);
+            } catch (InstantiationIOException ex) {
+              // if it is something other than non-implementation, throw.
+              // that way, non-impl messages are about v2 not v1 in the error
+              if (ex.getKind() != InstantiationIOException.Kind.IsNotImplementation) {
+                throw ex;
+              } else {
+                throw e;
+              }
+            }
+          } else {
+            LOG.warn("Failed to instantiate {} as AWS v2 SDK credential provider;"
+                + " AWS V1 SDK is not on the classpth so unable to attempt to"
+                + " instantiate as a v1 provider", className, e);
+            throw e;
+          }
+        } else {
+          // any other problem
+          throw e;
+
+        }
       }
 
     }
     return providers;
   }
 
+
   /**
-   * Create an AWS credential provider from its class by using reflection.  The
-   * class must implement one of the following means of construction, which are
-   * attempted in order:
-   *
-   * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named getInstance that accepts no
-   *    arguments and returns an instance of
-   *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
-   * <li>a public default constructor.</li>
-   * </ol>
-   *
+   * Create an AWS v2 credential provider from its class by using reflection.
    * @param conf configuration
-   * @param credClass credential class
+   * @param className credential class name
    * @param uri URI of the FS
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
-   */
-  private static AWSCredentialsProvider createAWSV1CredentialProvider(Configuration conf,
-      Class<?> credClass, @Nullable URI uri) throws IOException {
-    AWSCredentialsProvider credentials = null;
-    String className = credClass.getName();
-    if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
-    }
-    if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
-    }
-    LOG.debug("Credential provider class is {}", className);
-
-    credentials =
-        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AWSCredentialsProvider.class,
-            "getInstance", AWS_CREDENTIALS_PROVIDER);
-    return credentials;
-
-  }
-
-  /**
-   * Create an AWS credential provider from its class by using reflection.  The
-   * class must implement one of the following means of construction, which are
-   * attempted in order:
-   *
-   * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named getInstance that accepts no
-   *    arguments and returns an instance of
-   *    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider, or</li>
-   * <li>a public default constructor.</li>
-   * </ol>
-   *
-   * @param conf configuration
-   * @param credClass credential class
-   * @param uri URI of the FS
-   * @return the instantiated class
-   * @throws IOException on any instantiation failure.
+   * @see S3AUtils#getInstanceFromReflection
    */
   private static AwsCredentialsProvider createAWSV2CredentialProvider(Configuration conf,
-      Class<?> credClass, @Nullable URI uri) throws IOException {
-    AwsCredentialsProvider credentials = null;
-    String className = credClass.getName();
-    if (!AwsCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IOException("Class " + credClass + " " + NOT_AWS_V2_PROVIDER);
-    }
-    if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
-    }
+      String className,
+      @Nullable URI uri) throws IOException {
     LOG.debug("Credential provider class is {}", className);
-    credentials =
-        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AwsCredentialsProvider.class,
-            "create", AWS_CREDENTIALS_PROVIDER);
-    return credentials;
+    return S3AUtils.getInstanceFromReflection(className, conf, uri, AwsCredentialsProvider.class,
+        "create", AWS_CREDENTIALS_PROVIDER);
   }
 
 }
