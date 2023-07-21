@@ -162,6 +162,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED)
   private boolean linearRetryDoubleStepUpEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean staticRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_INTERVAL,
+      DefaultValue = DEFAULT_STATIC_RETRY_INTERVAL)
+  private int staticRetryInterval;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
@@ -673,6 +681,14 @@ public class AbfsConfiguration{
 
   public boolean getLinearRetryForConnectionTimeoutEnabled() {
     return linearRetryForConnectionTimeoutEnabled;
+  }
+
+  public boolean getStaticRetryForConnectionTimeoutEnabled() {
+    return staticRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getStaticRetryInterval() {
+    return staticRetryInterval;
   }
 
   public int getMinBackoffIntervalMillisecondsForConnectionTimeout() {

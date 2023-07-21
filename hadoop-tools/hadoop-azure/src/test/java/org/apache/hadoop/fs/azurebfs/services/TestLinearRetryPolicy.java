@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
@@ -46,7 +47,10 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testLinearRetryPolicyInitialization() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
 
     // Assert that linear retry policy will be used only for CT Failures
@@ -66,6 +70,7 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testLinearRetryIntervalWithDoubleStepUpEnabled() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED, "true");
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
@@ -88,6 +93,7 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testLinearRetryIntervalWithDoubleStepUpDisabled() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED, "false");
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
@@ -110,6 +116,7 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testLinearRetryConfigurations() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
+    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();

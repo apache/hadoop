@@ -26,16 +26,19 @@ public class AbfsClientContext {
 
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final LinearRetryPolicy linearRetryPolicy;
+  private final StaticRetryPolicy staticRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
       LinearRetryPolicy linearRetryPolicy,
+      StaticRetryPolicy staticRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
       AbfsCounters abfsCounters) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
     this.linearRetryPolicy = linearRetryPolicy;
+    this.staticRetryPolicy = staticRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
   }
@@ -46,6 +49,10 @@ public class AbfsClientContext {
 
   public LinearRetryPolicy getLinearRetryPolicy() {
     return linearRetryPolicy;
+  }
+
+  public StaticRetryPolicy getStaticRetryPolicy() {
+    return staticRetryPolicy;
   }
 
   public AbfsPerfTracker getAbfsPerfTracker() {
