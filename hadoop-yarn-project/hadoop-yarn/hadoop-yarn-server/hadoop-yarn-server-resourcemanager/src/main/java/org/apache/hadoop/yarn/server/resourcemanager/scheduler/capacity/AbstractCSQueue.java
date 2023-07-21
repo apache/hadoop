@@ -448,8 +448,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     // Set properties from parent template
     if (parent instanceof AbstractParentQueue && isDynamicQueue()) {
       ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
-                  this instanceof AbstractLeafQueue);
+          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(), this instanceof AbstractLeafQueue);
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
           AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
@@ -464,12 +463,14 @@ public abstract class AbstractCSQueue implements CSQueue {
           queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
               .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
         }
+        Map<String, QueueCapacityVector> templateConfiguredResourceVector = queueContext.getConfiguration()
+                .parseConfiguredResourceVector(queuePath.getFullPath(), parentNodeLabels);
+
         // For dynamic queue, we will set weight to 1 every time, because it
         // is possible new labels added to the parent.
         for (String label : parentNodeLabels) {
-          float weightByLabel = queueContext.getConfiguration()
-              .getLabeledQueueWeight(queuePath, label);
-          if (weightByLabel == -1) {
+          QueueCapacityVector queueCapacityVector = templateConfiguredResourceVector.get(label);
+          if (queueCapacityVector == null || queueCapacityVector.isEmpty()) {
             queueContext.getConfiguration()
                 .setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
           }
