@@ -139,6 +139,7 @@ public final class PBHelper {
     return bld.build();
   }
 
+  @SuppressWarnings("unchecked")
   public static ExceptionReconstructProto getReconstructProto(Throwable t) {
     if (t instanceof ReconstructableException && t instanceof IOException) {
       try {
