@@ -27,9 +27,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - run: |
-          echo ${{ github.workspace }}
-          echo $GITHUB_WORKSPACE
+      - uses: actions/checkout@v3
+        with:
+          sparse-checkout: |
+            .github
       - uses: actions/labeler@v4.3.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
