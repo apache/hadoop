@@ -21,18 +21,20 @@
 personality_plugins "all,-ant,-gradle,-scalac,-scaladoc"
 
 # These flags are needed to run Yetus against Hadoop on Windows.
-WINDOWS_FLAGS="-Pnative-win
+WINDOWS_FLAGS=(
+  -Pnative-win
   -Dhttps.protocols=TLSv1.2
   -Drequire.openssl
   -Drequire.test.libhadoop
-  -Dshell-executable=${BASH_EXECUTABLE}
-  -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}
-  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
-  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
+  -Dshell-executable="${BASH_EXECUTABLE}"
+  -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}"
+  -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}"
+  -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}"
   -Dwindows.cmake.build.type=RelWithDebInfo
   -Dwindows.build.hdfspp.dll=off
   -Dwindows.no.sasl=on
-  -Duse.platformToolsetVersion=v142"
+  -Duse.platformToolsetVersion=v142
+)
 
 ## @description  Globals specific to this personality
 ## @audience     private
@@ -292,7 +294,7 @@ function hadoop_native_flags
         -Drequire.snappy \
         -Pdist \
         -Dtar \
-        "${WINDOWS_FLAGS}"
+        "${WINDOWS_FLAGS[@]}"
     ;;
     *)
       echo \
@@ -436,7 +438,7 @@ function personality_modules
   fi
 
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
-    extra="-Ptest-patch -Pdist -Dtar ${WINDOWS_FLAGS} ${extra}"
+    extra="-Ptest-patch -Pdist -Dtar ${WINDOWS_FLAGS[*]} ${extra}"
   fi
 
   for module in $(hadoop_order ${ordering}); do
@@ -590,7 +592,7 @@ function shadedclient_rebuild
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
 
-    extra="${WINDOWS_FLAGS} ${extra}"
+    extra="${extra} ${WINDOWS_FLAGS[*]}"
   fi
 
   echo_and_redirect "${logfile}" \
