@@ -1218,9 +1218,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
     SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
-    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES
+    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES, GETECCODECS
   }
-
+  @SuppressWarnings("methodlength")
   private void operation(Operation op) throws Exception {
     switch (op) {
     case GET:
@@ -1369,6 +1369,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETECPOLICIES:
       testGetAllEEPolicies();
+      break;
+    case GETECCODECS:
+      testGetECCodecs();
       break;
     }
   }
@@ -2144,6 +2147,44 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
       assertEquals(dfsAllErasureCodingPolicies.size(), diffErasureCodingPolicies.size());
       assertTrue(dfsAllErasureCodingPolicies.containsAll(diffErasureCodingPolicies));
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
+    }
+  }
+
+  private void testGetECCodecs() throws Exception {
+    if (isLocalFS()) {
+      // do not test the testGetECCodecs for local FS.
+      return;
+    }
+    final Path path = new Path("/foo");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
+
+      Map<String, String> dfsAllErasureCodingCodecs = dfs.getAllErasureCodingCodecs();
+      Map<String, String> diffErasureCodingCodecs = null;
+
+      if (httpFs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) httpFs;
+        diffErasureCodingCodecs = httpFS.getAllErasureCodingCodecs();
+      } else if (httpFs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
+        diffErasureCodingCodecs = webHdfsFileSystem.getAllErasureCodingCodecs();
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " is not of type HttpFSFileSystem or WebHdfsFileSystem");
+      }
+
+      //Validate testGetECCodecs are the same as DistributedFileSystem
+      Assert.assertEquals(dfsAllErasureCodingCodecs.size(), diffErasureCodingCodecs.size());
+
+      for (Map.Entry<String, String> entry : dfsAllErasureCodingCodecs.entrySet()) {
+        Assert.assertTrue(diffErasureCodingCodecs.containsKey(entry.getKey()));
+        Assert.assertEquals(entry.getValue(), diffErasureCodingCodecs.get(entry.getKey()));
+      }
     } else {
       Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }

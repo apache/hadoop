@@ -286,6 +286,7 @@ public class HttpFSFileSystem extends FileSystem
     GETFILELINKSTATUS(HTTP_GET),
     GETSTATUS(HTTP_GET),
     GETECPOLICIES(HTTP_GET),
+    GETECCODECS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1784,6 +1785,17 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.getAllErasureCodingPolicies(json);
+  }
+
+  public Map<String, String> getAllErasureCodingCodecs() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECCODECS.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECCODECS.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getErasureCodeCodecs(json);
   }
 
   @VisibleForTesting
