@@ -567,6 +567,8 @@ function shadedclient_rebuild
     return 0
   fi
 
+  echo "Going to build shaded client. OS is ${OSTYPE}"
+
   yetus_debug "hadoop personality: seeing if we need the test of client artifacts."
   for module in hadoop-client-modules/hadoop-client-check-invariants \
                 hadoop-client-modules/hadoop-client-check-test-invariants \
