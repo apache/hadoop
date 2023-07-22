@@ -72,6 +72,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -243,6 +244,7 @@ public class TestDataNodeMetrics {
       String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode datanode = datanodes.get(0);
+
       // Verify both of metrics set to 0 when initialize.
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("CreateRbwOpNumOps", 0L, rb);
