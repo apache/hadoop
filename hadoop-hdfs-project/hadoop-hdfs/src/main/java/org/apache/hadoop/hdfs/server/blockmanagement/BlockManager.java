@@ -3891,6 +3891,8 @@ public class BlockManager implements BlockStatsMXBean {
         // initialisation, then progress might be different.
         reconstructionQueuesInitProgress = Math.min((double) totalProcessed
             / totalBlocks, 1.0);
+        LOG.info("Reconstruction queues initialisation progress: {}, total number of blocks " +
+                "processed: {}/{}", reconstructionQueuesInitProgress, totalProcessed, totalBlocks);
 
         if (!blocksItr.hasNext()) {
           LOG.info("Total number of blocks            = {}", blocksMap.size());
