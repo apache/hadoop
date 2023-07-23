@@ -30,6 +30,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -128,13 +129,37 @@ public class TestRouterSafemode {
 
     assertTrue(router.getSafemodeService().isInSafeMode());
     verifyRouter(RouterServiceState.SAFEMODE);
-
     // Wait for initial time in milliseconds
     long interval =
         conf.getTimeDuration(DFS_ROUTER_SAFEMODE_EXTENSION,
             TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS) +
         conf.getTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
             TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
+    Thread.sleep(interval);
+
+    assertFalse(router.getSafemodeService().isInSafeMode());
+    verifyRouter(RouterServiceState.RUNNING);
+  }
+
+  @Test
+  public void testRouterExitSafemodeResetUpTime()
+      throws InterruptedException, IllegalStateException, IOException {
+
+    Calendar calendar = Calendar.getInstance();
+    // Get the future times, add one day to the current date.
+    calendar.add(Calendar.DAY_OF_MONTH, 1);
+    long timestampAfterOneDay = calendar.getTimeInMillis();
+    router.getSafemodeService().setStartupTime(timestampAfterOneDay);
+
+    assertTrue(router.getSafemodeService().isInSafeMode());
+    verifyRouter(RouterServiceState.SAFEMODE);
+
+    // Wait for initial time in milliseconds
+    long interval =
+        conf.getTimeDuration(DFS_ROUTER_SAFEMODE_EXTENSION,
+            TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS) +
+            conf.getTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
+                TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS) * 2;
     Thread.sleep(interval);
 
     assertFalse(router.getSafemodeService().isInSafeMode());

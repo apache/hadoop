@@ -21,9 +21,9 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,7 +151,7 @@ public class RouterSafemodeService extends PeriodicService {
     LOG.info("Enter safe mode after {} ms without reaching the State Store",
         this.staleInterval);
 
-    this.startupTime = Time.now();
+    this.startupTime = now();
 
     // Initializing the RPC server in safe mode, it will disable it later
     enter();
@@ -161,11 +161,17 @@ public class RouterSafemodeService extends PeriodicService {
 
   @Override
   public void periodicInvoke() {
-    long now = Time.now();
+    long now = now();
     long delta = now - startupTime;
     if (delta < startupInterval) {
       LOG.info("Delaying safemode exit for {} milliseconds...",
           this.startupInterval - delta);
+      if (delta < 0) {
+        LOG.warn("Negative startup interval detected, resetting startupTime and " +
+            "enterSafeModeTime.");
+        startupTime = now();
+        enterSafeModeTime = now();
+      }
       return;
     }
     StateStoreService stateStore = router.getStateStore();
@@ -181,5 +187,10 @@ public class RouterSafemodeService extends PeriodicService {
       // Cache recently updated, leave safe mode
       leave();
     }
+  }
+
+  @VisibleForTesting
+  public void setStartupTime(long startupTime) {
+    this.startupTime = startupTime;
   }
 }
