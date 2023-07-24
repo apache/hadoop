@@ -211,7 +211,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException If it cannot get the delegation token.
    */
   public Map<FederationNamespaceInfo, Token<DelegationTokenIdentifier>>
-      getDelegationTokens(Text renewer) throws IOException {
+  getDelegationTokens(Text renewer) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
     return null;
   }
@@ -264,7 +264,7 @@ public class RouterClientProtocol implements ClientProtocol {
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
       CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
-      String storagePolicyName)
+      String storagePolicy)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
@@ -286,7 +286,7 @@ public class RouterClientProtocol implements ClientProtocol {
             long.class, CryptoProtocolVersion[].class,
             String.class, String.class},
         new RemoteParam(), masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName, storagePolicyName);
+        replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(src, true);
     RemoteLocation createLocation = null;
@@ -1935,6 +1935,9 @@ public class RouterClientProtocol implements ClientProtocol {
         .stream()
         .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
         .collect(Collectors.toSet());
+    if (namespacesEligibleForObserverReads.isEmpty()) {
+      return;
+    }
     rpcClient.invokeConcurrent(namespacesEligibleForObserverReads, method);
   }
 
