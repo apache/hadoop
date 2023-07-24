@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
@@ -54,17 +58,27 @@ import static org.junit.Assume.assumeThat;
  *     root.test_1.test_1_2      2/16      [memory=2048,  vcores=2]       6.25%
  *     root.test_1.test_1_3     12/16      [memory=12288, vcores=12]      37.5%
  */
+@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase {
+
+  private final boolean legacyQueueMode;
+
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
+  }
 
   private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
 
-  public TestRMWebServicesCapacitySchedDynamicConfig() {
+  public TestRMWebServicesCapacitySchedDynamicConfig(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
   public void testPercentageMode() throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
     conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "12.5");
@@ -80,6 +94,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   @Test
   public void testAbsoluteMode() throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
     conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=4096,vcores=4]");
@@ -96,6 +111,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   @Test
   public void testWeightMode() throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
     conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "4w");
@@ -115,6 +131,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   @Test
   public void testWeightModeFlexibleAQC() throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
     conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "4w");
