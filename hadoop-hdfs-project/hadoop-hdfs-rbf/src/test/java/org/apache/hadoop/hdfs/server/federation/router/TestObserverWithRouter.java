@@ -904,7 +904,7 @@ public class TestObserverWithRouter {
     startUpCluster(1, confOverride);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
 
-    // Send msync request
+    // Send msync request.
     fileSystem.msync();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
