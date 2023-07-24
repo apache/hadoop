@@ -255,7 +255,7 @@ public class TestDFSAdmin {
       final List<String> outs = Lists.newArrayList();
       scanIntoList(out, outs);
       assertThat(outs.get(0),
-          is(allOf(containsString("Trigger directory scanner: Success"))));
+          is(allOf(containsString("Trigger DirectoryScanner successfully."))));
     }
   }
 
@@ -293,7 +293,8 @@ public class TestDFSAdmin {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 
+      30000)
   public void testGetDatanodeInfo() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);

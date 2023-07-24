@@ -804,6 +804,7 @@ public class DirectoryScanner implements Runnable {
     }
     try {
       reconcile();
+      dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
     } catch (Exception e) {
       // Log and reset reconcileRunning.
       LOG.error(
