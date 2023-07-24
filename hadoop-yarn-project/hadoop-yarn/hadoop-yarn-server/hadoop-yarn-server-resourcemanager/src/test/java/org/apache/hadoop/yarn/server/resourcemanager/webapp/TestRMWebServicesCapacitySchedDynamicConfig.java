@@ -41,12 +41,11 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.reinitialize;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.sendRequest;
 import static org.assertj.core.api.Assertions.fail;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assume.assumeThat;
 
 
 /*
@@ -121,9 +120,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
     try (MockRM rm = createMutableRM(createConfiguration(conf))) {
-      // capacity and normalizedWeight are set differently between the two modes
-      assumeThat(((CapacityScheduler)rm.getResourceScheduler())
-              .getConfiguration().isLegacyQueueMode(), is(true));
+      // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
     }
   }
@@ -144,19 +141,18 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     Configuration config = createConfiguration(conf);
     setupAQC(config, "yarn.scheduler.capacity.root.test2.");
     try (MockRM rm = createMutableRM(config)) {
-      // capacity and normalizedWeight are set differently between the two modes
-      assumeThat(((CapacityScheduler)rm.getResourceScheduler())
-          .getConfiguration().isLegacyQueueMode(), is(true));
+      // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),
-          String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
+          getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
+              "before-aqc", legacyQueueMode));
       createDynamicQueues(rm, "test2");
       reinitialize(rm, config);
       assertJsonResponse(sendRequest(resource()),
-          String.format(EXPECTED_FILE_TMPL, "testWeightMode", "after-aqc"));
+          getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
+              "after-aqc", legacyQueueMode));
     }
   }
-
 
   private void setupAQC(Configuration config, String queueWithConfigPrefix) {
     config.set(queueWithConfigPrefix + "auto-queue-creation-v2.enabled", "true");
