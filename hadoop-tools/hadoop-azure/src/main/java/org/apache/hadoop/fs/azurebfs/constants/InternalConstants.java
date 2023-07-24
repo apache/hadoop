@@ -43,7 +43,4 @@ public final class InternalConstants {
    */
   public static final String CAPABILITY_SAFE_READAHEAD =
       "fs.azure.capability.readahead.safe";
-
-  public static final String EXPONENTIAL_RETRY_POLICY = "Exponential Retry Policy";
-  public static final String STATIC_RETRY_POLICY = "Static Retry Policy";
 }

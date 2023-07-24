@@ -214,7 +214,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null);
+    tracingContext.constructHeader(abfsHttpOperation, null, "E");
     String header = tracingContext.getHeader();
     String clientRequestIdUsed = header.split(":")[1];
     String[] clientRequestIdUsedParts = clientRequestIdUsed.split("-");
@@ -226,7 +226,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT");
+    tracingContext.constructHeader(abfsHttpOperation, "RT", "E");
     header = tracingContext.getHeader();
     String primaryRequestId = header.split(":")[3];
 
@@ -251,7 +251,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     tracingContext.setPrimaryRequestID();
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null);
+    tracingContext.constructHeader(abfsHttpOperation, null, "E");
     String header = tracingContext.getHeader();
     String assertionPrimaryId = header.split(":")[3];
 
@@ -261,7 +261,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT");
+    tracingContext.constructHeader(abfsHttpOperation, "RT", "E");
     header = tracingContext.getHeader();
     String primaryRequestId = header.split(":")[3];
 

@@ -133,6 +133,11 @@ public class ExponentialRetryPolicy extends RetryPolicy {
     return retryInterval;
   }
 
+  @Override
+  public String getAbbreviation() {
+    return RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
+  }
+
   @VisibleForTesting
   int getMinBackoff() {
     return this.minBackoff;

@@ -295,7 +295,7 @@ public class TestAbfsRestOperationMockFailures {
       }
       count[0]++;
       return null;
-    }).when(tracingContext).constructHeader(any(), any());
+    }).when(tracingContext).constructHeader(any(), any(), any());
 
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(2);
@@ -349,7 +349,7 @@ public class TestAbfsRestOperationMockFailures {
       }
       count[0]++;
       return null;
-    }).when(tracingContext).constructHeader(any(), any());
+    }).when(tracingContext).constructHeader(any(), any(), any());
 
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(len + 1);

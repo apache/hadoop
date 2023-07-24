@@ -61,4 +61,9 @@ public class StaticRetryPolicy extends RetryPolicy {
   public long getRetryInterval(final int retryCount) {
     return retryInterval;
   }
+
+  @Override
+  public String getAbbreviation() {
+    return RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
+  }
 }

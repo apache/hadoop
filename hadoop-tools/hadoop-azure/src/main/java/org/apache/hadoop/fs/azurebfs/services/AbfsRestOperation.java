@@ -39,8 +39,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.EXPONENTIAL_RETRY_POLICY;
-import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.STATIC_RETRY_POLICY;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
@@ -238,7 +236,7 @@ public class AbfsRestOperation {
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
         LOG.debug("Rest operation {} failed with failureReason: {}.\nRetrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
-            operationType, failureReason, retryCount, getRetryPolicyStr(retryPolicy), retryInterval);
+            operationType, failureReason, retryCount, retryPolicy.getAbbreviation(), retryInterval);
         Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -282,7 +280,7 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation, failureReason);
+      tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
       signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
 
@@ -430,18 +428,5 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
-  }
-
-  /**
-   * Utility function to get the retry policy used as String for logging purpose.
-   * @param retryPolicy
-   * @return Retry Policy as String
-   */
-  @VisibleForTesting
-  String getRetryPolicyStr(final RetryPolicy retryPolicy) {
-    if (retryPolicy instanceof StaticRetryPolicy) {
-      return STATIC_RETRY_POLICY;
-    }
-    return EXPONENTIAL_RETRY_POLICY;
   }
 }

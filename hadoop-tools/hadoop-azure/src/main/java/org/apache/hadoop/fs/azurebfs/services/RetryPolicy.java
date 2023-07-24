@@ -65,6 +65,8 @@ public abstract class RetryPolicy {
    */
   public abstract long getRetryInterval(final int retryCount);
 
+  public abstract String getAbbreviation();
+
   protected int getMaxRetryCount() {
     return maxRetryCount;
   }
