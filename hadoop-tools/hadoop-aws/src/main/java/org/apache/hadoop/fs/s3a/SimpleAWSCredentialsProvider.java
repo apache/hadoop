@@ -88,7 +88,10 @@ public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName();
+    return "SimpleAWSCredentialsProvider{" +
+        "accessKey.empty=" + accessKey.isEmpty() +
+        ", secretKey.empty'" + secretKey.isEmpty() +
+        '}';
   }
 
 }

@@ -90,4 +90,11 @@ public class IAMInstanceCredentialsProvider
   public void close() throws IOException {
     // no-op.
   }
+
+  @Override
+  public String toString() {
+    return "IAMInstanceCredentialsProvider{" +
+        "containerCredentialsProvider=" + containerCredentialsProvider +
+        '}';
+  }
 }

@@ -35,6 +35,7 @@ import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.StsException;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,7 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
 
     arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
     if (StringUtils.isEmpty(arn)) {
-      throw new IOException(E_NO_ROLE);
+      throw new PathIOException(String.valueOf(fsUri), E_NO_ROLE);
     }
 
     // build up the base provider
@@ -115,8 +116,8 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
         Arrays.asList(
             SimpleAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class),
-        Sets.newHashSet(this.getClass()));
-    LOG.debug("Credentials to obtain role credentials: {}", credentialsToSTS);
+        Sets.newHashSet(getClass()));
+    LOG.debug("Credentials used to obtain role credentials: {}", credentialsToSTS);
 
     // then the STS binding
     sessionName = conf.getTrimmed(ASSUMED_ROLE_SESSION_NAME,
@@ -156,9 +157,6 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
     // need to retry
     invoker = new Invoker(new S3ARetryPolicy(conf), this::operationRetried);
 
-    // and force in a fail-fast check just to keep the stack traces less
-    // convoluted
-    resolveCredentials();
   }
 
   /**
@@ -170,7 +168,7 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
   @Retries.RetryRaw
   public AwsCredentials resolveCredentials() {
     try {
-      return invoker.retryUntranslated("getCredentials",
+      return invoker.retryUntranslated("resolveCredentials",
           true,
           stsProvider::resolveCredentials);
     } catch (IOException e) {
@@ -198,13 +196,11 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "AssumedRoleCredentialProvider{");
-    sb.append("role='").append(arn).append('\'');
-    sb.append(", session'").append(sessionName).append('\'');
-    sb.append(", duration=").append(duration);
-    sb.append('}');
-    return sb.toString();
+    String sb = "AssumedRoleCredentialProvider{" + "role='" + arn + '\''
+        + ", session'" + sessionName + '\''
+        + ", duration=" + duration
+        + '}';
+    return sb;
   }
 
   /**

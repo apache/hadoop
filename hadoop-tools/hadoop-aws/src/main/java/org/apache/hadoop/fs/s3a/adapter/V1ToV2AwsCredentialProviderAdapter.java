@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.fs.s3a.adapter;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import javax.annotation.Nullable;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -33,7 +37,10 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
@@ -41,8 +48,14 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 /**
  * Adapts a V1 {@link AWSCredentialsProvider} to the V2 {@link AwsCredentialsProvider} interface.
  */
-public final class V1ToV2AwsCredentialProviderAdapter implements AwsCredentialsProvider {
+public final class V1ToV2AwsCredentialProviderAdapter
+    implements AwsCredentialsProvider, Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      V1ToV2AwsCredentialProviderAdapter.class);
 
+  /**
+   * The V1 credential provider constructed.
+   */
   private final AWSCredentialsProvider v1CredentialsProvider;
 
 
@@ -50,9 +63,45 @@ public final class V1ToV2AwsCredentialProviderAdapter implements AwsCredentialsP
     this.v1CredentialsProvider = requireNonNull(v1CredentialsProvider);
   }
 
+
+  /**
+   * Collect v1 credentials and convert to v2.
+   * @return v2 credentials
+   * @throws CredentialInitializationException if the inner retrieval raised an exception
+   */
   @Override
   public AwsCredentials resolveCredentials() {
-    AWSCredentials toAdapt = v1CredentialsProvider.getCredentials();
+    try {
+      // get the wrapped credentials
+      AWSCredentials toAdapt = v1CredentialsProvider.getCredentials();
+      return convertToV2Credentials(toAdapt);
+    } catch (SdkClientException e) {
+      // wrap with a v2 exception so that code which adds a try/catch for v2 sdk exceptions
+      // gets a compatible exception.
+      throw new CredentialInitializationException(e.toString(), e);
+    }
+  }
+
+  /**
+   * Close the wrapped provider if it implements Closeable/AutoCloseable.
+   * @throws IOException failure
+   */
+  @Override
+  public void close() throws IOException {
+    if (v1CredentialsProvider instanceof Closeable) {
+      ((Closeable) v1CredentialsProvider).close();
+    } else if (v1CredentialsProvider instanceof AutoCloseable) {
+      S3AUtils.closeAutocloseables(LOG, (AutoCloseable)v1CredentialsProvider);
+    }
+  }
+
+  /**
+   * Convert v1 credentials to v2, including support for session and anonymous
+   * credentials.
+   * @param toAdapt credentials to adapt.
+   * @return v2 credentials.
+   */
+  static AwsCredentials convertToV2Credentials(final AWSCredentials toAdapt) {
     if (toAdapt instanceof AWSSessionCredentials) {
       return AwsSessionCredentials.create(toAdapt.getAWSAccessKeyId(),
           toAdapt.getAWSSecretKey(),
@@ -98,19 +147,19 @@ public final class V1ToV2AwsCredentialProviderAdapter implements AwsCredentialsP
    * @param className classname
    * @param uri URI of the FS
    * @return the instantiated class
-   * @throws IOException on any instantiation failure.
+   * @throws InstantiationIOException on construction and instantiation failures,
+   *         including v1 SDK exceptions.
+   * @throws IOException if raised by a constructor/factory method.
    */
   static AwsCredentialsProvider create(
       Configuration conf,
       String className,
-      @Nullable URI uri) throws IOException {
+      @Nullable URI uri) throws InstantiationIOException, IOException {
 
-
-    final AWSCredentialsProvider instance =
-        S3AUtils.getInstanceFromReflection(className, conf, uri, AWSCredentialsProvider.class,
-            "getInstance", AWS_CREDENTIALS_PROVIDER);
-    return create(instance);
-
+      final AWSCredentialsProvider instance =
+          S3AUtils.getInstanceFromReflection(className, conf, uri, AWSCredentialsProvider.class,
+              "getInstance", AWS_CREDENTIALS_PROVIDER);
+      return create(instance);
   }
 
 }

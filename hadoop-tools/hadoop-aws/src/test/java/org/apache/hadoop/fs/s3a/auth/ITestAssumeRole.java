@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
@@ -241,7 +242,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         AssumedRoleCredentialProvider.NAME);
     expectFileSystemCreateFailure(conf,
-        IOException.class,
+        PathIOException.class,
         E_FORBIDDEN_AWS_PROVIDER);
   }
 

@@ -36,34 +36,34 @@ import javax.annotation.Nullable;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.assertj.core.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.adapter.V1ToV2AwsCredentialProviderAdapter;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.Sets;
 
-
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.STANDARD_AWS_PROVIDERS;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.V1_ANONYMOUS_CREDENTIALS;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.V1_EC2_CONTAINER_CREDENTIALS;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.V1_ENVIRONMENT_CREDENTIALS;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.ANONYMOUS_CREDENTIALS_V1;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.EC2_CONTAINER_CREDENTIALS_V1;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.ENVIRONMENT_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.buildAWSProviderList;
 import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderList;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.DOES_NOT_IMPLEMENT;
@@ -82,8 +82,7 @@ public class TestS3AAWSCredentialsProvider {
   private static final URI TESTFILE_URI = new Path(
       DEFAULT_CSVTEST_FILE).toUri();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  private static final Logger LOG = LoggerFactory.getLogger(AwsCredentialListProvider.class);
 
   @Test
   public void testProviderWrongClass() throws Exception {
@@ -170,9 +169,9 @@ public class TestS3AAWSCredentialsProvider {
             EnvironmentVariableCredentialsProvider.class);
     Configuration conf =
         createProviderConfiguration(buildClassList(
-            V1_EC2_CONTAINER_CREDENTIALS,
-            V1_ANONYMOUS_CREDENTIALS,
-            V1_ENVIRONMENT_CREDENTIALS));
+            EC2_CONTAINER_CREDENTIALS_V1,
+            ANONYMOUS_CREDENTIALS_V1,
+            ENVIRONMENT_CREDENTIALS_V1));
     AWSCredentialProviderList list1 = createAWSCredentialProviderList(
         uri1, conf);
     assertCredentialProviders(expectedClasses, list1);
@@ -241,6 +240,30 @@ public class TestS3AAWSCredentialsProvider {
             EnvironmentVariableCredentialsProvider.class),
         Sets.newHashSet());
     assertTrue("empty credentials", credentials.size() > 0);
+  }
+
+  @Test
+  public void testProviderConstructor() throws Throwable {
+    final AWSCredentialProviderList list = new AWSCredentialProviderList("name",
+        new AnonymousAWSCredentialsProvider(),
+        new ErrorProvider(TESTFILE_URI, new Configuration()));
+    Assertions.assertThat(list.getProviders())
+        .describedAs("provider list in %s", list)
+        .hasSize(2);
+    final AwsCredentials credentials = list.resolveCredentials();
+    Assertions.assertThat(credentials)
+        .isInstanceOf(AwsBasicCredentials.class);
+    assertCredentialResolution(credentials, null, null);
+  }
+
+  public static void assertCredentialResolution(AwsCredentials creds, String key, String secret) {
+    Assertions.assertThat(creds.accessKeyId())
+        .describedAs("access key of %s", creds)
+        .isEqualTo(key);
+    Assertions.assertThat(creds.secretAccessKey())
+        .describedAs("secret key of %s", creds)
+        .isEqualTo(secret);
+
 
   }
 
@@ -258,39 +281,33 @@ public class TestS3AAWSCredentialsProvider {
    * A credential provider declared as abstract, so it cannot be instantiated.
    */
   static abstract class AbstractProvider implements AwsCredentialsProvider {
+
+    @Override
+    public AwsCredentials resolveCredentials() {
+      return null;
+    }
   }
 
   /**
    * A credential provider whose constructor signature doesn't match.
    */
   protected static class ConstructorSignatureErrorProvider
-      implements AwsCredentialsProvider {
+      extends AbstractProvider {
 
     @SuppressWarnings("unused")
     public ConstructorSignatureErrorProvider(String str) {
     }
-
-    @Override
-    public AwsCredentials resolveCredentials() {
-      return null;
-    }
-
   }
 
   /**
    * A credential provider whose constructor raises an NPE.
    */
   protected static class ConstructorFailureProvider
-      implements AwsCredentialsProvider {
+      extends AbstractProvider  {
 
     @SuppressWarnings("unused")
     public ConstructorFailureProvider() {
       throw new NullPointerException("oops");
-    }
-
-    @Override
-    public AwsCredentials resolveCredentials() {
-      return null;
     }
 
   }
@@ -305,19 +322,13 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
-  protected static class AWSExceptionRaisingFactory implements AwsCredentialsProvider {
+  protected static class AWSExceptionRaisingFactory extends AbstractProvider  {
 
     public static final String NO_AUTH = "No auth";
 
     public static AwsCredentialsProvider create() {
       throw new NoAuthWithAWSException(NO_AUTH);
     }
-
-    @Override
-    public AwsCredentials resolveCredentials() {
-      return null;
-    }
-
   }
 
   @Test
@@ -327,7 +338,7 @@ public class TestS3AAWSCredentialsProvider {
         InstantiationIOException.CONSTRUCTOR_EXCEPTION);
   }
 
-  static class FactoryOfWrongType implements AwsCredentialsProvider {
+  static class FactoryOfWrongType extends AbstractProvider  {
 
     public static final String NO_AUTH = "No auth";
 
@@ -513,16 +524,11 @@ public class TestS3AAWSCredentialsProvider {
   /**
    * Credential provider which raises an IOE when constructed.
    */
-  protected static class IOERaisingProvider implements AwsCredentialsProvider {
+  protected static class IOERaisingProvider extends AbstractProvider  {
 
     public IOERaisingProvider(URI uri, Configuration conf)
         throws IOException {
       throw new InterruptedIOException("expected");
-    }
-
-    @Override
-    public AwsCredentials resolveCredentials() {
-      return null;
     }
 
   }
@@ -668,7 +674,7 @@ public class TestS3AAWSCredentialsProvider {
         provider.getInitializationException().getMessage().contains("expected error"));
   }
 
-  public static final class LegacyV1CredentialProvider implements AWSCredentialsProvider {
+  public static class LegacyV1CredentialProvider implements AWSCredentialsProvider {
 
     public LegacyV1CredentialProvider() {
     }
@@ -684,19 +690,77 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
-  public static final class LegacyV1CredentialProviderWithConf implements AWSCredentialsProvider {
+  /**
+   * V1 credentials with a configuration constructor.
+   */
+  public static final class LegacyV1CredentialProviderWithConf
+      extends LegacyV1CredentialProvider {
 
     public LegacyV1CredentialProviderWithConf(Configuration conf) {
     }
+  }
 
-    @Override
-    public AWSCredentials getCredentials() {
-      return null;
+  /**
+   * V1 Credentials whose factory method raises ClassNotFoundException.
+   * Expect this to fail rather than trigger recursive recovery;
+   * exception will be wrapped with something intended to be informative.
+   */
+  @Test
+  public void testV1InstantiationFailurePropagation() throws Throwable {
+    InstantiationIOException expected = intercept(InstantiationIOException.class,
+        "simulated CNFE",
+        () -> createAWSCredentialProviderList(
+            TESTFILE_URI,
+            createProviderConfiguration(V1CredentialProviderDoesNotInstantiate.class.getName())));
+    // print for the curious
+    LOG.info("{}", expected.toString());
+  }
+
+
+  /**
+   * V1 credentials which raises an instantiation exception.
+   */
+  public static final class V1CredentialProviderDoesNotInstantiate
+      extends LegacyV1CredentialProvider {
+
+    private V1CredentialProviderDoesNotInstantiate() {
     }
 
-    @Override
-    public void refresh() {
+    public static AWSCredentialsProvider getInstance() throws ClassNotFoundException {
+      throw new ClassNotFoundException("simulated CNFE");
+    }
+  }
 
+  /**
+   * V2 Credentials whose factory method raises ClassNotFoundException.
+   * This will fall back to an attempted v1 load which will fail because it
+   * is the wrong type.
+   * The exception raised will be from the v2 instantiation attempt,
+   * not the v1 attempt.
+   */
+  @Test
+  public void testV2ClassNotFound() throws Throwable {
+    InstantiationIOException expected = intercept(InstantiationIOException.class,
+        "simulated v2 CNFE",
+        () -> createAWSCredentialProviderList(
+            TESTFILE_URI,
+            createProviderConfiguration(V2CredentialProviderDoesNotInstantiate.class.getName())));
+    // print for the curious
+    LOG.info("{}", expected.toString());
+  }
+
+  /**
+   * V2 credentials which raises an instantiation exception in
+   * the factory method.
+   */
+  public static final class V2CredentialProviderDoesNotInstantiate
+      extends AbstractProvider {
+
+    private V2CredentialProviderDoesNotInstantiate() {
+    }
+
+    public static AwsCredentialsProvider create() throws ClassNotFoundException {
+      throw new ClassNotFoundException("simulated v2 CNFE");
     }
   }
 

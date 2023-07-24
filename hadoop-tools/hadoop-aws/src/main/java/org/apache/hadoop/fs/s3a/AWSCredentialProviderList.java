@@ -21,23 +21,23 @@ package org.apache.hadoop.fs.s3a;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Preconditions;
 
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -111,7 +111,7 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
   public AWSCredentialProviderList(final String name,
       final AwsCredentialsProvider... providerArgs) {
     setName(name);
-    providers.forEach(this::add);
+    Collections.addAll(providers, providerArgs);
   }
 
   /**
@@ -134,7 +134,6 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
     providers.add(provider);
   }
 
-
   /**
    * Add all providers from another list to this one.
    * @param other the other list.
@@ -143,6 +142,13 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
     providers.addAll(other.providers);
   }
 
+  /**
+   * Was an implementation of the v1 refresh; now just
+   * a no-op.
+   */
+  @Deprecated
+  public void refresh() {
+  }
 
   /**
    * Iterate through the list of providers, to find one with credentials.
@@ -245,9 +251,11 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
    */
   @Override
   public String toString() {
-    return "AWSCredentialProviderList[" +
-        name +
-        "refcount= " + refCount.get() + ": [" +
+    return "AWSCredentialProviderList"
+        + " name=" + name
+        + "; refcount= " + refCount.get()
+        + "; size="+ providers.size()
+        + ": [" +
         StringUtils.join(providers, ", ") + ']'
         + (lastProvider != null ? (" last provider: " + lastProvider) : "");
   }

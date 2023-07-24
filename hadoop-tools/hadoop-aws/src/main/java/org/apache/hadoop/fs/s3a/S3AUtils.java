@@ -571,7 +571,7 @@ public final class S3AUtils {
     return getInstanceFromReflection(className,conf, uri ,interfaceImplemented, methodName,configKey);
   }
 
-  /***
+  /**
    * Creates an instance of a class using reflection. The
    * class must implement one of the following means of construction, which are
    * attempted in order:

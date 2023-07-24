@@ -153,7 +153,8 @@ public final class RoleTestUtils {
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         ASSUMED_ROLE_ARN,
-        AWS_CREDENTIALS_PROVIDER);
+        AWS_CREDENTIALS_PROVIDER,
+        ASSUMED_ROLE_SESSION_DURATION);
     conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
