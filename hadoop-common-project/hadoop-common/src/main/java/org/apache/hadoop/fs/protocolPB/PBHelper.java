@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.protocolPB;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ReconstructableException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructProto;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-import org.apache.hadoop.util.IOUtil;
 import org.apache.hadoop.util.StringInterner;
 
 import java.io.IOException;
@@ -139,19 +139,21 @@ public final class PBHelper {
     return bld.build();
   }
 
-  @SuppressWarnings("unchecked")
   public static ExceptionReconstructProto getReconstructProto(Throwable t) {
-    if (t instanceof ReconstructableException && t instanceof IOException) {
-      try {
-        ExceptionReconstructProto.Builder builder =
-            ExceptionReconstructProto.newBuilder();
-        for (String str : ((ReconstructableException<?>) t).getReconstructParams()) {
-          builder.addParam(str);
+    if (t instanceof IOException) {
+      if (t instanceof ReconstructableException) {
+        String[] params = ((ReconstructableException<?>) t).getReconstructParams();
+        try {
+          ExceptionReconstructProto.Builder builder =
+              ExceptionReconstructProto.newBuilder();
+          for (String str : params) {
+            builder.addParam(str);
+          }
+          builder.setStacktrace(writeObject2ByteString(t.getStackTrace()));
+          return builder.build();
+        } catch (Exception e) {
+          // We might get NPE or other exceptions, we just return null here.
         }
-        builder.setStacktrace(writeObject2ByteString(t.getStackTrace()));
-        return builder.build();
-      } catch (Exception e) {
-        // We might get NPE or other exceptions, we just return null here.
       }
     }
     return null;
@@ -169,6 +171,6 @@ public final class PBHelper {
   }
 
   public static Object toObject(ByteString bytes) {
-    return IOUtil.readObject(bytes.newInput(), Object.class);
+    return IOUtils.readObject(bytes.newInput(), Object.class);
   }
 }
