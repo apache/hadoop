@@ -31,7 +31,7 @@ public abstract class RetryPolicy {
   /**
    * The maximum number of retry attempts.
    */
-  protected final int maxRetryCount;
+  private final int maxRetryCount;
 
   public RetryPolicy(final int maxRetryCount) {
     this.maxRetryCount = maxRetryCount;

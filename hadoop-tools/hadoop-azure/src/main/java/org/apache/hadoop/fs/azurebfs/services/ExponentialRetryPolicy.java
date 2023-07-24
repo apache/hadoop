@@ -19,12 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Random;
-import java.net.HttpURLConnection;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
 
 /**
  * Retry policy used by AbfsClient.

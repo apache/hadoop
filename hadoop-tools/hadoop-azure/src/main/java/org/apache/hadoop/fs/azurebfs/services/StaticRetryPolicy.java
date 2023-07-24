@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Retry policy used by AbfsClient for Network Errors.
