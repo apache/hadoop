@@ -800,7 +800,7 @@ public class DirectoryScanner implements Runnable {
    */
   public String triggerDirectoryScanner() throws IOException {
     if (reconcileRunning.get()) {
-      return "Trigger DirectoryScanner failed, beacause it's running. Please try again later.";
+      return "Trigger DirectoryScanner failed, because it's running. Please try again later.";
     }
     try {
       reconcile();
@@ -809,6 +809,9 @@ public class DirectoryScanner implements Runnable {
       LOG.error(
           "Exception during trigger DirectoryScanner execution, " +
           "Try again later.", e);
+      reconcileRunning.set(false);
+      throw e;
+    } catch (Throwable e) {
       reconcileRunning.set(false);
       throw e;
     }

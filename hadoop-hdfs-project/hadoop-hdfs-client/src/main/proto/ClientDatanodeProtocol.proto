@@ -150,7 +150,7 @@ message TriggerDirectoryScannerRequestProto {
 }
 
 /**
- * result - execution reulst.
+ * result - execution result.
  */
 message TriggerDirectoryScannerResponseProto {
   required string result = 1;
