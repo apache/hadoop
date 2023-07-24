@@ -6664,6 +6664,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           node.getLeavingServiceStatus().getOutOfServiceOnlyReplicas())
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
+          .put("decommissionDuration",
+              monotonicNow() - node.getLeavingServiceStatus().getStartTime())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
