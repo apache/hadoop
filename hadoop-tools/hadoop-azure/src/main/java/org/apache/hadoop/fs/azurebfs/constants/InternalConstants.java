@@ -46,5 +46,4 @@ public final class InternalConstants {
 
   public static final String EXPONENTIAL_RETRY_POLICY = "Exponential Retry Policy";
   public static final String STATIC_RETRY_POLICY = "Static Retry Policy";
-  public static final String LINEAR_RETRY_POLICY = "Linear Retry Policy";
 }

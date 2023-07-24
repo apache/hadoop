@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.EXPONENTIAL_RETRY_POLICY;
-import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.LINEAR_RETRY_POLICY;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.STATIC_RETRY_POLICY;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
@@ -238,7 +237,7 @@ public class AbfsRestOperation {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
-        LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
+        LOG.debug("Rest operation {} failed with failureReason: {}.\nRetrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
             operationType, failureReason, retryCount, getRetryPolicyStr(retryPolicy), retryInterval);
         Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
@@ -442,8 +441,6 @@ public class AbfsRestOperation {
   String getRetryPolicyStr(final RetryPolicy retryPolicy) {
     if (retryPolicy instanceof StaticRetryPolicy) {
       return STATIC_RETRY_POLICY;
-    } else if (retryPolicy instanceof LinearRetryPolicy) {
-      return LINEAR_RETRY_POLICY;
     }
     return EXPONENTIAL_RETRY_POLICY;
   }

@@ -146,22 +146,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
-      DefaultValue = DEFAULT_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
-  private boolean linearRetryForConnectionTimeoutEnabled;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT,
-      DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT)
-  private int minBackoffIntervalForConnectionTimeout;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT,
-      DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT)
-  private int maxBackoffIntervalForConnectionTimeout;
-
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED,
-      DefaultValue = DEFAULT_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED)
-  private boolean linearRetryDoubleStepUpEnabled;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
       DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
   private boolean staticRetryForConnectionTimeoutEnabled;
@@ -679,28 +663,12 @@ public class AbfsConfiguration{
     return this.maxBackoffInterval;
   }
 
-  public boolean getLinearRetryForConnectionTimeoutEnabled() {
-    return linearRetryForConnectionTimeoutEnabled;
-  }
-
   public boolean getStaticRetryForConnectionTimeoutEnabled() {
     return staticRetryForConnectionTimeoutEnabled;
   }
 
   public int getStaticRetryInterval() {
     return staticRetryInterval;
-  }
-
-  public int getMinBackoffIntervalMillisecondsForConnectionTimeout() {
-    return this.minBackoffIntervalForConnectionTimeout;
-  }
-
-  public int getMaxBackoffIntervalMillisecondsForConnectionTimeout() {
-    return this.maxBackoffIntervalForConnectionTimeout;
-  }
-
-  public boolean getLinearRetryDoubleStepUpEnabled() {
-    return linearRetryDoubleStepUpEnabled;
   }
 
   public int getBackoffIntervalMilliseconds() {
@@ -1189,11 +1157,6 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
-  }
-
-  @VisibleForTesting
-  public void setLinearRetryDoubleStepUpEnabled(final boolean linearRetryDoubleStepUpEnabled) {
-    this.linearRetryDoubleStepUpEnabled = linearRetryDoubleStepUpEnabled;
   }
 
   public boolean getRenameResilience() {

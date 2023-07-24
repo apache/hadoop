@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
- * Linear Retry policy used by AbfsClient.
+ * Retry policy used by AbfsClient for Network Errors.
  * */
 public class StaticRetryPolicy extends RetryPolicy {
 

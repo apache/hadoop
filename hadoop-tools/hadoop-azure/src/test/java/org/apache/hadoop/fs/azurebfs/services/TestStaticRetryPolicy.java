@@ -26,19 +26,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_STATIC_RETRY_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * Class to test the behavior of Static Retry policy as well the inheritance
- * between {@link RetryPolicy}, {@link LinearRetryPolicy}, {@link ExponentialRetryPolicy}, {@link StaticRetryPolicy}
+ * between {@link RetryPolicy}, {@link ExponentialRetryPolicy}, {@link StaticRetryPolicy}
  */
 public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
-
-  private final int STATIC_RETRY_INTERVAL = 2000;
 
   public TestStaticRetryPolicy() throws Exception {
     super();
@@ -60,7 +57,6 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testStaticRetryPolicyInitialization1() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
-    config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     assertInitialization(config, StaticRetryPolicy.class);
   }
 
@@ -68,15 +64,6 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testStaticRetryPolicyInitialization2() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
-    config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
-    assertInitialization(config, LinearRetryPolicy.class);
-  }
-
-  @Test
-  public void testStaticRetryPolicyInitialization3() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
-    config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
     assertInitialization(config, ExponentialRetryPolicy.class);
   }
 
@@ -106,8 +93,9 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
   @Test
   public void testStaticRetryInterval() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
+    long retryInterval = 1000;
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
-    config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
+    config.set(AZURE_STATIC_RETRY_INTERVAL, "1000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
@@ -116,12 +104,12 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
 
     Assertions.assertThat(retryPolicy.getRetryInterval(0))
-        .isEqualTo(STATIC_RETRY_INTERVAL);
+        .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(1))
-        .isEqualTo(STATIC_RETRY_INTERVAL);
+        .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(2))
-        .isEqualTo(STATIC_RETRY_INTERVAL);
+        .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(3))
-        .isEqualTo(STATIC_RETRY_INTERVAL);
+        .isEqualTo(retryInterval);
   }
 }

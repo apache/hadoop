@@ -56,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
-import org.apache.hadoop.fs.azurebfs.services.LinearRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -112,6 +111,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
@@ -1651,8 +1651,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsClientContextBuilder()
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration))
-        .withLinearRetryPolicy(
-            new LinearRetryPolicy(abfsConfiguration))
         .withStaticRetryPolicy(
             new StaticRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)

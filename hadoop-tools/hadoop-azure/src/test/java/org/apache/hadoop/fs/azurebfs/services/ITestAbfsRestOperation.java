@@ -57,7 +57,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.EXPONENTIAL_RETRY_POLICY;
-import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.LINEAR_RETRY_POLICY;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.STATIC_RETRY_POLICY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
@@ -363,10 +362,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   public void testRetryPolicyString() throws Exception {
     // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
-    RetryPolicy retryPolicy = new LinearRetryPolicy(10);
-    Assertions.assertThat(op.getRetryPolicyStr(retryPolicy)).isEqualTo(LINEAR_RETRY_POLICY);
-
-    retryPolicy = new StaticRetryPolicy(10);
+    RetryPolicy retryPolicy = new StaticRetryPolicy(10);
     Assertions.assertThat(op.getRetryPolicyStr(retryPolicy)).isEqualTo(STATIC_RETRY_POLICY);
 
     retryPolicy = new ExponentialRetryPolicy(10);

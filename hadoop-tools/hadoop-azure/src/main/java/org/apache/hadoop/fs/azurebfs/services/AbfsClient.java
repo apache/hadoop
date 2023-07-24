@@ -94,7 +94,6 @@ public class AbfsClient implements Closeable {
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy exponentialRetryPolicy;
-  private final LinearRetryPolicy linearRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -129,7 +128,6 @@ public class AbfsClient implements Closeable {
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
-    this.linearRetryPolicy = abfsClientContext.getLinearRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
@@ -227,10 +225,6 @@ public class AbfsClient implements Closeable {
     return exponentialRetryPolicy;
   }
 
-  LinearRetryPolicy getLinearRetryPolicy() {
-    return linearRetryPolicy;
-  }
-
   StaticRetryPolicy getStaticRetryPolicy() {
     return staticRetryPolicy;
   }
@@ -242,8 +236,6 @@ public class AbfsClient implements Closeable {
 
     if (getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()) {
       return getStaticRetryPolicy();
-    } else if (getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
-      return getLinearRetryPolicy();
     } else {
       return getExponentialRetryPolicy();
     }
