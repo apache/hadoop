@@ -46,7 +46,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.event.Level;
@@ -59,8 +58,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -367,7 +366,7 @@ public class TestObserverReadProxyProvider {
 
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     final HAServiceState state = HAServiceState.STANDBY;
-    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+    @SuppressWarnings("unchecked") NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
     Future<HAServiceState> task = mock(Future.class);
     when(task.get(anyLong(), any(TimeUnit.class))).thenReturn(state);
@@ -452,7 +451,7 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test GetHAServiceState when timeout is disabled (test the else { task.get() } code path)
+   * Test GetHAServiceState when timeout is disabled (test the else { task.get() } code path).
    */
   @Test
   public void testGetHAServiceStateWithoutTimeout() throws Exception {
