@@ -51,6 +51,9 @@ import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -269,5 +272,72 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         .describedAs("PrimaryRequestId in a retried request's tracingContext "
             + "should be equal to PrimaryRequestId in the original request.")
         .isEqualTo(assertionPrimaryId);
+  }
+
+  @Test
+  public void testTracingContextHeaderForRetrypolicy() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final String fileSystemId = fs.getFileSystemId();
+    final String clientCorrelationId = fs.getClientCorrelationId();
+    final TracingHeaderFormat tracingHeaderFormat = TracingHeaderFormat.ALL_ID_FORMAT;
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
+        0));
+    tracingContext.setPrimaryRequestID();
+    AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
+
+    tracingContext.constructHeader(abfsHttpOperation, null, null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, null, STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, STATIC_RETRY_POLICY_ABBREVIATION);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+  }
+
+  private void checkHeaderForRetryPolicyAbbreviation(String header, String expectedFailureReason, String expectedRetryPolicyAbbreviation) {
+    String headerContents[] = header.split(":");
+    String previousReqContext = headerContents[headerContents.length - 1];
+    if (expectedFailureReason != null) {
+      Assertions.assertThat(previousReqContext.split("_")[1])
+          .isEqualTo(expectedFailureReason);
+      Assertions.assertThat(previousReqContext.split("_").length)
+          .isGreaterThanOrEqualTo(2);
+    } else {
+      Assertions.assertThat(previousReqContext.split("_").length)
+          .isEqualTo(1);
+    }
+
+    if (expectedRetryPolicyAbbreviation != null) {
+      Assertions.assertThat(previousReqContext.split("_")[2])
+          .isEqualTo(expectedRetryPolicyAbbreviation);
+      Assertions.assertThat(previousReqContext.split("_").length)
+          .isGreaterThanOrEqualTo(3);
+    } else {
+      Assertions.assertThat(previousReqContext.split("_").length)
+          .isLessThanOrEqualTo(2);
+    }
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_STATIC_RETRY_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
@@ -83,6 +84,8 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
     retryPolicy = client.getRetryPolicy(CONNECTION_RESET_ABBREVIATION);
     Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    retryPolicy = client.getRetryPolicy(" ");
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
   }
 
   /**
@@ -94,8 +97,10 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testStaticRetryInterval() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     long retryInterval = 1000;
+    int maxIoRetry = 5;
     config.set(AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "true");
     config.set(AZURE_STATIC_RETRY_INTERVAL, "1000");
+    config.set(AZURE_MAX_IO_RETRIES, "5");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
@@ -103,6 +108,8 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
     Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
 
+    Assertions.assertThat(retryPolicy.shouldRetry(0, -1))
+        .isEqualTo(true);
     Assertions.assertThat(retryPolicy.getRetryInterval(0))
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(1))
@@ -111,5 +118,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(3))
         .isEqualTo(retryInterval);
+    Assertions.assertThat(retryPolicy.shouldRetry(maxIoRetry, -1))
+        .isEqualTo(false);
   }
 }

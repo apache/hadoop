@@ -223,7 +223,7 @@ public class TracingContext {
     if (previousFailure == null) {
       return header;
     }
-    if (previousFailure == CONNECTION_TIMEOUT_ABBREVIATION) {
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(previousFailure) && retryPolicyAbbreviation != null) {
       return String.format("%s_%s_%s", header, previousFailure, retryPolicyAbbreviation);
     }
     return String.format("%s_%s", header, previousFailure);
