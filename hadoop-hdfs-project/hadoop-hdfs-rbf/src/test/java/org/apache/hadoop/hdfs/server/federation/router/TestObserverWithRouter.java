@@ -896,7 +896,8 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testMsyncWithNoNamespacesEligibleForCRS(ConfigSetting configSetting) throws Exception {
+  public void testMsyncWithNoNamespacesEligibleForCRS(ConfigSetting configSetting)
+      throws Exception {
     Configuration confOverride = new Configuration(false);
     // Disable observer reads for all namespaces.
     confOverride.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, false);
