@@ -367,7 +367,7 @@ public class TestObserverReadProxyProvider {
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     final HAServiceState state = HAServiceState.STANDBY;
     @SuppressWarnings("unchecked") NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
-        (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo<>.class);
+        (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
     Future<HAServiceState> task = mock(Future.class);
     when(task.get(anyLong(), any(TimeUnit.class))).thenReturn(state);
 
