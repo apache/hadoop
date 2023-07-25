@@ -837,7 +837,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public synchronized Map<DatanodeStorage, BlockListAsLongs> getBlockReports(
       String bpid) {
-    Map<DatanodeStorage, BlockListAsLongs> blockReports = new HashMap<>();
+    Map<DatanodeStorage, BlockListAsLongs> blockReports = new TreeMap<>();
     for (SimulatedStorage storage : storages) {
       blockReports.put(storage.getDnStorage(), getBlockReport(bpid, storage));
     }
