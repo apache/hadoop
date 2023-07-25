@@ -105,6 +105,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -2158,35 +2159,45 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       return;
     }
     final Path path = new Path("/foo");
+
     FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
-    if (fs instanceof DistributedFileSystem) {
-      DistributedFileSystem dfs =
-          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
-      FileSystem httpFs = this.getHttpFSFileSystem();
+    LambdaTestUtils.intercept(AssertionError.class, () -> {
+      if (!(fs instanceof DistributedFileSystem)) {
+        throw new AssertionError(fs.getClass().getSimpleName() +
+            " is not of type DistributedFileSystem.");
+      }
+    });
 
-      Map<String, String> dfsAllErasureCodingCodecs = dfs.getAllErasureCodingCodecs();
-      Map<String, String> diffErasureCodingCodecs = null;
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    FileSystem httpFs = this.getHttpFSFileSystem();
 
+    Map<String, String> dfsErasureCodingCodecs = dfs.getAllErasureCodingCodecs();
+
+    final AtomicReference<Map<String, String>> diffErasureCodingCodecsRef =
+        new AtomicReference<>();
+    LambdaTestUtils.intercept(AssertionError.class, () -> {
       if (httpFs instanceof HttpFSFileSystem) {
-        HttpFSFileSystem httpFS = (HttpFSFileSystem) httpFs;
-        diffErasureCodingCodecs = httpFS.getAllErasureCodingCodecs();
+        HttpFSFileSystem httpFSFileSystem = (HttpFSFileSystem) httpFs;
+        diffErasureCodingCodecsRef.set(httpFSFileSystem.getAllErasureCodingCodecs());
       } else if (httpFs instanceof WebHdfsFileSystem) {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
-        diffErasureCodingCodecs = webHdfsFileSystem.getAllErasureCodingCodecs();
+        diffErasureCodingCodecsRef.set(webHdfsFileSystem.getAllErasureCodingCodecs());
       } else {
-        Assert.fail(fs.getClass().getSimpleName() +
+        throw new AssertionError(httpFs.getClass().getSimpleName() +
             " is not of type HttpFSFileSystem or WebHdfsFileSystem");
       }
+    });
+    Map<String, String> diffErasureCodingCodecs = diffErasureCodingCodecsRef.get();
 
-      //Validate testGetECCodecs are the same as DistributedFileSystem
-      Assert.assertEquals(dfsAllErasureCodingCodecs.size(), diffErasureCodingCodecs.size());
+    //Validate testGetECCodecs are the same as DistributedFileSystem
+    Assert.assertEquals(dfsErasureCodingCodecs.size(), diffErasureCodingCodecs.size());
 
-      for (Map.Entry<String, String> entry : dfsAllErasureCodingCodecs.entrySet()) {
-        Assert.assertTrue(diffErasureCodingCodecs.containsKey(entry.getKey()));
-        Assert.assertEquals(entry.getValue(), diffErasureCodingCodecs.get(entry.getKey()));
-      }
-    } else {
-      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
+    for (Map.Entry<String, String> entry : dfsErasureCodingCodecs.entrySet()) {
+      String key = entry.getKey();
+      String value = entry.getValue();
+      Assert.assertTrue(diffErasureCodingCodecs.containsKey(key));
+      Assert.assertEquals(value, diffErasureCodingCodecs.get(key));
     }
   }
 
