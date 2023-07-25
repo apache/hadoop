@@ -3889,10 +3889,10 @@ public class BlockManager implements BlockStatsMXBean {
         totalProcessed += processed;
         // there is a possibility that if any of the blocks deleted/added during
         // initialisation, then progress might be different.
-        reconstructionQueuesInitProgress = Math.min((double) totalProcessed
-            / totalBlocks, 1.0);
-        LOG.info("Reconstruction queues initialisation progress: {}, total number of blocks " +
-                "processed: {}/{}", reconstructionQueuesInitProgress, totalProcessed, totalBlocks);
+        if (totalBlocks > 0) { // here avoid metrics appear as NaN.
+          reconstructionQueuesInitProgress = Math.min((double) totalProcessed
+              / totalBlocks, 1.0);
+        }
 
         if (!blocksItr.hasNext()) {
           LOG.info("Total number of blocks            = {}", blocksMap.size());
@@ -3912,6 +3912,8 @@ public class BlockManager implements BlockStatsMXBean {
         }
       } finally {
         namesystem.writeUnlock("processMisReplicatesAsync");
+        LOG.info("Reconstruction queues initialisation progress: {}, total number of blocks " +
+            "processed: {}/{}", reconstructionQueuesInitProgress, totalProcessed, totalBlocks);
         // Make sure it is out of the write lock for sufficiently long time.
         Thread.sleep(sleepDuration);
       }

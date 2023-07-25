@@ -263,7 +263,7 @@ public interface FSNamesystemMBean {
   int getPendingSPSPaths();
 
   /**
-   * Get the progress of the reconstruction queues initialisation
+   * Get the progress of the reconstruction queues initialisation.
    *
    * @return Returns values between 0 and 1 for the progress.
    */
