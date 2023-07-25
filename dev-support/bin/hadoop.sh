@@ -587,18 +587,18 @@ function shadedclient_rebuild
 
   extra="-Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true"
 
-  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
-    if load_hadoop_version; then
-      export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
-    else
-      yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
-    fi
-
-    extra="${extra} ${WINDOWS_FLAGS[*]}"
-  fi
+#  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+#    if load_hadoop_version; then
+#      export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+#    else
+#      yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
+#    fi
+#
+#    extra="${extra} ${WINDOWS_FLAGS[*]}"
+#  fi
 
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}"
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}" -Pnative-win -Dhttps.protocols=TLSv1.2 -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable="${BASH_EXECUTABLE}" -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}" -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}" -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}" -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
@@ -606,7 +606,7 @@ function shadedclient_rebuild
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
-      -Dspotbugs.skip=true "${extra}"
+      -Dspotbugs.skip=true "${extra}" -Pnative-win -Dhttps.protocols=TLSv1.2 -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable="${BASH_EXECUTABLE}" -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}" -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}" -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}" -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
