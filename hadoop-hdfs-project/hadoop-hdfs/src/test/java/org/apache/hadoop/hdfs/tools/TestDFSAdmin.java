@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +78,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
-import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
@@ -293,8 +291,7 @@ public class TestDFSAdmin {
     }
   }
 
-  @Test(timeout = 
-      30000)
+  @Test(timeout = 30000)
   public void testGetDatanodeInfo() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
