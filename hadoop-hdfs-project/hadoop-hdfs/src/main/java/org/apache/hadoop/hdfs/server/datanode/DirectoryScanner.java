@@ -476,7 +476,7 @@ public class DirectoryScanner implements Runnable {
    * Reconcile differences between disk and in-memory blocks
    */
   @VisibleForTesting
-  public void reconcile() throws IOException {
+  public synchronized void reconcile() throws IOException {
     reconcileRunning.set(true);
     LOG.debug("reconcile start DirectoryScanning");
     DataNodeFaultInjector.get().throwIOExceptionWhenReconcile();
