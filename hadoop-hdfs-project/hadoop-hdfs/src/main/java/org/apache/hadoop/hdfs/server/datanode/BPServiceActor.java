@@ -105,6 +105,7 @@ class BPServiceActor implements Runnable {
   private final Scheduler scheduler;
   private final Object sendIBRLock;
   private final ExecutorService ibrExecutorService;
+  private final ExecutorService fbrExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -165,6 +166,9 @@ class BPServiceActor implements Runnable {
     ibrExecutorService = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("ibr-executor-%d").build());
+    fbrExecutorService = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat("fbr-executor-%d").build());
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -662,6 +666,9 @@ class BPServiceActor implements Runnable {
     if (!ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
     }
+    if (!fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
+    }
   }
 
   private void handleRollingUpgradeStatus(HeartbeatResponse resp) throws IOException {
@@ -758,17 +765,15 @@ class BPServiceActor implements Runnable {
           }
         }
 
-        List<DatanodeCommand> cmds = null;
         boolean forceFullBr =
             scheduler.forceFullBlockReport.getAndSet(false);
         if (forceFullBr) {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          cmds = blockReport(fullBlockReportLeaseId);
+          fbrExecutorService.submit(new FBRTaskHandler(fullBlockReportLeaseId));
           fullBlockReportLeaseId = 0;
         }
-        commandProcessingThread.enqueue(cmds);
 
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();
@@ -1185,6 +1190,29 @@ class BPServiceActor implements Runnable {
       }
     }
 
+  }
+
+  class FBRTaskHandler implements Runnable {
+
+    long fullBlockReportLeaseId;
+
+    private FBRTaskHandler(long fullBlockReportLeaseId) {
+      this.fullBlockReportLeaseId = fullBlockReportLeaseId;
+    }
+
+    @Override
+    public void run() {
+      LOG.info("Starting FBR Task Handler.");
+      List<DatanodeCommand> cmds = null;
+      try {
+        cmds = blockReport(this.fullBlockReportLeaseId);
+        commandProcessingThread.enqueue(cmds);
+      } catch (IOException e) {
+        LOG.warn("IOException in FBR Task Handler.", e);
+      } catch (InterruptedException e) {
+        LOG.warn("InterruptedException in FBR Task Handler.", e);
+      }
+    }
   }
 
   /**
