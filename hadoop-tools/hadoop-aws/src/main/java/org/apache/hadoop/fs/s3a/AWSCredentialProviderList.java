@@ -218,8 +218,7 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
    *
    * @return providers
    */
-  @VisibleForTesting
-  List<AwsCredentialsProvider> getProviders() {
+  public List<AwsCredentialsProvider> getProviders() {
     return providers;
   }
 

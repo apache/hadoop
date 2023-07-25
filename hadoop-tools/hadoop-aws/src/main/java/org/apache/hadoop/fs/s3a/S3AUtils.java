@@ -563,12 +563,20 @@ public final class S3AUtils {
    * @return instance of the specified class
    * @throws IOException on any problem
    */
-  public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
-      Configuration conf, @Nullable URI uri, Class<InstanceT> interfaceImplemented, String methodName,
+  public static <InstanceT> InstanceT getInstanceFromReflection(
+      Class<?> instanceClass,
+      Configuration conf,
+      @Nullable URI uri,
+      Class<InstanceT> interfaceImplemented,
+      String methodName,
       String configKey) throws IOException {
 
-    String className = instanceClass.getName();
-    return getInstanceFromReflection(className,conf, uri ,interfaceImplemented, methodName,configKey);
+    return getInstanceFromReflection(instanceClass.getName(),
+        conf,
+        uri,
+        interfaceImplemented,
+        methodName,
+        configKey);
   }
 
   /**
@@ -653,11 +661,11 @@ public final class S3AUtils {
         throw translateException("Instantiate " + className, "", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw instantiationException(className , configKey,  targetException);
+        throw instantiationException(className, configKey, targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw instantiationException(className , configKey, e);
+      throw instantiationException(className, configKey, e);
     }
 
   }

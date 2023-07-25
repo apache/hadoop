@@ -40,7 +40,7 @@ public enum Tristate {
   @SuppressWarnings("NonSerializableFieldInSerializableClass")
   private final Optional<Boolean> mapping;
 
-  <T> Tristate(final Optional<Boolean> t) {
+  Tristate(final Optional<Boolean> t) {
     mapping = t;
   }
 

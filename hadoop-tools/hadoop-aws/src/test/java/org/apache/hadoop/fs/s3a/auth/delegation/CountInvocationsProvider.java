@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 
 /**
@@ -40,7 +39,8 @@ public class CountInvocationsProvider
   public static final String NAME = CountInvocationsProvider.class.getName();
 
   public static final AtomicLong COUNTER = new AtomicLong(0);
-  private final AtomicLong instanceCounter  = new AtomicLong(0);
+
+  private final AtomicLong instanceCounter = new AtomicLong(0);
 
   @Override
   public AwsCredentials resolveCredentials() {

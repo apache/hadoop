@@ -45,11 +45,11 @@ A complete list of the changes can be found in the
 
 As the module name is lost, in hadoop releases a large JAR file with
 the name "bundle" is now part of the distribution.
-This is the AWS v2 SDK shaded artifact. 
+This is the AWS v2 SDK shaded artifact.
 
 The new and old SDKs can co-exist; the only place that the hadoop code
 may still use the original SDK is when a non-standard V1 AWS credential
-provider is declared. 
+provider is declared.
 
 Any deployment of the S3A connector must include this JAR or
 the subset of non-shaded aws- JARs needed for communication
@@ -78,7 +78,7 @@ As result, standard cluster configurations should seamlessly upgrade.
 | `com.amazonaws.auth.InstanceProfileCredentialsProvider`     | `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider`                   |
 
 
-There are a limited number of troublespots here
+There are still a number of troublespots here:
 
 #### Other `com.amazonaws.auth.` AWS providers
 
@@ -114,19 +114,20 @@ The major changes and how this affects S3A are listed below.
 
 * Package names have changed, all classes in SDK V2 are under `software.amazon.awssdk`, SDK V1 classes
 were under `com.amazonaws`.
-* There is no interoperability between them.
+* There is no interoperability between the old and new classes.
 * All classnames are different, often in very subtle ways. It is possible to use both in the same
   class, as is done in the package `org.apache.hadoop.fs.s3a.adapter`.
 * All the core message classes are now automatically generated from a JSON protocol description.
-* These all getter methods have been renamed.
+* All getter methods have been renamed.
 * All classes are constructed via builder methods
 * Message classes are no longer Java `Serializable`.
 
-Most of these changes simply add what will feel to be gratuitous migration effort;
-the removable of the `Serializable` nature from all messaage response classes can
+Most of these changes simply create what will feel to be gratuitous migration effort;
+the removable of the `Serializable` nature from all message response classes can
 potentially break applications -such as anything passing them between Spark workers.
 See AWS SDK v2 issue [Simplify Modeled Message Marshalling #82](https://github.com/aws/aws-sdk-java-v2/issues/82),
-note that it was filed in 2017, then implement your own workaround.
+note that it was filed in 2017, then implement your own workaround pending that issue
+being resolved.
 
 ### Credential Providers
 
@@ -139,7 +140,7 @@ The change in interface will mean that custom credential providers will need to 
 implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
 `com.amazonaws.auth.AWSCredentialsProvider`.
 
-#### v1 `AWSCredentialsProvider` interface
+#### Original v1 `AWSCredentialsProvider` interface
 
 Note how the interface begins with the capitalized "AWS" acronym.
 The v2 interface starts with "Aws". This is a very subtle change
@@ -158,6 +159,9 @@ public interface AWSCredentialsProvider {
 ```
 The interface binding also supported a factory method, `AWSCredentialsProvider instance()` which,
 if available, would be invoked in preference to using any constructor.
+
+If the interface implemented `Closeable` or `AutoCloseable`, these would
+be invoked when the provider chain was being shut down.
 
 #### v2 `AwsCredentialsProvider` interface
 
@@ -178,15 +182,16 @@ public interface AwsCredentialsProvider {
 2. `getCredentials()` has become `resolveCredentials()`.
 3. There is now the expectation in the SDK that credential resolution/lookup etc will be
    performed in `resolveCredentials()`.
-
+4. If the interface implements `Closeable` or `AutoCloseable`, these will
+   be invoked when the provider chain is being shut down.
 
 
 ### Delegation Tokens
 
-1. Custom credential providers used in delegation token binding classes will need to be updated;
-2. The return type from delegation token binding has changed to support more class 
-   instances being returned in future.
- 
+1. Custom credential providers used in delegation token binding classes will need to be updated
+2. The return type from delegation token binding has changed to support more class
+   instances being returned in the future.
+
 `AWSCredentialProviderList` has been upgraded to the V2 API. 
 * It still retains a `refresh()` method but this is now a deprecated no-op.
 * It is still `Closeable`; its `close()` method iterates through all entries in
@@ -210,6 +215,8 @@ has been replaced by [software.amazon.awssdk.core.signer.Signer](https://github.
 
 The change in signers will mean the custom signers will need to be updated to implement the new
 interface.
+
+There is no support to assist in this migration.
 
 ### S3A Auditing Extensions.
 

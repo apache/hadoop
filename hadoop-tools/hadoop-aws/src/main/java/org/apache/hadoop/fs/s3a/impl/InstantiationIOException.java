@@ -54,6 +54,18 @@ public class InstantiationIOException extends IOException {
    */
   private final String key;
 
+  /**
+   * An (extensible) enum of kinds of instantiation failure.
+   */
+  public enum Kind {
+    Forbidden,
+    InstantiationFailure,
+    IsAbstract,
+    IsNotImplementation,
+    Other,
+    Unavailable,
+    UnsupportedConstructor,
+  }
 
   public InstantiationIOException(
       final Kind kind,
@@ -81,10 +93,23 @@ public class InstantiationIOException extends IOException {
     return key;
   }
 
+  /**
+   * Class is abstract.
+   * @param classname classname.
+   * @param key configuration key
+   * @return an exception.
+   */
   public static InstantiationIOException isAbstract(String classname, String key) {
     return new InstantiationIOException(Kind.IsAbstract, classname, key, ABSTRACT_PROVIDER, null);
   }
 
+  /**
+   * Class does not implement the desired interface.
+   * @param classname classname.
+   * @param interfaceName required interface
+   * @param key configuration key
+   * @return an exception.
+   */
   public static InstantiationIOException isNotInstanceOf(String classname,
       String interfaceName,
       String key) {
@@ -92,29 +117,44 @@ public class InstantiationIOException extends IOException {
         key, DOES_NOT_IMPLEMENT + " " + interfaceName, null);
   }
 
+  /**
+   * Class is unavailable for some reason, likely missing dependency
+   * @param classname classname.
+   * @param key configuration key
+   * @return an exception.
+   */
+  public static InstantiationIOException unavailable(String classname,
+      String key,
+      String text) {
+    return new InstantiationIOException(Kind.Unavailable,
+        classname, key, text, null);
+  }
 
-  public static InstantiationIOException unsupportedConstructor(String classname, String key) {
+  /**
+   * Failure to find a valid constructor (signature, visibility) or
+   * factory method.
+   * @param classname classname.
+   * @param key configuration key
+   * @return an exception.
+   */
+  public static InstantiationIOException unsupportedConstructor(String classname,
+      String key) {
     return new InstantiationIOException(Kind.UnsupportedConstructor,
         classname, key, CONSTRUCTOR_EXCEPTION, null);
   }
 
-
+  /**
+   * General instantiation failure.
+   * @param classname classname.
+   * @param key configuration key
+   * @param t thrown
+   * @return an exception.
+   */
   public static InstantiationIOException instantiationException(String classname,
       String key,
       Throwable t) {
     return new InstantiationIOException(Kind.InstantiationFailure,
         classname, key, INSTANTIATION_EXCEPTION + " " + t, t);
-  }
-
-  /**
-   * An (extensible) enum of kinds.
-   */
-  public enum Kind {
-    IsAbstract,
-    UnsupportedConstructor,
-    IsNotImplementation,
-    InstantiationFailure,
-    Other,
   }
 
 }

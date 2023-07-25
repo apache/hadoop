@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.adapter;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -28,66 +28,60 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
 
 /**
  * Binding support; the sole way which the rest of the code should instantiate v1 SDK libraries.
  * Uses this class's Classloader for its analysis/loading.
  */
 @SuppressWarnings("StaticNonFinalField")
-public class AwsV1BindingSupport {
+public final class AwsV1BindingSupport {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AwsV1BindingSupport.class);
 
+  /**
+   * V1 credential provider classname: {@code}.
+   */
   public static final String CREDENTIAL_PROVIDER_CLASSNAME =
       "com.amazonaws.auth.AWSCredentialsProvider";
 
-  public static final String NOT_AWS_PROVIDER =
-      "does not implement AWSCredentialsProvider";
-
-  public static final String NOT_AWS_V2_PROVIDER =
-      "does not implement AwsCredentialsProvider";
-
-  public static final String ABSTRACT_PROVIDER =
-      "is abstract and therefore cannot be created";
-
   /**
-   * Tack availability.
+   * SDK availability.
    */
-  private static Tristate sdkAvailability = Tristate.UNKNOWN;
+  private static final AtomicBoolean sdkAvailability = new AtomicBoolean(checkForAwsV1Sdk());
 
-  @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
-  private static Class<?> credentialProviderClass;
-
-  static {
-    isAwsV1SdkAvailable();
+  private AwsV1BindingSupport() {
   }
 
   /**
-   * Is the AWS v1 SDK available
-   * @param cl classloader to look in.
+   * Probe for the AWS v1 SDK being available by looking for
+   * the class {@link #CREDENTIAL_PROVIDER_CLASSNAME}.
+   * @return true if it was found in the classloader
+   */
+  private static boolean checkForAwsV1Sdk() {
+
+    try {
+      ClassLoader cl = AwsV1BindingSupport.class.getClassLoader();
+      cl.loadClass(CREDENTIAL_PROVIDER_CLASSNAME);
+      LOG.debug("v1 SDK class {} found", CREDENTIAL_PROVIDER_CLASSNAME);
+      return true;
+    } catch (Exception e) {
+      LOG.debug("v1 SDK class {} not found", CREDENTIAL_PROVIDER_CLASSNAME, e);
+      return false;
+    }
+  }
+
+  /**
+   * Is the AWS v1 SDK available?
    * @return true if it was found in the classloader
    */
   public static synchronized boolean isAwsV1SdkAvailable() {
-
-    final Optional<Boolean> mapping = sdkAvailability.getMapping();
-    if (mapping.isPresent()) {
-      return mapping.get();
-    }
-    // no binding, so calculate it once.
-    try {
-      ClassLoader cl = AwsV1BindingSupport.class.getClassLoader();
-      credentialProviderClass = cl.loadClass(CREDENTIAL_PROVIDER_CLASSNAME);
-      LOG.debug("v1 SDK class {} found", CREDENTIAL_PROVIDER_CLASSNAME);
-      sdkAvailability = Tristate.TRUE;
-    } catch (Exception e) {
-      LOG.debug("v1 SDK class {} not found", CREDENTIAL_PROVIDER_CLASSNAME, e);
-      sdkAvailability = Tristate.FALSE;
-    }
-    // guaranteed to be non-empty
-    return sdkAvailability.getMapping().get();
+    return sdkAvailability.get();
   }
+
 
   /**
    * Create an AWS credential provider from its class by using reflection.  The
@@ -107,17 +101,19 @@ public class AwsV1BindingSupport {
    * @param conf configuration
    * @param className credential classname
    * @param uri URI of the FS
+   * @param key configuration key to use
    * @return the instantiated class
-   * @throws IOException on any instantiation failure, including v1 SDK not found.
+   * @throws InstantiationIOException on any instantiation failure, including v1 SDK not found
+   * @throws IOException anything else.
    */
-  public  static AwsCredentialsProvider createAWSV1CredentialProvider(
+  public static AwsCredentialsProvider createAWSV1CredentialProvider(
       Configuration conf,
       String className,
-      @Nullable URI uri) throws IOException {
+      @Nullable URI uri,
+      final String key) throws IOException {
     if (!isAwsV1SdkAvailable()) {
-      throw new IOException("No AWS v1 SDK available; unable to load " + className);
+      throw unavailable(className, key, "No AWS v1 SDK available");
     }
     return V1ToV2AwsCredentialProviderAdapter.create(conf, className, uri);
-
   }
 }

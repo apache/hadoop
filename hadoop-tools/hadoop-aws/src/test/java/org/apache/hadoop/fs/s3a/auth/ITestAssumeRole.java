@@ -59,7 +59,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.E_FORBIDDEN_AWS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.E_FORBIDDEN_AWS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;

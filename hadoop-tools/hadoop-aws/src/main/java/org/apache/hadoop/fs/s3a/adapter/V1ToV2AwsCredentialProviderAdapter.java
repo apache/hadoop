@@ -37,7 +37,6 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
@@ -50,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
  */
 public final class V1ToV2AwsCredentialProviderAdapter
     implements AwsCredentialsProvider, Closeable {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       V1ToV2AwsCredentialProviderAdapter.class);
 
@@ -91,7 +91,7 @@ public final class V1ToV2AwsCredentialProviderAdapter
     if (v1CredentialsProvider instanceof Closeable) {
       ((Closeable) v1CredentialsProvider).close();
     } else if (v1CredentialsProvider instanceof AutoCloseable) {
-      S3AUtils.closeAutocloseables(LOG, (AutoCloseable)v1CredentialsProvider);
+      S3AUtils.closeAutocloseables(LOG, (AutoCloseable) v1CredentialsProvider);
     }
   }
 
@@ -148,7 +148,7 @@ public final class V1ToV2AwsCredentialProviderAdapter
    * @param uri URI of the FS
    * @return the instantiated class
    * @throws InstantiationIOException on construction and instantiation failures,
-   *         including v1 SDK exceptions.
+   * including v1 SDK exceptions.
    * @throws IOException if raised by a constructor/factory method.
    */
   static AwsCredentialsProvider create(
@@ -156,10 +156,10 @@ public final class V1ToV2AwsCredentialProviderAdapter
       String className,
       @Nullable URI uri) throws InstantiationIOException, IOException {
 
-      final AWSCredentialsProvider instance =
-          S3AUtils.getInstanceFromReflection(className, conf, uri, AWSCredentialsProvider.class,
-              "getInstance", AWS_CREDENTIALS_PROVIDER);
-      return create(instance);
+    final AWSCredentialsProvider instance =
+        S3AUtils.getInstanceFromReflection(className, conf, uri, AWSCredentialsProvider.class,
+            "getInstance", AWS_CREDENTIALS_PROVIDER);
+    return create(instance);
   }
 
 }
