@@ -36,8 +36,10 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -124,6 +126,10 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   private Configuration createConfigurationWithProbe(final int probe) {
     Configuration conf = new Configuration(getFileSystem().getConf());
     S3ATestUtils.disableFilesystemCaching(conf);
+    removeBaseAndBucketOverrides(conf,
+        S3A_BUCKET_PROBE,
+        ENDPOINT,
+        AWS_REGION);
     conf.setInt(S3A_BUCKET_PROBE, probe);
     conf.set(AWS_REGION, "eu-west-1");
     return conf;

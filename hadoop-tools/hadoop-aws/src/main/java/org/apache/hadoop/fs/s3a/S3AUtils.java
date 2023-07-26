@@ -615,10 +615,10 @@ public final class S3AUtils {
     try {
       Class<?> instanceClass = S3AUtils.class.getClassLoader().loadClass(className);
       if (Modifier.isAbstract(instanceClass.getModifiers())) {
-        throw isAbstract(className, configKey);
+        throw isAbstract(uri, className, configKey);
       }
       if (!interfaceImplemented.isAssignableFrom(instanceClass)) {
-        throw isNotInstanceOf(className, interfaceImplemented.getName(), configKey);
+        throw isNotInstanceOf(uri, className, interfaceImplemented.getName(), configKey);
 
       }
       Constructor cons;
@@ -649,7 +649,7 @@ public final class S3AUtils {
       }
 
       // no supported constructor or factory method found
-      throw unsupportedConstructor(className, configKey);
+      throw unsupportedConstructor(uri, className, configKey);
     } catch (InvocationTargetException e) {
       Throwable targetException = e.getTargetException();
       if (targetException == null) {
@@ -661,13 +661,12 @@ public final class S3AUtils {
         throw translateException("Instantiate " + className, "", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw instantiationException(className, configKey, targetException);
+        throw instantiationException(uri, className, configKey, targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw instantiationException(className, configKey, e);
+      throw instantiationException(uri, className, configKey, e);
     }
-
   }
 
 

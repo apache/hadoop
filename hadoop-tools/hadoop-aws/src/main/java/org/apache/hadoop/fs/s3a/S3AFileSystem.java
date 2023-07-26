@@ -852,7 +852,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     if(!trackDurationAndSpan(
         STORE_EXISTS_PROBE, bucket, null, () ->
-            invoker.retry("doestBucketExist", bucket, true, () -> {
+            invoker.retry("doesBucketExist", bucket, true, () -> {
               try {
                 if (BUCKET_REGIONS.containsKey(bucket)) {
                   return true;

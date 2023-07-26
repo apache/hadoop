@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.adapter;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -51,7 +50,7 @@ public final class AwsV1BindingSupport {
   /**
    * SDK availability.
    */
-  private static final AtomicBoolean sdkAvailability = new AtomicBoolean(checkForAwsV1Sdk());
+  private static final boolean SDK_V1_FOUND = checkForAwsV1Sdk();
 
   private AwsV1BindingSupport() {
   }
@@ -79,7 +78,7 @@ public final class AwsV1BindingSupport {
    * @return true if it was found in the classloader
    */
   public static synchronized boolean isAwsV1SdkAvailable() {
-    return sdkAvailability.get();
+    return SDK_V1_FOUND;
   }
 
 
@@ -112,7 +111,7 @@ public final class AwsV1BindingSupport {
       @Nullable URI uri,
       final String key) throws IOException {
     if (!isAwsV1SdkAvailable()) {
-      throw unavailable(className, key, "No AWS v1 SDK available");
+      throw unavailable(uri, className, key, "No AWS v1 SDK available");
     }
     return V1ToV2AwsCredentialProviderAdapter.create(conf, className, uri);
   }

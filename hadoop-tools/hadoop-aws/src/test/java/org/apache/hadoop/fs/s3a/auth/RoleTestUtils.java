@@ -151,6 +151,7 @@ public final class RoleTestUtils {
       final String roleARN) {
     Configuration conf = new Configuration(srcConf);
     removeBaseAndBucketOverrides(conf,
+        S3A_BUCKET_PROBE,
         DELEGATION_TOKEN_BINDING,
         ASSUMED_ROLE_ARN,
         AWS_CREDENTIALS_PROVIDER,
@@ -159,6 +160,8 @@ public final class RoleTestUtils {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
+    // force in bucket resolution during startup
+    conf.setInt(S3A_BUCKET_PROBE, 1);
     disableFilesystemCaching(conf);
     return conf;
   }

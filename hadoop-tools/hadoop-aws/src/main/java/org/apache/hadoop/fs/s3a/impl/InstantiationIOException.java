@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.IOException;
+import java.net.URI;
+
+import javax.annotation.Nullable;
+
+import org.apache.hadoop.fs.PathIOException;
 
 /**
  * An instantiation exception raised during reflection-based creation
@@ -26,7 +30,7 @@ import java.io.IOException;
  * Uses an enum of kind so tests/code can examine it, without
  * creating a full hierarchy of exception classes.
  */
-public class InstantiationIOException extends IOException {
+public class InstantiationIOException extends PathIOException {
 
   public static final String ABSTRACT_PROVIDER =
       "is abstract and therefore cannot be created";
@@ -68,12 +72,13 @@ public class InstantiationIOException extends IOException {
   }
 
   public InstantiationIOException(
-      final Kind kind,
-      final String classname,
-      final String key,
-      final String message,
-      final Throwable cause) {
-    super("Class " + classname + " " + message
+      Kind kind,
+      @Nullable URI uri, String classname,
+      @Nullable String key,
+      String message,
+      Throwable cause) {
+    super(uri!= null ? uri.toString() : "",
+        "Class " + classname + " " + message
             + (key != null ? (" (configuration key " + key + ")") : ""),
         cause);
     this.kind = kind;
@@ -95,66 +100,80 @@ public class InstantiationIOException extends IOException {
 
   /**
    * Class is abstract.
+   * @param uri URI of filesystem
    * @param classname classname.
    * @param key configuration key
    * @return an exception.
    */
-  public static InstantiationIOException isAbstract(String classname, String key) {
-    return new InstantiationIOException(Kind.IsAbstract, classname, key, ABSTRACT_PROVIDER, null);
+  public static InstantiationIOException isAbstract(URI uri, String classname, String key) {
+    return new InstantiationIOException(Kind.IsAbstract,
+        uri, classname, key, ABSTRACT_PROVIDER, null);
   }
 
   /**
    * Class does not implement the desired interface.
+   * @param uri URI of filesystem
    * @param classname classname.
    * @param interfaceName required interface
    * @param key configuration key
    * @return an exception.
    */
-  public static InstantiationIOException isNotInstanceOf(String classname,
+  public static InstantiationIOException isNotInstanceOf(
+      @Nullable URI uri,
+      String classname,
       String interfaceName,
       String key) {
-    return new InstantiationIOException(Kind.IsNotImplementation, classname,
+    return new InstantiationIOException(Kind.IsNotImplementation, uri, classname,
         key, DOES_NOT_IMPLEMENT + " " + interfaceName, null);
   }
 
   /**
-   * Class is unavailable for some reason, likely missing dependency
+   * Class is unavailable for some reason, probably a missing dependency.
+   * @param uri URI of filesystem
    * @param classname classname.
    * @param key configuration key
    * @return an exception.
    */
-  public static InstantiationIOException unavailable(String classname,
+  public static InstantiationIOException unavailable(
+      @Nullable URI uri,
+      String classname,
       String key,
       String text) {
     return new InstantiationIOException(Kind.Unavailable,
-        classname, key, text, null);
+        uri, classname, key, text, null);
   }
 
   /**
    * Failure to find a valid constructor (signature, visibility) or
    * factory method.
+   * @param uri URI of filesystem
    * @param classname classname.
    * @param key configuration key
    * @return an exception.
    */
-  public static InstantiationIOException unsupportedConstructor(String classname,
+  public static InstantiationIOException unsupportedConstructor(
+      @Nullable URI uri,
+      String classname,
       String key) {
     return new InstantiationIOException(Kind.UnsupportedConstructor,
-        classname, key, CONSTRUCTOR_EXCEPTION, null);
+        uri, classname, key, CONSTRUCTOR_EXCEPTION, null);
   }
 
   /**
    * General instantiation failure.
+   * @param uri URI of filesystem
    * @param classname classname.
    * @param key configuration key
    * @param t thrown
    * @return an exception.
    */
-  public static InstantiationIOException instantiationException(String classname,
+  public static InstantiationIOException instantiationException(
+      @Nullable URI uri,
+      String classname,
       String key,
       Throwable t) {
     return new InstantiationIOException(Kind.InstantiationFailure,
-        classname, key, INSTANTIATION_EXCEPTION + " " + t, t);
+        uri, classname, key, INSTANTIATION_EXCEPTION + " " + t, t);
   }
 
 }

@@ -225,7 +225,7 @@ public final class CredentialProviderListFactory {
       // are also blocked
       if (forbiddenClassnames.contains(className)) {
         throw new InstantiationIOException(InstantiationIOException.Kind.Forbidden,
-            className, key, E_FORBIDDEN_AWS_PROVIDER, null);
+            binding, className, key, E_FORBIDDEN_AWS_PROVIDER, null);
       }
 
       AwsCredentialsProvider provider;
@@ -269,7 +269,6 @@ public final class CredentialProviderListFactory {
     }
     return providers;
   }
-
 
   /**
    * Create an AWS v2 credential provider from its class by using reflection.

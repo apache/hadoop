@@ -192,7 +192,7 @@ public interface AwsCredentialsProvider {
 2. The return type from delegation token binding has changed to support more class
    instances being returned in the future.
 
-`AWSCredentialProviderList` has been upgraded to the V2 API. 
+`AWSCredentialProviderList` has been upgraded to the V2 API.
 * It still retains a `refresh()` method but this is now a deprecated no-op.
 * It is still `Closeable`; its `close()` method iterates through all entries in
 the list; if they are `Closeable` or `AutoCloseable` then their `close()` method is invoked.
