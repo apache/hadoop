@@ -236,7 +236,7 @@ public class TestFSNamesystemMBean {
   @Test
   public void testReconstructionQueuesInitProgressMetrics() throws Exception {
     Configuration conf = new Configuration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
       cluster.waitActive();
       final FSNamesystem fsNamesystem = cluster.getNamesystem();
       final DistributedFileSystem fs = cluster.getFileSystem();
