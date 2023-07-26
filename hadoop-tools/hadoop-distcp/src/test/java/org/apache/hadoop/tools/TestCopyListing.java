@@ -182,16 +182,14 @@ public class TestCopyListing extends SimpleCopyListing {
     try {
       fs = FileSystem.get(getConf());
       buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
-    } catch (IOException e) {
-      LOG.error("Exception encountered in test", e);
-      Assert.fail("Test failed " + e.getMessage());
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
   @Test(timeout=10000)
-  public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory() {
+  public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory()
+      throws IOException {
     FileSystem fs = null;
     Configuration configuration = getConf();
     DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
@@ -202,9 +200,6 @@ public class TestCopyListing extends SimpleCopyListing {
     try {
       fs = FileSystem.get(getConf());
       buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
-    } catch (IOException e) {
-      LOG.error("Exception encountered in test", e);
-      Assert.fail("Test failed " + e.getMessage());
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
