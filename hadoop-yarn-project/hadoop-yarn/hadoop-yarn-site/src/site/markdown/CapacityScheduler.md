@@ -191,8 +191,6 @@ Configuration
   The effective capacity, absoluteCapacity and derived properties like the maximumApplications are calculated from the effective resources.
   If there is no cluster resource, the maximumApplications fallbacks to the configured values.
 
-  Flexible AQC does not support the Universal Capacity Vector format yet: [YARN-11520](https://issues.apache.org/jira/browse/YARN-11520)
-
   * Running and Pending Application Limits
 
   The `CapacityScheduler` supports the following parameters to control the running and pending applications:
@@ -360,7 +358,8 @@ The property `yarn.scheduler.capacity.mapping-rule-json` takes precedence over `
 
 ####Differences between legacy and flexible queue auto-creation modes
 
-To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights. The flexible mode gives the user much more freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
+To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights in legacy-queue-mode. The flexible mode gives the user much more freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
+If legacy-queue-mode is disabled the capacities can be configured using the Universal Capacity Vector format or using weights `1w`, percentages `75` or absolute units `[memory=1024,vcores=1]`.
 
 In flexible Queue Auto-Creation mode, every parent queue can have dynamically created parent or leaf queues (if the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` property is set to true), even if it already has static child queues. This also means that certain settings influence the outcome of the queue placement depending on how the scheduler is configured.
 
