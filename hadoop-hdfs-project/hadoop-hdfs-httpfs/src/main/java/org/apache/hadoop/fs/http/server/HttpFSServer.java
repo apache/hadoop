@@ -534,6 +534,14 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETECCODECS: {
+      FSOperations.FSGetErasureCodingCodecs command =
+          new FSOperations.FSGetErasureCodingCodecs();
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GET_BLOCK_LOCATIONS: {
       long offset = 0;
       long len = Long.MAX_VALUE;
