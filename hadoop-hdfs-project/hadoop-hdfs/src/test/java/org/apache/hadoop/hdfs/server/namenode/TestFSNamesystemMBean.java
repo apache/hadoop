@@ -241,7 +241,7 @@ public class TestFSNamesystemMBean {
       final FSNamesystem fsNamesystem = cluster.getNamesystem();
       final DistributedFileSystem fs = cluster.getFileSystem();
 
-      // validate init reconstructionQueuesInitProgress value.
+      // Validate init reconstructionQueuesInitProgress value.
       assertEquals(0.0, fsNamesystem.getReconstructionQueuesInitProgress(), 0);
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName =
@@ -250,16 +250,16 @@ public class TestFSNamesystemMBean {
           (float) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
       assertEquals(0.0, reconstructionQueuesInitProgress, 0);
 
-      // create file.
+      // Create file.
       Path file = new Path("/test");
       long fileLength = 1024 * 1024 * 3;
       DFSTestUtil.createFile(fs, file, fileLength, (short) 1, 0L);
       DFSTestUtil.waitReplication(fs, file, (short) 1);
 
-      // restart nameNode to run processMisReplicatedBlocks.
+      // Restart nameNode to run processMisReplicatedBlocks.
       cluster.restartNameNode(true);
 
-      // validate reconstructionQueuesInitProgress value.
+      // Validate reconstructionQueuesInitProgress value.
       GenericTestUtils.waitFor(
           () -> cluster.getNamesystem().getReconstructionQueuesInitProgress() == 1.0,
           100, 5 * 1000);
