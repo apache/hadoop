@@ -153,7 +153,7 @@ Configuration
   * Configuring Resource Allocation (non-legacy-queue-mode)
 
   The capacity and maximum-capacity can be set for the queues using the Universal Capacity Vector format, e.g. `[memory=50%,vcores=2w,gpu=1]`.
-  In this example the memory is set in percentage mode, the cpu is set in weight mode and the gpu is set in absolute unit.
+  In this example the Memory is set in percentage mode, the Vcores is set in weight mode and the GPU is set in absolute units.
   It is also possible to use to old capacity format, e.g.: `50.0` for percentage, `[memory=1024,vcores=1]` for absolute and `1w` for weight mode.
   Different modes can be mixed freely in the queue hierarchy.
 
