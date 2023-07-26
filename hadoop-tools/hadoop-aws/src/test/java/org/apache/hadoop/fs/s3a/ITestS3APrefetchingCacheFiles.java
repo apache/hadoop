@@ -105,6 +105,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Test
   public void testCacheFileExistence() throws Throwable {
     describe("Verify that FS cache files exist on local FS");
+    skipIfClientSideEncryption();
 
     try (FSDataInputStream in = fs.open(testFile)) {
       byte[] buffer = new byte[prefetchBlockSize];
