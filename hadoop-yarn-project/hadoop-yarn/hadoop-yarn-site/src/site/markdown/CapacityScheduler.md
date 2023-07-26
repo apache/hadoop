@@ -157,11 +157,11 @@ Configuration
   It is also possible to use to old capacity format, e.g.: `50.0` for percentage, `[memory=1024,vcores=1]` for absolute and `1w` for weight mode.
   Different modes can be mixed freely in the queue hierarchy.
 
-  The effective min and max resources are calculated based on the queues' capacity configuration and the available cluster resources.
-  Calculating the effective resources is done in the following way, for each defined resource type:
+  The hierarchy between the resources is calculated based on the queues' capacity configuration and the available cluster resources.
+  Calculating the hierarchy of resources is done in the following way, for each defined resource type:
   1. the configured absolute capacities are allocated to the queues from the available cluster resources
-  2. the remaining cluster resources are allocated for the queues with percentage resource configurations
-  3. the rest of the resources are allocated for the queues with weighted resource configurations
+  2. the remaining cluster resources are allocated to the queues with percentage resource configurations
+  3. the rest of the resources are allocated to the queues with weighted resource configurations
 
   Example for mixed queue resource allocation using the Universal Capacity Vector format:
 ```
@@ -188,8 +188,8 @@ Configuration
 
   The capacity for the root queue cannot be configured, it is fixed to 100% (percentage mode).
 
-  The effective capacity, absoluteCapacity and derived properties like the maximumApplications are calculated from the effective resources.
-  If there is no cluster resource, the maximumApplications fallbacks to the configured values.
+  The actual capacity, absoluteCapacity and derived properties like maximumApplications are calculated from the hierarchy between the resources.
+  If there is no cluster resource, the maximumApplications defaults to the configured values.
 
   * Running and Pending Application Limits
 
@@ -197,7 +197,7 @@ Configuration
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.maximum-applications` / `yarn.scheduler.capacity.<queue-path>.maximum-applications` | Maximum number of applications in the system which can be concurrently active both running and pending. Limits on each queue are directly proportional to their queue effective absolute capacities and user limits. This is a hard limit and any applications submitted when this limit is reached will be rejected. Default is 10000. This can be set for all queues with `yarn.scheduler.capacity.maximum-applications` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-applications`. When this property is not set for a specific queue path, the maximum application number is calculated by taking all configured node labels into consideration, and choosing the highest possible value. When the legacy-queue-mode is disabled and no cluster resource is available, it defaults to the configured values. Integer value expected. |
+| `yarn.scheduler.capacity.maximum-applications` / `yarn.scheduler.capacity.<queue-path>.maximum-applications` | Maximum number of applications in the system which can be concurrently active both running and pending. Limits on each queue are directly proportional to their queue absolute capacities and user limits. This is a hard limit and any applications submitted when this limit is reached will be rejected. Default is 10000. This can be set for all queues with `yarn.scheduler.capacity.maximum-applications` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-applications`. When this property is not set for a specific queue path, the maximum application number is calculated by taking all configured node labels into consideration, and choosing the highest possible value. When the legacy-queue-mode is disabled and no cluster resource is available, it defaults to the configured values. Integer value expected. |
 | `yarn.scheduler.capacity.maximum-am-resource-percent` / `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` | Maximum percent of resources in the cluster which can be used to run application masters - controls number of concurrent active applications. Limits on each queue are directly proportional to their queue capacities and user limits. Specified as a float - ie 0.5 = 50%. Default is 10%. This can be set for all queues with `yarn.scheduler.capacity.maximum-am-resource-percent` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` |
 | `yarn.scheduler.capacity.max-parallel-apps` / `yarn.scheduler.capacity.<queue-path>.max-parallel-apps` | Maximum number of applications that can run at the same time. Unlike to `maximum-applications`, application submissions are *not* rejected when this limit is reached. Instead they stay in `ACCEPTED` state until they are eligible to run. This can be set for all queues with `yarn.scheduler.capacity.max-parallel-apps` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.max-parallel-apps`. Integer value is expected. By default, there is no limit. The maximum parallel application limit is an inherited property in the queue hierarchy, meaning that the lowest value will be selected as the enforced limit in every branch of the hierarchy. |
 
