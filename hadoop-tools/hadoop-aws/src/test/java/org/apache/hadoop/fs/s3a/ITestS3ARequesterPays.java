@@ -59,7 +59,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   @Test
   public void testRequesterPaysOptionSuccess() throws Throwable {
     describe("Test requester pays enabled case by reading last then first byte");
-
+    skipIfClientSideEncryption();
     Configuration conf = this.createConfiguration();
     conf.setBoolean(ALLOW_REQUESTER_PAYS, true);
     // Enable bucket exists check, the first failure point people may encounter
