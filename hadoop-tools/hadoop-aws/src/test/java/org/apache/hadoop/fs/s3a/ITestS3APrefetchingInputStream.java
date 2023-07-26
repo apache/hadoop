@@ -106,6 +106,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testReadLargeFileFully() throws Throwable {
     describe("read a large file fully, uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
     createLargeFile();
 
@@ -139,6 +140,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   public void testReadLargeFileFullyLazySeek() throws Throwable {
     describe("read a large file using readFully(position,buffer,offset,length),"
         + " uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
     createLargeFile();
 
@@ -170,6 +172,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testRandomReadLargeFile() throws Throwable {
     describe("random read on a large file, uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
     createLargeFile();
 
