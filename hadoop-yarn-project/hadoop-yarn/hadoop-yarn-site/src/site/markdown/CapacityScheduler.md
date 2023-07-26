@@ -70,7 +70,7 @@ The `CapacityScheduler` supports the following features:
 
 * **Weight Resource Configuration** - Administrators could specify weights to a queue instead of providing percentage based values. This provides better control for admins to configure resources for the queue in a dynamically changing queue hierarchy.
 
-* **Universal Capacity Vector Resource Configuration** - Administrators could specify resources in a mixed manner - combining absolute, weight or percentage - to a queue instead of providing percentage based values. This provides the most flexible way of control for admins to configure required amount of resources for a given queue.
+* **Universal Capacity Vector Resource Configuration** - Administrators could specify resources in a mixed manner to a queue using absolute, weight or percentage modes for each defined resource types. This provides the most flexible way to configure the required amount of resources for a given queue.
 
 * **Dynamic Auto-Creation and Management of Leaf Queues** - This feature supports auto-creation of **leaf queues** in conjunction with **queue-mapping** which currently supports **user-group** based queue mappings for application placement to a queue. The scheduler also supports capacity management for these queues based on a policy configured on the parent queue.
 
