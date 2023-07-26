@@ -199,14 +199,36 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
   }
 
   /**
+   * Deploy, returning the binding information.
+   * The base implementation calls
+   *
+   * @param retrievedIdentifier any identifier -null if deployed unbonded.
+   * @return binding information
+   * @throws IOException any failure.
+   */
+  public DelegationBindingInfo deploy(AbstractS3ATokenIdentifier retrievedIdentifier)
+        throws IOException {
+    requireServiceStarted();
+    AWSCredentialProviderList credentialProviders =
+        retrievedIdentifier == null
+            ? deployUnbonded()
+            : bindToTokenIdentifier(retrievedIdentifier);
+    return new DelegationBindingInfo()
+        .withCredentialProviders(credentialProviders);
+  }
+
+  /**
    * Perform any actions when deploying unbonded, and return a list
    * of credential providers.
    * @return non-empty list of AWS credential providers to use for
    * authenticating this client with AWS services.
    * @throws IOException any failure.
+   * @throws UnsupportedOperationException in the base implementation.
    */
-  public abstract AWSCredentialProviderList deployUnbonded()
-      throws IOException;
+  public AWSCredentialProviderList deployUnbonded()
+      throws IOException {
+    throw new UnsupportedOperationException("unimplemented");
+  }
 
   /**
    * Bind to the token identifier, returning the credential providers to use
@@ -214,11 +236,14 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @param retrievedIdentifier the unmarshalled data
    * @return non-empty list of AWS credential providers to use for
    * authenticating this client with AWS services.
-   * @throws IOException any failure.
+   * @throws IOException any failure
+   * @throws UnsupportedOperationException in the base implementation.
    */
-  public abstract AWSCredentialProviderList bindToTokenIdentifier(
+  public AWSCredentialProviderList bindToTokenIdentifier(
       AbstractS3ATokenIdentifier retrievedIdentifier)
-      throws IOException;
+      throws IOException  {
+    throw new UnsupportedOperationException("unimplemented");
+  }
 
   /**
    * Create a new subclass of {@link AbstractS3ATokenIdentifier}.
