@@ -23,6 +23,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -282,8 +284,9 @@ public class TestBlockReportLease {
 
       FSNamesystem fsn = cluster.getNamesystem();
       
+      NameNode nameNode = cluster.getNameNode();
       // pretend to be in safemode
-      doReturn(true).when(fsn).isInStartupSafeMode();
+      NameNodeAdapter.enterSafeMode(nameNode, false);
 
       BlockManager blockManager = fsn.getBlockManager();
       BlockManager spyBlockManager = spy(blockManager);
