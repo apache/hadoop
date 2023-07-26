@@ -1192,9 +1192,9 @@ class BPServiceActor implements Runnable {
 
   }
 
-  class FBRTaskHandler implements Runnable {
+  final class FBRTaskHandler implements Runnable {
 
-    long fullBlockReportLeaseId;
+    private long fullBlockReportLeaseId;
 
     private FBRTaskHandler(long fullBlockReportLeaseId) {
       this.fullBlockReportLeaseId = fullBlockReportLeaseId;
