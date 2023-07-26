@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
@@ -550,6 +552,15 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       } else {
         placementQueueName = placementContext.getQueue();
       }
+    }
+
+    // Get full queue path for the application when submitting by short queue name
+    try {
+      QueueInfo queueInfo =
+          scheduler.getQueueInfo(placementQueueName, false, false);
+      placementQueueName = queueInfo.getQueuePath();
+    } catch (IOException e) {
+      // if the queue does not exist, we just ignore here
     }
 
     // Create RMApp
