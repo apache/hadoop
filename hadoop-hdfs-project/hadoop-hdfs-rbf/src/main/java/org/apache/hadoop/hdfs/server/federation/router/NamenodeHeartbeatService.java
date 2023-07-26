@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -41,7 +44,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.util.Time;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +98,13 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private URLConnectionFactory connectionFactory;
   /** URL scheme to use for JMX calls. */
   private String scheme;
+
+  /** Frequency of updates to JMX report. */
+  private long updateJmxIntervalMs;
+  /** Timestamp of last attempt to update JMX report. */
+  private long lastJmxUpdateAttempt;
+  /** Result of the last successful FsNamesystemMetrics report. */
+  private JSONArray fsNamesystemMetrics;
   /**
    * Create a new Namenode status updater.
    * @param resolver Namenode resolver service to handle NN registration.
@@ -163,6 +175,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS,
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT));
 
+    this.updateJmxIntervalMs = conf.getTimeDuration(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
+        DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT, TimeUnit.MILLISECONDS);
 
     super.serviceInit(configuration);
   }
@@ -348,41 +362,70 @@ public class NamenodeHeartbeatService extends PeriodicService {
       String address, NamenodeStatusReport report) {
     try {
       // TODO part of this should be moved to its own utility
-      String query = "Hadoop:service=NameNode,name=FSNamesystem*";
-      JSONArray aux = FederationUtil.getJmx(
-          query, address, connectionFactory, scheme);
-      if (aux != null) {
-        for (int i = 0; i < aux.length(); i++) {
-          JSONObject jsonObject = aux.getJSONObject(i);
-          String name = jsonObject.getString("name");
-          if (name.equals("Hadoop:service=NameNode,name=FSNamesystemState")) {
-            report.setDatanodeInfo(
-                jsonObject.getInt("NumLiveDataNodes"),
-                jsonObject.getInt("NumDeadDataNodes"),
-                jsonObject.getInt("NumStaleDataNodes"),
-                jsonObject.getInt("NumDecommissioningDataNodes"),
-                jsonObject.getInt("NumDecomLiveDataNodes"),
-                jsonObject.getInt("NumDecomDeadDataNodes"),
-                jsonObject.optInt("NumInMaintenanceLiveDataNodes"),
-                jsonObject.optInt("NumInMaintenanceDeadDataNodes"),
-                jsonObject.optInt("NumEnteringMaintenanceDataNodes"));
-          } else if (name.equals(
-              "Hadoop:service=NameNode,name=FSNamesystem")) {
-            report.setNamesystemInfo(
-                jsonObject.getLong("CapacityRemaining"),
-                jsonObject.getLong("CapacityTotal"),
-                jsonObject.getLong("FilesTotal"),
-                jsonObject.getLong("BlocksTotal"),
-                jsonObject.getLong("MissingBlocks"),
-                jsonObject.getLong("PendingReplicationBlocks"),
-                jsonObject.getLong("UnderReplicatedBlocks"),
-                jsonObject.getLong("PendingDeletionBlocks"),
-                jsonObject.optLong("ProvidedCapacityTotal"));
-          }
-        }
+      if (shouldUpdateJmx()) {
+        this.lastJmxUpdateAttempt = Time.monotonicNow();
+        String query = "Hadoop:service=NameNode,name=FSNamesystem*";
+        this.fsNamesystemMetrics = FederationUtil.getJmx(
+            query, address, connectionFactory, scheme);
       }
+      populateFsNamesystemMetrics(this.fsNamesystemMetrics, report);
     } catch (Exception e) {
       LOG.error("Cannot get stat from {} using JMX", getNamenodeDesc(), e);
+    }
+  }
+
+  /**
+   * Evaluates whether the JMX report should be refreshed by
+   * calling the Namenode, based on the following conditions:
+   * 1. JMX Updates must be enabled.
+   * 2. The last attempt to update JMX occurred before the
+   *    configured interval (if any).
+   */
+  private boolean shouldUpdateJmx() {
+    if (this.updateJmxIntervalMs < 0) {
+      return false;
+    }
+
+    return Time.monotonicNow() - this.lastJmxUpdateAttempt > this.updateJmxIntervalMs;
+  }
+
+  /**
+   * Populates FSNamesystem* metrics into report.
+   * @param aux FSNamesystem* metrics from namenode.
+   * @param report Namenode status report to update with JMX data.
+   * @throws JSONException When invalid JSONObject is found.
+   */
+  private void populateFsNamesystemMetrics(JSONArray aux, NamenodeStatusReport report)
+      throws JSONException {
+    if (aux != null) {
+      for (int i = 0; i < aux.length(); i++) {
+        JSONObject jsonObject = aux.getJSONObject(i);
+        String name = jsonObject.getString("name");
+        if (name.equals("Hadoop:service=NameNode,name=FSNamesystemState")) {
+          report.setDatanodeInfo(
+              jsonObject.getInt("NumLiveDataNodes"),
+              jsonObject.getInt("NumDeadDataNodes"),
+              jsonObject.getInt("NumStaleDataNodes"),
+              jsonObject.getInt("NumDecommissioningDataNodes"),
+              jsonObject.getInt("NumDecomLiveDataNodes"),
+              jsonObject.getInt("NumDecomDeadDataNodes"),
+              jsonObject.optInt("NumInMaintenanceLiveDataNodes"),
+              jsonObject.optInt("NumInMaintenanceDeadDataNodes"),
+              jsonObject.optInt("NumEnteringMaintenanceDataNodes"));
+        } else if (name.equals(
+            "Hadoop:service=NameNode,name=FSNamesystem")) {
+          report.setNamesystemInfo(
+              jsonObject.getLong("CapacityRemaining"),
+              jsonObject.getLong("CapacityTotal"),
+              jsonObject.getLong("FilesTotal"),
+              jsonObject.getLong("BlocksTotal"),
+              jsonObject.getLong("MissingBlocks"),
+              jsonObject.getLong("PendingReplicationBlocks"),
+              jsonObject.getLong("UnderReplicatedBlocks"),
+              jsonObject.getLong("PendingDeletionBlocks"),
+              jsonObject.optLong("ProvidedCapacityTotal"));
+        }
+      }
     }
   }
 
