@@ -468,7 +468,7 @@ public abstract class AbstractCSQueue implements CSQueue {
                 QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100,
                         QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
     } else if (isDynamicQueue()) {
-      if (this.configuredCapacityVectors == null || this.configuredCapacityVectors.isEmpty()) {
+      if (this.configuredCapacityVectors == null || this.configuredCapacityVectors.get(label).isEmpty()) {
         setConfiguredMinCapacityVector(label, QueueCapacityVector.of(1,
                 QueueCapacityVector.ResourceUnitCapacityType.WEIGHT));
         setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(100,
