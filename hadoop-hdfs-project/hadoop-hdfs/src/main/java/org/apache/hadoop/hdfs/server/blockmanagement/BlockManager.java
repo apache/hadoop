@@ -449,7 +449,7 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * Progress of the Reconstruction queues initialisation.
    */
-  private double reconstructionQueuesInitProgress = 0.0;
+  private float reconstructionQueuesInitProgress = 0.0f;
 
   /** for block replicas placement */
   private volatile BlockPlacementPolicies placementPolicies;
@@ -3890,8 +3890,8 @@ public class BlockManager implements BlockStatsMXBean {
         // there is a possibility that if any of the blocks deleted/added during
         // initialisation, then progress might be different.
         if (totalBlocks > 0) { // here avoid metrics appear as NaN.
-          reconstructionQueuesInitProgress = Math.min((double) totalProcessed
-              / totalBlocks, 1.0);
+          reconstructionQueuesInitProgress = Math.min((float) totalProcessed
+              / totalBlocks, 1.0f);
         }
 
         if (!blocksItr.hasNext()) {
@@ -3928,7 +3928,7 @@ public class BlockManager implements BlockStatsMXBean {
    * 
    * @return Returns values between 0 and 1 for the progress.
    */
-  public double getReconstructionQueuesInitProgress() {
+  public float getReconstructionQueuesInitProgress() {
     return reconstructionQueuesInitProgress;
   }
 

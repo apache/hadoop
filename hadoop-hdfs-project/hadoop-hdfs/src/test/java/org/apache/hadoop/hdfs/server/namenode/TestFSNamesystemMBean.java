@@ -246,9 +246,9 @@ public class TestFSNamesystemMBean {
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName =
           new ObjectName("Hadoop:service=NameNode,name=FSNamesystemState");
-      Double reconstructionQueuesInitProgress =
-          (Double) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
-      assertEquals(0.0, reconstructionQueuesInitProgress.doubleValue(), 0);
+      float reconstructionQueuesInitProgress =
+          (float) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
+      assertEquals(0.0, reconstructionQueuesInitProgress, 0);
 
       // create file.
       Path file = new Path("/test");
@@ -265,8 +265,8 @@ public class TestFSNamesystemMBean {
           100, 5 * 1000);
 
       reconstructionQueuesInitProgress =
-          (Double) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
-      assertEquals(1.0, reconstructionQueuesInitProgress.doubleValue(), 0);
+          (float) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
+      assertEquals(1.0, reconstructionQueuesInitProgress, 0);
     }
   }
 }

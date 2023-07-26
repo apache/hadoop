@@ -885,8 +885,8 @@ public class NamenodeBeanMetrics
   }
 
   @Override
-  public double getReconstructionQueuesInitProgress() {
-    return 0.0;
+  public float getReconstructionQueuesInitProgress() {
+    return 0;
   }
 
   private Router getRouter() throws IOException {

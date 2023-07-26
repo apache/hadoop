@@ -4893,7 +4893,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // FSNamesystemMBean
   @Metric
-  public double getReconstructionQueuesInitProgress() {
+  public float getReconstructionQueuesInitProgress() {
     return blockManager.getReconstructionQueuesInitProgress();
   }
 

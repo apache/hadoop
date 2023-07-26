@@ -267,5 +267,5 @@ public interface FSNamesystemMBean {
    *
    * @return Returns values between 0 and 1 for the progress.
    */
-  double getReconstructionQueuesInitProgress();
+  float getReconstructionQueuesInitProgress();
 }
