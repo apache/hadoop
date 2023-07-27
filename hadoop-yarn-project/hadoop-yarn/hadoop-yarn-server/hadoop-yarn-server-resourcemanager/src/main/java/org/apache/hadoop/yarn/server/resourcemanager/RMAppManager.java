@@ -555,15 +555,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
 
     // Get full queue path for the application when submitting by short queue name
-    try {
-      QueueInfo queueInfo =
-          scheduler.getQueueInfo(placementQueueName, false, false);
-      if (queueInfo != null && queueInfo.getQueuePath() != null) {
-        placementQueueName = queueInfo.getQueuePath();
-      }
-    } catch (IOException e) {
-      // if the queue does not exist, we just ignore here
-    }
+    placementQueueName = getQueuePath(placementQueueName);
 
     // Create RMApp
     RMAppImpl application =
@@ -593,6 +585,20 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
     return application;
+  }
+
+  public String getQueuePath(String queueName) {
+    String queuePath = queueName;
+    try {
+      QueueInfo queueInfo =
+          scheduler.getQueueInfo(queueName, false, false);
+      if (queueInfo != null && queueInfo.getQueuePath() != null) {
+        queuePath = queueInfo.getQueuePath();
+      }
+    } catch (IOException e) {
+      // if the queue does not exist, we just ignore here
+    }
+    return queuePath;
   }
 
   private boolean checkPermission(AccessRequest accessRequest,
