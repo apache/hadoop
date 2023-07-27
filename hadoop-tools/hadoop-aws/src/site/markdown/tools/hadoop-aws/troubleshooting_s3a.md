@@ -70,14 +70,45 @@ These are Hadoop filesystem client classes, found in the `hadoop-aws` JAR.
 An exception reporting this class as missing means that this JAR is not on
 the classpath.
 
-### `ClassNotFoundException: com.amazonaws.services.s3.AmazonS3Client`
+
+### `NoClassDefFoundError: software/amazon/awssdk/crt/s3/S3MetaRequest`
+
+The library `aws-crt.jar` is not on the classpath. Its classes
+are not in the AWS `bundle.jar` file, yet are needed for uploading
+and renaming objects.
+
+Fix: add.
+
+```
+java.lang.BootstrapMethodError: java.lang.NoClassDefFoundError: software/amazon/awssdk/crt/s3/S3MetaRequest
+at software.amazon.awssdk.services.s3.internal.crt.S3MetaRequestPauseObservable.<init>(S3MetaRequestPauseObservable.java:33)
+at software.amazon.awssdk.transfer.s3.internal.DefaultS3TransferManager.uploadFile(DefaultS3TransferManager.java:205)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.putObject(S3AFileSystem.java:3064)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.executePut(S3AFileSystem.java:4054)
+
+```
+### `ClassNotFoundException: software.amazon.awssdk.services.s3.S3Client`
+
+(or other `software.amazon` class.)
+
+This means that the AWS V2 SDK `bundle.jar` JAR is not on the classpath:
+add it.
+
+### `ClassNotFoundException: com.amazonaws.auth.AWSCredentials`
 
 (or other `com.amazonaws` class.)
 
-This means that the `aws-java-sdk-bundle.jar` JAR is not on the classpath:
-add it.
+With the move to the [V2 AWS SDK](../aws_sdk_upgrade.html),
+the v1 SDK classes are no longer on the classpath.
 
-### `java.lang.NoSuchMethodError` referencing a `com.amazonaws` class
+If this happens when trying to use a custom credential provider defined
+in `fs.s3a.aws.credentials.provider`, then add the `aws-sdk-bundle.jar`
+JAR to the classpath.
+
+If this happens in your own/third-party code, then again, add the JAR,
+and/or consider moving to the v2 sdk yourself.
+
+### `java.lang.NoSuchMethodError` referencing a `software.amazon` class
 
 This can be triggered by incompatibilities between the AWS SDK on the classpath
 and the version which Hadoop was compiled with.
@@ -86,12 +117,14 @@ The AWS SDK JARs change their signature enough between releases that the only
 way to safely update the AWS SDK version is to recompile Hadoop against the later
 version.
 
-The sole fix is to use the same version of the AWS SDK with which Hadoop
+The fix is to use the same version of the AWS SDK with which Hadoop
 was built.
 
 This can also be caused by having more than one version of an AWS SDK
-JAR on the classpath. If the full `aws-java-sdk-bundle<` JAR is on the
-classpath, do not add any of the `aws-sdk-` JARs.
+JAR on the classpath. If the full `bundle.jar` JAR is on the
+classpath, do not add any of the `aws-sdk-` JARs *except* for
+`aws-crt.jar` (which is required) and
+`eventstream.jar` which is required when using S3 Select.
 
 
 ### `java.lang.NoSuchMethodError` referencing an `org.apache.hadoop` class

@@ -521,7 +521,6 @@
     <dependency>
       <groupId>software.amazon.awssdk.crt</groupId>
       <artifactId>aws-crt</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.eventstream</groupId>
