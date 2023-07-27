@@ -558,7 +558,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     try {
       QueueInfo queueInfo =
           scheduler.getQueueInfo(placementQueueName, false, false);
-      placementQueueName = queueInfo.getQueuePath();
+      if (queueInfo != null && queueInfo.getQueuePath() != null) {
+        placementQueueName = queueInfo.getQueuePath();
+      }
     } catch (IOException e) {
       // if the queue does not exist, we just ignore here
     }

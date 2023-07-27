@@ -1168,7 +1168,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       //verify queue name when rmContainer is recovered
       if (scheduler instanceof CapacityScheduler) {
         Assert.assertEquals(
-            CapacitySchedulerConfiguration.ROOT + "." + app1.getQueue(),
+            app1.getQueue(),
             rmContainer.getQueueName());
       } else {
         Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());
