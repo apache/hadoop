@@ -427,6 +427,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * The auth chain for the parent options.
+   * @return the parent authentication chain.
    */
   protected AWSCredentialProviderList getParentAuthChain() {
     return parentAuthChain;

@@ -65,7 +65,7 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
      */
     private final AtomicLong failureCounter = new AtomicLong(0);
 
-   FailureInjectionInterceptor(FailureInjectionPolicy policy) {
+    FailureInjectionInterceptor(FailureInjectionPolicy policy) {
       this.policy = policy;
     }
 

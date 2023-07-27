@@ -1134,8 +1134,8 @@
         <version>${aws-java-sdk.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>software.amazon.ion</groupId>
-            <artifactId>ion-java</artifactId>
+            <groupId>*</groupId>
+            <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

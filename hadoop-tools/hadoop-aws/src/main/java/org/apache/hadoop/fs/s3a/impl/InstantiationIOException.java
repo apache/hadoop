@@ -132,6 +132,7 @@ public class InstantiationIOException extends PathIOException {
    * @param uri URI of filesystem
    * @param classname classname.
    * @param key configuration key
+   * @param text text to include
    * @return an exception.
    */
   public static InstantiationIOException unavailable(

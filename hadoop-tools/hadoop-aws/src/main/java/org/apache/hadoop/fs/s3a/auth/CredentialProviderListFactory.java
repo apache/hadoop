@@ -96,7 +96,7 @@ public final class CredentialProviderListFactory {
   public static final String EC2_IAM_CREDENTIALS_V1 =
       "com.amazonaws.auth.InstanceProfileCredentialsProvider";
 
-  /** V1 credential provider: {@value}. */
+  /** V2 EC2 instance/container credential provider. */
   public static final String EC2_IAM_CREDENTIALS_V2 =
       IAMInstanceCredentialsProvider.class.getName();
 
@@ -104,7 +104,7 @@ public final class CredentialProviderListFactory {
   public static final String ENVIRONMENT_CREDENTIALS_V1 =
       "com.amazonaws.auth.EnvironmentVariableCredentialsProvider";
 
-  /** V1 credential provider: {@value}. */
+  /** V2 environment variables credential provider: {@value}. */
   public static final String ENVIRONMENT_CREDENTIALS_V2 =
       EnvironmentVariableCredentialsProvider.class.getName();
 
