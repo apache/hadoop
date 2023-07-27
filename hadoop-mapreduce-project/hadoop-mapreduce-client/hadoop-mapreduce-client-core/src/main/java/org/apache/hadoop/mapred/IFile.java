@@ -436,7 +436,7 @@ public class IFile {
     public void nextRawValue(DataInputBuffer value) throws IOException {
       long targetSizeLong = currentValueLength + (currentValueLength >> 1);
       int targetSize = (int) Math.min(targetSizeLong, ARRAY_MAX_SIZE);
-      
+
       final byte[] valBytes = (value.getData().length < currentValueLength)
         ? new byte[targetSize]
         : value.getData();
