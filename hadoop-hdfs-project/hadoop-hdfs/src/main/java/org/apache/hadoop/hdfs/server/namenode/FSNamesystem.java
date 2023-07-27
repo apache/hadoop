@@ -4889,6 +4889,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Get the progress of the reconstruction queues initialisation.
+   */
+  @Override // FSNamesystemMBean
+  @Metric
+  public float getReconstructionQueuesInitProgress() {
+    return blockManager.getReconstructionQueuesInitProgress();
+  }
+
+  /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *
    * A larger number here indicates lots of threads are waiting for
