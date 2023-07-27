@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.ClientResponse;
+
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Test;
 
@@ -32,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
@@ -41,10 +47,19 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  public TestRMWebServicesCapacitySched() {
+  private final boolean legacyQueueMode;
+
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
+  }
+
+  public TestRMWebServicesCapacitySched(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
@@ -132,6 +147,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   private Configuration createConfig() {
     Configuration conf = new Configuration();
+    conf.set("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.set("yarn.scheduler.capacity.root.queues", "a, b, c");
     conf.set("yarn.scheduler.capacity.root.a.capacity", "12.5");
     conf.set("yarn.scheduler.capacity.root.a.maximum-capacity", "50");
