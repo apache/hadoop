@@ -103,7 +103,7 @@ class BPServiceActor implements Runnable {
   
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
-  private final Object sendIBRLock;
+  private final Object sendBRLock;
   private final ExecutorService ibrExecutorService;
   private final ExecutorService fbrExecutorService;
 
@@ -162,7 +162,7 @@ class BPServiceActor implements Runnable {
     }
     commandProcessingThread = new CommandProcessingThread(this);
     commandProcessingThread.start();
-    sendIBRLock = new Object();
+    sendBRLock = new Object();
     ibrExecutorService = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("ibr-executor-%d").build());
@@ -401,10 +401,8 @@ class BPServiceActor implements Runnable {
     // we have a chance that we will miss the delHint information
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
-    synchronized (sendIBRLock) {
-      ibrManager.sendIBRs(bpNamenode, bpRegistration,
-          bpos.getBlockPoolId(), getRpcMetricSuffix());
-    }
+    ibrManager.sendIBRs(bpNamenode, bpRegistration,
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -639,6 +637,9 @@ class BPServiceActor implements Runnable {
     }
     if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
+    }
+    if (fbrExecutorService != null && !fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
     }
   }
   
@@ -1175,7 +1176,7 @@ class BPServiceActor implements Runnable {
           final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
           if (!dn.areIBRDisabledForTests() &&
               (ibrManager.sendImmediately() || sendHeartbeat)) {
-            synchronized (sendIBRLock) {
+            synchronized (sendBRLock) {
               ibrManager.sendIBRs(bpNamenode, bpRegistration,
                   bpos.getBlockPoolId(), getRpcMetricSuffix());
             }
@@ -1205,7 +1206,9 @@ class BPServiceActor implements Runnable {
       LOG.info("Starting FBR Task Handler.");
       List<DatanodeCommand> cmds = null;
       try {
-        cmds = blockReport(this.fullBlockReportLeaseId);
+        synchronized (sendBRLock) {
+          cmds = blockReport(this.fullBlockReportLeaseId);
+        }
         commandProcessingThread.enqueue(cmds);
       } catch (IOException e) {
         LOG.warn("IOException in FBR Task Handler.", e);
