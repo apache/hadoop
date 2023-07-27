@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 public class IFile {
   private static final Logger LOG = LoggerFactory.getLogger(IFile.class);
   public static final int EOF_MARKER = -1; // End of File Marker
+  private static final int ARRAY_MAX_SIZE = Integer.MAX_VALUE - 8;
   
   /**
    * <code>IFile.Writer</code> to write out intermediate map-outputs. 
@@ -433,8 +434,11 @@ public class IFile {
     }
     
     public void nextRawValue(DataInputBuffer value) throws IOException {
+      long targetSizeLong = currentValueLength + (currentValueLength >> 1);
+      int targetSize = (int) Math.min(targetSizeLong, ARRAY_MAX_SIZE);
+      
       final byte[] valBytes = (value.getData().length < currentValueLength)
-        ? new byte[currentValueLength << 1]
+        ? new byte[targetSize]
         : value.getData();
       int i = readData(valBytes, 0, currentValueLength);
       if (i != currentValueLength) {
