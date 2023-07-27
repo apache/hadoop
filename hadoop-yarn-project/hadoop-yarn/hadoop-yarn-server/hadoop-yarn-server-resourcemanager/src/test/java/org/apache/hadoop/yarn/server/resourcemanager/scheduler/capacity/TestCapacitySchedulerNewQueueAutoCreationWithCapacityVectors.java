@@ -35,7 +35,7 @@ import java.io.IOException;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
 public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
-  extends TestCapacitySchedulerAutoCreatedQueueBase {
+        extends TestCapacitySchedulerAutoCreatedQueueBase {
   public static final int GB = 1024;
   private static final String NL = CommonNodeLabelsManager.NO_LABEL;
   private MockRM mockRM = null;
@@ -112,8 +112,10 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     csConf.setAutoQueueCreationV2Enabled(A, true);
 
     // Set up dynamic queue templates
-    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"), "[memory=2000mb, vcores=2]");
-    csConf.set(getLeafTemplateKey(A, "capacity"), "[memory=2000, vcores=4]");
+    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+            "[memory=2000mb, vcores=2]");
+    csConf.set(getLeafTemplateKey(A, "capacity"),
+            "[memory=2000, vcores=4]");
   }
 
   private void createMixedConfig() {
@@ -140,9 +142,12 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     csConf.setAutoQueueCreationV2Enabled(D, true);
 
     // Set up dynamic queue templates
-    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"), "[memory=2w, vcores=5w]");
-    csConf.set(getParentTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"), "[memory=2w, vcores=10]");
-    csConf.set(getLeafTemplateKey(CapacitySchedulerConfiguration.ROOT + ".*", "capacity"), "[memory=2000, vcores=2]");
+    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+            "[memory=2w, vcores=5w]");
+    csConf.set(getParentTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+            "[memory=2w, vcores=10]");
+    csConf.set(getLeafTemplateKey(CapacitySchedulerConfiguration.ROOT + ".*", "capacity"),
+            "[memory=2000, vcores=2]");
     csConf.set(getLeafTemplateKey(D, "capacity"), "[memory=1000, vcores=1]");
 
   }
@@ -214,7 +219,8 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
   }
 
   /*
-   Create and validate the following structure with mixed resource vectors and non-legacy queue mode:
+   Create and validate the following structure with mixed resource vectors
+   and non-legacy queue mode:
 
                            root
       ┌─────┬────────┬─────┴─────┬─────────┐
@@ -232,8 +238,9 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     // Check if queue c-auto got created
     CSQueue cAuto = cs.getQueue("root.c-auto");
     // At this point queues a, b, d exists, ant c-auto was just created
-    // b takes 2000 MB from the cluster, a and d take up 10 + 10 = 20% (6000 MB, 6 vcore), so c-auto should get the rest
-    // (24000 MB, 24 vcore) because it's the only one with configured weights
+    // b takes 2000 MB from the cluster, a and d take up 10 + 10 = 20% (6000 MB, 6 vcore),
+    // so c-auto should get the rest (24000 MB, 24 vcore) because it's the only one
+    // with configured weights
     Assert.assertEquals(24 / 32f, cAuto.getAbsoluteCapacity(), EPSILON);
     Assert.assertEquals(-1f, cAuto.getQueueCapacities().getWeight(), EPSILON);
     Assert.assertEquals(24000,
@@ -267,7 +274,8 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     Assert.assertEquals(2,
             a2Auto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
-    // Absolute requests take precedence over percentage and weight, hence a1 should have 1000 MB, 0 vcore
+    // Absolute requests take precedence over percentage and weight,
+    // hence a1 should have 1000 MB, 0 vcore
     CSQueue a1 = cs.getQueue("root.a.a1");
     Assert.assertEquals(1000,
             a1.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
