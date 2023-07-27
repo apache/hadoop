@@ -447,6 +447,12 @@ public enum Statistic {
       "Total queue duration of all block uploads",
       TYPE_DURATION),
 
+  /* Stream prefetch file cache eviction */
+  STREAM_EVICT_BLOCKS_FROM_FILE_CACHE(
+      StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
+      "Count of blocks evicted from the disk cache",
+      TYPE_COUNTER),
+
   /* committer stats */
   COMMITTER_COMMITS_CREATED(
       "committer_commits_created",

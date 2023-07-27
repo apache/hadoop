@@ -444,6 +444,7 @@ public class SingleFilePerBlockCache implements BlockCache {
           entryListSize--;
           prefetchingStatistics.blockRemovedFromFileCache();
           blocks.remove(elementToPurge.blockNumber);
+          prefetchingStatistics.blockEvictedFromFileCache();
         }
       } catch (IOException e) {
         LOG.warn("Failed to delete cache file {}", elementToPurge.path, e);
