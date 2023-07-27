@@ -133,7 +133,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
-      createAQC(rm, "test2");
+      createDynamicQueues(rm, "test2");
       reinitialize(rm, config);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "after-aqc"));
@@ -141,40 +141,41 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   }
 
 
-  private void setupAQC(Configuration config, String queue) {
-    config.set(queue + "auto-queue-creation-v2.enabled", "true");
-    config.set(queue + "auto-queue-creation-v2.maximum-queue-depth", "10");
-    config.set(queue + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+  private void setupAQC(Configuration config, String queueWithConfigPrefix) {
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.enabled", "true");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.maximum-queue-depth", "10");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.leaf-template.capacity", "10w");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.parent-template.acl_submit_applications",
         "parentUser");
-    config.set(queue + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.parent-template.acl_administer_queue",
         "parentAdmin");
-    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "ap1User");
-    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
         "ap1Admin");
-    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+    config.set(queueWithConfigPrefix + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "leafUser");
-    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+    config.set(queueWithConfigPrefix + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
         "leafAdmin");
-    config.set(queue + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+    config.set(queueWithConfigPrefix + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "pLeafUser");
-    config.set(queue + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+    config.set(queueWithConfigPrefix + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
         "pLeafAdmin");
-    config.set(queue + "autoParent1.auto-queue-creation-v2.template.maximum-applications", "300");
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.template.maximum-applications", "300");
   }
-  private void createAQC(MockRM rm, String queue) {
+  private void createDynamicQueues(MockRM rm, String queueName) {
     try {
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".auto1"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".auto2"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto3"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto4"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent2.auto5"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.autoParent2.auto6"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent2.auto7"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto1"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto2"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent1.auto3"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent1.auto4"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent2.auto5"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".parent.autoParent2.auto6"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".parent2.auto7"));
     } catch (YarnException | IOException e) {
-      fail("Can not auto create queues under " + queue, e);
+      fail("Can not auto create queues under " + queueName, e);
     }
   }
 }
