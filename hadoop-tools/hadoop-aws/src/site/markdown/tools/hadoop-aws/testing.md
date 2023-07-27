@@ -1287,9 +1287,12 @@ time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
 
 # ---------------------------------------------------
 # S3 Select on Landsat
+# this will fail with a ClassNotFoundException unless
+# eventstore JAR is added to the classpath
 # ---------------------------------------------------
 
 export LANDSATGZ=s3a://landsat-pds/scene_list.gz
+
 
 bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
  "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
