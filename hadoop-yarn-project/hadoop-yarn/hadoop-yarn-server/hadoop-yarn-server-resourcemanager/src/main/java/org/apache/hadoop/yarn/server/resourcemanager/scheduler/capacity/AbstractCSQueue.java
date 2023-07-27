@@ -349,7 +349,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.acls = configuration.getAcls(getQueuePath());
 
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
-        setDynamicQueueProperties();
+        parseAndSetDynamicTemplates();
         setDynamicQueueACLProperties();
       }
 
@@ -389,21 +389,14 @@ public abstract class AbstractCSQueue implements CSQueue {
               this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
               QueueCapacityVector.newInstance());
 
-      // Preserving the capacities set by Entitlements, see: ReservationSystem.md
-      if (this instanceof ReservationQueue ||
-          this instanceof PlanQueue) {
-        for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
-          setConfiguredMinCapacityVector(label,
-              QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100,
-                  QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
-          setConfiguredMaxCapacityVector(label,
-              QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100,
-                  QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
-        }
-      }
-
-      // Re-adjust weight when mixed capacity type is used. 5w == [memory=5w, vcores=5w]
       for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+        // Manually sets the capacity vector for:
+        // 1. Dynamic queues that have no configured capacity vectors defined by templates
+        // 2. ReservationQueue and PlanQueue instances which have their capacities set by entitlements and need to be
+        //    preserved during a restart, see: ReservationSystem.md
+        overrideCapacityVectorsForSpecialQueues(label);
+
+        // Re-adjust weight when mixed capacity type is used. 5w == [memory=5w, vcores=5w]
         final QueueCapacityVector capacityVector = configuredCapacityVectors.get(label);
         final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
             capacityVector.getDefinedCapacityTypes();
@@ -444,12 +437,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Set properties specific to dynamic queues.
    */
-  protected void setDynamicQueueProperties() {
-    // Set properties from parent template
-    if (parent instanceof AbstractParentQueue && isDynamicQueue()) {
+  protected void parseAndSetDynamicTemplates() {
+    // Set the template properties from the parent to the queuepath of the child
       ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
-                  this instanceof AbstractLeafQueue);
+          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(), this instanceof AbstractLeafQueue);
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
           AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
@@ -459,26 +450,31 @@ public abstract class AbstractCSQueue implements CSQueue {
           .getConfiguredNodeLabelsForAllQueues()
           .getLabelsByQueue(parentTemplate);
 
-      if (parentNodeLabels != null) {
-        if (parentNodeLabels.size() > 1) {
+      if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
           queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
               .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
-        }
-        // For dynamic queue, we will set weight to 1 every time, because it
-        // is possible new labels added to the parent.
-        for (String label : parentNodeLabels) {
-          float weightByLabel = queueContext.getConfiguration()
-              .getLabeledQueueWeight(queuePath, label);
-          if (weightByLabel == -1) {
-            queueContext.getConfiguration()
-                .setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
-          }
-        }
       }
-    }
   }
 
   protected void setDynamicQueueACLProperties() {
+  }
+
+  protected void overrideCapacityVectorsForSpecialQueues(String label) {
+    if (this instanceof ReservationQueue || this instanceof PlanQueue) {
+        setConfiguredMinCapacityVector(label,
+                QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100,
+                        QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+        setConfiguredMaxCapacityVector(label,
+                QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100,
+                        QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+    } else if (isDynamicQueue()) {
+      if (this.configuredCapacityVectors == null || this.configuredCapacityVectors.get(label).isEmpty()) {
+        setConfiguredMinCapacityVector(label, QueueCapacityVector.of(1,
+                QueueCapacityVector.ResourceUnitCapacityType.WEIGHT));
+        setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(100,
+                QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+      }
+    }
   }
 
   private UserWeights getUserWeightsFromHierarchy() {
