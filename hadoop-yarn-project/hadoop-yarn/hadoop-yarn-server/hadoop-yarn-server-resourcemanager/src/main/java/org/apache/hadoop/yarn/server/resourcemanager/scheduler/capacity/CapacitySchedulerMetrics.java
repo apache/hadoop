@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -52,6 +53,8 @@ public class CapacitySchedulerMetrics {
   @Metric("Scheduler node update") MutableRate nodeUpdate;
   @Metric("Scheduler node heartbeat interval") MutableQuantiles
       schedulerNodeHBInterval;
+  @Metric("Scheduler backlogs")
+  MutableGaugeInt backlogs;
 
   private static volatile CapacitySchedulerMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -87,6 +90,14 @@ public class CapacitySchedulerMetrics {
     if (ms != null) {
       ms.unregisterSource("CapacitySchedulerMetrics");
     }
+  }
+
+  public void incrBacklogs() {
+    this.backlogs.incr();
+  }
+
+  public void decrBackLogs() {
+    this.backlogs.decr();
   }
 
   public void addAllocate(long latency) {

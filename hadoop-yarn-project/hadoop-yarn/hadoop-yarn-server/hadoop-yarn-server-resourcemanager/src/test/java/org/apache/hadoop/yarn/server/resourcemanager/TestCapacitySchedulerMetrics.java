@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
@@ -115,6 +118,11 @@ public class TestCapacitySchedulerMetrics {
     } catch(TimeoutException e) {
       Assert.fail("CS metrics not updated on node-update events.");
     }
+    MetricsRecordBuilder rb = getMetrics("CapacitySchedulerMetrics");
+    csMetrics.incrBacklogs();
+    assertCounter("backlogs", 1, rb);
+    csMetrics.decrBackLogs();
+    assertCounter("backlogs", 0, rb);
   }
 
   @After
