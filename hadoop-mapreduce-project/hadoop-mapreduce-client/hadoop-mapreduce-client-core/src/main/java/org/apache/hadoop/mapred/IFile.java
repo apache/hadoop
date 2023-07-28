@@ -220,7 +220,7 @@ public class IFile {
       buffer.reset();
       
       // Update bytes written
-      decompressedBytesWritten += (long) keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength +
                                   WritableUtils.getVIntSize(keyLength) + 
                                   WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
@@ -246,7 +246,7 @@ public class IFile {
       out.write(value.getData(), value.getPosition(), valueLength); 
 
       // Update bytes written
-      decompressedBytesWritten += (long) keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength +
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
