@@ -103,9 +103,7 @@ class BPServiceActor implements Runnable {
   
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
-  private final Object sendBRLock;
-  private final ExecutorService ibrExecutorService;
-  private final ExecutorService fbrExecutorService;
+  private final ExecutorService brExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -122,7 +120,7 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
-  private long fullBlockReportLeaseId;
+  private AtomicLong fullBlockReportLeaseId;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -148,7 +146,7 @@ class BPServiceActor implements Runnable {
         dnConf.ibrInterval,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
-    fullBlockReportLeaseId = 0;
+    fullBlockReportLeaseId = new AtomicLong(0);
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs);
@@ -162,13 +160,9 @@ class BPServiceActor implements Runnable {
     }
     commandProcessingThread = new CommandProcessingThread(this);
     commandProcessingThread.start();
-    sendBRLock = new Object();
-    ibrExecutorService = Executors.newSingleThreadExecutor(
+    brExecutorService = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("ibr-executor-%d").build());
-    fbrExecutorService = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("fbr-executor-%d").build());
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -635,11 +629,8 @@ class BPServiceActor implements Runnable {
     if (commandProcessingThread != null) {
       commandProcessingThread.interrupt();
     }
-    if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
-      ibrExecutorService.shutdownNow();
-    }
-    if (fbrExecutorService != null && !fbrExecutorService.isShutdown()) {
-      fbrExecutorService.shutdownNow();
+    if (brExecutorService != null && !brExecutorService.isShutdown()) {
+      brExecutorService.shutdownNow();
     }
   }
   
@@ -664,11 +655,8 @@ class BPServiceActor implements Runnable {
     IOUtils.cleanupWithLogger(null, bpNamenode);
     IOUtils.cleanupWithLogger(null, lifelineSender);
     bpos.shutdownActor(this);
-    if (!ibrExecutorService.isShutdown()) {
-      ibrExecutorService.shutdownNow();
-    }
-    if (!fbrExecutorService.isShutdown()) {
-      fbrExecutorService.shutdownNow();
+    if (!brExecutorService.isShutdown()) {
+      brExecutorService.shutdownNow();
     }
   }
 
@@ -722,7 +710,7 @@ class BPServiceActor implements Runnable {
           // -- Total capacity
           // -- Bytes remaining
           //
-          boolean requestBlockReportLease = (fullBlockReportLeaseId == 0) &&
+          boolean requestBlockReportLease = (fullBlockReportLeaseId.get() == 0) &&
                   scheduler.isBlockReportDue(startTime);
           if (!dn.areHeartbeatsDisabledForTests()) {
             LOG.debug("Before sending heartbeat to namenode {}, the state of the namenode known"
@@ -730,15 +718,15 @@ class BPServiceActor implements Runnable {
             resp = sendHeartBeat(requestBlockReportLease);
             assert resp != null;
             if (resp.getFullBlockReportLeaseId() != 0) {
-              if (fullBlockReportLeaseId != 0) {
+              if (fullBlockReportLeaseId.get() != 0) {
                 LOG.warn(nnAddr + " sent back a full block report lease " +
                         "ID of 0x" +
                         Long.toHexString(resp.getFullBlockReportLeaseId()) +
                         ", but we already have a lease ID of 0x" +
-                        Long.toHexString(fullBlockReportLeaseId) + ". " +
+                        Long.toHexString(fullBlockReportLeaseId.get()) + ". " +
                         "Overwriting old lease ID.");
               }
-              fullBlockReportLeaseId = resp.getFullBlockReportLeaseId();
+              fullBlockReportLeaseId.set(resp.getFullBlockReportLeaseId());
             }
             dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime,
                 getRpcMetricSuffix());
@@ -766,16 +754,6 @@ class BPServiceActor implements Runnable {
           }
         }
 
-        boolean forceFullBr =
-            scheduler.forceFullBlockReport.getAndSet(false);
-        if (forceFullBr) {
-          LOG.info("Forcing a full block report to " + nnAddr);
-        }
-        if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          fbrExecutorService.submit(new FBRTaskHandler(fullBlockReportLeaseId));
-          fullBlockReportLeaseId = 0;
-        }
-
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();
           commandProcessingThread.enqueue(cmd);
@@ -799,7 +777,7 @@ class BPServiceActor implements Runnable {
           return;
         }
         if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
-          fullBlockReportLeaseId = 0;
+          fullBlockReportLeaseId.set(0);
         }
         LOG.warn("RemoteException in offerService", re);
         sleepAfterException();
@@ -873,7 +851,7 @@ class BPServiceActor implements Runnable {
 
     // reset lease id whenever registered to NN.
     // ask for a new lease id at the next heartbeat.
-    fullBlockReportLeaseId = 0;
+    fullBlockReportLeaseId.set(0);
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs, true);
@@ -932,7 +910,7 @@ class BPServiceActor implements Runnable {
       // IBR tasks to be handled separately from offerService() in order to
       // improve performance of offerService(), which can now focus only on
       // FBR and heartbeat.
-      ibrExecutorService.submit(new IBRTaskHandler());
+      brExecutorService.submit(new BRTaskHandler());
       while (shouldRun()) {
         try {
           offerService();
@@ -1165,57 +1143,59 @@ class BPServiceActor implements Runnable {
     }
   }
 
-  class IBRTaskHandler implements Runnable {
+  final class BRTaskHandler implements Runnable {
 
     @Override
     public void run() {
-      LOG.info("Starting IBR Task Handler.");
+      LOG.info("Starting BlockReport Task Handler.");
       while (shouldRun()) {
         try {
           final long startTime = scheduler.monotonicNow();
           final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
           if (!dn.areIBRDisabledForTests() &&
               (ibrManager.sendImmediately() || sendHeartbeat)) {
-            synchronized (sendBRLock) {
-              ibrManager.sendIBRs(bpNamenode, bpRegistration,
-                  bpos.getBlockPoolId(), getRpcMetricSuffix());
-            }
+            ibrManager.sendIBRs(bpNamenode, bpRegistration,
+                bpos.getBlockPoolId(), getRpcMetricSuffix());
           }
+
+          List<DatanodeCommand> cmds = null;
+          boolean forceFullBr =
+              scheduler.forceFullBlockReport.getAndSet(false);
+          if (forceFullBr) {
+            LOG.info("Forcing a full block report to " + nnAddr);
+          }
+          if ((fullBlockReportLeaseId.get() != 0) || forceFullBr) {
+            cmds = blockReport(fullBlockReportLeaseId.get());
+            fullBlockReportLeaseId.set(0);
+          }
+          commandProcessingThread.enqueue(cmds);
+
           // There is no work to do; sleep until heartbeat timer elapses,
           // or work arrives, and then iterate again.
           ibrManager.waitTillNextIBR(scheduler.getHeartbeatWaitTime());
-        } catch (Throwable t) {
-          LOG.error("Exception in IBRTaskHandler.", t);
-          sleepAndLogInterrupts(5000, "offering IBR service");
+        } catch(RemoteException re) {
+          String reClass = re.getClassName();
+          if (UnregisteredNodeException.class.getName().equals(reClass) ||
+              DisallowedDatanodeException.class.getName().equals(reClass) ||
+              IncorrectVersionException.class.getName().equals(reClass)) {
+            LOG.warn(this + " is shutting down", re);
+            shouldServiceRun = false;
+            return;
+          }
+          if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
+            fullBlockReportLeaseId.set(0);
+          }
+          LOG.warn("RemoteException in BRTaskHandler", re);
+          sleepAfterException();
+        } catch (IOException e) {
+          LOG.warn("IOException in BRTaskHandler", e);
+          sleepAfterException();
+        } catch (InterruptedException e) {
+          LOG.warn("InterruptedException in BRTaskHandler", e);
         }
       }
     }
 
-  }
-
-  final class FBRTaskHandler implements Runnable {
-
-    private long fullBlockReportLeaseId;
-
-    private FBRTaskHandler(long fullBlockReportLeaseId) {
-      this.fullBlockReportLeaseId = fullBlockReportLeaseId;
-    }
-
-    @Override
-    public void run() {
-      LOG.debug("Start sending full blockreport.");
-      List<DatanodeCommand> cmds = null;
-      try {
-        synchronized (sendBRLock) {
-          cmds = blockReport(this.fullBlockReportLeaseId);
-        }
-        commandProcessingThread.enqueue(cmds);
-      } catch (IOException e) {
-        LOG.warn("IOException in FBR Task Handler.", e);
-      } catch (InterruptedException e) {
-        LOG.warn("InterruptedException in FBR Task Handler.", e);
-      }
-    }
   }
 
   /**
