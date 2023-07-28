@@ -1203,7 +1203,7 @@ class BPServiceActor implements Runnable {
 
     @Override
     public void run() {
-      LOG.info("Starting FBR Task Handler.");
+      LOG.debug("Start sending full blockreport.");
       List<DatanodeCommand> cmds = null;
       try {
         synchronized (sendBRLock) {
