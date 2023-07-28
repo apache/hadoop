@@ -435,7 +435,7 @@ public class StateStoreService extends CompositeService {
     }
     if (success) {
       // Uses local time, not driver time.
-      this.cacheLastUpdateTime = Time.now();
+      this.cacheLastUpdateTime = Time.monotonicNow();
     }
   }
 
