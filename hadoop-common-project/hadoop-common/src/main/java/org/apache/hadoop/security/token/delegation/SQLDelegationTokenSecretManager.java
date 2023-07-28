@@ -167,11 +167,15 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
       // Ensure that the token has not been renewed in SQL by
       // another secret manager
       DelegationTokenInformation tokenInfo = getTokenInfoFromSQL(ident);
-      if (tokenInfo.getRenewDate() < Time.now()) {
-        removeStoredToken(ident);
+      if (tokenInfo.getRenewDate() >= Time.now()) {
+        LOG.info("Token was renewed by a different router and has not been deleted: " + ident);
+        return;
       }
+      removeStoredToken(ident);
+    } catch (NoSuchElementException e) {
+      LOG.info("Token has already been deleted by a different router: " + ident);
     } catch (Exception e) {
-      LOG.debug("Could not remove token " + ident);
+      LOG.warn("Could not remove token " + ident, e);
     }
   }
 
