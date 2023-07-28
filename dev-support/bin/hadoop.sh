@@ -585,7 +585,12 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
-  extra="-Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true"
+  extra=(
+    -Dtest=NoUnitTests
+    -Dmaven.javadoc.skip=true
+    -Dcheckstyle.skip=true
+    -Dspotbugs.skip=true
+  )
 
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
     if load_hadoop_version; then
@@ -594,19 +599,22 @@ function shadedclient_rebuild
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
 
-#    extra="${extra} ${WINDOWS_FLAGS[*]}"
+    # shellcheck disable=SC2206
+    extra+=(${WINDOWS_FLAGS[*]})
   fi
 
+  # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}" -Pnative-win -Dhttps.protocols=TLSv1.2 -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable="${BASH_EXECUTABLE}" -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}" -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}" -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}" -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" ${extra[*]}
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
+  # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
-      -Dspotbugs.skip=true "${extra}" -Pnative-win -Dhttps.protocols=TLSv1.2 -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable="${BASH_EXECUTABLE}" -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}" -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}" -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}" -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+      -Dspotbugs.skip=true ${extra[*]}
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
