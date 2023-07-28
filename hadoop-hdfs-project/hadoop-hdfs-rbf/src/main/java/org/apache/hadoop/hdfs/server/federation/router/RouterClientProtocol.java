@@ -821,6 +821,9 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
+  /**
+   * For {@link this#getListing(String,byte[],boolean) to sort results.}
+   */
   private static class GetListingComparator implements Comparator<byte[]> {
     @Override
     public int compare(byte[] o1, byte[] o2) {
@@ -891,10 +894,6 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // Add mount points at this level in the tree
     final List<String> children = subclusterResolver.getMountPoints(src);
-    // Sort the list as the entries from subcluster are also sorted
-    if (children != null) {
-      Collections.sort(children);
-    }
     if (children != null) {
       // Get the dates for each mount point
       Map<String, Long> dates = getMountPointDates(src);

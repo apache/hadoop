@@ -2283,7 +2283,6 @@ public class TestRouterRpc {
 
   @Test
   public void testGetListingOrder() throws Exception {
-
     String ns1 = getCluster().getNameservices().get(1);
     String destBasePath =  cluster.getNamenodeTestDirectoryForNS(ns1);
     final String testPath1 = destBasePath + "/ßtestGetListingOrder";
@@ -2304,11 +2303,12 @@ public class TestRouterRpc {
           .collect(Collectors.toList());
       Iterator<String> requiredPathsIterator = requiredPaths.iterator();
 
-      // Fetch listing
+      // Fetch listing.
       DirectoryListing listing =
           routerProtocol.getListing(cluster.getFederatedTestDirectoryForNS(ns1),
               HdfsFileStatus.EMPTY_NAME, false);
-      // Match each path returned and verify order returned
+      assertEquals(requiredPaths.size(), listing.getPartialListing().length);
+      // Match each path returned and verify order returned.
       for (HdfsFileStatus f : listing.getPartialListing()) {
         String fileName = requiredPathsIterator.next();
         String currentFile = f.getFullPath(new Path("/")).getName();
