@@ -434,11 +434,10 @@ public class IFile {
     }
     
     public void nextRawValue(DataInputBuffer value) throws IOException {
-      long targetSizeLong = currentValueLength + (long) (currentValueLength >> 1);
-      int targetSize = (int) Math.min(targetSizeLong, ARRAY_MAX_SIZE);
+      final int targetSize = currentValueLength << 1;
 
       final byte[] valBytes = (value.getData().length < currentValueLength)
-        ? new byte[targetSize]
+        ? new byte[targetSize < 0 ? ARRAY_MAX_SIZE : targetSize]
         : value.getData();
       int i = readData(valBytes, 0, currentValueLength);
       if (i != currentValueLength) {
