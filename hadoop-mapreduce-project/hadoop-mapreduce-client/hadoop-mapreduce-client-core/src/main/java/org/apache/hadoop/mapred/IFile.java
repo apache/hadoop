@@ -153,7 +153,7 @@ public class IFile {
       // Write EOF_MARKER for key/value length
       WritableUtils.writeVInt(out, EOF_MARKER);
       WritableUtils.writeVInt(out, EOF_MARKER);
-      decompressedBytesWritten += 2 * WritableUtils.getVIntSize(EOF_MARKER);
+      decompressedBytesWritten += (long) 2 * WritableUtils.getVIntSize(EOF_MARKER);
       
       //Flush the stream
       out.flush();
@@ -220,7 +220,7 @@ public class IFile {
       buffer.reset();
       
       // Update bytes written
-      decompressedBytesWritten += keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength + 
                                   WritableUtils.getVIntSize(keyLength) + 
                                   WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
@@ -246,7 +246,7 @@ public class IFile {
       out.write(value.getData(), value.getPosition(), valueLength); 
 
       // Update bytes written
-      decompressedBytesWritten += keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength + 
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
@@ -395,7 +395,7 @@ public class IFile {
       // Read key and value lengths
       currentKeyLength = WritableUtils.readVInt(dIn);
       currentValueLength = WritableUtils.readVInt(dIn);
-      bytesRead += WritableUtils.getVIntSize(currentKeyLength) +
+      bytesRead += (long) WritableUtils.getVIntSize(currentKeyLength) +
                    WritableUtils.getVIntSize(currentValueLength);
       
       // Check for EOF
