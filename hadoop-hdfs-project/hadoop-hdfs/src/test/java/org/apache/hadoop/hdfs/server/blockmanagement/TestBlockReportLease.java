@@ -283,7 +283,7 @@ public class TestBlockReportLease {
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNamesystem();
-      
+
       NameNode nameNode = cluster.getNameNode();
       // pretend to be in safemode
       NameNodeAdapter.enterSafeMode(nameNode, false);
@@ -336,10 +336,6 @@ public class TestBlockReportLease {
 
         // Wait until BlockManager calls processReport
         delayer.waitForCall();
-
-        // Remove full block report lease about dn
-        spyBlockManager.getBlockReportLeaseManager()
-                .removeLease(datanodeDescriptor);
 
         // Allow blockreport to proceed
         delayer.proceed();
