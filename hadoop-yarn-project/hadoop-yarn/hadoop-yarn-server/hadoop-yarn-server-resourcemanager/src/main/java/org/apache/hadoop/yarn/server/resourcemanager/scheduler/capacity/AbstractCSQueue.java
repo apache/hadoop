@@ -440,7 +440,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void parseAndSetDynamicTemplates() {
     // Set the template properties from the parent to the queuepath of the child
     ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
-        .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(), this instanceof AbstractLeafQueue);
+        .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
+                this instanceof AbstractLeafQueue);
 
     String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
         AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
@@ -451,8 +452,8 @@ public abstract class AbstractCSQueue implements CSQueue {
         .getLabelsByQueue(parentTemplate);
 
     if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-        queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
-            .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
+      queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
+              .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
     }
   }
 
