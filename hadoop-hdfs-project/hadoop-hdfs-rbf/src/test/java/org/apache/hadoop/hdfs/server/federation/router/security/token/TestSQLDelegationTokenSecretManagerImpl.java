@@ -75,7 +75,6 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     conf.set(SQLConnectionFactory.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.MAX_RETRIES, TEST_MAX_RETRIES);
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.RETRY_SLEEP_TIME_MS, 10);
-    conf.setBoolean(SQLDelegationTokenSecretManager.SQL_DTSM_TOKEN_LOADING_CACHE_ENABLE, true);
     conf.setInt(SQLDelegationTokenSecretManager.SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS, 200);
     conf.setInt(DelegationTokenManager.RENEW_INTERVAL, TOKEN_EXPIRATION_SECONDS);
   }
@@ -130,7 +129,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
     TestDelegationTokenSecretManager secretManager2 =
         (TestDelegationTokenSecretManager) tokenManager2.getDelegationTokenSecretManager();
-    
+
     try {
       // Create token on token manager 1
       Token token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");

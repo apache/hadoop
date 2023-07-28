@@ -50,9 +50,6 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   private static final String SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE = SQL_DTSM_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final int DEFAULT_SEQ_NUM_BATCH_SIZE = 10;
-  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_ENABLE = SQL_DTSM_CONF_PREFIX
-      + "token.loading.cache.enable";
-  public static final boolean SQL_DTSM_TOKEN_LOADING_CACHE_ENABLE_DEFAULT = false;
   public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS = SQL_DTSM_CONF_PREFIX
       + "token.loading.cache.expiration.ms";
   public static final int SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT_MS = 10000;
@@ -82,14 +79,10 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
     this.seqNumBatchSize = conf.getInt(SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         DEFAULT_SEQ_NUM_BATCH_SIZE);
 
-    if (conf.getBoolean(SQL_DTSM_TOKEN_LOADING_CACHE_ENABLE, 
-        SQL_DTSM_TOKEN_LOADING_CACHE_ENABLE_DEFAULT)) {
-      LOG.info("Using cache: " + DelegationTokenLoadingCache.class.getName());
-      long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS,
-          SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT_MS, TimeUnit.MILLISECONDS);
-      this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs,
-          this::getTokenInfoFromSQL);
-    }
+    long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS,
+        SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT_MS, TimeUnit.MILLISECONDS);
+    this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs,
+        this::getTokenInfoFromSQL);
   }
 
   /**
