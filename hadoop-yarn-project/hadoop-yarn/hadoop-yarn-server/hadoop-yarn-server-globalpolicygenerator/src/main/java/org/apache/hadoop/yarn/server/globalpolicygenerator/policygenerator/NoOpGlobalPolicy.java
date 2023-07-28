@@ -1,5 +1,5 @@
 /**
- *  Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -15,21 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
-package org.apache.hadoop.yarn.server.globalpolicygenerator;
+import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import java.util.Map;
 
 /**
- * Context for Global Policy Generator.
+ * Default policy that does not update any policy configurations.
  */
-public interface GPGContext {
+public class NoOpGlobalPolicy extends GlobalPolicy{
 
-  FederationStateStoreFacade getStateStoreFacade();
-
-  void setStateStoreFacade(FederationStateStoreFacade facade);
-
-  GPGPolicyFacade getPolicyFacade();
-
-  void setPolicyFacade(GPGPolicyFacade facade);
+  @Override
+  public FederationPolicyManager updatePolicy(String queueName,
+      Map<SubClusterId, Map<Class, Object>> clusterInfo,
+      FederationPolicyManager manager) {
+    return null;
+  }
 }
