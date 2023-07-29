@@ -1837,11 +1837,12 @@ public class TestFsck {
    */
   @Test
   public void testBlockIdCKExcess() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration configuration = new Configuration();
     // Disable redundancy monitor check so that excess block can be verified.
-    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 5000);
+    configuration.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 5000);
 
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(configuration).
+        numDataNodes(2).build()) {
       cluster.waitActive();
       final DistributedFileSystem fs = cluster.getFileSystem();
 
@@ -1856,7 +1857,7 @@ public class TestFsck {
       String blockName = locatedBlocks.get(0).getBlock().getBlockName();
 
       // Validate block is HEALTHY.
-      String outStr = runFsck(conf, 0, true,
+      String outStr = runFsck(configuration, 0, true,
           "/", "-blockId", blockName);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertTrue(outStr.contains("No. of Expected Replica: " + 2));
@@ -1867,7 +1868,7 @@ public class TestFsck {
       fs.setReplication(file, (short)1);
 
       // Validate the one block is EXCESS.
-      outStr = runFsck(conf, 0, true,
+      outStr = runFsck(configuration, 0, true,
           "/", "-blockId", blockName);
       assertTrue(outStr.contains(NamenodeFsck.EXCESS_STATUS));
       assertTrue(outStr.contains("No. of Expected Replica: " + 1));
