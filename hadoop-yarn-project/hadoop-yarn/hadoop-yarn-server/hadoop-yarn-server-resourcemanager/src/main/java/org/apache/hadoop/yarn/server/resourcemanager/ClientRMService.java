@@ -889,6 +889,16 @@ public class ClientRMService extends AbstractService implements
     final Set<ApplicationId> runningAppsFilteredByQueues =
         getRunningAppsFilteredByQueues(apps, queues);
 
+    Set<String> queuePaths = new HashSet<>();
+    for (String queue : queues) {
+      String queuePath = rmAppManager.getQueuePath(queue);
+      if (queuePath != null) {
+        queuePaths.add(queuePath);
+      } else {
+        queuePaths.add(queue);
+      }
+    }
+
     Iterator<RMApp> appsIter = apps.values().iterator();
     
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
@@ -901,9 +911,9 @@ public class ClientRMService extends AbstractService implements
         continue;
       }
 
-      if (queues != null && !queues.isEmpty()) {
+      if (queuePaths != null && !queuePaths.isEmpty()) {
         if (!runningAppsFilteredByQueues.contains(application.getApplicationId()) &&
-            !queues.contains(application.getQueue())) {
+            !queuePaths.contains(application.getQueue())) {
           continue;
         }
       }
