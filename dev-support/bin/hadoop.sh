@@ -595,6 +595,16 @@ function shadedclient_rebuild
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+      echo "ls-ing ${SOURCEDIR}/hadoop-dist"
+      ls "${SOURCEDIR}/hadoop-dist"
+      echo "ls-ing ${SOURCEDIR}/hadoop-dist/target"
+      ls "${SOURCEDIR}/hadoop-dist/target"
+      echo "ls-ing ${SOURCEDIR}/hadoop-project-dist"
+      ls "${SOURCEDIR}/hadoop-project-dist"
+      echo "ls-ing ${SOURCEDIR}/hadoop-project-dist/target"
+      ls "${SOURCEDIR}/hadoop-project-dist/target"
+      echo "finding hadoop.lib"
+      find "${SOURCEDIR}" -name hadoop.lib
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
