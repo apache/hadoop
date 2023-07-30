@@ -822,7 +822,7 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * For {@link this#getListing(String,byte[],boolean)} to sort results.
+   * For {@link #getListing(String,byte[],boolean) GetLisiting} to sort results.
    */
   private static class GetListingComparator
       implements Comparator<byte[]>, Serializable {
@@ -832,7 +832,7 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
-  private static final GetListingComparator comparator =
+  private static GetListingComparator comparator =
       new GetListingComparator();
 
   @Override
