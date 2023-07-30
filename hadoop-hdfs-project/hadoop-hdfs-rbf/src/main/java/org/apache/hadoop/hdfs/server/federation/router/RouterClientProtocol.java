@@ -102,10 +102,10 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -822,15 +822,18 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * For {@link this#getListing(String,byte[],boolean) to sort results.}
+   * For {@link this#getListing(String,byte[],boolean)} to sort results.
    */
-  private static class GetListingComparator implements Comparator<byte[]> {
+  private static class GetListingComparator
+      implements Comparator<byte[]>, Serializable {
     @Override
     public int compare(byte[] o1, byte[] o2) {
       return DFSUtilClient.compareBytes(o1, o2);
     }
   }
-  private static GetListingComparator comparator = new GetListingComparator();
+
+  private static final GetListingComparator comparator =
+      new GetListingComparator();
 
   @Override
   public DirectoryListing getListing(String src, byte[] startAfter,
