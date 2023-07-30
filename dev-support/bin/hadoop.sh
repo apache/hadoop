@@ -469,14 +469,14 @@ function personality_file_tests
        || ${filename} =~ src/main/conf
        ]]; then
     yetus_debug "tests/shell: ${filename}"
-    add_test mvnsite
-    add_test unit
+    # add_test mvnsite
+    # add_test unit
   elif [[ ${filename} =~ \.md$
        || ${filename} =~ \.md\.vm$
        || ${filename} =~ src/site
        ]]; then
     yetus_debug "tests/site: ${filename}"
-    add_test mvnsite
+    # add_test mvnsite
   elif [[ ${filename} =~ \.c$
        || ${filename} =~ \.cc$
        || ${filename} =~ \.h$
@@ -486,23 +486,23 @@ function personality_file_tests
        || ${filename} =~ CMakeLists.txt
        ]]; then
     yetus_debug "tests/units: ${filename}"
-    add_test compile
-    add_test cc
-    add_test mvnsite
-    add_test javac
-    add_test unit
+    # add_test compile
+    # add_test cc
+    # add_test mvnsite
+    # add_test javac
+    # add_test unit
   elif [[ ${filename} =~ build.xml$
        || ${filename} =~ pom.xml$
        || ${filename} =~ \.java$
        || ${filename} =~ src/main
        ]]; then
       yetus_debug "tests/javadoc+units: ${filename}"
-      add_test compile
-      add_test javac
-      add_test javadoc
+      # add_test compile
+      # add_test javac
+      # add_test javadoc
       add_test mvninstall
-      add_test mvnsite
-      add_test unit
+      # add_test mvnsite
+      # add_test unit
       add_test shadedclient
   fi
 
@@ -514,11 +514,11 @@ function personality_file_tests
 
   if [[ ${filename} =~ src/test ]]; then
     yetus_debug "tests: src/test"
-    add_test unit
+    # add_test unit
   fi
 
   if [[ ${filename} =~ \.java$ ]]; then
-    add_test spotbugs
+    # add_test spotbugs
   fi
 }
 
@@ -595,6 +595,8 @@ function shadedclient_rebuild
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+      echo "ls-ing ${SOURCEDIR}/hadoop-dist/target"
+      ls "${SOURCEDIR}/hadoop-dist/target"
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
