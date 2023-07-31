@@ -572,7 +572,8 @@ function shadedclient_rebuild
   yetus_debug "hadoop personality: seeing if we need the test of client artifacts."
   for module in hadoop-client-modules/hadoop-client-check-invariants \
                 hadoop-client-modules/hadoop-client-check-test-invariants \
-                hadoop-client-modules/hadoop-client-integration-tests; do
+                hadoop-client-modules/hadoop-client-integration-tests \
+                hadoop-dist; do
     if [ -d "${module}" ]; then
       yetus_debug "hadoop personality: test module '${module}' is present."
       modules+=(-pl "${module}")
@@ -586,6 +587,8 @@ function shadedclient_rebuild
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
   extra=(
+    -Pdist
+    -Dtar
     -Dtest=NoUnitTests
     -Dmaven.javadoc.skip=true
     -Dcheckstyle.skip=true
