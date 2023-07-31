@@ -615,6 +615,11 @@ function shadedclient_rebuild
 
   # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" package -fae --batch-mode \
+      -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
+
+  # shellcheck disable=SC2086
+  echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" ${extra[*]}
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
