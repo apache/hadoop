@@ -114,7 +114,7 @@ public class DecommissioningNodesWatcher {
 
   private Timer pollTimer;
   private MonotonicClock mclock;
-  private int expireIntvl;
+  private long expireIntvl;
 
   public DecommissioningNodesWatcher(RMContext rmContext) {
     this.rmContext = rmContext;
@@ -128,7 +128,7 @@ public class DecommissioningNodesWatcher {
         YarnConfiguration
           .DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL);
     // expire interval should not be configured more than RM_AM_EXPIRY_INTERVAL_MS
-    this.expireIntvl = Math.min(conf.getInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+    this.expireIntvl = Math.min(conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS),
     conf.getInt(YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS,
             YarnConfiguration.DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS));
@@ -234,7 +234,7 @@ public class DecommissioningNodesWatcher {
 
   public boolean checkReadyToBeDecommissioned(NodeId nodeId) {
     DecommissioningNodeStatus s = checkDecommissioningStatus(nodeId);
-    LOG.debug("checkReadyToBeDecommissioned " + nodeId + " status " + s);
+    LOG.debug("checkReadyToBeDecommissioned {} status {}.", nodeId, s);
     return (s == DecommissioningNodeStatus.READY ||
             s == DecommissioningNodeStatus.TIMEOUT);
   }

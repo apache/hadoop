@@ -1285,10 +1285,10 @@ public class YarnConfiguration extends Configuration {
    * on that node. No delay if set to 0.
    */
   public static final String RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS =
-          RM_PREFIX + "decommissioning-nodes-watcher.delay-ms";
+      RM_PREFIX + "decommissioning-nodes-watcher.delay-ms";
 
   public static final int
-          DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS = 0;
+      DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS = 0;
 
   ////////////////////////////////
   // Node Manager Configs
