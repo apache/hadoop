@@ -681,14 +681,14 @@ to the `get()` call: do it.
 
 ### `NoClassDefFoundError: software/amazon/eventstream/MessageDecoder`
 
-Select operation failing with a missing evenstream class.
+Select operation failing with a missing eventstream class.
 
 ```
 java.io.IOException: java.lang.NoClassDefFoundError: software/amazon/eventstream/MessageDecoder
-        at org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper.select(SelectObjectContentHelper.java:75)
-        at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$select$10(WriteOperationHelper.java:660)
-        at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62)
-        at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+at org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper.select(SelectObjectContentHelper.java:75)
+at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$select$10(WriteOperationHelper.java:660)
+at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62)
+at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
 ```
 
 The eventstream JAR is not on the classpath/not in sync with the version of the full "bundle.jar" JDK

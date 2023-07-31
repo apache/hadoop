@@ -165,11 +165,6 @@ be invoked when the provider chain was being shut down.
 
 #### v2 `AwsCredentialsProvider` interface
 
-Note how the interface begins with the capitalized "AWS" acronym.
-The v2 interface starts with "Aws". This is a very subtle change.
-Compilers will detect and report the type mismatch, but it is not
-immediately obvious to developers migrating existing code.
-
 ```java
 public interface AwsCredentialsProvider {
 
