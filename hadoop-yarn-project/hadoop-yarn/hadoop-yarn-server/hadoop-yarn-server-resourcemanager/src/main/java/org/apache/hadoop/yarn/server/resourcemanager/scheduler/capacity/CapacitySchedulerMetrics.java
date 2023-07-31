@@ -53,7 +53,12 @@ public class CapacitySchedulerMetrics {
   @Metric("Scheduler node update") MutableRate nodeUpdate;
   @Metric("Scheduler node heartbeat interval") MutableQuantiles
       schedulerNodeHBInterval;
+<<<<<<< HEAD
   @Metric("Scheduler backlogs") MutableGaugeInt backlogs;
+=======
+  @Metric("Scheduler backlogs")
+  MutableGaugeInt backlogs;
+>>>>>>> 39070fa20452cacdd3b1980659a1d3bdf47f2ddf
 
   private static volatile CapacitySchedulerMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -94,6 +99,10 @@ public class CapacitySchedulerMetrics {
   public void incrBacklogs() {
     this.backlogs.incr();
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 39070fa20452cacdd3b1980659a1d3bdf47f2ddf
   public void decrBackLogs() {
     this.backlogs.decr();
   }
