@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
@@ -155,7 +157,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     Path testPath = new Path("/");
     validateStatus(fs, testPath, true);
 
-    // Assert that passing absolute root path works2
+    // Assert that passing absolute root path works
     String testPathStr = makeQualified(testPath).toString();
     validateStatus(fs, new Path(testPathStr), true);
 
