@@ -263,9 +263,9 @@ public class TestFSConfigToCSConfigConverter {
         conf.get(PREFIX + "root.admins.alice.acl_administer_queue"));
 
     // root.users.john
-    assertEquals("root.users.john submit ACL", "john ",
+    assertEquals("root.users.john submit ACL", "*",
         conf.get(PREFIX + "root.users.john.acl_submit_applications"));
-    assertEquals("root.users.john admin ACL", "john ",
+    assertEquals("root.users.john admin ACL", "*",
         conf.get(PREFIX + "root.users.john.acl_administer_queue"));
 
     // root.users.joe
