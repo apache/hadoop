@@ -593,30 +593,31 @@ function shadedclient_rebuild
   )
 
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    # shellcheck disable=SC2206
+    extra+=(${WINDOWS_FLAGS[*]})
+
+    # shellcheck disable=SC2086
+    echo_and_redirect "${logfile}" \
+      "${MAVEN}" "${MAVEN_ARGS[@]}" package -fae --batch-mode \
+        -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
+
+    echo "ls-ing ${SOURCEDIR}/hadoop-dist"
+    ls "${SOURCEDIR}/hadoop-dist"
+    echo "ls-ing ${SOURCEDIR}/hadoop-dist/target"
+    ls "${SOURCEDIR}/hadoop-dist/target"
+    echo "ls-ing ${SOURCEDIR}/hadoop-project-dist"
+    ls "${SOURCEDIR}/hadoop-project-dist"
+    echo "ls-ing ${SOURCEDIR}/hadoop-project-dist/target"
+    ls "${SOURCEDIR}/hadoop-project-dist/target"
+    echo "finding hadoop.lib"
+    find "${SOURCEDIR}" -name hadoop.lib
+
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
-      echo "ls-ing ${SOURCEDIR}/hadoop-dist"
-      ls "${SOURCEDIR}/hadoop-dist"
-      echo "ls-ing ${SOURCEDIR}/hadoop-dist/target"
-      ls "${SOURCEDIR}/hadoop-dist/target"
-      echo "ls-ing ${SOURCEDIR}/hadoop-project-dist"
-      ls "${SOURCEDIR}/hadoop-project-dist"
-      echo "ls-ing ${SOURCEDIR}/hadoop-project-dist/target"
-      ls "${SOURCEDIR}/hadoop-project-dist/target"
-      echo "finding hadoop.lib"
-      find "${SOURCEDIR}" -name hadoop.lib
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
-
-    # shellcheck disable=SC2206
-    extra+=(${WINDOWS_FLAGS[*]})
   fi
-
-  # shellcheck disable=SC2086
-  echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" package -fae --batch-mode \
-      -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
 
   # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
