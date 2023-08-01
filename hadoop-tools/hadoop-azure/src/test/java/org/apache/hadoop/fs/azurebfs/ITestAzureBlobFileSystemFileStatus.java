@@ -85,11 +85,11 @@ public class ITestAzureBlobFileSystemFileStatus extends
       if (isDir) {
         assertEquals(errorInStatus + ": permission",
                 new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission());
-        assertTrue(fileStatus.isDirectory());
+        assertTrue(errorInStatus + "not a directory", fileStatus.isDirectory());
       } else {
         assertEquals(errorInStatus + ": permission",
                 new FsPermission(DEFAULT_FILE_PERMISSION_VALUE), fileStatus.getPermission());
-        assertTrue(fileStatus.isFile());
+        assertTrue(errorInStatus + "not a file", fileStatus.isFile());
       }
     }
 
@@ -151,7 +151,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
 
   @Test
   public void testFileStatusOnRoot() throws IOException {
-    AzureBlobFileSystem fs = this.getFileSystem();
+    AzureBlobFileSystem fs = getFileSystem();
 
     // Assert that passing relative root path works
     Path testPath = new Path("/");
