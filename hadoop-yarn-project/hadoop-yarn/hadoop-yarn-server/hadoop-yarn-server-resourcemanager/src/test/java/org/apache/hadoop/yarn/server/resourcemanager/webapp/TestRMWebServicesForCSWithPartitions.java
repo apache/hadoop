@@ -25,11 +25,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -53,17 +56,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -73,19 +71,18 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String DEFAULT_PARTITION = "";
   private static final String CAPACITIES = "capacities";
@@ -109,42 +106,19 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
 
-  private MockNM nm1;
+  private final boolean legacyQueueMode;
 
-  private static class WebServletModule extends ServletModule {
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      csConf = new CapacitySchedulerConfiguration();
-      setupQueueConfiguration(csConf);
-      conf = new YarnConfiguration(csConf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      rm = new MockRM(conf);
-      Set<NodeLabel> labels = new HashSet<NodeLabel>();
-      labels.add(NodeLabel.newInstance(LABEL_LX));
-      labels.add(NodeLabel.newInstance(LABEL_LY));
-      try {
-        RMNodeLabelsManager nodeLabelManager =
-            rm.getRMContext().getNodeLabelManager();
-        nodeLabelManager.addToCluserNodeLabels(labels);
-      } catch (Exception e) {
-        Assert.fail();
-      }
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
-  };
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
   }
 
-  private static void setupQueueConfiguration(
+  private MockNM nm1;
+
+  private void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
+
+    config.setLegacyQueueModeEnabled(legacyQueueMode);
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
@@ -207,8 +181,22 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+
+    csConf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(csConf);
+    conf = new YarnConfiguration(csConf);
+    rm = createRM(conf);
+
+    Set<NodeLabel> labels = new HashSet<NodeLabel>();
+    labels.add(NodeLabel.newInstance(LABEL_LX));
+    labels.add(NodeLabel.newInstance(LABEL_LY));
+    try {
+      RMNodeLabelsManager nodeLabelManager =
+          rm.getRMContext().getNodeLabelManager();
+      nodeLabelManager.addToCluserNodeLabels(labels);
+    } catch (Exception e) {
+      Assert.fail();
+    }
 
     rm.start();
     rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
@@ -241,12 +229,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     }
   }
 
-  public TestRMWebServicesForCSWithPartitions() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
+  public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
+    super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
