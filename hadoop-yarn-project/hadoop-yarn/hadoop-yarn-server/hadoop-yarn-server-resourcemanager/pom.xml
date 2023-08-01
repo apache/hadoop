@@ -333,16 +333,6 @@
      <dependency>
          <groupId>com.fasterxml.jackson.dataformat</groupId>
          <artifactId>jackson-dataformat-yaml</artifactId>
-         <exclusions>
-             <exclusion>
-                 <groupId>org.yaml</groupId>
-                 <artifactId>snakeyaml</artifactId>
-             </exclusion>
-         </exclusions>
-     </dependency>
-     <dependency>
-         <groupId>org.yaml</groupId>
-         <artifactId>snakeyaml</artifactId>
      </dependency>
   </dependencies>
 

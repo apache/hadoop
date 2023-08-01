@@ -69,7 +69,7 @@
     <jersey.version>1.19.4</jersey.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.12.7</jackson2.version>
+    <jackson2.version>2.15.2</jackson2.version>
     <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
