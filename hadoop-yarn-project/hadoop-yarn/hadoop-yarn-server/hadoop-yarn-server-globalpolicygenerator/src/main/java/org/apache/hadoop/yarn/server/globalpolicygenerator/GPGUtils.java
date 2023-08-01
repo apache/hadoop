@@ -72,6 +72,7 @@ public final class GPGUtils {
     } finally {
       if (response != null) {
         response.close();
+        response = null;
       }
       client.destroy();
     }
