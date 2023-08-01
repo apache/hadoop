@@ -331,8 +331,7 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
 
-//  @Test (timeout=5000)
-  @Test
+  @Test (timeout=5000)
   public void testProtoBufReconstructableException() throws Exception {
     //No test with legacy
     assumeFalse(testWithLegacy);
