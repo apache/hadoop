@@ -273,7 +273,7 @@ public class TestBlockReportLease {
     return storageBlockReports;
   }
 
-  @Test
+  @Test(timeout = 360000)
   public void testFirstIncompleteBlockReport() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     Random rand = new Random();
