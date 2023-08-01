@@ -196,7 +196,7 @@ public class TestFSConfigToCSConfigConverter {
     assertEquals("root.users user-limit-factor", 1.0f,
             conf.getUserLimitFactor("root.users"), 0.0f);
     assertEquals("root.users auto-queue-creation-v2.enabled", true,
-            conf.isAutoQueueCreationV2Enabled( "root.users"));
+            conf.isAutoQueueCreationV2Enabled("root.users"));
 
     assertEquals("root.default user-limit-factor", -1.0f,
             conf.getUserLimitFactor("root.default"), 0.0f);
