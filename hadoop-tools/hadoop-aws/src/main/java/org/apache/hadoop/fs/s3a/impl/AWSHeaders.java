@@ -68,7 +68,7 @@ public interface AWSHeaders {
   /** JSON-encoded description of encryption materials used during encryption. */
   String MATERIALS_DESCRIPTION = "x-amz-matdesc";
 
-  /** Header for the optional restore information of an objec.t */
+  /** Header for the optional restore information of an object. */
   String RESTORE = "x-amz-restore";
 
   /**

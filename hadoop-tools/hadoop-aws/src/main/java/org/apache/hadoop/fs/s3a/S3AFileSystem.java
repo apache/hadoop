@@ -294,6 +294,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Path workingDir;
   private String username;
   private S3Client s3Client;
+  /** Async client is used for transfer manager and s3 select. */
   private S3AsyncClient s3AsyncClient;
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
@@ -986,7 +987,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
     createS3AsyncClient(clientFactory, parameters);
-    transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
+    transferManager =  clientFactory.createS3TransferManager(getS3AsyncClient());
   }
 
   /**
@@ -1199,6 +1200,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  /**
+   * Get the S3 Async client; synchronized to keep spotbugs quiet.
+   * @return the async s3 client.
+   */
+  private synchronized S3AsyncClient getS3AsyncClient() {
+    return s3AsyncClient;
   }
 
   /**
@@ -1761,7 +1770,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public CompletableFuture<Void> selectObjectContent(
         SelectObjectContentRequest request,
         SelectObjectContentResponseHandler responseHandler) {
-      return s3AsyncClient.selectObjectContent(request, responseHandler);
+      return getS3AsyncClient().selectObjectContent(request, responseHandler);
     }
 
     @Override
@@ -4178,7 +4187,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected synchronized void stopAllServices() {
     closeAutocloseables(LOG, transferManager,
         s3Client,
-        s3AsyncClient);
+        getS3AsyncClient());
     transferManager = null;
     s3Client = null;
     s3AsyncClient = null;

@@ -104,7 +104,7 @@ public final class CredentialProviderListFactory {
   public static final String ENVIRONMENT_CREDENTIALS_V1 =
       "com.amazonaws.auth.EnvironmentVariableCredentialsProvider";
 
-  /** V2 environment variables credential provider: {@value}. */
+  /** V2 environment variables credential provider. */
   public static final String ENVIRONMENT_CREDENTIALS_V2 =
       EnvironmentVariableCredentialsProvider.class.getName();
 
