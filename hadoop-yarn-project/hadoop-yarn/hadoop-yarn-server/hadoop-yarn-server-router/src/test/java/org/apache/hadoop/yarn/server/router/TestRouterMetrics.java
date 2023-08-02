@@ -2257,7 +2257,8 @@ public class TestRouterMetrics {
   public void testGetBatchSaveFederationQueuePoliciesFailedRetrieved() {
     long totalBadBefore = metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved();
     badSubCluster.getBatchSaveFederationQueuePoliciesFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved());
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved());
   }
 
   @Test

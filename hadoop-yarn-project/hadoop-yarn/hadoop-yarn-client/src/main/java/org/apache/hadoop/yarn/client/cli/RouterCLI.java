@@ -370,10 +370,8 @@ public class RouterCLI extends Configured implements Tool {
         policy = cliParser.getOptionValue(OPTION_SAVE);
       }
       return handleSavePolicy(policy);
-    }
-    // Save Queue Policies in Batches
-    else if (cliParser.hasOption(OPTION_BATCH_S) || cliParser.hasOption(OPTION_BATCH_SAVE)) {
-
+    } else if (cliParser.hasOption(OPTION_BATCH_S) || cliParser.hasOption(OPTION_BATCH_SAVE)) {
+      // Save Queue Policies in Batches
       // Determine whether the file format is accurate, XML or JSON format.
       // If it is not XML or JSON, we will directly prompt the user with an error message.
       String format = null;
@@ -398,9 +396,8 @@ public class RouterCLI extends Configured implements Tool {
 
       // Batch SavePolicies.
       return handBatchSavePolicies(format, filePath);
-    }
-    // printUsage
-    else {
+    } else {
+      // printUsage
       printUsage(args[0]);
     }
 
