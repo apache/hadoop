@@ -50,9 +50,10 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   private static final String SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE = SQL_DTSM_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final int DEFAULT_SEQ_NUM_BATCH_SIZE = 10;
-  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS = SQL_DTSM_CONF_PREFIX
-      + "token.loading.cache.expiration.ms";
-  public static final int SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT_MS = 10000;
+  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION = SQL_DTSM_CONF_PREFIX
+      + "token.loading.cache.expiration";
+  public static final long SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT =
+      TimeUnit.SECONDS.toMillis(10);
 
   // Batch of sequence numbers that will be requested by the sequenceNumCounter.
   // A new batch is requested once the sequenceNums available to a secret manager are
@@ -79,8 +80,8 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
     this.seqNumBatchSize = conf.getInt(SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         DEFAULT_SEQ_NUM_BATCH_SIZE);
 
-    long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_MS,
-        SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT_MS, TimeUnit.MILLISECONDS);
+    long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
+        SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT, TimeUnit.MILLISECONDS);
     this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs,
         this::getTokenInfoFromSQL);
   }
@@ -168,14 +169,14 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
       // another secret manager
       DelegationTokenInformation tokenInfo = getTokenInfoFromSQL(ident);
       if (tokenInfo.getRenewDate() >= Time.now()) {
-        LOG.info("Token was renewed by a different router and has not been deleted: " + ident);
+        LOG.info("Token was renewed by a different router and has not been deleted: {}", ident);
         return;
       }
       removeStoredToken(ident);
     } catch (NoSuchElementException e) {
-      LOG.info("Token has already been deleted by a different router: " + ident);
+      LOG.info("Token has already been deleted by a different router: {}", ident);
     } catch (Exception e) {
-      LOG.warn("Could not remove token " + ident, e);
+      LOG.warn("Could not remove token {}", ident, e);
     }
   }
 
