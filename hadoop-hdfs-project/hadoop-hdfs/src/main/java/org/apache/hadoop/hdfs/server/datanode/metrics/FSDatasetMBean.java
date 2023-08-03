@@ -122,4 +122,9 @@ public interface FSDatasetMBean extends MetricsSource {
    * Returns the number of blocks that the datanode was unable to uncache
    */
   public long getNumBlocksFailedToUncache();
+
+  /**
+   * Returns the last time in milliseconds when the directory scanner successfully ran.
+   */
+  long getLastDirScannerFinishTime();
 }

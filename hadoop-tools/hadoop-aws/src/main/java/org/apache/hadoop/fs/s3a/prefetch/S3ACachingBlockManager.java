@@ -33,6 +33,9 @@ import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
+
 /**
  * Provides access to S3 file one block at a time.
  */
@@ -67,7 +70,13 @@ public class S3ACachingBlockManager extends CachingBlockManager {
       Configuration conf,
       LocalDirAllocator localDirAllocator) {
 
-    super(futurePool, blockData, bufferPoolSize, streamStatistics, conf, localDirAllocator);
+    super(futurePool,
+        blockData,
+        bufferPoolSize,
+        streamStatistics,
+        conf,
+        localDirAllocator,
+        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
 
     Validate.checkNotNull(reader, "reader");
 

@@ -421,13 +421,13 @@ public class FSConfigToCSConfigConverter {
     AccessControlList adminAcls = access.get(AccessType.ADMINISTER_QUEUE);
 
     if (!submitAcls.getGroups().isEmpty() ||
-        !submitAcls.getUsers().isEmpty()) {
+        !submitAcls.getUsers().isEmpty() || submitAcls.isAllAllowed()) {
       capacitySchedulerConfig.setAcl(queue, QueueACL.SUBMIT_APPLICATIONS,
           submitAcls.getAclString());
     }
 
     if (!adminAcls.getGroups().isEmpty() ||
-        !adminAcls.getUsers().isEmpty()) {
+        !adminAcls.getUsers().isEmpty() || adminAcls.isAllAllowed()) {
       capacitySchedulerConfig.setAcl(queue, QueueACL.ADMINISTER_QUEUE,
           adminAcls.getAclString());
     }

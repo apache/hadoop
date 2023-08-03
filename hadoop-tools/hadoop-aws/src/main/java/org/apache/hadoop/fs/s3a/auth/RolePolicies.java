@@ -80,7 +80,7 @@ public final class RolePolicies {
    * Statement to allow KMS R/W access access, so full use of
    * SSE-KMS.
    */
-  public static final Statement STATEMENT_ALLOW_SSE_KMS_RW =
+  public static final Statement STATEMENT_ALLOW_KMS_RW =
       statement(true, KMS_ALL_KEYS, KMS_ALL_OPERATIONS);
 
   /**

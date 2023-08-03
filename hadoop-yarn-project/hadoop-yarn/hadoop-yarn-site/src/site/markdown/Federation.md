@@ -235,9 +235,10 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 |`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
 |`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
-**How to configure the policy-manager?**
+How to configure the policy-manager?
+--------------------
 
-- Router Policy
+Router Policy
 
   Router Policy defines the logic for determining the routing of an application submission and determines the HomeSubCluster for the application.
 
@@ -263,7 +264,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
   - WeightedRandomRouterPolicy
     - This policy implements a weighted random sample among currently active sub-clusters.
 
-- AMRM Policy
+AMRM Policy
 
   AMRM Proxy defines the logic to split the resource request list received by AM among RMs.
 
@@ -282,7 +283,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
   - RejectAMRMProxyPolicy
     - This policy simply rejects all requests. Useful to prevent apps from accessing any sub-cluster.
 
-- Policy Manager
+Policy Manager
 
   The PolicyManager is providing a combination of RouterPolicy and AMRMPolicy.
 
@@ -315,6 +316,38 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
     - It combines the basic policies: UniformRandomRouterPolicy and BroadcastAMRMProxyPolicy, which are designed to work together and "spread" the load among sub-clusters uniformly. This simple policy might impose heavy load on the RMs and return more containers than a job requested as all requests are (replicated and) broadcasted.
   - WeightedLocalityPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a LocalityRouterPolicy for the router and a LocalityMulticastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
+
+How to configure the queue policy?
+--------------------
+
+We will provide a set of commands to view and save queue policies.
+
+The Queue Policy(SubClusterPolicyConfiguration) include the following:
+
+| Property       | Description                                                           |
+|:---------------|:----------------------------------------------------------------------|
+| `queue`        | `Queue for Job submission`                                            |
+| `policyType`   | `Policy Manager Class name, Default is UniformBroadcastPolicyManager` |
+| `policyParams` | `It stores serialized objects of WeightedPolicyInfo.`                 |
+
+WeightedPolicyInfo include the following:
+
+- RouterWeight
+
+  Weight for routing applications to different subclusters. We will route the application to different subclusters based on the configured weights.
+  Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.7 for SC-1 and 0.3 for SC-2,
+  the application will be allocated in such a way that 70% of the applications will be assigned to SC-1 and 30% to SC-2.
+
+- AmRMWeight
+
+  Weight for resource request from ApplicationMaster (AM) to different subclusters' Resource Manager (RM).
+  Assuming we have two subclusters, SC-1 and SC-2, with a weight of 0.6 for SC-1 and 0.4 for SC-2,
+  When AM requesting resources, 60% of the requests will be made to the Resource Manager (RM) of SC-1 and 40% to the RM of SC-2.
+
+- HeadRoomAlpha
+
+  used by policies that balance weight-based and load-based considerations in their decisions.
+  For policies that use this parameter, values close to 1 indicate that most of the decision should be based on currently observed headroom from various sub-clusters, values close to zero, indicate that the decision should be mostly based on weights and practically ignore current load.
 
 ### ON RMs:
 

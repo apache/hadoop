@@ -263,9 +263,9 @@ public class TestFSConfigToCSConfigConverter {
         conf.getAcl("root.admins.alice", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.john
-    assertEquals("root.users.john submit ACL", "john ",
+    assertEquals("root.users.john submit ACL", "*",
         conf.getAcl("root.users.john", QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root.users.john admin ACL", "john ",
+    assertEquals("root.users.john admin ACL", "*",
         conf.getAcl("root.users.john", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.joe

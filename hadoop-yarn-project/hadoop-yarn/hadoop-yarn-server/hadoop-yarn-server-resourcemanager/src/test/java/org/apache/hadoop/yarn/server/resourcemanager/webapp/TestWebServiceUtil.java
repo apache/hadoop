@@ -96,29 +96,73 @@ public final class TestWebServiceUtil {
       WebResource resource) throws Exception {
     final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
     try {
-      // capacity is not set when there are no cluster resources available yet
-      if (((CapacityScheduler)rm.getResourceScheduler()).getConfiguration().isLegacyQueueMode()) {
-        assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
-      }
+      boolean legacyQueueMode = ((CapacityScheduler) rm.getResourceScheduler())
+          .getConfiguration().isLegacyQueueMode();
+
+      // capacity is not set when there are no cluster resources available in non-legacy queue mode
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "0", legacyQueueMode));
+
       MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
       rm.registerNode("h2:1234", 8 * GB, 8);
       if (reinitAfterNodeChane) {
         reinitialize(rm, rm.getConfig());
       }
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "16", legacyQueueMode));
       rm.registerNode("h3:1234", 8 * GB, 8);
       MockNM nm4 = rm.registerNode("h4:1234", 8 * GB, 8);
       if (reinitAfterNodeChane) {
         reinitialize(rm, rm.getConfig());
       }
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 32));
+
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "32", legacyQueueMode));
       rm.unRegisterNode(nm1);
       rm.unRegisterNode(nm4);
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "16", legacyQueueMode));
     } finally {
       rm.close();
     }
   }
+
+  /**
+   * There are some differences between legacy and non-legacy queue mode.
+   *   - capacity/maxCapacity shows effective values instead of configured on non-legacy mode
+   *   - no cluster resource -> no capacity in non-legacy mode
+   *   - no cluster resource -> maxApplications is set to the configured value in non-legacy mode
+   *   - normalizedWeight is not set in non-legacy queue mode
+   *  To address this tests may add separate test files for legacy queue mode.
+   *
+   * @param template The file template to use
+   * @param name The base test name (-legacy suffix will be searched if legacy-queue-mode)
+   * @param suffix The test suffix
+   * @param legacyQueueMode Is legacy-queue-mode enabled
+   * @return The expected test file name. In legacy-queue mode returns the basename-legacy
+   * filepath if exists.
+   *
+   * @throws IOException when the resource file cannot be opened for some reason.
+   */
+  public static String getExpectedResourceFile(String template, String name, String suffix,
+                                               boolean legacyQueueMode) throws IOException {
+    String legacyResource = String.format(template, legacySuffix(legacyQueueMode, name), suffix);
+    try (InputStream stream = getResourceAsStream(legacyResource)) {
+      if (stream != null) {
+        return legacyResource;
+      }
+    }
+
+    return String.format(template, name, suffix);
+  }
+
+  public static String legacySuffix(boolean legacyQueueMode, String text) {
+    if (legacyQueueMode) {
+      return text + "-legacy";
+    }
+    return text;
+  }
+
   public static boolean isMutableConfig(Configuration config) {
     return Objects.equals(config.get(SCHEDULER_CONFIGURATION_STORE_CLASS),
         MEMORY_CONFIGURATION_STORE);

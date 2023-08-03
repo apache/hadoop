@@ -236,7 +236,7 @@ public final class CommitContext implements Closeable {
         .setDaemon(true)
         .setNameFormat(THREAD_PREFIX + jobId + "-%d")
         .build();
-    return new HadoopThreadPoolExecutor(0, numThreads,
+    return new HadoopThreadPoolExecutor(numThreads, numThreads,
         THREAD_KEEP_ALIVE_TIME,
         TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(),

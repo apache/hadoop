@@ -406,6 +406,7 @@
       <th>Under replicated blocks</th>
       <th>Blocks with no live replicas</th>
       <th>Under Replicated Blocks <br/>In files under construction</th>
+      <th>Decommission duration</th>
     </tr>
   </thead>
   {#DecomNodes}
@@ -414,6 +415,7 @@
     <td>{underReplicatedBlocks}</td>
     <td>{decommissionOnlyReplicas}</td>
     <td>{underReplicateInOpenFiles}</td>
+    <td>{decommissionDuration}ms</td>
   </tr>
   {/DecomNodes}
 </table>

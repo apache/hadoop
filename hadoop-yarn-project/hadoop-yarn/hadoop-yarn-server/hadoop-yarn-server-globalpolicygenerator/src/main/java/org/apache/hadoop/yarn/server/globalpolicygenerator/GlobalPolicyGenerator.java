@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.PolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner.SubClusterCleaner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,7 @@ public class GlobalPolicyGenerator extends CompositeService {
   // Scheduler service that runs tasks periodically
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
+  private PolicyGenerator policyGenerator;
 
   public GlobalPolicyGenerator() {
     super(GlobalPolicyGenerator.class.getName());
@@ -94,13 +96,16 @@ public class GlobalPolicyGenerator extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     // Set up the context
-    this.gpgContext
-        .setStateStoreFacade(FederationStateStoreFacade.getInstance());
+    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance());
+    GPGPolicyFacade gpgPolicyFacade =
+        new GPGPolicyFacade(this.gpgContext.getStateStoreFacade(), conf);
+    this.gpgContext.setPolicyFacade(gpgPolicyFacade);
 
     this.scheduledExecutorService = new ScheduledThreadPoolExecutor(
         conf.getInt(YarnConfiguration.GPG_SCHEDULED_EXECUTOR_THREADS,
             YarnConfiguration.DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS));
     this.subClusterCleaner = new SubClusterCleaner(conf, this.gpgContext);
+    this.policyGenerator = new PolicyGenerator(conf, this.gpgContext);
 
     DefaultMetricsSystem.initialize(METRICS_NAME);
 
@@ -128,6 +133,35 @@ public class GlobalPolicyGenerator extends CompositeService {
           0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);
       LOG.info("Scheduled sub-cluster cleaner with interval: {}",
           DurationFormatUtils.formatDurationISO(scCleanerIntervalMs));
+    }
+
+    // Schedule PolicyGenerator
+    // We recommend using yarn.federation.gpg.policy.generator.interval
+    // instead of yarn.federation.gpg.policy.generator.interval-ms
+
+    // To ensure compatibility,
+    // let's first obtain the value of "yarn.federation.gpg.policy.generator.interval-ms."
+    long policyGeneratorIntervalMillis = 0L;
+    String generatorIntervalMS = config.get(YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL_MS);
+    if (generatorIntervalMS != null) {
+      LOG.warn("yarn.federation.gpg.policy.generator.interval-ms is deprecated property, " +
+          " we better set it yarn.federation.gpg.policy.generator.interval.");
+      policyGeneratorIntervalMillis = Long.parseLong(generatorIntervalMS);
+    }
+
+    // If it is not available, let's retrieve
+    // the value of "yarn.federation.gpg.policy.generator.interval" instead.
+    if (policyGeneratorIntervalMillis == 0) {
+      policyGeneratorIntervalMillis = config.getTimeDuration(
+          YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL,
+          YarnConfiguration.DEFAULT_GPG_POLICY_GENERATOR_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+
+    if(policyGeneratorIntervalMillis > 0){
+      this.scheduledExecutorService.scheduleAtFixedRate(this.policyGenerator,
+          0, policyGeneratorIntervalMillis, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled policy-generator with interval: {}",
+          DurationFormatUtils.formatDurationISO(policyGeneratorIntervalMillis));
     }
   }
 
