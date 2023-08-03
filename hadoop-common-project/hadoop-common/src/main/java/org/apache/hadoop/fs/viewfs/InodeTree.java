@@ -349,6 +349,11 @@ public abstract class InodeTree<T> {
       }
       return targetFileSystem;
     }
+
+    T getTargetFileSystemForClose() throws IOException {
+      return targetFileSystem;
+    }
+
   }
 
   private void createLink(final String src, final String target,

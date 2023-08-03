@@ -23,11 +23,10 @@
 
 ###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
 
-1. This release can safely list/index/read S3 buckets where "empty directory"
-markers are retained.
-
-1. This release can be configured to retain these directory makers at the
-expense of being backwards incompatible.
+This release does not delete directory markers when creating
+files or directories underneath.
+This is incompatible with versions of the Hadoop S3A client released
+before 2021.
 
 Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
 full details.
@@ -1108,6 +1107,7 @@ options are covered in [Testing](./testing.md).
   <value>8MB</value>
   <description>
       The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
   </description>
 </property>
 
