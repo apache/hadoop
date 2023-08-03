@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.ReconstructableException;
+import org.apache.hadoop.ipc.ReconstructibleException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructProto;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.util.StringInterner;
@@ -140,20 +140,21 @@ public final class PBHelper {
   }
 
   public static ExceptionReconstructProto getReconstructProto(Throwable t) {
-    if (t instanceof IOException) {
-      if (t instanceof ReconstructableException) {
-        String[] params = ((ReconstructableException<?>) t).getReconstructParams();
-        try {
-          ExceptionReconstructProto.Builder builder =
-              ExceptionReconstructProto.newBuilder();
-          for (String str : params) {
-            builder.addParam(str);
-          }
-          builder.setStacktrace(writeObject2ByteString(t.getStackTrace()));
-          return builder.build();
-        } catch (Exception e) {
-          // We might get NPE or other exceptions, we just return null here.
+    if (!(t instanceof IOException)) {
+      return null;
+    }
+    if (t instanceof ReconstructibleException) {
+      String[] params = ((ReconstructibleException<?>) t).getReconstructParams();
+      try {
+        ExceptionReconstructProto.Builder builder =
+            ExceptionReconstructProto.newBuilder();
+        for (String str : params) {
+          builder.addParam(str);
         }
+        builder.setStacktrace(writeObject2ByteString(t.getStackTrace()));
+        return builder.build();
+      } catch (Exception e) {
+        // We might get NPE or other exceptions, we just return null here.
       }
     }
     return null;
@@ -161,7 +162,7 @@ public final class PBHelper {
 
   public static ByteString writeObject2ByteString(Object obj) {
     final ByteString.Output byteOut = ByteString.newOutput();
-    try(ObjectOutputStream objOut = new ObjectOutputStream(byteOut)) {
+    try (ObjectOutputStream objOut = new ObjectOutputStream(byteOut)) {
       objOut.writeObject(obj);
     } catch (IOException e) {
       throw new IllegalStateException(

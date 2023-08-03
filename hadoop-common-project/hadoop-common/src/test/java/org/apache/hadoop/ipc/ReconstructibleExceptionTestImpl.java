@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,39 @@ package org.apache.hadoop.ipc;
 import java.io.IOException;
 
 /**
- * Exceptions that can be reconstructed by String array.
+ * Test class of ReconstructibleException.
  */
-public interface ReconstructableException<E extends IOException> {
+public class ReconstructibleExceptionTestImpl extends IOException
+    implements ReconstructibleException<ReconstructibleExceptionTestImpl> {
 
-  E reconstruct(String... params);
+  private int field1;
+  private String field2;
 
-  String[] getReconstructParams();
+  public ReconstructibleExceptionTestImpl(String msg) {
+    super(msg);
+  }
 
+  public ReconstructibleExceptionTestImpl(String param1, String param2) {
+    super(param1 + param2);
+    field1 = Integer.parseInt(param1);
+    field2 = param2;
+  }
+
+  @Override
+  public ReconstructibleExceptionTestImpl reconstruct(String... params) {
+    return new ReconstructibleExceptionTestImpl(params[0], params[1]);
+  }
+
+  @Override
+  public String[] getReconstructParams() {
+    return new String[]{String.valueOf(field1), field2};
+  }
+
+  public int getField1() {
+    return field1;
+  }
+
+  public String getField2() {
+    return field2;
+  }
 }

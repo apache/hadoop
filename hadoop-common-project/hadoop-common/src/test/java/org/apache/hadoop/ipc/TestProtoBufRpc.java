@@ -332,7 +332,7 @@ public class TestProtoBufRpc extends TestRpcBase {
   }
 
   @Test (timeout=5000)
-  public void testProtoBufReconstructableException() throws Exception {
+  public void testProtoBufReconstructibleException() throws Exception {
     //No test with legacy
     assumeFalse(testWithLegacy);
     TestRpcService client = getClient(addr, conf);
@@ -343,11 +343,11 @@ public class TestProtoBufRpc extends TestRpcBase {
       assertThat(se.getCause()).isInstanceOf(RemoteException.class);
       RemoteException re = (RemoteException) se.getCause();
       assertThat(re.getClassName())
-          .isEqualTo(ReconstructableExceptionTestImpl.class.getName());
-      IOException ex = re.unwrapRemoteException(ReconstructableExceptionTestImpl.class);
-      assertThat(ex).isInstanceOf(ReconstructableExceptionTestImpl.class);
-      assertEquals(1, ((ReconstructableExceptionTestImpl) ex).getField1());
-      assertEquals("field2", ((ReconstructableExceptionTestImpl) ex).getField2());
+          .isEqualTo(ReconstructibleExceptionTestImpl.class.getName());
+      IOException ex = re.unwrapRemoteException(ReconstructibleExceptionTestImpl.class);
+      assertThat(ex).isInstanceOf(ReconstructibleExceptionTestImpl.class);
+      assertEquals(1, ((ReconstructibleExceptionTestImpl) ex).getField1());
+      assertEquals("field2", ((ReconstructibleExceptionTestImpl) ex).getField2());
       assertThat(ex.getMessage()).contains("1field2");
       assertThat(ex.getStackTrace()).isNotNull();
       assertThat(re.getErrorCode())

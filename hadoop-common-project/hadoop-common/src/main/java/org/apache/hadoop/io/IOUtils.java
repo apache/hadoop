@@ -525,7 +525,7 @@ public class IOUtils {
    */
   public static <T> T readObject(InputStream in, Class<T> clazz) {
     final Object obj;
-    try(ObjectInputStream oin = new ObjectInputStream(in)) {
+    try (ObjectInputStream oin = new ObjectInputStream(in)) {
       obj = oin.readObject();
     } catch (IOException | ClassNotFoundException e) {
       throw new IllegalStateException("Failed to readObject for class " + clazz, e);

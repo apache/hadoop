@@ -61,7 +61,7 @@ public class RemoteException extends IOException {
    * @param reconstructProto may be null.
    */
   public RemoteException(String className, String msg, RpcErrorCodeProto erCode,
-                         ExceptionReconstructProto reconstructProto) {
+      ExceptionReconstructProto reconstructProto) {
     super(msg);
     this.className = className;
     if (erCode != null) {
@@ -139,8 +139,8 @@ public class RemoteException extends IOException {
     if (exceptionReconstructProto != null) {
       // process params
       List<String> params = exceptionReconstructProto.getParamList();
-      if (params.size() != 0 && ex instanceof ReconstructableException) {
-        IOException reconstructed = ((ReconstructableException<?>) ex).
+      if (params.size() != 0 && ex instanceof ReconstructibleException) {
+        IOException reconstructed = ((ReconstructibleException<?>) ex).
             reconstruct(params.toArray(new String[0]));
         if (reconstructed != null) {
           ex = reconstructed;
