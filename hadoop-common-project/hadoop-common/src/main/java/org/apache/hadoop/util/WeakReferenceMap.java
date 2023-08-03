@@ -219,7 +219,7 @@ public class WeakReferenceMap<K, V> {
       // between the put() and the get()
       resolvedStrongRef = resolve(retrievedWeakRef);
       if (resolvedStrongRef == null) {
-        referenceLostDuringCreation.warn("reference to %s lost during creation", key);
+        referenceLostDuringCreation.warn("reference to {} lost during creation", key);
         noteLost(key);
       }
     } while (resolvedStrongRef == null);
