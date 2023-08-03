@@ -54,6 +54,9 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
       + "token.loading.cache.expiration";
   public static final long SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE = SQL_DTSM_CONF_PREFIX
+      + "token.loading.cache.max.size";
+  public static final long SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE_DEFAULT = 100000;
 
   // Batch of sequence numbers that will be requested by the sequenceNumCounter.
   // A new batch is requested once the sequenceNums available to a secret manager are
@@ -82,7 +85,9 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
 
     long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
         SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT, TimeUnit.MILLISECONDS);
-    this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs,
+    long maximumCacheSize = conf.getLong(SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE,
+        SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE_DEFAULT);
+    this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs, maximumCacheSize,
         this::getTokenInfoFromSQL);
   }
 

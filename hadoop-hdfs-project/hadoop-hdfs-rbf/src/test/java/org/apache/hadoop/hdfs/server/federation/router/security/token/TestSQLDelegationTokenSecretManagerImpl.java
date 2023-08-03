@@ -75,9 +75,6 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     conf.set(SQLConnectionFactory.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.MAX_RETRIES, TEST_MAX_RETRIES);
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.RETRY_SLEEP_TIME_MS, 10);
-    conf.setTimeDuration(SQLDelegationTokenSecretManager.SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
-        200, TimeUnit.MILLISECONDS);
-    conf.setInt(DelegationTokenManager.RENEW_INTERVAL, TOKEN_EXPIRATION_SECONDS);
   }
 
   @AfterClass
@@ -125,8 +122,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
   @Test
   public void testCancelToken() throws Exception {
-    DelegationTokenManager tokenManager1 = createTokenManager();
-    DelegationTokenManager tokenManager2 = createTokenManager();
+    DelegationTokenManager tokenManager1 = createTokenManager(getShortLivedTokenConf());
+    DelegationTokenManager tokenManager2 = createTokenManager(getShortLivedTokenConf());
 
     TestDelegationTokenSecretManager secretManager2 =
         (TestDelegationTokenSecretManager) tokenManager2.getDelegationTokenSecretManager();
@@ -153,8 +150,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
   @Test
   public void testRenewToken() throws Exception {
-    DelegationTokenManager tokenManager1 = createTokenManager();
-    DelegationTokenManager tokenManager2 = createTokenManager();
+    DelegationTokenManager tokenManager1 = createTokenManager(getShortLivedTokenConf());
+    DelegationTokenManager tokenManager2 = createTokenManager(getShortLivedTokenConf());
 
     TestDelegationTokenSecretManager secretManager2 =
         (TestDelegationTokenSecretManager) tokenManager2.getDelegationTokenSecretManager();
@@ -189,6 +186,15 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       stopTokenManager(tokenManager1);
       stopTokenManager(tokenManager2);
     }
+  }
+
+  private Configuration getShortLivedTokenConf() {
+    Configuration shortLivedConf = new Configuration(conf);
+    shortLivedConf.setTimeDuration(
+        SQLDelegationTokenSecretManager.SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
+        200, TimeUnit.MILLISECONDS);
+    shortLivedConf.setInt(DelegationTokenManager.RENEW_INTERVAL, TOKEN_EXPIRATION_SECONDS);
+    return shortLivedConf;
   }
 
   private void callRemoveExpiredTokensAndValidateSQL(
@@ -385,8 +391,13 @@ public class TestSQLDelegationTokenSecretManagerImpl {
   }
 
   private DelegationTokenManager createTokenManager() {
+    return createTokenManager(conf);
+  }
+
+  private DelegationTokenManager createTokenManager(Configuration conf) {
     DelegationTokenManager tokenManager = new DelegationTokenManager(new Configuration(), null);
-    tokenManager.setExternalDelegationTokenSecretManager(new TestDelegationTokenSecretManager());
+    tokenManager.setExternalDelegationTokenSecretManager(
+        new TestDelegationTokenSecretManager(conf));
     return tokenManager;
   }
 
@@ -494,7 +505,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       return keyRollLock;
     }
 
-    TestDelegationTokenSecretManager() {
+    TestDelegationTokenSecretManager(Configuration conf) {
       super(conf, new TestConnectionFactory(conf),
           SQLSecretManagerRetriableHandlerImpl.getInstance(conf, new TestRetryHandler()));
     }
