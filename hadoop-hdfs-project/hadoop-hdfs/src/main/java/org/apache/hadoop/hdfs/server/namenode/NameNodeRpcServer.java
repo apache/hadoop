@@ -1650,7 +1650,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           final int index = r;
           noStaleStorages = bm.runBlockOp(() ->
             bm.processReport(nodeReg, reports[index].getStorage(),
-                blocks, context, reports.length, index + 1));
+                blocks, context));
         }
       } else {
         throw new InvalidBlockReportLeaseException(context.getReportId(), context.getLeaseId());

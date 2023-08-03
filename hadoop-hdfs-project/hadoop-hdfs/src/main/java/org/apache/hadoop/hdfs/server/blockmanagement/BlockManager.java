@@ -2866,8 +2866,6 @@ public class BlockManager implements BlockStatsMXBean {
    * The given storage is reporting all its blocks.
    * Update the (storage{@literal -->}block list) and
    * (block{@literal -->}storage list) maps.
-   * totalReportNum -> totalStorageReportsNum
-   * currentReportNum -> currentStorageReportIndex
    *
    * @return true if all known storages of the given DN have finished reporting.
    * @throws IOException
@@ -2875,9 +2873,7 @@ public class BlockManager implements BlockStatsMXBean {
   public boolean processReport(final DatanodeID nodeID,
       final DatanodeStorage storage,
       final BlockListAsLongs newReport,
-      BlockReportContext context,
-      int totalReportNum,
-      int currentReportNum) throws IOException {
+      BlockReportContext context) throws IOException {
     namesystem.writeLock();
     final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
@@ -2908,13 +2904,12 @@ public class BlockManager implements BlockStatsMXBean {
       }
       if (namesystem.isInStartupSafeMode()
           && !StorageType.PROVIDED.equals(storageInfo.getStorageType())
-          && storageInfo.getBlockReportCount() > 0
-          && totalReportNum == currentReportNum) {
+          && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
             strBlockReportId, fullBrLeaseId, nodeID);
-        blockReportLeaseManager.removeLease(node);
+        removeLease(node);
         return !node.hasStaleStorages();
       }
 
@@ -2962,6 +2957,19 @@ public class BlockManager implements BlockStatsMXBean {
     return !node.hasStaleStorages();
   }
 
+  // Remove the lease when we have received block reports for all storages for a particular DN.
+  void removeLease(DatanodeDescriptor node) {
+    boolean needRemoveLease = true;
+    for (DatanodeStorageInfo sInfo : node.getStorageInfos()) {
+      if (sInfo.getBlockReportCount() == 0) {
+        needRemoveLease = false;
+      }
+    }
+    if (needRemoveLease) {
+      blockReportLeaseManager.removeLease(node);
+    }
+  }
+  
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
       final BlockReportContext context) throws IOException {
     namesystem.writeLock();
