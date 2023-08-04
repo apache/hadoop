@@ -4104,18 +4104,15 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeDescriptor addedNode,
       DatanodeDescriptor delNodeHint) {
     assert namesystem.hasWriteLock();
-    // first form a rack to datanodes map and
     BlockCollection bc = getBlockCollection(storedBlock);
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
+        bc.getStoragePolicyID());
     if (storedBlock.isStriped()) {
-      chooseExcessRedundancyStriped(bc, nonExcess, storedBlock, delNodeHint);
+      chooseExcessRedundancyStriped(storagePolicy, nonExcess, storedBlock, delNodeHint);
     } else {
       if (nonExcess.size() > replication) {
-        final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
-            bc.getStoragePolicyID());
-        final List<StorageType> excessTypes = storagePolicy.chooseExcess(
-            replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
         chooseExcessRedundancyContiguous(nonExcess, storedBlock, replication,
-            addedNode, delNodeHint, excessTypes);
+            addedNode, delNodeHint, storagePolicy);
       }
     }
   }
@@ -4137,7 +4134,9 @@ public class BlockManager implements BlockStatsMXBean {
   private void chooseExcessRedundancyContiguous(
       final Collection<DatanodeStorageInfo> nonExcess, BlockInfo storedBlock,
       short replication, DatanodeDescriptor addedNode,
-      DatanodeDescriptor delNodeHint, List<StorageType> excessTypes) {
+      DatanodeDescriptor delNodeHint, BlockStoragePolicy storagePolicy) {
+    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+        replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
     BlockPlacementPolicy replicator = placementPolicies.getPolicy(CONTIGUOUS);
     List<DatanodeStorageInfo> replicasToDelete = replicator
         .chooseReplicasToDelete(nonExcess, nonExcess, replication, excessTypes,
@@ -4156,7 +4155,7 @@ public class BlockManager implements BlockStatsMXBean {
    * The block placement policy will make sure that the left internal blocks are
    * spread across racks and also try hard to pick one with least free space.
    */
-  private void chooseExcessRedundancyStriped(BlockCollection bc,
+  private void chooseExcessRedundancyStriped(BlockStoragePolicy storagePolicy,
       final Collection<DatanodeStorageInfo> nonExcess,
       BlockInfo storedBlock,
       DatanodeDescriptor delNodeHint) {
@@ -4192,8 +4191,6 @@ public class BlockManager implements BlockStatsMXBean {
 
     // cardinality of found indicates the expected number of internal blocks
     final int numOfTarget = found.cardinality();
-    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
-        bc.getStoragePolicyID());
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
         (short) numOfTarget, DatanodeStorageInfo.toStorageTypes(nonExcess));
     if (excessTypes.isEmpty()) {
