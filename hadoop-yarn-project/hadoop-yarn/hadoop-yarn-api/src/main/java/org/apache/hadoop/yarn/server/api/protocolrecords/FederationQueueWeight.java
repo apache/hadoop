@@ -199,12 +199,12 @@ public abstract class FederationQueueWeight {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("FederationQueueWeight{");
-    builder.append("Queue:" + getQueue() + ", ");
-    builder.append("RouterWeight:" + getRouterWeight() + ", ");
-    builder.append("AmrmWeight:" + getAmrmWeight() + ", ");
-    builder.append("PolicyManagerClassName:" + getPolicyManagerClassName());
-    builder.append("}");
+    builder.append("FederationQueueWeight { ");
+    builder.append("Queue: ").append(getQueue()).append(", ");
+    builder.append("RouterWeight: ").append(getRouterWeight()).append(", ");
+    builder.append("AmrmWeight: ").append(getAmrmWeight()).append(", ");
+    builder.append("PolicyManagerClassName: ").append(getPolicyManagerClassName());
+    builder.append(" }");
     return builder.toString();
   }
 }
