@@ -324,7 +324,8 @@ public class TestBlockReportLease {
         datanodeStorages[i] = storages[i].getStorage();
         StorageBlockReport[] reports = createReports(datanodeStorages, 100);
 
-        // The first multiple send once, simulating the failure of the first report, only send successfully once
+        // The first multiple send once, simulating the failure of the first report, 
+        // only send successfully once
         if(i == 0){
           rpcServer.blockReport(dnRegistration, poolId, reports, brContext);
         }
