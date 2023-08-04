@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -49,6 +51,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
+import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,6 +101,8 @@ public class Router extends CompositeService {
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private static final String METRICS_NAME = "Router";
+
+  private static final String UI2_WEBAPP_NAME = "/ui2";
 
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
@@ -209,7 +214,48 @@ public class Router extends CompositeService {
 
     Builder<Object> builder =
         WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
-    webApp = builder.start(new RouterWebApp(this));
+
+    WebAppContext uiWebAppContext = null;
+    boolean isWebUI2Enabled = conf.getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE);
+
+    if(isWebUI2Enabled) {
+      String onDiskPath = conf.get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(UI2_WEBAPP_NAME);
+
+      if (null == onDiskPath) {
+        String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
+        URL url = getClass().getClassLoader().getResource(war);
+        if (null == url) {
+          onDiskPath = getWebAppsPath("ui2");
+        } else {
+          onDiskPath = url.getFile();
+        }
+      }
+
+      if (onDiskPath == null || onDiskPath.isEmpty()) {
+        LOG.error("No war file or webapps found for yarn federation!");
+      } else {
+        if (onDiskPath.endsWith(".war")) {
+          uiWebAppContext.setWar(onDiskPath);
+          LOG.info("Using war file at: {}.", onDiskPath);
+        } else {
+          uiWebAppContext.setResourceBase(onDiskPath);
+          LOG.info("Using webapps at: {}.", onDiskPath);
+        }
+      }
+    }
+
+    webApp = builder.start(new RouterWebApp(this), uiWebAppContext);
+  }
+
+  private String getWebAppsPath(String appName) {
+    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
+    if (url == null) {
+      return "";
+    }
+    return url.toString();
   }
 
   public static void main(String[] argv) {
