@@ -36,6 +36,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_INTERFACE_KEY;
@@ -362,7 +366,9 @@ public class DataNode extends ReconfigurableBase
               FS_GETSPACEUSED_JITTER_KEY,
               FS_GETSPACEUSED_CLASSNAME,
               DFS_DISK_BALANCER_ENABLED,
-              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL));
+              DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+              DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -694,6 +700,8 @@ public class DataNode extends ReconfigurableBase
     case DFS_BLOCKREPORT_INITIAL_DELAY_KEY:
       return reconfBlockReportParameters(property, newVal);
     case DFS_DATANODE_MAX_RECEIVER_THREADS_KEY:
+    case DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY:
+    case DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY:
       return reconfDataXceiverParameters(property, newVal);
     case DFS_CACHEREPORT_INTERVAL_MSEC_KEY:
       return reconfCacheReportParameters(property, newVal);
@@ -724,14 +732,40 @@ public class DataNode extends ReconfigurableBase
 
   private String reconfDataXceiverParameters(String property, String newVal)
       throws ReconfigurationException {
-    String result;
+    String result = null;
     try {
       LOG.info("Reconfiguring {} to {}", property, newVal);
-      Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
-      int threads = (newVal == null ? DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT :
-          Integer.parseInt(newVal));
-      result = Integer.toString(threads);
-      getXferServer().setMaxXceiverCount(threads);
+      if (property.equals(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY)) {
+        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+        int threads = (newVal == null ? DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT :
+            Integer.parseInt(newVal));
+        result = Integer.toString(threads);
+        getXferServer().setMaxXceiverCount(threads);
+      } else if (property.equals(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY)) {
+        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+        long bandwidthPerSec = (newVal == null ?
+            DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT : Long.parseLong(newVal));
+        DataTransferThrottler transferThrottler = null;
+        if (bandwidthPerSec > 0) {
+          transferThrottler = new DataTransferThrottler(bandwidthPerSec);
+        } else {
+          bandwidthPerSec = 0;
+        }
+        result = Long.toString(bandwidthPerSec);
+        getXferServer().setTransferThrottler(transferThrottler);
+      } else if (property.equals(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY)) {
+        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+        long bandwidthPerSec = (newVal == null ? DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT :
+            Long.parseLong(newVal));
+        DataTransferThrottler writeThrottler = null;
+        if (bandwidthPerSec > 0) {
+          writeThrottler = new DataTransferThrottler(bandwidthPerSec);
+        } else {
+          bandwidthPerSec = 0;
+        }
+        result = Long.toString(bandwidthPerSec);
+        getXferServer().setWriteThrottler(writeThrottler);
+      }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
     } catch (IllegalArgumentException e) {
