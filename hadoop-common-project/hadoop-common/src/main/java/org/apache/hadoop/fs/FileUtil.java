@@ -629,7 +629,7 @@ public class FileUtil {
   }
 
   public static boolean isRegularFile(File file) {
-    return isRegularFile(file, true);
+    return isRegularFile(file, false);
   }
 
   /**

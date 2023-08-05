@@ -1607,12 +1607,12 @@ public class TestFileUtil {
     FileOutputStream os = new FileOutputStream(tmpFile);
     os.write(data);
     os.close();
-    assertTrue(FileUtil.isRegularFile(tmpFile));
+    assertTrue(FileUtil.isRegularFile(tmpFile, true));
 
     // create a symlink to file
     File link = new File(del, "reg2");
     FileUtil.symLink(tmpFile.toString(), link.toString());
-    assertFalse(FileUtil.isRegularFile(link, false));
+    assertFalse(FileUtil.isRegularFile(link));
   }
 
   /**

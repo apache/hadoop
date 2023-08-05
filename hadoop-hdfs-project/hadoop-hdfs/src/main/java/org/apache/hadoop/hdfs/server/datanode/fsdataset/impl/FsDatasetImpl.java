@@ -2737,8 +2737,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           Block.getGenerationStamp(diskMetaFile.getName()) :
           HdfsConstants.GRANDFATHER_GENERATION_STAMP;
 
-      final boolean isRegular = FileUtil.isRegularFile(diskMetaFile, false) &&
-          FileUtil.isRegularFile(diskFile, false);
+      final boolean isRegular = FileUtil.isRegularFile(diskMetaFile) &&
+          FileUtil.isRegularFile(diskFile);
 
       if (vol.getStorageType() == StorageType.PROVIDED) {
         if (memBlockInfo == null) {

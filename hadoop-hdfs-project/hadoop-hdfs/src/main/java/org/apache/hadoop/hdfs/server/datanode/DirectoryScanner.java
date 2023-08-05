@@ -544,8 +544,8 @@ public class DirectoryScanner implements Runnable {
         }
 
         // Block and meta must be regular file
-        boolean isRegular = FileUtil.isRegularFile(info.getBlockFile(), false) &&
-                FileUtil.isRegularFile(info.getMetaFile(), false);
+        boolean isRegular = FileUtil.isRegularFile(info.getBlockFile()) &&
+                FileUtil.isRegularFile(info.getMetaFile());
         if (!isRegular) {
           statsRecord.mismatchBlocks++;
           addDifference(diffRecord, statsRecord, info);
