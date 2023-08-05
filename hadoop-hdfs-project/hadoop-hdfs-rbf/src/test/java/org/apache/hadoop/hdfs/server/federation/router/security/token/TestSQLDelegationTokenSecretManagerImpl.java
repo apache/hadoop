@@ -394,10 +394,10 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     return createTokenManager(conf);
   }
 
-  private DelegationTokenManager createTokenManager(Configuration conf) {
+  private DelegationTokenManager createTokenManager(Configuration config) {
     DelegationTokenManager tokenManager = new DelegationTokenManager(new Configuration(), null);
     tokenManager.setExternalDelegationTokenSecretManager(
-        new TestDelegationTokenSecretManager(conf));
+        new TestDelegationTokenSecretManager(config));
     return tokenManager;
   }
 
