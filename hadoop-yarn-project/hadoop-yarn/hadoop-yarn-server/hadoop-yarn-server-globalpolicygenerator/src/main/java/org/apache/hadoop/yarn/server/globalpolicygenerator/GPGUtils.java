@@ -55,7 +55,7 @@ public final class GPGUtils {
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType) {
     Client client = Client.create();
-    T obj = null;
+    T obj;
 
     WebResource webResource = client.resource(webAddr);
     ClientResponse response = null;
@@ -86,8 +86,7 @@ public final class GPGUtils {
    */
   public static Map<SubClusterIdInfo, Float> createUniformWeights(
       Set<SubClusterId> ids) {
-    Map<SubClusterIdInfo, Float> weights =
-        new HashMap<>();
+    Map<SubClusterIdInfo, Float> weights = new HashMap<>();
     for(SubClusterId id : ids) {
       weights.put(new SubClusterIdInfo(id), 1.0f);
     }

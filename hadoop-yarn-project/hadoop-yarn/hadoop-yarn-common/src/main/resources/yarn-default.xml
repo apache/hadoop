@@ -5468,4 +5468,66 @@
     <value></value>
   </property>
 
+  <property>
+    <description>
+      GPG load policy, the minimum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.minimum</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the maximum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.maximum</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the subCluster minimum weight,
+      If a subCluster has a very high load, we will assign this value to the subCluster.
+      The default value is 0, which means that we no longer assign appliaction to this subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.weight.minimum</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We choose the subCluster computing load of TopN.
+      This value represents the number of subClusters we want to calculate.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.edit.maximum</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We provide 4 calculation methods: NONE, LINEAR, QUADRATIC, LOG.
+
+      Note, this calculation method is when the number of Pending Applications in
+      the subCluster is less than yarn.federation.gpg.policy.generator.load-based.pending.maximum.
+
+      maxPendingVal = yarn.federation.gpg.policy.generator.load-based.pending.maximum -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+      curPendingVal = Pending Applications in the subCluster -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+
+      1. NONE: No calculation is required, and the weight is 1 at this time.
+      2. LINEAR: For linear computation, we will use (maxPendingVal - curPendingVal) / (maxPendingVal).
+      3. QUADRATIC: Calculated using quadratic,
+      We will calculate quadratic for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+      4. LOG(LOGARITHM): Calculated using logarithm,
+      We will calculate logarithm for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+      LINEAR is used by default.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.scaling</name>
+    <value>LINEAR</value>
+  </property>
+
 </configuration>

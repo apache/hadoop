@@ -4427,6 +4427,24 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_POLICY_GENERATOR_BLACKLIST =
       FEDERATION_GPG_POLICY_PREFIX + "blacklist";
 
+  private static final String FEDERATION_GPG_LOAD_BASED_PREFIX =
+      YarnConfiguration.FEDERATION_GPG_PREFIX + "policy.generator.load-based.";
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.minimum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_PENDING = 100;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_PENDING = 1000;
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "weight.minimum";
+  public static final float DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT = 0.0f;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_EDIT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "edit.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_EDIT = 3;
+  public static final String FEDERATION_GPG_LOAD_BASED_SCALING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "scaling";
+  public static final String DEFAULT_FEDERATION_GPG_LOAD_BASED_SCALING = "LINEAR";
+
   /**
    * Connection and Read timeout from the Router to RM.
    */
