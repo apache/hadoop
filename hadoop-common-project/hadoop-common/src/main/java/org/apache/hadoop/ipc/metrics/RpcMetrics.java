@@ -69,6 +69,8 @@ public class RpcMetrics {
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
     metricsTimeUnit = getMetricsTimeUnit(conf);
     if (rpcQuantileEnable) {
+      rpcEnQueueTimeQuantiles =
+          new MutableQuantiles[intervals.length];
       rpcQueueTimeQuantiles =
           new MutableQuantiles[intervals.length];
       rpcLockWaitTimeQuantiles =
@@ -81,6 +83,9 @@ public class RpcMetrics {
           new MutableQuantiles[intervals.length];
       for (int i = 0; i < intervals.length; i++) {
         int interval = intervals[i];
+        rpcEnQueueTimeQuantiles[i] = registry.newQuantiles("rpcEnQueueTime"
+            + interval + "s", "rpc enqueue time in " + metricsTimeUnit, "ops",
+            "latency", interval);
         rpcQueueTimeQuantiles[i] = registry.newQuantiles("rpcQueueTime"
             + interval + "s", "rpc queue time in " + metricsTimeUnit, "ops",
             "latency", interval);
@@ -114,6 +119,8 @@ public class RpcMetrics {
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
   @Metric("Number of sent bytes") MutableCounterLong sentBytes;
+  @Metric("EQueue time") MutableRate rpcEnQueueTime;
+  MutableQuantiles[] rpcEnQueueTimeQuantiles;
   @Metric("Queue time") MutableRate rpcQueueTime;
   MutableQuantiles[] rpcQueueTimeQuantiles;
   @Metric("Lock wait time") MutableRate rpcLockWaitTime;
@@ -255,6 +262,23 @@ public class RpcMetrics {
   //@Override
   public void incrReceivedBytes(int count) {
     receivedBytes.incr(count);
+  }
+
+  /**
+   * Sometimes, the request time observed by the client is much longer than
+   * the queue + process time on the RPC server.Perhaps the RPC request
+   * 'waiting enQueue' took too long on the RPC server, so we should add
+   * enQueue time to RpcMetrics. See HADOOP-18840 for details.
+   * Add an RPC enqueue time sample
+   * @param enQTime the queue time
+   */
+  public void addRpcEnQueueTime(long enQTime) {
+    rpcEnQueueTime.add(enQTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcEnQueueTimeQuantiles) {
+        q.add(enQTime);
+      }
+    }
   }
 
   /**
