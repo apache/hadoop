@@ -4445,6 +4445,27 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_GPG_LOAD_BASED_PREFIX + "scaling";
   public static final String DEFAULT_FEDERATION_GPG_LOAD_BASED_SCALING = "LINEAR";
 
+  public static final String GPG_WEBAPP_PREFIX = FEDERATION_GPG_PREFIX + "webapp.";
+
+  /** Enable/disable CORS filter. */
+  public static final String GPG_WEBAPP_ENABLE_CORS_FILTER =
+      GPG_WEBAPP_PREFIX + "cross-origin.enabled";
+  public static final boolean DEFAULT_GPG_WEBAPP_ENABLE_CORS_FILTER = false;
+
+  /** The address of the GPG web application. */
+  public static final String GPG_WEBAPP_ADDRESS = GPG_WEBAPP_PREFIX + "address";
+
+  public static final int DEFAULT_GPG_WEBAPP_PORT = 8069;
+  public static final String DEFAULT_GPG_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_PORT;
+
+  /** The https address of the GPG web application. */
+  public static final String GPG_WEBAPP_HTTPS_ADDRESS = GPG_WEBAPP_PREFIX + "https.address";
+
+  public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
+  public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
+
   /**
    * Connection and Read timeout from the Router to RM.
    */
