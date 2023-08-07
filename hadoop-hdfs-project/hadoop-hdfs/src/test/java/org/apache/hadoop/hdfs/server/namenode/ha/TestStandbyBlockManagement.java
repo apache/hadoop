@@ -110,7 +110,7 @@ public class TestStandbyBlockManagement {
 
     // Create HA Cluster.
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(10).build()) {
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(4).build()) {
       cluster.waitActive();
       cluster.transitionToActive(0);
 
@@ -132,8 +132,8 @@ public class TestStandbyBlockManagement {
       // Create test file.
       Path file = new Path("/test");
       long fileLength = 512;
-      DFSTestUtil.createFile(fs, file, fileLength, (short) 8, 0L);
-      DFSTestUtil.waitReplication(fs, file, (short) 8);
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 4, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 4);
 
       // Set decrease 3 replication.
       fs.setReplication(file, (short) 3);
