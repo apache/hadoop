@@ -2364,6 +2364,14 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.server.read.threadpool.size</name>
+  <value>1</value>
+  <description>Indicates the number of threads in RPC server reading
+    from the socket.
+  </description>
+</property>
+
+<property>
   <name>ipc.maximum.data.length</name>
   <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
