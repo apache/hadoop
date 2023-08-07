@@ -26,14 +26,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CON
  * Abstract Class for Retry policy to be used by {@link AbfsClient}
  * Implementation to be used is based on retry cause.
  */
-public abstract class RetryPolicy {
+public abstract class AbfsRetryPolicy {
 
   /**
    * The maximum number of retry attempts.
    */
   private final int maxRetryCount;
 
-  public RetryPolicy(final int maxRetryCount) {
+  public AbfsRetryPolicy(final int maxRetryCount) {
     this.maxRetryCount = maxRetryCount;
   }
 

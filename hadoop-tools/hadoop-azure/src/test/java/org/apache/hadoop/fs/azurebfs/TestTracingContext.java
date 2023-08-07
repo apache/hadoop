@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -254,7 +255,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     tracingContext.setPrimaryRequestID();
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null, "E");
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     String header = tracingContext.getHeader();
     String assertionPrimaryId = header.split(":")[3];
 
@@ -264,7 +265,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT", "E");
+    tracingContext.constructHeader(abfsHttpOperation, READ_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     header = tracingContext.getHeader();
     String primaryRequestId = header.split(":")[3];
 
@@ -323,21 +324,17 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     if (expectedFailureReason != null) {
       Assertions.assertThat(previousReqContext.split("_")[1])
           .isEqualTo(expectedFailureReason);
-      Assertions.assertThat(previousReqContext.split("_").length)
-          .isGreaterThanOrEqualTo(2);
+      Assertions.assertThat(previousReqContext.split("_")).hasSize(2);
     } else {
-      Assertions.assertThat(previousReqContext.split("_").length)
-          .isEqualTo(1);
+      Assertions.assertThat(previousReqContext.split("_")).hasSize(1);
     }
 
     if (expectedRetryPolicyAbbreviation != null) {
       Assertions.assertThat(previousReqContext.split("_")[2])
           .isEqualTo(expectedRetryPolicyAbbreviation);
-      Assertions.assertThat(previousReqContext.split("_").length)
-          .isGreaterThanOrEqualTo(3);
+      Assertions.assertThat(previousReqContext.split("_")).hasSize(3);
     } else {
-      Assertions.assertThat(previousReqContext.split("_").length)
-          .isLessThanOrEqualTo(2);
+      Assertions.assertThat(previousReqContext.split("_")).hasSize(2);
     }
   }
 }

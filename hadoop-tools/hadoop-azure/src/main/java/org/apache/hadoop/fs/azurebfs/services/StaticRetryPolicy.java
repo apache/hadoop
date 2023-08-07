@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 /**
  * Retry policy used by AbfsClient for Network Errors.
  * */
-public class StaticRetryPolicy extends RetryPolicy {
+public class StaticRetryPolicy extends AbfsRetryPolicy {
 
   private static final int STATIC_RETRY_INTERVAL_DEFAULT = 2000; // 2s
 

@@ -34,11 +34,11 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 
 /**
  * Class to test the behavior of Static Retry policy as well the inheritance
- * between {@link RetryPolicy}, {@link ExponentialRetryPolicy}, {@link StaticRetryPolicy}
+ * between {@link AbfsRetryPolicy}, {@link ExponentialRetryPolicy}, {@link StaticRetryPolicy}
  */
-public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
+public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
 
-  public TestStaticRetryPolicy() throws Exception {
+  public ITestStaticRetryPolicy() throws Exception {
     super();
   }
 
@@ -74,7 +74,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsClient client = fs.getAbfsStore().getClient();
 
     // Assert that static retry policy will be used only for CT Failures
-    RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
+    AbfsRetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
     Assertions.assertThat(retryPolicy).isInstanceOf(retryPolicyClass);
 
     // For all other possible values of failureReason, Exponential retry is used
@@ -105,7 +105,7 @@ public class TestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
         .newInstance(getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsStore().getClient();
 
-    RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
+    AbfsRetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
     Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
 
     Assertions.assertThat(retryPolicy.shouldRetry(0, -1))

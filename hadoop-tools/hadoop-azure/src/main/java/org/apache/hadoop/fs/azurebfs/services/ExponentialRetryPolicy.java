@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 /**
  * Retry policy used by AbfsClient.
  * */
-public class ExponentialRetryPolicy extends RetryPolicy {
+public class ExponentialRetryPolicy extends AbfsRetryPolicy {
   /**
    * Represents the default amount of time used when calculating a random delta in the exponential
    * delay between retries.

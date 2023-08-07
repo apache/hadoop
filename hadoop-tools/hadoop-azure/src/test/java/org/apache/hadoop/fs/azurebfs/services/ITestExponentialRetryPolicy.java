@@ -56,9 +56,9 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 
 /**
- * Unit test TestExponentialRetryPolicy.
+ * Unit test ITestExponentialRetryPolicy.
  */
-public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
+public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private final int maxRetryCount = 30;
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
@@ -68,7 +68,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private static final int ANALYSIS_PERIOD = 10000;
 
 
-  public TestExponentialRetryPolicy() throws Exception {
+  public ITestExponentialRetryPolicy() throws Exception {
     super();
   }
 

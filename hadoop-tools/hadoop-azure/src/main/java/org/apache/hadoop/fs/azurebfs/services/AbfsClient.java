@@ -229,7 +229,12 @@ public class AbfsClient implements Closeable {
     return staticRetryPolicy;
   }
 
-  public RetryPolicy getRetryPolicy(final String failureReason) {
+  /**
+   * Returns the retry policy to be used for Abfs Rest Operation Failure
+   * @param failureReason helps to decide which type of retryPolicy to be used
+   * @return retry policy to be used
+   */
+  public AbfsRetryPolicy getRetryPolicy(final String failureReason) {
     if (!CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)) {
       return getExponentialRetryPolicy();
     }

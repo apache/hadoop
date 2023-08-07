@@ -82,7 +82,7 @@ public class AbfsRestOperation {
    * AbfsRestOperation object.
    */
   private String failureReason;
-  private RetryPolicy retryPolicy;
+  private AbfsRetryPolicy retryPolicy;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -274,7 +274,7 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation;
-    boolean iOExceptionThrown = false;
+    boolean wasIOExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
@@ -330,7 +330,7 @@ public class AbfsRestOperation {
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
       retryPolicy = client.getRetryPolicy(failureReason);
-      iOExceptionThrown = true;
+      wasIOExceptionThrown = true;
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -354,9 +354,9 @@ public class AbfsRestOperation {
        * In case the current request fails with Connection Timeout we will have
        * ioExceptionThrown true and failure reason as CT
        * In case the current request failed with 5xx, failure reason will be
-       * updated after finally block but iOExceptionThrown will be false;
+       * updated after finally block but wasIOExceptionThrown will be false;
        */
-      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && iOExceptionThrown;
+      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && wasIOExceptionThrown;
 
       if (updateMetricsResponseCode && !isCTFailure) {
         intercept.updateMetrics(operationType, httpOperation);
