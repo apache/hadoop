@@ -2011,45 +2011,6 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   /**
-   * Get DelegationToken SeqNum.
-   *
-   * @return delegationTokenSeqNum.
-   */
-  @Override
-  public int getDelegationTokenSeqNum() {
-    return querySequenceTable(YARN_ROUTER_SEQUENCE_NUM, false);
-  }
-
-  @Override
-  public void setDelegationTokenSeqNum(int seqNum) {
-    Connection connection = null;
-    try {
-      connection = getConnection(false);
-      FederationQueryRunner runner = new FederationQueryRunner();
-      runner.updateSequenceTable(connection, YARN_ROUTER_SEQUENCE_NUM, seqNum);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not update sequence table!!", e);
-    } finally {
-      // Return to the pool the CallableStatement
-      try {
-        FederationStateStoreUtils.returnToPool(LOG, null, connection);
-      } catch (YarnException e) {
-        LOG.error("close connection error.", e);
-      }
-    }
-  }
-
-  /**
-   * Get Current KeyId.
-   *
-   * @return currentKeyId.
-   */
-  @Override
-  public int getCurrentKeyId() {
-    return querySequenceTable(YARN_ROUTER_CURRENT_KEY_ID, false);
-  }
-
-  /**
    * The Router Supports incrementCurrentKeyId.
    *
    * @return CurrentKeyId.

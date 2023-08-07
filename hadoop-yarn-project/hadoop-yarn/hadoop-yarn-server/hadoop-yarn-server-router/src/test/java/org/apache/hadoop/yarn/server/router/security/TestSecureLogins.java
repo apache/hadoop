@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.router.secure;
+package org.apache.hadoop.yarn.server.router.security;
 
 import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.service.Service;

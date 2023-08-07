@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -59,10 +58,10 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
         memoryStateStore.getRouterRMSecretManagerState();
     assertNotNull(secretManagerState);
 
-    Set<DelegationKey> delegationKeys = secretManagerState.getMasterKeyState();
+    Map<Integer, DelegationKey> delegationKeys = secretManagerState.getMasterKeyState();
     assertNotNull(delegationKeys);
 
-    assertTrue(delegationKeys.contains(delegationKey));
+    assertTrue(delegationKeys.containsKey(delegationKey.getKeyId()));
 
     RouterMasterKey resultRouterMasterKey = RouterMasterKey.newInstance(delegationKey.getKeyId(),
         ByteBuffer.wrap(delegationKey.getEncodedKey()), delegationKey.getExpiryDate());
@@ -78,11 +77,11 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
         memoryStateStore.getRouterRMSecretManagerState();
     assertNotNull(secretManagerState);
 
-    Map<RMDelegationTokenIdentifier, RouterStoreToken> tokenStateMap =
+    Map<Integer, RouterStoreToken> tokenStateMap =
         secretManagerState.getTokenState();
     assertNotNull(tokenStateMap);
 
-    assertTrue(tokenStateMap.containsKey(identifier));
+    assertTrue(tokenStateMap.containsKey(identifier.getSequenceNumber()));
 
     YARNDelegationTokenIdentifier tokenIdentifier = token.getTokenIdentifier();
     assertTrue(tokenIdentifier instanceof RMDelegationTokenIdentifier);

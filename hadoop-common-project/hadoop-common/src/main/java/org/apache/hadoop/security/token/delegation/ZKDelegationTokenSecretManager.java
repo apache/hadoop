@@ -569,7 +569,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected DelegationKey getDelegationKey(int keyId) {
+  protected DelegationKey getDelegationKey(int keyId) throws IOException {
     // First check if its I already have this key
     DelegationKey key = allKeys.get(keyId);
     // Then query ZK
@@ -581,6 +581,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         }
       } catch (IOException e) {
         LOG.error("Error retrieving key [" + keyId + "] from ZK", e);
+        throw e;
       }
     }
     return key;
@@ -608,7 +609,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
+  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) throws IOException {
     // First check if I have this..
     DelegationTokenInformation tokenInfo = currentTokens.get(ident);
     // Then query ZK
@@ -621,6 +622,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       } catch (IOException e) {
         LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
             + "] from ZK", e);
+        throw e;
       }
     }
     return tokenInfo;

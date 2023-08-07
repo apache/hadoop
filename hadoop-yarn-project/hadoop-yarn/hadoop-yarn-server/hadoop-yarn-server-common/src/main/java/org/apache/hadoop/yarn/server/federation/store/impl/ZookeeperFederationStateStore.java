@@ -1622,40 +1622,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   /**
-   * Get DelegationToken SeqNum.
-   *
-   * @return delegationTokenSeqNum.
-   */
-  @Override
-  public int getDelegationTokenSeqNum() {
-    return delTokSeqCounter.getCount();
-  }
-
-  /**
-   * Set DelegationToken SeqNum.
-   *
-   * @param seqNum sequenceNum.
-   */
-  @Override
-  public void setDelegationTokenSeqNum(int seqNum) {
-    try {
-      delTokSeqCounter.setCount(seqNum);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not set shared counter !!", e);
-    }
-  }
-
-  /**
-   * Get Current KeyId.
-   *
-   * @return currentKeyId.
-   */
-  @Override
-  public int getCurrentKeyId() {
-    return keyIdSeqCounter.getCount();
-  }
-
-  /**
    * The Router Supports incrementCurrentKeyId.
    *
    * @return CurrentKeyId.

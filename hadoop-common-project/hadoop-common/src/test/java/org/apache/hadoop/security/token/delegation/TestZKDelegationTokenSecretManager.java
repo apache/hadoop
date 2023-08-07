@@ -473,9 +473,13 @@ public class TestZKDelegationTokenSecretManager {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
-            zksm.getTokenInfo(idCancelled);
-        return dtinfo == null;
+        try {
+          AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
+              zksm.getTokenInfo(idCancelled);
+          return dtinfo == null;
+        } catch (IOException ex) {
+          return false;
+        }
       }
     }, 100, 5000);
 
@@ -508,7 +512,11 @@ public class TestZKDelegationTokenSecretManager {
       @Override
       public Boolean get() {
         LOG.info("Waiting for the expired token to be removed...");
-        return zksm1.getTokenInfo(id1) == null;
+        try {
+          return zksm1.getTokenInfo(id1) == null;
+        } catch (Exception ex) {
+          return false;
+        }
       }
     }, 1000, 5000);
   }

@@ -28,17 +28,17 @@ import java.util.Set;
 public class RouterRMDTSecretManagerState {
 
   // DTIdentifier -> renewDate
-  private Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState = new HashMap<>();
+  private Map<Integer, RouterStoreToken> delegationTokenState = new HashMap<>();
 
-  private Set<DelegationKey> masterKeyState = new HashSet<>();
+  private Map<Integer, DelegationKey> masterKeyState = new HashMap<>();
 
   private int dtSequenceNumber = 0;
 
-  public Map<RMDelegationTokenIdentifier, RouterStoreToken> getTokenState() {
+  public Map<Integer, RouterStoreToken> getTokenState() {
     return delegationTokenState;
   }
 
-  public Set<DelegationKey> getMasterKeyState() {
+  public Map<Integer, DelegationKey> getMasterKeyState() {
     return masterKeyState;
   }
 
