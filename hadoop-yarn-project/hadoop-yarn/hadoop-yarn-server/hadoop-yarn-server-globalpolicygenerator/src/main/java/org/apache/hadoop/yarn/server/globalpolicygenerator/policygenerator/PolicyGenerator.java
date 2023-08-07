@@ -129,15 +129,15 @@ public class PolicyGenerator implements Runnable, Configurable {
       try {
         manager = this.gpgContext.getPolicyFacade().getPolicyManager(queueName);
       } catch (YarnException e) {
-        LOG.error("GetPolicy for queue {} failed", queueName, e);
+        LOG.error("GetPolicy for queue {} failed.", queueName, e);
         continue;
       }
-      LOG.info("Updating policy for queue {}", queueName);
+      LOG.info("Updating policy for queue {}.", queueName);
       manager = policy.updatePolicy(queueName, clusterInfo, manager);
       try {
         this.gpgContext.getPolicyFacade().setPolicyManager(manager);
       } catch (YarnException e) {
-        LOG.error("SetPolicy for queue {} failed", queueName, e);
+        LOG.error("SetPolicy for queue {} failed.", queueName, e);
       }
     }
   }
