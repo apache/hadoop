@@ -266,4 +266,14 @@ public class TestYarnConfiguration {
     assertTrue(NumberUtils.isDigits(rmAmExpiryIntervalMS1));
     assertEquals(600000, Long.parseLong(rmAmExpiryIntervalMS1));
   }
+
+  @Test
+  void testGetFederationStoreClass() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    String defaultFedStateStoreClass = conf.get(
+        YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS);
+    assertEquals(YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS,
+        defaultFedStateStoreClass);
+  }
 }

@@ -4001,7 +4001,7 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_PREFIX + "state-store.class";
 
   public static final String DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS =
-      "org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore";
+      "org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore";
 
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";
