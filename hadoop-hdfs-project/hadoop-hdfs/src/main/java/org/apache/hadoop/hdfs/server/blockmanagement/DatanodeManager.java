@@ -144,10 +144,10 @@ public class DatanodeManager {
   private volatile boolean avoidSlowDataNodesForRead;
 
   /** Whether or not to consider lad for reading. */
-  private final boolean readConsiderLoad;
+  private volatile boolean readConsiderLoad;
 
   /** Whether or not to consider storageType for reading. */
-  private final boolean readConsiderStorageType;
+  private volatile boolean readConsiderStorageType;
 
   /**
    * Whether or not to avoid using stale DataNodes for writing.
@@ -2287,5 +2287,23 @@ public class DatanodeManager {
   @VisibleForTesting
   public boolean isSlowPeerCollectorInitialized() {
     return slowPeerCollectorDaemon == null;
+  }
+
+  public void setReadConsiderLoad(boolean enable) {
+    this.readConsiderLoad = enable;
+  }
+
+  public void setReadConsiderStorageType(boolean enable) {
+    this.readConsiderStorageType = enable;
+  }
+
+  @VisibleForTesting
+  public boolean isReadConsiderLoad() {
+    return readConsiderLoad;
+  }
+
+  @VisibleForTesting
+  public boolean isReadConsiderStorageType() {
+    return readConsiderStorageType;
   }
 }
