@@ -240,6 +240,14 @@ public final class CommitConstants {
    */
   public static final int DEFAULT_COMMITTER_THREADS = 32;
 
+  public static final String FS_S3A_COMMITTER_OVERWRITE_AND_COMMIT
+      = "fs.s3a.committer.overwrite.and.commit";
+
+  public static final String FS_S3A_COMMITTER_DELETE_DIRECTORY_THREADS =
+      "fs.s3a.committer.delete.directory.threads";
+
+  public static final int DEFAULT_COMMITTER_DELETE_DIRECTORY_THREADS = 1;
+
   /**
    * Path  in the cluster filesystem for temporary data: {@value}.
    * This is for HDFS, not the local filesystem.
