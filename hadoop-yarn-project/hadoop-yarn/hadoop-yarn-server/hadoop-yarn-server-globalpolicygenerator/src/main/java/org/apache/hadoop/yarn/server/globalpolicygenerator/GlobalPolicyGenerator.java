@@ -297,4 +297,9 @@ public class GlobalPolicyGenerator extends CompositeService {
   public static long getGPGStartupTime() {
     return gpgStartupTime;
   }
+
+  @VisibleForTesting
+  public WebApp getWebApp() {
+    return webApp;
+  }
 }
