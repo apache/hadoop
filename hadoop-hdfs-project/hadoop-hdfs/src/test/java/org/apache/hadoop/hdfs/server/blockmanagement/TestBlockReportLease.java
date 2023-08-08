@@ -284,7 +284,7 @@ public class TestBlockReportLease {
       FSNamesystem fsn = cluster.getNamesystem();
 
       NameNode nameNode = cluster.getNameNode();
-      // pretend to be in safemode
+      // Pretend to be in safemode.
       NameNodeAdapter.enterSafeMode(nameNode, false);
 
       BlockManager blockManager = fsn.getBlockManager();
@@ -294,56 +294,54 @@ public class TestBlockReportLease {
 
       NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
 
-      // Test based on one DataNode report to Namenode
+      // Test based on one DataNode report to Namenode.
       DataNode dn = cluster.getDataNodes().get(0);
       DatanodeDescriptor datanodeDescriptor = spyBlockManager
-              .getDatanodeManager().getDatanode(dn.getDatanodeId());
+          .getDatanodeManager().getDatanode(dn.getDatanodeId());
 
       DatanodeRegistration dnRegistration = dn.getDNRegistrationForBP(poolId);
       StorageReport[] storages = dn.getFSDataset().getStorageReports(poolId);
 
-      // Send heartbeat and request full block report lease
+      // Send heartbeat and request full block report lease.
       HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
-              dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
-              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+          dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+          SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
 
       DelayAnswer delayer = new DelayAnswer(BlockManager.LOG);
       doAnswer(delayer).when(spyBlockManager).processReport(
-              any(DatanodeStorageInfo.class),
-              any(BlockListAsLongs.class));
-
-      ExecutorService pool = Executors.newFixedThreadPool(1);
-
-      // Trigger sendBlockReport
+          any(DatanodeStorageInfo.class),
+          any(BlockListAsLongs.class));
+      
+      // Trigger sendBlockReport.
       BlockReportContext brContext = new BlockReportContext(1, 0,
-              rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
-      // Build every storage with 100 blocks for sending report
+          rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
+      // Build every storage with 100 blocks for sending report.
       DatanodeStorage[] datanodeStorages
-              = new DatanodeStorage[storages.length];
+          = new DatanodeStorage[storages.length];
       for (int i = 0; i < storages.length; i++) {
         datanodeStorages[i] = storages[i].getStorage();
         StorageBlockReport[] reports = createReports(datanodeStorages, 100);
 
-        // The first multiple send once, simulating the failure of the first report, 
-        // only send successfully once
+        // The first multiple send once, simulating the failure of the first report,
+        // only send successfully once.
         if(i == 0){
           rpcServer.blockReport(dnRegistration, poolId, reports, brContext);
         }
 
-        // Send blockReport
+        // Send blockReport.
         DatanodeCommand datanodeCommand = rpcServer.blockReport(dnRegistration, poolId, reports,
-                brContext);
+            brContext);
 
-        // Wait until BlockManager calls processReport
+        // Wait until BlockManager calls processReport.
         delayer.waitForCall();
 
-        // Allow blockreport to proceed
+        // Allow blockreport to proceed.
         delayer.proceed();
 
-        // Get result, it will not null if process successfully
+        // Get result, it will not null if process successfully.
         assertTrue(datanodeCommand instanceof FinalizeCommand);
         assertEquals(poolId, ((FinalizeCommand)datanodeCommand)
-                .getBlockPoolId());
+            .getBlockPoolId());
         if(i == 0){
           assertEquals(2, datanodeDescriptor.getStorageInfos()[i].getBlockReportCount());
         }else{

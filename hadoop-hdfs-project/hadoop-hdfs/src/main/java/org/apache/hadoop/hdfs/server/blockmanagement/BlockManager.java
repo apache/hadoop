@@ -2958,7 +2958,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Remove the DN lease only when we have received block reports 
+   * Remove the DN lease only when we have received block reports,
    * for all storages for a particular DN.
    */
   void removeDNLeaseIfNeeded(DatanodeDescriptor node) {
