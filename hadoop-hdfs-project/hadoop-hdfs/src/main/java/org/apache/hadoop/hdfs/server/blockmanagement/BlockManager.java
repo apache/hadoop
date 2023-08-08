@@ -4030,6 +4030,11 @@ public class BlockManager implements BlockStatsMXBean {
 
     // update neededReconstruction priority queues
     b.setReplication(newRepl);
+
+    // Process the block only when active NN is out of safe mode.
+    if (!isPopulatingReplQueues()) {
+      return;
+    }
     NumberReplicas num = countNodes(b);
     updateNeededReconstructions(b, 0, newRepl - oldRepl);
     if (shouldProcessExtraRedundancy(num, newRepl)) {
