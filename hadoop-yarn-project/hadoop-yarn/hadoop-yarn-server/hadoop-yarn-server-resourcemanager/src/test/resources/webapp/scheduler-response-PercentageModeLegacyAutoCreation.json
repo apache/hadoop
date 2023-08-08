@@ -1,1580 +1,1057 @@
-{"scheduler": {"schedulerInfo": {
-  "type": "capacityScheduler",
-  "capacity": 100,
-  "usedCapacity": 0,
-  "maxCapacity": 100,
-  "weight": -1,
-  "normalizedWeight": 0,
-  "queueName": "root",
-  "queuePath": "root",
-  "maxParallelApps": 2147483647,
-  "isAbsoluteResource": false,
-  "queues": {"queue": [
-    {
-      "type": "capacitySchedulerLeafQueueInfo",
-      "queuePath": "root.test1",
-      "capacity": 50,
-      "usedCapacity": 0,
-      "maxCapacity": 100,
-      "absoluteCapacity": 50,
-      "absoluteMaxCapacity": 100,
-      "absoluteUsedCapacity": 0,
-      "weight": -1,
-      "normalizedWeight": 0,
-      "numApplications": 0,
-      "maxParallelApps": 2147483647,
-      "queueName": "test1",
-      "isAbsoluteResource": false,
-      "state": "RUNNING",
-      "resourcesUsed": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
+{
+  "scheduler" : {
+    "schedulerInfo" : {
+      "type" : "capacityScheduler",
+      "capacity" : 100,
+      "usedCapacity" : 0,
+      "maxCapacity" : 100,
+      "weight" : -1,
+      "normalizedWeight" : 0,
+      "queueName" : "root",
+      "queuePath" : "root",
+      "maxParallelApps" : 2147483647,
+      "isAbsoluteResource" : false,
+      "queues" : {
+        "queue" : [ {
+          "type" : "capacitySchedulerLeafQueueInfo",
+          "queuePath" : "root.default",
+          "capacity" : 25,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 25,
+          "absoluteMaxCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "numApplications" : 0,
+          "maxParallelApps" : 2147483647,
+          "queueName" : "default",
+          "isAbsoluteResource" : false,
+          "state" : "RUNNING",
+          "resourcesUsed" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
           },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
+          "hideReservationQueues" : false,
+          "nodeLabels" : [ "*" ],
+          "allocatedContainers" : 0,
+          "reservedContainers" : 0,
+          "pendingContainers" : 0,
+          "capacities" : {
+            "queueCapacitiesByPartition" : [ {
+              "partitionName" : "",
+              "capacity" : 25,
+              "usedCapacity" : 0,
+              "maxCapacity" : 100,
+              "absoluteCapacity" : 25,
+              "absoluteUsedCapacity" : 0,
+              "absoluteMaxCapacity" : 100,
+              "maxAMLimitPercentage" : 10,
+              "weight" : -1,
+              "normalizedWeight" : 0,
+              "configuredMinResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "configuredMaxResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "effectiveMinResource" : {
+                "memory" : 8192,
+                "vCores" : 8,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 8192
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 8
+                  } ]
+                }
+              },
+              "effectiveMaxResource" : {
+                "memory" : 32768,
+                "vCores" : 32,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 32768
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 32
+                  } ]
+                }
+              }
+            } ]
+          },
+          "resources" : {
+            "resourceUsagesByPartition" : [ {
+              "partitionName" : "",
+              "used" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "reserved" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "pending" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amUsed" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amLimit" : {
+                "memory" : 4096,
+                "vCores" : 1,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 4096
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 1
+                  } ]
+                }
+              },
+              "userAmLimit" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              }
+            } ]
+          },
+          "minEffectiveCapacity" : {
+            "memory" : 8192,
+            "vCores" : 8,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 8
+              } ]
+            }
+          },
+          "maxEffectiveCapacity" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          },
+          "maximumAllocation" : {
+            "memory" : 8192,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "queueAcls" : {
+            "queueAcl" : [ {
+              "accessType" : "ADMINISTER_QUEUE",
+              "accessControlList" : " "
+            }, {
+              "accessType" : "APPLICATION_MAX_PRIORITY",
+              "accessControlList" : "*"
+            }, {
+              "accessType" : "SUBMIT_APP",
+              "accessControlList" : " "
+            } ]
+          },
+          "queuePriority" : 0,
+          "orderingPolicyInfo" : "fifo",
+          "autoCreateChildQueueEnabled" : false,
+          "leafQueueTemplate" : { },
+          "mode" : "percentage",
+          "queueType" : "leaf",
+          "creationMethod" : "static",
+          "autoCreationEligibility" : "off",
+          "autoQueueTemplateProperties" : { },
+          "autoQueueParentTemplateProperties" : { },
+          "autoQueueLeafTemplateProperties" : { },
+          "numActiveApplications" : 0,
+          "numPendingApplications" : 0,
+          "numContainers" : 0,
+          "maxApplications" : 2500,
+          "maxApplicationsPerUser" : 2500,
+          "userLimit" : 100,
+          "users" : { },
+          "userLimitFactor" : 1,
+          "configuredMaxAMResourceLimit" : 0.1,
+          "AMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "usedAMResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "userAMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "preemptionDisabled" : true,
+          "intraQueuePreemptionDisabled" : true,
+          "defaultPriority" : 0,
+          "isAutoCreatedLeafQueue" : false,
+          "maxApplicationLifetime" : -1,
+          "defaultApplicationLifetime" : -1
+        }, {
+          "queuePath" : "root.managed",
+          "capacity" : 75,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 75,
+          "absoluteMaxCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "numApplications" : 0,
+          "maxParallelApps" : 2147483647,
+          "queueName" : "managed",
+          "isAbsoluteResource" : false,
+          "state" : "RUNNING",
+          "queues" : { },
+          "resourcesUsed" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "hideReservationQueues" : false,
+          "nodeLabels" : [ "*" ],
+          "allocatedContainers" : 0,
+          "reservedContainers" : 0,
+          "pendingContainers" : 0,
+          "capacities" : {
+            "queueCapacitiesByPartition" : [ {
+              "partitionName" : "",
+              "capacity" : 75,
+              "usedCapacity" : 0,
+              "maxCapacity" : 100,
+              "absoluteCapacity" : 75,
+              "absoluteUsedCapacity" : 0,
+              "absoluteMaxCapacity" : 100,
+              "maxAMLimitPercentage" : 0,
+              "weight" : -1,
+              "normalizedWeight" : 0,
+              "configuredMinResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "configuredMaxResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "effectiveMinResource" : {
+                "memory" : 24576,
+                "vCores" : 24,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 24576
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 24
+                  } ]
+                }
+              },
+              "effectiveMaxResource" : {
+                "memory" : 32768,
+                "vCores" : 32,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 32768
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 32
+                  } ]
+                }
+              }
+            } ]
+          },
+          "resources" : {
+            "resourceUsagesByPartition" : [ {
+              "partitionName" : "",
+              "used" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "reserved" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "pending" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              }
+            } ]
+          },
+          "minEffectiveCapacity" : {
+            "memory" : 24576,
+            "vCores" : 24,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 24576
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 24
+              } ]
+            }
+          },
+          "maxEffectiveCapacity" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          },
+          "maximumAllocation" : {
+            "memory" : 8192,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "queueAcls" : {
+            "queueAcl" : [ {
+              "accessType" : "ADMINISTER_QUEUE",
+              "accessControlList" : " "
+            }, {
+              "accessType" : "APPLICATION_MAX_PRIORITY",
+              "accessControlList" : "*"
+            }, {
+              "accessType" : "SUBMIT_APP",
+              "accessControlList" : " "
+            } ]
+          },
+          "queuePriority" : 0,
+          "orderingPolicyInfo" : "utilization",
+          "autoCreateChildQueueEnabled" : true,
+          "leafQueueTemplate" : { },
+          "mode" : "percentage",
+          "queueType" : "parent",
+          "creationMethod" : "static",
+          "autoCreationEligibility" : "legacy",
+          "autoQueueTemplateProperties" : { },
+          "autoQueueParentTemplateProperties" : { },
+          "autoQueueLeafTemplateProperties" : { }
+        } ]
       },
-      "hideReservationQueues": false,
-      "nodeLabels": ["*"],
-      "allocatedContainers": 0,
-      "reservedContainers": 0,
-      "pendingContainers": 0,
-      "capacities": {"queueCapacitiesByPartition": [{
-        "partitionName": "",
-        "capacity": 50,
-        "usedCapacity": 0,
-        "maxCapacity": 100,
-        "absoluteCapacity": 50,
-        "absoluteUsedCapacity": 0,
-        "absoluteMaxCapacity": 100,
-        "maxAMLimitPercentage": 10,
-        "weight": -1,
-        "normalizedWeight": 0,
-        "configuredMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
+      "capacities" : {
+        "queueCapacitiesByPartition" : [ {
+          "partitionName" : "",
+          "capacity" : 100,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "absoluteMaxCapacity" : 100,
+          "maxAMLimitPercentage" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "configuredMinResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 8192,
+                "minimumAllocation" : 1024,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 4,
+                "minimumAllocation" : 1,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
             }
-          ]}
-        },
-        "configuredMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
+          },
+          "configuredMaxResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 8192,
+                "minimumAllocation" : 1024,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 4,
+                "minimumAllocation" : 1,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
             }
-          ]}
-        },
-        "effectiveMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
+          },
+          "effectiveMinResource" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
             }
-          ]}
-        },
-        "effectiveMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
+          },
+          "effectiveMaxResource" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
             }
-          ]}
+          }
+        } ]
+      },
+      "health" : {
+        "lastrun" : 0,
+        "operationsInfo" : [ {
+          "operation" : "last-allocation",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-release",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-preemption",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-reservation",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        } ],
+        "lastRunDetails" : [ {
+          "operation" : "releases",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        }, {
+          "operation" : "allocations",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        }, {
+          "operation" : "reservations",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        } ]
+      },
+      "maximumAllocation" : {
+        "memory" : 8192,
+        "vCores" : 4,
+        "resourceInformations" : {
+          "resourceInformation" : [ {
+            "attributes" : { },
+            "maximumAllocation" : 9223372036854775807,
+            "minimumAllocation" : 0,
+            "name" : "memory-mb",
+            "resourceType" : "COUNTABLE",
+            "units" : "Mi",
+            "value" : 8192
+          }, {
+            "attributes" : { },
+            "maximumAllocation" : 9223372036854775807,
+            "minimumAllocation" : 0,
+            "name" : "vcores",
+            "resourceType" : "COUNTABLE",
+            "units" : "",
+            "value" : 4
+          } ]
         }
-      }]},
-      "resources": {"resourceUsagesByPartition": [{
-        "partitionName": "",
-        "used": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "reserved": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "pending": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "amUsed": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "amLimit": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "userAmLimit": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }]},
-      "minEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
       },
-      "maxEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
+      "queueAcls" : {
+        "queueAcl" : [ {
+          "accessType" : "ADMINISTER_QUEUE",
+          "accessControlList" : "*"
+        }, {
+          "accessType" : "APPLICATION_MAX_PRIORITY",
+          "accessControlList" : "*"
+        }, {
+          "accessType" : "SUBMIT_APP",
+          "accessControlList" : "*"
+        } ]
       },
-      "maximumAllocation": {
-        "memory": 8192,
-        "vCores": 4,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 8192
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 4
-          }
-        ]}
-      },
-      "queueAcls": {"queueAcl": [
-        {
-          "accessType": "ADMINISTER_QUEUE",
-          "accessControlList": " "
-        },
-        {
-          "accessType": "APPLICATION_MAX_PRIORITY",
-          "accessControlList": "*"
-        },
-        {
-          "accessType": "SUBMIT_APP",
-          "accessControlList": " "
-        }
-      ]},
-      "queuePriority": 0,
-      "orderingPolicyInfo": "fifo",
-      "autoCreateChildQueueEnabled": false,
-      "leafQueueTemplate": {},
-      "mode": "percentage",
-      "queueType": "leaf",
-      "creationMethod": "static",
-      "autoCreationEligibility": "off",
-      "autoQueueTemplateProperties": {},
-      "autoQueueParentTemplateProperties": {},
-      "autoQueueLeafTemplateProperties": {},
-      "numActiveApplications": 0,
-      "numPendingApplications": 0,
-      "numContainers": 0,
-      "maxApplications": 5000,
-      "maxApplicationsPerUser": 5000,
-      "userLimit": 100,
-      "users": {},
-      "userLimitFactor": 1,
-      "configuredMaxAMResourceLimit": 0.1,
-      "AMResourceLimit": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "usedAMResource": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "userAMResourceLimit": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "preemptionDisabled": true,
-      "intraQueuePreemptionDisabled": true,
-      "defaultPriority": 0,
-      "isAutoCreatedLeafQueue": false,
-      "maxApplicationLifetime": -1,
-      "defaultApplicationLifetime": -1
-    },
-    {
-      "type": "capacitySchedulerLeafQueueInfo",
-      "queuePath": "root.default",
-      "capacity": 0,
-      "usedCapacity": 0,
-      "maxCapacity": 100,
-      "absoluteCapacity": 0,
-      "absoluteMaxCapacity": 100,
-      "absoluteUsedCapacity": 0,
-      "weight": -1,
-      "normalizedWeight": 0,
-      "numApplications": 0,
-      "maxParallelApps": 2147483647,
-      "queueName": "default",
-      "isAbsoluteResource": false,
-      "state": "RUNNING",
-      "resourcesUsed": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "hideReservationQueues": false,
-      "nodeLabels": ["*"],
-      "allocatedContainers": 0,
-      "reservedContainers": 0,
-      "pendingContainers": 0,
-      "capacities": {"queueCapacitiesByPartition": [{
-        "partitionName": "",
-        "capacity": 0,
-        "usedCapacity": 0,
-        "maxCapacity": 100,
-        "absoluteCapacity": 0,
-        "absoluteUsedCapacity": 0,
-        "absoluteMaxCapacity": 100,
-        "maxAMLimitPercentage": 10,
-        "weight": -1,
-        "normalizedWeight": 0,
-        "configuredMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "configuredMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "effectiveMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "effectiveMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }]},
-      "resources": {"resourceUsagesByPartition": [{
-        "partitionName": "",
-        "used": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "reserved": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "pending": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "amUsed": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "amLimit": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "userAmLimit": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }]},
-      "minEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "maxEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "maximumAllocation": {
-        "memory": 8192,
-        "vCores": 4,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 8192
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 4
-          }
-        ]}
-      },
-      "queueAcls": {"queueAcl": [
-        {
-          "accessType": "ADMINISTER_QUEUE",
-          "accessControlList": " "
-        },
-        {
-          "accessType": "APPLICATION_MAX_PRIORITY",
-          "accessControlList": "*"
-        },
-        {
-          "accessType": "SUBMIT_APP",
-          "accessControlList": " "
-        }
-      ]},
-      "queuePriority": 0,
-      "orderingPolicyInfo": "fifo",
-      "autoCreateChildQueueEnabled": false,
-      "leafQueueTemplate": {},
-      "mode": "percentage",
-      "queueType": "leaf",
-      "creationMethod": "static",
-      "autoCreationEligibility": "off",
-      "autoQueueTemplateProperties": {},
-      "autoQueueParentTemplateProperties": {},
-      "autoQueueLeafTemplateProperties": {},
-      "numActiveApplications": 0,
-      "numPendingApplications": 0,
-      "numContainers": 0,
-      "maxApplications": 0,
-      "maxApplicationsPerUser": 0,
-      "userLimit": 100,
-      "users": {},
-      "userLimitFactor": 1,
-      "configuredMaxAMResourceLimit": 0.1,
-      "AMResourceLimit": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "usedAMResource": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "userAMResourceLimit": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "preemptionDisabled": true,
-      "intraQueuePreemptionDisabled": true,
-      "defaultPriority": 0,
-      "isAutoCreatedLeafQueue": false,
-      "maxApplicationLifetime": -1,
-      "defaultApplicationLifetime": -1
-    },
-    {
-      "queuePath": "root.managedtest2",
-      "capacity": 50,
-      "usedCapacity": 0,
-      "maxCapacity": 100,
-      "absoluteCapacity": 50,
-      "absoluteMaxCapacity": 100,
-      "absoluteUsedCapacity": 0,
-      "weight": -1,
-      "normalizedWeight": 0,
-      "numApplications": 0,
-      "maxParallelApps": 2147483647,
-      "queueName": "managedtest2",
-      "isAbsoluteResource": false,
-      "state": "RUNNING",
-      "queues": {},
-      "resourcesUsed": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "hideReservationQueues": false,
-      "nodeLabels": ["*"],
-      "allocatedContainers": 0,
-      "reservedContainers": 0,
-      "pendingContainers": 0,
-      "capacities": {"queueCapacitiesByPartition": [{
-        "partitionName": "",
-        "capacity": 50,
-        "usedCapacity": 0,
-        "maxCapacity": 100,
-        "absoluteCapacity": 50,
-        "absoluteUsedCapacity": 0,
-        "absoluteMaxCapacity": 100,
-        "maxAMLimitPercentage": 0,
-        "weight": -1,
-        "normalizedWeight": 0,
-        "configuredMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "configuredMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 8192,
-              "minimumAllocation": 1024,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 4,
-              "minimumAllocation": 1,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "effectiveMinResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "effectiveMaxResource": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }]},
-      "resources": {"resourceUsagesByPartition": [{
-        "partitionName": "",
-        "used": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "reserved": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        },
-        "pending": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }]},
-      "minEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "maxEffectiveCapacity": {
-        "memory": 0,
-        "vCores": 0,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 0
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 0
-          }
-        ]}
-      },
-      "maximumAllocation": {
-        "memory": 8192,
-        "vCores": 4,
-        "resourceInformations": {"resourceInformation": [
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "memory-mb",
-            "resourceType": "COUNTABLE",
-            "units": "Mi",
-            "value": 8192
-          },
-          {
-            "attributes": {},
-            "maximumAllocation": 9223372036854775807,
-            "minimumAllocation": 0,
-            "name": "vcores",
-            "resourceType": "COUNTABLE",
-            "units": "",
-            "value": 4
-          }
-        ]}
-      },
-      "queueAcls": {"queueAcl": [
-        {
-          "accessType": "ADMINISTER_QUEUE",
-          "accessControlList": " "
-        },
-        {
-          "accessType": "APPLICATION_MAX_PRIORITY",
-          "accessControlList": "*"
-        },
-        {
-          "accessType": "SUBMIT_APP",
-          "accessControlList": " "
-        }
-      ]},
-      "queuePriority": 0,
-      "orderingPolicyInfo": "utilization",
-      "autoCreateChildQueueEnabled": true,
-      "leafQueueTemplate": {},
-      "mode": "percentage",
-      "queueType": "parent",
-      "creationMethod": "static",
-      "autoCreationEligibility": "legacy",
-      "autoQueueTemplateProperties": {},
-      "autoQueueParentTemplateProperties": {},
-      "autoQueueLeafTemplateProperties": {}
+      "queuePriority" : 0,
+      "orderingPolicyInfo" : "utilization",
+      "mode" : "percentage",
+      "queueType" : "parent",
+      "creationMethod" : "static",
+      "autoCreationEligibility" : "off",
+      "autoQueueTemplateProperties" : { },
+      "autoQueueParentTemplateProperties" : { },
+      "autoQueueLeafTemplateProperties" : { }
     }
-  ]},
-  "capacities": {"queueCapacitiesByPartition": [{
-    "partitionName": "",
-    "capacity": 100,
-    "usedCapacity": 0,
-    "maxCapacity": 100,
-    "absoluteCapacity": 100,
-    "absoluteUsedCapacity": 0,
-    "absoluteMaxCapacity": 100,
-    "maxAMLimitPercentage": 0,
-    "weight": -1,
-    "normalizedWeight": 0,
-    "configuredMinResource": {
-      "memory": 0,
-      "vCores": 0,
-      "resourceInformations": {"resourceInformation": [
-        {
-          "attributes": {},
-          "maximumAllocation": 8192,
-          "minimumAllocation": 1024,
-          "name": "memory-mb",
-          "resourceType": "COUNTABLE",
-          "units": "Mi",
-          "value": 0
-        },
-        {
-          "attributes": {},
-          "maximumAllocation": 4,
-          "minimumAllocation": 1,
-          "name": "vcores",
-          "resourceType": "COUNTABLE",
-          "units": "",
-          "value": 0
-        }
-      ]}
-    },
-    "configuredMaxResource": {
-      "memory": 0,
-      "vCores": 0,
-      "resourceInformations": {"resourceInformation": [
-        {
-          "attributes": {},
-          "maximumAllocation": 8192,
-          "minimumAllocation": 1024,
-          "name": "memory-mb",
-          "resourceType": "COUNTABLE",
-          "units": "Mi",
-          "value": 0
-        },
-        {
-          "attributes": {},
-          "maximumAllocation": 4,
-          "minimumAllocation": 1,
-          "name": "vcores",
-          "resourceType": "COUNTABLE",
-          "units": "",
-          "value": 0
-        }
-      ]}
-    },
-    "effectiveMinResource": {
-      "memory": 0,
-      "vCores": 0,
-      "resourceInformations": {"resourceInformation": [
-        {
-          "attributes": {},
-          "maximumAllocation": 9223372036854775807,
-          "minimumAllocation": 0,
-          "name": "memory-mb",
-          "resourceType": "COUNTABLE",
-          "units": "Mi",
-          "value": 0
-        },
-        {
-          "attributes": {},
-          "maximumAllocation": 9223372036854775807,
-          "minimumAllocation": 0,
-          "name": "vcores",
-          "resourceType": "COUNTABLE",
-          "units": "",
-          "value": 0
-        }
-      ]}
-    },
-    "effectiveMaxResource": {
-      "memory": 0,
-      "vCores": 0,
-      "resourceInformations": {"resourceInformation": [
-        {
-          "attributes": {},
-          "maximumAllocation": 9223372036854775807,
-          "minimumAllocation": 0,
-          "name": "memory-mb",
-          "resourceType": "COUNTABLE",
-          "units": "Mi",
-          "value": 0
-        },
-        {
-          "attributes": {},
-          "maximumAllocation": 9223372036854775807,
-          "minimumAllocation": 0,
-          "name": "vcores",
-          "resourceType": "COUNTABLE",
-          "units": "",
-          "value": 0
-        }
-      ]}
-    }
-  }]},
-  "health": {
-    "lastrun": 0,
-    "operationsInfo": [
-      {
-        "operation": "last-allocation",
-        "nodeId": "N\/A",
-        "containerId": "N\/A",
-        "queue": "N\/A"
-      },
-      {
-        "operation": "last-release",
-        "nodeId": "N\/A",
-        "containerId": "N\/A",
-        "queue": "N\/A"
-      },
-      {
-        "operation": "last-preemption",
-        "nodeId": "N\/A",
-        "containerId": "N\/A",
-        "queue": "N\/A"
-      },
-      {
-        "operation": "last-reservation",
-        "nodeId": "N\/A",
-        "containerId": "N\/A",
-        "queue": "N\/A"
-      }
-    ],
-    "lastRunDetails": [
-      {
-        "operation": "releases",
-        "count": 0,
-        "resources": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      },
-      {
-        "operation": "allocations",
-        "count": 0,
-        "resources": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      },
-      {
-        "operation": "reservations",
-        "count": 0,
-        "resources": {
-          "memory": 0,
-          "vCores": 0,
-          "resourceInformations": {"resourceInformation": [
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "memory-mb",
-              "resourceType": "COUNTABLE",
-              "units": "Mi",
-              "value": 0
-            },
-            {
-              "attributes": {},
-              "maximumAllocation": 9223372036854775807,
-              "minimumAllocation": 0,
-              "name": "vcores",
-              "resourceType": "COUNTABLE",
-              "units": "",
-              "value": 0
-            }
-          ]}
-        }
-      }
-    ]
-  },
-  "maximumAllocation": {
-    "memory": 8192,
-    "vCores": 4,
-    "resourceInformations": {"resourceInformation": [
-      {
-        "attributes": {},
-        "maximumAllocation": 9223372036854775807,
-        "minimumAllocation": 0,
-        "name": "memory-mb",
-        "resourceType": "COUNTABLE",
-        "units": "Mi",
-        "value": 8192
-      },
-      {
-        "attributes": {},
-        "maximumAllocation": 9223372036854775807,
-        "minimumAllocation": 0,
-        "name": "vcores",
-        "resourceType": "COUNTABLE",
-        "units": "",
-        "value": 4
-      }
-    ]}
-  },
-  "queueAcls": {"queueAcl": [
-    {
-      "accessType": "ADMINISTER_QUEUE",
-      "accessControlList": "*"
-    },
-    {
-      "accessType": "APPLICATION_MAX_PRIORITY",
-      "accessControlList": "*"
-    },
-    {
-      "accessType": "SUBMIT_APP",
-      "accessControlList": "*"
-    }
-  ]},
-  "queuePriority": 0,
-  "orderingPolicyInfo": "utilization",
-  "mode": "percentage",
-  "queueType": "parent",
-  "creationMethod": "static",
-  "autoCreationEligibility": "off",
-  "autoQueueTemplateProperties": {},
-  "autoQueueParentTemplateProperties": {},
-  "autoQueueLeafTemplateProperties": {}
-}}}
+  }
+}

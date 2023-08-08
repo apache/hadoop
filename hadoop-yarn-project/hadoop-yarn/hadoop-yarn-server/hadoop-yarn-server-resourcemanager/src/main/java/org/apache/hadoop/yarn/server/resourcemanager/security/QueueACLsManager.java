@@ -52,7 +52,7 @@ public abstract class QueueACLsManager {
   /**
    * Get queue acl manager corresponding to the scheduler.
    * @param scheduler the scheduler for which the queue acl manager is required
-   * @param conf
+   * @param conf Configuration.
    * @return {@link QueueACLsManager}
    */
   public static QueueACLsManager getQueueACLsManager(

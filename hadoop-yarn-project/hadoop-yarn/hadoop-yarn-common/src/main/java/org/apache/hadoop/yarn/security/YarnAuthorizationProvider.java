@@ -79,6 +79,7 @@ public abstract class YarnAuthorizationProvider {
   /**
    * Initialize the provider. Invoked on daemon startup. DefaultYarnAuthorizer is
    * initialized based on configurations.
+   * @param conf configuration.
    */
   public abstract void init(Configuration conf);
 

@@ -49,6 +49,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -871,7 +872,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     long id = getId();
     return (int)(id^(id>>>32));  
   }
-  
+
+  @VisibleForTesting
+  public final StringBuilder dumpParentINodes() {
+    final StringBuilder b = parent == null? new StringBuilder()
+        : parent.dumpParentINodes().append("\n  ");
+    return b.append(toDetailString());
+  }
+
   /**
    * Dump the subtree starting from this inode.
    * @return a text representation of the tree.
@@ -896,10 +904,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   @VisibleForTesting
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
+  }
+
+  public void dumpINode(PrintWriter out, StringBuilder prefix,
+      int snapshotId) {
     out.print(prefix);
     out.print(" ");
     final String name = getLocalName();
-    out.print(name.isEmpty()? "/": name);
+    out.print(name != null && name.isEmpty()? "/": name);
+    out.print(", isInCurrentState? ");
+    out.print(isInCurrentState());
     out.print("   (");
     out.print(getObjectString());
     out.print("), ");
@@ -1002,6 +1017,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     /** Used to collect quota usage delta */
     private final QuotaDelta quotaDelta;
 
+    private Snapshot snapshotToBeDeleted = null;
+
     /**
      * @param bsps
      *      block storage policy suite to calculate intended storage type
@@ -1023,6 +1040,36 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.quotaDelta = new QuotaDelta();
     }
 
+    /**
+     * Set the snapshot to be deleted
+     * for {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT}.
+     *
+     * @param snapshot the snapshot to be deleted
+     */
+    public void setSnapshotToBeDeleted(Snapshot snapshot) {
+      this.snapshotToBeDeleted = Objects.requireNonNull(
+          snapshot, "snapshot == null");
+    }
+
+    /**
+     * For {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT},
+     * return the snapshot to be deleted.
+     * For other ops, return {@link Snapshot#CURRENT_STATE_ID}.
+     */
+    public int getSnapshotIdToBeDeleted() {
+      return Snapshot.getSnapshotId(snapshotToBeDeleted);
+    }
+
+    public int getSnapshotIdToBeDeleted(int snapshotId, INode inode) {
+      final int snapshotIdToBeDeleted = getSnapshotIdToBeDeleted();
+      if (snapshotId != snapshotIdToBeDeleted) {
+        LOG.warn("Snapshot changed: current = {}, original = {}, inode: {}",
+            Snapshot.getSnapshotString(snapshotId), snapshotToBeDeleted,
+            inode.toDetailString());
+      }
+      return snapshotIdToBeDeleted;
+    }
+
     public BlockStoragePolicySuite storagePolicySuite() {
       return bsps;
     }
@@ -1040,8 +1087,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * removedUCFiles but a new quotaDelta.
      */
     public ReclaimContext getCopy() {
-      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+      final ReclaimContext that = new ReclaimContext(
+          bsps, collectedBlocks, removedINodes,
           removedUCFiles);
+      that.snapshotToBeDeleted = this.snapshotToBeDeleted;
+      return that;
     }
   }
 

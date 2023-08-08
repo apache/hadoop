@@ -18,311 +18,177 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Guice;
-import com.sun.jersey.api.client.ClientResponse;
-
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.ws.rs.core.MediaType;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.assertJsonResponse;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.reinitialize;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.sendRequest;
+import static org.assertj.core.api.Assertions.fail;
 
-public class TestRMWebServicesCapacitySchedDynamicConfig extends
-    JerseyTestBase {
-  private MockRM rm;
 
-  private CapacitySchedulerQueueManager autoQueueHandler;
+/*
+ *                                         EffectiveMin (32GB 32VCores)     AbsoluteCapacity
+ *     root.default              4/32      [memory=4096,  vcores=4]       12.5%
+ *     root.test_1              16/32      [memory=16384, vcores=16]
+ *     root.test_2              12/32      [memory=12288, vcores=12]      37.5%
+ *     root.test_1.test_1_1      2/16      [memory=2048,  vcores=2]       6.25%
+ *     root.test_1.test_1_2      2/16      [memory=2048,  vcores=2]       6.25%
+ *     root.test_1.test_1_3     12/16      [memory=12288, vcores=12]      37.5%
+ */
+@RunWith(Parameterized.class)
+public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase {
 
-  public TestRMWebServicesCapacitySchedDynamicConfig() {
+  private final boolean legacyQueueMode;
+
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
+  }
+
+  private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
+
+  public TestRMWebServicesCapacitySchedDynamicConfig(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
-  public void testSchedulerResponsePercentageMode()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createPercentageConfig();
-
-    initResourceManager(config);
-
-    /*
-     * mode: percentage
-     * autoCreationEligibility: off
-     * weight: -1, normalizedWeight: 0
-     * root.queueType: parent, others.queueType: leaf
-     */
-    assertJsonResponse(sendRequest(), "webapp/scheduler-response-PercentageMode.json");
+  public void testPercentageMode() throws Exception {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "12.5");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "37.5");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
+    }
+  }
+  @Test
+  public void testAbsoluteMode() throws Exception {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=4096,vcores=4]");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "[memory=16384,vcores=16]");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "[memory=12288,vcores=12]");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
+    }
   }
 
   @Test
-  public void testSchedulerResponsePercentageModeLegacyAutoCreation()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createPercentageConfigLegacyAutoCreation();
-
-    initResourceManager(config);
-
-    /*
-     * mode: percentage
-     * managedtest2.autoCreationEligibility: legacy, others.autoCreationEligibility: off
-     * weight: -1, normalizedWeight: 0
-     * root.queueType: parent, others.queueType: leaf
-     */
-    assertJsonResponse(sendRequest(),
-        "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
+  public void testWeightMode() throws Exception {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "4w");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "16w");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "12w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
+      runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
+    }
   }
 
   @Test
-  public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createAbsoluteConfigLegacyAutoCreation();
+  public void testWeightModeFlexibleAQC() throws Exception {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "4w");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "16w");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "12w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
+    conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
 
-    initResourceManager(config);
-    initAutoQueueHandler(8192 * GB);
-    createQueue("root.managed.queue1");
-
-    assertJsonResponse(sendRequest(),
-        "webapp/scheduler-response-AbsoluteModeLegacyAutoCreation.json");
-  }
-
-  @Test
-  public void testSchedulerResponseAbsoluteMode()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createAbsoluteConfig();
-
-    initResourceManager(config);
-
-    /*
-     * mode: absolute
-     * autoCreationEligibility: off
-     * weight: -1, normalizedWeight: 0
-     * root.queueType: parent, others.queueType: leaf
-     */
-    assertJsonResponse(sendRequest(), "webapp/scheduler-response-AbsoluteMode.json");
-  }
-
-  @Test
-  public void testSchedulerResponseWeightMode()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createWeightConfig();
-
-    initResourceManager(config);
-
-    /*
-     * mode: weight
-     * autoCreationEligibility: off
-     *                   root   default  test1  test2
-     * weight:            1       10       4     6
-     * normalizedWeight:  1       0.5      0.2   0.3
-     * root.queueType: parent, others.queueType: leaf
-     */
-    assertJsonResponse(sendRequest(), "webapp/scheduler-response-WeightMode.json");
-  }
-
-  @Test
-  public void testSchedulerResponseWeightModeWithAutoCreatedQueues()
-      throws Exception {
-    Configuration config = CSConfigGenerator
-        .createWeightConfigWithAutoQueueCreationEnabled();
-    config.setInt(CapacitySchedulerConfiguration
-        .getQueuePrefix("root.autoParent1") +
-        AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
-        "maximum-applications", 300);
-
-    initResourceManager(config);
-    initAutoQueueHandler(1200 * GB);
-
-    // same as webapp/scheduler-response-WeightMode.json, but with effective resources filled in
-    assertJsonResponse(sendRequest(),
-        "webapp/scheduler-response-WeightModeWithAutoCreatedQueues-Before.json");
-
-    //Now create some auto created queues
-    createQueue("root.auto1");
-    createQueue("root.auto2");
-    createQueue("root.auto3");
-    createQueue("root.autoParent1.auto4");
-    createQueue("root.autoParent2.auto5");
-    createQueue("root.parent.autoParent3.auto6");
-
-    assertJsonResponse(sendRequest(),
-        "webapp/scheduler-response-WeightModeWithAutoCreatedQueues-After.json");
-  }
-
-  private void initAutoQueueHandler(int nodeMemory) throws Exception {
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
-    rm.registerNode("h1:1234", nodeMemory); // label = x
-  }
-
-  private void createQueue(String queuePath) throws YarnException,
-      IOException {
-    autoQueueHandler.createQueue(new QueuePath(queuePath));
-  }
-
-  private ClientResponse sendRequest() {
-    return resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-  }
-
-  private static class CSConfigGenerator {
-    public static Configuration createPercentageConfig() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createPercentageConfigLegacyAutoCreation() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
-          "managedtest2");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managedtest2.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managedtest2." +
-          "auto-create-child-queue.enabled", "true");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createAbsoluteConfigLegacyAutoCreation() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
-      conf.put("yarn.scheduler.capacity.root.default.state", "STOPPED");
-      conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
-          "[memory=2048,vcores=2]");
-      conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managed." +
-          "auto-create-child-queue.enabled", "true");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",
-          "user");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
-          "admin");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createAbsoluteConfig() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf.put("yarn.scheduler.capacity.root.capacity",
-          "[memory=6136,vcores=30]");
-      conf.put("yarn.scheduler.capacity.root.default.capacity",
-          "[memory=3064,vcores=15]");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity",
-          "[memory=2048,vcores=10]");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity",
-          "[memory=1024,vcores=5]");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createWeightConfig() {
-      return createWeightConfigInternal(false);
-    }
-
-    public static Configuration createWeightConfigWithAutoQueueCreationEnabled() {
-      return createWeightConfigInternal(true);
-    }
-
-    private static Configuration createWeightConfigInternal(boolean enableAqc) {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2, parent");
-      conf.put("yarn.scheduler.capacity.root.capacity", "1w");
-      conf.put("yarn.scheduler.capacity.root.default.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "5w");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.parent.capacity", "20w");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-
-      if (enableAqc) {
-        final String root = "yarn.scheduler.capacity.root.";
-        conf.put(root +  "auto-queue-creation-v2.enabled", "true");
-
-        conf.put(root + "auto-queue-creation-v2.parent-template.acl_submit_applications",
-            "parentUser1");
-        conf.put(root + "auto-queue-creation-v2.parent-template.acl_administer_queue",
-            "parentAdmin1");
-
-        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "user1");
-        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "admin1");
-
-        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "wildUser1");
-        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "wildAdmin1");
-
-
-        conf.put(root + "parent.auto-queue-creation-v2.enabled", "true");
-        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_submit_applications",
-            "parentUser2");
-        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_administer_queue",
-            "parentAdmin2");
-
-        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "wildUser2");
-        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "wildAdmin2");
-      }
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createConfiguration(
-        Map<String, String> configs) {
-      Configuration config = new Configuration();
-
-      for (Map.Entry<String, String> entry : configs.entrySet()) {
-        config.set(entry.getKey(), entry.getValue());
-      }
-
-      config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-
-      return config;
+    Configuration config = createConfiguration(conf);
+    setupAQC(config, "yarn.scheduler.capacity.root.test2.");
+    try (MockRM rm = createMutableRM(config)) {
+      // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
+      rm.registerNode("h1:1234", 32 * GB, 32);
+      assertJsonResponse(sendRequest(resource()),
+          getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
+              "before-aqc", legacyQueueMode));
+      createDynamicQueues(rm, "test2");
+      reinitialize(rm, config);
+      assertJsonResponse(sendRequest(resource()),
+          getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
+              "after-aqc", legacyQueueMode));
     }
   }
 
-  private void initResourceManager(Configuration conf) throws IOException {
-    rm = createMockRM(new CapacitySchedulerConfiguration(conf));
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
-    rm.start();
-    //Need to call reinitialize as
-    //MutableCSConfigurationProvider with InMemoryConfigurationStore
-    //somehow does not load the queues properly and falls back to default config.
-    //Therefore CS will think there's only the default queue there.
-    ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
-        rm.getRMContext(), true);
+  private void setupAQC(Configuration config, String queueWithConfigPrefix) {
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.enabled", "true");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.maximum-queue-depth", "10");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.leaf-template.capacity", "10w");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+        "parentUser");
+    config.set(queueWithConfigPrefix + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+        "parentAdmin");
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+        "ap1User");
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+        "ap1Admin");
+    config.set(queueWithConfigPrefix + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+        "leafUser");
+    config.set(queueWithConfigPrefix + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+        "leafAdmin");
+    config.set(queueWithConfigPrefix + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+        "pLeafUser");
+    config.set(queueWithConfigPrefix + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+        "pLeafAdmin");
+    config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.template.maximum-applications", "300");
+  }
+  private void createDynamicQueues(MockRM rm, String queueName) {
+    try {
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto1"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto2"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent1.auto3"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent1.auto4"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".autoParent2.auto5"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".parent.autoParent2.auto6"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".parent2.auto7"));
+    } catch (YarnException | IOException e) {
+      fail("Can not auto create queues under " + queueName, e);
+    }
   }
 }

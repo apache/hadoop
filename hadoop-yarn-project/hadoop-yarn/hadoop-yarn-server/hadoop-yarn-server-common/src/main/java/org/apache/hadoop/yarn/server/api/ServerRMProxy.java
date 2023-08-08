@@ -49,7 +49,7 @@ public class ServerRMProxy<T> extends RMProxy<T> {
    * @param protocol Server protocol for which proxy is being requested.
    * @param <T> Type of proxy.
    * @return Proxy to the ResourceManager for the specified server protocol.
-   * @throws IOException
+   * @throws IOException if there are I/O errors.
    */
   public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {

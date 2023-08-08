@@ -51,6 +51,11 @@ public final class InternalConstants {
   */
   public static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
 
+  /**
+   * size of a buffer to create when draining the stream.
+   */
+  public static final int DRAIN_BUFFER_SIZE = 16384;
+
   private InternalConstants() {
   }
 
@@ -97,6 +102,7 @@ public final class InternalConstants {
 
   static {
     Set<String> keys = Stream.of(
+        Constants.ASYNC_DRAIN_THRESHOLD,
         Constants.INPUT_FADVISE,
         Constants.READAHEAD_RANGE)
         .collect(Collectors.toSet());
@@ -113,6 +119,12 @@ public final class InternalConstants {
   /** Name of the log for throttling events. Value: {@value}. */
   public static final String THROTTLE_LOG_NAME =
       "org.apache.hadoop.fs.s3a.throttled";
+
+  /**
+   * Name of the log for events related to the SDK V2 upgrade.
+   */
+  public static final String SDK_V2_UPGRADE_LOG_NAME =
+      "org.apache.hadoop.fs.s3a.SDKV2Upgrade";
 
   /** Directory marker attribute: see HADOOP-16613. Value: {@value}. */
   public static final String X_DIRECTORY =

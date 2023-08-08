@@ -143,7 +143,7 @@ public class NumaResourceAllocator {
   }
 
   @VisibleForTesting
-  String executeNGetCmdOutput(Configuration conf) throws YarnException {
+  public String executeNGetCmdOutput(Configuration conf) throws YarnException {
     String numaCtlCmd = conf.get(
         YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
         YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);

@@ -2097,7 +2097,7 @@ public class CapacityScheduler extends
     {
       QueueManagementChangeEvent queueManagementChangeEvent =
           (QueueManagementChangeEvent) event;
-      ParentQueue parentQueue = queueManagementChangeEvent.getParentQueue();
+      AbstractParentQueue parentQueue = queueManagementChangeEvent.getParentQueue();
       try {
         final List<QueueManagementChange> queueManagementChanges =
             queueManagementChangeEvent.getQueueManagementChanges();
@@ -2725,7 +2725,7 @@ public class CapacityScheduler extends
       application.setQueue(dest);
       LOG.info("App: " + appId + " successfully moved from " + sourceQueueName
           + " to: " + destQueueName);
-      return targetQueueName;
+      return dest.getQueuePath();
     } finally {
       writeLock.unlock();
     }

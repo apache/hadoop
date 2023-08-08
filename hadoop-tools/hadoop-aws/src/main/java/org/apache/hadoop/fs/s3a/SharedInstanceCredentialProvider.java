@@ -39,6 +39,6 @@ import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class SharedInstanceCredentialProvider extends
-    IAMInstanceCredentialsProvider {
+@SuppressWarnings("deprecation")
+public final class SharedInstanceCredentialProvider extends IAMInstanceCredentialsProvider {
 }

@@ -152,7 +152,7 @@ public abstract class AppReportFetcher {
 
   /*
    * This class creates a bundle of the application report and the source from
-   * where the the report was fetched. This allows the WebAppProxyServlet
+   * where the report was fetched. This allows the WebAppProxyServlet
    * to make decisions for the application report based on the source.
    */
   protected static class FetchedAppReport {

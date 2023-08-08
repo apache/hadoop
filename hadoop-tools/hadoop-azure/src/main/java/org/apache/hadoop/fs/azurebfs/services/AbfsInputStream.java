@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -50,6 +51,7 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -120,6 +122,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   private long nextReadPos;
 
+  /** ABFS instance to be held by the input stream to avoid GC close. */
+  private final BackReference fsBackRef;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -137,7 +142,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
-    this.readAheadEnabled = true;
+    this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.bufferedPreadDisabled = abfsInputStreamContext
@@ -151,6 +156,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+    this.fsBackRef = abfsInputStreamContext.getFsBackRef();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
@@ -746,6 +752,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
+  public boolean isReadAheadEnabled() {
+    return readAheadEnabled;
+  }
+
+  @VisibleForTesting
   public int getReadAheadRange() {
     return readAheadRange;
   }
@@ -823,11 +834,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
+    sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
+    sb.append("[" + CAPABILITY_SAFE_READAHEAD + "]");
     if (streamStatistics != null) {
-      sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
-      sb.append(streamStatistics.toString());
-      sb.append("}");
+      sb.append(", ").append(streamStatistics);
     }
+    sb.append("}");
     return sb.toString();
   }
 
@@ -849,5 +861,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   long getLimit() {
     return this.limit;
+  }
+
+  @VisibleForTesting
+  BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }

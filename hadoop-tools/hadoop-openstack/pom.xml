@@ -26,9 +26,10 @@
   <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop OpenStack support</name>
   <description>
-    This module contains code to support integration with OpenStack.
-    Currently this consists of a filesystem client to read data from
-    and write data to an OpenStack Swift object store.
+    This module used to contain code to support integration with OpenStack.
+    It has been deleted as unsupported; the JAR is still published so as to
+    not break applications which declare an explicit maven/ivy/SBT dependency
+    on the module.
   </description>
   <packaging>jar</packaging>
 
@@ -37,32 +38,6 @@
     <downloadSources>true</downloadSources>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>tests-off</id>
-      <activation>
-        <file>
-          <missing>src/test/resources/auth-keys.xml</missing>
-        </file>
-      </activation>
-      <properties>
-        <maven.test.skip>true</maven.test.skip>
-      </properties>
-    </profile>
-    <profile>
-      <id>tests-on</id>
-      <activation>
-        <file>
-          <exists>src/test/resources/auth-keys.xml</exists>
-        </file>
-      </activation>
-      <properties>
-        <maven.test.skip>false</maven.test.skip>
-      </properties>
-    </profile>
-
-  </profiles>
-
   <build>
     <plugins>
       <plugin>
@@ -70,77 +45,11 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
-          </excludeFilterFile>
           <effort>Max</effort>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>deplist</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>list</goal>
-            </goals>
-            <configuration>
-              <!-- build a shellprofile -->
-              <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt</outputFile>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.enterprise</groupId>
-          <artifactId>cdi-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-annotations</artifactId>
-      <scope>compile</scope>
-    </dependency>
 
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpcore</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-  </dependencies>
 </project>

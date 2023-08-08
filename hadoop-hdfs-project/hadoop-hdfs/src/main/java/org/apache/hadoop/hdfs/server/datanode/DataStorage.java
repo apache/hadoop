@@ -1403,7 +1403,7 @@ public class DataStorage extends Storage {
   }
 
   /**
-   * Get the BlockPoolSliceStorage from {@link bpStorageMap}.
+   * Get the BlockPoolSliceStorage from {@link #bpStorageMap}.
    * If the object is not found, create a new object and put it to the map.
    */
   synchronized BlockPoolSliceStorage getBlockPoolSliceStorage(

@@ -20,21 +20,24 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerFaultInjector;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.spy;
 
 public class TestHAWithInProgressTail {
   private MiniQJMHACluster qjmhaCluster;
@@ -75,33 +78,34 @@ public class TestHAWithInProgressTail {
     cluster.transitionToActive(0);
     cluster.waitActive(0);
 
-    BlockManagerFaultInjector.instance = new BlockManagerFaultInjector() {
-      @Override
-      public void mockJNStreams() throws IOException {
-        spyOnJASjournal();
-      }
-    };
-
     // Stop EditlogTailer in Standby NameNode.
     cluster.getNameNode(1).getNamesystem().getEditLogTailer().stop();
 
     String p = "/testFailoverWhileTailingWithoutCache/";
-    mkdirs(nn0, p + 0, p + 1, p + 2, p + 3, p + 4);
-    mkdirs(nn0, p + 5, p + 6, p + 7, p + 8, p + 9);
-    mkdirs(nn0, p + 10, p + 11, p + 12, p + 13, p + 14);
+    nn0.getRpcServer().mkdirs(p + 0, FsPermission.getCachePoolDefault(), true);
 
     cluster.transitionToStandby(0);
-
+    spyFSEditLog();
     cluster.transitionToActive(1);
 
     // we should read them in nn1.
-    waitForFileInfo(nn1, p + 0, p + 1, p + 14);
+    assertNotNull(getFileInfo(nn1, p + 0, true, false, false));
   }
 
-  private void spyOnJASjournal() throws IOException {
-    JournalSet.JournalAndStream jas = nn1.getNamesystem().getEditLogTailer()
-        .getEditLog().getJournalSet().getAllJournalStreams().get(0);
+  private void spyFSEditLog() throws IOException {
+    FSEditLog spyEditLog = spy(nn1.getNamesystem().getFSImage().getEditLog());
+    Mockito.doAnswer(invocation -> {
+      invocation.callRealMethod();
+      spyOnJASjournal(spyEditLog.getJournalSet());
+      return null;
+    }).when(spyEditLog).recoverUnclosedStreams(anyBoolean());
 
+    DFSTestUtil.setEditLogForTesting(nn1.getNamesystem(), spyEditLog);
+    nn1.getNamesystem().getEditLogTailer().setEditLog(spyEditLog);
+  }
+
+  private void spyOnJASjournal(JournalSet journalSet) throws IOException {
+    JournalSet.JournalAndStream jas = journalSet.getAllJournalStreams().get(0);
     JournalManager oldManager = jas.getManager();
     oldManager.close();
 
@@ -112,31 +116,6 @@ public class TestHAWithInProgressTail {
     manager.recoverUnfinalizedSegments();
     jas.setJournalForTests(manager);
 
-    // First JournalNode with an empty response.
-    SpyQJournalUtil.mockOneJNReturnEmptyResponse(manager, 1L, 0);
-    // Second JournalNode with a slow response.
-    SpyQJournalUtil.mockOneJNWithSlowResponse(manager, 1L, 3000, 1);
-  }
-
-  /**
-   * Create the given directories on the provided NameNode.
-   */
-  private static void mkdirs(NameNode nameNode, String... dirNames)
-      throws Exception {
-    for (String dirName : dirNames) {
-      nameNode.getRpcServer().mkdirs(dirName,
-          FsPermission.createImmutable((short) 0755), true);
-    }
-  }
-
-  /**
-   * Wait up to 1 second until the given NameNode is aware of the existing of
-   * all of the provided fileNames.
-   */
-  private static void waitForFileInfo(NameNode nn, String... fileNames)
-      throws Exception {
-    for (String fileName : fileNames){
-      assertNotNull(getFileInfo(nn, fileName, true, false, false));
-    }
+    SpyQJournalUtil.mockJNWithEmptyOrSlowResponse(manager, 1);
   }
 }

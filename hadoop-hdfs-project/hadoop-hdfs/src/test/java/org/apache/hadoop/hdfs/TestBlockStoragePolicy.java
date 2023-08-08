@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -1009,9 +1009,9 @@ public class TestBlockStoragePolicy {
       checkDirectoryListing(barList, WARM, HOT);
 
       // restart namenode with checkpoint to make sure the fsimage is correct
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fs.setSafeMode(SafeModeAction.LEAVE);
       cluster.restartNameNode(true);
       dirList = fs.getClient().listPaths(dir.toString(),
           HdfsFileStatus.EMPTY_NAME).getPartialListing();

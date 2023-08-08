@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -189,7 +190,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -223,7 +224,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -264,7 +265,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1724,7 +1725,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         response.getType().toString());
     String xml = response.getEntity(String.class);
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -2040,13 +2041,11 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         appIds.contains(runningApp1.getApplicationId().toString()));
     assertTrue("Running app 2 should be in the result list!",
         appIds.contains(runningApp2.getApplicationId().toString()));
-    assertFalse("Finished app 1 should not be in the result list " +
-            "as it was submitted to 'root.default' but the query is for 'default'",
+    assertTrue("Running app 1 should be in the result list!",
         appIds.contains(finishedApp1.getApplicationId().toString()));
-    assertTrue("Finished app 2 should be in the result list " +
-            "as it was submitted to 'default' and the query is exactly for 'default'",
+    assertTrue("Running app 1 should be in the result list!",
         appIds.contains(finishedApp2.getApplicationId().toString()));
-    assertEquals("incorrect number of elements", 3, array.length());
+    assertEquals("incorrect number of elements", 4, array.length());
 
     rm.stop();
   }
@@ -2109,13 +2108,11 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         appIds.contains(runningApp1.getApplicationId().toString()));
     assertTrue("Running app 2 should be in the result list!",
         appIds.contains(runningApp2.getApplicationId().toString()));
-    assertTrue("Finished app 1 should be in the result list, " +
-            "as it was submitted to 'root.default' and the query is exactly for 'root.default'!",
+    assertTrue("Running app 2 should be in the result list!",
         appIds.contains(finishedApp1.getApplicationId().toString()));
-    assertFalse("Finished app 2 should not be in the result list, " +
-            "as it was submitted to 'default' but the query is for 'root.default'!",
+    assertTrue("Running app 2 should be in the result list!",
         appIds.contains(finishedApp2.getApplicationId().toString()));
-    assertEquals("incorrect number of elements", 3, array.length());
+    assertEquals("incorrect number of elements", 4, array.length());
 
     rm.stop();
   }

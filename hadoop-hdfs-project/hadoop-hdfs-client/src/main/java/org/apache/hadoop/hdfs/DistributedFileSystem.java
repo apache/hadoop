@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.fs.LeaseRecoverable;
+import org.apache.hadoop.fs.SafeMode;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -60,6 +63,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -94,7 +98,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -143,7 +146,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer, BatchListingOperations {
+    implements KeyProviderTokenIssuer, BatchListingOperations, LeaseRecoverable, SafeMode {
   private Path workingDir;
   private URI uri;
 
@@ -305,6 +308,7 @@ public class DistributedFileSystem extends FileSystem
    * @return true if the file is already closed
    * @throws IOException if an error occurs
    */
+  @Override
   public boolean recoverLease(final Path f) throws IOException {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Boolean>() {
@@ -419,6 +423,16 @@ public class DistributedFileSystem extends FileSystem
   public FSDataOutputStream append(Path f, final int bufferSize,
       final Progressable progress) throws IOException {
     return append(f, EnumSet.of(CreateFlag.APPEND), bufferSize, progress);
+  }
+
+  @Override
+  public FSDataOutputStream append(Path f, final int bufferSize,
+      final Progressable progress, boolean appendToNewBlock) throws IOException {
+    EnumSet<CreateFlag> flag = EnumSet.of(CreateFlag.APPEND);
+    if (appendToNewBlock) {
+      flag.add(CreateFlag.NEW_BLOCK);
+    }
+    return append(f, flag, bufferSize, progress);
   }
 
   /**
@@ -567,7 +581,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Same as
-   * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
+   * {@link #create(Path, FsPermission, EnumSet, int, short, long,
    * Progressable, ChecksumOpt)} with a few additions. First, addition of
    * favoredNodes that is a hint to where the namenode should place the file
    * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
@@ -636,12 +650,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
-   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * Progressable, ChecksumOpt, InetSocketAddress[], String, String)}, it provides a
    * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
    * EnumSet, int, short, long, Progressable)} with a few additions.
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
-   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * ChecksumOpt, InetSocketAddress[], String, String) for the descriptions of
    * additional parameters, i.e., favoredNodes, ecPolicyName and
    * storagePolicyName.
    */
@@ -1622,6 +1636,63 @@ public class DistributedFileSystem extends FileSystem
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
    *    HdfsConstants.SafeModeAction,boolean)
    */
+  @Override
+  public boolean setSafeMode(SafeModeAction action)
+      throws IOException {
+    return setSafeMode(action, false);
+  }
+
+  /**
+   * Enter, leave or get safe mode.
+   *
+   * @param action
+   *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
+   *          SafeModeAction.GET.
+   * @param isChecked
+   *          If true check only for Active NNs status, else check first NN's
+   *          status.
+   */
+  @Override
+  @SuppressWarnings("deprecation")
+  public boolean setSafeMode(SafeModeAction action, boolean isChecked)
+      throws IOException {
+    return this.setSafeMode(convertToClientProtocolSafeModeAction(action), isChecked);
+  }
+
+  /**
+   * Translating the {@link SafeModeAction} into {@link HdfsConstants.SafeModeAction}
+   * that is used by {@link DFSClient#setSafeMode(HdfsConstants.SafeModeAction, boolean)}.
+   *
+   * @param action any supported action listed in {@link SafeModeAction}.
+   * @return the converted {@link HdfsConstants.SafeModeAction}.
+   * @throws UnsupportedOperationException if the provided {@link SafeModeAction} cannot be
+   *           translated.
+   */
+  private static HdfsConstants.SafeModeAction convertToClientProtocolSafeModeAction(
+      SafeModeAction action) {
+    switch (action) {
+    case ENTER:
+      return HdfsConstants.SafeModeAction.SAFEMODE_ENTER;
+    case LEAVE:
+      return HdfsConstants.SafeModeAction.SAFEMODE_LEAVE;
+    case FORCE_EXIT:
+      return HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT;
+    case GET:
+      return HdfsConstants.SafeModeAction.SAFEMODE_GET;
+    default:
+      throw new UnsupportedOperationException("Unsupported safe mode action " + action);
+    }
+  }
+
+  /**
+   * Enter, leave or get safe mode.
+   *
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,
+   * boolean)
+   *
+   * @deprecated please instead use {@link #setSafeMode(SafeModeAction)}.
+   */
+  @Deprecated
   public boolean setSafeMode(HdfsConstants.SafeModeAction action)
       throws IOException {
     return setSafeMode(action, false);
@@ -1632,12 +1703,18 @@ public class DistributedFileSystem extends FileSystem
    *
    * @param action
    *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
-   *          SafeModeAction.GET
+   *          SafeModeAction.GET.
    * @param isChecked
    *          If true check only for Active NNs status, else check first NN's
-   *          status
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(SafeModeAction, boolean)
+   *          status.
+   *
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,
+   * boolean)
+   *
+   * @deprecated please instead use
+   *               {@link DistributedFileSystem#setSafeMode(SafeModeAction, boolean)}.
    */
+  @Deprecated
   public boolean setSafeMode(HdfsConstants.SafeModeAction action,
       boolean isChecked) throws IOException {
     return dfs.setSafeMode(action, isChecked);
@@ -1674,7 +1751,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * enable/disable/check restoreFaileStorage
+   * enable/disable/check restoreFaileStorage.
    *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
@@ -2037,7 +2114,7 @@ public class DistributedFileSystem extends FileSystem
    *           when there is an issue communicating with the NameNode
    */
   public boolean isInSafeMode() throws IOException {
-    return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+    return setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
   }
 
   /**
@@ -2453,6 +2530,7 @@ public class DistributedFileSystem extends FileSystem
    * @throws FileNotFoundException if the file does not exist.
    * @throws IOException If an I/O error occurred
    */
+  @Override
   public boolean isFileClosed(final Path src) throws IOException {
     Path absF = fixRelativePart(src);
     return new FileSystemLinkResolver<Boolean>() {
@@ -3874,6 +3952,7 @@ public class DistributedFileSystem extends FileSystem
     // (yet/ever) in the WebHDFS API.
     switch (validatePathCapabilityArgs(path, capability)) {
     case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+    case CommonPathCapabilities.LEASE_RECOVERABLE:
       return true;
     default:
       // fall through
@@ -3898,4 +3977,36 @@ public class DistributedFileSystem extends FileSystem
     return dfs.slowDatanodeReport();
   }
 
+  /**
+   * Returns LocatedBlocks of the corresponding HDFS file p from offset start
+   * for length len.
+   * This is similar to {@link #getFileBlockLocations(Path, long, long)} except
+   * that it returns LocatedBlocks rather than BlockLocation array.
+   * @param p path representing the file of interest.
+   * @param start offset
+   * @param len length
+   * @return a LocatedBlocks object
+   * @throws IOException
+   */
+  public LocatedBlocks getLocatedBlocks(Path p, long start, long len)
+      throws IOException {
+    final Path absF = fixRelativePart(p);
+    return new FileSystemLinkResolver<LocatedBlocks>() {
+      @Override
+      public LocatedBlocks doCall(final Path p) throws IOException {
+        return dfs.getLocatedBlocks(getPathName(p), start, len);
+      }
+      @Override
+      public LocatedBlocks next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.getLocatedBlocks(p, start, len);
+        }
+        throw new UnsupportedOperationException("Cannot getLocatedBlocks " +
+            "through a symlink to a non-DistributedFileSystem: " + fs + " -> "+
+            p);
+      }
+    }.resolve(this, absF);
+  }
 }

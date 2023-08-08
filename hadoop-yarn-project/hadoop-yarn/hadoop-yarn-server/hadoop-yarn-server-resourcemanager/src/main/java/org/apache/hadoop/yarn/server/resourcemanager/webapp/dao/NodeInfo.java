@@ -68,6 +68,7 @@ public class NodeInfo {
   protected ResourceInfo availableResource;
   protected NodeAttributesInfo nodeAttributesInfo;
   private ResourceInfo totalResource;
+  private String subClusterId;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -286,5 +287,13 @@ public class NodeInfo {
 
   public ResourceInfo getTotalResource() {
     return this.totalResource;
+  }
+
+  public String getSubClusterId() {
+    return subClusterId;
+  }
+
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
   }
 }

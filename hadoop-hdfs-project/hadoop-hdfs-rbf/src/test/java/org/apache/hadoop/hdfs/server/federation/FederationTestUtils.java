@@ -175,7 +175,7 @@ public final class FederationTestUtils {
     GenericTestUtils.waitFor(() -> {
       try {
         List<? extends FederationNamenodeContext> namenodes =
-            resolver.getNamenodesForNameserviceId(nsId);
+            resolver.getNamenodesForNameserviceId(nsId, false);
         if (namenodes != null) {
           for (FederationNamenodeContext namenode : namenodes) {
             // Check if this is the Namenode we are checking
@@ -207,7 +207,7 @@ public final class FederationTestUtils {
     GenericTestUtils.waitFor(() -> {
       try {
         List<? extends FederationNamenodeContext> nns =
-            resolver.getNamenodesForNameserviceId(nsId);
+            resolver.getNamenodesForNameserviceId(nsId, false);
         for (FederationNamenodeContext nn : nns) {
           if (nn.getState().equals(state)) {
             return true;
@@ -384,7 +384,8 @@ public final class FederationTestUtils {
           invocation.getMock());
       throw new IOException("Simulate connectionManager throw IOException");
     }).when(spyConnectionManager).getConnection(
-        any(UserGroupInformation.class), any(String.class), any(Class.class));
+        any(UserGroupInformation.class), any(String.class), any(Class.class),
+        any(String.class));
 
     Whitebox.setInternalState(rpcClient, "connectionManager",
         spyConnectionManager);

@@ -339,16 +339,19 @@ Hadoop supports [different policies for directory marker retention](directory_ma
 -essentially the classic "delete" and the higher-performance "keep" options; "authoritative"
 is just "keep" restricted to a part of the bucket.
 
-Example: test with `markers=delete`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=delete
-```
 
 Example: test with `markers=keep`
 
 ```
 mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=keep
+```
+
+This is the default and does not need to be explicitly set.
+
+Example: test with `markers=delete`
+
+```
+mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=delete
 ```
 
 Example: test with `markers=authoritative`
@@ -616,6 +619,20 @@ If your endpoint doesn't support that feature, this option should be in
 your `core-site.xml` file, so that trying to use S3 select fails fast with
 a meaningful error ("S3 Select not supported") rather than a generic Bad Request
 exception.
+
+### <a name="enabling-prefetch"></a> Enabling prefetch for all tests
+
+The tests are run with prefetch if the `prefetch` property is set in the
+maven build. This can be combined with the scale tests as well.
+
+```bash
+mvn verify -Dprefetch
+
+mvn verify -Dparallel-tests -Dprefetch -DtestsThreadCount=8
+
+mvn verify -Dparallel-tests -Dprefetch -Dscale -DtestsThreadCount=8
+```
+
 
 ### Testing Requester Pays
 
@@ -1254,33 +1271,6 @@ bin/hdfs fetchdt -print secrets.bin
 # expect warning "No TokenRenewer defined for token kind S3ADelegationToken/Session"
 bin/hdfs fetchdt -renew secrets.bin
 
-# ---------------------------------------------------
-# Directory markers
-# ---------------------------------------------------
-
-# require success
-bin/hadoop s3guard bucket-info -markers aware $BUCKET
-# expect failure unless bucket policy is keep
-bin/hadoop s3guard bucket-info -markers keep $BUCKET/path
-
-# you may need to set this on a per-bucket basis if you have already been
-# playing with options
-bin/hadoop s3guard -D fs.s3a.directory.marker.retention=keep bucket-info -markers keep $BUCKET/path
-bin/hadoop s3guard -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep bucket-info -markers keep $BUCKET/path
-
-# expect to see "Directory markers will be kept" messages and status code of "46"
-bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -mkdir $BUCKET/p1
-bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -mkdir $BUCKET/p1/p2
-bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -touchz $BUCKET/p1/p2/file
-
-# expect failure as markers will be found for /p1/ and /p1/p2/
-bin/hadoop s3guard markers -audit -verbose $BUCKET
-
-# clean will remove markers
-bin/hadoop s3guard markers -clean -verbose $BUCKET
-
-# expect success and exit code of 0
-bin/hadoop s3guard markers -audit -verbose $BUCKET
 
 # ---------------------------------------------------
 # Copy to from local

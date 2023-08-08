@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -27,19 +26,23 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ExecutionException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
-
-import org.apache.hadoop.io.retry.MultiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.retry.MultiException;
+import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
+import org.apache.hadoop.ipc.StandbyException;
 
 /**
  * A FailoverProxyProvider implementation that technically does not "failover"
@@ -55,7 +58,7 @@ public class RequestHedgingProxyProvider<T> extends
   public static final Logger LOG =
       LoggerFactory.getLogger(RequestHedgingProxyProvider.class);
 
-  class RequestHedgingInvocationHandler implements InvocationHandler {
+  class RequestHedgingInvocationHandler implements RpcInvocationHandler {
 
     final Map<String, ProxyInfo<T>> targetProxies;
     // Proxy of the active nn
@@ -123,11 +126,18 @@ public class RequestHedgingProxyProvider<T> extends
               }
               executor = Executors.newFixedThreadPool(proxies.size());
               completionService = new ExecutorCompletionService<>(executor);
+              // Set the callId and other informations from current thread.
+              final int callId = Client.getCallId();
+              final int retryCount = Client.getRetryCount();
+              final Object externalHandler = Client.getExternalHandler();
               for (final Map.Entry<String, ProxyInfo<T>> pEntry : targetProxies
                   .entrySet()) {
                 Callable<Object> c = new Callable<Object>() {
                   @Override
                   public Object call() throws Exception {
+                    // Call Id and other informations from parent thread.
+                    Client.setCallIdAndRetryCount(callId, retryCount,
+                        externalHandler);
                     LOG.trace("Invoking method {} on proxy {}", method,
                         pEntry.getValue().proxyInfo);
                     return method.invoke(pEntry.getValue().proxy, args);
@@ -136,7 +146,9 @@ public class RequestHedgingProxyProvider<T> extends
                 proxyMap.put(completionService.submit(c), pEntry.getValue());
                 numAttempts++;
               }
-
+              // Current thread's callId will not be cleared as RPC happens in
+              // separate threads. Reset the CallId information Forcefully.
+              Client.setCallIdAndRetryCountUnprotected(null, 0, null);
               Map<String, Exception> badResults = new HashMap<>();
               while (numAttempts > 0) {
                 Future<Object> callResultFuture = completionService.take();
@@ -188,6 +200,18 @@ public class RequestHedgingProxyProvider<T> extends
             currentUsedProxy.proxyInfo);
         throw unwrappedException;
       }
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
+
+    @Override
+    public ConnectionId getConnectionId() {
+      if (currentUsedProxy == null) {
+        return null;
+      }
+      return RPC.getConnectionIdForProxy(currentUsedProxy.proxy);
     }
   }
 

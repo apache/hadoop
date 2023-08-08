@@ -37,6 +37,7 @@ import java.util.zip.GZIPOutputStream;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
@@ -3041,6 +3042,96 @@ public class TestDFSShell {
         "-appendToFile", file1.toString(), "-", remoteFile.toString() };
     res = ToolRunner.run(shell, argv);
     assertThat(res, not(0));
+  }
+
+  @Test (timeout = 300000)
+  public void testAppendToFileWithOptionN() throws Exception {
+    final int inputFileLength = 1024 * 1024;
+    File testRoot = new File(TEST_ROOT_DIR, "testAppendToFileWithOptionN");
+    testRoot.mkdirs();
+
+    File file1 = new File(testRoot, "file1");
+    createLocalFileWithRandomData(inputFileLength, file1);
+
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6).build()) {
+      cluster.waitActive();
+      FileSystem hdfs = cluster.getFileSystem();
+      assertTrue("Not a HDFS: " + hdfs.getUri(),
+          hdfs instanceof DistributedFileSystem);
+
+      // Run appendToFile with option n by replica policy once, make sure that the target file is
+      // created and is of the right size and block number is correct.
+      String dir = "/replica";
+      boolean mkdirs = hdfs.mkdirs(new Path(dir));
+      assertTrue("Mkdir fail", mkdirs);
+      Path remoteFile = new Path(dir + "/remoteFile");
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      String[] argv = new String[] {
+          "-appendToFile", "-n", file1.toString(), remoteFile.toString() };
+      int res = ToolRunner.run(shell, argv);
+      assertEquals("Run appendToFile command fail", 0, res);
+      FileStatus fileStatus = hdfs.getFileStatus(remoteFile);
+      assertEquals("File size should be " + inputFileLength,
+          inputFileLength, fileStatus.getLen());
+      BlockLocation[] fileBlockLocations =
+          hdfs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
+      assertEquals("Block Num should be 1", 1, fileBlockLocations.length);
+
+      // Run appendToFile with option n by replica policy again and
+      // make sure that the target file size has been doubled and block number has been doubled.
+      res = ToolRunner.run(shell, argv);
+      assertEquals("Run appendToFile command fail", 0, res);
+      fileStatus = hdfs.getFileStatus(remoteFile);
+      assertEquals("File size should be " + inputFileLength * 2,
+          inputFileLength * 2, fileStatus.getLen());
+      fileBlockLocations = hdfs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
+      assertEquals("Block Num should be 2", 2, fileBlockLocations.length);
+
+      // Before run appendToFile with option n by ec policy, set ec policy for the dir.
+      dir = "/ecPolicy";
+      final String ecPolicyName = "RS-6-3-1024k";
+      mkdirs = hdfs.mkdirs(new Path(dir));
+      assertTrue("Mkdir fail", mkdirs);
+      ((DistributedFileSystem) hdfs).setErasureCodingPolicy(new Path(dir), ecPolicyName);
+      ErasureCodingPolicy erasureCodingPolicy =
+          ((DistributedFileSystem) hdfs).getErasureCodingPolicy(new Path(dir));
+      assertEquals("Set ec policy fail", ecPolicyName, erasureCodingPolicy.getName());
+
+      // Run appendToFile with option n by ec policy once, make sure that the target file is
+      // created and is of the right size and block group number is correct.
+      remoteFile = new Path(dir + "/remoteFile");
+      argv = new String[] {
+          "-appendToFile", "-n", file1.toString(), remoteFile.toString() };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("Run appendToFile command fail", 0, res);
+      fileStatus = hdfs.getFileStatus(remoteFile);
+      assertEquals("File size should be " + inputFileLength,
+          inputFileLength, fileStatus.getLen());
+      fileBlockLocations = hdfs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
+      assertEquals("Block Group Num should be 1", 1, fileBlockLocations.length);
+
+      // Run appendToFile without option n by ec policy again and make sure that
+      // append on EC file without new block must fail.
+      argv = new String[] {
+          "-appendToFile", file1.toString(), remoteFile.toString() };
+      res = ToolRunner.run(shell, argv);
+      assertTrue("Run appendToFile command must fail", res != 0);
+
+      // Run appendToFile with option n by ec policy again and
+      // make sure that the target file size has been doubled
+      // and block group number has been doubled.
+      argv = new String[] {
+          "-appendToFile", "-n", file1.toString(), remoteFile.toString() };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("Run appendToFile command fail", 0, res);
+      fileStatus = hdfs.getFileStatus(remoteFile);
+      assertEquals("File size should be " + inputFileLength * 2,
+          inputFileLength * 2, fileStatus.getLen());
+      fileBlockLocations = hdfs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
+      assertEquals("Block Group Num should be 2", 2, fileBlockLocations.length);
+    }
   }
 
   @Test (timeout = 30000)

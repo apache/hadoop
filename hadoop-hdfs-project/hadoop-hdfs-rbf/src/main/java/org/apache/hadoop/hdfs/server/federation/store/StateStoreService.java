@@ -257,6 +257,7 @@ public class StateStoreService extends CompositeService {
    * Get the record store in this State Store for a given interface.
    *
    * @param recordStoreClass Class of the record store.
+   * @param <T> The type of the record store.
    * @return Registered record store or null if not found.
    */
   public <T extends RecordStore<?>> T getRegisteredRecordStore(
@@ -270,6 +271,17 @@ public class StateStoreService extends CompositeService {
       }
     }
     return null;
+  }
+
+  /**
+   * Get the list of all RecordStores.
+   *
+   * @param <T> The type of the record stores that are returned.
+   * @return a list of each RecordStore.
+   */
+  @SuppressWarnings("unchecked")
+  public <T extends RecordStore<? extends BaseRecord>> List<T> getRecordStores() {
+    return new ArrayList<>((Collection<T>) recordStores.values());
   }
 
   /**
@@ -423,7 +435,7 @@ public class StateStoreService extends CompositeService {
     }
     if (success) {
       // Uses local time, not driver time.
-      this.cacheLastUpdateTime = Time.now();
+      this.cacheLastUpdateTime = Time.monotonicNow();
     }
   }
 

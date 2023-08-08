@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -335,6 +337,17 @@ public class JsonUtil {
       return null;
     }
 
+    final Map<String, Object> m = toJsonMap(locatedblocks);
+    return toJsonString(LocatedBlocks.class, m);
+  }
+
+  /** Convert LocatedBlocks to a Map. */
+  public static Map<String, Object> toJsonMap(final LocatedBlocks locatedblocks)
+      throws IOException {
+    if (locatedblocks == null) {
+      return null;
+    }
+
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("fileLength", locatedblocks.getFileLength());
     m.put("isUnderConstruction", locatedblocks.isUnderConstruction());
@@ -342,7 +355,7 @@ public class JsonUtil {
     m.put("locatedBlocks", toJsonArray(locatedblocks.getLocatedBlocks()));
     m.put("lastLocatedBlock", toJsonMap(locatedblocks.getLastLocatedBlock()));
     m.put("isLastBlockComplete", locatedblocks.isLastBlockComplete());
-    return toJsonString(LocatedBlocks.class, m);
+    return m;
   }
 
   /** Convert a ContentSummary to a Json string. */
@@ -676,7 +689,8 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> toJsonMap(
+  @VisibleForTesting
+  static Map<String, Object> toJsonMap(
       final BlockLocation blockLocation) throws IOException {
     if (blockLocation == null) {
       return null;
@@ -696,15 +710,58 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
+    return toJsonString("BlockLocations", JsonUtil.toJsonMap(locations));
+  }
+
+  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
+      throws IOException {
     if (locations == null) {
       return null;
     }
     final Map<String, Object> m = new HashMap<>();
     Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
+    for (int i = 0; i < locations.length; i++) {
       blockLocations[i] = toJsonMap(locations[i]);
     }
     m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return toJsonString("BlockLocations", m);
+    return m;
+  }
+
+  public static String toJsonString(FsStatus status) {
+    return toJsonString(FsStatus.class, toJsonMap(status));
+  }
+
+  public static Map<String, Object> toJsonMap(FsStatus status) {
+    if (status == null) {
+      return null;
+    }
+    final Map<String, Object> m = new HashMap<>();
+    m.put("capacity", status.getCapacity());
+    m.put("used", status.getUsed());
+    m.put("remaining", status.getRemaining());
+    return m;
+  }
+
+  public static Map<String, Object> toJsonMap(ErasureCodingPolicyInfo ecPolicyInfo) {
+    if (ecPolicyInfo == null) {
+      return null;
+    }
+    Map<String, Object> m = new HashMap<>();
+    m.put("policy", ecPolicyInfo.getPolicy());
+    m.put("state", ecPolicyInfo.getState());
+    return m;
+  }
+
+  public static String toJsonString(ErasureCodingPolicyInfo[] ecPolicyInfos) {
+    final Map<String, Object> erasureCodingPolicies = new HashMap<>();
+    Object[] erasureCodingPolicyInfos = null;
+    if (ecPolicyInfos != null && ecPolicyInfos.length > 0) {
+      erasureCodingPolicyInfos = new Object[ecPolicyInfos.length];
+      for (int i = 0; i < ecPolicyInfos.length; i++) {
+        erasureCodingPolicyInfos[i] = toJsonMap(ecPolicyInfos[i]);
+      }
+    }
+    erasureCodingPolicies.put("ErasureCodingPolicyInfo", erasureCodingPolicyInfos);
+    return toJsonString("ErasureCodingPolicies", erasureCodingPolicies);
   }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -96,12 +99,45 @@ public class TestJournalNodeSync {
     }
   }
 
+  /**
+   * Test that the "self exclusion" works when there are multiple JournalNode instances running on
+   * the same server, but on different ports.
+   */
+  @Test
+  public void testJournalNodeExcludesSelfMultilpePorts() throws URISyntaxException, IOException {
+    String uri = qjmhaCluster.getJournalCluster().getQuorumJournalURI("ns1").toString();
+    JournalNodeSyncer syncer = jCluster.getJournalNode(0).getJournalSyncer("ns1");
+
+    // Test: Get the Journal address list for the default configuration
+    List<InetSocketAddress> addrList = syncer.getJournalAddrList(uri);
+
+    // Verify: One of the addresses should be excluded so that the node isn't syncing with itself
+    assertEquals(2, addrList.size());
+  }
+
+  /**
+   * Test that the "self exclusion" works when there a host uses a wildcard address.
+   */
+  @Test
+  public void testJournalNodeExcludesSelfWildCard() throws URISyntaxException, IOException {
+    String uri = qjmhaCluster.getJournalCluster().getQuorumJournalURI("ns1").toString();
+    JournalNodeSyncer syncer = jCluster.getJournalNode(0).getJournalSyncer("ns1");
+
+    // Test: Request the same Journal address list, but using the IPv4 "0.0.0.0" which is commonly
+    // used as a bind host.
+    String boundHostUri = uri.replaceAll("127.0.0.1", "0.0.0.0");
+    List<InetSocketAddress> boundHostAddrList = syncer.getJournalAddrList(boundHostUri);
+
+    // Verify: One of the address should be excluded so that the node isn't syncing with itself
+    assertEquals(2, boundHostAddrList.size());
+  }
+
   @Test(timeout=30000)
   public void testJournalNodeSync() throws Exception {
 
     //As by default 3 journal nodes are started;
     for(int i=0; i<3; i++) {
-      Assert.assertEquals(true,
+      assertEquals(true,
           jCluster.getJournalNode(i).getJournalSyncerStatus("ns1"));
     }
 
@@ -386,13 +422,13 @@ public class TestJournalNodeSync {
           HdfsConstants.RollingUpgradeAction.PREPARE);
 
     //query rolling upgrade
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Restart the Standby NN with rollingUpgrade option
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Do some edits and delete some edit logs
@@ -420,7 +456,7 @@ public class TestJournalNodeSync {
     // Restart the current standby NN (previously active)
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
     dfsCluster.waitActive();
 

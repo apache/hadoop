@@ -19,14 +19,23 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The MultipleOutputs class simplifies writing output data 
@@ -191,6 +200,8 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    * Counters group used by the counters of MultipleOutputs.
    */
   private static final String COUNTERS_GROUP = MultipleOutputs.class.getName();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(org.apache.hadoop.mapred.lib.MultipleOutputs.class);
 
   /**
    * Cache for the taskContexts
@@ -343,6 +354,11 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   public static boolean getCountersEnabled(JobContext job) {
     return job.getConfiguration().getBoolean(COUNTERS_ENABLED, false);
+  }
+
+  @VisibleForTesting
+  synchronized void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
+    this.recordWriters = recordWriters;
   }
 
   /**
@@ -568,8 +584,43 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   @SuppressWarnings("unchecked")
   public void close() throws IOException, InterruptedException {
+    Configuration conf = context.getConfiguration();
+    int nThreads = conf.getInt(MRConfig.MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT,
+        MRConfig.DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT);
+    AtomicBoolean encounteredException = new AtomicBoolean(false);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("MultipleOutputs-close")
+        .setUncaughtExceptionHandler(((t, e) -> {
+          LOG.error("Thread " + t + " failed unexpectedly", e);
+          encounteredException.set(true);
+        })).build();
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads, threadFactory);
+
+    List<Callable<Object>> callableList = new ArrayList<>(recordWriters.size());
+
     for (RecordWriter writer : recordWriters.values()) {
-      writer.close(context);
+      callableList.add(() -> {
+        try {
+          writer.close(context);
+        } catch (IOException e) {
+          LOG.error("Error while closing MultipleOutput file", e);
+          encounteredException.set(true);
+        }
+        return null;
+      });
+    }
+    try {
+      executorService.invokeAll(callableList);
+    } catch (InterruptedException e) {
+      LOG.warn("Closing is Interrupted");
+      Thread.currentThread().interrupt();
+    } finally {
+      executorService.shutdown();
+    }
+
+    if (encounteredException.get()) {
+      throw new IOException(
+          "One or more threads encountered exception during close. See prior errors.");
     }
   }
 }
+

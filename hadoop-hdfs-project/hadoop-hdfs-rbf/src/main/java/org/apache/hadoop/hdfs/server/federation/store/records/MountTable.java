@@ -42,9 +42,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Data schema for {@link
  * org.apache.hadoop.hdfs.server.federation.store.MountTableStore
- * FederationMountTableStore} data stored in the {@link
+ * MountTableStore} data stored in the {@link
  * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * FederationStateStoreService}. Supports string serialization.
+ * StateStoreService}. Supports string serialization.
  */
 public abstract class MountTable extends BaseRecord {
 
@@ -125,6 +125,7 @@ public abstract class MountTable extends BaseRecord {
    *
    * @param src Source path in the mount entry.
    * @param destinations Name service destinations of the mount point.
+   * @return The MountTable object.
    * @throws IOException If it cannot be created.
    */
   public static MountTable newInstance(final String src,

@@ -30,6 +30,10 @@ public interface FederationRPCMBean {
 
   long getProxyOps();
 
+  long getActiveProxyOps();
+
+  long getObserverProxyOps();
+
   double getProxyAvg();
 
   long getProcessingOps();

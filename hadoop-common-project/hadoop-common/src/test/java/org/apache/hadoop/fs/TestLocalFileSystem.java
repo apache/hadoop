@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -650,7 +649,8 @@ public class TestLocalFileSystem {
     RawLocalFileSystem fs = spy(origFs);
     Configuration conf = mock(Configuration.class);
     fs.setConf(conf);
-    Whitebox.setInternalState(fs, "useDeprecatedFileStatus", false);
+
+    RawLocalFileSystem.setUseDeprecatedFileStatus(false);
     Path path = new Path("/foo");
     File pipe = mock(File.class);
     when(pipe.isFile()).thenReturn(false);

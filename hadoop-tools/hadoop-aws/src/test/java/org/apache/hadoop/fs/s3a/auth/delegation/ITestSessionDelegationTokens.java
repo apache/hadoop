@@ -249,7 +249,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
    * @return the retrieved DT. This is only for error reporting.
    * @throws IOException failure.
    */
-  @SuppressWarnings("OptionalGetWithoutIsPresent")
+  @SuppressWarnings({"OptionalGetWithoutIsPresent", "deprecation"})
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
       final MarshalledCredentials session,
@@ -259,8 +259,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     // clear any credential paths to ensure they don't get picked up and used
     // for authentication.
     unsetHadoopCredentialProviders(conf);
-    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER,
-        TemporaryAWSCredentialsProvider.NAME);
+    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER, TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
       delegationTokens2.bindToFileSystem(

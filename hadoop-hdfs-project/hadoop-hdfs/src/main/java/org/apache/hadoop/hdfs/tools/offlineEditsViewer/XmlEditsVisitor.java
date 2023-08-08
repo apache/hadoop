@@ -60,8 +60,8 @@ public class XmlEditsVisitor implements OfflineEditsVisitor {
   public XmlEditsVisitor(OutputStream out)
       throws IOException {
     this.out = out;
-    factory =(SAXTransformerFactory)SAXTransformerFactory.newInstance();
     try {
+      factory = org.apache.hadoop.util.XMLUtils.newSecureSAXTransformerFactory();
       TransformerHandler handler = factory.newTransformerHandler();
       handler.getTransformer().setOutputProperty(OutputKeys.METHOD, "xml");
       handler.getTransformer().setOutputProperty(OutputKeys.ENCODING, "UTF-8");

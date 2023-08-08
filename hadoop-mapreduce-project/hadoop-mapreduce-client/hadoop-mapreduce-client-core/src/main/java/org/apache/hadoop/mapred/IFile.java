@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 public class IFile {
   private static final Logger LOG = LoggerFactory.getLogger(IFile.class);
   public static final int EOF_MARKER = -1; // End of File Marker
+  private static final int ARRAY_MAX_SIZE = Integer.MAX_VALUE - 8;
   
   /**
    * <code>IFile.Writer</code> to write out intermediate map-outputs. 
@@ -152,7 +153,7 @@ public class IFile {
       // Write EOF_MARKER for key/value length
       WritableUtils.writeVInt(out, EOF_MARKER);
       WritableUtils.writeVInt(out, EOF_MARKER);
-      decompressedBytesWritten += 2 * WritableUtils.getVIntSize(EOF_MARKER);
+      decompressedBytesWritten += (long) 2 * WritableUtils.getVIntSize(EOF_MARKER);
       
       //Flush the stream
       out.flush();
@@ -219,7 +220,7 @@ public class IFile {
       buffer.reset();
       
       // Update bytes written
-      decompressedBytesWritten += keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength +
                                   WritableUtils.getVIntSize(keyLength) + 
                                   WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
@@ -245,7 +246,7 @@ public class IFile {
       out.write(value.getData(), value.getPosition(), valueLength); 
 
       // Update bytes written
-      decompressedBytesWritten += keyLength + valueLength + 
+      decompressedBytesWritten += (long) keyLength + valueLength +
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
@@ -394,7 +395,7 @@ public class IFile {
       // Read key and value lengths
       currentKeyLength = WritableUtils.readVInt(dIn);
       currentValueLength = WritableUtils.readVInt(dIn);
-      bytesRead += WritableUtils.getVIntSize(currentKeyLength) +
+      bytesRead += (long) WritableUtils.getVIntSize(currentKeyLength) +
                    WritableUtils.getVIntSize(currentValueLength);
       
       // Check for EOF
@@ -433,8 +434,10 @@ public class IFile {
     }
     
     public void nextRawValue(DataInputBuffer value) throws IOException {
+      final int targetSize = currentValueLength << 1;
+
       final byte[] valBytes = (value.getData().length < currentValueLength)
-        ? new byte[currentValueLength << 1]
+        ? new byte[targetSize < 0 ? ARRAY_MAX_SIZE : targetSize]
         : value.getData();
       int i = readData(valBytes, 0, currentValueLength);
       if (i != currentValueLength) {

@@ -34,6 +34,9 @@ public final class DiagnosticKeys {
   public static final String STAGE = "stage";
   public static final String EXCEPTION = "exception";
   public static final String STACKTRACE = "stacktrace";
+  public static final String TOTAL_MEMORY = "total.memory";
+  public static final String FREE_MEMORY = "free.memory";
+  public static final String HEAP_MEMORY = "heap.memory";
 
 
   /** Directory where manifests were renamed: {@value}. */

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,9 +29,12 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +118,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private boolean nodeLabelsEnabled;
   private Set<String> exclusiveEnforcedPartitions;
   private String amDefaultNodeLabel;
+  private FederationStateStoreService federationStateStoreService;
 
   private static final String USER_ID_PREFIX = "userid=";
 
@@ -347,6 +352,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + ", removing app " + removeApp.getApplicationId()
           + " from state store.");
       rmContext.getStateStore().removeApplication(removeApp);
+      removeApplicationIdFromStateStore(removeId);
       completedAppsInStateStore--;
     }
 
@@ -358,6 +364,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + this.maxCompletedAppsInMemory + ", removing app " + removeId
           + " from memory: ");
       rmContext.getRMApps().remove(removeId);
+      removeApplicationIdFromStateStore(removeId);
       this.applicationACLsManager.removeApplication(removeId);
     }
   }
@@ -547,6 +554,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
 
+    // Get full queue path for the application when submitting by short queue name
+    placementQueueName = getQueuePath(placementQueueName);
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
@@ -575,6 +585,20 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
     return application;
+  }
+
+  public String getQueuePath(String queueName) {
+    String queuePath = queueName;
+    try {
+      QueueInfo queueInfo =
+          scheduler.getQueueInfo(queueName, false, false);
+      if (queueInfo != null && queueInfo.getQueuePath() != null) {
+        queuePath = queueInfo.getQueuePath();
+      }
+    } catch (IOException e) {
+      // if the queue does not exist, we just ignore here
+    }
+    return queuePath;
   }
 
   private boolean checkPermission(AccessRequest accessRequest,
@@ -1002,7 +1026,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;
       } else {
-        LOG.warn("User '{}' from application tag does not have access to " +
+        LOG.warn("Proxy user '{}' from application tag does not have access to " +
                 " queue '{}'. " + "The placement is done for user '{}'",
                 userNameFromAppTag, queue, user);
       }
@@ -1051,7 +1075,45 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       LOG.info("Placed application with ID " + context.getApplicationId() +
           " in queue: " + placementContext.getQueue() +
           ", original submission queue was: " + context.getQueue());
-      context.setQueue(placementContext.getQueue());
+      context.setQueue(placementContext.getFullQueuePath());
     }
+  }
+
+  @VisibleForTesting
+  public void setFederationStateStoreService(FederationStateStoreService stateStoreService) {
+    this.federationStateStoreService = stateStoreService;
+  }
+
+  /**
+   * Remove ApplicationId From StateStore.
+   *
+   * @param appId appId
+   */
+  private void removeApplicationIdFromStateStore(ApplicationId appId) {
+    if (HAUtil.isFederationEnabled(conf) && federationStateStoreService != null) {
+      try {
+        boolean cleanUpResult =
+            federationStateStoreService.cleanUpFinishApplicationsWithRetries(appId, true);
+        if(cleanUpResult){
+          LOG.info("applicationId = {} remove from state store success.", appId);
+        } else {
+          LOG.warn("applicationId = {} remove from state store failed.", appId);
+        }
+      } catch (Exception e) {
+        LOG.error("applicationId = {} remove from state store error.", appId, e);
+      }
+    }
+  }
+
+  // just test using
+  @VisibleForTesting
+  public void checkAppNumCompletedLimit4Test() {
+    checkAppNumCompletedLimit();
+  }
+
+  // just test using
+  @VisibleForTesting
+  public void finishApplication4Test(ApplicationId applicationId) {
+    finishApplication(applicationId);
   }
 }

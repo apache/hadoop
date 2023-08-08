@@ -276,8 +276,8 @@ public final class FederationPoliciesTestUtil {
    * @throws YarnException in case the initialization is not successful.
    */
   public static FederationStateStoreFacade initFacade() throws YarnException {
-    return initFacade(new ArrayList<>(), mock(SubClusterPolicyConfiguration
-        .class));
+    SubClusterPolicyConfiguration policyConfiguration =
+        SubClusterPolicyConfiguration.newInstance(null, null, null);
+    return initFacade(new ArrayList<>(), policyConfiguration);
   }
-
 }

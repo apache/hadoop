@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +31,9 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -128,6 +131,10 @@ public class NodesListManager extends CompositeService implements
     enableNodeUntrackedWithoutIncludePath = conf.getBoolean(
         YarnConfiguration.RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH,
         YarnConfiguration.DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH);
+    final Set<String> untrackedSelectiveStatesToRemove = Arrays.stream(conf.getStrings(
+        YarnConfiguration.RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE,
+        YarnConfiguration.DEFAULT_RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE))
+            .collect(Collectors.toSet());
     final int nodeRemovalTimeout =
         conf.getInt(
             YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC,
@@ -146,6 +153,13 @@ public class NodesListManager extends CompositeService implements
           NodeId nodeId = entry.getKey();
           RMNode rmNode = entry.getValue();
           if (isUntrackedNode(rmNode.getHostName())) {
+            if(CollectionUtils.isNotEmpty(untrackedSelectiveStatesToRemove) &&
+                !untrackedSelectiveStatesToRemove.contains(rmNode.getState().toString())) {
+              LOG.warn("Untracked node {}, with node state {} is not part of " +
+                  "node-removal-untracked.node-selective-states-to-remove config",
+                  rmNode.getHostName(), rmNode.getState().toString());
+              continue;
+            }
             if (rmNode.getUntrackedTimeStamp() == 0) {
               rmNode.setUntrackedTimeStamp(now);
             } else
@@ -220,7 +234,11 @@ public class NodesListManager extends CompositeService implements
 
   public void refreshNodes(Configuration yarnConf)
       throws IOException, YarnException {
-    refreshNodes(yarnConf, false);
+    try {
+      refreshNodes(yarnConf, false);
+    } catch (YarnException | IOException ex) {
+      disableHostsFileReader(ex);
+    }
   }
 
   public void refreshNodes(Configuration yarnConf, boolean graceful)
@@ -618,12 +636,12 @@ public class NodesListManager extends CompositeService implements
   }
 
   /**
-   * Refresh the nodes gracefully
+   * Refresh the nodes gracefully.
    *
-   * @param yarnConf
+   * @param yarnConf yarn configuration.
    * @param timeout decommission timeout, null means default timeout.
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   public void refreshNodesGracefully(Configuration yarnConf, Integer timeout)
       throws IOException, YarnException {
@@ -685,6 +703,9 @@ public class NodesListManager extends CompositeService implements
   /**
    * A NodeId instance needed upon startup for populating inactive nodes Map.
    * It only knows the hostname/ip and marks the port to -1 or invalid.
+   *
+   * @param host host name.
+   * @return node id.
    */
   public static NodeId createUnknownNodeId(String host) {
     return NodeId.newInstance(host, -1);

@@ -39,6 +39,7 @@ function hadoop_usage
   hadoop_add_subcommand "container" client "prints container(s) report"
   hadoop_add_subcommand "daemonlog" admin "get/set the log level for each daemon"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "globalpolicygenerator" daemon "run the Global Policy Generator"
   hadoop_add_subcommand "jar <jar>" client "run a jar file"
   hadoop_add_subcommand "logs" client "dump container logs"
   hadoop_add_subcommand "node" admin "prints node report(s)"
@@ -50,6 +51,7 @@ function hadoop_usage
   hadoop_add_subcommand "fs2cs" client "converts Fair Scheduler configuration to Capacity Scheduler (EXPERIMENTAL)"
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
+  hadoop_add_subcommand "routeradmin" admin "router admin tools"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
   hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
@@ -104,6 +106,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
       echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
       exit 0
+    ;;
+    globalpolicygenerator)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator'
     ;;
     jar)
       HADOOP_CLASSNAME=org.apache.hadoop.util.RunJar
@@ -179,6 +185,9 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       if [[ -n "${YARN_ROUTER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${YARN_ROUTER_HEAPSIZE}"
       fi
+    ;;
+    routeradmin)
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RouterCLI'
     ;;
     schedulerconf)
     HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'

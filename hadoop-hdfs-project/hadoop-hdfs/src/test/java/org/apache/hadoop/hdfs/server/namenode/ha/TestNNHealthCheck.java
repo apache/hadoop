@@ -29,12 +29,12 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
@@ -105,7 +105,7 @@ public class TestNNHealthCheck {
 
     // manually set safemode.
     cluster.getFileSystem(0)
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        .setSafeMode(SafeModeAction.ENTER);
 
     NNHAServiceTarget haTarget = new NNHAServiceTarget(conf,
         DFSUtil.getNamenodeNameServiceId(conf), "nn1");

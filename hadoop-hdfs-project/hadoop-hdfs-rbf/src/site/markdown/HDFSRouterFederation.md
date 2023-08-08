@@ -46,7 +46,6 @@ This approach has the same architecture as [YARN federation](../../hadoop-yarn/h
 ### Example flow
 The simplest configuration deploys a Router on each NameNode machine.
 The Router monitors the local NameNode and its state and heartbeats to the State Store.
-The Router monitors the local NameNode and heartbeats the state to the State Store.
 When a regular DFS client contacts any of the Routers to access a file in the federated filesystem, the Router checks the Mount Table in the State Store (i.e., the local cache) to find out which subcluster contains the file.
 Then it checks the Membership table in the State Store (i.e., the local cache) for the NameNode responsible for the subcluster.
 After it has identified the correct NameNode, the Router proxies the request.
@@ -328,6 +327,17 @@ This is useful when decommissioning subclusters or when one subcluster is missbe
 To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server.
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refreshRouterArgs <host:ipc_port> <key> [arg1..argn]
+
+### Router state dump
+
+To diagnose the current state of the routers, you can use the
+dumpState command. It generates a text dump of the records in the
+State Store. Since it uses the configuration to find and read the
+state store, it is often easiest to use the machine where the routers
+run. The command runs locally, so the routers do not have to be up to
+use this command.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -dumpState
 
 Client configuration
 --------------------

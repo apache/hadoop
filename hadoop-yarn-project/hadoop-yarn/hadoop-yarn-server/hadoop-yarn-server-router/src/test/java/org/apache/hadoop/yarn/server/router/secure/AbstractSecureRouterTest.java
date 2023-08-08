@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.server.router.secure;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.router.Router;
@@ -34,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -107,6 +111,8 @@ public abstract class AbstractSecureRouterTest {
     // Router Kerberos KeyTab configuration
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
     conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
+
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   /**
@@ -175,6 +181,9 @@ public abstract class AbstractSecureRouterTest {
    */
   public synchronized void startSecureRouter() {
     assertNull("Router is already running", router);
+    MemoryFederationStateStore stateStore = new MemoryFederationStateStore();
+    stateStore.init(getConf());
+    FederationStateStoreFacade.getInstance().reinitialize(stateStore, getConf());
     UserGroupInformation.setConfiguration(conf);
     router = new Router();
     router.init(conf);
@@ -214,6 +223,12 @@ public abstract class AbstractSecureRouterTest {
   public static void afterSecureRouterTest() throws Exception {
     LOG.info("teardown of kdc instance.");
     teardownKDC();
+    if (mockRMs != null && mockRMs.isEmpty()) {
+      for (MockRM mockRM : mockRMs.values()) {
+        mockRM.close();
+      }
+    }
+    mockRMs.clear();
   }
 
   public static MiniKdc getKdc() {
@@ -228,4 +243,7 @@ public abstract class AbstractSecureRouterTest {
     return mockRMs;
   }
 
+  public static Configuration getConf() {
+    return conf;
+  }
 }

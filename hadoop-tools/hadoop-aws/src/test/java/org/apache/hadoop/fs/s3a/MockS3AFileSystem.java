@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StubContextAccessor;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
@@ -176,7 +177,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
         conf,
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
-        AuditTestSupport.NOOP_SPAN);
+        AuditTestSupport.NOOP_SPAN,
+        new MinimalWriteOperationHelperCallbacks());
   }
 
   @Override
@@ -195,6 +197,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public boolean isMagicCommitEnabled() {
+    return true;
+  }
+
+  @Override
+  public boolean isMultipartUploadEnabled() {
     return true;
   }
 

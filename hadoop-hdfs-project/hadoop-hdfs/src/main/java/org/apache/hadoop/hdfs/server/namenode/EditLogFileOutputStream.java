@@ -84,9 +84,9 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     doubleBuf = new EditsDoubleBuffer(size);
     RandomAccessFile rp;
     if (shouldSyncWritesAndSkipFsync) {
-      rp = new RandomAccessFile(name, "rw");
+      rp = new RandomAccessFile(name, "rwd");
     } else {
-      rp = new RandomAccessFile(name, "rws");
+      rp = new RandomAccessFile(name, "rw");
     }
     try {
       fp = new FileOutputStream(rp.getFD()); // open for append

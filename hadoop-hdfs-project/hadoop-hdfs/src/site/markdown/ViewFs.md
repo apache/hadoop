@@ -109,34 +109,34 @@ In the below mount table configuration, namespace `/data` is linked to the files
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./data</name>
+    <name>fs.viewfs.mounttable.clusterX.link./data</name>
     <value>hdfs://nn1-clusterx.example.com:8020/data</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./project</name>
+    <name>fs.viewfs.mounttable.clusterX.link./project</name>
     <value>hdfs://nn2-clusterx.example.com:8020/project</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./user</name>
+    <name>fs.viewfs.mounttable.clusterX.link./user</name>
     <value>hdfs://nn3-clusterx.example.com:8020/user</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <name>fs.viewfs.mounttable.clusterX.link./tmp</name>
     <value>hdfs://nn4-clusterx.example.com:8020/tmp</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.linkFallback</name>
+    <name>fs.viewfs.mounttable.clusterX.linkFallback</name>
     <value>hdfs://nn5-clusterx.example.com:8020/home</value>
   </property>
 </configuration>
 ```
 
-Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, ClusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
+Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, clusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
 
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterY.linkMergeSlash</name>
+    <name>fs.viewfs.mounttable.clusterY.linkMergeSlash</name>
     <value>hdfs://nn1-clustery.example.com:8020/</value>
   </property>
 </configuration>
@@ -443,7 +443,7 @@ The mount tables can be described in `core-site.xml` but it is better to use ind
 </configuration> 
 ```
 
-In the file `mountTable.xml`, there is a definition of the mount table "ClusterX" for the hypothetical cluster that is a federation of the three namespace volumes managed by the three namenodes
+In the file `mountTable.xml`, there is a definition of the mount table "clusterX" for the hypothetical cluster that is a federation of the three namespace volumes managed by the three namenodes
 
 1.  nn1-clusterx.example.com:8020,
 2.  nn2-clusterx.example.com:8020, and
@@ -454,23 +454,23 @@ Here `/home` and `/tmp` are in the namespace managed by namenode nn1-clusterx.ex
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.homedir</name>
+    <name>fs.viewfs.mounttable.clusterX.homedir</name>
     <value>/home</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./home</name>
+    <name>fs.viewfs.mounttable.clusterX.link./home</name>
     <value>hdfs://nn1-clusterx.example.com:8020/home</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <name>fs.viewfs.mounttable.clusterX.link./tmp</name>
     <value>hdfs://nn1-clusterx.example.com:8020/tmp</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./projects/foo</name>
+    <name>fs.viewfs.mounttable.clusterX.link./projects/foo</name>
     <value>hdfs://nn2-clusterx.example.com:8020/projects/foo</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./projects/bar</name>
+    <name>fs.viewfs.mounttable.clusterX.link./projects/bar</name>
     <value>hdfs://nn3-clusterx.example.com:8020/projects/bar</value>
   </property>
 </configuration>

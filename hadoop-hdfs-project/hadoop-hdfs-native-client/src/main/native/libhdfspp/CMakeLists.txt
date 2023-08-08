@@ -28,7 +28,7 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
-find_package (Boost 1.72.0 REQUIRED)
+find_package (Boost 1.72.0 REQUIRED COMPONENTS date_time)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
@@ -283,7 +283,7 @@ if (HADOOP_BUILD AND NOT MSVC)
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-  )
+    ${Boost_LIBRARIES})
   set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
   hadoop_dual_output_directory(hdfspp ${OUT_DIR})
 else (HADOOP_BUILD AND NOT MSVC)
@@ -293,7 +293,8 @@ else (HADOOP_BUILD AND NOT MSVC)
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT})
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${Boost_LIBRARIES})
   if(BUILD_SHARED_HDFSPP)
     add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
     set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})

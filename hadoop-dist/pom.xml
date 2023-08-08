@@ -43,7 +43,17 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-native-client</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-app</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -169,7 +179,6 @@
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}
                   </workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>
                       ${basedir}/../dev-support/bin/dist-layout-stitching
@@ -188,7 +197,6 @@
                 <configuration>
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${basedir}</workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>
                       ${basedir}/../dev-support/bin/dist-tools-hooks-maker
@@ -209,7 +217,6 @@
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}
                   </workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>${basedir}/../dev-support/bin/dist-tar-stitching
                     </argument>

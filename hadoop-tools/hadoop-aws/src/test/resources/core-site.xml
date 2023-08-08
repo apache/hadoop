@@ -184,12 +184,16 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.s3a.connection.request.timeout</name>
+    <value>10s</value>
+  </property>
+
   <!--
   To run these tests.
 
   # Create a file auth-keys.xml  - DO NOT ADD TO REVISION CONTROL
-  # add the property test.fs.s3n.name to point to an S3 filesystem URL
-  # Add the credentials for the service you are testing against
+  # see testing.md for details on what to set.
   -->
   <include xmlns="http://www.w3.org/2001/XInclude" href="auth-keys.xml">
     <fallback/>

@@ -275,7 +275,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * that are currently being written by this client.
    * Note that a file can only be written by a single client.
    */
-  private final Map<Long, DFSOutputStream> filesBeingWritten = new HashMap<>();
+  private final Map<String, DFSOutputStream> filesBeingWritten = new HashMap<>();
 
   /**
    * Same as this(NameNode.getNNAddress(conf), conf);
@@ -349,9 +349,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     if (numResponseToDrop > 0) {
       // This case is used for testing.
-      LOG.warn(DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
-          + " is set to " + numResponseToDrop
-          + ", this hacked client will proactively drop responses");
+      LOG.warn("{} is set to {} , this hacked client will proactively drop responses",
+          DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY, numResponseToDrop);
       proxyInfo = NameNodeProxiesClient.createProxyWithLossyRetryHandler(conf,
           nameNodeUri, ClientProtocol.class, numResponseToDrop,
           nnFallbackToSimpleAuth);
@@ -378,9 +377,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         conf.getTrimmedStrings(DFS_CLIENT_LOCAL_INTERFACES);
     localInterfaceAddrs = getLocalInterfaceAddrs(localInterfaces);
     if (LOG.isDebugEnabled() && 0 != localInterfaces.length) {
-      LOG.debug("Using local interfaces [" +
-          Joiner.on(',').join(localInterfaces)+ "] with addresses [" +
-          Joiner.on(',').join(localInterfaceAddrs) + "]");
+      LOG.debug("Using local interfaces [{}] with addresses [{}]",
+          Joiner.on(',').join(localInterfaces),
+          Joiner.on(',').join(localInterfaceAddrs));
     }
 
     Boolean readDropBehind =
@@ -502,9 +501,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Get a lease and start automatic renewal */
-  private void beginFileLease(final long inodeId, final DFSOutputStream out) {
+  private void beginFileLease(final String key, final DFSOutputStream out) {
     synchronized (filesBeingWritten) {
-      putFileBeingWritten(inodeId, out);
+      putFileBeingWritten(key, out);
       LeaseRenewer renewer = getLeaseRenewer();
       boolean result = renewer.put(this);
       if (!result) {
@@ -518,9 +517,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Stop renewal of lease for the file. */
-  void endFileLease(final long inodeId) {
+  void endFileLease(final String renewLeaseKey) {
     synchronized (filesBeingWritten) {
-      removeFileBeingWritten(inodeId);
+      removeFileBeingWritten(renewLeaseKey);
       // remove client from renewer if no files are open
       if (filesBeingWritten.isEmpty()) {
         getLeaseRenewer().closeClient(this);
@@ -532,10 +531,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *  enforced to consistently update its local dfsclients array and
    *  client's filesBeingWritten map.
    */
-  public void putFileBeingWritten(final long inodeId,
+  public void putFileBeingWritten(final String key,
       final DFSOutputStream out) {
     synchronized(filesBeingWritten) {
-      filesBeingWritten.put(inodeId, out);
+      filesBeingWritten.put(key, out);
       // update the last lease renewal time only when there was no
       // writes. once there is one write stream open, the lease renewer
       // thread keeps it updated well with in anyone's expiration time.
@@ -546,9 +545,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Remove a file. Only called from LeaseRenewer. */
-  public void removeFileBeingWritten(final long inodeId) {
+  public void removeFileBeingWritten(final String key) {
     synchronized(filesBeingWritten) {
-      filesBeingWritten.remove(inodeId);
+      filesBeingWritten.remove(key);
       if (filesBeingWritten.isEmpty()) {
         lastLeaseRenewal = 0;
       }
@@ -577,6 +576,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         return;
       }
       lastLeaseRenewal = Time.monotonicNow();
+    }
+  }
+
+  @VisibleForTesting
+  public int getNumOfFilesBeingWritten() {
+    synchronized (filesBeingWritten) {
+      return filesBeingWritten.size();
     }
   }
 
@@ -616,10 +622,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
         if (elapsed > dfsClientConf.getleaseHardLimitPeriod()) {
-          LOG.warn("Failed to renew lease for " + clientName + " for "
-              + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (dfsClientConf.getleaseHardLimitPeriod() / 1000) + " seconds.) "
-              + "Closing all files being written ...", e);
+          LOG.warn("Failed to renew lease for {} for {} seconds (>= hard-limit ={} seconds.) "
+              + "Closing all files being written ...", clientName, (elapsed/1000),
+              (dfsClientConf.getleaseHardLimitPeriod() / 1000), e);
           closeAllFilesBeingWritten(true);
         } else {
           // Let the lease renewer handle it and retry.
@@ -640,14 +645,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** Close/abort all files being written. */
   public void closeAllFilesBeingWritten(final boolean abort) {
     for(;;) {
-      final long inodeId;
+      final String key;
       final DFSOutputStream out;
       synchronized(filesBeingWritten) {
         if (filesBeingWritten.isEmpty()) {
           return;
         }
-        inodeId = filesBeingWritten.keySet().iterator().next();
-        out = filesBeingWritten.remove(inodeId);
+        key = filesBeingWritten.keySet().iterator().next();
+        out = filesBeingWritten.remove(key);
       }
       if (out != null) {
         try {
@@ -657,8 +662,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             out.close();
           }
         } catch(IOException ie) {
-          LOG.error("Failed to " + (abort ? "abort" : "close") + " file: "
-              + out.getSrc() + " with inode: " + inodeId, ie);
+          LOG.error("Failed to {} file: {} with renewLeaseKey: {}",
+              (abort ? "abort" : "close"), out.getSrc(), key, ie);
         }
       }
     }
@@ -750,9 +755,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           namenode.getDelegationToken(renewer);
       if (token != null) {
         token.setService(this.dtService);
-        LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+        LOG.info("Created {}", DelegationTokenIdentifier.stringifyToken(token));
       } else {
-        LOG.info("Cannot get delegation token from " + renewer);
+        LOG.info("Cannot get delegation token from {}", renewer);
       }
       return token;
     }
@@ -768,7 +773,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
+    LOG.info("Renewing {}", DelegationTokenIdentifier.stringifyToken(token));
     try {
       return token.renew(conf);
     } catch (InterruptedException ie) {
@@ -788,7 +793,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
+    LOG.info("Cancelling {}", DelegationTokenIdentifier.stringifyToken(token));
     try {
       token.cancel(conf);
     } catch (InterruptedException ie) {
@@ -832,8 +837,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     public void cancel(Token<?> token, Configuration conf) throws IOException {
       Token<DelegationTokenIdentifier> delToken =
           (Token<DelegationTokenIdentifier>) token;
-      LOG.info("Cancelling " +
-          DelegationTokenIdentifier.stringifyToken(delToken));
+      LOG.info("Cancelling {}", DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         nn.cancelDelegationToken(delToken);
@@ -1297,7 +1301,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         src, masked, flag, createParent, replication, blockSize, progress,
         dfsClientConf.createChecksum(checksumOpt),
         getFavoredNodesStr(favoredNodes), ecPolicyName, storagePolicy);
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1352,7 +1356,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           flag, createParent, replication, blockSize, progress, checksum,
           null, null, null);
     }
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1497,7 +1501,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     final DFSOutputStream result = callAppend(src, flag, progress,
         favoredNodes);
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -2049,7 +2053,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long getStateAtIndex(long[] states, int index) {
+  public static long getStateAtIndex(long[] states, int index) {
     return states.length > index ? states[index] : -1;
   }
 
@@ -2418,8 +2422,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   @VisibleForTesting
-  ExtendedBlock getPreviousBlock(long fileId) {
-    return filesBeingWritten.get(fileId).getBlock();
+  ExtendedBlock getPreviousBlock(String key) {
+    return filesBeingWritten.get(key).getBlock();
   }
 
   /**
@@ -2702,8 +2706,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       reportBadBlocks(lblocks);
     } catch (IOException ie) {
-      LOG.info("Found corruption while reading " + file
-          + ". Error repairing corrupt blocks. Bad blocks remain.", ie);
+      LOG.info("Found corruption while reading {}"
+          + ". Error repairing corrupt blocks. Bad blocks remain.", file, ie);
     }
   }
 
@@ -3083,10 +3087,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  void updateFileSystemReadStats(int distance, int nRead) {
+  void updateFileSystemReadStats(int distance, int readBytes, long readTimeMS) {
     if (stats != null) {
-      stats.incrementBytesRead(nRead);
-      stats.incrementBytesReadByDistance(distance, nRead);
+      stats.incrementBytesRead(readBytes);
+      stats.incrementBytesReadByDistance(distance, readBytes);
+      if (distance > 0) {
+        //remote read
+        stats.increaseRemoteReadTime(readTimeMS);
+      }
     }
   }
 

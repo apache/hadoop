@@ -211,6 +211,7 @@ https://audit.example.org/hadoop/1/op_rename/3c0d9b7e-2a63-43d9-a220-3c574d768ef
     &pr=alice
     &p2=s3a://alice-london/path2
     &ps=235865a0-d399-4696-9978-64568db1b51c
+    &ks=5
     &id=3c0d9b7e-2a63-43d9-a220-3c574d768ef3-3
     &t0=12
     &fs=af5943a9-b6f6-4eec-9c58-008982fc492a
@@ -232,10 +233,12 @@ If any of the field values were `null`, the field is omitted.
 | `p2` | Path 2 of operation | `s3a://alice-london/path2` |
 | `pr` | Principal | `alice` |
 | `ps` | Unique process UUID | `235865a0-d399-4696-9978-64568db1b51c` |
+| `rg` | GET request range | `100-200` |
 | `ta` | Task Attempt ID (S3A committer) | |
 | `t0` | Thread 0: thread span was created in | `100` |
 | `t1` | Thread 1: thread this operation was executed in | `200` |
 | `ts` | Timestamp (UTC epoch millis) | `1617116985923` |
+| `ks` | Key size (num of files) to delete as part of the given request (applicable to delete and rename ops) | `5` |
 
 _Notes_
 
@@ -410,7 +413,7 @@ log4j.logger.org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor=DEBUG
 This adds one log line per request -and does provide some insight into
 communications between the S3A client and AWS S3.
 
-For low-level debugging of the Auditing system, such as when when spans are
+For low-level debugging of the Auditing system, such as when spans are
 entered and exited, set the log to `TRACE`:
 
 ```

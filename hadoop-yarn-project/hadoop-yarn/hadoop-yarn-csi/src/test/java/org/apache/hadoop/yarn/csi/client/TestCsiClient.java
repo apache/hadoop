@@ -20,18 +20,19 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class for CSI client.
@@ -42,7 +43,7 @@ public class TestCsiClient {
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     // Use /tmp to fix bind failure caused by the long file name
     File tmpDir = new File(System.getProperty("java.io.tmpdir"));
@@ -55,27 +56,27 @@ public class TestCsiClient {
     driver = new FakeCsiDriver(domainSocket);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (testRoot != null) {
       FileUtils.deleteDirectory(testRoot);
     }
   }
 
-  @Before
+  @BeforeEach
   public void beforeMethod() {
     // Skip tests on non-linux systems
     String osName = System.getProperty("os.name").toLowerCase();
-    Assume.assumeTrue(osName.contains("nix") || osName.contains("nux"));
+    Assumptions.assumeTrue(osName.contains("nix") || osName.contains("nux"));
   }
 
   @Test
-  public void testIdentityService() throws IOException {
+  void testIdentityService() throws IOException {
     try {
       driver.start();
       CsiClient client = new CsiClientImpl(domainSocket);
       Csi.GetPluginInfoResponse response = client.getPluginInfo();
-      Assert.assertEquals("fake-csi-identity-service", response.getName());
+      assertEquals("fake-csi-identity-service", response.getName());
     } finally {
       driver.stop();
     }

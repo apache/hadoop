@@ -151,7 +151,7 @@ public final class ManifestCommitterConstants {
   /**
    * Default value:  {@value}.
    */
-  public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
+  public static final int OPT_IO_PROCESSORS_DEFAULT = 32;
 
   /**
    * Directory for saving job summary reports.
@@ -233,6 +233,32 @@ public final class ManifestCommitterConstants {
    * Task ID attribute in audit context: {@value}.
    */
   public static final String CONTEXT_ATTR_TASK_ATTEMPT_ID = "ta";
+
+  /**
+   * Stream Capabilities probe for spark dynamic partitioning compatibility.
+   */
+  public static final String CAPABILITY_DYNAMIC_PARTITIONING =
+      "mapreduce.job.committer.dynamic.partitioning";
+
+
+  /**
+   * Queue capacity between task manifest loading an entry file writer.
+   * If more than this number of manifest lists are waiting to be written,
+   * the enqueue is blocking.
+   * There's an expectation that writing to the local file is a lot faster
+   * than the parallelized buffer reads, therefore that this queue can
+   * be emptied at the same rate it is filled.
+   * Value {@value}.
+   */
+  public static final String OPT_WRITER_QUEUE_CAPACITY =
+      OPT_PREFIX + "writer.queue.capacity";
+
+
+  /**
+   * Default value of {@link #OPT_WRITER_QUEUE_CAPACITY}.
+   * Value {@value}.
+   */
+  public static final int DEFAULT_WRITER_QUEUE_CAPACITY = OPT_IO_PROCESSORS_DEFAULT;
 
   private ManifestCommitterConstants() {
   }

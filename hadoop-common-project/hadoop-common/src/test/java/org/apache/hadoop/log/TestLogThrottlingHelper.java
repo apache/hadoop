@@ -143,6 +143,18 @@ public class TestLogThrottlingHelper {
   }
 
   @Test
+  public void testInfrequentPrimaryAndDependentLoggers() {
+    helper = new LogThrottlingHelper(LOG_PERIOD, "foo", timer);
+
+    assertTrue(helper.record("foo", 0).shouldLog());
+    assertTrue(helper.record("bar", 0).shouldLog());
+
+    // Both should log once the period has elapsed
+    assertTrue(helper.record("foo", LOG_PERIOD).shouldLog());
+    assertTrue(helper.record("bar", LOG_PERIOD).shouldLog());
+  }
+
+  @Test
   public void testMultipleLoggersWithValues() {
     helper = new LogThrottlingHelper(LOG_PERIOD, "foo", timer);
 

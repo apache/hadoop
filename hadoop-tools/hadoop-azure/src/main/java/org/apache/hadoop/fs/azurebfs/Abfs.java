@@ -43,4 +43,13 @@ public class Abfs extends DelegateToFileSystem {
   public int getUriDefaultPort() {
     return -1;
   }
+
+  /**
+   * Close the file system; the FileContext API doesn't have an explicit close.
+   */
+  @Override
+  protected void finalize() throws Throwable {
+    fsImpl.close();
+    super.finalize();
+  }
 }

@@ -20,22 +20,19 @@ package org.apache.hadoop.hdfs.qjournal.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.Executors;
-
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.eq;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 
 /**
- * One Util class to mock QJuournals for some UTs not in this package.
+ * One Util class to mock QJM for some UTs not in this package.
  */
 public final class SpyQJournalUtil {
 
@@ -53,55 +50,59 @@ public final class SpyQJournalUtil {
    */
   public static QuorumJournalManager createSpyingQJM(Configuration conf,
       URI uri, NamespaceInfo nsInfo, String nameServiceId) throws IOException {
-    AsyncLogger.Factory spyFactory = (conf1, nsInfo1, journalId1, nameServiceId1, addr1) -> {
-      AsyncLogger logger = new IPCLoggerChannel(conf1, nsInfo1, journalId1, nameServiceId1, addr1);
-      return Mockito.spy(logger);
+    AsyncLogger.Factory spyFactory = new AsyncLogger.Factory() {
+      @Override
+      public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
+          String journalId, String nameServiceId, InetSocketAddress addr) {
+        AsyncLogger logger = new IPCLoggerChannel(conf, nsInfo, journalId,
+            nameServiceId, addr) {
+          protected ExecutorService createSingleThreadExecutor() {
+            // Don't parallelize calls to the quorum in the tests.
+            // This makes the tests more deterministic.
+            return new DirectExecutorService();
+          }
+        };
+        return Mockito.spy(logger);
+      }
     };
     return new QuorumJournalManager(conf, uri, nsInfo, nameServiceId, spyFactory);
   }
 
   /**
-   * Try to mock one abnormal JournalNode with one empty response
-   * for getJournaledEdits rpc with startTxid.
-   * @param manager QuorumJournalmanager.
-   * @param startTxid input StartTxid.
+   * Mock Journals with different response for getJournaledEdits rpc with the input startTxid.
+   * 1. First journal with one empty response.
+   * 2. Second journal with one normal response.
+   * 3. Third journal with one slow response.
+   * @param manager input QuorumJournalManager.
+   * @param startTxid input start txid.
    */
-  public static void mockOneJNReturnEmptyResponse(
-      QuorumJournalManager manager, long startTxid, int journalIndex) {
+  public static void mockJNWithEmptyOrSlowResponse(QuorumJournalManager manager, long startTxid) {
     List<AsyncLogger> spies = manager.getLoggerSetForTests().getLoggersForTests();
+    Semaphore semaphore = new Semaphore(0);
 
     // Mock JN0 return an empty response.
-    GetJournaledEditsResponseProto responseProto = GetJournaledEditsResponseProto
-        .newBuilder().setTxnCount(journalIndex).build();
-    ListenableFuture<GetJournaledEditsResponseProto> ret = Futures.immediateFuture(responseProto);
-    Mockito.doReturn(ret).when(spies.get(journalIndex))
-        .getJournaledEdits(eq(startTxid), eq(QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT));
+    Mockito.doAnswer(invocation -> {
+      semaphore.release();
+      return GetJournaledEditsResponseProto.newBuilder().setTxnCount(0).build();
+    }).when(spies.get(0))
+        .getJournaledEdits(startTxid, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    // Mock JN1 return a normal response.
+    spyGetJournaledEdits(spies, 1, startTxid, () -> semaphore.release(1));
+
+    // Mock JN2 return a slow response
+    spyGetJournaledEdits(spies, 2, startTxid, () -> semaphore.acquireUninterruptibly(2));
   }
 
-  /**
-   * Try to mock one abnormal JournalNode with slow response for
-   * getJournaledEdits rpc with startTxid.
-   * @param manager input QuormJournalManager.
-   * @param startTxid input start txid.
-   * @param sleepTime sleep time.
-   * @param journalIndex the journal index need to be mocked.
-   */
-  public static void mockOneJNWithSlowResponse(
-      QuorumJournalManager manager, long startTxid, int sleepTime, int journalIndex) {
-    List<AsyncLogger> spies = manager.getLoggerSetForTests().getLoggersForTests();
-
-    ListeningExecutorService service = MoreExecutors.listeningDecorator(
-        Executors.newSingleThreadExecutor());
-    Mockito.doAnswer(invocation -> service.submit(() -> {
-      Thread.sleep(sleepTime);
-      ListenableFuture<?> future = null;
-      try {
-        future = (ListenableFuture<?>) invocation.callRealMethod();
-      } catch (Throwable e) {
-        fail("getJournaledEdits failed " + e.getMessage());
-      }
-      return future.get();
-    })).when(spies.get(journalIndex))
-        .getJournaledEdits(startTxid, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+  public static void spyGetJournaledEdits(List<AsyncLogger> spies,
+      int jnSpyIdx, long fromTxId, Runnable preHook) {
+    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
+      preHook.run();
+      @SuppressWarnings("unchecked")
+      ListenableFuture<GetJournaledEditsResponseProto> result =
+          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(jnSpyIdx)).getJournaledEdits(fromTxId,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
   }
 }

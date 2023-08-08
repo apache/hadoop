@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.util.WeakReferenceMap;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A WeakReferenceMap for threads.
  * @param <V> value type of the map
@@ -36,30 +38,55 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
     super(factory, referenceLost);
   }
 
+  /**
+   * Get the value for the current thread, creating if needed.
+   * @return an instance.
+   */
   public V getForCurrentThread() {
     return get(currentThreadId());
   }
 
+  /**
+   * Remove the reference for the current thread.
+   * @return any reference value which existed.
+   */
   public V removeForCurrentThread() {
     return remove(currentThreadId());
   }
 
+  /**
+   * Get the current thread ID.
+   * @return thread ID.
+   */
   public long currentThreadId() {
     return Thread.currentThread().getId();
   }
 
+  /**
+   * Set the new value for the current thread.
+   * @param newVal new reference to set for the active thread.
+   * @return the previously set value, possibly null
+   */
   public V setForCurrentThread(V newVal) {
+    requireNonNull(newVal);
     long id = currentThreadId();
 
     // if the same object is already in the map, just return it.
-    WeakReference<V> ref = lookup(id);
-    // Reference value could be set to null. Thus, ref.get() could return
-    // null. Should be handled accordingly while using the returned value.
-    if (ref != null && ref.get() == newVal) {
-      return ref.get();
+    WeakReference<V> existingWeakRef = lookup(id);
+
+    // The looked up reference could be one of
+    // 1. null: nothing there
+    // 2. valid but get() == null : reference lost by GC.
+    // 3. different from the new value
+    // 4. the same as the old value
+    if (resolve(existingWeakRef) == newVal) {
+      // case 4: do nothing, return the new value
+      return newVal;
+    } else {
+      // cases 1, 2, 3: update the map and return the old value
+      return put(id, newVal);
     }
 
-    return put(id, newVal);
   }
 
 }

@@ -38,15 +38,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.XMLUtils;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -145,7 +147,7 @@ public class TestOfflineImageViewerForAcl {
       writtenAcls.put(file.toString(), hdfs.getAclStatus(file));
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
 
       // Determine the location of the fsimage file
@@ -221,7 +223,7 @@ public class TestOfflineImageViewerForAcl {
     PrintStream o = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
-    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());

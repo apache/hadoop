@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -129,6 +131,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -138,6 +141,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -202,13 +206,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfigVersionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
+import org.apache.hadoop.yarn.util.AppsCacheKey;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.LRUCache;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -254,6 +261,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private boolean filterAppsByUser = false;
   private boolean filterInvalidXMLChars = false;
   private boolean enableRestAppSubmissions = true;
+  private LRUCache<AppsCacheKey, AppsInfo> appsLRUCache;
+  private AtomicLong getAppsSuccessTimes = new AtomicLong(0);
+  private AtomicLong hitAppsCacheTimes = new AtomicLong(0);
+  private boolean enableAppsCache = false;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -275,6 +286,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.enableRestAppSubmissions = conf.getBoolean(
         YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS,
         YarnConfiguration.DEFAULT_ENABLE_REST_APP_SUBMISSIONS);
+    this.enableAppsCache = this.conf.getBoolean(YarnConfiguration.APPS_CACHE_ENABLE,
+        YarnConfiguration.DEFAULT_APPS_CACHE_ENABLE);
+    if (enableAppsCache) {
+      int cacheSize = this.conf.getInt(YarnConfiguration.APPS_CACHE_SIZE,
+          YarnConfiguration.DEFAULT_APPS_CACHE_SIZE);
+      long appsCacheTimeMs = this.conf.getTimeDuration(YarnConfiguration.APPS_CACHE_EXPIRE,
+          YarnConfiguration.DEFAULT_APPS_CACHE_EXPIRE, TimeUnit.MILLISECONDS);
+      appsLRUCache = new LRUCache<>(cacheSize, appsCacheTimeMs);
+    }
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -320,7 +340,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
    * @param doAdminACLsCheck
    *          boolean flag to indicate whether ACLs check is needed
    * @throws AuthorizationException
-   *           in case of no access to perfom this op.
+   *           in case of no access to perform this op.
    */
   private void initForWritableEndpoints(UserGroupInformation callerUGI,
       boolean doAdminACLsCheck) throws AuthorizationException {
@@ -622,6 +642,23 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.NAME) String name,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
 
+    AppsCacheKey cacheKey = AppsCacheKey.newInstance(stateQuery, new HashSet<>(statesQuery),
+        finalStatusQuery, userQuery, queueQuery, limit, startedBegin, startedEnd, finishBegin,
+        finishEnd, new HashSet<>(applicationTypes), new HashSet<>(applicationTags), name,
+        unselectedFields);
+    if (this.enableAppsCache) {
+      long successTimes = getAppsSuccessTimes.incrementAndGet();
+      if (successTimes % 1000 == 0) {
+        LOG.debug("hit cache info: getAppsSuccessTimes={}, hitAppsCacheTimes={}",
+            successTimes, hitAppsCacheTimes.get());
+      }
+      AppsInfo appsInfo = appsLRUCache.get(cacheKey);
+      if (appsInfo != null) {
+        hitAppsCacheTimes.getAndIncrement();
+        return appsInfo;
+      }
+    }
+
     initForReadableEndpoints();
 
     GetApplicationsRequest request =
@@ -692,6 +729,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       }
     }
 
+    if (enableAppsCache) {
+      appsLRUCache.put(cacheKey, allApps);
+      getAppsSuccessTimes.getAndIncrement();
+    }
     return allApps;
   }
 
@@ -765,7 +806,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return activitiesManager.getActivitiesInfo(nodeId, activitiesGroupBy);
     }
 
-    // Return a activities info with error message
+    // Return an activities info with error message
     return new ActivitiesInfo(errMessage, nodeId);
   }
 
@@ -962,10 +1003,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       for (String action : actions) {
         if (!EnumUtils.isValidEnum(RMWSConsts.AppActivitiesRequiredAction.class,
             action.toUpperCase())) {
-          String errMesasge =
+          String errMessage =
               "Got invalid action: " + action + ", valid actions: " + Arrays
                   .asList(RMWSConsts.AppActivitiesRequiredAction.values());
-          throw new IllegalArgumentException(errMesasge);
+          throw new IllegalArgumentException(errMessage);
         }
         requiredActions.add(RMWSConsts.AppActivitiesRequiredAction
             .valueOf(action.toUpperCase()));
@@ -978,10 +1019,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     if (groupBy != null) {
       if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class,
           groupBy.toUpperCase())) {
-        String errMesasge =
+        String errMessage =
             "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
                 + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
-        throw new IllegalArgumentException(errMesasge);
+        throw new IllegalArgumentException(errMessage);
       }
       return RMWSConsts.ActivitiesGroupBy.valueOf(groupBy.toUpperCase());
     }
@@ -1398,6 +1439,32 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       PartitionInfo partitionInfo =
           new PartitionInfo(new ResourceInfo(resource));
       nodeLabelsInfo.add(new NodeLabelInfo(label, partitionInfo));
+    }
+
+    return new NodeLabelsInfo(nodeLabelsInfo);
+  }
+
+  @GET
+  @Path(RMWSConsts.GET_RM_NODE_LABELS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NodeLabelsInfo getRMNodeLabels(@Context HttpServletRequest hsr)
+      throws IOException {
+
+    initForReadableEndpoints();
+    RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
+
+    ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
+    for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
+      String labelName = info.getLabelName().isEmpty() ?
+          NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName();
+      int activeNMs = info.getNumActiveNMs();
+      PartitionInfo partitionInfo =
+          new PartitionInfo(new ResourceInfo(info.getResource()));
+      NodeLabel nodeLabel = NodeLabel.newInstance(labelName, info.getIsExclusive());
+      NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nodeLabel, partitionInfo);
+      nodeLabelInfo.setActiveNMs(activeNMs);
+      nodeLabelsInfo.add(nodeLabelInfo);
     }
 
     return new NodeLabelsInfo(nodeLabelsInfo);
@@ -2299,7 +2366,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     if (resContext.getReservationId() == null) {
       throw new BadRequestException(
-          "Update operations must specify an existing ReservaitonId");
+          "Update operations must specify an existing ReservationId");
     }
 
     ReservationRequestInterpreter[] values =
@@ -2671,7 +2738,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return Response.status(Status.OK).entity("Configuration under " +
             "store successfully formatted.").build();
       } catch (Exception e) {
-        LOG.error("Exception thrown when formating configuration", e);
+        LOG.error("Exception thrown when formatting configuration", e);
         return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
@@ -2748,25 +2815,25 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (isConfigurationMutable(scheduler)) {
+    if (!(scheduler instanceof MutableConfScheduler)) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by MutableConfScheduler.").build();
+    } else if (!((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by mutable configuration store.").build();
+    } else {
       try {
         callerUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
-          MutableConfigurationProvider provider = ((MutableConfScheduler)
-              scheduler).getMutableConfProvider();
+          MutableConfigurationProvider provider =
+              ((MutableConfScheduler) scheduler).getMutableConfProvider();
           LogMutation logMutation = applyMutation(provider, callerUGI, mutationInfo);
           return refreshQueues(provider, logMutation);
         });
       } catch (IOException e) {
         LOG.error("Exception thrown when modifying configuration.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
-            .build();
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
       return Response.status(Status.OK).entity("Configuration change successfully applied.")
-          .build();
-    } else {
-      return Response.status(Status.BAD_REQUEST)
-          .entity(String.format("Configuration change only supported by " +
-              "%s.", MutableConfScheduler.class.getSimpleName()))
           .build();
     }
   }
@@ -2877,7 +2944,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForReadableEndpoints();
 
     // For the user who invokes this REST call, he/she should have admin access
-    // to the queue. Otherwise we will reject the call.
+    // to the queue. Otherwise, we will reject the call.
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     if (callerUGI != null && !this.rm.getResourceScheduler().checkAccess(
         callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {
@@ -2941,5 +3008,20 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .entity(e.getMessage()).build();
     }
     return Response.status(Status.OK).build();
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_OVERVIEW)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public SchedulerOverviewInfo getSchedulerOverview() {
+    initForReadableEndpoints();
+    ResourceScheduler rs = rm.getResourceScheduler();
+    return new SchedulerOverviewInfo(rs);
+  }
+
+  @VisibleForTesting
+  public LRUCache<AppsCacheKey, AppsInfo> getAppsLRUCache(){
+    return appsLRUCache;
   }
 }

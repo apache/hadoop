@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -82,6 +83,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -1501,5 +1503,28 @@ public class TestRMNodeTransitions {
         speedup, slowdown, vcoreUnit * 0.1F, hbDefault); // 10%
     calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
         speedup, slowdown, vcoreUnit * 1.0F, hbDefault); // 100%
+  }
+
+  @Test
+  public void testFinishedContainersPulledByAmOnDecommissioningNode() {
+    RMNodeImpl rMNodeImpl = getRunningNode();
+    rMNodeImpl.handle(
+        new RMNodeEvent(rMNodeImpl.getNodeID(), RMNodeEventType.GRACEFUL_DECOMMISSION));
+    Assert.assertEquals(NodeState.DECOMMISSIONING, rMNodeImpl.getState());
+
+    ContainerId containerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(BuilderUtils.newApplicationId(0, 0), 0), 0);
+    List<ContainerId> containerIds = Arrays.asList(containerId);
+
+    rMNodeImpl.handle(
+        new RMNodeFinishedContainersPulledByAMEvent(rMNodeImpl.getNodeID(), containerIds));
+    Assert.assertEquals(NodeState.DECOMMISSIONING, rMNodeImpl.getState());
+
+    // Verify expected containersToBeRemovedFromNM from NodeHeartbeatResponse.
+    NodeHeartbeatResponse response =
+        YarnServerBuilderUtils.newNodeHeartbeatResponse(1, NodeAction.NORMAL, null, null, null,
+            null, 1000);
+    rMNodeImpl.setAndUpdateNodeHeartbeatResponse(response);
+    Assert.assertEquals(1, response.getContainersToBeRemovedFromNM().size());
   }
 }

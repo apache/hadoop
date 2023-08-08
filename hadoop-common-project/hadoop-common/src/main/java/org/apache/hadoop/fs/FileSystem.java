@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.net.URI;
@@ -1545,6 +1544,39 @@ public abstract class FileSystem extends Configured
       Progressable progress) throws IOException;
 
   /**
+   * Append to an existing file (optional operation).
+   * @param f the existing file to be appended.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException {
+    return append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT), null, appendToNewBlock);
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   * This function is used for being overridden by some FileSystem like DistributedFileSystem
+   * @param f the existing file to be appended.
+   * @param bufferSize the size of the buffer to be used.
+   * @param progress for reporting progress if it is not null.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress, boolean appendToNewBlock) throws IOException {
+    return append(f, bufferSize, progress);
+  }
+
+  /**
    * Concat existing files together.
    * @param trg the path to the target destination.
    * @param psrcs the paths to the sources to use for the concatenation.
@@ -2381,8 +2413,14 @@ public abstract class FileSystem extends Configured
         if (stat.isFile()) { // file
           curFile = stat;
         } else if (recursive) { // directory
-          itors.push(curItor);
-          curItor = listLocatedStatus(stat.getPath());
+          try {
+            RemoteIterator<LocatedFileStatus> newDirItor = listLocatedStatus(stat.getPath());
+            itors.push(curItor);
+            curItor = newDirItor;
+          } catch (FileNotFoundException ignored) {
+            LOGGER.debug("Directory {} deleted while attempting for recursive listing",
+                stat.getPath());
+          }
         }
       }
 
@@ -3564,9 +3602,9 @@ public abstract class FileSystem extends Configured
       } catch (IOException | RuntimeException e) {
         // exception raised during initialization.
         // log summary at warn and full stack at debug
-        LOGGER.warn("Failed to initialize fileystem {}: {}",
+        LOGGER.warn("Failed to initialize filesystem {}: {}",
             uri, e.toString());
-        LOGGER.debug("Failed to initialize fileystem", e);
+        LOGGER.debug("Failed to initialize filesystem", e);
         // then (robustly) close the FS, so as to invoke any
         // cleanup code.
         IOUtils.cleanupWithLogger(LOGGER, fs);
@@ -3647,11 +3685,7 @@ public abstract class FileSystem extends Configured
       // to construct an instance.
       try (DurationInfo d = new DurationInfo(LOGGER, false,
           "Acquiring creator semaphore for %s", uri)) {
-        creatorPermits.acquire();
-      } catch (InterruptedException e) {
-        // acquisition was interrupted; convert to an IOE.
-        throw (IOException)new InterruptedIOException(e.toString())
-            .initCause(e);
+        creatorPermits.acquireUninterruptibly();
       }
       FileSystem fsToClose = null;
       try {
@@ -3908,6 +3942,7 @@ public abstract class FileSystem extends Configured
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
       private volatile long bytesReadErasureCoded;
+      private volatile long remoteReadTimeMS;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3925,6 +3960,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded += other.bytesReadErasureCoded;
+        this.remoteReadTimeMS += other.remoteReadTimeMS;
       }
 
       /**
@@ -3943,6 +3979,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
+        this.remoteReadTimeMS = -this.remoteReadTimeMS;
       }
 
       @Override
@@ -3990,6 +4027,10 @@ public abstract class FileSystem extends Configured
 
       public long getBytesReadErasureCoded() {
         return bytesReadErasureCoded;
+      }
+
+      public long getRemoteReadTimeMS() {
+        return remoteReadTimeMS;
       }
     }
 
@@ -4219,6 +4260,14 @@ public abstract class FileSystem extends Configured
     }
 
     /**
+     * Increment the time taken to read bytes from remote in the statistics.
+     * @param durationMS time taken in ms to read bytes from remote
+     */
+    public void increaseRemoteReadTime(final long durationMS) {
+      getThreadStatistics().remoteReadTimeMS += durationMS;
+    }
+
+    /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
      *
@@ -4363,6 +4412,25 @@ public abstract class FileSystem extends Configured
         break;
       }
       return bytesRead;
+    }
+
+    /**
+     * Get total time taken in ms for bytes read from remote.
+     * @return time taken in ms for remote bytes read.
+     */
+    public long getRemoteReadTime() {
+      return visitAll(new StatisticsAggregator<Long>() {
+        private long remoteReadTimeMS = 0;
+
+        @Override
+        public void accept(StatisticsData data) {
+          remoteReadTimeMS += data.remoteReadTimeMS;
+        }
+
+        public Long aggregate() {
+          return remoteReadTimeMS;
+        }
+      });
     }
 
     /**

@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.DurationInfo;
@@ -145,19 +146,25 @@ public class WriteOperationHelper implements WriteOperations {
   private final RequestFactory requestFactory;
 
   /**
+   * WriteOperationHelper callbacks.
+   */
+  private final WriteOperationHelperCallbacks writeOperationHelperCallbacks;
+
+  /**
    * Constructor.
    * @param owner owner FS creating the helper
    * @param conf Configuration object
    * @param statisticsContext statistics context
    * @param auditSpanSource source of spans
    * @param auditSpan span to activate
-   *
+   * @param writeOperationHelperCallbacks callbacks used by writeOperationHelper
    */
   protected WriteOperationHelper(S3AFileSystem owner,
       Configuration conf,
       S3AStatisticsContext statisticsContext,
       final AuditSpanSource auditSpanSource,
-      final AuditSpan auditSpan) {
+      final AuditSpan auditSpan,
+      final WriteOperationHelperCallbacks writeOperationHelperCallbacks) {
     this.owner = owner;
     this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
@@ -168,6 +175,7 @@ public class WriteOperationHelper implements WriteOperations {
     this.auditSpanSource = auditSpanSource;
     this.auditSpan = checkNotNull(auditSpan);
     this.requestFactory = owner.getRequestFactory();
+    this.writeOperationHelperCallbacks = writeOperationHelperCallbacks;
   }
 
   /**
@@ -262,8 +270,6 @@ public class WriteOperationHelper implements WriteOperations {
       String dest,
       File sourceFile,
       final PutObjectOptions options) {
-    Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
-        "File length is too big for a single PUT upload");
     activateAuditSpan();
     final ObjectMetadata objectMetadata =
         newObjectMetadata((int) sourceFile.length());
@@ -359,8 +365,7 @@ public class WriteOperationHelper implements WriteOperations {
             final CompleteMultipartUploadRequest request =
                 getRequestFactory().newCompleteMultipartUploadRequest(
                     destKey, uploadId, partETags);
-            return owner.getAmazonS3Client().completeMultipartUpload(
-                  request);
+            return writeOperationHelperCallbacks.completeMultipartUpload(request);
           });
       owner.finishedWrite(destKey, length, uploadResult.getETag(),
           uploadResult.getVersionId(),
@@ -526,7 +531,7 @@ public class WriteOperationHelper implements WriteOperations {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws IOException {
@@ -560,36 +565,19 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object",
         putObjectRequest.getKey(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
-  }
-
-  /**
-   * PUT an object.
-   *
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   *
-   * @throws IOException on problems
-   */
-  @Retries.RetryTranslated
-  public void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
-      throws IOException {
-
-    retry("Writing Object",
-        putObjectRequest.getKey(), true,
-        withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions, durationTrackerFactory)));
   }
 
   /**
@@ -646,18 +634,20 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Upload part of a multi-partition file.
    * @param request request
+   * @param durationTrackerFactory duration tracker factory for operation
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  public UploadPartResult uploadPart(UploadPartRequest request,
+      final DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("upload part #" + request.getPartNumber()
             + " upload ID " + request.getUploadId(),
         request.getKey(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request)));
+            () -> owner.uploadPart(request, durationTrackerFactory)));
   }
 
   /**
@@ -716,7 +706,7 @@ public class WriteOperationHelper implements WriteOperations {
           try (DurationInfo ignored =
                    new DurationInfo(LOG, "S3 Select operation")) {
             try {
-              return owner.getAmazonS3Client().selectObjectContent(request);
+              return writeOperationHelperCallbacks.selectObjectContent(request);
             } catch (AmazonS3Exception e) {
               LOG.error("Failure of S3 Select request against {}",
                   source);
@@ -756,6 +746,27 @@ public class WriteOperationHelper implements WriteOperations {
    */
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  /***
+   * Callbacks for writeOperationHelper.
+   */
+  public interface WriteOperationHelperCallbacks {
+
+    /**
+     * Initiates a select request.
+     * @param request selectObjectContent request
+     * @return selectObjectContentResult
+     */
+    SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request);
+
+    /**
+     * Initiates a complete multi-part upload request.
+     * @param request Complete multi-part upload request
+     * @return completeMultipartUploadResult
+     */
+    CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
+
   }
 
 }

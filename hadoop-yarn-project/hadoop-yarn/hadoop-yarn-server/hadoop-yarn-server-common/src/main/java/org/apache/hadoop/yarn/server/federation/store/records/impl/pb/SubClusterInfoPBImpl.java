@@ -104,8 +104,10 @@ public class SubClusterInfoPBImpl extends SubClusterInfo {
     maybeInitBuilder();
     if (subClusterId == null) {
       builder.clearSubClusterId();
+      return;
     }
     this.subClusterId = subClusterId;
+    builder.setSubClusterId(convertToProtoFormat(subClusterId));
   }
 
   @Override

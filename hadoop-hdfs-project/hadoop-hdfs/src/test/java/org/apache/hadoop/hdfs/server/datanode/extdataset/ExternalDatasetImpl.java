@@ -231,6 +231,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
+  public void invalidateMissingBlock(String bpid, Block block) {
+  }
+
+  @Override
   public void cache(String bpid, long[] blockIds) {
   }
 
@@ -473,4 +477,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
 }

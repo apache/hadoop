@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -47,11 +49,15 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO.toPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -76,7 +82,14 @@ public final class ManifestCommitterTestSupport {
    * default number of task attempts for some tests.
    * Value: {@value}.
    */
-  public static final int NUMBER_OF_TASK_ATTEMPTS = 200;
+  public static final int NUMBER_OF_TASK_ATTEMPTS = 2000;
+
+  /**
+   * Smaller number of task attempts for some tests against object
+   * stores where IO overhead is higher.
+   * Value: {@value}.
+   */
+  public static final int NUMBER_OF_TASK_ATTEMPTS_SMALL = 200;
 
   private ManifestCommitterTestSupport() {
   }
@@ -193,29 +206,35 @@ public final class ManifestCommitterTestSupport {
       Path destDir,
       ManifestSuccessData successData,
       boolean exclusive) throws IOException {
-    Map<Path, LocatedFileStatus> map = new HashMap<>();
+    Map<Path, LocatedFileStatus> fileListing = new HashMap<>();
     RemoteIterators.foreach(fs.listFiles(destDir, true),
         e -> {
           if (!e.getPath().getName().startsWith("_")) {
-            map.put(e.getPath(), e);
+            fileListing.put(e.getPath(), e);
           }
         });
+    final List<Path> actual = fileListing.keySet().stream()
+        .sorted(Comparator.comparing(Path::getName))
+        .collect(Collectors.toList());
+
     // map has all files other than temp ones and the success marker
     // what do we expect
     final List<Path> expected = filesInManifest(successData);
+    expected.sort(Comparator.comparing(Path::getName));
 
     // all of those must be found
-    Assertions.assertThat(map.keySet())
-        .describedAs("Files in FS compared to manifest")
+    Assertions.assertThat(actual)
+        .describedAs("Files in FS expected to contain all listed in manifest")
         .containsAll(expected);
 
     // and if exclusive, that too
     if (exclusive) {
-      Assertions.assertThat(map.keySet())
-          .describedAs("Files in FS compared to manifest")
+      Assertions.assertThat(actual)
+          .describedAs("Files in FS expected to be exclusively of the job")
+          .hasSize(expected.size())
           .containsExactlyInAnyOrderElementsOf(expected);
     }
-    return map;
+    return fileListing;
   }
 
   /**
@@ -293,6 +312,24 @@ public final class ManifestCommitterTestSupport {
     assertThat(fileOrDir.getType())
         .describedAs("type of " + entry)
         .isEqualTo(type);
+  }
+
+  /**
+   * Save a manifest to an entry file; returning the loaded manifest data.
+   * Caller MUST clean up the temp file.
+   * @param entryFileIO IO class
+   * @param manifest manifest to process.
+   * @return info about the load
+   * @throws IOException write failure
+   */
+  public static LoadedManifestData saveManifest(EntryFileIO entryFileIO, TaskManifest manifest)
+      throws IOException {
+    final File tempFile = File.createTempFile("entries", ".seq");
+    final SequenceFile.Writer writer = entryFileIO.createWriter(tempFile);
+    return new LoadedManifestData(
+        manifest.getDestDirectories(),
+        toPath(tempFile),
+        EntryFileIO.write(writer, manifest.getFilesToCommit(), true));
   }
 
   /**

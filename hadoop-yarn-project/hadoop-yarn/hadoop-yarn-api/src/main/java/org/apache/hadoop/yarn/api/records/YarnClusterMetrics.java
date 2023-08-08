@@ -54,6 +54,20 @@ public abstract class YarnClusterMetrics {
   public abstract void setNumNodeManagers(int numNodeManagers);
 
   /**
+   * Get the number of <code>DecommissioningNodeManager</code>s in the cluster.
+   *
+   * @return number of <code>DecommissioningNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumDecommissioningNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumDecommissioningNodeManagers(
+      int numDecommissioningNodeManagers);
+
+  /**
    * Get the number of <code>DecommissionedNodeManager</code>s in the cluster.
    * 
    * @return number of <code>DecommissionedNodeManager</code>s in the cluster
@@ -119,4 +133,16 @@ public abstract class YarnClusterMetrics {
   @Unstable
   public abstract void setNumRebootedNodeManagers(int numRebootedNodeManagers);
 
+  /**
+   * Get the number of <code>ShutdownNodeManager</code>s in the cluster.
+   *
+   * @return number of <code>ShutdownNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumShutdownNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumShutdownNodeManagers(int numShutdownNodeManagers);
 }

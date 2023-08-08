@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Implementation of {@code Futures#withTimeout}.

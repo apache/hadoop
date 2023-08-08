@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCre
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@SuppressWarnings("deprecation")
 public class MarshalledCredentialProvider extends
     AbstractSessionCredentialsProvider {
 

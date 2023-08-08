@@ -73,11 +73,11 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -105,6 +105,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.XMLUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -153,7 +154,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
   static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
@@ -573,9 +573,9 @@ public class TestEncryptionZones {
       assertZonePresent(null, zonePath.toString());
     }
 
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertEquals("Unexpected number of encryption zones!", numZones, cluster
@@ -608,9 +608,9 @@ public class TestEncryptionZones {
 
     // Verify rootDir ez is present after restarting the NameNode
     // and saving/loading from fsimage.
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertZonePresent(null, rootDir.toString());
@@ -1203,9 +1203,9 @@ public class TestEncryptionZones {
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
     System.out.println(report);
     Assert.assertEquals(0, report.getDiffList().size());
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
@@ -1719,7 +1719,7 @@ public class TestEncryptionZones {
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
     DFSTestUtil.createFile(fs, zone1File, len, (short) 1, 0xFEED);
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+    fs.setSafeMode(SafeModeAction.ENTER, false);
     fs.saveNamespace();
 
     File originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -1734,7 +1734,7 @@ public class TestEncryptionZones {
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), pw);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
-    SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 

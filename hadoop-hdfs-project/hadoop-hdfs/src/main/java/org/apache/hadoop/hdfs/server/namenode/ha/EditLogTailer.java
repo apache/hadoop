@@ -123,7 +123,7 @@ public class EditLogTailer {
 
   /**
    * The timeout in milliseconds of calling rollEdits RPC to Active NN.
-   * @see HDFS-4176.
+   * See HDFS-4176.
    */
   private final long rollEditsTimeoutMs;
 
@@ -283,7 +283,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  public FSEditLog getEditLog() {
+  FSEditLog getEditLog() {
     return editLog;
   }
   
@@ -311,6 +311,7 @@ public class EditLogTailer {
                 startTime - lastLoadTimeMs);
             // It is already under the name system lock and the checkpointer
             // thread is already stopped. No need to acquire any other lock.
+            // HDFS-16689. Disable inProgress to use the streaming mechanism
             editsTailed = doTailEdits(false);
           } catch (InterruptedException e) {
             throw new IOException(e);
@@ -323,13 +324,13 @@ public class EditLogTailer {
       }
     });
   }
-  
+
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
-    return doTailEdits(true);
+    return doTailEdits(inProgressOk);
   }
 
-  private long doTailEdits(boolean onlyDurableTxns) throws IOException, InterruptedException {
+  private long doTailEdits(boolean enableInProgress) throws IOException, InterruptedException {
     Collection<EditLogInputStream> streams;
     FSImage image = namesystem.getFSImage();
 
@@ -338,7 +339,7 @@ public class EditLogTailer {
     long startTime = timer.monotonicNow();
     try {
       streams = editLog.selectInputStreams(lastTxnId + 1, 0,
-          null, inProgressOk, onlyDurableTxns);
+          null, enableInProgress, true);
     } catch (IOException ioe) {
       // This is acceptable. If we try to tail edits in the middle of an edits
       // log roll, i.e. the last one has been finalized but the new inprogress

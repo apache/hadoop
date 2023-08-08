@@ -21,12 +21,16 @@ package org.apache.hadoop.yarn.server.router;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
@@ -36,6 +40,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
+import org.apache.hadoop.yarn.server.router.cleaner.SubClusterCleaner;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
@@ -48,6 +53,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.ROUTER_DEREGISTER_SUBCLUSTER_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.ROUTER_SCHEDULED_EXECUTOR_THREADS;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS;
 
 /**
  * The router is a stateless YARN component which is the entry point to the
@@ -78,6 +90,7 @@ public class Router extends CompositeService {
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
+  private static long clusterTimeStamp = System.currentTimeMillis();
 
   /**
    * Priority of the Router shutdown hook.
@@ -85,6 +98,9 @@ public class Router extends CompositeService {
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private static final String METRICS_NAME = "Router";
+
+  private ScheduledThreadPoolExecutor scheduledExecutorService;
+  private SubClusterCleaner subClusterCleaner;
 
   public Router() {
     super(Router.class.getName());
@@ -115,6 +131,12 @@ public class Router extends CompositeService {
     addService(pauseMonitor);
     jm.setPauseMonitor(pauseMonitor);
 
+    // Initialize subClusterCleaner
+    this.subClusterCleaner = new SubClusterCleaner(this.conf);
+    int scheduledExecutorThreads = conf.getInt(ROUTER_SCHEDULED_EXECUTOR_THREADS,
+        DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS);
+    this.scheduledExecutorService = new ScheduledThreadPoolExecutor(scheduledExecutorThreads);
+
     WebServiceClient.initialize(config);
     super.serviceInit(conf);
   }
@@ -125,6 +147,16 @@ public class Router extends CompositeService {
       doSecureLogin();
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed Router login", e);
+    }
+    boolean isDeregisterSubClusterEnabled = this.conf.getBoolean(
+        ROUTER_DEREGISTER_SUBCLUSTER_ENABLED, DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED);
+    if (isDeregisterSubClusterEnabled) {
+      long scCleanerIntervalMs = this.conf.getTimeDuration(ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME,
+          DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME, TimeUnit.MINUTES);
+      this.scheduledExecutorService.scheduleAtFixedRate(this.subClusterCleaner,
+          0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled SubClusterCleaner With Interval: {}.",
+          DurationFormatUtils.formatDurationISO(scCleanerIntervalMs));
     }
     startWepApp();
     super.serviceStart();
@@ -144,12 +176,7 @@ public class Router extends CompositeService {
   }
 
   protected void shutDown() {
-    new Thread() {
-      @Override
-      public void run() {
-        Router.this.stop();
-      }
-    }.start();
+    new Thread(() -> Router.this.stop()).start();
   }
 
   protected RouterClientRMService createClientRMProxyService() {
@@ -167,6 +194,16 @@ public class Router extends CompositeService {
 
   @VisibleForTesting
   public void startWepApp() {
+
+    // Initialize RouterWeb's CrossOrigin capability.
+    boolean enableCors = conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_ENABLE_CORS_FILTER,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER);
+    if (enableCors) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
+
+    LOG.info("Instantiating RouterWebApp at {}.", webAppAddress);
 
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 
@@ -225,5 +262,9 @@ public class Router extends CompositeService {
       name = InetAddress.getLocalHost().getHostName();
     }
     return name;
+  }
+
+  public static long getClusterTimeStamp() {
+    return clusterTimeStamp;
   }
 }

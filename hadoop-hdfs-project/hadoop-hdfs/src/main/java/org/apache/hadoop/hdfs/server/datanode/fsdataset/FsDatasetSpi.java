@@ -476,7 +476,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   void invalidate(String bpid, Block invalidBlks[]) throws IOException;
 
   /**
-   * Caches the specified blocks
+   * Invalidate a block which is not found on disk.
+   * @param bpid the block pool ID.
+   * @param block The block to be invalidated.
+   */
+  void invalidateMissingBlock(String bpid, Block block) throws IOException;
+
+  /**
+   * Caches the specified block
    * @param bpid Block pool id
    * @param blockIds - block ids to cache
    */
@@ -685,4 +692,10 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Get the volume list.
    */
   List<FsVolumeImpl> getVolumeList();
+
+  /**
+   * Set the last time in milliseconds when the directory scanner successfully ran.
+   * @param time the last time in milliseconds when the directory scanner successfully ran.
+   */
+  default void setLastDirScannerFinishTime(long time) {}
 }

@@ -206,9 +206,9 @@ public class Balancer {
       + "on over-utilized machines."
       + "\n\t[-asService]\tRun as a long running service."
       + "\n\t[-sortTopNodes]"
-      + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks."
       + "\tSort datanodes based on the utilization so "
-      + "that highly utilized datanodes get scheduled first.";
+      + "that highly utilized datanodes get scheduled first."
+      + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks.";
 
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
@@ -708,12 +708,12 @@ public class Balancer {
 
   Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
     return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
-        dispatcher.getBytesMoved(), dispatcher.getBblocksMoved());
+        dispatcher.getBytesMoved(), dispatcher.getBlocksMoved());
   }
 
   Result newResult(ExitStatus exitStatus) {
     return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved(),
-        dispatcher.getBblocksMoved());
+        dispatcher.getBlocksMoved());
   }
 
   /** Run an iteration for all datanodes. */

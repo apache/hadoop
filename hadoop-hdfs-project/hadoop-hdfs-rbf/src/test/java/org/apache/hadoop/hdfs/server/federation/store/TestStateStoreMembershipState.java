@@ -586,8 +586,6 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
   /**
    * Register a namenode heartbeat with the state store.
    *
-   * @param store FederationMembershipStateStore instance to retrieve the
-   *          membership data records.
    * @param namenode A fully populated namenode membership record to be
    *          committed to the data store.
    * @return True if successful, false otherwise.

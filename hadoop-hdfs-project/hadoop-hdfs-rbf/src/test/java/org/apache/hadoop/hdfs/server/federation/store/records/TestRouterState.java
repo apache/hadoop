@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,16 @@ package org.apache.hadoop.hdfs.server.federation.store.records;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
+import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 import org.junit.Test;
 
@@ -40,7 +48,7 @@ public class TestRouterState {
   private static final RouterServiceState STATE = RouterServiceState.RUNNING;
 
 
-  private RouterState generateRecord() throws IOException {
+  private RouterState generateRecord() {
     RouterState record = RouterState.newInstance(ADDRESS, START_TIME, STATE);
     record.setVersion(VERSION);
     record.setCompileInfo(COMPILE_INFO);
@@ -81,5 +89,47 @@ public class TestRouterState {
         serializer.deserialize(serializedString, RouterState.class);
 
     validateRecord(newRecord);
+  }
+
+  @Test
+  public void testStateStoreResilience() throws Exception {
+    StateStoreService service = new StateStoreService();
+    Configuration conf = new Configuration();
+    conf.setClass(RBFConfigKeys.FEDERATION_STORE_DRIVER_CLASS,
+        MockStateStoreDriver.class,
+        StateStoreDriver.class);
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE, false);
+    service.init(conf);
+    MockStateStoreDriver driver = (MockStateStoreDriver) service.getDriver();
+    driver.clearAll();
+    // Add two records for block1
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha1", "cluster1", "block1", "rpc1",
+        "service1", "lifeline1", "https", "nn01",
+        FederationNamenodeServiceState.ACTIVE, false), false, false);
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha2", "cluster1", "block1", "rpc2",
+        "service2", "lifeline2", "https", "nn02",
+        FederationNamenodeServiceState.STANDBY, false), false, false);
+    // load the cache
+    service.loadDriver();
+    MembershipNamenodeResolver resolver = new MembershipNamenodeResolver(conf, service);
+    service.refreshCaches(true);
+
+    // look up block1
+    List<? extends FederationNamenodeContext> result =
+        resolver.getNamenodesForBlockPoolId("block1");
+    assertEquals(2, result.size());
+
+    // cause io errors and then reload the cache
+    driver.setGiveErrors(true);
+    long previousUpdate = service.getCacheUpdateTime();
+    service.refreshCaches(true);
+    assertEquals(previousUpdate, service.getCacheUpdateTime());
+
+    // make sure the old cache is still there
+    result = resolver.getNamenodesForBlockPoolId("block1");
+    assertEquals(2, result.size());
+    service.stop();
   }
 }

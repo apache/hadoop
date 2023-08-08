@@ -144,6 +144,7 @@
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
       <scope>test</scope>
+      <classifier>jdk8</classifier>
     </dependency>
     <dependency>
       <groupId>com.microsoft.sqlserver</groupId>
@@ -169,14 +170,30 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>copy-site</id>
             <phase>pre-site</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-sql</id>
+            <phase>test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -195,6 +212,9 @@
                 </additionalProtoPathElement>
                 <additionalProtoPathElement>
                   ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-common/src/main/proto
                 </additionalProtoPathElement>
               </additionalProtoPathElements>
             </configuration>

@@ -53,6 +53,9 @@
     <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
     <!--    marker retention policy -->
     <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
+
+    <!-- Is prefetch enabled? -->
+    <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
   </properties>
 
   <profiles>
@@ -105,6 +108,7 @@
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
+              <trimStackTrace>false</trimStackTrace>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
@@ -127,6 +131,8 @@
                 <!-- Markers-->
                 <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                 <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                <!-- Prefetch -->
+                <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -166,6 +172,8 @@
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -192,6 +200,9 @@
                     <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- leave this until the end for better statistics -->
                     <exclude>**/ITestAggregateIOStatistics.java</exclude>
+                    <!-- cache file based assertions cannot be properly achieved with parallel
+                         execution, let this be sequential -->
+                    <exclude>**/ITestS3APrefetchingCacheFiles.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -215,6 +226,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -236,6 +249,8 @@
                     <include>**/ITestS3AContractRootDir.java</include>
                     <!-- leave this until the end for better statistics -->
                     <include>**/ITestAggregateIOStatistics.java</include>
+                    <!-- sequential execution for the better cleanup -->
+                    <include>**/ITestS3APrefetchingCacheFiles.java</include>
                   </includes>
                 </configuration>
               </execution>
@@ -263,6 +278,7 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
+                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Propagate scale parameters -->
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
@@ -271,6 +287,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -329,6 +347,19 @@
       </activation>
       <properties >
         <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+
+    <!-- Turn on prefetching-->
+    <profile>
+      <id>prefetch</id>
+      <activation>
+        <property>
+          <name>prefetch</name>
+        </property>
+      </activation>
+      <properties>
+        <fs.s3a.prefetch.enabled>true</fs.s3a.prefetch.enabled>
       </properties>
     </profile>
 

@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -334,6 +335,13 @@ class FsDatasetAsyncDiskService {
     @Override
     public void run() {
       try {
+        // For testing, simulate the case asynchronously deletion of the
+        // replica task stacked pending.
+        DataNodeFaultInjector.get().delayDeleteReplica();
+        if (!fsdatasetImpl.removeReplicaFromMem(block, volume)) {
+          return;
+        }
+
         final long blockLength = replicaToDelete.getBlockDataLength();
         final long metaLength = replicaToDelete.getMetadataLength();
         boolean result;

@@ -34,8 +34,8 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -239,7 +239,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        dfs.setSafeMode(SafeModeAction.ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {
@@ -349,7 +349,7 @@ public class TestDFSUpgrade {
           UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+          UpgradeUtilities.getCurrentBlockPoolID(null));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -362,7 +362,7 @@ public class TestDFSUpgrade {
           UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+          UpgradeUtilities.getCurrentBlockPoolID(null));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -384,7 +384,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        dfs.setSafeMode(SafeModeAction.ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {

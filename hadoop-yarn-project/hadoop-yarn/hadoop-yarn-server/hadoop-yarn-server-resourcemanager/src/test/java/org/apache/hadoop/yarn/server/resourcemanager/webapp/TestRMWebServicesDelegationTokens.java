@@ -48,6 +48,7 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -697,7 +698,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   public static DelegationToken getDelegationTokenFromXML(String tokenXML)
       throws IOException, ParserConfigurationException, SAXException {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(tokenXML));

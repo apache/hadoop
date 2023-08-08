@@ -34,9 +34,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Please note that users may reference this class name from configuration
  * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
  * would be a backward-incompatible change.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
+@Deprecated
 public class AnonymousAWSCredentialsProvider implements AWSCredentialsProvider {
 
   public static final String NAME

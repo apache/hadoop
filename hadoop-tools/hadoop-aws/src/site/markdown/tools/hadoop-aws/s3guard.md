@@ -119,14 +119,7 @@ Without S3Guard, listing performance may be slower. However, Hadoop 3.3.0+ has s
 improved listing performance ([HADOOP-17400](https://issues.apache.org/jira/browse/HADOOP-17400)
 _Optimize S3A for maximum performance in directory listings_) so this should not be apparent.
 
-We recommend disabling [directory marker deletion](directory_markers.html) to reduce
-the number of DELETE operations made when writing files.
-this reduces the load on the S3 partition and so the risk of throttling, which can
-impact performance.
-This is very important when working with versioned S3 buckets, as the tombstone markers
-created will slow down subsequent listing operations.
-
-Finally, the S3A [auditing](auditing.html) feature adds information to the S3 server logs
+The S3A [auditing](auditing.html) feature adds information to the S3 server logs
 about which jobs, users and filesystem operations have been making S3 requests.
 This auditing information can be used to identify opportunities to reduce load.
 
@@ -162,7 +155,6 @@ Example
 ```bash
 > hadoop s3guard bucket-info -magic -markers keep s3a://test-london/
 
-2021-11-22 15:21:00,289 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(189)) - Directory markers will be kept
 Filesystem s3a://test-london
 Location: eu-west-2
 

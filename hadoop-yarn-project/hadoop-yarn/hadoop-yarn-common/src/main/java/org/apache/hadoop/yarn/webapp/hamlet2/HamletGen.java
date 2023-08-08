@@ -73,7 +73,7 @@ public class HamletGen {
    * @param implClass a generic hamlet implementation. e.g. {@link HamletImpl}
    * @param outputName name of the output class. e.g. {@link Hamlet}
    * @param outputPkg package name of the output class.
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public void generate(Class<?> specClass, Class<?> implClass,
                        String outputName, String outputPkg) throws IOException {

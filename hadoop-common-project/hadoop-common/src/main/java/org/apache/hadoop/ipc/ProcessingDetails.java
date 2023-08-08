@@ -20,13 +20,15 @@ package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
 /**
- * Stores the times that a call takes to be processed through each step.
+ * Stores the times that a call takes to be processed through each step and
+ * its response status.
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
@@ -52,6 +54,9 @@ public class ProcessingDetails {
   }
 
   private long[] timings = new long[Timing.values().length];
+
+  // Rpc return status of this call
+  private RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
 
   ProcessingDetails(TimeUnit timeUnit) {
     this.valueTimeUnit = timeUnit;
@@ -79,6 +84,14 @@ public class ProcessingDetails {
 
   public void add(Timing type, long value, TimeUnit timeUnit) {
     timings[type.ordinal()] += valueTimeUnit.convert(value, timeUnit);
+  }
+
+  public void setReturnStatus(RpcStatusProto status) {
+    this.returnStatus = status;
+  }
+
+  public RpcStatusProto getReturnStatus() {
+    return returnStatus;
   }
 
   @Override

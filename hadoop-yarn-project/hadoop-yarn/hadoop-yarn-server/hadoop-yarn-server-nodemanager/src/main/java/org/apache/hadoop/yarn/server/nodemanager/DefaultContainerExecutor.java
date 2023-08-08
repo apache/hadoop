@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.numaAwarenessEnabled;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.DataOutputStream;
@@ -28,12 +29,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.FileContext;
@@ -51,14 +53,19 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
@@ -86,6 +93,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
   private String logDirPermissions = null;
 
+  private NumaResourceAllocator numaResourceAllocator;
+
+
+  private String numactl;
   /**
    * Default constructor for use in testing.
    */
@@ -137,7 +148,19 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
   @Override
   public void init(Context nmContext) throws IOException {
-    // nothing to do or verify here
+    if(numaAwarenessEnabled(getConf())) {
+      numaResourceAllocator = new NumaResourceAllocator(nmContext);
+      numactl = this.getConf().get(YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
+              YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);
+      try {
+        numaResourceAllocator.init(this.getConf());
+        LOG.info("NUMA resources allocation is enabled in DefaultContainer Executor," +
+                " Successfully initialized NUMA resources allocator.");
+      } catch (YarnException e) {
+        LOG.warn("Improper NUMA configuration provided.", e);
+        throw new IOException("Failed to initialize configured numa subsystem!");
+      }
+    }
   }
 
   @Override
@@ -300,11 +323,28 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       setScriptExecutable(launchDst, user);
       setScriptExecutable(sb.getWrapperScriptPath(), user);
 
+      // adding numa commands based on configuration
+      String[] numaCommands = new String[]{};
+
+      if (numaResourceAllocator != null) {
+        try {
+          NumaResourceAllocation numaResourceAllocation =
+                  numaResourceAllocator.allocateNumaNodes(container);
+          if (numaResourceAllocation != null) {
+            numaCommands = getNumaCommands(numaResourceAllocation);
+          }
+        } catch (ResourceHandlerException e) {
+          LOG.error("NumaResource Allocation failed!", e);
+          throw new IOException("NumaResource Allocation Error!", e);
+        }
+      }
+
       shExec = buildCommandExecutor(sb.getWrapperScriptPath().toString(),
-          containerIdStr, user, pidFile, container.getResource(),
-          new File(containerWorkDir.toUri().getPath()),
-          container.getLaunchContext().getEnvironment());
-      
+              containerIdStr, user, pidFile, container.getResource(),
+              new File(containerWorkDir.toUri().getPath()),
+              container.getLaunchContext().getEnvironment(),
+              numaCommands);
+
       if (isContainerActive(containerId)) {
         shExec.execute();
       } else {
@@ -350,6 +390,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       return exitCode;
     } finally {
       if (shExec != null) shExec.close();
+      postComplete(containerId);
     }
     return 0;
   }
@@ -372,15 +413,21 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * as the current working directory for the command. If null,
    * the current working directory is not modified.
    * @param environment the container environment
+   * @param numaCommands list of prefix numa commands
    * @return the new {@link ShellCommandExecutor}
    * @see ShellCommandExecutor
    */
-  protected CommandExecutor buildCommandExecutor(String wrapperScriptPath, 
-      String containerIdStr, String user, Path pidFile, Resource resource,
-      File workDir, Map<String, String> environment) {
-    
+  protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
+                            String containerIdStr, String user, Path pidFile, Resource resource,
+                            File workDir, Map<String, String> environment, String[] numaCommands) {
+
     String[] command = getRunCommand(wrapperScriptPath,
         containerIdStr, user, pidFile, this.getConf(), resource);
+
+    // check if numa commands are passed and append it as prefix commands
+    if(numaCommands != null && numaCommands.length!=0) {
+      command = concatStringCommands(numaCommands, command);
+    }
 
     LOG.info("launchContainer: {}", Arrays.toString(command));
     return new ShellCommandExecutor(
@@ -1040,4 +1087,92 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       String appId, String spec) throws IOException {
     throw new ServiceStateException("Implementation unavailable");
   }
+
+  @Override
+  public int reacquireContainer(ContainerReacquisitionContext ctx)
+          throws IOException, InterruptedException {
+    try {
+      if (numaResourceAllocator != null) {
+        numaResourceAllocator.recoverNumaResource(ctx.getContainerId());
+      }
+      return super.reacquireContainer(ctx);
+    } finally {
+      postComplete(ctx.getContainerId());
+    }
+  }
+
+  /**
+   * clean up and release of resources.
+   *
+   * @param containerId containerId of running container
+   */
+  public void postComplete(final ContainerId containerId) {
+    if (numaResourceAllocator != null) {
+      try {
+        numaResourceAllocator.releaseNumaResource(containerId);
+      } catch (ResourceHandlerException e) {
+        LOG.warn("NumaResource release failed for " +
+                "containerId: {}. Exception: ", containerId, e);
+      }
+    }
+  }
+
+  /**
+   * @param resourceAllocation NonNull NumaResourceAllocation object reference
+   * @return Array of numa specific commands
+   */
+  String[] getNumaCommands(NumaResourceAllocation resourceAllocation) {
+    String[] numaCommand = new String[3];
+    numaCommand[0] = numactl;
+    numaCommand[1] = "--interleave=" + String.join(",", resourceAllocation.getMemNodes());
+    numaCommand[2] = "--cpunodebind=" + String.join(",", resourceAllocation.getCpuNodes());
+    return numaCommand;
+
+  }
+
+  /**
+   * @param firstStringArray  Array of String
+   * @param secondStringArray Array of String
+   * @return combined array of string where first elements are from firstStringArray
+   * and later are the elements from secondStringArray
+   */
+  String[] concatStringCommands(String[] firstStringArray, String[] secondStringArray) {
+
+    if(firstStringArray == null && secondStringArray == null) {
+      return secondStringArray;
+    }
+
+    else if(firstStringArray == null || firstStringArray.length == 0) {
+      return secondStringArray;
+    }
+
+    else if(secondStringArray == null || secondStringArray.length == 0){
+      return firstStringArray;
+    }
+
+    int len = firstStringArray.length + secondStringArray.length;
+
+    String[] ret = new String[len];
+    int idx = 0;
+    for (String s : firstStringArray) {
+      ret[idx] = s;
+      idx++;
+    }
+    for (String s : secondStringArray) {
+      ret[idx] = s;
+      idx++;
+    }
+    return ret;
+  }
+
+  @VisibleForTesting
+  public void setNumaResourceAllocator(NumaResourceAllocator numaResourceAllocator) {
+    this.numaResourceAllocator = numaResourceAllocator;
+  }
+
+  @VisibleForTesting
+  public void setNumactl(String numactl) {
+    this.numactl = numactl;
+  }
+
 }

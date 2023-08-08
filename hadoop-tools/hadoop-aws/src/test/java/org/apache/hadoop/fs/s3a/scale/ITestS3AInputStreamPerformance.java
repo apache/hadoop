@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -93,6 +94,14 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   /** Tests only run if the there is a named test file that can be read. */
   private boolean testDataAvailable = true;
   private String assumptionMessage = "test file";
+
+  @Override
+  protected Configuration createScaleConfiguration() {
+    Configuration conf = super.createScaleConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    return conf;
+  }
 
   /**
    * Open the FS and the test data. The input stream is always set up here.
@@ -210,11 +219,10 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     final FutureDataInputStreamBuilder builder = fs.openFile(path)
         .opt(FS_OPTION_OPENFILE_READ_POLICY,
             inputPolicy.toString())
-        .opt(FS_OPTION_OPENFILE_LENGTH, length)
-        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize);
-    if (readahead > 0) {
-      builder.opt(READAHEAD_RANGE, readahead);
-    }
+        .optLong(FS_OPTION_OPENFILE_LENGTH, length)
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize)
+        .optLong(READAHEAD_RANGE, readahead);
+
     FSDataInputStream stream = awaitFuture(builder.build());
     streamStatistics = getInputStreamStatistics(stream);
     return stream;

@@ -161,7 +161,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       getRequiredTaskAttemptId();
       getRequiredTaskAttemptDir();
       stageName = String.format("[Task-Attempt %s]", getRequiredTaskAttemptId());
-    } else  {
+    } else {
       stageName = String.format("[Job-Attempt %s/%02d]",
           stageConfig.getJobId(),
           stageConfig.getJobAttemptNumber());
@@ -310,6 +310,15 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
           statistic,
           wait.toMillis());
     }
+  }
+
+
+  /**
+   * Get the operations callbacks.
+   * @return the operations invocable against the destination.
+   */
+  public ManifestStoreOperations getOperations() {
+    return operations;
   }
 
   @Override
@@ -677,11 +686,18 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
     return operations.storeSupportsResilientCommit();
   }
 
+  /**
+   * Maybe delete the destination.
+   * This routine is optimized for the data not existing, as HEAD seems to cost less
+   * than a DELETE; assuming most calls don't have data, this is faster.
+   * @param deleteDest should an attempt to delete the dest be made?
+   * @param dest destination path
+   * @throws IOException IO failure, including permissions.
+   */
   private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
-    if (deleteDest) {
-      // delete the destination, always, knowing that it's a no-op if
-      // the data isn't there. Skipping the change saves one round trip
-      // to actually look for the file/object
+
+    if (deleteDest && getFileStatusOrNull(dest) != null) {
+
       boolean deleted = delete(dest, true);
       // log the outcome in case of emergency diagnostics traces
       // being needed.

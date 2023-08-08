@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -55,7 +56,10 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_FAILED_COUNT;
@@ -84,7 +88,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.C
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ManifestCommitter extends PathOutputCommitter implements
-    IOStatisticsSource, StageEventCallbacks {
+    IOStatisticsSource, StageEventCallbacks, StreamCapabilities {
 
   public static final Logger LOG = LoggerFactory.getLogger(
       ManifestCommitter.class);
@@ -391,7 +395,9 @@ public class ManifestCommitter extends PathOutputCommitter implements
       marker = result.getJobSuccessData();
       // update the cached success with the new report.
       setSuccessReport(marker);
-
+      // patch in the #of threads as it is useful
+      marker.putDiagnostic(OPT_IO_PROCESSORS,
+          conf.get(OPT_IO_PROCESSORS, Long.toString(OPT_IO_PROCESSORS_DEFAULT)));
     } catch (IOException e) {
       // failure. record it for the summary
       failure = e;
@@ -686,7 +692,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * to date.
    * The report will updated with the current active stage,
    * and if {@code thrown} is non-null, it will be added to the
-   * diagnistics (and the job tagged as a failure).
+   * diagnostics (and the job tagged as a failure).
    * Static for testability.
    * @param activeStage active stage
    * @param config configuration to use.
@@ -757,5 +763,16 @@ public class ManifestCommitter extends PathOutputCommitter implements
   @Override
   public IOStatisticsStore getIOStatistics() {
     return iostatistics;
+  }
+
+  /**
+   * The committer is compatible with spark's dynamic partitioning
+   * algorithm.
+   * @param capability string to query the stream support for.
+   * @return true if the requested capability is supported.
+   */
+  @Override
+  public boolean hasCapability(final String capability) {
+    return CAPABILITY_DYNAMIC_PARTITIONING.equals(capability);
   }
 }

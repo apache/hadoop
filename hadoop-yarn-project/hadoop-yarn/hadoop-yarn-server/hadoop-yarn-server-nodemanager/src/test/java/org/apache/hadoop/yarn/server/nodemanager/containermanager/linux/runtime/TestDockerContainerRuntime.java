@@ -2033,19 +2033,27 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testDockerImageNamePattern() throws Exception {
-    String[] validNames =
-        { "ubuntu", "fedora/httpd:version1.0",
-            "fedora/httpd:version1.0.test",
-            "fedora/httpd:version1.0.TEST",
-            "myregistryhost:5000/ubuntu",
-            "myregistryhost:5000/fedora/httpd:version1.0",
-            "myregistryhost:5000/fedora/httpd:version1.0.test",
-            "myregistryhost:5000/fedora/httpd:version1.0.TEST"};
+    String[] validNames = {"ubuntu", "fedora/httpd:version1.0", "fedora/httpd:version1.0.test",
+        "fedora/httpd:version1.0.TEST", "myregistryhost:5000/ubuntu",
+        "myregistryhost:5000/fedora/httpd:version1.0",
+        "myregistryhost:5000/fedora/httpd:version1.0.test",
+        "myregistryhost:5000/fedora/httpd:version1.0.TEST",
+        "123456789123.dkr.ecr.us-east-1.amazonaws.com/emr-docker-examples:pyspark-example"
+            + "@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807"};
 
-    String[] invalidNames = { "Ubuntu", "ubuntu || fedora", "ubuntu#",
-        "myregistryhost:50AB0/ubuntu", "myregistry#host:50AB0/ubuntu",
-        ":8080/ubuntu"
-    };
+    String[] invalidNames = {"Ubuntu", "ubuntu || fedora", "ubuntu#", "myregistryhost:50AB0/ubuntu",
+        "myregistry#host:50AB0/ubuntu", ":8080/ubuntu",
+
+        // Invalid: contains "@sha256" but doesn't really contain a digest.
+        "123456789123.dkr.ecr.us-east-1.amazonaws.com/emr-docker-examples:pyspark-example@sha256",
+
+        // Invalid: digest is too short.
+        "123456789123.dkr.ecr.us-east-1.amazonaws.com/emr-docker-examples:pyspark-example"
+            + "@sha256:f1d4",
+
+        // Invalid: digest is too long
+        "123456789123.dkr.ecr.us-east-1.amazonaws.com/emr-docker-examples:pyspark-example"
+            + "@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807f"};
 
     for (String name : validNames) {
       DockerLinuxContainerRuntime.validateImageName(name);
@@ -2383,24 +2391,37 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testLaunchContainerWithDockerTokens()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException {
-    // Write the JSOn to a temp file.
-    File file = File.createTempFile("docker-client-config", "runtime-test");
-    file.deleteOnExit();
-    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-    bw.write(TestDockerClientConfigHandler.JSON);
-    bw.close();
+      throws ContainerExecutionException, PrivilegedOperationException, IOException {
 
     // Get the credentials object with the Tokens.
-    Credentials credentials = DockerClientConfigHandler
-        .readCredentialsFromConfigFile(new Path(file.toURI()), conf, appId);
+    Credentials credentials = DockerClientConfigHandler.readCredentialsFromConfigFile(
+        new Path(getDockerClientConfigFile().toURI()), conf, appId);
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-    // Configure the runtime and launch the container
-    when(context.getTokens()).thenReturn(tokens);
+    testLaunchContainer(tokens, null);
+  }
+
+  @Test
+  public void testLaunchContainerWithAdditionalDockerClientConfig()
+      throws ContainerExecutionException, PrivilegedOperationException, IOException {
+    testLaunchContainer(null, getDockerClientConfigFile());
+  }
+
+  public void testLaunchContainer(ByteBuffer tokens, File dockerConfigFile)
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    if (dockerConfigFile != null) {
+      // load the docker client config file from system environment
+      env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_CLIENT_CONFIG,
+          dockerConfigFile.getPath());
+    }
+
+    if (tokens != null) {
+      // Configure the runtime and launch the container
+      when(context.getTokens()).thenReturn(tokens);
+    }
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -2484,6 +2505,16 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter++));
+  }
+
+  private File getDockerClientConfigFile() throws IOException {
+    // Write the JSOn to a temp file.
+    File file = File.createTempFile("docker-client-config", "runtime-test");
+    file.deleteOnExit();
+    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+    bw.write(TestDockerClientConfigHandler.JSON);
+    bw.close();
+    return file;
   }
 
   @Test

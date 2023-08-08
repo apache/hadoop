@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -76,7 +77,6 @@ import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -95,6 +95,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.XMLUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -357,9 +358,9 @@ public class TestOfflineImageViewer {
       filesECCount++;
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
+      hdfs.setSafeMode(SafeModeAction.LEAVE, false);
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -565,7 +566,7 @@ public class TestOfflineImageViewer {
     try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       v.visit(r);
     }
-    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     ECXMLHandler ecxmlHandler = new ECXMLHandler();
@@ -1028,13 +1029,13 @@ public class TestOfflineImageViewer {
 
   private void deleteINodeFromXML(File inputFile, File outputFile,
       List<Long> corruptibleIds) throws Exception {
-    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docFactory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
     Document doc = docBuilder.parse(inputFile);
 
     properINodeDelete(corruptibleIds, doc);
 
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = transformerFactory.newTransformer();
     DOMSource source = new DOMSource(doc);
     StreamResult result = new StreamResult(outputFile);
@@ -1284,7 +1285,7 @@ public class TestOfflineImageViewer {
       }
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
       // Determine location of fsimage file
       fsimageFile =
@@ -1370,10 +1371,9 @@ public class TestOfflineImageViewer {
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
-    InputSource is = new InputSource();
-    is.setCharacterStream(new StringReader(xml));
+    InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList ecSection = dom.getElementsByTagName(ERASURE_CODING_SECTION_NAME);
     assertEquals(1, ecSection.getLength());

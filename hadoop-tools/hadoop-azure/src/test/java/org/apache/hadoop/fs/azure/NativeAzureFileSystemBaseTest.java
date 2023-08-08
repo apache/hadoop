@@ -30,8 +30,6 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.TimeZone;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,6 +47,8 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.readStringFromFile;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToFile;
@@ -73,7 +73,7 @@ public abstract class NativeAzureFileSystemBaseTest
   private static final EnumSet<XAttrSetFlag> CREATE_FLAG = EnumSet.of(XAttrSetFlag.CREATE);
   private static final EnumSet<XAttrSetFlag> REPLACE_FLAG = EnumSet.of(XAttrSetFlag.REPLACE);
 
-  public static final Log LOG = LogFactory.getLog(NativeAzureFileSystemBaseTest.class);
+  public static final Logger LOG = LoggerFactory.getLogger(NativeAzureFileSystemBaseTest.class);
   protected NativeAzureFileSystem fs;
 
   @Override

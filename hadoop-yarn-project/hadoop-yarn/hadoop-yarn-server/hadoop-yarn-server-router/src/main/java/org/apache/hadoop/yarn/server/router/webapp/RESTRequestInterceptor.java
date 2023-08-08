@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServiceProtocol;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -122,4 +123,18 @@ public interface RESTRequestInterceptor
    */
   ContainerInfo getContainer(HttpServletRequest req, HttpServletResponse res,
       String appId, String appAttemptId, String containerId);
+
+  /**
+   * Set RouterClientRMService.
+   *
+   * @param routerClientRMService routerClientRMService.
+   */
+  void setRouterClientRMService(RouterClientRMService routerClientRMService);
+
+  /**
+   * Get RouterClientRMService.
+   *
+   * @return RouterClientRMService
+   */
+  RouterClientRMService getRouterClientRMService();
 }

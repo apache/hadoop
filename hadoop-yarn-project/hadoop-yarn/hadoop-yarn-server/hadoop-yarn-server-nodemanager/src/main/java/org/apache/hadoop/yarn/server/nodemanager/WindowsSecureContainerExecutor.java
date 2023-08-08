@@ -718,10 +718,10 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
   @Override
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
       String containerIdStr, String userName, Path pidFile, Resource resource,
-      File wordDir, Map<String, String> environment) {
+      File wordDir, Map<String, String> environment, String[] numaCommands) {
      return new WintuilsProcessStubExecutor(
          wordDir.toString(),
-         containerIdStr, userName, pidFile.toString(), 
+         containerIdStr, userName, pidFile.toString(),
          "cmd /c " + wrapperScriptPath);
    }
    

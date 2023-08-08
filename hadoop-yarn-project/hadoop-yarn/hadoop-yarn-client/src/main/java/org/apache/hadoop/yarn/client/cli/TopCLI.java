@@ -339,9 +339,11 @@ public class TopCLI extends YarnCLI {
     int totalNodes;
     int runningNodes;
     int unhealthyNodes;
+    int decommissioningNodes;
     int decommissionedNodes;
     int lostNodes;
     int rebootedNodes;
+    int shutdownNodes;
   }
 
   private static class QueueMetrics {
@@ -696,6 +698,8 @@ public class TopCLI extends YarnCLI {
       return nodeInfo;
     }
 
+    nodeInfo.decommissioningNodes =
+        yarnClusterMetrics.getNumDecommissioningNodeManagers();
     nodeInfo.decommissionedNodes =
         yarnClusterMetrics.getNumDecommissionedNodeManagers();
     nodeInfo.totalNodes = yarnClusterMetrics.getNumNodeManagers();
@@ -703,6 +707,7 @@ public class TopCLI extends YarnCLI {
     nodeInfo.lostNodes = yarnClusterMetrics.getNumLostNodeManagers();
     nodeInfo.unhealthyNodes = yarnClusterMetrics.getNumUnhealthyNodeManagers();
     nodeInfo.rebootedNodes = yarnClusterMetrics.getNumRebootedNodeManagers();
+    nodeInfo.shutdownNodes = yarnClusterMetrics.getNumShutdownNodeManagers();
     return nodeInfo;
   }
 
@@ -880,11 +885,11 @@ public class TopCLI extends YarnCLI {
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
             "NodeManager(s)"
-                + ": %d total, %d active, %d unhealthy, %d decommissioned,"
-                + " %d lost, %d rebooted%n",
+                + ": %d total, %d active, %d unhealthy, %d decommissioning,"
+                + " %d decommissioned, %d lost, %d rebooted, %d shutdown%n",
             nodes.totalNodes, nodes.runningNodes, nodes.unhealthyNodes,
-            nodes.decommissionedNodes, nodes.lostNodes,
-            nodes.rebootedNodes), terminalWidth, true));
+            nodes.decommissioningNodes, nodes.decommissionedNodes, nodes.lostNodes,
+            nodes.rebootedNodes, nodes.shutdownNodes), terminalWidth, true));
 
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
@@ -1039,7 +1044,8 @@ public class TopCLI extends YarnCLI {
     }
   }
 
-  protected void showTopScreen() {
+  @VisibleForTesting
+  void showTopScreen() {
     List<ApplicationInformation> appsInfo = new ArrayList<>();
     List<ApplicationReport> apps;
     try {

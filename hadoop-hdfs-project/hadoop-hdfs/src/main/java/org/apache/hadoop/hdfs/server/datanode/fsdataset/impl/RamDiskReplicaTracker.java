@@ -184,7 +184,7 @@ public abstract class RamDiskReplicaTracker {
    * {@link org.apache.hadoop.hdfs.DFSConfigKeys#DFS_DATANODE_RAM_DISK_REPLICA_TRACKER_KEY}.
    *
    * @param conf the configuration to be used
-   * @param dataset the FsDataset object.
+   * @param fsDataset the FsDataset object.
    * @return an instance of RamDiskReplicaTracker
    */
   static RamDiskReplicaTracker getInstance(final Configuration conf,

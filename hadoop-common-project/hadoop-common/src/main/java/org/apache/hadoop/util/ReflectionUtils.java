@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -222,16 +221,18 @@ public class ReflectionUtils {
   }
     
   private static long previousLogTime = 0;
-    
+
   /**
    * Log the current thread stacks at INFO level.
    * @param log the logger that logs the stack trace
    * @param title a descriptive title for the call stacks
-   * @param minInterval the minimum time from the last 
+   * @param minInterval the minimum time from the last
+   * @deprecated to be removed with 3.4.0. Use {@link #logThreadInfo(Logger, String, long)} instead.
    */
-  public static void logThreadInfo(Log log,
-                                   String title,
-                                   long minInterval) {
+  @Deprecated
+  public static void logThreadInfo(org.apache.commons.logging.Log log,
+      String title,
+      long minInterval) {
     boolean dumpStack = false;
     if (log.isInfoEnabled()) {
       synchronized (ReflectionUtils.class) {

@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-find_package(Boost REQUIRED COMPONENTS date_time)
-
 # Delegate some functionality to libhdfs, until libhdfspp is complete.
 set (LIBHDFS_SRC_DIR ../../libhdfs)
 set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)

@@ -24,6 +24,7 @@ import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.AlreadyClosedException;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.util.DataChecksum;
@@ -83,6 +84,10 @@ public class BuiltInGzipCompressor implements Compressor {
       throw new IOException("compress called on finished compressor");
     }
 
+    if (state == BuiltInGzipDecompressor.GzipStateLabel.ENDED) {
+      throw new AlreadyClosedException("compress called on closed compressor");
+    }
+
     int compressedBytesWritten = 0;
 
     // If we are not within uncompressed data yet, output the header.
@@ -139,6 +144,8 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public void end() {
     deflater.end();
+
+    state = BuiltInGzipDecompressor.GzipStateLabel.ENDED;
   }
 
   @Override

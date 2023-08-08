@@ -43,6 +43,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -88,6 +90,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -343,7 +346,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(19, outs.size());
+    assertEquals(24, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -438,7 +441,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(19, outs.size());
+    assertEquals(22, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
@@ -449,8 +452,10 @@ public class TestDFSAdmin {
     assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(7));
     assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(8));
     assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(9));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(10));
-    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(11));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(10));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(11));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(12));
+    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(13));
     assertEquals(errs.size(), 0);
   }
 
@@ -790,6 +795,14 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client, 0L, 0L);
+
+      // verify report command for list all DN types
+      resetStream();
+      String[] reportWithArg = new String[DFSAdmin.DFS_REPORT_ARGS.length + 1];
+      reportWithArg[0] = "-report";
+      System.arraycopy(DFSAdmin.DFS_REPORT_ARGS, 0, reportWithArg, 1,
+          DFSAdmin.DFS_REPORT_ARGS.length);
+      assertEquals(0, ToolRunner.run(dfsAdmin, reportWithArg));
     }
   }
 
@@ -1234,36 +1247,38 @@ public class TestDFSAdmin {
     when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
         any(Configuration.class))).thenReturn(changes);
 
-    assertEquals(0, admin.startReconfiguration("datanode", "livenodes"));
+    int result = admin.startReconfiguration("datanode", "livenodes");
+    Assertions.assertThat(result).isEqualTo(0);
     final List<String> outsForStartReconf = new ArrayList<>();
     final List<String> errsForStartReconf = new ArrayList<>();
     reconfigurationOutErrFormatter("startReconfiguration", "datanode",
         "livenodes", outsForStartReconf, errsForStartReconf);
-    assertEquals(3, outsForStartReconf.size());
-    assertEquals(0, errsForStartReconf.size());
-    assertTrue(outsForStartReconf.get(0).startsWith("Started reconfiguration task on node"));
-    assertTrue(outsForStartReconf.get(1).startsWith("Started reconfiguration task on node"));
-    assertEquals("Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.",
-        outsForStartReconf.get(2));
+    String started = "Started reconfiguration task on node";
+    String starting =
+        "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
+    Assertions.assertThat(outsForStartReconf).hasSize(3);
+    Assertions.assertThat(errsForStartReconf).hasSize(0);
+    Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
 
     Thread.sleep(1000);
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
-    assertEquals(9, outs.size());
-    assertEquals(0, errs.size());
+    Assertions.assertThat(outs).hasSize(9);
+    Assertions.assertThat(errs).hasSize(0);
     LOG.info("dfsadmin -status -livenodes output:");
     outs.forEach(s -> LOG.info("{}", s));
-    assertTrue(outs.get(0).startsWith("Reconfiguring status for node"));
-    assertTrue("SUCCESS: Changed property dfs.datanode.peer.stats.enabled".equals(outs.get(2))
-        || "SUCCESS: Changed property dfs.datanode.peer.stats.enabled".equals(outs.get(1)));
-    assertTrue("\tFrom: \"false\"".equals(outs.get(3)) || "\tFrom: \"false\"".equals(outs.get(2)));
-    assertTrue("\tTo: \"true\"".equals(outs.get(4)) || "\tTo: \"true\"".equals(outs.get(3)));
-    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(5));
-    assertEquals("\tFrom: \"false\"", outs.get(6));
-    assertEquals("\tTo: \"true\"", outs.get(7));
-    assertEquals("Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.",
-        outs.get(8));
-  }
+    Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
 
+    String success = "SUCCESS: Changed property dfs.datanode.peer.stats.enabled";
+    String from = "\tFrom: \"false\"";
+    String to = "\tTo: \"true\"";
+    String retrieval =
+        "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
+
+    Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
+    Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
+  }
 }

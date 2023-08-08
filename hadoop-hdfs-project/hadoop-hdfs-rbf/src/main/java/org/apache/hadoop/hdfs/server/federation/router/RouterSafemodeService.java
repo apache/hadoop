@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +72,7 @@ public class RouterSafemodeService extends PeriodicService {
   private long startupTime;
 
   /** The time the Router enters safe mode in milliseconds. */
-  private long enterSafeModeTime = now();
+  private long enterSafeModeTime = monotonicNow();
 
 
   /**
@@ -107,7 +106,7 @@ public class RouterSafemodeService extends PeriodicService {
    */
   private void enter() {
     LOG.info("Entering safe mode");
-    enterSafeModeTime = now();
+    enterSafeModeTime = monotonicNow();
     safeMode = true;
     router.updateRouterState(RouterServiceState.SAFEMODE);
   }
@@ -117,7 +116,7 @@ public class RouterSafemodeService extends PeriodicService {
    */
   private void leave() {
     // Cache recently updated, leave safemode
-    long timeInSafemode = now() - enterSafeModeTime;
+    long timeInSafemode = monotonicNow() - enterSafeModeTime;
     LOG.info("Leaving safe mode after {} milliseconds", timeInSafemode);
     RouterMetrics routerMetrics = router.getRouterMetrics();
     if (routerMetrics == null) {
@@ -151,7 +150,7 @@ public class RouterSafemodeService extends PeriodicService {
     LOG.info("Enter safe mode after {} ms without reaching the State Store",
         this.staleInterval);
 
-    this.startupTime = Time.now();
+    this.startupTime = monotonicNow();
 
     // Initializing the RPC server in safe mode, it will disable it later
     enter();
@@ -161,7 +160,7 @@ public class RouterSafemodeService extends PeriodicService {
 
   @Override
   public void periodicInvoke() {
-    long now = Time.now();
+    long now = monotonicNow();
     long delta = now - startupTime;
     if (delta < startupInterval) {
       LOG.info("Delaying safemode exit for {} milliseconds...",

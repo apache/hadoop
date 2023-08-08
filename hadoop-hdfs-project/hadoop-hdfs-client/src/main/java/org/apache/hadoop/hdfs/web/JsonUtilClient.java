@@ -19,12 +19,16 @@ package org.apache.hadoop.hdfs.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
@@ -38,6 +42,8 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
@@ -69,6 +75,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -819,6 +826,57 @@ public class JsonUtilClient {
         diffList);
   }
 
+  public static FsStatus toFsStatus(Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(FsStatus.class.getSimpleName());
+    long capacity = getLong(m, "capacity", Long.MAX_VALUE);
+    long used = getLong(m, "used", 0);
+    long remaining = getLong(m, "remaining", Long.MAX_VALUE);
+    return new FsStatus(capacity, used, remaining);
+  }
+
+  public static Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies(
+      Map<?, ?> json) {
+    Map<?, ?> erasureCodingPoliciesJson = (Map<?, ?>) json.get("ErasureCodingPolicies");
+    if (erasureCodingPoliciesJson != null) {
+      List<?> objs = (List<?>) erasureCodingPoliciesJson.get(ErasureCodingPolicyInfo.class
+          .getSimpleName());
+      if (objs != null) {
+        ErasureCodingPolicyInfo[] erasureCodingPolicies = new ErasureCodingPolicyInfo[objs
+            .size()];
+        for (int i = 0; i < objs.size(); i++) {
+          final Map<?, ?> m = (Map<?, ?>) objs.get(i);
+          ErasureCodingPolicyInfo erasureCodingPolicyInfo = toECPolicyInfo(m);
+          erasureCodingPolicies[i] = erasureCodingPolicyInfo;
+        }
+        return Arrays.asList(erasureCodingPolicies);
+      }
+    }
+    return new ArrayList<ErasureCodingPolicyInfo>(0);
+  }
+
+  public static ErasureCodingPolicyInfo toECPolicyInfo(Map<?, ?> m) {
+    if (m == null) {
+      return null;
+    }
+    ErasureCodingPolicy ecPolicy = toECPolicy((Map<?, ?>) m.get("policy"));
+    String state = getString(m, "state", "DISABLE");
+    final ErasureCodingPolicyState ecPolicyState = ErasureCodingPolicyState.valueOf(state);
+    return new ErasureCodingPolicyInfo(ecPolicy, ecPolicyState);
+  }
+
+  public static Map<String, String> getErasureCodeCodecs(Map<?, ?> json) {
+    Map<String, String> map = new HashMap<>();
+    Map<?, ?> m = (Map<?, ?>) json.get("ErasureCodingCodecs");
+    m.forEach((key, value) -> {
+      map.put((String) key, (String) value);
+    });
+    return map;
+  }
+
   private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(
       List<?> objs) {
     if (objs == null) {
@@ -964,5 +1022,54 @@ public class JsonUtilClient {
             isDeleted, DFSUtilClient.string2Bytes(
                 SnapshotStatus.getParentPath(fullPath)));
     return snapshotStatus;
+  }
+
+  @VisibleForTesting
+  public static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
+      throws IOException {
+    final Map<?, ?> rootmap =
+        (Map<?, ?>) json.get(BlockLocation.class.getSimpleName() + "s");
+    final List<?> array =
+        JsonUtilClient.getList(rootmap, BlockLocation.class.getSimpleName());
+    Preconditions.checkNotNull(array);
+    final BlockLocation[] locations = new BlockLocation[array.size()];
+    int i = 0;
+    for (Object object : array) {
+      final Map<?, ?> m = (Map<?, ?>) object;
+      locations[i++] = JsonUtilClient.toBlockLocation(m);
+    }
+    return locations;
+  }
+
+  /** Convert a Json map to BlockLocation. **/
+  private static BlockLocation toBlockLocation(Map<?, ?> m) throws IOException {
+    if (m == null) {
+      return null;
+    }
+    long length = ((Number) m.get("length")).longValue();
+    long offset = ((Number) m.get("offset")).longValue();
+    boolean corrupt = Boolean.getBoolean(m.get("corrupt").toString());
+    String[] storageIds = toStringArray(getList(m, "storageIds"));
+    String[] cachedHosts = toStringArray(getList(m, "cachedHosts"));
+    String[] hosts = toStringArray(getList(m, "hosts"));
+    String[] names = toStringArray(getList(m, "names"));
+    String[] topologyPaths = toStringArray(getList(m, "topologyPaths"));
+    StorageType[] storageTypes = toStorageTypeArray(getList(m, "storageTypes"));
+    return new BlockLocation(names, hosts, cachedHosts, topologyPaths,
+        storageIds, storageTypes, offset, length, corrupt);
+  }
+
+  @VisibleForTesting
+  static String[] toStringArray(List<?> list) {
+    if (list == null) {
+      return null;
+    } else {
+      final String[] array = new String[list.size()];
+      int i = 0;
+      for (Object object : list) {
+        array[i++] = object.toString();
+      }
+      return array;
+    }
   }
 }

@@ -140,6 +140,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
@@ -153,6 +154,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -170,6 +172,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * @return a configuration set to use to the role ARN.
    * @throws JsonProcessingException problems working with JSON policies.
    */
+  @SuppressWarnings("deprecation")
   protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
@@ -183,6 +186,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedInvalidRole() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
@@ -200,6 +204,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleNoARN() throws Exception {
     describe("Attemnpt to create the FS with no ARN");
     Configuration conf = createAssumedRoleConfig();
@@ -232,6 +237,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleCannotAuthAssumedRole() throws Exception {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
@@ -245,13 +251,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth() throws Exception {
     describe("Try to authenticate with a keypair with spaces");
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "not valid");
     conf.set(SECRET_KEY, "not secret");
     expectFileSystemCreateFailure(conf,
@@ -261,13 +267,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth2() throws Exception {
     describe("Try to authenticate with an invalid keypair");
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "notvalid");
     conf.set(SECRET_KEY, "notsecret");
     expectFileSystemCreateFailure(conf,
@@ -345,6 +351,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleUndefined() throws Throwable {
     describe("Verify that you cannot instantiate the"
         + " AssumedRoleCredentialProvider without a role ARN");
@@ -356,6 +363,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedIllegalDuration() throws Throwable {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
@@ -418,8 +426,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT_TORRENT),
-            ALLOW_S3_GET_BUCKET_LOCATION,
-            STATEMENT_ALLOW_SSE_KMS_RW));
+            ALLOW_S3_GET_BUCKET_LOCATION, STATEMENT_ALLOW_KMS_RW));
     Path path = path("testAssumeRoleStillIncludesRolePerms");
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     assertTouchForbidden(roleFS, path);
@@ -439,8 +446,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3,
-            STATEMENT_ALLOW_SSE_KMS_READ));
+            STATEMENT_ALL_S3, STATEMENT_ALLOW_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -487,8 +493,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_BUCKET_READ_ACCESS,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_BUCKET_READ_ACCESS, STATEMENT_ALLOW_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
           .addResources(directory(restrictedDir)));
@@ -529,6 +534,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * don't break.
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedRoleRetryHandler() throws Throwable {
     try(AssumedRoleCredentialProvider provider
             = new AssumedRoleCredentialProvider(getFileSystem().getUri(),
@@ -554,8 +560,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.delete(basePath, true);
     fs.mkdirs(readOnlyDir);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -705,8 +710,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     fs.delete(destDir, true);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)
@@ -737,8 +741,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();

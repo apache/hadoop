@@ -396,6 +396,10 @@ public class LocalDirAllocator {
       Context ctx = confChanged(conf);
       int numDirs = ctx.localDirs.length;
       int numDirsSearched = 0;
+      // Max capacity in any directory
+      long maxCapacity = 0;
+      String errorText = null;
+      IOException diskException = null;
       //remove the leading slash from the path (to make sure that the uri
       //resolution results in a valid path on the dir being checked)
       if (pathStr.startsWith("/")) {
@@ -410,7 +414,14 @@ public class LocalDirAllocator {
         
             //build the "roulette wheel"
         for(int i =0; i < ctx.dirDF.length; ++i) {
-          availableOnDisk[i] = ctx.dirDF[i].getAvailable();
+          final DF target = ctx.dirDF[i];
+          // attempt to recreate the dir so that getAvailable() is valid
+          // if it fails, getAvailable() will return 0, so the dir will
+          // be declared unavailable.
+          // return value is logged at debug to keep spotbugs quiet.
+          final boolean b = new File(target.getDirPath()).mkdirs();
+          LOG.debug("mkdirs of {}={}", target, b);
+          availableOnDisk[i] = target.getAvailable();
           totalAvailable += availableOnDisk[i];
         }
 
@@ -444,9 +455,18 @@ public class LocalDirAllocator {
         int dirNum = ctx.getAndIncrDirNumLastAccessed(randomInc);
         while (numDirsSearched < numDirs) {
           long capacity = ctx.dirDF[dirNum].getAvailable();
+          if (capacity > maxCapacity) {
+            maxCapacity = capacity;
+          }
           if (capacity > size) {
-            returnPath =
-                createPath(ctx.localDirs[dirNum], pathStr, checkWrite);
+            try {
+              returnPath = createPath(ctx.localDirs[dirNum], pathStr,
+                  checkWrite);
+            } catch (IOException e) {
+              errorText = e.getMessage();
+              diskException = e;
+              LOG.debug("DiskException caught for dir {}", ctx.localDirs[dirNum], e);
+            }
             if (returnPath != null) {
               ctx.getAndIncrDirNumLastAccessed(numDirsSearched);
               break;
@@ -462,8 +482,13 @@ public class LocalDirAllocator {
       }
       
       //no path found
-      throw new DiskErrorException("Could not find any valid local " +
-          "directory for " + pathStr);
+      String newErrorText = "Could not find any valid local directory for " +
+          pathStr + " with requested size " + size +
+          " as the max capacity in any directory is " + maxCapacity;
+      if (errorText != null) {
+        newErrorText = newErrorText + " due to " + errorText;
+      }
+      throw new DiskErrorException(newErrorText, diskException);
     }
 
     /** Creates a file on the local FS. Pass size as 

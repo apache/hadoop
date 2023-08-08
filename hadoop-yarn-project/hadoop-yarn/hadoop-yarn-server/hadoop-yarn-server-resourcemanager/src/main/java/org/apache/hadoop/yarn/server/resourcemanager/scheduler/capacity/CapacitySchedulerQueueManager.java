@@ -81,6 +81,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   private CSQueue root;
   private final RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
+  private CapacitySchedulerQueueCapacityHandler queueCapacityHandler;
 
   private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       queueStateManager;
@@ -100,6 +101,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     this.queueStateManager = new QueueStateManager<>();
     this.appPriorityACLManager = appPriorityACLManager;
     this.configuredNodeLabels = new ConfiguredNodeLabels();
+    this.queueCapacityHandler = new CapacitySchedulerQueueCapacityHandler(labelManager,
+        new CapacitySchedulerConfiguration(conf));
   }
 
   @Override
@@ -247,7 +250,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueueName);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)
-    final boolean isDynamicParent = oldQueue instanceof ParentQueue && oldQueue.isDynamicQueue();
+    final boolean isDynamicParent = oldQueue instanceof AbstractParentQueue &&
+            oldQueue.isDynamicQueue();
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         fullQueueName) || isAutoCreateEnabled;
 
@@ -268,7 +272,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         throw new IllegalStateException("Only Leaf Queues can be reservable for " + fullQueueName);
       }
 
-      ParentQueue parentQueue;
+      AbstractParentQueue parentQueue;
       if (isAutoCreateEnabled) {
         parentQueue = new ManagedParentQueue(queueContext, queueName, parent, oldQueues.get(
             fullQueueName));
@@ -411,6 +415,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   public QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       getQueueStateManager() {
     return this.queueStateManager;
+  }
+
+  public CapacitySchedulerQueueCapacityHandler getQueueCapacityHandler() {
+    return queueCapacityHandler;
   }
 
   /**
@@ -570,6 +578,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       firstExistingStaticParent = getQueue(parentCandidate.toString());
     }
 
+    if (firstExistingParent == null || firstExistingStaticParent == null) {
+      throw new SchedulerDynamicEditException("Could not auto-create queue "
+          + queue + " parent queue does not exist.");
+    }
+
     int maximumDepthOfStaticParent = csContext.getConfiguration().getMaximumAutoCreatedQueueDepth(
         firstExistingStaticParent.getQueuePath());
     if (firstStaticParentDistance > maximumDepthOfStaticParent) {
@@ -580,7 +593,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
               "above the limit.");
     }
 
-    if (!(firstExistingParent instanceof ParentQueue)) {
+    if (!(firstExistingParent instanceof AbstractParentQueue)) {
       throw new SchedulerDynamicEditException(
           "Could not auto create hierarchy of "
               + queue.getFullPath() + ". Queue " + queue.getParent() +
@@ -588,7 +601,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       );
     }
 
-    ParentQueue existingParentQueue = (ParentQueue) firstExistingParent;
+    AbstractParentQueue existingParentQueue = (AbstractParentQueue) firstExistingParent;
 
     if (!existingParentQueue.isEligibleForAutoQueueCreation()) {
       throw new SchedulerDynamicEditException("Auto creation of queue " +

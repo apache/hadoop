@@ -20,11 +20,14 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.ApplicationHomeSubClusterProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.ApplicationHomeSubClusterProtoOrBuilder;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
@@ -44,6 +47,8 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
 
   private ApplicationId applicationId = null;
   private SubClusterId homeSubCluster = null;
+  private long createTime = 0L;
+  private ApplicationSubmissionContext applicationSubmissionContext;
 
   public ApplicationHomeSubClusterPBImpl() {
     builder = ApplicationHomeSubClusterProto.newBuilder();
@@ -110,6 +115,9 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
   @Override
   public ApplicationId getApplicationId() {
     ApplicationHomeSubClusterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.applicationId != null) {
+      return this.applicationId;
+    }
     if (!p.hasApplicationId()) {
       return null;
     }
@@ -125,6 +133,7 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
       return;
     }
     this.applicationId = applicationId;
+    builder.setApplicationId(convertToProtoFormat(applicationId));
   }
 
   @Override
@@ -141,12 +150,58 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
   }
 
   @Override
-  public void setHomeSubCluster(SubClusterId homeSubCluster) {
+  public void setHomeSubCluster(SubClusterId paramHomeSubCluster) {
     maybeInitBuilder();
-    if (homeSubCluster == null) {
+    if (paramHomeSubCluster == null) {
       builder.clearHomeSubCluster();
+      return;
     }
-    this.homeSubCluster = homeSubCluster;
+    this.homeSubCluster = paramHomeSubCluster;
+    builder.setHomeSubCluster(convertToProtoFormat(paramHomeSubCluster));
+  }
+
+  @Override
+  public long getCreateTime() {
+    ApplicationHomeSubClusterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.createTime != 0) {
+      return this.createTime;
+    }
+    if (!p.hasCreateTime()) {
+      return 0;
+    }
+    this.createTime = p.getCreateTime();
+    return this.createTime;
+  }
+
+  @Override
+  public void setCreateTime(long time) {
+    maybeInitBuilder();
+    this.createTime = time;
+    builder.setCreateTime(time);
+  }
+
+  @Override
+  public void setApplicationSubmissionContext(ApplicationSubmissionContext context) {
+    maybeInitBuilder();
+    if (context == null) {
+      builder.clearAppSubmitContext();
+      return;
+    }
+    this.applicationSubmissionContext = context;
+    builder.setAppSubmitContext(convertToProtoFormat(context));
+  }
+
+  @Override
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    ApplicationHomeSubClusterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.applicationSubmissionContext != null) {
+      return this.applicationSubmissionContext;
+    }
+    if (!p.hasAppSubmitContext()) {
+      return null;
+    }
+    this.applicationSubmissionContext = convertFromProtoFormat(p.getAppSubmitContext());
+    return this.applicationSubmissionContext;
   }
 
   private SubClusterId convertFromProtoFormat(SubClusterIdProto subClusterId) {
@@ -163,5 +218,15 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId appId) {
     return ((ApplicationIdPBImpl) appId).getProto();
+  }
+
+  private ApplicationSubmissionContext convertFromProtoFormat(
+      ApplicationSubmissionContextProto appSubmitContext) {
+    return new ApplicationSubmissionContextPBImpl(appSubmitContext);
+  }
+
+  private ApplicationSubmissionContextProto convertToProtoFormat(
+      ApplicationSubmissionContext appContext) {
+    return ((ApplicationSubmissionContextPBImpl) appContext).getProto();
   }
 }

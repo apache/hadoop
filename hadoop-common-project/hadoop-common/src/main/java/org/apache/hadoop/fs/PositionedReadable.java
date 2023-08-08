@@ -114,6 +114,16 @@ public interface PositionedReadable {
    * As a result of the call, each range will have FileRange.setData(CompletableFuture)
    * called with a future that when complete will have a ByteBuffer with the
    * data from the file's range.
+   * <p>
+   *   The position returned by getPos() after readVectored() is undefined.
+   * </p>
+   * <p>
+   *   If a file is changed while the readVectored() operation is in progress, the output is
+   *   undefined. Some ranges may have old data, some may have new and some may have both.
+   * </p>
+   * <p>
+   *   While a readVectored() operation is in progress, normal read api calls may block.
+   * </p>
    * @param ranges the byte ranges to read
    * @param allocate the function to allocate ByteBuffer
    * @throws IOException any IOE.

@@ -194,7 +194,7 @@ public class TestRouterNamenodeWebScheme {
     final List<FederationNamenodeContext> namespaceInfo = new ArrayList<>();
     for (String nsId : nns.keySet()) {
       List<? extends FederationNamenodeContext> nnReports =
-          resolver.getNamenodesForNameserviceId(nsId);
+          resolver.getNamenodesForNameserviceId(nsId, false);
       namespaceInfo.addAll(nnReports);
     }
     for (FederationNamenodeContext nnInfo : namespaceInfo) {

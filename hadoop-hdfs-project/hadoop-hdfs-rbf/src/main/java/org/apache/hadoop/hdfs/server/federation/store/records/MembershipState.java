@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerialize
 /**
  * Data schema for storing NN registration information in the
  * {@link org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * FederationStateStoreService}.
+ * StateStoreService}.
  */
 public abstract class MembershipState extends BaseRecord
     implements FederationNamenodeContext {
