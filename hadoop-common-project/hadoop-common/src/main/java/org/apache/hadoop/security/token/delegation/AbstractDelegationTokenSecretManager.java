@@ -88,8 +88,7 @@ extends AbstractDelegationTokenIdentifier>
    * Cache of currently valid tokens, mapping from DelegationTokenIdentifier 
    * to DelegationTokenInformation. Protected by this object lock.
    */
-  protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
-      = new ConcurrentHashMap<>();
+  protected Map<TokenIdent, DelegationTokenInformation> currentTokens;
 
   /**
    * Map of token real owners to its token count. This is used to generate
@@ -155,6 +154,7 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
     this.storeTokenTrackingId = false;
+    this.currentTokens = new ConcurrentHashMap<>();
   }
 
   /**
@@ -771,8 +771,12 @@ extends AbstractDelegationTokenIdentifier>
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
       LOG.info("Removing expired token " + formatTokenId(ident));
-      removeStoredToken(ident);
+      removeExpiredStoredToken(ident);
     }
+  }
+
+  protected void removeExpiredStoredToken(TokenIdent ident) throws IOException {
+    removeStoredToken(ident);
   }
 
   public void stopThreads() {

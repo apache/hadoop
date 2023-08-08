@@ -4390,6 +4390,61 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
       "kerberos.principal.hostname";
 
+  public static final String FEDERATION_GPG_POLICY_PREFIX =
+      FEDERATION_GPG_PREFIX + "policy.generator.";
+
+  /** The interval at which the policy generator runs, default is one hour. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL =
+      FEDERATION_GPG_POLICY_PREFIX + "interval";
+  public static final long DEFAULT_GPG_POLICY_GENERATOR_INTERVAL = TimeUnit.HOURS.toMillis(1);
+
+  /** The interval at which the policy generator runs, default is one hour.
+   *  This is an deprecated property, We better set it
+   *  `yarn.federation.gpg.policy.generator.interval`. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL_MS =
+      FEDERATION_GPG_POLICY_PREFIX + "interval-ms";
+
+  /**
+   * The configured policy generator class, runs NoOpGlobalPolicy by
+   * default.
+   */
+  public static final String GPG_GLOBAL_POLICY_CLASS = FEDERATION_GPG_POLICY_PREFIX + "class";
+  public static final String DEFAULT_GPG_GLOBAL_POLICY_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator." +
+      "NoOpGlobalPolicy";
+
+  /**
+   * Whether or not the policy generator is running in read only (won't modify
+   * policies), default is false.
+   */
+  public static final String GPG_POLICY_GENERATOR_READONLY =
+      FEDERATION_GPG_POLICY_PREFIX + "readonly";
+  public static final boolean DEFAULT_GPG_POLICY_GENERATOR_READONLY = false;
+
+  /**
+   * Which sub-clusters the policy generator should blacklist.
+   */
+  public static final String GPG_POLICY_GENERATOR_BLACKLIST =
+      FEDERATION_GPG_POLICY_PREFIX + "blacklist";
+
+  private static final String FEDERATION_GPG_LOAD_BASED_PREFIX =
+      YarnConfiguration.FEDERATION_GPG_PREFIX + "policy.generator.load-based.";
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.minimum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_PENDING = 100;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_PENDING = 1000;
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "weight.minimum";
+  public static final float DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT = 0.0f;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_EDIT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "edit.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_EDIT = 3;
+  public static final String FEDERATION_GPG_LOAD_BASED_SCALING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "scaling";
+  public static final String DEFAULT_FEDERATION_GPG_LOAD_BASED_SCALING = "LINEAR";
+
   /**
    * Connection and Read timeout from the Router to RM.
    */

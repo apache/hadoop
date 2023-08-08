@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import javax.ws.rs.core.MediaType;
@@ -30,6 +32,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
@@ -37,17 +41,27 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     JerseyTestBase {
 
-  public TestRMWebServicesCapacitySchedLegacyQueueCreation() {
+  private final boolean legacyQueueMode;
+
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
+  }
+
+  public TestRMWebServicesCapacitySchedLegacyQueueCreation(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
   public void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "25");
     conf.put("yarn.scheduler.capacity.root.managed.capacity", "75");
@@ -64,6 +78,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
       throws Exception {
     Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
     conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=28672,vcores=28]");
     conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");

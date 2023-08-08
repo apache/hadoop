@@ -24,9 +24,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +50,13 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   private static final String SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE = SQL_DTSM_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final int DEFAULT_SEQ_NUM_BATCH_SIZE = 10;
+  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION = SQL_DTSM_CONF_PREFIX
+      + "token.loading.cache.expiration";
+  public static final long SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT =
+      TimeUnit.SECONDS.toMillis(10);
+  public static final String SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE = SQL_DTSM_CONF_PREFIX
+      + "token.loading.cache.max.size";
+  public static final long SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE_DEFAULT = 100000;
 
   // Batch of sequence numbers that will be requested by the sequenceNumCounter.
   // A new batch is requested once the sequenceNums available to a secret manager are
@@ -71,6 +82,13 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
 
     this.seqNumBatchSize = conf.getInt(SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         DEFAULT_SEQ_NUM_BATCH_SIZE);
+
+    long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
+        SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT, TimeUnit.MILLISECONDS);
+    long maximumCacheSize = conf.getLong(SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE,
+        SQL_DTSM_TOKEN_LOADING_CACHE_MAX_SIZE_DEFAULT);
+    this.currentTokens = new DelegationTokenLoadingCache<>(cacheExpirationMs, maximumCacheSize,
+        this::getTokenInfoFromSQL);
   }
 
   /**
@@ -126,15 +144,11 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   @Override
   public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(token.getIdentifier());
-        DataInputStream din = new DataInputStream(bis)) {
-      TokenIdent id = createIdentifier();
-      id.readFields(din);
+    TokenIdent id = createTokenIdent(token.getIdentifier());
 
-      // Calling getTokenInfo to load token into local cache if not present.
-      // super.cancelToken() requires token to be present in local cache.
-      getTokenInfo(id);
-    }
+    // Calling getTokenInfo to load token into local cache if not present.
+    // super.cancelToken() requires token to be present in local cache.
+    getTokenInfo(id);
 
     return super.cancelToken(token, canceller);
   }
@@ -153,6 +167,24 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
     }
   }
 
+  @Override
+  protected void removeExpiredStoredToken(TokenIdent ident) {
+    try {
+      // Ensure that the token has not been renewed in SQL by
+      // another secret manager
+      DelegationTokenInformation tokenInfo = getTokenInfoFromSQL(ident);
+      if (tokenInfo.getRenewDate() >= Time.now()) {
+        LOG.info("Token was renewed by a different router and has not been deleted: {}", ident);
+        return;
+      }
+      removeStoredToken(ident);
+    } catch (NoSuchElementException e) {
+      LOG.info("Token has already been deleted by a different router: {}", ident);
+    } catch (Exception e) {
+      LOG.warn("Could not remove token {}", ident, e);
+    }
+  }
+
   /**
    * Obtains the DelegationTokenInformation associated with the given
    * TokenIdentifier in the SQL database.
@@ -160,29 +192,35 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
    * @return DelegationTokenInformation that matches the given TokenIdentifier or
    *         null if it doesn't exist in the database.
    */
-  @Override
-  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
-    // Look for token in local cache
-    DelegationTokenInformation tokenInfo = super.getTokenInfo(ident);
+  @VisibleForTesting
+  protected DelegationTokenInformation getTokenInfoFromSQL(TokenIdent ident) {
+    try {
+      byte[] tokenInfoBytes = selectTokenInfo(ident.getSequenceNumber(), ident.getBytes());
+      if (tokenInfoBytes == null) {
+        // Throw exception so value is not added to cache
+        throw new NoSuchElementException("Token not found in SQL secret manager: " + ident);
+      }
+      return createTokenInfo(tokenInfoBytes);
+    } catch (SQLException | IOException e) {
+      LOG.error("Failed to get token in SQL secret manager", e);
+      throw new RuntimeException(e);
+    }
+  }
 
-    if (tokenInfo == null) {
-      try {
-        // Look for token in SQL database
-        byte[] tokenInfoBytes = selectTokenInfo(ident.getSequenceNumber(), ident.getBytes());
+  private TokenIdent createTokenIdent(byte[] tokenIdentBytes) throws IOException {
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(tokenIdentBytes);
+        DataInputStream din = new DataInputStream(bis)) {
+      TokenIdent id = createIdentifier();
+      id.readFields(din);
+      return id;
+    }
+  }
 
-        if (tokenInfoBytes != null) {
-          tokenInfo = new DelegationTokenInformation();
-          try (ByteArrayInputStream bis = new ByteArrayInputStream(tokenInfoBytes)) {
-            try (DataInputStream dis = new DataInputStream(bis)) {
-              tokenInfo.readFields(dis);
-            }
-          }
-
-          // Update token in local cache
-          currentTokens.put(ident, tokenInfo);
-        }
-      } catch (IOException | SQLException e) {
-        LOG.error("Failed to get token in SQL secret manager", e);
+  private DelegationTokenInformation createTokenInfo(byte[] tokenInfoBytes) throws IOException {
+    DelegationTokenInformation tokenInfo = new DelegationTokenInformation();
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(tokenInfoBytes)) {
+      try (DataInputStream dis = new DataInputStream(bis)) {
+        tokenInfo.readFields(dis);
       }
     }
 
