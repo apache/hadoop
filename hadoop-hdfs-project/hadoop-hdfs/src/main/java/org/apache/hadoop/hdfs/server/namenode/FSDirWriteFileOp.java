@@ -251,7 +251,6 @@ class FSDirWriteFileOp {
     fsn.commitOrCompleteLastBlock(pendingFile, fileState.iip,
                                   ExtendedBlock.getLocalBlock(previous));
 
-    // allocate new block, record block locations in INode.
     final BlockType blockType = pendingFile.getBlockType();
     // allocate new block, record block locations in INode.
     Block newBlock = fsn.createNewBlock(blockType);
