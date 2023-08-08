@@ -365,8 +365,8 @@ public class TestWebAppProxyServlet {
       String appAddressInRm =
           WebAppUtils.getResolvedRMWebAppURLWithScheme(configuration) +
               "/cluster" + "/app/" + app.toString();
-      assertEquals("Webapp proxy servlet should have redirected to RM",
-          proxyConn.getURL().toString(), appAddressInRm);
+      assertEquals(proxyConn.getURL().toString(), appAddressInRm,
+          "Webapp proxy servlet should have redirected to RM");
 
       //set AHS_ENABLED = true to simulate getting the app report from AHS
       configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
@@ -384,8 +384,8 @@ public class TestWebAppProxyServlet {
       String appAddressInAhs =
           WebAppUtils.getHttpSchemePrefix(configuration) + WebAppUtils.getAHSWebAppURLWithoutScheme(
               configuration) + "/applicationhistory" + "/app/" + app.toString();
-      assertEquals("Webapp proxy servlet should have redirected to AHS",
-          proxyConn.getURL().toString(), appAddressInAhs);
+      assertEquals(proxyConn.getURL().toString(), appAddressInAhs,
+          "Webapp proxy servlet should have redirected to AHS");
     } finally {
       proxy.close();
     }
