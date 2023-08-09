@@ -129,6 +129,71 @@ See AWS SDK v2 issue [Simplify Modeled Message Marshalling #82](https://github.c
 note that it was filed in 2017, then implement your own workaround pending that issue
 being resolved.
 
+### Compilation/Linkage Errors
+
+Any code making use of v1 sdk classes will fail if they
+* Expect the v1 sdk classes to be on the classpath when `hadoop-aws` is declared as a dependency
+* Use v1-SDK-compatible methods previously exported by the `S3AFileSystem` class and associated classes.
+* Try to pass s3a classes to v1 SDK classes (e.g. credential providers).
+
+The sole solution to these problems is "move to the v2 SDK".
+
+Some `S3AUtils` methods are deleted
+```
+cannot find symbol
+[ERROR]   symbol:   method createAwsConf(org.apache.hadoop.conf.Configuration,java.lang.String)
+[ERROR]   location: class org.apache.hadoop.fs.s3a.S3AUtils
+```
+
+The signature and superclass of `AWSCredentialProviderList` has changed, which can surface in different
+ways
+
+Signature mismatch
+```
+ cannot find symbol
+[ERROR]   symbol:   method getCredentials()
+[ERROR]   location: variable credentials of type org.apache.hadoop.fs.s3a.AWSCredentialProviderList
+```
+
+It is no longer a V1 credential provider, cannot be used to pass credentials to a v1 SDK class
+```
+incompatible types: org.apache.hadoop.fs.s3a.AWSCredentialProviderList cannot be converted to com.amazonaws.auth.AWSCredentialsProvider
+```
+
+### `AmazonS3` replaced by `S3Client`; factory and accessor changed.
+
+The V1 s3 client class `com.amazonaws.services.s3.AmazonS3` has been superseded by `software.amazon.awssdk.services.s3.S3Client` 
+
+The `S3ClientFactory` interface has been replaced by one that creates a V2 `S3Client`.
+* Custom implementations will need to be updated.
+* The `InconsistentS3ClientFactory` class has been deleted.
+
+
+
+#### `S3AFileSystem` method changes
+
+##### `S3AFileSystem.getAmazonS3ClientForTesting()`
+
+The `S3AFileSystem.getAmazonS3ClientForTesting()` method has been been deleted.
+
+Compilation
+```
+cannot find symbol
+[ERROR]   symbol:   method getAmazonS3ClientForTesting(java.lang.String)
+[ERROR]   location: variable fs of type org.apache.hadoop.fs.s3a.S3AFileSystem
+```
+
+It has been replaced with a new method to return the V2 `S3Client` of the filesystem instance.
+```java
+public S3Client getAmazonS3V2ClientForTesting(String reason);
+```
+
+##### `S3AFileSystem.getObjectMetadata(Path path)` returns a v2 HeadResponse
+
+The `getObjectMetadata(Path)` call returns an instance of the
+`software.amazon.awssdk.services.s3.model.HeadObjectResponse` class 
+
+
 ### Credential Providers
 
 - Interface change: [com.amazonaws.auth.AWSCredentialsProvider](https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/auth/AWSCredentialsProvider.java)
@@ -147,7 +212,10 @@ The v2 interface starts with "Aws". This is a very subtle change
 for developers to spot.
 Compilers _will_ detect and report the type mismatch.
 
+
 ```java
+package com.amazonaws.auth;
+
 public interface AWSCredentialsProvider {
 
     public AWSCredentials getCredentials();
@@ -166,6 +234,8 @@ be invoked when the provider chain was being shut down.
 #### v2 `AwsCredentialsProvider` interface
 
 ```java
+package software.amazon.awssdk.auth.credentials;
+
 public interface AwsCredentialsProvider {
 
   AwsCredentials resolveCredentials();
@@ -180,6 +250,18 @@ public interface AwsCredentialsProvider {
 4. If the interface implements `Closeable` or `AutoCloseable`, these will
    be invoked when the provider chain is being shut down.
 
+#### `AWSCredentialProviderList` is now a V2 credential provider
+
+The class `org.apache.hadoop.fs.s3a.AWSCredentialProviderList` has moved from
+being a v1 to a v2 credential provider.
+Any code which obtains one of these lists, such as through a call to `S3AFileSystem.shareCredentials()`
+may still link, but the v1 operations are no longer available.
+
+```
+java.lang.NoSuchMethodError: org.apache.hadoop.fs.s3a.AWSCredentialProviderList.getCredentials()Lcom/amazonaws/auth/AWSCredentials;
+        at org.apache.hadoop.fs.store.diag.S3ADiagnosticsInfo.validateFilesystem(S3ADiagnosticsInfo.java:903)
+
+```
 
 ### Delegation Tokens
 
@@ -194,14 +276,8 @@ the list; if they are `Closeable` or `AutoCloseable` then their `close()` method
 * Accordingly, providers may still perform background refreshes in separate threads;
   the S3A client will close its provider list when the filesystem itself is closed.
 
-### AmazonS3 replaced by S3Client
 
-The s3 client is an instance of `S3Client` in V2 rather than `AmazonS3`.
 
-For this reason, the `S3ClientFactory` will be deprecated and replaced by one that creates a V2
-`S3Client`.
-
-The `getAmazonS3ClientForTesting()` method has been updated to return the `S3Client`.
 
 ### Signers
 

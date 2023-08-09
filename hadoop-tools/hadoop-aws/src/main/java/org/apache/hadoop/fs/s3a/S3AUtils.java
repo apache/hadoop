@@ -537,48 +537,6 @@ public final class S3AUtils {
     return date.getTime();
   }
 
-  /***
-   * Creates an instance of a class using reflection. The
-   * class must implement one of the following means of construction, which are
-   * attempted in order:
-   *
-   * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named as per methodName, that accepts no
-   *    arguments and returns an instance of
-   *    specified type, or</li>
-   * <li>a public default constructor.</li>
-   * </ol>
-   *
-   * @param instanceClass Class for which instance is to be created
-   * @param conf configuration
-   * @param uri URI of the FS
-   * @param interfaceImplemented interface that this class implements
-   * @param methodName name of factory method to be invoked
-   * @param configKey config key under which this class is specified
-   * @param <InstanceT> Instance of class
-   * @return instance of the specified class
-   * @throws IOException on any problem
-   */
-  public static <InstanceT> InstanceT getInstanceFromReflection(
-      Class<?> instanceClass,
-      Configuration conf,
-      @Nullable URI uri,
-      Class<InstanceT> interfaceImplemented,
-      String methodName,
-      String configKey) throws IOException {
-
-    return getInstanceFromReflection(instanceClass.getName(),
-        conf,
-        uri,
-        interfaceImplemented,
-        methodName,
-        configKey);
-  }
-
   /**
    * Creates an instance of a class using reflection. The
    * class must implement one of the following means of construction, which are

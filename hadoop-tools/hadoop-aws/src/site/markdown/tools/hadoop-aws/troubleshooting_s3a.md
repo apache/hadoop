@@ -74,8 +74,8 @@ the classpath.
 ### `NoClassDefFoundError: software/amazon/awssdk/crt/s3/S3MetaRequest`
 
 The library `aws-crt.jar` is not on the classpath. Its classes
-are not in the AWS `bundle.jar` file, yet are needed for uploading
-and renaming objects.
+are not in the AWS `bundle.jar` file, yet may be needed by some uses made
+of the SDK.
 
 Fix: add.
 

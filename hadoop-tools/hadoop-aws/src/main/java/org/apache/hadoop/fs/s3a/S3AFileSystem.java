@@ -926,7 +926,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // with it if so.
 
       LOG.debug("Using delegation tokens");
-      V2Migration.v1DelegationTokenCredentialProvidersUsed();
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
       tokens.bindToFileSystem(getCanonicalUri(),
@@ -1350,15 +1349,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * A log for warning of aws s3 client use; only logs once per process.
+   */
+  private static final LogExactlyOnce AWS_CLIENT_LOG = new LogExactlyOnce(LOG);
+
+  /**
    * Returns the S3 client used by this filesystem.
+   * Will log once first, to discourage use.
    * <i>Warning: this must only be used for testing, as it bypasses core
    * S3A operations. </i>
    * @param reason a justification for requesting access.
    * @return S3Client
    */
   @VisibleForTesting
-  public S3Client getAmazonS3ClientForTesting(String reason) {
-    LOG.warn("Access to S3 client requested, reason {}", reason);
+  public S3Client getAmazonS3V2ClientForTesting(String reason) {
+    AWS_CLIENT_LOG.warn("Access to S3 client requested, reason {}", reason);
     return s3Client;
   }
 
@@ -2489,7 +2494,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
   public HeadObjectResponse getObjectMetadata(Path path) throws IOException {
-    V2Migration.v1GetObjectMetadataCalled();
     return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
         getObjectMetadata(makeQualified(path), null, invoker,
             "getObjectMetadata"));
