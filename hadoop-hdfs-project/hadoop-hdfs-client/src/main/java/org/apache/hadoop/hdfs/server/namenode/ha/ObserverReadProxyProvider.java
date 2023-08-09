@@ -343,11 +343,8 @@ public class ObserverReadProxyProvider<T>
    * the second function.
    */
   HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo) {
-    Callable<HAServiceState> getHAServiceStateTask = () -> getHAServiceState(proxyInfo);
-
     try {
-      Future<HAServiceState> task =
-          nnProbingThreadPool.submit(getHAServiceStateTask);
+      Future<HAServiceState> task = nnProbingThreadPool.submit(() -> getHAServiceState(proxyInfo));
       return getHAServiceStateWithTimeout(proxyInfo, task);
     } catch (RejectedExecutionException e) {
       LOG.warn("Run out of threads to submit the request to query HA state. "
@@ -373,9 +370,7 @@ public class ObserverReadProxyProvider<T>
       // Cancel the task on timeout
       String msg = String.format("Cancel NN probe task due to timeout for %s", proxyInfo.proxyInfo);
       LOG.warn(msg, e);
-      if (task != null) {
-        task.cancel(true);
-      }
+      task.cancel(true);
     } catch (InterruptedException|ExecutionException e) {
       String msg = String.format("Exception in NN probe task for %s", proxyInfo.proxyInfo);
       LOG.warn(msg, e);
