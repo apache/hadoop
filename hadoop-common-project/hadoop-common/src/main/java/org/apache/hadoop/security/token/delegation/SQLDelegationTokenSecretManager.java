@@ -53,7 +53,7 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
       + "token.seqnum.batch.size";
   public static final int DEFAULT_SEQ_NUM_BATCH_SIZE = 10;
   public static final String SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS = SQL_DTSM_CONF_PREFIX
-      + "token.token.max.cleanup.results";
+      + "token.max.cleanup.results";
   public static final int SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS_DEFAULT = 10000;
   public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION = SQL_DTSM_CONF_PREFIX
       + "token.loading.cache.expiration";
