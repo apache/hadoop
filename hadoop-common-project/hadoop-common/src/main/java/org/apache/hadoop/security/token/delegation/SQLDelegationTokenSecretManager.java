@@ -459,7 +459,7 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   protected abstract byte[] selectTokenInfo(int sequenceNum, byte[] tokenIdentifier)
       throws SQLException;
   protected abstract Map<byte[], byte[]> selectStaleTokenInfos(long maxModifiedTime,
-      int topResults) throws SQLException;
+      int maxResults) throws SQLException;
   protected abstract void insertToken(int sequenceNum, byte[] tokenIdentifier, byte[] tokenInfo)
       throws SQLException;
   protected abstract void updateToken(int sequenceNum, byte[] tokenIdentifier, byte[] tokenInfo)
