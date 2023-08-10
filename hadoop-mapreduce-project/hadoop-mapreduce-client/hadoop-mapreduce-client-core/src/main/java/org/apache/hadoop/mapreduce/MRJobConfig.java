@@ -306,8 +306,8 @@ public interface MRJobConfig {
     "java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name";
 
   /*
-   * Flag to indicate whether JDK17's required add-opens flags should be added to MR AM and map/reduce containers
-   * regardless of the user specified java opts.
+   * Flag to indicate whether JDK17's required add-opens flags should be added to MR AM and
+   * map/reduce containers regardless of the user specified java opts.
    */
   public static final String MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT =
     "mapreduce.jvm.add-opens-as-default";
