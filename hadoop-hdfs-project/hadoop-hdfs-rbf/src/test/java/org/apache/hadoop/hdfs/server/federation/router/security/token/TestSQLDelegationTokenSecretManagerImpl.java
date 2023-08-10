@@ -218,7 +218,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
         try {
           // Constantly renew token so it doesn't expire.
           tokenManager.renewToken(token1, "foo");
-          
+
           // Wait for cleanup to happen so expired token is deleted from SQL.
           return !isTokenInSQL(secretManager, tokenId2);
         } catch (IOException | SQLException e) {

@@ -183,6 +183,7 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
       Map<byte[], byte[]> tokenInfoBytesList = selectTokenInfos(maxModifiedTime,
           this.maxTokenCleanupResults);
 
+      LOG.info("Found {} tokens for cleanup", tokenInfoBytesList.size());
       for (Map.Entry<byte[], byte[]> tokenInfoBytes : tokenInfoBytesList.entrySet()) {
         TokenIdent tokenIdent = createTokenIdent(tokenInfoBytes.getKey());
         DelegationTokenInformation tokenInfo = createTokenInfo(tokenInfoBytes.getValue());

@@ -162,13 +162,14 @@ public class SQLDelegationTokenSecretManagerImpl
               "SELECT tokenIdentifier, tokenInfo FROM Tokens WHERE modifiedTime < ?")) {
         statement.setTimestamp(1, new Timestamp(maxModifiedTime));
         statement.setMaxRows(maxResults);
-        ResultSet result = statement.executeQuery();
-        Map<byte[], byte[]> results = new HashMap<>();
-        while (result.next()) {
-          results.put(result.getBytes("tokenIdentifier"),
-              result.getBytes("tokenInfo"));
+        try (ResultSet result = statement.executeQuery()) {
+          Map<byte[], byte[]> results = new HashMap<>();
+          while (result.next()) {
+            results.put(result.getBytes("tokenIdentifier"),
+                result.getBytes("tokenInfo"));
+          }
+          return results;
         }
-        return results;
       }
     });
   }
