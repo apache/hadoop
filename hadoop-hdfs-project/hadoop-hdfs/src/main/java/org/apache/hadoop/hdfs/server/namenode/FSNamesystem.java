@@ -3816,8 +3816,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         pendingFile.removeLastBlock(lastBlock);
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
-            + "Removed empty last block and closed file " + src);
+        if (uc.getNumExpectedLocations() == 0) {
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed empty last block and closed file " + src);
+        } else {
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed last unrecoverable block group and closed file " + src);
+        }
         return true;
       }
       // Start recovery of the last block for this file
