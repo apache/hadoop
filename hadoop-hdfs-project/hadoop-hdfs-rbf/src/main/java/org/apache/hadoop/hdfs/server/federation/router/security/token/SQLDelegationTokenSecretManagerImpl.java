@@ -154,7 +154,7 @@ public class SQLDelegationTokenSecretManagerImpl
   }
 
   @Override
-  protected Map<byte[], byte[]> selectTokenInfos(long maxModifiedTime, int maxResults)
+  protected Map<byte[], byte[]> selectStaleTokenInfos(long maxModifiedTime, int maxResults)
       throws SQLException {
     return retryHandler.execute(() -> {
       try (Connection connection = connectionFactory.getConnection();

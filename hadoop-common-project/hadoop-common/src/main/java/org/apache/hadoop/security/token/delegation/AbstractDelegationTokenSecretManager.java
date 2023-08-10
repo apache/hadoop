@@ -759,7 +759,7 @@ extends AbstractDelegationTokenIdentifier>
     Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
-          getTokensForCleanup().entrySet().iterator();
+          getCandidateTokensForCleanup().entrySet().iterator();
       while (i.hasNext()) {
         Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
         long renewDate = entry.getValue().getRenewDate();
@@ -774,7 +774,7 @@ extends AbstractDelegationTokenIdentifier>
     logExpireTokens(expiredTokens);
   }
 
-  protected Map<TokenIdent, DelegationTokenInformation> getTokensForCleanup() {
+  protected Map<TokenIdent, DelegationTokenInformation> getCandidateTokensForCleanup() {
     return this.currentTokens;
   }
 
