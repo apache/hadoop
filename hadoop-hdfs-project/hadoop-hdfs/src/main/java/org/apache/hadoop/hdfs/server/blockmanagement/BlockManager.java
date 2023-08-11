@@ -2972,7 +2972,7 @@ public class BlockManager implements BlockStatsMXBean {
       blockReportLeaseManager.removeLease(node);
     }
   }
-  
+
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
       final BlockReportContext context) throws IOException {
     namesystem.writeLock();

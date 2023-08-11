@@ -311,7 +311,7 @@ public class TestBlockReportLease {
       doAnswer(delayer).when(spyBlockManager).processReport(
           any(DatanodeStorageInfo.class),
           any(BlockListAsLongs.class));
-      
+
       // Trigger sendBlockReport.
       BlockReportContext brContext = new BlockReportContext(1, 0,
           rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
