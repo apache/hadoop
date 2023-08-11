@@ -52,6 +52,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PIPELINE_SLOWNODE_ENABLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -619,6 +620,14 @@ public class TestDataNodeReconfiguration {
           DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
       assertEquals(dn.getPeerMetrics().getSlowNodeDetector().getLowThresholdMs(),
           DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
+
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.pipeline.slownode from 'false' to 'text'",
+          () -> dn.reconfigureProperty(DFS_PIPELINE_SLOWNODE_ENABLED, "text"));
+
+      // Reset DFS_PIPELINE_SLOWNODE_ENABLED to true.
+      dn.reconfigureProperty(DFS_PIPELINE_SLOWNODE_ENABLED, "true");
+      assertTrue(dn.isPipelineSupportSlownode());
     }
   }
 
