@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +45,10 @@ import org.apache.hadoop.yarn.server.router.cleaner.SubClusterCleaner;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
+import org.apache.hadoop.yarn.server.webproxy.FedAppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -91,6 +96,7 @@ public class Router extends CompositeService {
   @VisibleForTesting
   protected String webAppAddress;
   private static long clusterTimeStamp = System.currentTimeMillis();
+  private FedAppReportFetcher fetcher = null;
 
   /**
    * Priority of the Router shutdown hook.
@@ -209,7 +215,28 @@ public class Router extends CompositeService {
 
     Builder<Object> builder =
         WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+    if(conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE)) {
+      fetcher = new FedAppReportFetcher(conf);
+      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
+          WebAppProxyServlet.class);
+      builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
+      String proxyHostAndPort = getProxyHostAndPort(conf);
+      String[] proxyParts = proxyHostAndPort.split(":");
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+    }
     webApp = builder.start(new RouterWebApp(this));
+  }
+
+  public static String getProxyHostAndPort(Configuration conf) {
+    String addr = conf.get(YarnConfiguration.PROXY_ADDRESS);
+    if(addr == null || addr.isEmpty()) {
+      InetSocketAddress address = conf.getSocketAddr(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PORT);
+      addr = WebAppUtils.getResolvedAddress(address);
+    }
+    return addr;
   }
 
   public static void main(String[] argv) {
@@ -266,5 +293,10 @@ public class Router extends CompositeService {
 
   public static long getClusterTimeStamp() {
     return clusterTimeStamp;
+  }
+
+  @VisibleForTesting
+  public FedAppReportFetcher getFetcher() {
+    return fetcher;
   }
 }

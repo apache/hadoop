@@ -4362,6 +4362,9 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
 
+  public static final String ROUTER_WEBAPP_PROXY_ENABLE = ROUTER_WEBAPP_PREFIX + "proxy.enable";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE = true;
+
   private static final String FEDERATION_GPG_PREFIX = FEDERATION_PREFIX + "gpg.";
 
   // The number of threads to use for the GPG scheduled executor service
