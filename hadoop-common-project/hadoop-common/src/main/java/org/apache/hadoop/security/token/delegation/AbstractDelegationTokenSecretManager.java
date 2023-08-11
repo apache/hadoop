@@ -190,6 +190,14 @@ extends AbstractDelegationTokenIdentifier>
     return currentTokens.size();
   }
 
+  /**
+   * Interval for tokens to be renewed.
+   * @return Renew interval in milliseconds.
+   */
+  protected long getTokenRenewInterval() {
+    return this.tokenRenewInterval;
+  }
+
   /** 
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate().
@@ -751,7 +759,7 @@ extends AbstractDelegationTokenIdentifier>
     Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
-          currentTokens.entrySet().iterator();
+          getCandidateTokensForCleanup().entrySet().iterator();
       while (i.hasNext()) {
         Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
         long renewDate = entry.getValue().getRenewDate();
@@ -764,6 +772,10 @@ extends AbstractDelegationTokenIdentifier>
     }
     // don't hold lock on 'this' to avoid edit log updates blocking token ops
     logExpireTokens(expiredTokens);
+  }
+
+  protected Map<TokenIdent, DelegationTokenInformation> getCandidateTokensForCleanup() {
+    return this.currentTokens;
   }
 
   protected void logExpireTokens(
