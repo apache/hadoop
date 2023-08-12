@@ -5558,4 +5558,39 @@
     <value>0.0.0.0:8070</value>
   </property>
 
+  <property>
+    <description>
+      This configuration will enable request rerouting according to the load of the subCluster.
+      If it is true, it will reroute the request according to the load of the subCluster.
+      The default configuration is false.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster pending container threshold. The default value is 10000.
+      This configuration will determine the load weight of a subCluster.
+      For SC with pending containers count bigger than container threshold / 2,
+      use threshold / pending as weight.
+      For SC with pending containers count less than threshold / 2, we cap the weight at 2.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.pending-container.threshold</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to consider the configured vcores when calculating the subCluster load.
+      The default value is false, we only consider the number of cluster pending containers.
+      If this configuration item is set to true, This configuration item needs to be used together
+      with yarn.nodemanager.least-load-policy-selector.multiplier. We will use the following formula
+      when calculating subCluster pending.
+      pendingContainersCountNormalize = (totalPendingContainersCount * multiplier) / totalActiveCores.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.use-active-core</name>
+    <value>false</value>
+  </property>
+
 </configuration>
