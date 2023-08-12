@@ -24,6 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -50,6 +52,9 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   private static final String SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE = SQL_DTSM_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final int DEFAULT_SEQ_NUM_BATCH_SIZE = 10;
+  public static final String SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS = SQL_DTSM_CONF_PREFIX
+      + "token.max.cleanup.results";
+  public static final int SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS_DEFAULT = 1000;
   public static final String SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION = SQL_DTSM_CONF_PREFIX
       + "token.loading.cache.expiration";
   public static final long SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT =
@@ -62,6 +67,9 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   // A new batch is requested once the sequenceNums available to a secret manager are
   // exhausted, including during initialization.
   private final int seqNumBatchSize;
+
+  // Number of tokens to obtain from SQL during the cleanup process.
+  private final int maxTokenCleanupResults;
 
   // Last sequenceNum in the current batch that has been allocated to a token.
   private int currentSeqNum;
@@ -82,6 +90,8 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
 
     this.seqNumBatchSize = conf.getInt(SQL_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         DEFAULT_SEQ_NUM_BATCH_SIZE);
+    this.maxTokenCleanupResults = conf.getInt(SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS,
+        SQL_DTSM_TOKEN_MAX_CLEANUP_RESULTS_DEFAULT);
 
     long cacheExpirationMs = conf.getTimeDuration(SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
         SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION_DEFAULT, TimeUnit.MILLISECONDS);
@@ -151,6 +161,39 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
     getTokenInfo(id);
 
     return super.cancelToken(token, canceller);
+  }
+
+  /**
+   * Obtain a list of tokens that will be considered for cleanup, based on the last
+   * time the token was updated in SQL. This list may include tokens that are not
+   * expired and should not be deleted (e.g. if the token was last renewed using a
+   * higher renewal interval).
+   * The number of results is limited to reduce performance impact. Some level of
+   * contention is expected when multiple routers run cleanup simultaneously.
+   * @return Map of tokens that have not been updated in SQL after the token renewal
+   *         period.
+   */
+  @Override
+  protected Map<TokenIdent, DelegationTokenInformation> getCandidateTokensForCleanup() {
+    Map<TokenIdent, DelegationTokenInformation> tokens = new HashMap<>();
+    try {
+      // Query SQL for tokens that haven't been updated after
+      // the last token renewal period.
+      long maxModifiedTime = Time.now() - getTokenRenewInterval();
+      Map<byte[], byte[]> tokenInfoBytesList = selectStaleTokenInfos(maxModifiedTime,
+          this.maxTokenCleanupResults);
+
+      LOG.info("Found {} tokens for cleanup", tokenInfoBytesList.size());
+      for (Map.Entry<byte[], byte[]> tokenInfoBytes : tokenInfoBytesList.entrySet()) {
+        TokenIdent tokenIdent = createTokenIdent(tokenInfoBytes.getKey());
+        DelegationTokenInformation tokenInfo = createTokenInfo(tokenInfoBytes.getValue());
+        tokens.put(tokenIdent, tokenInfo);
+      }
+    } catch (IOException | SQLException e) {
+      LOG.error("Failed to get candidate tokens for cleanup in SQL secret manager", e);
+    }
+
+    return tokens;
   }
 
   /**
@@ -415,6 +458,8 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
   // Token operations in SQL database
   protected abstract byte[] selectTokenInfo(int sequenceNum, byte[] tokenIdentifier)
       throws SQLException;
+  protected abstract Map<byte[], byte[]> selectStaleTokenInfos(long maxModifiedTime,
+      int maxResults) throws SQLException;
   protected abstract void insertToken(int sequenceNum, byte[] tokenIdentifier, byte[] tokenInfo)
       throws SQLException;
   protected abstract void updateToken(int sequenceNum, byte[] tokenIdentifier, byte[] tokenInfo)
