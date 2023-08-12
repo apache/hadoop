@@ -122,6 +122,8 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_FORMAT = "format";
   private static final String OPTION_FILE = "f";
   private static final String OPTION_INPUT_FILE = "input-file";
+  private static final String OPTION_L = "l";
+  private static final String OPTION_LIST = "list";
 
   private static final String CMD_POLICY = "-policy";
   private static final String FORMAT_XML = "xml";
@@ -191,7 +193,8 @@ public class RouterCLI extends Configured implements Tool {
         .append("routeradmin\n")
         .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
         .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha] " +
-                "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]]\n")
+                "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]] " +
+                "[-l|--list [-p|--pageSize] [-c|--currentPage] [-q|--queue] [-qs|--queues]]\n")
         .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -396,6 +399,8 @@ public class RouterCLI extends Configured implements Tool {
 
       // Batch SavePolicies.
       return handBatchSavePolicies(format, filePath);
+    } else if(cliParser.hasOption(OPTION_L) || cliParser.hasOption(OPTION_LIST)) {
+
     } else {
       // printUsage
       printUsage(args[0]);
@@ -440,6 +445,19 @@ public class RouterCLI extends Configured implements Tool {
       System.out.println("We currently only support XML formats.");
       return EXIT_ERROR;
     }
+  }
+
+  /**
+   * Lists policies based on the Yarn Federation Queue Policies.
+   *
+   * @param pageSize The number of items to display per page.
+   * @param currentPage The current page number.
+   * @param queue The specific queue to filter the policies by.
+   * @param queues A list of available queues for filtering (optional).
+   * @return 0, success; 1, failed.
+   */
+  private int listPolicies(int pageSize, int currentPage, String queue, List<String> queues) {
+    return 0;
   }
 
   /**
