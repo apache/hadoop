@@ -26,7 +26,6 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;

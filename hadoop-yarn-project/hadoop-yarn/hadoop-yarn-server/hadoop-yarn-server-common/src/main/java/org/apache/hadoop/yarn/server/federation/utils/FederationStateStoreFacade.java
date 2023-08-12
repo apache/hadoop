@@ -835,7 +835,7 @@ public final class FederationStateStoreFacade {
   public void deleteApplicationHomeSubCluster(ApplicationId applicationId)
       throws YarnException {
     stateStore.deleteApplicationHomeSubCluster(
-    DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
+        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
   }
 
   /**

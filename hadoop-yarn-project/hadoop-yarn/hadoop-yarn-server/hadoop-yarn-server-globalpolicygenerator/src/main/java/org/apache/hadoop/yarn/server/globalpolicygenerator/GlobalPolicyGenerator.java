@@ -168,7 +168,7 @@ public class GlobalPolicyGenerator extends CompositeService {
         YarnConfiguration.DEFAULT_GPG_APPCLEANER_INTERVAL_MS);
     if (appCleanerIntervalMs > 0) {
       this.scheduledExecutorService.scheduleAtFixedRate(this.applicationCleaner,
-      0, appCleanerIntervalMs, TimeUnit.MILLISECONDS);
+        0, appCleanerIntervalMs, TimeUnit.MILLISECONDS);
       LOG.info("Scheduled application cleaner with interval: {}",
           DurationFormatUtils.formatDurationISO(appCleanerIntervalMs));
     }
