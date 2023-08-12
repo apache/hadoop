@@ -52,16 +52,17 @@ public final class GPGUtils {
    * @param webAddr WebAddress.
    * @param path url path.
    * @param returnType return type.
+   * @param selectParam query parameters.
    * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
-      String deSelectParam) {
+      String selectParam) {
     Client client = Client.create();
     T obj;
 
     WebResource webResource = client.resource(webAddr);
-    if (deSelectParam != null) {
-      webResource = webResource.queryParam(RMWSConsts.DESELECTS, deSelectParam);
+    if (selectParam != null) {
+      webResource = webResource.queryParam(RMWSConsts.DESELECTS, selectParam);
     }
     ClientResponse response = null;
     try {
@@ -85,6 +86,11 @@ public final class GPGUtils {
 
   /**
    * Performs an invocation of the remote RMWebService.
+   *
+   * @param webAddr WebAddress.
+   * @param path url path.
+   * @param returnType return type.
+   * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr,
       String path, final Class<T> returnType) {

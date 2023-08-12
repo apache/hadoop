@@ -5537,7 +5537,7 @@
     <name>yarn.federation.gpg.application.cleaner.class</name>
     <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
   </property>
-  
+
   <property> 
     <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
       requires the CORS filter initializer to be added to the filter initializers
@@ -5553,7 +5553,7 @@
     <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
     <value>-1</value>
   </property>
-  
+
   <property>
     <description>
       The http address of the GPG web application.
@@ -5575,7 +5575,7 @@
     <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
     <value>3,10,600000</value>
   </property>
-  
+
   <property>
     <description>
       The https address of the GPG web application.
