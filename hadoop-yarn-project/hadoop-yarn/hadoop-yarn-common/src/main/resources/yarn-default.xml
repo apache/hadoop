@@ -5593,4 +5593,39 @@
     <value>false</value>
   </property>
 
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to fail directly if activeSubCluster is less than 1.
+      The default is true.
+      If We set to false, We will try to re-fetch activeSubCluster list.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.fail-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The subCluster configured in the blacklist will not be forwarded requests.
+      The default value is empty.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.blacklist-subclusters</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
 </configuration>
