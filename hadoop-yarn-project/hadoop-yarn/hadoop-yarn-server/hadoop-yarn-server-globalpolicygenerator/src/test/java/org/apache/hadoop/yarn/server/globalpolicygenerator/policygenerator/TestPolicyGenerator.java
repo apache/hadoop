@@ -22,6 +22,7 @@ import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONUnmarshaller;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
@@ -60,6 +61,7 @@ import org.mockito.ArgumentCaptor;
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -294,8 +296,10 @@ public class TestPolicyGenerator {
     resourceManager.start();
 
     String rmAddress = WebAppUtils.getRMWebAppURLWithScheme(this.conf);
-    SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(rmAddress, RMWSConsts.SCHEDULER,
-        SchedulerTypeInfo.class);
+    String webAppAddress = getServiceAddress(NetUtils.createSocketAddr(rmAddress));
+
+    SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.SCHEDULER,
+        SchedulerTypeInfo.class, this.conf);
 
     Assert.assertNotNull(sti);
     SchedulerInfo schedulerInfo = sti.getSchedulerInfo();
@@ -344,6 +348,11 @@ public class TestPolicyGenerator {
     CapacitySchedulerQueueInfo queueB3 = queueInfoBList.get(2);
     Assert.assertNotNull(queueB3);
     Assert.assertEquals(20f, queueB3.getCapacity(), 0.00001);
+  }
+
+  private String getServiceAddress(InetSocketAddress address) {
+    InetSocketAddress socketAddress = NetUtils.getConnectAddress(address);
+    return socketAddress.getAddress().getHostAddress() + ":" + socketAddress.getPort();
   }
 
   /**
