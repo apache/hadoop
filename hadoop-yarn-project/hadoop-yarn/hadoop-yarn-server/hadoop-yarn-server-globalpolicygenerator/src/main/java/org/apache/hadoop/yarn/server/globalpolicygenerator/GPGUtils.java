@@ -61,7 +61,8 @@ public final class GPGUtils {
    * @param conf configuration.
    * @return response entity.
    */
-  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType, Configuration conf) {
+  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
+      Configuration conf) {
     Client client = Client.create();
     T obj;
 
