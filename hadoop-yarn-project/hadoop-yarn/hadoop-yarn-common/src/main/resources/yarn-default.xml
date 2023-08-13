@@ -5628,4 +5628,14 @@
     <value>100</value>
   </property>
 
+  <property>
+    <description>
+      This configuration will be used
+      when yarn.nodemanager.least-load-policy-selector.use-active-core is set to true.
+      The purpose of this value is to help normalize the pendingContainersCount.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
+    <value>50000</value>
+  </property>
+
 </configuration>
