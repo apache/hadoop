@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -33,7 +34,6 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -163,8 +163,7 @@ public class RouterClientRMService extends AbstractService
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_ADDRESS,
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PORT);
 
-    if (getConfig().getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
-        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE)) {
+    if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
       redirectURL = getRedirectURL();
     }
 
@@ -331,8 +330,7 @@ public class RouterClientRMService extends AbstractService
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
     GetApplicationReportResponse response = pipeline.getRootInterceptor()
         .getApplicationReport(request);
-    if (getConfig().getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
-        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE)) {
+    if (RouterServerUtil.isRouterWebProxyEnable(getConfig())) {
       // After redirect url, tracking url in application report will
       // redirect to embeded proxy server of router
       URL url = new URL(response.getApplicationReport().getTrackingUrl());
@@ -660,7 +658,7 @@ public class RouterClientRMService extends AbstractService
       throw new YarnRuntimeException("Router can't get valid redirect proxy url");
     }
     String host;
-    if (null == hostPort[0] || hostPort[0].equals("") || hostPort[0].equals("0.0.0.0")) {
+    if (StringUtils.isBlank(hostPort[0]) || hostPort[0].equals("0.0.0.0")) {
       host = InetAddress.getLocalHost().getCanonicalHostName();
     } else {
       host = hostPort[0];

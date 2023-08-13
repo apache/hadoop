@@ -96,7 +96,7 @@ public class TestRouterWebAppProxy {
     LOG.info("Running embedded servlet container at: http://localhost:" + mockServerPort);
   }
 
-  @Test(timeout=10000000)
+  @Test(timeout=10000)
   public void testRouterWebAppProxyFed() throws Exception {
 
     Configuration conf = new Configuration();
@@ -195,7 +195,7 @@ public class TestRouterWebAppProxy {
       appReportFetcher.registerSubCluster(subClusterInfo2, appManager2);
       appReportFetcher.setHistoryManager(historyManager);
 
-      // App1 is running in subcluster1, and original url is registered in rm of subCluster1. 
+      // App1 is running in subcluster1, and original url is registered in rm of subCluster1.
       // So router will get original url from rm by getApplicationReport. Then router
       // will fetch the webapp directly.
       GetApplicationReportResponse response = router.getClientRMProxyService()

@@ -215,8 +215,7 @@ public class Router extends CompositeService {
 
     Builder<Object> builder =
         WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
-    if(conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
-        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE)) {
+    if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
       fetcher = new FedAppReportFetcher(conf);
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
           WebAppProxyServlet.class);
