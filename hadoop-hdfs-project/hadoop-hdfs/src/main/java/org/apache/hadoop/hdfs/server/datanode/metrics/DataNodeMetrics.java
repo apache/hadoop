@@ -165,11 +165,11 @@ public class DataNodeMetrics {
   @Metric("Bytes remote read by erasure coding worker")
   MutableCounterLong ecReconstructionRemoteBytesRead;
   @Metric("Milliseconds spent on read by erasure coding worker")
-  private MutableCounterLong ecReconstructionReadTimeMillis;
+  private MutableRate ecReconstructionReadTimeMillis;
   @Metric("Milliseconds spent on decoding by erasure coding worker")
-  private MutableCounterLong ecReconstructionDecodingTimeMillis;
+  private MutableRate ecReconstructionDecodingTimeMillis;
   @Metric("Milliseconds spent on write by erasure coding worker")
-  private MutableCounterLong ecReconstructionWriteTimeMillis;
+  private MutableRate ecReconstructionWriteTimeMillis;
   @Metric("Milliseconds spent on validating by erasure coding worker")
   private MutableCounterLong ecReconstructionValidateTimeMillis;
   @Metric("Sum of all BPServiceActors command queue length")
@@ -647,16 +647,16 @@ public class DataNodeMetrics {
     ecReconstructionBytesWritten.incr(bytes);
   }
 
-  public void incrECReconstructionReadTime(long millis) {
-    ecReconstructionReadTimeMillis.incr(millis);
+  public void addECReconstructionReadTime(long millis) {
+    ecReconstructionReadTimeMillis.add(millis);
   }
 
-  public void incrECReconstructionWriteTime(long millis) {
-    ecReconstructionWriteTimeMillis.incr(millis);
+  public void addECReconstructionWriteTime(long millis) {
+    ecReconstructionWriteTimeMillis.add(millis);
   }
 
-  public void incrECReconstructionDecodingTime(long millis) {
-    ecReconstructionDecodingTimeMillis.incr(millis);
+  public void addECReconstructionDecodingTime(long millis) {
+    ecReconstructionDecodingTimeMillis.add(millis);
   }
 
   public void incrECReconstructionValidateTime(long millis) {
