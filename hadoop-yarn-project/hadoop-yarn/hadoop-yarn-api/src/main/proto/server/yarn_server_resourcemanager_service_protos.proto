@@ -195,6 +195,12 @@ message QueryFederationQueuePoliciesRequestProto {
   repeated string queues = 4;
 }
 
+message QueryFederationQueuePoliciesResponseProto {
+  optional int32 totalSize = 1;
+  optional int32 pageSize = 2;
+  repeated FederationQueueWeightProto federationQueueWeights = 3;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

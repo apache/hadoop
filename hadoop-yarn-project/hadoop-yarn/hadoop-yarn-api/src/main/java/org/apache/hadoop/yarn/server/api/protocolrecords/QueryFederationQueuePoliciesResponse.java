@@ -18,13 +18,60 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.util.List;
 
+/**
+ * This is the QueryFederationQueuePoliciesResponse, which contains the following information:
+ * 1. Number of policy information included,
+ * 2. Page number,
+ * 3. Result of queue weight information returned.
+ */
 @Private
 @Unstable
 public abstract class QueryFederationQueuePoliciesResponse {
 
+  @Private
+  @Unstable
+  public static QueryFederationQueuePoliciesResponse newInstance(
+      int totalSize, int pageSize, List<FederationQueueWeight> federationQueueWeights) {
+    QueryFederationQueuePoliciesResponse response =
+        Records.newRecord(QueryFederationQueuePoliciesResponse.class);
+    return response;
+  }
+
+  /**
+   * Returns the total size of the query result.
+   * It is mainly related to the filter conditions set by the user.
+   *
+   * @return The total size of the query result.
+   */
+  public abstract int getTotalSize();
+
+  /**
+   * Sets the total size of the federationQueueWeights.
+   *
+   * @param totalSize The total size of the query result to be set.
+   */
+  public abstract void setTotalSize(int totalSize);
+
+  @Public
+  @Unstable
+  public abstract int getPageSize();
+
+  @Private
+  @Unstable
+  public abstract void setPageSize(int pageSize);
+
+  @Public
+  @Unstable
+  public abstract List<FederationQueueWeight> getFederationQueueWeights();
+
+  @Private
+  @Unstable
+  public abstract void setFederationQueueWeights(
+      List<FederationQueueWeight> federationQueueWeights);
 }
