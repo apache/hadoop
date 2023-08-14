@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -509,6 +511,23 @@ public class ITestS3AConfiguration {
     fs = S3ATestUtils.createTestFileSystem(config);
     Configuration updated = fs.getConf();
     assertOptionEquals(updated, "fs.s3a.propagation", "propagated");
+  }
+
+  @Test(timeout = 10_000L)
+  public void testConnectTtlPropagation() throws Exception {
+    Configuration config = new Configuration();
+    ClientConfiguration awsConf  = new ClientConfiguration();
+    initConnectionSettings(config, awsConf);
+    Assertions.assertThat(awsConf.getConnectionTTL())
+            .describedAs(String.format("connection ttl should be set to default value as" +
+                    " %s is not set", CONNECTION_TTL))
+            .isEqualTo(DEFAULT_CONNECTION_TTL);
+    long connectionTtlTestVal = 1000;
+    config.setLong(CONNECTION_TTL, connectionTtlTestVal);
+    initConnectionSettings(config, awsConf);
+    Assertions.assertThat(awsConf.getConnectionTTL())
+            .describedAs(String.format("%s not propagated to aws conf", CONNECTION_TTL))
+            .isEqualTo(connectionTtlTestVal);
   }
 
   @Test(timeout = 10_000L)

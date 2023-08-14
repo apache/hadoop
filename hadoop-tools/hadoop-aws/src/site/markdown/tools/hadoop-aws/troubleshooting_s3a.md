@@ -1782,6 +1782,23 @@ will attempt to retry the operation; it may just be a transient event. If there
 are many such exceptions in logs, it may be a symptom of connectivity or network
 problems.
 
+Above error could be because of a stale http connections. By default, connections
+in the http connection pool are reused indefinitely. To discard connections after 
+a specific period of time please configure fs.s3a.connection.ttl.
+
+```xml
+<property>
+  <name>fs.s3a.connection.ttl</name>
+  <value>-1</value>
+  <description>
+      Expiration time for a connection in the connection pool in milliseconds.
+      When a connection is retrieved from the connection pool,
+      this parameter is checked to see if the connection can be reused. 
+      Default value is set to -1 (infinite) which means connection 
+      will be reused indefinitely.
+  </description>
+</property>
+```
 ### `AWSBadRequestException` IllegalLocationConstraintException/The unspecified location constraint is incompatible
 
 ```
