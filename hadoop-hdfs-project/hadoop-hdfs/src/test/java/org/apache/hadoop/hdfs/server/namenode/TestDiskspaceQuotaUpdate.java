@@ -394,7 +394,7 @@ public class TestDiskspaceQuotaUpdate {
     FSNamesystem fsn = cluster.getNamesystem();
     fsn.writeLock();
     try {
-      getFSDirectory().updateCountForQuota(1);
+      getFSDirectory().updateCountForQuota(i);
     } finally {
       fsn.writeUnlock();
     }

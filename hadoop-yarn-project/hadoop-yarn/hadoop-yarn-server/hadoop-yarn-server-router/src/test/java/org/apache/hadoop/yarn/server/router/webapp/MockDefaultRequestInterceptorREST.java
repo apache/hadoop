@@ -213,7 +213,7 @@ public class MockDefaultRequestInterceptorREST
     validateRunning();
 
     ApplicationId applicationId =
-        ApplicationId.newInstance(Integer.valueOf(getSubClusterId().getId()),
+        ApplicationId.newInstance(Integer.parseInt(getSubClusterId().getId()),
             applicationCounter.incrementAndGet());
     NewApplication appId =
         new NewApplication(applicationId.toString(), new ResourceInfo());
@@ -277,7 +277,7 @@ public class MockDefaultRequestInterceptorREST
     AppInfo appInfo = new AppInfo();
 
     appInfo.setAppId(
-        ApplicationId.newInstance(Integer.valueOf(getSubClusterId().getId()),
+        ApplicationId.newInstance(Integer.parseInt(getSubClusterId().getId()),
             applicationCounter.incrementAndGet()).toString());
     appInfo.setAMHostHttpAddress("http://i_am_the_AM:1234");
 
@@ -318,7 +318,7 @@ public class MockDefaultRequestInterceptorREST
     if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
       node = new NodeInfo();
       node.setId(nodeId);
-      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+      node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));
     }
     return node;
   }
@@ -330,7 +330,7 @@ public class MockDefaultRequestInterceptorREST
     }
     NodeInfo node = new NodeInfo();
     node.setId("Node " + Integer.valueOf(getSubClusterId().getId()));
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));
     NodesInfo nodes = new NodesInfo();
     nodes.add(node);
     return nodes;
@@ -352,12 +352,12 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
     ClusterMetricsInfo metrics = new ClusterMetricsInfo();
-    metrics.setAppsSubmitted(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsCompleted(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsPending(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsRunning(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsFailed(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsKilled(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsSubmitted(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsCompleted(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsPending(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsRunning(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsFailed(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsKilled(Integer.parseInt(getSubClusterId().getId()));
 
     return metrics;
   }

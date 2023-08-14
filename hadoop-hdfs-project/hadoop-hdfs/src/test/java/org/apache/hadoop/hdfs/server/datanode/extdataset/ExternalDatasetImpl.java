@@ -477,4 +477,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
 }

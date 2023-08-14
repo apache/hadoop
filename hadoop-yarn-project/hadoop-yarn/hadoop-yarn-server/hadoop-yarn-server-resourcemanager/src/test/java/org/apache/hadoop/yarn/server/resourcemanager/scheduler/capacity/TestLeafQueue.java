@@ -227,7 +227,7 @@ public class TestLeafQueue {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
     CapacitySchedulerQueueManager queueManager =
-        new CapacitySchedulerQueueManager(csConf, null, null);
+        new CapacitySchedulerQueueManager(csConf, rmContext.getNodeLabelManager(), null);
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
 
     queueManager.reinitConfiguredNodeLabels(csConf);
@@ -5135,22 +5135,37 @@ public class TestLeafQueue {
       final String leafQueueName =
           "testSetupQueueConfigsWithSpecifiedConfiguration";
       final QueuePath leafQueuePath = new QueuePath(ROOT.getFullPath(), leafQueueName);
+      final QueuePath bQueuePath = new QueuePath(ROOT + DOT + B);
 
       assertEquals(0, conf.size());
       conf.setNodeLocalityDelay(60);
+
+      csConf.setQueues(ROOT, new String[] {leafQueueName, B});
       csConf.setCapacity(leafQueuePath, 10);
       csConf.setMaximumCapacity(leafQueuePath, 100);
       csConf.setUserLimitFactor(leafQueuePath, 0.1f);
+
+      csConf.setCapacity(bQueuePath, 90);
+      csConf.setMaximumCapacity(bQueuePath, 100);
 
       csConf.setNodeLocalityDelay(30);
       csConf.setGlobalMaximumApplicationsPerQueue(20);
       queueContext.reinitialize();
 
-      LeafQueue leafQueue = new LeafQueue(queueContext, leafQueueName, cs.getRootQueue(),
-          null);
+      // reinitialize queues
+      CSQueueStore newQueues = new CSQueueStore();
+      CSQueue newRoot =
+          CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+              CapacitySchedulerConfiguration.ROOT,
+              newQueues, queues,
+              TestUtils.spyHook);
+      queues = newQueues;
+      root.reinitialize(newRoot, csContext.getClusterResource());
+      root.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(csContext.getClusterResource()));
 
-      leafQueue.updateClusterResource(Resource.newInstance(0, 0),
-          new ResourceLimits(Resource.newInstance(0, 0)));
+      // Mock the queue
+      LeafQueue leafQueue = stubLeafQueue((LeafQueue)queues.get(leafQueueName));
 
       assertEquals(30, leafQueue.getNodeLocalityDelay());
       assertEquals(20, leafQueue.getMaxApplications());
@@ -5175,8 +5190,8 @@ public class TestLeafQueue {
       // limit maximum apps by max system apps
       csConf.setMaximumSystemApplications(15);
       queueContext.reinitialize();
-      leafQueue.updateClusterResource(Resource.newInstance(0, 0),
-          new ResourceLimits(Resource.newInstance(0, 0)));
+      leafQueue.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(csContext.getClusterResource()));
 
       assertEquals(15, leafQueue.getMaxApplications());
 
@@ -5225,6 +5240,8 @@ public class TestLeafQueue {
   public void testMaxApplicationsWithNodeLabels() throws IOException {
     CapacitySchedulerConfiguration conf = csConf;
     String rootChild = root.getChildQueues().get(0).getQueuePath();
+    when(cs.getClusterResource()).thenReturn(
+        Resources.createResource(2 * 16 * GB, 2 * 32));
 
     conf.setCapacityByLabel(ROOT, "test", 100);
     conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);

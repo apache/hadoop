@@ -63,10 +63,18 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappin
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -79,6 +87,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Collection;
 import java.util.Set;
 import java.util.Date;
@@ -95,6 +104,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationRMAdminInterceptor.class);
+
+  private static final String COMMA = ",";
+  private static final String COLON = ":";
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -855,11 +867,211 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (Exception e) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-              "Unable to deregisterSubCluster due to exception. " + e.getMessage());
+          "Unable to deregisterSubCluster due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrDeregisterSubClusterFailedRetrieved();
     throw new YarnException("Unable to deregisterSubCluster.");
+  }
+
+  /**
+   * Save the Queue Policy for the Federation.
+   *
+   * @param request saveFederationQueuePolicy Request.
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+
+    if (request == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing SaveFederationQueuePolicy request.", null);
+    }
+
+    FederationQueueWeight federationQueueWeight = request.getFederationQueueWeight();
+    if (federationQueueWeight == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing FederationQueueWeight information.", null);
+    }
+
+    String queue = request.getQueue();
+    if (StringUtils.isBlank(queue)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing Queue information.", null);
+    }
+
+    String amRmWeight = federationQueueWeight.getAmrmWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
+
+    String routerWeight = federationQueueWeight.getRouterWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerWeight);
+
+    String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+    FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
+
+    try {
+      long startTime = clock.getTime();
+      // Step1, get parameters.
+      String policyManagerClassName = request.getPolicyManagerClassName();
+
+
+      // Step2, parse amRMPolicyWeights.
+      Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
+      LOG.debug("amRMPolicyWeights = {}.", amRMPolicyWeights);
+
+      // Step3, parse routerPolicyWeights.
+      Map<SubClusterIdInfo, Float> routerPolicyWeights = getSubClusterWeightMap(routerWeight);
+      LOG.debug("routerWeights = {}.", amRMPolicyWeights);
+
+      // Step4, Initialize WeightedPolicyInfo.
+      WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+      weightedPolicyInfo.setHeadroomAlpha(Float.parseFloat(headRoomAlpha));
+      weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+      weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+      // Step5, Set SubClusterPolicyConfiguration.
+      SubClusterPolicyConfiguration policyConfiguration =
+          SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
+          weightedPolicyInfo.toByteBuffer());
+      federationFacade.setPolicyConfiguration(policyConfiguration);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededSaveFederationQueuePolicyRetrieved(stopTime - startTime);
+      return SaveFederationQueuePolicyResponse.newInstance("save policy success.");
+    } catch (Exception e) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to saveFederationQueuePolicy due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+    throw new YarnException("Unable to saveFederationQueuePolicy.");
+  }
+
+  /**
+   * Batch Save the Queue Policies for the Federation.
+   *
+   * @param request BatchSaveFederationQueuePolicies Request
+   * @return Response from batchSaveFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing BatchSaveFederationQueuePoliciesRequest request.", null);
+    }
+
+    List<FederationQueueWeight> federationQueueWeights = request.getFederationQueueWeights();
+    if (federationQueueWeights == null) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing FederationQueueWeights information.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      for (FederationQueueWeight federationQueueWeight : federationQueueWeights) {
+        saveFederationQueuePolicy(federationQueueWeight);
+      }
+      long stopTime = clock.getTime();
+      routerMetrics.succeededBatchSaveFederationQueuePoliciesRetrieved(stopTime - startTime);
+      return BatchSaveFederationQueuePoliciesResponse.newInstance("batch save policies success.");
+    } catch (Exception e) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to batchSaveFederationQueuePolicies due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+    throw new YarnException("Unable to batchSaveFederationQueuePolicies.");
+  }
+
+  /**
+   * Save FederationQueuePolicy.
+   *
+   * @param federationQueueWeight queue weight.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  private void saveFederationQueuePolicy(FederationQueueWeight federationQueueWeight)
+      throws YarnException {
+
+    // Step1, Check whether the weight setting of the queue is as expected.
+    String queue = federationQueueWeight.getQueue();
+    String policyManagerClassName = federationQueueWeight.getPolicyManagerClassName();
+
+    if (StringUtils.isBlank(queue)) {
+      RouterServerUtil.logAndThrowException("Missing Queue information.", null);
+    }
+
+    if (StringUtils.isBlank(policyManagerClassName)) {
+      RouterServerUtil.logAndThrowException("Missing PolicyManagerClassName information.", null);
+    }
+
+    String amRmWeight = federationQueueWeight.getAmrmWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
+
+    String routerWeight = federationQueueWeight.getRouterWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerWeight);
+
+    String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+    FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
+
+    // Step2, parse amRMPolicyWeights.
+    Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
+    LOG.debug("amRMPolicyWeights = {}.", amRMPolicyWeights);
+
+    // Step3, parse routerPolicyWeights.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = getSubClusterWeightMap(routerWeight);
+    LOG.debug("routerWeights = {}.", amRMPolicyWeights);
+
+    // Step4, Initialize WeightedPolicyInfo.
+    WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+    weightedPolicyInfo.setHeadroomAlpha(Float.parseFloat(headRoomAlpha));
+    weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+    weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+    // Step5, Set SubClusterPolicyConfiguration.
+    SubClusterPolicyConfiguration policyConfiguration =
+        SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
+        weightedPolicyInfo.toByteBuffer());
+    federationFacade.setPolicyConfiguration(policyConfiguration);
+  }
+
+  /**
+   * Get the Map of SubClusterWeight.
+   *
+   * This method can parse the Weight information of Router and
+   * the Weight information of AMRMProxy.
+   *
+   * An example of a parsed string is as follows:
+   * SC-1:0.7,SC-2:0.3
+   *
+   * @param policyWeight policyWeight.
+   * @return Map of SubClusterWeight.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  protected Map<SubClusterIdInfo, Float> getSubClusterWeightMap(String policyWeight)
+      throws YarnException {
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(policyWeight);
+    Map<SubClusterIdInfo, Float> result = new HashMap<>();
+    String[] policyWeights = policyWeight.split(COMMA);
+    for (String policyWeightItem : policyWeights) {
+      String[] subClusterWeight = policyWeightItem.split(COLON);
+      String subClusterId = subClusterWeight[0];
+      SubClusterIdInfo subClusterIdInfo = new SubClusterIdInfo(subClusterId);
+      String weight = subClusterWeight[1];
+      result.put(subClusterIdInfo, Float.valueOf(weight));
+    }
+    return result;
   }
 
   /**
@@ -870,7 +1082,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    */
   private DeregisterSubClusters deregisterSubCluster(String reqSubClusterId) {
 
-    DeregisterSubClusters deregisterSubClusters = null;
+    DeregisterSubClusters deregisterSubClusters;
 
     try {
       // Step1. Get subCluster information.
@@ -879,9 +1091,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       SubClusterState subClusterState = subClusterInfo.getState();
       long lastHeartBeat = subClusterInfo.getLastHeartBeat();
       Date lastHeartBeatDate = new Date(lastHeartBeat);
-
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-              reqSubClusterId, "UNKNOWN", lastHeartBeatDate.toString(), "", subClusterState.name());
+          reqSubClusterId, "NONE", lastHeartBeatDate.toString(),
+          "Normal Heartbeat", subClusterState.name());
 
       // Step2. Deregister subCluster.
       if (subClusterState.isUsable()) {
@@ -891,11 +1103,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         long heartBearTimeInterval = Time.now() - lastHeartBeat;
         if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
           boolean deregisterSubClusterFlag =
-                  federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+              federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
           if (deregisterSubClusterFlag) {
             deregisterSubClusters.setDeregisterState("SUCCESS");
             deregisterSubClusters.setSubClusterState("SC_LOST");
-            deregisterSubClusters.setInformation("Heartbeat Time >= 30 minutes.");
+            deregisterSubClusters.setInformation("Heartbeat Time >= " +
+                heartbeatExpirationMillis / (1000 * 60) + "minutes");
           } else {
             deregisterSubClusters.setDeregisterState("FAILED");
             deregisterSubClusters.setInformation("DeregisterSubClusters Failed.");
@@ -903,16 +1116,16 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         }
       } else {
         deregisterSubClusters.setDeregisterState("FAILED");
-        deregisterSubClusters.setInformation("Heartbeat Time < 30 minutes. " +
-            "DeregisterSubCluster does not need to be executed");
-        LOG.warn("SubCluster {} in State {} does not need to update state.",
-                subClusterId, subClusterState);
+        deregisterSubClusters.setInformation("The subCluster is Unusable, " +
+            "So it can't be Deregistered");
+        LOG.warn("The SubCluster {} is Unusable (SubClusterState:{}), So it can't be Deregistered",
+            subClusterId, subClusterState);
       }
       return deregisterSubClusters;
     } catch (YarnException e) {
       LOG.error("SubCluster {} DeregisterSubCluster Failed", reqSubClusterId, e);
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-              reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
+          reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
       return deregisterSubClusters;
     }
   }

@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper;
 
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
@@ -24,10 +23,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCrea
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AutoQueueTemplatePropertiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LeafQueueTemplateInfo.ConfItem;
 
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 /**
  * Helper class to describe a queue's type, its creation method and its
@@ -64,22 +69,39 @@ public class CapacitySchedulerInfoHelper {
 
   private CapacitySchedulerInfoHelper() {}
 
-  public static String getMode(CSQueue queue) throws YarnRuntimeException {
-    if (queue.getCapacityConfigType() ==
-        AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE) {
-      return "absolute";
-    } else if (queue.getCapacityConfigType() ==
-        AbstractCSQueue.CapacityConfigType.PERCENTAGE) {
-      float weight = queue.getQueueCapacities().getWeight();
-      if (weight == -1) {
-        //-1 indicates we are not in weight mode
-        return "percentage";
-      } else {
-        return "weight";
+  public static String getMode(CSQueue queue) {
+    if (((AbstractCSQueue) queue).getQueueContext().getConfiguration().isLegacyQueueMode()) {
+      if (queue.getCapacityConfigType() ==
+              AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE) {
+        return "absolute";
+      } else if (queue.getCapacityConfigType() ==
+              AbstractCSQueue.CapacityConfigType.PERCENTAGE) {
+        float weight = queue.getQueueCapacities().getWeight();
+        if (weight == -1) {
+          //-1 indicates we are not in weight mode
+          return "percentage";
+        } else {
+          return "weight";
+        }
+      }
+    } else {
+      final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
+              queue.getConfiguredCapacityVector(NO_LABEL).getDefinedCapacityTypes();
+      if (definedCapacityTypes.size() == 1) {
+        QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
+        if (Objects.requireNonNull(next) == PERCENTAGE) {
+          return "percentage";
+        } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
+          return "absolute";
+        } else if (next == QueueCapacityVector.ResourceUnitCapacityType.WEIGHT) {
+          return "weight";
+        }
+      } else if (definedCapacityTypes.size() > 1) {
+        return "mixed";
       }
     }
-    throw new YarnRuntimeException("Unknown mode for queue: " +
-        queue.getQueuePath() + ". Queue details: " + queue);
+
+    return "unknown";
   }
 
   public static String getQueueType(CSQueue queue) {

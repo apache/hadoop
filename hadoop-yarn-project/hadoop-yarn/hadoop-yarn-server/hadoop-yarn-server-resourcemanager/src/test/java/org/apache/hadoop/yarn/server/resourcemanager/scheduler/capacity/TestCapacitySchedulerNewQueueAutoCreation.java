@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +50,9 @@ import java.util.Set;
 import java.util.HashSet;
 
 import java.io.IOException;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assume.assumeThat;
 
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
@@ -62,7 +66,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   private static final QueuePath A_A_AUTO_A2 = new QueuePath("root.a.a-auto.a2");
   private static final QueuePath A_A1_AUTO_A2_AUTO = new QueuePath("root.a.a1-auto.a2-auto");
   public static final int GB = 1024;
-  private static final int MAX_MEMORY = 1200;
+  public static final int MAX_MEMORY = 1200;
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
@@ -81,8 +85,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   /*
   Create the following structure:
            root
-        /       \
-      a          b
+        /   |   \
+      a     b    e
     /
   a1
    */
@@ -105,6 +109,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setAutoQueueCreationV2Enabled(new QueuePath(PARENT_QUEUE), true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   protected void startScheduler() throws Exception {
@@ -317,6 +328,10 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
     startScheduler();
+    // If the new queue mode is used it's allowed to
+    // create a new dynamic queue when the sibling is
+    // not in weight mode
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
     csConf.setCapacity(A, 50f);
     csConf.setCapacity(B, 50f);
     csConf.setCapacity(A1, 100f);

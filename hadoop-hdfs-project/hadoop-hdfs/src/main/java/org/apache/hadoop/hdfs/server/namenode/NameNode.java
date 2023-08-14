@@ -78,6 +78,8 @@ import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -252,6 +254,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
+@Metrics(context="dfs")
 public class NameNode extends ReconfigurableBase implements
     NameNodeStatusMXBean, TokenVerifier<DelegationTokenIdentifier> {
   static{
@@ -1146,6 +1149,7 @@ public class NameNode extends ReconfigurableBase implements
         DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE,
         DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT);
     this.started.set(true);
+    DefaultMetricsSystem.instance().register(this);
   }
 
   private void stopAtException(Exception e){
@@ -1216,6 +1220,7 @@ public class NameNode extends ReconfigurableBase implements
         levelDBAliasMapServer.close();
       }
     }
+    started.set(false);
     tracer.close();
   }
 
@@ -2049,6 +2054,26 @@ public class NameNode extends ReconfigurableBase implements
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
+  }
+
+  /**
+   * Emit Namenode HA service state as an integer so that one can monitor NN HA
+   * state based on this metric.
+   *
+   * @return  0 when not fully started
+   *          1 for active or standalone (non-HA) NN
+   *          2 for standby
+   *          3 for observer
+   *
+   * These are the same integer values for the HAServiceState enum.
+   */
+  @Metric({"NameNodeState", "Namenode HA service state"})
+  public int getNameNodeState() {
+    if (!isStarted() || state == null) {
+      return HAServiceState.INITIALIZING.ordinal();
+    }
+
+    return state.getServiceState().ordinal();
   }
 
   /**

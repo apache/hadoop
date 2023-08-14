@@ -216,6 +216,7 @@ public class TestCapacitySchedulerNodes {
         queueInfoB.getQueuePath());
     Assert.assertEquals("Default Node Label Expression should be y", "y",
         queueInfoB.getDefaultNodeLabelExpression());
+    cs.stop();
   }
 
   @Test
