@@ -147,7 +147,6 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -386,6 +385,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private AWSCredentialProviderList credentials;
   private SignerManager signerManager;
+  private S3AInternals s3aInternals;
 
   /**
    * Page size for deletions.
@@ -533,6 +533,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       setUri(name, delegationTokensEnabled);
       super.initialize(uri, conf);
       setConf(conf);
+
+      s3aInternals = createS3AInternals();
 
       // look for encryption data
       // DT Bindings may override this
@@ -1349,25 +1351,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * A log for warning of aws s3 client use; only logs once per process.
-   */
-  private static final LogExactlyOnce AWS_CLIENT_LOG = new LogExactlyOnce(LOG);
-
-  /**
-   * Returns the S3 client used by this filesystem.
-   * Will log once first, to discourage use.
-   * <i>Warning: this must only be used for testing, as it bypasses core
-   * S3A operations. </i>
-   * @param reason a justification for requesting access.
-   * @return S3Client
-   */
-  @VisibleForTesting
-  public S3Client getAmazonS3V2ClientForTesting(String reason) {
-    AWS_CLIENT_LOG.warn("Access to S3 client requested, reason {}", reason);
-    return s3Client;
-  }
-
-  /**
    * Set the client -used in mocking tests to force in a different client.
    * @param client client.
    */
@@ -1378,45 +1361,106 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the region of a bucket.
-   * Invoked from StoreContext; consider an entry point.
-   * @return the region in which a bucket is located
-   * @throws AccessDeniedException if the caller lacks permission.
-   * @throws IOException on any failure.
+   * S3AInternals method.
+   * {@inheritDoc}.
    */
+  @AuditEntryPoint
   @Retries.RetryTranslated
-  @InterfaceAudience.LimitedPrivate("diagnostics")
   public String getBucketLocation() throws IOException {
-    return getBucketLocation(bucket);
+    return s3aInternals.getBucketLocation(bucket);
   }
 
   /**
-   * Get the region of a bucket; fixing up the region so it can be used
-   * in the builders of other AWS clients.
-   * TODO: Review. Used only for S3Guard?
-   * Requires the caller to have the AWS role permission
-   * {@code s3:GetBucketLocation}.
-   * Retry policy: retrying, translated.
-   * @param bucketName the name of the bucket
-   * @return the region in which a bucket is located
-   * @throws AccessDeniedException if the caller lacks permission.
-   * @throws IOException on any failure.
+   * Create the S3AInternals; left as something mocking
+   * subclasses may want to override.
+   * @return the internal implementation
    */
-  @VisibleForTesting
-  @AuditEntryPoint
-  @Retries.RetryTranslated
-  public String getBucketLocation(String bucketName) throws IOException {
-    final String region = trackDurationAndSpan(
-        STORE_EXISTS_PROBE, bucketName, null, () ->
-            invoker.retry("getBucketLocation()", bucketName, true, () ->
-                // If accessPoint then region is known from Arn
-                accessPoint != null
-                    ? accessPoint.getRegion()
-                    : s3Client.getBucketLocation(GetBucketLocationRequest.builder()
-                        .bucket(bucketName)
-                        .build())
-                    .locationConstraintAsString()));
-    return fixBucketRegion(region);
+  protected S3AInternals createS3AInternals() {
+    return new S3AInternalsImpl();
+  }
+
+  /**
+   * Get the S3AInternals.
+   * @return the internal implementation
+   */
+  public S3AInternals getS3AInternals() {
+    return s3aInternals;
+  }
+
+  /**
+   * Implementation of the S3A Internals operations; pulled out of S3AFileSystem to
+   * force code accessing it to call {@link #getS3AInternals()}.
+   */
+  private final class S3AInternalsImpl implements S3AInternals {
+
+    /**
+     * A log for warning of aws s3 client use; only logs once per process.
+     */
+    private final LogExactlyOnce AWS_CLIENT_LOG = new LogExactlyOnce(LOG);
+
+    @Override
+    public S3Client getAmazonS3V2ClientForTesting(String reason) {
+      AWS_CLIENT_LOG.warn("Access to S3 client requested, reason {}", reason);
+      return s3Client;
+    }
+
+    /**
+     * S3AInternals method.
+     * {@inheritDoc}.
+     */
+    @Override
+    @AuditEntryPoint
+    @Retries.RetryTranslated
+    public String getBucketLocation() throws IOException {
+      return s3aInternals.getBucketLocation(bucket);
+    }
+
+    /**
+     * S3AInternals method.
+     * {@inheritDoc}.
+     */
+    @Override
+    @AuditEntryPoint
+    @Retries.RetryTranslated
+    public String getBucketLocation(String bucketName) throws IOException {
+      final String region = trackDurationAndSpan(
+          STORE_EXISTS_PROBE, bucketName, null, () ->
+              invoker.retry("getBucketLocation()", bucketName, true, () ->
+                  // If accessPoint then region is known from Arn
+                  accessPoint != null
+                      ? accessPoint.getRegion()
+                      : s3Client.getBucketLocation(GetBucketLocationRequest.builder()
+                          .bucket(bucketName)
+                          .build())
+                      .locationConstraintAsString()));
+      return fixBucketRegion(region);
+    }
+
+    /**
+     * S3AInternals method.
+     * {@inheritDoc}.
+     */
+    @Override
+    @AuditEntryPoint
+    @Retries.RetryTranslated
+    public HeadObjectResponse getObjectMetadata(Path path) throws IOException {
+      return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
+          S3AFileSystem.this.getObjectMetadata(makeQualified(path), null, invoker,
+              "getObjectMetadata"));
+    }
+
+    /**
+     * Get a shared copy of the AWS credentials, with its reference
+     * counter updated.
+     * Caller is required to call {@code close()} on this after
+     * they have finished using it.
+     * @param purpose what is this for? This is initially for logging
+     * @return a reference to shared credentials.
+     */
+    public AWSCredentialProviderList shareCredentials(final String purpose) {
+      LOG.debug("Sharing credentials for: {}", purpose);
+      return credentials.share();
+    }
   }
 
   /**
@@ -1439,7 +1483,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the encryption algorithm of this endpoint.
+   * Get the encryption algorithm of this connector.
    * @return the encryption algorithm.
    */
   public S3AEncryptionMethods getS3EncryptionAlgorithm() {
@@ -1486,6 +1530,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the bucket of this filesystem.
    * @return the bucket
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public String getBucket() {
     return bucket;
   }
@@ -2483,20 +2529,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Low-level call to get at the object metadata.
    * This method is used in some external applications and so
    * must be viewed as a public entry point.
-   * Auditing: An audit entry point.
+   * @deprecated use S3AInternals API.
    * @param path path to the object. This will be qualified.
    * @return metadata
    * @throws IOException IO and object access problems.
    */
-  @VisibleForTesting
   @AuditEntryPoint
   @InterfaceAudience.LimitedPrivate("utilities")
   @Retries.RetryTranslated
-  @InterfaceStability.Evolving
+  @Deprecated
   public HeadObjectResponse getObjectMetadata(Path path) throws IOException {
-    return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
-        getObjectMetadata(makeQualified(path), null, invoker,
-            "getObjectMetadata"));
+    return getS3AInternals().getObjectMetadata(path);
   }
 
   /**
@@ -5582,4 +5625,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean isMultipartUploadEnabled() {
     return isMultipartUploadEnabled;
   }
+
 }

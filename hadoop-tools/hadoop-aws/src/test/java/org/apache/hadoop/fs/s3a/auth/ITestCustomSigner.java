@@ -152,7 +152,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   private String determineRegion(String bucketName) throws IOException {
-    return getFileSystem().getBucketLocation(bucketName);
+    return getS3AInternals().getBucketLocation(bucketName);
   }
 
   @Private

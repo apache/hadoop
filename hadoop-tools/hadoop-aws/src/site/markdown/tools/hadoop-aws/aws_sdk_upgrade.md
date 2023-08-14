@@ -45,7 +45,7 @@ A complete list of the changes can be found in the
 
 As the module name is lost, in hadoop releases a large JAR file with
 the name "bundle" is now part of the distribution.
-This is the AWS v2 SDK shaded artifact.
+This is the AWS V2 SDK shaded artifact.
 
 The new and old SDKs can co-exist; the only place that the hadoop code
 may still use the original SDK is when a non-standard V1 AWS credential
@@ -64,13 +64,13 @@ or compatibility of dependent libraries.
 
 V1 Credential providers are *only* supported when the V1 SDK is on the classpath.
 
-The standard set of v1 credential providers used in hadoop deployments are
-automatically remapped to v2 equivalents,
+The standard set of V1 credential providers used in hadoop deployments are
+automatically remapped to V2 equivalents,
 while the stable hadoop providers have been upgraded in place; their names
 are unchanged.
 As result, standard cluster configurations should seamlessly upgrade.
 
-| v1 Credential Provider                                      | Remapped V2 substitute                                                           |
+| V1 Credential Provider                                      | Remapped V2 substitute                                                           |
 |-------------------------------------------------------------|----------------------------------------------------------------------------------|
 | `com.amazonaws.auth.AnonymousAWSCredentials`                | `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`                       |
 | `com.amazonaws.auth.EnvironmentVariableCredentialsProvider` | `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` |
@@ -87,16 +87,16 @@ they are likely to have moved different factory/builder mechanisms.
 Identify the changed classes and use their
 names in the `fs.s3a.aws.credentials.provider` option.
 
-If a v2 equivalent is not found; provided the v1 SDK is added to the classpath,
+If a V2 equivalent is not found; provided the V1 SDK is added to the classpath,
 it should still be possible to use the existing classes.
 
 
 #### Private/third-party credential providers
 
-Provided the v1 SDK is added to the classpath,
+Provided the V1 SDK is added to the classpath,
 it should still be possible to use the existing classes.
 
-Adding a v2 equivalent is the recommended long-term solution.
+Adding a V2 equivalent is the recommended long-term solution.
 
 #### Private subclasses of the Hadoop credential providers
 
@@ -125,18 +125,18 @@ were under `com.amazonaws`.
 Most of these changes simply create what will feel to be gratuitous migration effort;
 the removable of the `Serializable` nature from all message response classes can
 potentially break applications -such as anything passing them between Spark workers.
-See AWS SDK v2 issue [Simplify Modeled Message Marshalling #82](https://github.com/aws/aws-sdk-java-v2/issues/82),
+See AWS SDK V2 issue [Simplify Modeled Message Marshalling #82](https://github.com/aws/aws-sdk-java-v2/issues/82),
 note that it was filed in 2017, then implement your own workaround pending that issue
 being resolved.
 
 ### Compilation/Linkage Errors
 
-Any code making use of v1 sdk classes will fail if they
-* Expect the v1 sdk classes to be on the classpath when `hadoop-aws` is declared as a dependency
-* Use v1-SDK-compatible methods previously exported by the `S3AFileSystem` class and associated classes.
-* Try to pass s3a classes to v1 SDK classes (e.g. credential providers).
+Any code making use of V1 sdk classes will fail if they
+* Expect the V1 sdk classes to be on the classpath when `hadoop-aws` is declared as a dependency
+* Use V1-SDK-compatible methods previously exported by the `S3AFileSystem` class and associated classes.
+* Try to pass s3a classes to V1 SDK classes (e.g. credential providers).
 
-The sole solution to these problems is "move to the v2 SDK".
+The sole solution to these problems is "move to the V2 SDK".
 
 Some `S3AUtils` methods are deleted
 ```
@@ -155,24 +155,51 @@ Signature mismatch
 [ERROR]   location: variable credentials of type org.apache.hadoop.fs.s3a.AWSCredentialProviderList
 ```
 
-It is no longer a V1 credential provider, cannot be used to pass credentials to a v1 SDK class
+It is no longer a V1 credential provider, cannot be used to pass credentials to a V1 SDK class
 ```
 incompatible types: org.apache.hadoop.fs.s3a.AWSCredentialProviderList cannot be converted to com.amazonaws.auth.AWSCredentialsProvider
 ```
 
 ### `AmazonS3` replaced by `S3Client`; factory and accessor changed.
 
-The V1 s3 client class `com.amazonaws.services.s3.AmazonS3` has been superseded by `software.amazon.awssdk.services.s3.S3Client` 
+The V1 s3 client class `com.amazonaws.services.s3.AmazonS3` has been superseded by
+`software.amazon.awssdk.services.s3.S3Client`
 
 The `S3ClientFactory` interface has been replaced by one that creates a V2 `S3Client`.
 * Custom implementations will need to be updated.
 * The `InconsistentS3ClientFactory` class has been deleted.
 
+#### `S3AFileSystem` method changes: `S3AInternals`.
+
+The low-level s3 operations/client accessors have been moved into a new interface,
+`org.apache.hadoop.fs.s3a.S3AInternals`, which must be accessed via the 
+`S3AFileSystem.getS3AInternals()` method.
+They have also been updated to return V2 SDK classes. 
+
+```java
+@InterfaceStability.Unstable
+@InterfaceAudience.LimitedPrivate("testing/diagnostics")
+public interface S3AInternals {
+  S3Client getAmazonS3V2ClientForTesting(String reason);
+  
+  @Retries.RetryTranslated
+  @AuditEntryPoint
+  String getBucketLocation() throws IOException;
+  
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  String getBucketLocation(String bucketName) throws IOException;
+ 
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  HeadObjectResponse getObjectMetadata(Path path) throws IOException;
+  
+  AWSCredentialProviderList shareCredentials(final String purpose);
+}
+```
 
 
-#### `S3AFileSystem` method changes
-
-##### `S3AFileSystem.getAmazonS3ClientForTesting()`
+##### `S3AFileSystem.getAmazonS3ClientForTesting(String)` moved and return type changed
 
 The `S3AFileSystem.getAmazonS3ClientForTesting()` method has been been deleted.
 
@@ -183,16 +210,39 @@ cannot find symbol
 [ERROR]   location: variable fs of type org.apache.hadoop.fs.s3a.S3AFileSystem
 ```
 
-It has been replaced with a new method to return the V2 `S3Client` of the filesystem instance.
+It has been replaced by an `S3AInternals` equivalent which returns the V2 `S3Client` of the filesystem instance.
+
 ```java
-public S3Client getAmazonS3V2ClientForTesting(String reason);
+((S3AFilesystem)fs).getAmazonS3ClientForTesting("testing")
 ```
 
-##### `S3AFileSystem.getObjectMetadata(Path path)` returns a v2 HeadResponse
+```java
+((S3AFilesystem)fs).getS3AInternals().getAmazonS3ClientForTesting("testing")
+```
+
+##### `S3AFileSystem.getObjectMetadata(Path path)` moved and return type changed
 
 The `getObjectMetadata(Path)` call returns an instance of the
-`software.amazon.awssdk.services.s3.model.HeadObjectResponse` class 
+`software.amazon.awssdk.services.s3.model.HeadObjectResponse` class
 
+```java
+((S3AFilesystem)fs).getObjectMetadata(path)
+```
+
+```java
+((S3AFilesystem)fs).getS3AInternals().getObjectMetadata(path)
+```
+
+The original `S3AFileSystem` method has been retained (and forwards to the new interface's
+implementation), however its return type has changed and is marked as deprecated.
+
+##### `AWSCredentialProviderList shareCredentials(String)` moved to `S3AInternals`
+
+The operation to share a reference-counted access to the AWS credentials used
+by the S3A FS has been moved to `S3AInternals`.
+
+This is very much an implementation method, used to allow extension modules to share
+an authentication chain into other AWS SDK client services (dynamoDB, etc.).
 
 ### Credential Providers
 
@@ -205,10 +255,10 @@ The change in interface will mean that custom credential providers will need to 
 implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
 `com.amazonaws.auth.AWSCredentialsProvider`.
 
-#### Original v1 `AWSCredentialsProvider` interface
+#### Original V1 `AWSCredentialsProvider` interface
 
 Note how the interface begins with the capitalized "AWS" acronym.
-The v2 interface starts with "Aws". This is a very subtle change
+The V2 interface starts with "Aws". This is a very subtle change
 for developers to spot.
 Compilers _will_ detect and report the type mismatch.
 
@@ -231,7 +281,7 @@ if available, would be invoked in preference to using any constructor.
 If the interface implemented `Closeable` or `AutoCloseable`, these would
 be invoked when the provider chain was being shut down.
 
-#### v2 `AwsCredentialsProvider` interface
+#### V2 `AwsCredentialsProvider` interface
 
 ```java
 package software.amazon.awssdk.auth.credentials;
@@ -253,14 +303,12 @@ public interface AwsCredentialsProvider {
 #### `AWSCredentialProviderList` is now a V2 credential provider
 
 The class `org.apache.hadoop.fs.s3a.AWSCredentialProviderList` has moved from
-being a v1 to a v2 credential provider.
-Any code which obtains one of these lists, such as through a call to `S3AFileSystem.shareCredentials()`
-may still link, but the v1 operations are no longer available.
+being a V1 to a V2 credential provider; even if an instance can be created with
+existing code, the V1 methods will not resolve:
 
 ```
 java.lang.NoSuchMethodError: org.apache.hadoop.fs.s3a.AWSCredentialProviderList.getCredentials()Lcom/amazonaws/auth/AWSCredentials;
-        at org.apache.hadoop.fs.store.diag.S3ADiagnosticsInfo.validateFilesystem(S3ADiagnosticsInfo.java:903)
-
+  at org.apache.hadoop.fs.store.diag.S3ADiagnosticsInfo.validateFilesystem(S3ADiagnosticsInfo.java:903)
 ```
 
 ### Delegation Tokens
@@ -275,8 +323,6 @@ java.lang.NoSuchMethodError: org.apache.hadoop.fs.s3a.AWSCredentialProviderList.
 the list; if they are `Closeable` or `AutoCloseable` then their `close()` method is invoked.
 * Accordingly, providers may still perform background refreshes in separate threads;
   the S3A client will close its provider list when the filesystem itself is closed.
-
-
 
 
 ### Signers

@@ -737,7 +737,8 @@ public final class Constants {
       "fs.s3a.s3.client.factory.impl";
 
   /**
-   * Default factory: {@value}.
+   * Default factory:
+   * {@code org.apache.hadoop.fs.s3a.DefaultS3ClientFactory}.
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
