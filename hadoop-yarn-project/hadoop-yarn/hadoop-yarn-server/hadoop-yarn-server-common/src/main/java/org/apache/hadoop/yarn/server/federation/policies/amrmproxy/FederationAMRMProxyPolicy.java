@@ -63,4 +63,5 @@ public interface FederationAMRMProxyPolicy
    */
   void notifyOfResponse(SubClusterId subClusterId, AllocateResponse response)
       throws YarnException;
+
 }

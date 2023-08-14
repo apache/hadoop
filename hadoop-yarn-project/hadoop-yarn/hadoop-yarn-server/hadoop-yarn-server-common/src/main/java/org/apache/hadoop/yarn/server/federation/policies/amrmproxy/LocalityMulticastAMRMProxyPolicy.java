@@ -766,7 +766,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       tmpSCSet.removeAll(timedOutSubClusters);
 
       if (tmpSCSet.size() < 1) {
-        LOG.warn("All active and enabled subClusters have expired last "
+        LOG.warn("All active and enabled subclusters have expired last "
             + "heartbeat time. Ignore the expiry check for this request.");
       } else {
         activeAndEnabledSC = tmpSCSet;
