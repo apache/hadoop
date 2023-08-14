@@ -210,14 +210,14 @@ public class TestDecommissioningNodesWatcher {
     Assert.assertEquals(DecommissioningNodeStatus.WAIT_SCHEDULED_APPS,
             watcher.checkDecommissioningStatus(id1));
 
-      // update node with 3 running containers
-      nodeStatus = createNodeStatus(id1, app, 3);
-      node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
-      watcher.update(node1, nodeStatus);
-      Assert.assertEquals(1, node1.getRunningApps().size());
-      Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
-      Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER,
-            watcher.checkDecommissioningStatus(id1));
+    // update node with 3 running containers
+    nodeStatus = createNodeStatus(id1, app, 3);
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
+    watcher.update(node1, nodeStatus);
+    Assert.assertEquals(1, node1.getRunningApps().size());
+    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER, 
+        watcher.checkDecommissioningStatus(id1));
 
     // update node with 0 running containers
     nodeStatus = createNodeStatus(id1, app, 0);
