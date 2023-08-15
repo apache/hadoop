@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -56,8 +57,17 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioning
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.junit.Assert;
@@ -66,6 +76,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -602,5 +615,233 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     assertNotNull(groups);
     assertEquals(1, groups.length);
     assertEquals("admin", groups[0]);
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyErrorRequest() throws Exception {
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class, "Missing SaveFederationQueuePolicy request.",
+        () -> interceptor.saveFederationQueuePolicy(null));
+
+    // federationQueueWeight is null.
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class, "FederationQueueWeight cannot be null.",
+        () -> SaveFederationQueuePolicyRequest.newInstance("root.a", null, "-"));
+
+    // queue is null
+    FederationQueueWeight federationQueueWeight =
+        FederationQueueWeight.newInstance("SC-1:0.7,SC-2:0.3", "SC-1:0.7,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request =
+        SaveFederationQueuePolicyRequest.newInstance("", federationQueueWeight, "-");
+    LambdaTestUtils.intercept(YarnException.class, "Missing Queue information.",
+        () -> interceptor.saveFederationQueuePolicy(request));
+
+    // routerWeight / amrmWeight
+    // The sum of the routerWeight is not equal to 1.
+    FederationQueueWeight federationQueueWeight2 = FederationQueueWeight.newInstance(
+        "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request2 =
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "-");
+    LambdaTestUtils.intercept(YarnException.class,
+        "The sum of ratios for all subClusters must be equal to 1.",
+        () -> interceptor.saveFederationQueuePolicy(request2));
+  }
+
+  @Test
+  public void testSaveFederationQueuePolicyRequest() throws IOException, YarnException {
+
+    // We design unit tests, including 2 SubCluster (SC-1, SC-2)
+    // Router Weight: SC-1=0.7,SC-2=0.3
+    // AMRM Weight: SC-1=0.6,SC-2=0.4
+    // headRoomAlpha: 1.0
+    String queue = "root.a";
+    String subCluster1 = "SC-1";
+    String subCluster2 = "SC-2";
+    String routerWeight = "SC-1:0.7,SC-2:0.3";
+    String amrmWeight = "SC-1:0.6,SC-2:0.4";
+    String headRoomAlpha = "1.0";
+
+    // Step1. Write FederationQueue information to stateStore.
+    String policyTypeName = WeightedLocalityPolicyManager.class.getCanonicalName();
+    FederationQueueWeight federationQueueWeight =
+        FederationQueueWeight.newInstance(routerWeight, amrmWeight, headRoomAlpha);
+    SaveFederationQueuePolicyRequest request =
+        SaveFederationQueuePolicyRequest.newInstance(queue, federationQueueWeight, policyTypeName);
+    SaveFederationQueuePolicyResponse response = interceptor.saveFederationQueuePolicy(request);
+    assertNotNull(response);
+    assertEquals("save policy success.", response.getMessage());
+
+    // Step2. We query Policy information from FederationStateStore.
+    FederationStateStoreFacade federationFacade = interceptor.getFederationFacade();
+    SubClusterPolicyConfiguration policyConfiguration =
+        federationFacade.getPolicyConfiguration(queue);
+    assertNotNull(policyConfiguration);
+    assertEquals(queue, policyConfiguration.getQueue());
+
+    ByteBuffer params = policyConfiguration.getParams();
+    assertNotNull(params);
+    WeightedPolicyInfo weightedPolicyInfo = WeightedPolicyInfo.fromByteBuffer(params);
+    assertNotNull(weightedPolicyInfo);
+
+    SubClusterIdInfo sc1 = new SubClusterIdInfo(subCluster1);
+    SubClusterIdInfo sc2 = new SubClusterIdInfo(subCluster2);
+
+    // Step3. We will compare the accuracy of routerPolicyWeights and amrmPolicyWeights.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = weightedPolicyInfo.getRouterPolicyWeights();
+    Float sc1Weight = routerPolicyWeights.get(sc1);
+    assertNotNull(sc1Weight);
+    assertEquals(0.7f, sc1Weight.floatValue(), 0.00001);
+
+    Float sc2Weight = routerPolicyWeights.get(sc2);
+    assertNotNull(sc2Weight);
+    assertEquals(0.3f, sc2Weight.floatValue(), 0.00001);
+
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights = weightedPolicyInfo.getAMRMPolicyWeights();
+    Float sc1AMRMWeight = amrmPolicyWeights.get(sc1);
+    assertNotNull(sc1AMRMWeight);
+    assertEquals(0.6f, sc1AMRMWeight.floatValue(), 0.00001);
+
+    Float sc2AMRMWeight = amrmPolicyWeights.get(sc2);
+    assertNotNull(sc2AMRMWeight);
+    assertEquals(0.4f, sc2AMRMWeight.floatValue(), 0.00001);
+  }
+
+  @Test
+  public void testBatchSaveFederationQueuePoliciesRequest() throws IOException, YarnException {
+
+    // subClusters
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // generate queue A, queue B, queue C
+    FederationQueueWeight rootA = generateFederationQueueWeight("root.a", subClusterLists);
+    FederationQueueWeight rootB = generateFederationQueueWeight("root.b", subClusterLists);
+    FederationQueueWeight rootC = generateFederationQueueWeight("root.b", subClusterLists);
+
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    federationQueueWeights.add(rootA);
+    federationQueueWeights.add(rootB);
+    federationQueueWeights.add(rootC);
+
+    // Step1. Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // Step2. We query Policy information from FederationStateStore.
+    FederationStateStoreFacade federationFacade = interceptor.getFederationFacade();
+    SubClusterPolicyConfiguration policyConfiguration =
+        federationFacade.getPolicyConfiguration("root.a");
+    assertNotNull(policyConfiguration);
+    assertEquals("root.a", policyConfiguration.getQueue());
+
+    ByteBuffer params = policyConfiguration.getParams();
+    assertNotNull(params);
+    WeightedPolicyInfo weightedPolicyInfo = WeightedPolicyInfo.fromByteBuffer(params);
+    assertNotNull(weightedPolicyInfo);
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights = weightedPolicyInfo.getAMRMPolicyWeights();
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = weightedPolicyInfo.getRouterPolicyWeights();
+
+    SubClusterIdInfo sc1 = new SubClusterIdInfo("SC-1");
+    SubClusterIdInfo sc2 = new SubClusterIdInfo("SC-2");
+
+    // Check whether the AMRMWeight of SC-1 and SC-2 of root.a meet expectations
+    FederationQueueWeight queueWeight = federationQueueWeights.get(0);
+    Map<SubClusterIdInfo, Float> subClusterAmrmWeightMap =
+        interceptor.getSubClusterWeightMap(queueWeight.getAmrmWeight());
+    Float sc1ExpectedAmrmWeightFloat = amrmPolicyWeights.get(sc1);
+    Float sc1AmrmWeightFloat = subClusterAmrmWeightMap.get(sc1);
+    assertNotNull(sc1AmrmWeightFloat);
+    assertEquals(sc1ExpectedAmrmWeightFloat, sc1AmrmWeightFloat, 0.00001);
+
+    Float sc2ExpectedAmrmWeightFloat = amrmPolicyWeights.get(sc2);
+    Float sc2AmrmWeightFloat = subClusterAmrmWeightMap.get(sc2);
+    assertNotNull(sc2ExpectedAmrmWeightFloat);
+    assertEquals(sc2ExpectedAmrmWeightFloat, sc2AmrmWeightFloat, 0.00001);
+
+    // Check whether the RouterPolicyWeight of SC-1 and SC-2 of root.a meet expectations
+    Map<SubClusterIdInfo, Float> subClusterRouterWeightMap =
+        interceptor.getSubClusterWeightMap(queueWeight.getRouterWeight());
+    Float sc1ExpectedRouterWeightFloat = routerPolicyWeights.get(sc1);
+    Float sc1RouterWeightFloat = subClusterRouterWeightMap.get(sc1);
+    assertNotNull(sc1RouterWeightFloat);
+    assertEquals(sc1ExpectedRouterWeightFloat, sc1RouterWeightFloat, 0.00001);
+
+    Float sc2ExpectedRouterWeightFloat = routerPolicyWeights.get(sc2);
+    Float sc2RouterWeightFloat = subClusterRouterWeightMap.get(sc2);
+    assertNotNull(sc2ExpectedRouterWeightFloat);
+    assertEquals(sc2ExpectedRouterWeightFloat, sc2RouterWeightFloat, 0.00001);
+  }
+
+  /**
+   * Generate FederationQueueWeight.
+   * We will generate the weight information of the queue.
+   *
+   * @param queue queue name
+   * @param pSubClusters subClusters
+   * @return subCluster FederationQueueWeight
+   */
+  private FederationQueueWeight generateFederationQueueWeight(
+      String queue, List<String> pSubClusters) {
+    String routerWeight = generatePolicyWeight(pSubClusters);
+    String amrmWeight = generatePolicyWeight(pSubClusters);
+    String policyTypeName = WeightedLocalityPolicyManager.class.getCanonicalName();
+    String headRoomAlpha = "1.0";
+    return FederationQueueWeight.newInstance(routerWeight, amrmWeight, headRoomAlpha,
+        queue, policyTypeName);
+  }
+
+  /**
+   * Generating Policy Weight Data.
+   *
+   * @param pSubClusters set of sub-clusters.
+   * @return policy Weight String, like SC-1:0.7,SC-2:0.
+   */
+  private String generatePolicyWeight(List<String> pSubClusters) {
+    List<String> weights = generateWeights(subClusters.size());
+    List<String> subClusterWeight = new ArrayList<>();
+    for (int i = 0; i < pSubClusters.size(); i++) {
+      String subCluster = pSubClusters.get(i);
+      String weight = weights.get(i);
+      subClusterWeight.add(subCluster + ":" + weight);
+    }
+    return StringUtils.join(subClusterWeight, ",");
+  }
+
+  /**
+   * Generate a set of random numbers, and the sum of the numbers is 1.
+   *
+   * @param n number of random numbers generated.
+   * @return a set of random numbers
+   */
+  private List<String> generateWeights(int n) {
+    List<Float> randomNumbers = new ArrayList<>();
+    float total = 0.0f;
+
+    Random random = new Random();
+    for (int i = 0; i < n - 1; i++) {
+      float randNum = random.nextFloat();
+      randomNumbers.add(randNum);
+      total += randNum;
+    }
+
+    float lastNumber = 1 - total;
+    randomNumbers.add(lastNumber);
+
+    DecimalFormat decimalFormat = new DecimalFormat("#.##");
+    List<String> formattedRandomNumbers = new ArrayList<>();
+    for (double number : randomNumbers) {
+      String formattedNumber = decimalFormat.format(number);
+      formattedRandomNumbers.add(formattedNumber);
+    }
+
+    return formattedRandomNumbers;
   }
 }

@@ -67,7 +67,7 @@ public interface AMRMProxyApplicationContext {
    * Gets the NMContext object.
    * @return the NMContext.
    */
-  Context getNMCotext();
+  Context getNMContext();
 
   /**
    * Gets the credentials of this application.

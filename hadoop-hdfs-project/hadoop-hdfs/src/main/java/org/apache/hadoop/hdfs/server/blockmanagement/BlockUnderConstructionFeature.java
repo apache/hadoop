@@ -147,6 +147,14 @@ public class BlockUnderConstructionFeature {
     return indices;
   }
 
+  public byte[] getBlockIndicesForSpecifiedStorages(List<Integer> storageIdx) {
+    byte[] indices = new byte[storageIdx.size()];
+    for (int i = 0; i < indices.length; i++) {
+      indices[i] = BlockIdManager.getBlockIndex(replicas[storageIdx.get(i)]);
+    }
+    return indices;
+  }
+
   public int getNumExpectedLocations() {
     return replicas.length;
   }

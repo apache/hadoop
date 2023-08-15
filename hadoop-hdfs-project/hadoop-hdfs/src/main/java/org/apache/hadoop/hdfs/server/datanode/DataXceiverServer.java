@@ -168,9 +168,9 @@ class DataXceiverServer implements Runnable {
 
   final BlockBalanceThrottler balanceThrottler;
 
-  private final DataTransferThrottler transferThrottler;
+  private volatile DataTransferThrottler transferThrottler;
 
-  private final DataTransferThrottler writeThrottler;
+  private volatile DataTransferThrottler writeThrottler;
 
   /**
    * Stores an estimate for block size to check if the disk partition has enough
@@ -200,7 +200,10 @@ class DataXceiverServer implements Runnable {
             DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
+    initBandwidthPerSec(conf);
+  }
 
+  private void initBandwidthPerSec(Configuration conf) {
     long bandwidthPerSec = conf.getLongBytes(
         DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
         DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT);
@@ -523,5 +526,13 @@ class DataXceiverServer implements Runnable {
   @VisibleForTesting
   public int getMaxXceiverCount() {
     return maxXceiverCount;
+  }
+
+  public void setTransferThrottler(DataTransferThrottler transferThrottler) {
+    this.transferThrottler = transferThrottler;
+  }
+
+  public void setWriteThrottler(DataTransferThrottler writeThrottler) {
+    this.writeThrottler = writeThrottler;
   }
 }

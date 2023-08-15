@@ -16,9 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSQueueConverter.QUEUE_MAX_AM_SHARE_DISABLED;
 
@@ -35,6 +32,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AccessType;
@@ -342,14 +340,13 @@ public class FSConfigToCSConfigConverter {
       }
       writer.writeValue(mappingRulesOutputStream, desc);
 
-      capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
-          MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setMappingRuleFormat(MAPPING_RULE_FORMAT_JSON);
       capacitySchedulerConfig.setOverrideWithQueueMappings(true);
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)
             .toString(StandardCharsets.UTF_8.displayName());
-        capacitySchedulerConfig.set(MAPPING_RULE_JSON, json);
+        capacitySchedulerConfig.setMappingRuleJson(json);
       }
     } else {
       LOG.info("No rules to convert");
@@ -377,38 +374,31 @@ public class FSConfigToCSConfigConverter {
 
   private void emitDefaultQueueMaxParallelApplications() {
     if (queueMaxAppsDefault != Integer.MAX_VALUE) {
-      capacitySchedulerConfig.set(
-          PREFIX + "max-parallel-apps",
-          String.valueOf(queueMaxAppsDefault));
+      capacitySchedulerConfig.setDefaultMaxParallelApps(
+          queueMaxAppsDefault);
     }
   }
 
   private void emitDefaultUserMaxParallelApplications() {
     if (userMaxAppsDefault != Integer.MAX_VALUE) {
-      capacitySchedulerConfig.set(
-          PREFIX + "user.max-parallel-apps",
-          String.valueOf(userMaxAppsDefault));
+      capacitySchedulerConfig.setDefaultMaxParallelAppsPerUser(
+          userMaxAppsDefault);
     }
   }
 
   private void emitUserMaxParallelApplications() {
     userMaxApps
         .forEach((user, apps) -> {
-          capacitySchedulerConfig.setInt(
-              PREFIX + "user." + user + ".max-parallel-apps", apps);
+          capacitySchedulerConfig.setMaxParallelAppsForUser(user, apps);
         });
   }
 
   private void emitDefaultMaxAMShare() {
     if (queueMaxAMShareDefault == QUEUE_MAX_AM_SHARE_DISABLED) {
-      capacitySchedulerConfig.setFloat(
-          CapacitySchedulerConfiguration.
-            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+      capacitySchedulerConfig.setMaximumApplicationMasterResourcePercent(
             1.0f);
     } else {
-      capacitySchedulerConfig.setFloat(
-          CapacitySchedulerConfiguration.
-            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+      capacitySchedulerConfig.setMaximumApplicationMasterResourcePercent(
           queueMaxAMShareDefault);
     }
   }
@@ -416,8 +406,7 @@ public class FSConfigToCSConfigConverter {
     if (preemptionMode == FSConfigToCSConfigConverterParams
             .PreemptionMode.OBSERVE_ONLY) {
       capacitySchedulerConfig.
-          setBoolean(CapacitySchedulerConfiguration.
-              PREEMPTION_OBSERVE_ONLY, true);
+          setPreemptionObserveOnly(true);
     }
   }
 
@@ -432,14 +421,14 @@ public class FSConfigToCSConfigConverter {
     AccessControlList adminAcls = access.get(AccessType.ADMINISTER_QUEUE);
 
     if (!submitAcls.getGroups().isEmpty() ||
-        !submitAcls.getUsers().isEmpty()) {
-      capacitySchedulerConfig.set(PREFIX + queue + ".acl_submit_applications",
+        !submitAcls.getUsers().isEmpty() || submitAcls.isAllAllowed()) {
+      capacitySchedulerConfig.setAcl(queue, QueueACL.SUBMIT_APPLICATIONS,
           submitAcls.getAclString());
     }
 
     if (!adminAcls.getGroups().isEmpty() ||
-        !adminAcls.getUsers().isEmpty()) {
-      capacitySchedulerConfig.set(PREFIX + queue + ".acl_administer_queue",
+        !adminAcls.getUsers().isEmpty() || adminAcls.isAllAllowed()) {
+      capacitySchedulerConfig.setAcl(queue, QueueACL.ADMINISTER_QUEUE,
           adminAcls.getAclString());
     }
   }
@@ -501,7 +490,7 @@ public class FSConfigToCSConfigConverter {
   }
 
   @VisibleForTesting
-  Configuration getCapacitySchedulerConfig() {
+  CapacitySchedulerConfiguration getCapacitySchedulerConfig() {
     return capacitySchedulerConfig;
   }
 

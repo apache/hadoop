@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1055,8 +1056,6 @@ public class TestFsck {
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
     assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
     assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
-
-
   }
 
   /** Test if fsck can return -1 in case of failure.
@@ -1682,6 +1681,91 @@ public class TestFsck {
   }
 
   /**
+   * Test for blockIdCK with datanode staleness.
+   */
+  @Test
+  public void testBlockIdCKStaleness() throws Exception {
+    final short replFactor = 1;
+    final long blockSize = 512;
+    Configuration configuration = new Configuration();
+
+    // Shorten dfs.namenode.stale.datanode.interval for easier testing.
+    configuration.setLong(DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY, 5000);
+    configuration.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    configuration.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, replFactor);
+
+    String[] racks = {"/rack1", "/rack2"};
+    String[] hosts = {"host1", "host2"};
+
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(configuration, builderBaseDir)
+        .hosts(hosts).racks(racks).build();
+    assertNotNull("Failed Cluster Creation", cluster);
+    cluster.waitClusterUp();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    assertNotNull("Failed to get FileSystem", fs);
+
+    try {
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName(getClass().getSimpleName()).setNumFiles(1).build();
+
+      // Create one file.
+      final String pathString = new String("/testfile");
+      final Path path = new Path(pathString);
+      util.createFile(fs, path, 1024L, replFactor, 1024L);
+      util.waitReplication(fs, path, replFactor);
+      StringBuilder sb = new StringBuilder();
+      for (LocatedBlock lb: util.getAllBlocks(fs, path)) {
+        sb.append(lb.getBlock().getLocalBlock().getBlockName() + " ");
+      }
+      String[] bIds = sb.toString().split(" ");
+
+      // Make sure datanode is HEALTHY before down.
+      String outStr = runFsck(configuration, 0, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
+      DatanodeManager dnm = bm.getDatanodeManager();
+      DatanodeDescriptor dn = dnm.getDatanode(cluster.getDataNodes().get(0)
+          .getDatanodeId());
+      final String dnName = dn.getXferAddr();
+
+      // Make the block on datanode enter stale state.
+      cluster.stopDataNode(0);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            DatanodeInfo datanodeInfo = null;
+            for (DatanodeInfo info : fs.getDataNodeStats()) {
+              if (dnName.equals(info.getXferAddr())) {
+                datanodeInfo = info;
+              }
+            }
+            if (datanodeInfo != null && datanodeInfo.isStale(5000)) {
+              return true;
+            }
+          } catch (Exception e) {
+            LOG.warn("Unexpected exception: " + e);
+            return false;
+          }
+          return false;
+        }
+      }, 500, 30000);
+      outStr = runFsck(configuration, 6, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.STALE_STATUS));
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * Test for blockIdCK with block corruption.
    */
   @Test
@@ -1746,6 +1830,51 @@ public class TestFsck {
     outStr = runFsck(conf, 1, false, "/", "-blockId", block.getBlockName());
     System.out.println(outStr);
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+  }
+
+  /**
+   * Test for blockIdCK with block excess.
+   */
+  @Test
+  public void testBlockIdCKExcess() throws Exception {
+    final Configuration configuration = new Configuration();
+    // Disable redundancy monitor check so that excess block can be verified.
+    configuration.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 5000);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(configuration).
+        numDataNodes(2).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Create file.
+      Path file = new Path("/test");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 2, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 2);
+
+      List<LocatedBlock> locatedBlocks = DFSTestUtil.getAllBlocks(fs, file);
+      assertEquals(1, locatedBlocks.size());
+      String blockName = locatedBlocks.get(0).getBlock().getBlockName();
+
+      // Validate block is HEALTHY.
+      String outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 2));
+      assertTrue(outStr.contains("No. of live Replica: " + 2));
+      assertTrue(outStr.contains("No. of excess Replica: " + 0));
+
+      // Make the block on one  datanode enter excess state.
+      fs.setReplication(file, (short)1);
+
+      // Validate the one block is EXCESS.
+      outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.EXCESS_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 1));
+      assertTrue(outStr.contains("No. of live Replica: " + 1));
+      assertTrue(outStr.contains("No. of excess Replica: " + 1));
+    }
   }
 
   private void writeFile(final DistributedFileSystem dfs,
@@ -1875,7 +2004,7 @@ public class TestFsck {
 
     // check the replica status should be healthy(0) after decommission
     // is done
-    String fsckOut = runFsck(conf, 0, true, testFile);
+    runFsck(conf, 0, true, testFile);
   }
 
   /**

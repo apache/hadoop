@@ -82,14 +82,14 @@ public class DiskBalancer {
   private final BlockMover blockMover;
   private final ReentrantLock lock;
   private final ConcurrentHashMap<VolumePair, DiskBalancerWorkItem> workMap;
-  private boolean isDiskBalancerEnabled = false;
+  private volatile boolean isDiskBalancerEnabled = false;
   private ExecutorService scheduler;
   private Future future;
   private String planID;
   private String planFile;
   private DiskBalancerWorkStatus.Result currentResult;
   private long bandwidth;
-  private long planValidityInterval;
+  private volatile long planValidityInterval;
   private final Configuration config;
 
   /**
@@ -339,6 +339,58 @@ public class DiskBalancer {
       throw new DiskBalancerException("Disk Balancer is not enabled.",
           DiskBalancerException.Result.DISK_BALANCER_NOT_ENABLED);
     }
+  }
+
+  /**
+   * Sets Disk balancer is to enable or not to enable.
+   *
+   * @param diskBalancerEnabled
+   *          true, enable diskBalancer, otherwise false to disable it.
+   */
+  public void setDiskBalancerEnabled(boolean diskBalancerEnabled) {
+    isDiskBalancerEnabled = diskBalancerEnabled;
+  }
+
+  /**
+   * Returns the value indicating if diskBalancer is enabled.
+   *
+   * @return boolean.
+   */
+  @VisibleForTesting
+  public boolean isDiskBalancerEnabled() {
+    return isDiskBalancerEnabled;
+  }
+
+  /**
+   * Sets maximum amount of time disk balancer plan is valid.
+   *
+   * @param planValidityInterval - maximum amount of time in the unit of milliseconds.
+   */
+  public void setPlanValidityInterval(long planValidityInterval) {
+    this.config.setTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+        planValidityInterval, TimeUnit.MILLISECONDS);
+    this.planValidityInterval = planValidityInterval;
+  }
+
+  /**
+   * Gets maximum amount of time disk balancer plan is valid.
+   *
+   * @return the maximum amount of time in milliseconds.
+   */
+  @VisibleForTesting
+  public long getPlanValidityInterval() {
+    return planValidityInterval;
+  }
+
+  /**
+   * Gets maximum amount of time disk balancer plan is valid in config.
+   *
+   * @return the maximum amount of time in milliseconds.
+   */
+  @VisibleForTesting
+  public long getPlanValidityIntervalInConfig() {
+    return config.getTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+        DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
   }
 
   /**

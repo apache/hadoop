@@ -4058,6 +4058,20 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  // AMRMProxy Register UAM Retry-Num
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.retry-count";
+  // Register a UAM , we will retry a maximum of 3 times.
+  public static final int DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
+      3;
+
+  // AMRMProxy Register UAM Retry Interval
+  public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      FEDERATION_PREFIX + "amrmproxy.register.uam.interval";
+  // Retry Interval, default 100 ms
+  public static final long DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
+      TimeUnit.MILLISECONDS.toMillis(100);
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
@@ -4365,6 +4379,92 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_SUBCLUSTER_EXPIRATION_MS =
       FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
   public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = TimeUnit.MINUTES.toMillis(30);
+
+  /** Keytab for GPG. **/
+  public static final String GPG_KEYTAB = FEDERATION_GPG_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the globalpolicygenerator.*/
+  public static final String GPG_PRINCIPAL = FEDERATION_GPG_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn gpg.*/
+  public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
+      "kerberos.principal.hostname";
+
+  public static final String FEDERATION_GPG_POLICY_PREFIX =
+      FEDERATION_GPG_PREFIX + "policy.generator.";
+
+  /** The interval at which the policy generator runs, default is one hour. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL =
+      FEDERATION_GPG_POLICY_PREFIX + "interval";
+  public static final long DEFAULT_GPG_POLICY_GENERATOR_INTERVAL = TimeUnit.HOURS.toMillis(1);
+
+  /** The interval at which the policy generator runs, default is one hour.
+   *  This is an deprecated property, We better set it
+   *  `yarn.federation.gpg.policy.generator.interval`. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL_MS =
+      FEDERATION_GPG_POLICY_PREFIX + "interval-ms";
+
+  /**
+   * The configured policy generator class, runs NoOpGlobalPolicy by
+   * default.
+   */
+  public static final String GPG_GLOBAL_POLICY_CLASS = FEDERATION_GPG_POLICY_PREFIX + "class";
+  public static final String DEFAULT_GPG_GLOBAL_POLICY_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator." +
+      "NoOpGlobalPolicy";
+
+  /**
+   * Whether or not the policy generator is running in read only (won't modify
+   * policies), default is false.
+   */
+  public static final String GPG_POLICY_GENERATOR_READONLY =
+      FEDERATION_GPG_POLICY_PREFIX + "readonly";
+  public static final boolean DEFAULT_GPG_POLICY_GENERATOR_READONLY = false;
+
+  /**
+   * Which sub-clusters the policy generator should blacklist.
+   */
+  public static final String GPG_POLICY_GENERATOR_BLACKLIST =
+      FEDERATION_GPG_POLICY_PREFIX + "blacklist";
+
+  private static final String FEDERATION_GPG_LOAD_BASED_PREFIX =
+      YarnConfiguration.FEDERATION_GPG_PREFIX + "policy.generator.load-based.";
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.minimum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_PENDING = 100;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_PENDING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "pending.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_PENDING = 1000;
+  public static final String FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "weight.minimum";
+  public static final float DEFAULT_FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT = 0.0f;
+  public static final String FEDERATION_GPG_LOAD_BASED_MAX_EDIT =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "edit.maximum";
+  public static final int DEFAULT_FEDERATION_GPG_LOAD_BASED_MAX_EDIT = 3;
+  public static final String FEDERATION_GPG_LOAD_BASED_SCALING =
+      FEDERATION_GPG_LOAD_BASED_PREFIX + "scaling";
+  public static final String DEFAULT_FEDERATION_GPG_LOAD_BASED_SCALING = "LINEAR";
+
+  public static final String GPG_WEBAPP_PREFIX = FEDERATION_GPG_PREFIX + "webapp.";
+
+  /** Enable/disable CORS filter. */
+  public static final String GPG_WEBAPP_ENABLE_CORS_FILTER =
+      GPG_WEBAPP_PREFIX + "cross-origin.enabled";
+  public static final boolean DEFAULT_GPG_WEBAPP_ENABLE_CORS_FILTER = false;
+
+  /** The address of the GPG web application. */
+  public static final String GPG_WEBAPP_ADDRESS = GPG_WEBAPP_PREFIX + "address";
+
+  public static final int DEFAULT_GPG_WEBAPP_PORT = 8069;
+  public static final String DEFAULT_GPG_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_PORT;
+
+  /** The https address of the GPG web application. */
+  public static final String GPG_WEBAPP_HTTPS_ADDRESS = GPG_WEBAPP_PREFIX + "https.address";
+
+  public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
+  public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
 
   /**
    * Connection and Read timeout from the Router to RM.
