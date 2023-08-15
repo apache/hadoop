@@ -260,12 +260,12 @@ public class DecommissioningNodesWatcher {
       // wait for am expire interval or decommission timeout whichever is smaller
       // if decommission timeout is negative, use am expire interval
       long effectiveTimeout = context.timeoutMs > 0 ? Math.min(context.timeoutMs, expireIntvl) :
-        expireIntvl;
+          expireIntvl;
       LOG.debug("checkReadyToBeDecommissioned " + nodeId + ", context.timeoutMs=" +
-        context.timeoutMs + ", expireIntvl=" + expireIntvl + ", waitTime=" + waitTime +
+          context.timeoutMs + ", expireIntvl=" + expireIntvl + ", waitTime=" + waitTime +
           ", effectiveTimeout=" + effectiveTimeout);
       return waitTime >= effectiveTimeout?
-       DecommissioningNodeStatus.READY : DecommissioningNodeStatus.WAIT_SCHEDULED_APPS;
+          DecommissioningNodeStatus.READY : DecommissioningNodeStatus.WAIT_SCHEDULED_APPS;
     } else {
       return (context.timeoutMs < 0 || waitTime < context.timeoutMs)?
           DecommissioningNodeStatus.WAIT_APP :

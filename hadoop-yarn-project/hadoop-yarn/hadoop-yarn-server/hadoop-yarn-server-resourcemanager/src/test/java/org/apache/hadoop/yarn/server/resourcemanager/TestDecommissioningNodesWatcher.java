@@ -216,7 +216,7 @@ public class TestDecommissioningNodesWatcher {
     watcher.update(node1, nodeStatus);
     Assert.assertEquals(1, node1.getRunningApps().size());
     Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
-    Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER, 
+    Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER,
         watcher.checkDecommissioningStatus(id1));
 
     // update node with 0 running containers
