@@ -26,7 +26,7 @@
   <packaging>maven-plugin</packaging>
   <name>Apache Hadoop Maven Plugins</name>
   <properties>
-    <maven.dependency.version>3.0.5</maven.dependency.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.plugin-tools.version>3.6.0</maven.plugin-tools.version>
   </properties>
   <dependencies>
