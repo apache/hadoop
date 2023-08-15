@@ -131,7 +131,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
         ENDPOINT,
         AWS_REGION);
     conf.setInt(S3A_BUCKET_PROBE, probe);
-    conf.set(AWS_REGION, "eu-west-1");
+    conf.set(AWS_REGION, EU_WEST_1);
     return conf;
   }
 
@@ -210,7 +210,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
    */
   private Configuration createArnConfiguration() {
     Configuration configuration = createConfigurationWithProbe(2);
-    configuration.set(AWS_REGION, "eu-west-1");
+    configuration.set(AWS_REGION, EU_WEST_1);
     return configuration;
   }
 

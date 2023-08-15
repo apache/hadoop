@@ -80,7 +80,7 @@ public class ITestS3AAWSCredentialsProvider {
       implements AwsCredentialsProvider {
 
     @SuppressWarnings("unused")
-    public BadCredentialsProviderConstructor(String fsUri, Configuration conf) {
+    BadCredentialsProviderConstructor(String fsUri, Configuration conf) {
     }
 
     @Override
@@ -125,7 +125,7 @@ public class ITestS3AAWSCredentialsProvider {
   static class BadCredentialsProvider implements AwsCredentialsProvider {
 
     @SuppressWarnings("unused")
-    public BadCredentialsProvider(Configuration conf) {
+    BadCredentialsProvider(Configuration conf) {
     }
 
     @Override

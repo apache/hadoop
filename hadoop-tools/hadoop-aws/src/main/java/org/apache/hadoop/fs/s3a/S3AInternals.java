@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -96,4 +97,14 @@ public interface S3AInternals {
    * @return a reference to shared credentials.
    */
   AWSCredentialProviderList shareCredentials(String purpose);
+
+  /**
+   * Request bucket metadata.
+   * @return the metadata
+   * @throws UnknownStoreException the bucket is absent
+   * @throws IOException  any other problem talking to S3
+   */
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  HeadBucketResponse getBucketMetadata() throws IOException;
 }

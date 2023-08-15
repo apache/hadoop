@@ -1445,6 +1445,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     /**
+     * S3AInternals method.
+     * {@inheritDoc}.
+     */
+    @Override
+    @AuditEntryPoint
+    @Retries.RetryTranslated
+    public HeadBucketResponse getBucketMetadata() throws IOException {
+      return S3AFileSystem.this.getBucketMetadata();
+    }
+
+    /**
      * Get a shared copy of the AWS credentials, with its reference
      * counter updated.
      * Caller is required to call {@code close()} on this after
@@ -2821,7 +2832,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException  any other problem talking to S3
    */
-  @Retries.RetryRaw
+  @AuditEntryPoint
+  @Retries.RetryTranslated
   protected HeadBucketResponse getBucketMetadata() throws IOException {
     final HeadBucketResponse response = trackDurationAndSpan(STORE_EXISTS_PROBE, bucket, null,
         () -> invoker.retry("getBucketMetadata()", bucket, true, () -> {
