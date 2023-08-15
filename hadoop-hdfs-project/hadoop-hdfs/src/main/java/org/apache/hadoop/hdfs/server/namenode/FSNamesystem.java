@@ -3817,9 +3817,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
         if (uc.getNumExpectedLocations() == 0) {
+          // If uc.getNumExpectedLocations() is 0, regardless of whether it
+          // is a striped block or not, we should consider it as an empty block.
           NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
               + "Removed empty last block and closed file " + src);
         } else {
+          // If uc.getNumExpectedLocations() is greater than 0, it means that
+          // minLocationsNum must be greater than 1, so this must be a striped
+          // block.
           NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
               + "Removed last unrecoverable block group and closed file " + src);
         }
