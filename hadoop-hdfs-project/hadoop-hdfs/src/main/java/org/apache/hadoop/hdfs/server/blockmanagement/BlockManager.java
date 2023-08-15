@@ -2966,6 +2966,7 @@ public class BlockManager implements BlockStatsMXBean {
     for (DatanodeStorageInfo sInfo : node.getStorageInfos()) {
       if (sInfo.getBlockReportCount() == 0) {
         needRemoveLease = false;
+        break;
       }
     }
     if (needRemoveLease) {
