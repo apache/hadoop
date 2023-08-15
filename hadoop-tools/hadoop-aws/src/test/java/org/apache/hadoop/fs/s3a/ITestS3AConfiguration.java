@@ -95,7 +95,7 @@ public class ITestS3AConfiguration {
    * @param reason why?
    * @return the client
    */
-  private final S3Client getS3Client(String reason) {
+  private S3Client getS3Client(String reason) {
     return requireNonNull(getS3AInternals().getAmazonS3V2ClientForTesting(reason));
   }
 

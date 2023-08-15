@@ -36,12 +36,7 @@ The [SDK V2](https://github.com/aws/aws-sdk-java-v2) for S3 is very different fr
 A complete list of the changes can be found in the
 [Changelog](https://github.com/aws/aws-sdk-java-v2/blob/master/docs/LaunchChangelog.md#41-s3-changes).
 
-# S3A integration changes.
-
-## Deployment Changes
-
-
-### Packaging: `aws-java-sdk-bundle-1.12.x.jar` becomes `bundle-2.x.y.jar`
+## Packaging: `aws-java-sdk-bundle-1.12.x.jar` becomes `bundle-2.x.y.jar`
 
 As the module name is lost, in hadoop releases a large JAR file with
 the name "bundle" is now part of the distribution.
@@ -58,17 +53,116 @@ As before: the exact set of dependencies used by the S3A connector
 is neither defined nor comes with any commitments of stability
 or compatibility of dependent libraries.
 
-### Configuration Option Changes
 
-### Credential Providers declared in `fs.s3a.aws.credentials.provider`
 
-V1 Credential providers are *only* supported when the V1 SDK is on the classpath.
+## Credential Provider changes and migration
 
-The standard set of V1 credential providers used in hadoop deployments are
-automatically remapped to V2 equivalents,
-while the stable hadoop providers have been upgraded in place; their names
-are unchanged.
-As result, standard cluster configurations should seamlessly upgrade.
+- Interface change: [com.amazonaws.auth.AWSCredentialsProvider](https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/auth/AWSCredentialsProvider.java)
+has been replaced by [software.amazon.awssdk.auth.credentials.AwsCredentialsProvider](https://github.com/aws/aws-sdk-java-v2/blob/master/core/auth/src/main/java/software/amazon/awssdk/auth/credentials/AwsCredentialsProvider.java).
+- Credential provider class changes: the package and class names of credential providers have
+changed.
+
+The change in interface will mean that custom credential providers will need to be updated to now
+implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
+`com.amazonaws.auth.AWSCredentialsProvider`.
+
+### Original V1 `AWSCredentialsProvider` interface
+
+Note how the interface begins with the capitalized "AWS" acronym.
+The V2 interface starts with "Aws". This is a very subtle change
+for developers to spot.
+Compilers _will_ detect and report the type mismatch.
+
+
+```java
+package com.amazonaws.auth;
+
+public interface AWSCredentialsProvider {
+
+    public AWSCredentials getCredentials();
+
+    public void refresh();
+
+}
+
+```
+The interface binding also supported a factory method, `AWSCredentialsProvider instance()` which,
+if available, would be invoked in preference to using any constructor.
+
+If the interface implemented `Closeable` or `AutoCloseable`, these would
+be invoked when the provider chain was being shut down.
+
+### New V2 `AwsCredentialsProvider` interface
+
+```java
+package software.amazon.awssdk.auth.credentials;
+
+public interface AwsCredentialsProvider {
+
+  AwsCredentials resolveCredentials();
+
+}
+```
+
+1. There is no `refresh()` method any more.
+2. `getCredentials()` has become `resolveCredentials()`.
+3. There is now the expectation in the SDK that credential resolution/lookup etc will be
+   performed in `resolveCredentials()`.
+4. If the interface implements `Closeable` or `AutoCloseable`, these will
+   be invoked when the provider chain is being shut down.
+5. A static method `create()` which returns an `AwsCredentialsProvider` or subclass; this will be used
+   in preference to a constructor
+
+### S3A `AWSCredentialProviderList` is now a V2 credential provider
+
+The class `org.apache.hadoop.fs.s3a.AWSCredentialProviderList` has moved from
+being a V1 to a V2 credential provider; even if an instance can be created with
+existing code, the V1 methods will not resolve:
+
+```
+java.lang.NoSuchMethodError: org.apache.hadoop.fs.s3a.AWSCredentialProviderList.getCredentials()Lcom/amazonaws/auth/AWSCredentials;
+  at org.apache.hadoop.fs.store.diag.S3ADiagnosticsInfo.validateFilesystem(S3ADiagnosticsInfo.java:903)
+```
+
+### Migration of Credential Providers listed in `fs.s3a.aws.credentials.provider`
+
+
+Before: `fs.s3a.aws.credentials.provider` took a list of v1 credential providers,
+This took a list containing
+1. V1 credential providers implemented in the `hadoop-aws` module.
+2. V1 credential providers implemented in the `aws-sdk-bundle` library.
+3. Custom V1 credential providers placed onto the classpath.
+4. Custom subclasses of hadoop-aws credential providers.
+
+And here is how they change
+1. All `hadoop-aws` credential providers migrated to V2.
+2. Well-known `aws-sdk-bundle` credential providers _automatically remapped_ to their V2 equivalents.
+3. Custom v1 providers supported if the original `aws-sdk-bundle` JAR is on the classpath.
+4. Custom subclasses of hadoop-aws credential providers need manual migration.
+
+Because of (1) and (2), As result, standard `fs.s3a.aws.credentials.provider` configurations
+should seamlessly upgrade. This also means that the same provider list, if restricted to
+those classes, will work across versions.
+
+
+
+### `hadoop-aws` credential providers migration to V2
+
+All the fs.s3a credential providers have the same name and functionality as before.
+
+| Hadoop module credential provider                              | Authentication Mechanism                         |
+|----------------------------------------------------------------|--------------------------------------------------|
+| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`     | Session Credentials in configuration             |
+| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`        | Simple name/secret credentials in configuration  |
+| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`     | Anonymous Login                                  |
+| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`  | [Assumed Role credentials](./assumed_roles.html) |
+| `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` | EC2/k8s instance credentials                     |
+
+### Automatic `aws-sdk-bundle` credential provider remapping
+
+The commonly-used set of V1 credential providers are automatically remapped to V2 equivalents.
+
+
 
 | V1 Credential Provider                                      | Remapped V2 substitute                                                           |
 |-------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -76,11 +170,11 @@ As result, standard cluster configurations should seamlessly upgrade.
 | `com.amazonaws.auth.EnvironmentVariableCredentialsProvider` | `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` |
 | `com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper` | `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider`                   |
 | `com.amazonaws.auth.InstanceProfileCredentialsProvider`     | `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider`                   |
-
+| `com.amazonaws.auth.profile.ProfileCredentialsProvider`     | `software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider`             |
 
 There are still a number of troublespots here:
 
-#### Other `com.amazonaws.auth.` AWS providers
+#### Less widely used`com.amazonaws.auth.` AWS providers
 
 There should be equivalents in the new SDK, but as well as being renamed
 they are likely to have moved different factory/builder mechanisms.
@@ -98,12 +192,12 @@ it should still be possible to use the existing classes.
 
 Adding a V2 equivalent is the recommended long-term solution.
 
-#### Private subclasses of the Hadoop credential providers
+#### Custom subclasses of the Hadoop credential providers
 
 Because all the standard hadoop credential providers have been upgraded,
 any subclasses of these are not going to link or work.
 
-These will need to be upgraded in source, as covered below.
+These will need to be manually migrated to being V2 Credential providers.
 
 
 ## Source code/binary integration changes
@@ -172,28 +266,28 @@ The `S3ClientFactory` interface has been replaced by one that creates a V2 `S3Cl
 #### `S3AFileSystem` method changes: `S3AInternals`.
 
 The low-level s3 operations/client accessors have been moved into a new interface,
-`org.apache.hadoop.fs.s3a.S3AInternals`, which must be accessed via the 
+`org.apache.hadoop.fs.s3a.S3AInternals`, which must be accessed via the
 `S3AFileSystem.getS3AInternals()` method.
-They have also been updated to return V2 SDK classes. 
+They have also been updated to return V2 SDK classes.
 
 ```java
 @InterfaceStability.Unstable
 @InterfaceAudience.LimitedPrivate("testing/diagnostics")
 public interface S3AInternals {
   S3Client getAmazonS3V2ClientForTesting(String reason);
-  
+
   @Retries.RetryTranslated
   @AuditEntryPoint
   String getBucketLocation() throws IOException;
-  
+
   @AuditEntryPoint
   @Retries.RetryTranslated
   String getBucketLocation(String bucketName) throws IOException;
- 
+
   @AuditEntryPoint
   @Retries.RetryTranslated
   HeadObjectResponse getObjectMetadata(Path path) throws IOException;
-  
+
   AWSCredentialProviderList shareCredentials(final String purpose);
 }
 ```
@@ -210,7 +304,8 @@ cannot find symbol
 [ERROR]   location: variable fs of type org.apache.hadoop.fs.s3a.S3AFileSystem
 ```
 
-It has been replaced by an `S3AInternals` equivalent which returns the V2 `S3Client` of the filesystem instance.
+It has been replaced by an `S3AInternals` equivalent which returns the V2 `S3Client`
+of the filesystem instance.
 
 ```java
 ((S3AFilesystem)fs).getAmazonS3ClientForTesting("testing")
@@ -220,21 +315,22 @@ It has been replaced by an `S3AInternals` equivalent which returns the V2 `S3Cli
 ((S3AFilesystem)fs).getS3AInternals().getAmazonS3ClientForTesting("testing")
 ```
 
-##### `S3AFileSystem.getObjectMetadata(Path path)` moved and return type changed
+##### `S3AFileSystem.getObjectMetadata(Path path)`  moved to `S3AInternals`; return type changed
 
-The `getObjectMetadata(Path)` call returns an instance of the
-`software.amazon.awssdk.services.s3.model.HeadObjectResponse` class
+The `getObjectMetadata(Path)` call has been moved to the `S3AInternals` interface
+and an instance of the `software.amazon.awssdk.services.s3.model.HeadObjectResponse` class
+returned.
+The original `S3AFileSystem` method has been deleted
 
+Before:
 ```java
 ((S3AFilesystem)fs).getObjectMetadata(path)
 ```
 
+After:
 ```java
 ((S3AFilesystem)fs).getS3AInternals().getObjectMetadata(path)
 ```
-
-The original `S3AFileSystem` method has been retained (and forwards to the new interface's
-implementation), however its return type has changed and is marked as deprecated.
 
 ##### `AWSCredentialProviderList shareCredentials(String)` moved to `S3AInternals`
 
@@ -243,73 +339,6 @@ by the S3A FS has been moved to `S3AInternals`.
 
 This is very much an implementation method, used to allow extension modules to share
 an authentication chain into other AWS SDK client services (dynamoDB, etc.).
-
-### Credential Providers
-
-- Interface change: [com.amazonaws.auth.AWSCredentialsProvider](https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/auth/AWSCredentialsProvider.java)
-has been replaced by [software.amazon.awssdk.auth.credentials.AwsCredentialsProvider](https://github.com/aws/aws-sdk-java-v2/blob/master/core/auth/src/main/java/software/amazon/awssdk/auth/credentials/AwsCredentialsProvider.java).
-- Credential provider class changes: the package and class names of credential providers have
-changed.
-
-The change in interface will mean that custom credential providers will need to be updated to now
-implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
-`com.amazonaws.auth.AWSCredentialsProvider`.
-
-#### Original V1 `AWSCredentialsProvider` interface
-
-Note how the interface begins with the capitalized "AWS" acronym.
-The V2 interface starts with "Aws". This is a very subtle change
-for developers to spot.
-Compilers _will_ detect and report the type mismatch.
-
-
-```java
-package com.amazonaws.auth;
-
-public interface AWSCredentialsProvider {
-
-    public AWSCredentials getCredentials();
-
-    public void refresh();
-
-}
-
-```
-The interface binding also supported a factory method, `AWSCredentialsProvider instance()` which,
-if available, would be invoked in preference to using any constructor.
-
-If the interface implemented `Closeable` or `AutoCloseable`, these would
-be invoked when the provider chain was being shut down.
-
-#### V2 `AwsCredentialsProvider` interface
-
-```java
-package software.amazon.awssdk.auth.credentials;
-
-public interface AwsCredentialsProvider {
-
-  AwsCredentials resolveCredentials();
-
-}
-```
-
-1. There is no `refresh()` method any more.
-2. `getCredentials()` has become `resolveCredentials()`.
-3. There is now the expectation in the SDK that credential resolution/lookup etc will be
-   performed in `resolveCredentials()`.
-4. If the interface implements `Closeable` or `AutoCloseable`, these will
-   be invoked when the provider chain is being shut down.
-
-#### `AWSCredentialProviderList` is now a V2 credential provider
-
-The class `org.apache.hadoop.fs.s3a.AWSCredentialProviderList` has moved from
-being a V1 to a V2 credential provider; even if an instance can be created with
-existing code, the V1 methods will not resolve:
-
-```
-java.lang.NoSuchMethodError: org.apache.hadoop.fs.s3a.AWSCredentialProviderList.getCredentials()Lcom/amazonaws/auth/AWSCredentials;
-  at org.apache.hadoop.fs.store.diag.S3ADiagnosticsInfo.validateFilesystem(S3ADiagnosticsInfo.java:903)
-```
 
 ### Delegation Tokens
 

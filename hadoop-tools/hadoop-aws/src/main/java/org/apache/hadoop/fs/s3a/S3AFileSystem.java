@@ -999,7 +999,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param parameters parameter object
    * @throws IOException on any IO problem
    */
-  private synchronized void createS3AsyncClient(S3ClientFactory clientFactory,
+  private void createS3AsyncClient(S3ClientFactory clientFactory,
       S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
   }
@@ -1207,7 +1207,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the S3 Async client; synchronized to keep spotbugs quiet.
    * @return the async s3 client.
    */
-  private synchronized S3AsyncClient getS3AsyncClient() {
+  private S3AsyncClient getS3AsyncClient() {
     return s3AsyncClient;
   }
 
@@ -1393,14 +1393,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final class S3AInternalsImpl implements S3AInternals {
 
-    /**
-     * A log for warning of aws s3 client use; only logs once per process.
-     */
-    private final LogExactlyOnce AWS_CLIENT_LOG = new LogExactlyOnce(LOG);
-
     @Override
     public S3Client getAmazonS3V2ClientForTesting(String reason) {
-      AWS_CLIENT_LOG.warn("Access to S3 client requested, reason {}", reason);
+      LOG.debug("Access to S3 client requested, reason {}", reason);
       return s3Client;
     }
 
