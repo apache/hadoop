@@ -1782,20 +1782,23 @@ will attempt to retry the operation; it may just be a transient event. If there
 are many such exceptions in logs, it may be a symptom of connectivity or network
 problems.
 
-Above error could be because of a stale http connections. By default, connections
-in the http connection pool are reused indefinitely. To discard connections after 
-a specific period of time please configure fs.s3a.connection.ttl.
+The above error could be because of a stale http connections.Default value in AWS
+SDK is set to -1 (infinite) which means connection will be reused indefinitely.
+We have introduced a new config fs.s3a.connection.ttl to configure this.
+Tuning this setting down (together with an appropriately-low setting for Java's DNS cache TTL)
+ensures that your application will quickly rotate over to new IP addresses when the
+service begins announcing them through DNS, at the cost of having to re-establish new
+connections more frequently.
 
 ```xml
 <property>
   <name>fs.s3a.connection.ttl</name>
-  <value>-1</value>
+  <value>300000</value>
   <description>
       Expiration time for a connection in the connection pool in milliseconds.
       When a connection is retrieved from the connection pool,
-      this parameter is checked to see if the connection can be reused. 
-      Default value is set to -1 (infinite) which means connection 
-      will be reused indefinitely.
+      this parameter is checked to see if the connection can be reused.
+      Default value is 5 minutes.
   </description>
 </property>
 ```

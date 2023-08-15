@@ -528,6 +528,17 @@ public class ITestS3AConfiguration {
     Assertions.assertThat(awsConf.getConnectionTTL())
             .describedAs(String.format("%s not propagated to aws conf", CONNECTION_TTL))
             .isEqualTo(connectionTtlTestVal);
+
+    long connectionTtlTestVal1 = -1;
+    config.setLong(CONNECTION_TTL, connectionTtlTestVal1);
+    initConnectionSettings(config, awsConf);
+    Assertions.assertThat(awsConf.getConnectionTTL())
+            .describedAs(String.format("%s not propagated to aws conf", CONNECTION_TTL))
+            .isEqualTo(connectionTtlTestVal1);
+
+    long connectionTtlTestVal2 = -100;
+    config.setLong(CONNECTION_TTL, connectionTtlTestVal2);
+    intercept(IllegalArgumentException.class, () -> initConnectionSettings(config, awsConf));
   }
 
   @Test(timeout = 10_000L)

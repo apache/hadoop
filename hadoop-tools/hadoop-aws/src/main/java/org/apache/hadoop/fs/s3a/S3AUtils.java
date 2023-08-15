@@ -1299,10 +1299,6 @@ public final class S3AUtils {
       ClientConfiguration awsConf) throws IOException {
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    // To discuss?
-    // what if user set the value to 0?
-    // Should we reduce the value to Integer.MAX_VALUE if user sets greater than that.
-
     awsConf.setConnectionTTL(longOption(conf, CONNECTION_TTL,
             DEFAULT_CONNECTION_TTL, -1));
     initProtocolSettings(conf, awsConf);

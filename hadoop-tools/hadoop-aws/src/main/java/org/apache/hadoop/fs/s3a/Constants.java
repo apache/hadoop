@@ -156,10 +156,16 @@ public final class Constants {
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
 
-  // Expiration time of s3 http connection from the connection pool.
-  // See {@code com.amazonaws.ClientConfiguration#setConnectionTTL}
+  /**
+   * Configuration option to configure expiration time of
+   * s3 http connection from the connection pool in milliseconds: {@value}.
+   */
   public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
-  public static final long DEFAULT_CONNECTION_TTL = ClientConfiguration.DEFAULT_CONNECTION_TTL;
+
+  /**
+   * Default value for {@value CONNECTION_TTL}: {@value}.
+   */
+  public static final long DEFAULT_CONNECTION_TTL = 5 * 60 * 1000;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
