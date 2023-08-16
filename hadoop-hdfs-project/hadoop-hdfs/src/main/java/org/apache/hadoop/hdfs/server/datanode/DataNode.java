@@ -57,6 +57,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT;
@@ -368,7 +370,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DISK_BALANCER_ENABLED,
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -702,6 +705,7 @@ public class DataNode extends ReconfigurableBase
     case DFS_DATANODE_MAX_RECEIVER_THREADS_KEY:
     case DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY:
     case DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY:
+    case DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY:
       return reconfDataXceiverParameters(property, newVal);
     case DFS_CACHEREPORT_INTERVAL_MSEC_KEY:
       return reconfCacheReportParameters(property, newVal);
@@ -765,6 +769,18 @@ public class DataNode extends ReconfigurableBase
         }
         result = Long.toString(bandwidthPerSec);
         getXferServer().setWriteThrottler(writeThrottler);
+      } else if (property.equals(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY)) {
+        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+        long bandwidthPerSec = (newVal == null ? DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT :
+            Long.parseLong(newVal));
+        DataTransferThrottler readThrottler = null;
+        if (bandwidthPerSec > 0) {
+          readThrottler = new DataTransferThrottler(bandwidthPerSec);
+        } else {
+          bandwidthPerSec = 0;
+        }
+        result = Long.toString(bandwidthPerSec);
+        getXferServer().setReadThrottler(readThrottler);
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;

@@ -172,7 +172,7 @@ class DataXceiverServer implements Runnable {
 
   private volatile DataTransferThrottler writeThrottler;
 
-  private final DataTransferThrottler readThrottler;
+  private volatile DataTransferThrottler readThrottler;
 
   /**
    * Stores an estimate for block size to check if the disk partition has enough
@@ -549,5 +549,9 @@ class DataXceiverServer implements Runnable {
 
   public void setWriteThrottler(DataTransferThrottler writeThrottler) {
     this.writeThrottler = writeThrottler;
+  }
+
+  public void setReadThrottler(DataTransferThrottler readThrottler) {
+    this.readThrottler = readThrottler;
   }
 }
