@@ -202,7 +202,7 @@ public class ITestS3AAWSCredentialsProvider {
   /**
    * Credentials via the create() method.
    */
-  public static class CredentialsProviderWithCreateMethod implements AwsCredentialsProvider {
+  public static final class CredentialsProviderWithCreateMethod implements AwsCredentialsProvider {
 
     public static AwsCredentialsProvider create() {
       LOG.info("creating CredentialsProviderWithCreateMethod");

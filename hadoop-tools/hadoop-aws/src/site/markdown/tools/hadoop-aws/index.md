@@ -262,7 +262,7 @@ a warning has been printed since Hadoop 2.8 whenever such a URL was used.
   <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
     as one of the providers.
   </description>
-</property>  
+</property>
 
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
@@ -339,7 +339,7 @@ on which values are set.
 S3A can be configured to obtain client authentication providers from classes
 which integrate with the AWS SDK by implementing the
 `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`
-interface. 
+interface.
 This is done by listing the implementation classes, in order of
 preference, in the configuration option `fs.s3a.aws.credentials.provider`.
 In previous hadoop releases, providers were required to
