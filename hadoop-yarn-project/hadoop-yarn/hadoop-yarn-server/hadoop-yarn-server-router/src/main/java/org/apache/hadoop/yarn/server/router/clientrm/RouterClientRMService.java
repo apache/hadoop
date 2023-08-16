@@ -659,7 +659,7 @@ public class RouterClientRMService extends AbstractService
     }
     String host = hostPort[0];
     int port = Integer.parseInt(hostPort[1]);
-    if (StringUtils.isBlank(hostPort[0]) || hostPort[0].equals("0.0.0.0")) {
+    if (StringUtils.isBlank(host) || host.equals("0.0.0.0")) {
       host = InetAddress.getLocalHost().getCanonicalHostName();
     }
     return new URL(YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http", host, port, "");
