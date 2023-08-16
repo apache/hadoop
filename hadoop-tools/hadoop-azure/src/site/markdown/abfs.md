@@ -560,6 +560,54 @@ The Azure Portal/CLI is used to create the service identity.
 </property>
 ```
 
+### <a name="workload-identity"></a> Azure Workload Identity
+
+[Azure Workload Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Azure AD pod identity".
+
+OAuth 2.0 tokens are written to a file that is only accessible
+from the executing pod (`/var/run/secrets/azure/tokens/azure-identity-token`).
+The issued credentials can be used to authenticate.
+
+The Azure Portal/CLI is used to create the service identity.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider</value>
+  <description>
+  Use Workload Identity for issuing OAuth tokens
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.msi.tenant</name>
+  <value></value>
+  <description>
+  Optional MSI Tenant ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value></value>
+  <description>
+  Optional Client ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.token.file</name>
+  <value></value>
+  <description>
+  Token file path
+  </description>
+</property>
+```
+
 ### Custom OAuth 2.0 Token Provider
 
 A Custom OAuth 2.0 token provider supplies the ABFS connector with an OAuth 2.0

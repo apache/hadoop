@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
@@ -831,6 +832,7 @@ public class AbfsConfiguration{
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
+
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
       try {
@@ -884,6 +886,19 @@ public class AbfsConfiguration{
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
+        } else if (tokenProviderClass == WorkloadIdentityTokenProvider.class) {
+          String authority = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+          authority = appendSlashIfNeeded(authority);
+          String tenantId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String tokenFile = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
+          tokenProvider = new WorkloadIdentityTokenProvider(authority, tenantId,
+              clientId, tokenFile);
+          LOG.trace("WorkloadIdentityTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
