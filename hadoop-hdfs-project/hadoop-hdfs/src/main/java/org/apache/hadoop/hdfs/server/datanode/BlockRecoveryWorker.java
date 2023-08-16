@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,6 +40,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,11 +62,14 @@ public class BlockRecoveryWorker {
   private final DataNode datanode;
   private final Configuration conf;
   private final DNConf dnConf;
+  private final int maxRetries;
 
   BlockRecoveryWorker(DataNode datanode) {
     this.datanode = datanode;
     conf = datanode.getConf();
     dnConf = datanode.getDnConf();
+    maxRetries = conf.getInt(DFSConfigKeys.DFS_BLOCK_RECOVERY_EOF_RETRY_KEY,
+      DFSConfigKeys.DFS_BLOCK_RECOVERY_EOF_RETRY_DEFAULT);
   }
 
   /** A convenient class used in block recovery. */
@@ -300,8 +305,19 @@ public class BlockRecoveryWorker {
       final List<BlockRecord> successList = new ArrayList<>();
       for (BlockRecord r : participatingList) {
         try {
-          r.updateReplicaUnderRecovery(bpid, recoveryId, blockId,
-              newBlock.getNumBytes());
+          // Allow retry when encountering EOFException
+          int numRetries = 0;
+          while (numRetries < maxRetries) {
+            try {
+              r.updateReplicaUnderRecovery(bpid, recoveryId, blockId,
+                      newBlock.getNumBytes());
+              break;
+            } catch (EOFException e) {
+              if (++numRetries == maxRetries) {
+                throw e;
+              }
+            }
+          }
           successList.add(r);
         } catch (IOException e) {
           InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="
