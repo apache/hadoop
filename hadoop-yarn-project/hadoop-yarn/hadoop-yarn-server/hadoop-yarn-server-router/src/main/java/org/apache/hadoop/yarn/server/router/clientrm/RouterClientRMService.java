@@ -657,13 +657,11 @@ public class RouterClientRMService extends AbstractService
     if (hostPort.length != 2) {
       throw new YarnRuntimeException("Router can't get valid redirect proxy url");
     }
-    String host;
+    String host = hostPort[0];
+    int port = Integer.parseInt(hostPort[1]);
     if (StringUtils.isBlank(hostPort[0]) || hostPort[0].equals("0.0.0.0")) {
       host = InetAddress.getLocalHost().getCanonicalHostName();
-    } else {
-      host = hostPort[0];
     }
-    return new URL(YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http", host,
-        Integer.parseInt(hostPort[1]), "");
+    return new URL(YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http", host, port, "");
   }
 }
