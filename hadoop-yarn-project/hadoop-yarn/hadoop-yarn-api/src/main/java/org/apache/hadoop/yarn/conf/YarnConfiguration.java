@@ -4058,6 +4058,45 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  // Prefix for configs related to selecting SC based on load
+  public static final String LOAD_BASED_SC_SELECTOR_PREFIX =
+      NM_PREFIX + "least-load-policy-selector.";
+
+  // Config to enable re-rerouting node requests base on SC load
+  public static final String LOAD_BASED_SC_SELECTOR_ENABLED =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "enabled";
+  public static final boolean DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED = false;
+
+  // Pending container threshold for selecting SC
+  public static final String LOAD_BASED_SC_SELECTOR_THRESHOLD =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "pending-container.threshold";
+  public static final int DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD = 10000;
+
+  // Whether to consider total number of active cores in the subcluster for load
+  public static final String LOAD_BASED_SC_SELECTOR_USE_ACTIVE_CORE =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "use-active-core";
+  public static final boolean DEFAULT_LOAD_BASED_SC_SELECTOR_USE_ACTIVE_CORE = false;
+
+  // multiplier to normalize pending container to active cores
+  public static final String LOAD_BASED_SC_SELECTOR_MULTIPLIER =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "multiplier";
+  public static final int DEFAULT_LOAD_BASED_SC_SELECTOR_MULTIPLIER = 50000;
+
+  // max count to maintain for container allocation history
+  public static final String FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY =
+      FEDERATION_PREFIX + "amrmproxy.allocation.history.max.entry";
+  public static final int DEFAULT_FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY = 100;
+
+  // Whether to fail directly if activeSubCluster is less than 1.
+  public static final String LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "fail-on-error";
+  public static final boolean DEFAULT_LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR = true;
+
+  // Blacklisted subClusters.
+  public static final String FEDERATION_BLACKLIST_SUBCLUSTERS =
+      LOAD_BASED_SC_SELECTOR_PREFIX + "blacklist-subclusters";
+  public static final String DEFAULT_FEDERATION_BLACKLIST_SUBCLUSTERS = "";
+
   // AMRMProxy Register UAM Retry-Num
   public static final String FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_COUNT =
       FEDERATION_PREFIX + "amrmproxy.register.uam.retry-count";

@@ -321,7 +321,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         SubClusterId.newInstance(YarnConfiguration.getClusterId(conf));
     this.homeRMRelayer = new AMRMClientRelayer(createHomeRMProxy(appContext,
         ApplicationMasterProtocol.class, appOwner), appId,
-        this.homeSubClusterId.toString());
+        this.homeSubClusterId.toString(), conf);
 
     this.homeHeartbeatHandler =
         createHomeHeartbeatHandler(conf, appId, this.homeRMRelayer);

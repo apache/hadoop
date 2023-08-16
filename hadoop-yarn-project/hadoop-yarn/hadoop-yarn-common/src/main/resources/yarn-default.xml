@@ -5558,4 +5558,84 @@
     <value>0.0.0.0:8070</value>
   </property>
 
+  <property>
+    <description>
+      This configuration will enable request rerouting according to the load of the subCluster.
+      If it is true, it will reroute the request according to the load of the subCluster.
+      The default configuration is false.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster pending container threshold. The default value is 10000.
+      This configuration will determine the load weight of a subCluster.
+      For SC with pending containers count bigger than container threshold / 2,
+      use threshold / pending as weight.
+      For SC with pending containers count less than threshold / 2, we cap the weight at 2.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.pending-container.threshold</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to consider the configured vcores when calculating the subCluster load.
+      The default value is false, we only consider the number of cluster pending containers.
+      If this configuration item is set to true, This configuration item needs to be used together
+      with yarn.nodemanager.least-load-policy-selector.multiplier. We will use the following formula
+      when calculating subCluster pending.
+      pendingContainersCountNormalize = (totalPendingContainersCount * multiplier) / totalActiveCores.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.use-active-core</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to fail directly if activeSubCluster is less than 1.
+      The default is true.
+      If We set to false, We will try to re-fetch activeSubCluster list.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.fail-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The subCluster configured in the blacklist will not be forwarded requests.
+      The default value is empty.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.blacklist-subclusters</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will be used
+      when yarn.nodemanager.least-load-policy-selector.use-active-core is set to true.
+      The purpose of this value is to help normalize the pendingContainersCount.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
+    <value>50000</value>
+  </property>
+
 </configuration>
