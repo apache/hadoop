@@ -383,44 +383,8 @@ public class TestDelegationToken {
         dtId.toStringStable());
   }
 
-  public static class MyDelegationTokenSecretManager extends
-      AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
-    /**
-     * Create a secret manager
-     *
-     * @param delegationKeyUpdateInterval        the number of milliseconds for rolling
-     *                                           new secret keys.
-     * @param delegationTokenMaxLifetime         the maximum lifetime of the delegation
-     *                                           tokens in milliseconds
-     * @param delegationTokenRenewInterval       how often the tokens must be renewed
-     *                                           in milliseconds
-     * @param delegationTokenRemoverScanInterval how often the tokens are scanned
-     *                                           for expired tokens in milliseconds
-     */
-    public MyDelegationTokenSecretManager(long delegationKeyUpdateInterval,
-        long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
-        long delegationTokenRemoverScanInterval) {
-      super(delegationKeyUpdateInterval,
-          delegationTokenMaxLifetime,
-          delegationTokenRenewInterval,
-          delegationTokenRemoverScanInterval);
-    }
-
-    @Override
-    public DelegationTokenIdentifier createIdentifier() {
-      return null;
-    }
-
-    @Override
-    public void logExpireTokens(Collection<DelegationTokenIdentifier> expiredTokens) throws IOException {
-      super.logExpireTokens(expiredTokens);
-    }
-  }
-
   @Test
-  public void testLogExpireTokensWhenChangeRules() {
-    MyDelegationTokenSecretManager myDtSecretManager =
-        new MyDelegationTokenSecretManager(10 * 1000, 10 * 1000, 10 * 1000, 10 * 1000);
+  public void testLogExpireTokensWhenChangeRules() throws IOException {
     setRules("RULE:[2:$1@$0](SomeUser.*)s/.*/SomeUser/");
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
         new Text("SomeUser/HOST@EXAMPLE.COM"),
@@ -428,15 +392,20 @@ public class TestDelegationToken {
         new Text("SomeUser/HOST@EXAMPLE.COM"));
     Set<DelegationTokenIdentifier> expiredTokens = new HashSet();
     expiredTokens.add(dtId);
-
     setRules("RULE:[2:$1@$0](OtherUser.*)s/.*/OtherUser/");
-    // rules was modified, causing the existing tokens (May be loaded from other storage systems like zookeeper)
-    // to fail to match the kerberos rules,
-    // return an exception that cannot be handled
-    try {
-      myDtSecretManager.logExpireTokens(expiredTokens);
-    } catch (Exception e) {
-      Assert.fail("Exception in logExpireTokens");
-    }
+    //rules was modified, causing the existing tokens
+    //(May be loaded from other storage systems like zookeeper) to fail to match the kerberos rules,
+    //return an exception that cannot be handled
+    new AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>(10 * 1000, 10 * 1000,
+        10 * 1000, 10 * 1000) {
+      @Override
+      public DelegationTokenIdentifier createIdentifier() {
+        return null;
+      }
+      public void logExpireTokens(Collection<DelegationTokenIdentifier> expiredTokens)
+          throws IOException {
+        super.logExpireTokens(expiredTokens);
+      }
+    }.logExpireTokens(expiredTokens);
   }
 }
