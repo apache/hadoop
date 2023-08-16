@@ -89,6 +89,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PIPELINE_SLOWNODE_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_CREATE;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY;
@@ -368,7 +370,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DISK_BALANCER_ENABLED,
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+              DFS_PIPELINE_SLOWNODE_ENABLED));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -441,7 +444,7 @@ public class DataNode extends ReconfigurableBase
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
   private final boolean pipelineSupportECN;
-  private final boolean pipelineSupportSlownode;
+  private volatile boolean pipelineSupportSlownode;
 
   private final List<String> usersWithLocalPathAccess;
   private final boolean connectToDnViaHostname;
@@ -709,6 +712,7 @@ public class DataNode extends ReconfigurableBase
     case DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY:
     case DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY:
     case DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY:
+    case DFS_PIPELINE_SLOWNODE_ENABLED:
       return reconfSlowPeerParameters(property, newVal);
     case DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY:
     case DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY:
@@ -867,6 +871,17 @@ public class DataNode extends ReconfigurableBase
             Long.parseLong(newVal));
         result = Long.toString(minSamples);
         peerMetrics.setMinOutlierDetectionSamples(minSamples);
+      } else if (property.equals(DFS_PIPELINE_SLOWNODE_ENABLED)) {
+        Preconditions.checkNotNull(dnConf, "DNConf has not been initialized.");
+        if (newVal != null && !newVal.equalsIgnoreCase("true")
+            && !newVal.equalsIgnoreCase("false")) {
+          throw new IllegalArgumentException("Not a valid Boolean value for " + property +
+              " in reconfSlowPeerParameters");
+        }
+        boolean enable = (newVal == null ? DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        setPipelineSupportSlownode(enable);
+        result = Boolean.toString(enable);
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
@@ -4333,5 +4348,14 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public BlockPoolManager getBlockPoolManager() {
     return blockPoolManager;
+  }
+
+  public void setPipelineSupportSlownode(boolean enable) {
+    this.pipelineSupportSlownode = enable;
+  }
+
+  @VisibleForTesting
+  public boolean isPipelineSupportSlownode() {
+    return pipelineSupportSlownode;
   }
 }
