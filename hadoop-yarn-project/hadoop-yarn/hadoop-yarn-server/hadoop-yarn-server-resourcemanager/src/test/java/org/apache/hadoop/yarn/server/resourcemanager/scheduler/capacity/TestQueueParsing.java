@@ -167,8 +167,7 @@ public class TestQueueParsing {
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-            CapacitySchedulerConfiguration
-                    .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            QueuePrefixes.getQueuePrefix(ROOT)
                     + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
     conf.setCapacity(A, 10);
@@ -182,8 +181,7 @@ public class TestQueueParsing {
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-            CapacitySchedulerConfiguration
-                    .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            QueuePrefixes.getQueuePrefix(ROOT)
                     + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
     conf.setCapacity(A, 10);
@@ -193,7 +191,7 @@ public class TestQueueParsing {
     conf.setMaximumCapacity(C, 70);
 
     // sub queues for A
-    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A)
+    conf.set(QueuePrefixes.getQueuePrefix(A)
             + CapacitySchedulerConfiguration.QUEUES, "a1, a2 ");
 
     conf.setCapacity(A1, 60);
@@ -448,7 +446,7 @@ public class TestQueueParsing {
   public void testRootQueueParsing() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     // non-100 percent value will throw IllegalArgumentException
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT, 90);
+    csConf.setCapacity(ROOT, 90);
   }
   
   @Test

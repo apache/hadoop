@@ -354,14 +354,14 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         .getLabelsByQueue(queuePath.getFullPath());
     for (String label : templateConfiguredNodeLabels) {
       final String leafConfigPath =
-          CapacitySchedulerConfiguration.getNodeLabelPrefix(
-              getQueuePath() + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX, label);
+          QueuePrefixes.getNodeLabelPrefix(
+              QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject()), label);
       String capacityString = leafConfig.get(leafConfigPath + CAPACITY, "0");
       leafQueue.setConfiguredMinCapacityVector(label,
-          getQueueCapacityConfigParser().parse(capacityString, leafQueue.getQueuePath()));
+          getQueueCapacityConfigParser().parse(capacityString, leafQueue.getQueuePathObject()));
       String maxCapacityString = leafConfig.get(leafConfigPath + MAXIMUM_CAPACITY, "100");
       leafQueue.setConfiguredMaxCapacityVector(label,
-          getQueueCapacityConfigParser().parse(maxCapacityString, leafQueue.getQueuePath()));
+          getQueueCapacityConfigParser().parse(maxCapacityString, leafQueue.getQueuePathObject()));
     }
   }
 

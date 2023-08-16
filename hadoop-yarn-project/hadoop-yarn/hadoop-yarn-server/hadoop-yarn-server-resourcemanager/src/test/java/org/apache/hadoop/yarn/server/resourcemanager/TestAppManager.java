@@ -369,11 +369,11 @@ public class TestAppManager extends AppManagerTestBase{
         CapacitySchedulerConfiguration(conf, false);
     csConf.set(PREFIX + "root.queues", "default,test");
 
-    csConf.setCapacity("root.default", 50.0f);
-    csConf.setMaximumCapacity("root.default", 100.0f);
+    csConf.setCapacity(DEFAULT, 50.0f);
+    csConf.setMaximumCapacity(DEFAULT, 100.0f);
 
-    csConf.setCapacity("root.test", 50.0f);
-    csConf.setMaximumCapacity("root.test", 100.0f);
+    csConf.setCapacity(TEST, 50.0f);
+    csConf.setMaximumCapacity(TEST, 100.0f);
 
     MockRM newMockRM = new MockRM(csConf);
     RMContext newMockRMContext = newMockRM.getRMContext();

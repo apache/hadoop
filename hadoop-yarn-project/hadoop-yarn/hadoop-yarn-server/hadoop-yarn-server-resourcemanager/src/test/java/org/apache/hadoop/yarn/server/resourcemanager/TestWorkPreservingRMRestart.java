@@ -1672,24 +1672,19 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       return;
     }
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    final QueuePath defaultPath = new QueuePath(ROOT + "." + "default");
+    final QueuePath joe = new QueuePath(ROOT + "." + "joe");
+    final QueuePath john = new QueuePath(ROOT + "." + "john");
 
-    csConf.setQueues(
-            CapacitySchedulerConfiguration.ROOT, new String[] {"default", "joe", "john"});
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "joe", 25);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "john", 25);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "default", 50);
-
-    final String q1 = CapacitySchedulerConfiguration.ROOT + "." + "joe";
-    final String q2 = CapacitySchedulerConfiguration.ROOT + "." + "john";
-    csConf.setQueues(q1, new String[] {"test"});
-    csConf.setQueues(q2, new String[] {"test"});
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "joe.test", 100);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "john.test", 100);
+    csConf.setQueues(ROOT, new String[] {"default", "joe", "john"});
+    csConf.setCapacity(joe, 25);
+    csConf.setCapacity(john, 25);
+    csConf.setCapacity(defaultPath, 50);
+    
+    csConf.setQueues(joe, new String[] {"test"});
+    csConf.setQueues(john, new String[] {"test"});
+    csConf.setCapacity(new QueuePath(joe.getFullPath(), "test"), 100);
+    csConf.setCapacity(new QueuePath(john.getFullPath(), "test"), 100);
 
     csConf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
         "{\"rules\" : [{\"type\": \"user\", \"policy\" : \"specified\", " +

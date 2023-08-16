@@ -178,6 +178,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String USER2 = USER + 2;
   public static final String USER3 = USER + 3;
   public static final String PARENT_QUEUE = "c";
+  public static final QueuePath PARENT_QUEUE_PATH = new QueuePath(PARENT_QUEUE);
 
   public static final Set<String> accessibleNodeLabelsOnC = new HashSet<>();
 
@@ -512,7 +513,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
             new String[] {"c"});
     conf.setCapacity(C, 100f);
 
