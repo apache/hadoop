@@ -754,12 +754,12 @@ public class TestReconstructStripedFile {
     try {
       shutdownDataNode(dataNode);
       final int attempts = 60;
-      // Wait Until the injection is injected
+      // Wait Until the IOException is injected
       for (int i = 0; i < attempts; i++) {
         if (injected.get()) {
           break;
         }
-        if (i == 59) {
+        if (i == (attempts - 1)) {
           Assert.fail("Should have injected the IOException");
         }
         Thread.sleep(1000);
@@ -775,7 +775,7 @@ public class TestReconstructStripedFile {
         if (allReleased) {
           break;
         }
-        if (i == 59) {
+        if (i == (attempts - 1)) {
           Assert.fail("The socket is still not released");
         }
         Thread.sleep(1000);
