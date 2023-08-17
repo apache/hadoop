@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SDK_V2_UPGRADE_LOG_NAME;
 
 /**
@@ -50,11 +51,12 @@ public final class V2Migration {
 
   /**
    * Notes use of request handlers.
+   * @param handlers handlers declared
    */
-  public static void v1RequestHandlersUsed() {
+  public static void v1RequestHandlersUsed(final String handlers) {
     WARN_OF_REQUEST_HANDLERS.warn(
-        "The request handler interface has changed in AWS SDK V2, use exception interceptors "
-            + "now S3A is upgraded to SDK V2");
+        "Ignoring V1 SDK request handlers set in {}: {}",
+        AUDIT_REQUEST_HANDLERS, handlers);
   }
 
 }

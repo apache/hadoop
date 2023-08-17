@@ -24,16 +24,22 @@ import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+
 /**
  * Simple AWS interceptor to verify dynamic loading of extra
  * execution interceptors during auditing setup.
  * The invocation counter tracks the count of calls to
  * {@link #beforeExecution}.
  */
-public final class SimpleAWSExecutionInterceptor implements ExecutionInterceptor {
+public final class SimpleAWSExecutionInterceptor extends Configured
+    implements ExecutionInterceptor {
 
   public static final String CLASS
       = "org.apache.hadoop.fs.s3a.audit.SimpleAWSExecutionInterceptor";
+
+  private static Configuration staticConf;
 
   /** Count of invocations. */
   private static final AtomicLong INVOCATIONS = new AtomicLong(0);
@@ -42,6 +48,7 @@ public final class SimpleAWSExecutionInterceptor implements ExecutionInterceptor
   public void beforeExecution(Context.BeforeExecution context,
       ExecutionAttributes executionAttributes) {
     INVOCATIONS.incrementAndGet();
+    staticConf = getConf();
   }
 
   /**
@@ -50,5 +57,15 @@ public final class SimpleAWSExecutionInterceptor implements ExecutionInterceptor
    */
   public static long getInvocationCount() {
     return INVOCATIONS.get();
+  }
+
+  /**
+   * get the static conf, which is set the config of the
+   * last executor invoked.
+   * @return the static configuration.
+   */
+
+  public static Configuration getStaticConf() {
+    return staticConf;
   }
 }

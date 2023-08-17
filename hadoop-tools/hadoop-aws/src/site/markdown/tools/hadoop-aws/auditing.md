@@ -172,6 +172,9 @@ all of which must implement the interface `software.amazon.awssdk.core.intercept
 
 The list of classes is set in the configuration option `fs.s3a.audit.execution.interceptors`.
 
+Any class in the list which implements `org.apache.hadoop.conf.Configurable` will have
+`Configurable.setConf()` called with the filesystem configuration passed down.
+
 Before the upgrade to the V2 SDK, a list of extra subclasses of the AWS SDK `com.amazonaws.handlers.RequestHandler2`
 class could be declared in the option `fs.s3a.audit.request.handlers`;
 these would be wired up into the V1 request processing pipeline.
