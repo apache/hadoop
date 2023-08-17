@@ -371,3 +371,11 @@ the interface `org.apache.hadoop.fs.s3a.audit.AWSAuditEventCallbacks`
 
 Examine the interface and associated implementations to
 see how to migrate.
+
+The option `fs.s3a.audit.request.handlers` to declare a list of v1 SDK
+`com.amazonaws.handlers.RequestHandler2` implementations to include
+in the AWS request chain is no longer supported: a warning is printed
+and the value ignored.
+
+The V2 SDK equivalent, classes implementing `software.amazon.awssdk.core.interceptor.ExecutionInterceptor`
+can be declared in the configuration option `fs.s3a.audit.execution.interceptors`.

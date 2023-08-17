@@ -45,22 +45,8 @@ public final class V2Migration {
 
   public static final Logger SDK_V2_UPGRADE_LOG = LoggerFactory.getLogger(SDK_V2_UPGRADE_LOG_NAME);
 
-  private static final LogExactlyOnce WARN_OF_DIRECTLY_REFERENCED_CREDENTIAL_PROVIDER =
-      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
-
   private static final LogExactlyOnce WARN_OF_REQUEST_HANDLERS =
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
-
-  /**
-   * Notes an AWS V1 credential provider being referenced directly.
-   * @param name name of the credential provider
-   */
-  public static void v1ProviderReferenced(String name) {
-    WARN_OF_DIRECTLY_REFERENCED_CREDENTIAL_PROVIDER.debug(
-        "Directly referencing AWS SDK V1 credential provider {}. AWS SDK V1 credential "
-            + "providers will be removed once S3A is upgraded to SDK V2", name);
-  }
-
 
   /**
    * Notes use of request handlers.
@@ -68,7 +54,7 @@ public final class V2Migration {
   public static void v1RequestHandlersUsed() {
     WARN_OF_REQUEST_HANDLERS.warn(
         "The request handler interface has changed in AWS SDK V2, use exception interceptors "
-            + "once S3A is upgraded to SDK V2");
+            + "now S3A is upgraded to SDK V2");
   }
 
 }
