@@ -21,8 +21,10 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 
 /**
@@ -162,4 +164,14 @@ public class DataNodeFaultInjector {
    * Just delay delete replica a while.
    */
   public void delayDeleteReplica() {}
+
+  /**
+   *  Used as a hook to throw IOException
+   *  when create block-reader
+   *  Also check the socket is not leaked
+   */
+  public void collectSocket(Socket s) {}
+
+  public void injectIOException() throws IOException {}
+
 }

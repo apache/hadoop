@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.FaultInjectorFileIoEvents;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -125,6 +126,7 @@ class StripedBlockReader {
          * TODO: add proper tracer
          */
       peer = newConnectedPeer(block, dnAddr, blockToken, source);
+      DataNodeFaultInjector.get().injectIOException();
       if (peer.isLocal()) {
         this.isLocal = true;
       }
@@ -155,6 +157,7 @@ class StripedBlockReader {
           sock, datanode.getDataEncryptionKeyFactoryForBlock(b),
           blockToken, datanodeId, socketTimeout);
       success = true;
+      DataNodeFaultInjector.get().collectSocket(sock);
       return peer;
     } finally {
       if (!success) {
