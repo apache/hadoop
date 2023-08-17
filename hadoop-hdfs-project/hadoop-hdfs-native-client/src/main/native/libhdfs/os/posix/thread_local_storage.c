@@ -43,15 +43,17 @@ void hdfsThreadDestructor(void *v)
   jint ret;
 
   /* Detach the current thread from the JVM */
-  if (env) {
-    ret = (*env)->GetJavaVM(env, &vm);
-    if (ret) {
-      fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
-        ret);
-      (*env)->ExceptionDescribe(env);
-    } else {
-      (*vm)->DetachCurrentThread(vm);
-    }
+  /* Found created Java */
+  jsize vmNum = 0;
+  auto res = JNI_GetCreatedJavaVMs(&vm, 1, &vmNum);
+  if (res != JNI_OK || vmNum <= 0) {
+    fprint(stderr, "JVM exits\n");
+    return;
+  }
+  ret = (*vm)->DetachCurrentThread(vm);
+
+  if (ret != JNI_OK) {
+    fprintf(stderr, "hdfsThreadDestructor: Unable to detach thread from the JVM. Error code: %d\n", ret);
   }
 
   /* Free exception strings */
