@@ -1680,7 +1680,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     csConf.setCapacity(joe, 25);
     csConf.setCapacity(john, 25);
     csConf.setCapacity(defaultPath, 50);
-    
+
     csConf.setQueues(joe, new String[] {"test"});
     csConf.setQueues(john, new String[] {"test"});
     csConf.setCapacity(new QueuePath(joe.getFullPath(), "test"), 100);

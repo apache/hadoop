@@ -39,7 +39,6 @@ import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueueCapacityConfigParser;
 
@@ -355,7 +354,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     for (String label : templateConfiguredNodeLabels) {
       final String leafConfigPath =
           QueuePrefixes.getNodeLabelPrefix(
-              QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject()), label);
+              QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject()),
+                  label);
       String capacityString = leafConfig.get(leafConfigPath + CAPACITY, "0");
       leafQueue.setConfiguredMinCapacityVector(label,
           getQueueCapacityConfigParser().parse(capacityString, leafQueue.getQueuePathObject()));

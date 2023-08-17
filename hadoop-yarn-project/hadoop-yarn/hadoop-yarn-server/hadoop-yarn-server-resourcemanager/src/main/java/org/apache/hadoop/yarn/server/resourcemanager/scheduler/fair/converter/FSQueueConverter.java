@@ -105,7 +105,8 @@ public class FSQueueConverter {
       List<String> childQueues = children.stream()
           .map(child -> getQueueShortName(child.getName()))
           .collect(Collectors.toList());
-      capacitySchedulerConfig.setQueues(new QueuePath(queueName), childQueues.toArray(new String[0]));
+      capacitySchedulerConfig.setQueues(new QueuePath(queueName),
+          childQueues.toArray(new String[0]));
     }
   }
 

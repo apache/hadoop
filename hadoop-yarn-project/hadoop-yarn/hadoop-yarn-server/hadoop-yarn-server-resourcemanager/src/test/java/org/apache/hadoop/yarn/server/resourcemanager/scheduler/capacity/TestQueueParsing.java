@@ -841,8 +841,8 @@ public class TestQueueParsing {
   public void testQueueParsingWithMoveQueue() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(ROOT, new String[] { "a" });
-    csConf.setQueues(A, new String[] { "x", "y" });
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setQueues(A, new String[] {"x", "y"});
     csConf.setCapacity(A, 100);
     csConf.setCapacity(AX, 50);
     csConf.setCapacity(AY, 50);
@@ -851,8 +851,8 @@ public class TestQueueParsing {
     MockRM rm = createMockRMWithoutLabels(conf);
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
-    csConf.setQueues(ROOT, new String[] { "a", "x" });
-    csConf.setQueues(A, new String[] { "y" });
+    csConf.setQueues(ROOT, new String[] {"a", "x"});
+    csConf.setQueues(A, new String[] {"y"});
     csConf.setCapacity(X, 50);
     csConf.setCapacity(A, 50);
     csConf.setCapacity(AY, 100);
