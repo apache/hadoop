@@ -222,7 +222,7 @@ If the S3 Bucket is configured to log requests to another bucket, then these log
 entries will include the audit information _as the referrer_.
 
 The S3 Server log entries can be parsed (consult AWS documentation for a regular expression)
-and the http referrer header extracted. 
+and the http referrer header extracted.
 
 ```
 https://audit.example.org/hadoop/1/op_rename/3c0d9b7e-2a63-43d9-a220-3c574d768ef3-3/
@@ -262,14 +262,15 @@ If any of the field values were `null`, the field is omitted.
 
 _Notes_
 
-* Thread IDs are from the current thread in the JVM, so can be compared to those in 
+* Thread IDs are from the current thread in the JVM, so can be compared to those in
   Log4J logs. They are never unique.
 * Task Attempt/Job IDs are only ever set during operations involving the S3A committers, specifically
   all operations executed by the committer.
   Operations executed in the same thread as the committer's instantiation _may_ also report the
   IDs, even if they are unrelated to the actual task. Consider them "best effort".
 
-Thread IDs are generated as follows: 
+Thread IDs are generated as follows:
+
 ```java
 Long.toString(Thread.currentThread().getId())
 ```
