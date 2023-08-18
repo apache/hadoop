@@ -483,8 +483,6 @@ class BPServiceActor implements Runnable {
                   (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
           ".");
     }
-    scheduler.updateLastBlockReportTime(monotonicNow());
-    scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
   }
 
@@ -774,6 +772,8 @@ class BPServiceActor implements Runnable {
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
           fbrExecutorService.submit(new FBRTaskHandler(fullBlockReportLeaseId));
           fullBlockReportLeaseId = 0;
+          scheduler.updateLastBlockReportTime(monotonicNow());
+          scheduler.scheduleNextBlockReport();
         }
 
         if (!dn.areCacheReportsDisabledForTests()) {
@@ -1205,15 +1205,19 @@ class BPServiceActor implements Runnable {
     public void run() {
       LOG.debug("Start sending full blockreport.");
       List<DatanodeCommand> cmds = null;
-      try {
-        synchronized (sendBRLock) {
-          cmds = blockReport(this.fullBlockReportLeaseId);
+      int retry = 0;
+      while (retry < 3) {
+        try {
+          synchronized (sendBRLock) {
+            cmds = blockReport(this.fullBlockReportLeaseId);
+            commandProcessingThread.enqueue(cmds);
+          }
+          break;
+        } catch (Throwable t) {
+          LOG.error("Exception in BRTaskHandler.", t);
+          sleepAndLogInterrupts(5000, "offering FBRTaskHandler.");
+          retry++;
         }
-        commandProcessingThread.enqueue(cmds);
-      } catch (IOException e) {
-        LOG.warn("IOException in FBR Task Handler.", e);
-      } catch (InterruptedException e) {
-        LOG.warn("InterruptedException in FBR Task Handler.", e);
       }
     }
   }
