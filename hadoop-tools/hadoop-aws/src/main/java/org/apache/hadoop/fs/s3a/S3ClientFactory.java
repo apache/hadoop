@@ -152,6 +152,11 @@ public interface S3ClientFactory {
     private long minimumPartSize;
 
     /**
+     * Threshold for multipart operations.
+     */
+    private long multiPartThreshold;
+
+    /**
      * Executor that the transfer manager will use to execute background tasks.
      */
     private Executor transferManagerExecutor;
@@ -334,6 +339,25 @@ public interface S3ClientFactory {
     public S3ClientCreationParameters withMinimumPartSize(
         final long value) {
       minimumPartSize = value;
+      return this;
+    }
+
+    /**
+     * Get the threshold for multipart operations.
+     * @return multipart threshold
+     */
+    public long getMultiPartThreshold() {
+      return multiPartThreshold;
+    }
+
+    /**
+     * Set the threshold for multipart operations.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMultipartThreshold(
+        final long value) {
+      multiPartThreshold = value;
       return this;
     }
 
