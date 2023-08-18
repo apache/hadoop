@@ -69,6 +69,7 @@ public class DelegationTokenLoadingCache<K, V> implements Map<K, V> {
     throw new UnsupportedOperationException();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public V get(Object key) {
     try {

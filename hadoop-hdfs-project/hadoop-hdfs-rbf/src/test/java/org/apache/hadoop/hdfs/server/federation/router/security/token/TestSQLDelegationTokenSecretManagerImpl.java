@@ -130,7 +130,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
     try {
       // Create token on token manager 1
-      Token token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      Token<? extends AbstractDelegationTokenIdentifier> token1 =
+          tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
 
       // Load token on token manager 2 to test it doesn't get stale
       tokenManager2.verifyToken(token1);
