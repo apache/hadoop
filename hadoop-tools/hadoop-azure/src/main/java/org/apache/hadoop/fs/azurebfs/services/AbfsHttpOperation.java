@@ -28,6 +28,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpUrlConnection;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -45,6 +46,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+
+import sun.net.www.protocol.http.Handler;
 
 /**
  * Represents an HTTP operation.
@@ -472,15 +475,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
-    if (!isTraceEnabled) {
-      return (HttpURLConnection) url.openConnection();
-    }
-    long start = System.nanoTime();
-    try {
-      return (HttpURLConnection) url.openConnection();
-    } finally {
-      connectionTimeMs = elapsedTimeMs(start);
-    }
+//    if (!isTraceEnabled) {
+//      return (HttpURLConnection) url.openConnection();
+//    }
+//    long start = System.nanoTime();
+//    try {
+//      return (HttpURLConnection) url.openConnection();
+//    } finally {
+//      connectionTimeMs = elapsedTimeMs(start);
+//    }
+    return new AbfsHttpUrlConnection(url, null, new Handler());
   }
 
   /**
