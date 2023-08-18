@@ -249,9 +249,11 @@ abstract public class ReplicaInfo extends Block
    * Its on-disk meta file name is renamed to be the new one too.
    *
    * @param newGS new generation stamp
+   * @param trashDir the trash directory in rolling upgrade
    * @throws IOException if the change fails
    */
-  abstract public void bumpReplicaGS(long newGS) throws IOException;
+  abstract public void bumpReplicaGS(long newGS, String trashDir)
+     throws IOException;
 
   abstract public ReplicaInfo getOriginalReplica();
 
