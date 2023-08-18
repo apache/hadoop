@@ -175,6 +175,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public String getResponseHeader(String httpHeader) {
+    LOG.info("header fetch");
     return connection.getHeaderField(httpHeader);
   }
 
@@ -394,11 +395,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.statusDescription = getConnResponseMessage();
 
+    LOG.info("header fetch");
     this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
     // dump the headers
+    LOG.info("header fetch");
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         connection.getHeaderFields());
 
@@ -416,6 +419,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       if (this.isTraceEnabled) {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
       }
+      LOG.info("header fetch");
       this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
     } else {
       // consume the input stream to release resources

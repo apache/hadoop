@@ -20,11 +20,13 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Random;
 
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -89,5 +91,15 @@ public class ITestAzureBlobFileSystemAppend extends
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.APPEND, false, 0));
     fs.append(testPath, 10);
+  }
+
+  @Test
+  public void test() throws Exception {
+    FileSystem fs = getFileSystem();
+    OutputStream os = fs.create(new Path("/testFile"));
+    fs.delete(new Path("/testFile"));
+    byte[] bytes  = new byte[1];
+    os.write(bytes);
+    os.close();
   }
 }
