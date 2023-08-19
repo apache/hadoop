@@ -159,7 +159,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
     try {
       // Create token on token manager 1
-      Token token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      Token<? extends AbstractDelegationTokenIdentifier> token1 =
+          tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
       long expirationTime = Time.monotonicNow() +
           TimeUnit.SECONDS.toMillis(TOKEN_EXPIRATION_SECONDS) * 2;
 
