@@ -227,7 +227,7 @@ public class TestDecommissioningNodesWatcher {
     // we still get status as WAIT_APP since app is still running even if
     // containers are 0
     Assert.assertEquals(DecommissioningNodeStatus.WAIT_APP,
-            watcher.checkDecommissioningStatus(id1));
+        watcher.checkDecommissioningStatus(id1));
 
     // Set app to be FINISHED and verified DecommissioningNodeStatus is READY.
     MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);

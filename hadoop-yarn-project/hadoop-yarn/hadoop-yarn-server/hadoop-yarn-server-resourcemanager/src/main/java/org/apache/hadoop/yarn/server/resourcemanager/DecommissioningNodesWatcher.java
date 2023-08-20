@@ -127,12 +127,19 @@ public class DecommissioningNodesWatcher {
         YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL,
         YarnConfiguration
           .DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL);
-    // expire interval should not be configured more than RM_AM_EXPIRY_INTERVAL_MS
-    this.expireIntvl = Math.min(conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS),
-    conf.getInt(YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS,
-            YarnConfiguration.DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS));
+    this.expireIntvl = setExpireInterval(conf);
     pollTimer.schedule(new PollTimerTask(rmContext), 0, (1000L * v));
+  }
+
+  // set value of decommissioned nodes watcher delay to allow delayed removal of
+  // decommissioning nodes, but delay should not be more than RM_AM_EXPIRY_INTERVAL_MS
+  private long setExpireInterval(Configuration conf) {
+    return Math.min(
+      conf.getInt(YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS,
+            YarnConfiguration.DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS),
+      conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS)
+    );
   }
 
   /**
@@ -261,9 +268,9 @@ public class DecommissioningNodesWatcher {
       // if decommission timeout is negative, use am expire interval
       long effectiveTimeout = context.timeoutMs > 0 ? Math.min(context.timeoutMs, expireIntvl) :
           expireIntvl;
-      LOG.debug("checkReadyToBeDecommissioned " + nodeId + ", context.timeoutMs=" +
-          context.timeoutMs + ", expireIntvl=" + expireIntvl + ", waitTime=" + waitTime +
-          ", effectiveTimeout=" + effectiveTimeout);
+      LOG.debug("checkReadyToBeDecommissioned  {}, context.timeoutMs={}, expireIntvl={}, " + 
+          "waitTime={}, effectiveTimeout={}", nodeId, context.timeoutMs, expireIntvl, waitTime,
+          effectiveTimeout);
       return waitTime >= effectiveTimeout?
           DecommissioningNodeStatus.READY : DecommissioningNodeStatus.WAIT_SCHEDULED_APPS;
     } else {
