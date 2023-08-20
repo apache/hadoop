@@ -204,7 +204,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
           (TestDelegationTokenSecretManager) tokenManager.getDelegationTokenSecretManager();
 
       // Create token to be constantly renewed.
-      Token token1 = tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      Token<? extends AbstractDelegationTokenIdentifier> token1 =
+          tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
       AbstractDelegationTokenIdentifier tokenId1 =
           (AbstractDelegationTokenIdentifier) token1.decodeIdentifier();
 
