@@ -344,6 +344,10 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private void checkAndInformMRAppMaster(
       int failures, TaskAttemptID mapId, boolean readError,
       boolean connectExcpt, boolean hostFailed) {
+        
+        if (maxFetchFailuresBeforeReporting == 0) {
+          throw new IllegalArgumentException("maxFetchFailuresBeforeReporting cannot be zero");
+        }
     if (connectExcpt || (reportReadErrorImmediately && readError)
         || ((failures % maxFetchFailuresBeforeReporting) == 0) || hostFailed) {
       LOG.info("Reporting fetch failure for " + mapId + " to MRAppMaster.");
