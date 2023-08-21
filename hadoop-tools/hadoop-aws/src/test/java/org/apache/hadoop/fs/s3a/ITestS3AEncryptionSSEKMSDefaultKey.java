@@ -51,7 +51,7 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
 
   @Override
   protected void assertEncrypted(Path path) throws IOException {
-    HeadObjectResponse md = getFileSystem().getObjectMetadata(path);
+    HeadObjectResponse md = getS3AInternals().getObjectMetadata(path);
     assertEquals("SSE Algorithm", EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
             md.serverSideEncryptionAsString());
     assertThat(md.ssekmsKeyId(), containsString("arn:aws:kms:"));

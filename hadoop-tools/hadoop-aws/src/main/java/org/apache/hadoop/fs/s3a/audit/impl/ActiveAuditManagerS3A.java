@@ -33,6 +33,8 @@ import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
+
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -404,19 +406,26 @@ public final class ActiveAuditManagerS3A
     List<ExecutionInterceptor> executionInterceptors = new ArrayList<>();
     executionInterceptors.add(this);
 
-    final String handlers = getConfig().get(AUDIT_REQUEST_HANDLERS);
-    if (handlers != null) {
-      V2Migration.v1RequestHandlersUsed();
+    final String handlers = getConfig().getTrimmed(AUDIT_REQUEST_HANDLERS, "");
+    if (!handlers.isEmpty()) {
+      // warn and ignore v1 handlers.
+      V2Migration.v1RequestHandlersUsed(handlers);
     }
 
-    // TODO: should we remove this and use Global/Service interceptors, see:
-    //  https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html
+    // V2 SDK supports global/service interceptors, but they need to be configured on the
+    // classpath and don't get the filesystem/job configuration passed down.
     final Class<?>[] interceptors = getConfig().getClasses(AUDIT_EXECUTION_INTERCEPTORS);
     if (interceptors != null) {
       for (Class<?> handler : interceptors) {
         try {
+          LOG.debug("Adding intercept of class {}", handler);
           Constructor<?> ctor = handler.getConstructor();
-          executionInterceptors.add((ExecutionInterceptor) ctor.newInstance());
+          final ExecutionInterceptor interceptor = (ExecutionInterceptor) ctor.newInstance();
+          if (interceptor instanceof Configurable) {
+            // pass in the configuration.
+            ((Configurable) interceptor).setConf(getConfig());
+          }
+          executionInterceptors.add(interceptor);
         } catch (ExceptionInInitializerError e) {
           throw FutureIO.unwrapInnerException(e);
         } catch (Exception e) {

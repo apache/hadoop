@@ -195,7 +195,7 @@ Here are the full set of configuration options.
 <property>
   <name>fs.s3a.assumed.role.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
   </value>
   <description>
     List of credential providers to authenticate with the STS endpoint and

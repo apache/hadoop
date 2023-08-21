@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.enableLoggingAuditor;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
@@ -59,6 +60,7 @@ public class ITestAuditManager extends AbstractS3ACostTest {
     enableLoggingAuditor(conf);
     conf.set(AUDIT_EXECUTION_INTERCEPTORS,
         SimpleAWSExecutionInterceptor.CLASS);
+    conf.set(AUDIT_REQUEST_HANDLERS, "not-valid-class");
     return conf;
   }
 
@@ -114,8 +116,8 @@ public class ITestAuditManager extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testRequestHandlerBinding() throws Throwable {
-    describe("Verify that extra request handlers can be added and that they"
+  public void testExecutionInterceptorBinding() throws Throwable {
+    describe("Verify that extra ExecutionInterceptor can be added and that they"
         + " will be invoked during request execution");
     final long baseCount = SimpleAWSExecutionInterceptor.getInvocationCount();
     final S3AFileSystem fs = getFileSystem();
@@ -131,5 +133,9 @@ public class ITestAuditManager extends AbstractS3ACostTest {
         .isGreaterThan(exec0);
     assertThatStatisticCounter(iostats(), AUDIT_FAILURE.getSymbol())
         .isZero();
+    Assertions.assertThat(SimpleAWSExecutionInterceptor.getStaticConf())
+        .describedAs("configuratin of SimpleAWSExecutionInterceptor")
+        .isNotNull()
+        .isSameAs(fs.getConf());
   }
 }
