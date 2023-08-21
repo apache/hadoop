@@ -115,6 +115,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
           <groupId>io.netty</groupId>
           <artifactId>netty-transport</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.dataformat</groupId>
+          <artifactId>jackson-dataformat-yaml</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
