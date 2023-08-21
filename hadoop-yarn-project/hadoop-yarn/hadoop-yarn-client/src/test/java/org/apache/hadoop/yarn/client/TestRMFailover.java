@@ -43,6 +43,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -212,6 +213,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
   public void testWebAppProxyInStandAloneMode() throws YarnException,
       InterruptedException, IOException {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    if (HAUtil.isHAEnabled(conf)) {
+      conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
+    }
     WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
     try {
       conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
