@@ -1956,6 +1956,27 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOTS);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETTRASHROOTS;
+    try {
+      Collection<FileStatus> trashRoots =
+          new FsPathResponseRunner<Collection<FileStatus>>(op, null,
+              new AllUsersParam(allUsers)) {
+            @Override
+            Collection<FileStatus> decodeResponse(Map<?, ?> json) throws IOException {
+              return JsonUtilClient.getTrashRoots(json);
+            }
+          }.run();
+      return trashRoots;
+    } catch (IOException e) {
+      LOG.warn("Cannot get all trash roots", e);
+      return super.getTrashRoots(allUsers);
+    }
+  }
+
   @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.CHECKACCESS;
