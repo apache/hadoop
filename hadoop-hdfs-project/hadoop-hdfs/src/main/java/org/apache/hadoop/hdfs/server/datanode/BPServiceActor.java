@@ -1205,18 +1205,17 @@ class BPServiceActor implements Runnable {
     public void run() {
       LOG.debug("Start sending full blockreport.");
       List<DatanodeCommand> cmds = null;
-      int retry = 0;
-      while (retry < 3) {
-        try {
-          synchronized (sendBRLock) {
-            cmds = blockReport(this.fullBlockReportLeaseId);
-            commandProcessingThread.enqueue(cmds);
-          }
-          break;
-        } catch (Throwable t) {
-          LOG.error("Exception in BRTaskHandler.", t);
-          sleepAndLogInterrupts(5000, "offering FBRTaskHandler.");
-          retry++;
+      try {
+        synchronized (sendBRLock) {
+          cmds = blockReport(this.fullBlockReportLeaseId);
+        }
+        commandProcessingThread.enqueue(cmds);
+      } catch (Throwable t) {
+        LOG.warn("InterruptedException in FBR Task Handler.", t);
+        sleepAndLogInterrupts(5000, "offering FBR service");
+        synchronized(ibrManager) {
+          scheduler.forceFullBlockReportNow();
+          ibrManager.notifyAll();
         }
       }
     }
