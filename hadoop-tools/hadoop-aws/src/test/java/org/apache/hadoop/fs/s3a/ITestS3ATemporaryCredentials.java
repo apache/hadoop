@@ -115,7 +115,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   public void testSTS() throws IOException {
     Configuration conf = getContract().getConf();
     S3AFileSystem testFS = getFileSystem();
-    credentials = testFS.shareCredentials("testSTS");
+    credentials = getS3AInternals().shareCredentials("testSTS");
 
     String bucket = testFS.getBucket();
     StsClientBuilder builder = STSClientFactory.builder(
@@ -363,7 +363,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       final String region,
       final String exceptionText) throws Exception {
     try(AWSCredentialProviderList parentCreds =
-            getFileSystem().shareCredentials("test");
+            getS3AInternals().shareCredentials("test");
         DurationInfo ignored = new DurationInfo(LOG, "requesting credentials")) {
       Configuration conf = new Configuration(getContract().getConf());
 

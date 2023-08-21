@@ -34,15 +34,15 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.StsException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -51,9 +51,10 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.buildAWSProviderList;
+import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.buildAWSProviderList;
 
 /**
  * Support IAM Assumed roles by instantiating an instance of
@@ -66,7 +67,7 @@ import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.buildAWSPr
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
+public final class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
     Closeable {
 
   private static final Logger LOG =
@@ -106,7 +107,7 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
 
     arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
     if (StringUtils.isEmpty(arn)) {
-      throw new IOException(E_NO_ROLE);
+      throw new PathIOException(String.valueOf(fsUri), E_NO_ROLE);
     }
 
     // build up the base provider
@@ -115,8 +116,8 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
         Arrays.asList(
             SimpleAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class),
-        Sets.newHashSet(this.getClass()));
-    LOG.debug("Credentials to obtain role credentials: {}", credentialsToSTS);
+        Sets.newHashSet(getClass()));
+    LOG.debug("Credentials used to obtain role credentials: {}", credentialsToSTS);
 
     // then the STS binding
     sessionName = conf.getTrimmed(ASSUMED_ROLE_SESSION_NAME,
@@ -170,7 +171,7 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
   @Retries.RetryRaw
   public AwsCredentials resolveCredentials() {
     try {
-      return invoker.retryUntranslated("getCredentials",
+      return invoker.retryUntranslated("resolveCredentials",
           true,
           stsProvider::resolveCredentials);
     } catch (IOException e) {
@@ -182,7 +183,7 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
           "getCredentials failed: " + e,
           e);
     } catch (SdkClientException e) {
-      LOG.error("Failed to get credentials for role {}",
+      LOG.error("Failed to resolve credentials for role {}",
           arn, e);
       throw e;
     }
@@ -198,13 +199,11 @@ public class AssumedRoleCredentialProvider implements AwsCredentialsProvider,
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "AssumedRoleCredentialProvider{");
-    sb.append("role='").append(arn).append('\'');
-    sb.append(", session'").append(sessionName).append('\'');
-    sb.append(", duration=").append(duration);
-    sb.append('}');
-    return sb.toString();
+    String sb = "AssumedRoleCredentialProvider{" + "role='" + arn + '\''
+        + ", session'" + sessionName + '\''
+        + ", duration=" + duration
+        + '}';
+    return sb;
   }
 
   /**

@@ -75,6 +75,7 @@ public class ProgressableProgressListener implements TransferListener {
   /**
    * Method to invoke after upload has completed.
    * This can handle race conditions in setup/teardown.
+   * @param upload upload which has just completed.
    * @return the number of bytes which were transferred after the notification
    */
   public long uploadCompleted(ObjectTransfer upload) {

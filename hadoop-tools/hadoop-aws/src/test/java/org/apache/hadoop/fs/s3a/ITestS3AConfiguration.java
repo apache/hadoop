@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.File;
+import java.net.URI;
+import java.nio.file.AccessDeniedException;
+import java.security.PrivilegedExceptionAction;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
@@ -26,7 +38,6 @@ import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.StsException;
 
@@ -38,29 +49,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
-import org.apache.hadoop.test.GenericTestUtils;
-
-import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.File;
-import java.net.URI;
-import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
-import org.junit.rules.TemporaryFolder;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.EU_WEST_1;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -92,6 +91,23 @@ public class ITestS3AConfiguration {
   public final TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
+   * Get the S3 client of the active filesystem.
+   * @param reason why?
+   * @return the client
+   */
+  private S3Client getS3Client(String reason) {
+    return requireNonNull(getS3AInternals().getAmazonS3V2ClientForTesting(reason));
+  }
+
+  /**
+   * Get the internals of the active filesystem.
+   * @return the internals
+   */
+  private S3AInternals getS3AInternals() {
+    return fs.getS3AInternals();
+  }
+
+  /**
    * Test if custom endpoint is picked up.
    * <p>
    * The test expects {@link S3ATestConstants#CONFIGURATION_TEST_ENDPOINT}
@@ -118,7 +134,6 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3Client s3 = fs.getAmazonS3ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -129,9 +144,7 @@ public class ITestS3AConfiguration {
       } else {
         fail("Unexpected endpoint");
       }
-      // TODO: review way to get the bucket region.
-      String region = s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost()))
-          .locationConstraintAsString();
+      String region = getS3AInternals().getBucketLocation();
       assertEquals("Endpoint config setting and bucket location differ: ",
           endPointRegion, region);
     }
@@ -159,7 +172,7 @@ public class ITestS3AConfiguration {
   }
 
   /**
-   * Expect a filesystem to not be created from a configuration
+   * Expect a filesystem to not be created from a configuration.
    * @return the exception intercepted
    * @throws Exception any other exception
    */
@@ -358,8 +371,7 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      S3Client s3 = fs.getAmazonS3ClientForTesting("configuration");
-      assertNotNull(s3);
+      S3Client s3 = getS3Client("configuration");
 
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
           "clientConfiguration");
@@ -393,8 +405,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("User Agent");
-    assertNotNull(s3);
+    S3Client s3 = getS3Client("User Agent");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
@@ -408,8 +419,7 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("User agent");
-    assertNotNull(s3);
+    S3Client s3 = getS3Client("User agent");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
@@ -422,7 +432,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
+    S3Client s3 = getS3Client("Request timeout (ms)");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
@@ -436,7 +446,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     AWSCredentialProviderList credentials =
-        fs.shareCredentials("testCloseIdempotent");
+        getS3AInternals().shareCredentials("testCloseIdempotent");
     credentials.close();
     fs.close();
     assertTrue("Closing FS didn't close credentials " + credentials,
@@ -529,36 +539,34 @@ public class ITestS3AConfiguration {
   }
 
   @Test(timeout = 10_000L)
-  public void testS3SpecificSignerOverride() throws IOException {
+  public void testS3SpecificSignerOverride() throws Exception {
     Configuration config = new Configuration();
+    removeBaseAndBucketOverrides(config,
+        CUSTOM_SIGNERS, SIGNING_ALGORITHM_S3, SIGNING_ALGORITHM_STS, AWS_REGION);
 
     config.set(CUSTOM_SIGNERS,
-        "CustomS3Signer:" + CustomS3Signer.class.getName() + ",CustomSTSSigner:"
-            + CustomSTSSigner.class.getName());
+        "CustomS3Signer:" + CustomS3Signer.class.getName()
+            + ",CustomSTSSigner:" + CustomSTSSigner.class.getName());
 
     config.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
     config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
 
-    config.set(AWS_REGION, "eu-west-1");
+    config.set(AWS_REGION, EU_WEST_1);
     fs = S3ATestUtils.createTestFileSystem(config);
 
-    S3Client s3Client = fs.getAmazonS3ClientForTesting("testS3SpecificSignerOverride");
+    S3Client s3Client = getS3Client("testS3SpecificSignerOverride");
 
+    final String bucket = fs.getBucket();
     StsClient stsClient =
-        STSClientFactory.builder(config, fs.getBucket(), new AnonymousAWSCredentialsProvider(), "",
+        STSClientFactory.builder(config, bucket, new AnonymousAWSCredentialsProvider(), "",
             "").build();
 
-    try {
-      stsClient.getSessionToken();
-    } catch (StsException exception) {
-      // Expected 403, as credentials are not provided.
-    }
+    intercept(StsException.class, "", () ->
+        stsClient.getSessionToken());
 
-    try {
-      s3Client.headBucket(HeadBucketRequest.builder().bucket(fs.getBucket()).build());
-    } catch (S3Exception exception) {
-      // Expected 403, as credentials are not provided.
-    }
+    intercept(AccessDeniedException.class, "", () ->
+        Invoker.once("head", bucket, () ->
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build())));
 
     Assertions.assertThat(CustomS3Signer.isS3SignerCalled())
         .describedAs("Custom S3 signer not called").isTrue();

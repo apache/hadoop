@@ -156,7 +156,9 @@ public final class TestSelectEventStreamPublisher extends Assert {
         SelectObjectContentEventStream.recordsBuilder()
             .payload(SdkBytes.fromUtf8String("bar"))
             .build())
-        .map(e -> { throw SdkException.create("error!", null); }));
+        .map(e -> {
+          throw SdkException.create("error!", null);
+        }));
 
     try (AbortableInputStream inputStream =
         selectEventStreamPublisher.toRecordsInputStream(e -> {})) {

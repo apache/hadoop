@@ -186,11 +186,15 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     final MarshalledCredentials creds;
     try(S3ADelegationTokens dt2 = instantiateDTSupport(getConfiguration())) {
       dt2.start();
+      // first creds are good
+      dt2.getCredentialProviders().resolveCredentials();
+
+      // reset to the original dt
 
       dt2.resetTokenBindingToDT(originalDT);
       final AwsSessionCredentials awsSessionCreds
           = verifySessionCredentials(
-          dt2.getCredentialProviders().resolveCredentials());
+              dt2.getCredentialProviders().resolveCredentials());
       final MarshalledCredentials origCreds = fromAWSCredentials(
           awsSessionCreds);
 
