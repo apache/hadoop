@@ -71,7 +71,6 @@
     <!-- jackson versions -->
     <jackson2.version>2.12.7</jackson2.version>
     <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
-    <jackson2.dataformat-yaml.version>2.15.2</jackson2.dataformat-yaml.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -1304,7 +1303,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-yaml</artifactId>
-        <version>${jackson2.dataformat-yaml.version}</version>
+        <version>${jackson2.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
