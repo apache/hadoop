@@ -35,12 +35,12 @@ final class StreamPublisher<T> implements SdkPublisher<T> {
   private final Iterator<T> iterator;
   private Boolean done = false;
 
-  public StreamPublisher(Stream<T> data, Executor executor) {
+  StreamPublisher(Stream<T> data, Executor executor) {
     this.iterator = data.iterator();
     this.executor = executor;
   }
 
-  public StreamPublisher(Stream<T> data) {
+  StreamPublisher(Stream<T> data) {
     this(data, Runnable::run);
   }
 

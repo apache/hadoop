@@ -18,6 +18,10 @@
 
 /**
  * Adapter classes for allowing V1 credential providers to be used with SDKV2.
+ * This is the only package where use of aws v1 classes are permitted;
+ * all instantiations of objects here must use reflection to probe for
+ * availability or be prepared to catch exceptions which may be raised
+ * if the v1 SDK isn't found on the classpath
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

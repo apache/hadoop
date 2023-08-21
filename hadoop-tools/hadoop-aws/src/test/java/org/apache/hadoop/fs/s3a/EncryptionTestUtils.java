@@ -69,7 +69,7 @@ public final class EncryptionTestUtils {
                                      final S3AEncryptionMethods algorithm,
                                      final String kmsKeyArn)
           throws IOException {
-    HeadObjectResponse md = fs.getObjectMetadata(path);
+    HeadObjectResponse md = fs.getS3AInternals().getObjectMetadata(path);
     String details = String.format(
             "file %s with encryption algorithm %s and key %s",
             path,

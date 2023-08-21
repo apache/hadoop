@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
@@ -31,14 +33,35 @@ import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 public class CountInvocationsProvider
     implements AwsCredentialsProvider {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      CountInvocationsProvider.class);
+
   public static final String NAME = CountInvocationsProvider.class.getName();
 
   public static final AtomicLong COUNTER = new AtomicLong(0);
 
+  private final AtomicLong instanceCounter = new AtomicLong(0);
+
   @Override
   public AwsCredentials resolveCredentials() {
-    COUNTER.incrementAndGet();
-    throw new CredentialInitializationException("no credentials");
+    final long global = COUNTER.incrementAndGet();
+    final long local = instanceCounter.incrementAndGet();
+    final String msg =
+        String.format("counter with global count %d and local count %d", global, local);
+    LOG.debug("resolving credentials from {}", msg);
+    throw new CredentialInitializationException("no credentials from " + msg);
+  }
+
+  public long getInstanceCounter() {
+    return instanceCounter.get();
+  }
+
+  @Override
+  public String toString() {
+    return "CountInvocationsProvider{" +
+        "instanceCounter=" + instanceCounter.get() +
+        "; global counter=" + COUNTER.get() +
+        '}';
   }
 
   public static long getInvocationCount() {

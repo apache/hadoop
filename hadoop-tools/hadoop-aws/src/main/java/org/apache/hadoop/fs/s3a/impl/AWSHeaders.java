@@ -24,7 +24,7 @@ package org.apache.hadoop.fs.s3a.impl;
 public interface AWSHeaders {
 
   /*
-   * Standard HTTP Headers
+   * Standard HTTP Headers.
    */
 
   String CACHE_CONTROL = "Cache-Control";
@@ -40,22 +40,22 @@ public interface AWSHeaders {
   String LAST_MODIFIED = "Last-Modified";
 
   /*
-   * Amazon HTTP Headers used by S3A
+   * Amazon HTTP Headers used by S3A.
    */
 
-  /** S3's version ID header */
+  /** S3's version ID header. */
   String S3_VERSION_ID = "x-amz-version-id";
 
-  /** Header describing what class of storage a user wants */
+  /** Header describing what class of storage a user wants. */
   String STORAGE_CLASS = "x-amz-storage-class";
 
-  /** Header describing what archive tier the object is in, if any */
+  /** Header describing what archive tier the object is in, if any. */
   String ARCHIVE_STATUS = "x-amz-archive-status";
 
-  /** Header for optional server-side encryption algorithm */
+  /** Header for optional server-side encryption algorithm. */
   String SERVER_SIDE_ENCRYPTION = "x-amz-server-side-encryption";
 
-  /** Range header for the get object request */
+  /** Range header for the get object request. */
   String RANGE = "Range";
 
   /**
@@ -65,10 +65,10 @@ public interface AWSHeaders {
   @Deprecated
   String CRYPTO_KEY = "x-amz-key";
 
-  /** JSON-encoded description of encryption materials used during encryption */
+  /** JSON-encoded description of encryption materials used during encryption. */
   String MATERIALS_DESCRIPTION = "x-amz-matdesc";
 
-  /** Header for the optional restore information of an object */
+  /** Header for the optional restore information of an object. */
   String RESTORE = "x-amz-restore";
 
   /**
