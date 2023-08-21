@@ -346,6 +346,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
           LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
+          ((AbfsHttpUrlConnection) connection).failed100cont();
           return;
         } else {
           LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
