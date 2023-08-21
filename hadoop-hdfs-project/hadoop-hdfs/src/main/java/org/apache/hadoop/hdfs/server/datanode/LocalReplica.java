@@ -378,10 +378,18 @@ abstract public class LocalReplica extends ReplicaInfo {
       // copy the original block/meta files to trash.
       final String blockName = getBlockName();
       final File blockFileInTrash = new File(trashDir, blockName);
-      final File metaFileInTrash = new File(trashDir,
-          DatanodeUtil.getMetaName(blockName, getGenerationStamp()));
-      copyBlockdata(blockFileInTrash.toURI());
-      copyMetadata(metaFileInTrash.toURI());
+
+      // If the block file already exists in trash,
+      // it is already copied.  Do not copy again.
+      if (!blockFileInTrash.exists()) {
+        getVolume().getFileIoProvider().mkdirsWithExistsCheck(
+            getVolume(), new File(trashDir));
+
+        final File metaFileInTrash = new File(trashDir,
+            DatanodeUtil.getMetaName(blockName, getGenerationStamp()));
+        copyBlockdata(blockFileInTrash.toURI());
+        copyMetadata(metaFileInTrash.toURI());
+      }
     }
 
     // rename meta file to new GS
