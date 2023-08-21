@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -54,6 +56,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @param pageSize The number of policies to display per page.
    */
+  @Private
+  @Unstable
   public abstract void setPageSize(int pageSize);
 
   /**
@@ -61,6 +65,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @return The number of policies to display per page.
    */
+  @Public
+  @Unstable
   public abstract int getPageSize();
 
   /**
@@ -68,6 +74,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @param currentPage The current page number.
    */
+  @Private
+  @Unstable
   public abstract void setCurrentPage(int currentPage);
 
   /**
@@ -75,6 +83,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @return The current page number.
    */
+  @Public
+  @Unstable
   public abstract int getCurrentPage();
 
   /**
@@ -82,6 +92,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @return The name or identifier of the current queue.
    */
+  @Public
+  @Unstable
   public abstract String getQueue();
 
   /**
@@ -94,6 +106,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @param queue queue name.
    */
+  @Private
+  @Unstable
   public abstract void setQueue(String queue);
 
   /**
@@ -104,6 +118,8 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @return A list of queue names or identifiers.
    */
+  @Public
+  @Unstable
   public abstract List<String> getQueues();
 
   /**
@@ -111,5 +127,7 @@ public abstract class QueryFederationQueuePoliciesRequest {
    *
    * @param queues A list of queue names or identifiers to set.
    */
+  @Private
+  @Unstable
   public abstract void setQueues(List<String> queues);
 }

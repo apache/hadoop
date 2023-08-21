@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.QueryFederationQueuePoliciesRequestProtoOrBuilder;
@@ -29,8 +27,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import java.util.ArrayList;
 import java.util.List;
 
-@Private
-@Unstable
 public class QueryFederationQueuePoliciesRequestPBImpl
     extends QueryFederationQueuePoliciesRequest {
 
@@ -52,7 +48,7 @@ public class QueryFederationQueuePoliciesRequestPBImpl
 
   @Override
   public void setPageSize(int pageSize) {
-    Preconditions.checkNotNull(proto);
+    Preconditions.checkNotNull(builder);
     builder.setPageSize(pageSize);
   }
 
@@ -64,7 +60,7 @@ public class QueryFederationQueuePoliciesRequestPBImpl
 
   @Override
   public void setCurrentPage(int currentPage) {
-    Preconditions.checkNotNull(proto);
+    Preconditions.checkNotNull(builder);
     builder.setCurrentPage(currentPage);
   }
 
@@ -96,18 +92,22 @@ public class QueryFederationQueuePoliciesRequestPBImpl
 
   @Override
   public List<String> getQueues() {
-    return null;
+    if (this.queues != null) {
+      return this.queues;
+    }
+    initQueues();
+    return this.queues;
   }
 
   @Override
   public void setQueues(List<String> pQueues) {
     if (pQueues == null || pQueues.isEmpty()) {
+      maybeInitBuilder();
       if (this.queues != null) {
         this.queues.clear();
       }
       return;
     }
-    initQueues();
     this.queues.clear();
     this.queues.addAll(pQueues);
   }

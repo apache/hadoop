@@ -28,40 +28,7 @@ import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -194,7 +161,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   /**
    * In YARN-Federation mode, this method provides a way to save queue policies in batches.
    *
-   * @param request BatchSaveFederationQueuePolicies Request
+   * @param request BatchSaveFederationQueuePolicies Request.
    * @return Response from batchSaveFederationQueuePolicies.
    * @throws YarnException exceptions from yarn servers.
    * @throws IOException if an IO error occurred.
@@ -203,4 +170,17 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
       BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException;
+
+  /**
+   *  In YARN-Federation mode, this method provides a way to list policies.
+   *
+   * @param request QueryFederationQueuePoliciesRequest Request.
+   * @return Response from listFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Idempotent
+  QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException;
 }

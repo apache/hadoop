@@ -37,7 +37,19 @@ public abstract class QueryFederationQueuePoliciesResponse {
   @Private
   @Unstable
   public static QueryFederationQueuePoliciesResponse newInstance(
-      int totalSize, int pageSize, List<FederationQueueWeight> federationQueueWeights) {
+      int totalSize, int totalPage, int currentPage, int pageSize,
+      List<FederationQueueWeight> federationQueueWeights) {
+    QueryFederationQueuePoliciesResponse response =
+        Records.newRecord(QueryFederationQueuePoliciesResponse.class);
+    response.setTotalSize(totalSize);
+    // response.setPage(page);
+    response.setFederationQueueWeights(federationQueueWeights);
+    return response;
+  }
+
+  @Private
+  @Unstable
+  public static QueryFederationQueuePoliciesResponse newInstance() {
     QueryFederationQueuePoliciesResponse response =
         Records.newRecord(QueryFederationQueuePoliciesResponse.class);
     return response;
@@ -58,18 +70,38 @@ public abstract class QueryFederationQueuePoliciesResponse {
    */
   public abstract void setTotalSize(int totalSize);
 
+  /**
+   * Returns the page.
+   *
+   * @return page.
+   */
   @Public
   @Unstable
-  public abstract int getPageSize();
+  public abstract int getPage();
 
+  /**
+   * Sets the page.
+   *
+   * @param page page.
+   */
   @Private
   @Unstable
-  public abstract void setPageSize(int pageSize);
+  public abstract void setPage(int page);
 
+  /**
+   * Get a list of FederationQueueWeight objects of different queues.
+   *
+   * @return list of FederationQueueWeight.
+   */
   @Public
   @Unstable
   public abstract List<FederationQueueWeight> getFederationQueueWeights();
 
+  /**
+   * Sets the FederationQueueWeights, which represent the weights of different queues.
+   *
+   * @param federationQueueWeights list of FederationQueueWeight.
+   */
   @Private
   @Unstable
   public abstract void setFederationQueueWeights(

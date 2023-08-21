@@ -78,14 +78,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -843,5 +836,16 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     }
 
     return formattedRandomNumbers;
+  }
+
+  @Test
+  public void testParsePolicyWeights() {
+    Map<SubClusterIdInfo, Float> policyWeights = new LinkedHashMap<>();
+    SubClusterIdInfo sc1 = new SubClusterIdInfo("SC-1");
+    policyWeights.put(sc1, 0.7f);
+    SubClusterIdInfo sc2 = new SubClusterIdInfo("SC-2");
+    policyWeights.put(sc2, 0.3f);
+    String policyWeight = interceptor.parsePolicyWeights(policyWeights);
+    assertEquals("SC-1:0.7,SC-2:0.3", policyWeight);
   }
 }
