@@ -213,9 +213,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
   public void testWebAppProxyInStandAloneMode() throws YarnException,
       InterruptedException, IOException {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    if (HAUtil.isHAEnabled(conf)) {
-      conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
-    }
+    conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
+
     WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
     try {
       conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
