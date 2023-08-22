@@ -213,6 +213,18 @@ public final class AzureADAuthenticator {
       return this.requestId;
     }
 
+    /**
+     Constructs an instance of HttpException with detailed information about an HTTP error response.
+     This exception is designed to encapsulate details of an HTTP error response, providing context about the error
+     encountered during an HTTP operation. It includes the HTTP error code, the associated request ID, an error message,
+     the URL that triggered the error, the content type of the response, and the response body.
+     @param httpErrorCode The HTTP error code indicating the nature of the encountered error.
+     @param requestId The unique identifier associated with the corresponding HTTP request.
+     @param message A descriptive error message providing additional information about the encountered error.
+     @param url The URL that resulted in the HTTP error response.
+     @param contentType The content type of the HTTP response.
+     @param body The body of the HTTP response, containing more details about the error.
+     */
     public HttpException(
         final int httpErrorCode,
         final String requestId,
@@ -341,6 +353,19 @@ public final class AzureADAuthenticator {
         || e instanceof FileNotFoundException);
   }
 
+/**
+ Retrieves an Azure OAuth token for authentication through a single API call.
+ This method facilitates the acquisition of an OAuth token from Azure Active Directory
+ to enable secure authentication for various services. It supports both Managed Service Identity (MSI)
+ tokens and non-MSI tokens based on the provided parameters.
+ @param authEndpoint The URL endpoint for OAuth token retrieval.
+ @param payload The payload to be included in the token request. This typically contains grant type and
+ any required parameters for token acquisition.
+ @param headers A Hashtable containing additional HTTP headers to be included in the token request.
+ @param httpMethod The HTTP method to be used for the token request (e.g., GET, POST).
+ @param isMsi A boolean flag indicating whether to request a Managed Service Identity (MSI) token or not.
+ @return An AzureADToken object containing the acquired OAuth token and associated metadata.
+ */
   public static AzureADToken getTokenSingleCall(String authEndpoint,
       String payload, Hashtable<String, String> headers, String httpMethod,
       boolean isMsi)

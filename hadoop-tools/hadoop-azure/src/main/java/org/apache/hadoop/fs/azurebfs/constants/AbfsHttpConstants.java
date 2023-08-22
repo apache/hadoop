@@ -111,6 +111,12 @@ public final class AbfsHttpConstants {
   // The HTTP 100 Continue informational status response code indicates that everything so far
   // is OK and that the client should continue with the request or ignore it if it is already finished.
   public static final String HUNDRED_CONTINUE = "100-continue";
+  /**
+   * HTTP status code indicating that the server has received too many requests and the client should
+   * qualify for retrying the operation, as described in the Microsoft Azure documentation.
+   * {@link "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"}.
+   */
+  public static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   public static final char CHAR_FORWARD_SLASH = '/';
   public static final char CHAR_EXCLAMATION_POINT = '!';

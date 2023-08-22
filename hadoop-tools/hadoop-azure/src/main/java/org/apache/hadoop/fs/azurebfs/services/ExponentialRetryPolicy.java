@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_TOO_MANY_REQUESTS;
 
 /**
  * Retry policy used by AbfsClient.
@@ -57,13 +58,6 @@ public class ExponentialRetryPolicy {
    *  The maximum random ratio used for delay interval calculation.
    */
   private static final double MAX_RANDOM_RATIO = 1.2;
-
-  /**
-   * Qualifies for retry based on
-   * https://learn.microsoft.com/en-us/azure/active-directory/
-   * managed-identities-azure-resources/how-to-use-vm-token#error-handling
-   */
-  private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   /**
    *  Holds the random number generator used to calculate randomized backoff intervals
