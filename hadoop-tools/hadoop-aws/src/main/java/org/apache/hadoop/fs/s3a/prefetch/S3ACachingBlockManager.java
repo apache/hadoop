@@ -25,11 +25,16 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 
 /**
  * Provides access to S3 file one block at a time.
@@ -52,7 +57,8 @@ public class S3ACachingBlockManager extends CachingBlockManager {
    * @param blockData information about each block of the S3 file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    * @param streamStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
    * @throws IllegalArgumentException if reader is null.
    */
   public S3ACachingBlockManager(
@@ -60,8 +66,17 @@ public class S3ACachingBlockManager extends CachingBlockManager {
       S3ARemoteObjectReader reader,
       BlockData blockData,
       int bufferPoolSize,
-      S3AInputStreamStatistics streamStatistics) {
-    super(futurePool, blockData, bufferPoolSize, streamStatistics);
+      S3AInputStreamStatistics streamStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
+
+    super(futurePool,
+        blockData,
+        bufferPoolSize,
+        streamStatistics,
+        conf,
+        localDirAllocator,
+        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
 
     Validate.checkNotNull(reader, "reader");
 

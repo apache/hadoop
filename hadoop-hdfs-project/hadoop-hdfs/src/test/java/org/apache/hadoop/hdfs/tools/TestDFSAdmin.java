@@ -346,7 +346,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(20, outs.size());
+    assertEquals(25, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -795,6 +795,14 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client, 0L, 0L);
+
+      // verify report command for list all DN types
+      resetStream();
+      String[] reportWithArg = new String[DFSAdmin.DFS_REPORT_ARGS.length + 1];
+      reportWithArg[0] = "-report";
+      System.arraycopy(DFSAdmin.DFS_REPORT_ARGS, 0, reportWithArg, 1,
+          DFSAdmin.DFS_REPORT_ARGS.length);
+      assertEquals(0, ToolRunner.run(dfsAdmin, reportWithArg));
     }
   }
 

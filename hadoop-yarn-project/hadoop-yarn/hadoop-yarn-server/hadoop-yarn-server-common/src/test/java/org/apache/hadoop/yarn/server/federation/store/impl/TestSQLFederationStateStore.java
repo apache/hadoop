@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import com.zaxxer.hikari.HikariDataSource;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
@@ -626,5 +627,26 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     String sqlServerDBSQL = DatabaseProduct.addForUpdateClause(DbType.SQLSERVER, sql);
     String expectUpdateSQL = "select sequenceName, nextVal from sequenceTable with (updlock)";
     assertEquals(expectUpdateSQL, sqlServerDBSQL);
+  }
+
+  @Test
+  public void testCheckHikariDataSourceParam() throws SQLException {
+    HikariDataSource dataSource = sqlFederationStateStore.getDataSource();
+    long maxLifeTime = dataSource.getMaxLifetime();
+    long idleTimeOut = dataSource.getIdleTimeout();
+    long connTimeOut = dataSource.getConnectionTimeout();
+    String poolName = dataSource.getPoolName();
+    int minimumIdle = dataSource.getMinimumIdle();
+    int maximumPoolSize = dataSource.getMaximumPoolSize();
+
+    // maxLifeTime 30 minute, 1800000 ms
+    assertEquals(1800000, maxLifeTime);
+    // idleTimeOut 10 minute, 600000 ms
+    assertEquals(600000, idleTimeOut);
+    // connTimeOut 10 second, 10000 ms
+    assertEquals(10000, connTimeOut);
+    assertEquals("YARN-Federation-DataBasePool", poolName);
+    assertEquals(1, minimumIdle);
+    assertEquals(1, maximumPoolSize);
   }
 }

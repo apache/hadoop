@@ -349,9 +349,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     if (numResponseToDrop > 0) {
       // This case is used for testing.
-      LOG.warn(DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
-          + " is set to " + numResponseToDrop
-          + ", this hacked client will proactively drop responses");
+      LOG.warn("{} is set to {} , this hacked client will proactively drop responses",
+          DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY, numResponseToDrop);
       proxyInfo = NameNodeProxiesClient.createProxyWithLossyRetryHandler(conf,
           nameNodeUri, ClientProtocol.class, numResponseToDrop,
           nnFallbackToSimpleAuth);
@@ -378,9 +377,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         conf.getTrimmedStrings(DFS_CLIENT_LOCAL_INTERFACES);
     localInterfaceAddrs = getLocalInterfaceAddrs(localInterfaces);
     if (LOG.isDebugEnabled() && 0 != localInterfaces.length) {
-      LOG.debug("Using local interfaces [" +
-          Joiner.on(',').join(localInterfaces)+ "] with addresses [" +
-          Joiner.on(',').join(localInterfaceAddrs) + "]");
+      LOG.debug("Using local interfaces [{}] with addresses [{}]",
+          Joiner.on(',').join(localInterfaces),
+          Joiner.on(',').join(localInterfaceAddrs));
     }
 
     Boolean readDropBehind =
@@ -623,10 +622,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
         if (elapsed > dfsClientConf.getleaseHardLimitPeriod()) {
-          LOG.warn("Failed to renew lease for " + clientName + " for "
-              + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (dfsClientConf.getleaseHardLimitPeriod() / 1000) + " seconds.) "
-              + "Closing all files being written ...", e);
+          LOG.warn("Failed to renew lease for {} for {} seconds (>= hard-limit ={} seconds.) "
+              + "Closing all files being written ...", clientName, (elapsed/1000),
+              (dfsClientConf.getleaseHardLimitPeriod() / 1000), e);
           closeAllFilesBeingWritten(true);
         } else {
           // Let the lease renewer handle it and retry.
@@ -664,8 +662,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             out.close();
           }
         } catch(IOException ie) {
-          LOG.error("Failed to " + (abort ? "abort" : "close") + " file: "
-              + out.getSrc() + " with renewLeaseKey: " + key, ie);
+          LOG.error("Failed to {} file: {} with renewLeaseKey: {}",
+              (abort ? "abort" : "close"), out.getSrc(), key, ie);
         }
       }
     }
@@ -757,9 +755,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           namenode.getDelegationToken(renewer);
       if (token != null) {
         token.setService(this.dtService);
-        LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+        LOG.info("Created {}", DelegationTokenIdentifier.stringifyToken(token));
       } else {
-        LOG.info("Cannot get delegation token from " + renewer);
+        LOG.info("Cannot get delegation token from {}", renewer);
       }
       return token;
     }
@@ -775,7 +773,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
+    LOG.info("Renewing {}", DelegationTokenIdentifier.stringifyToken(token));
     try {
       return token.renew(conf);
     } catch (InterruptedException ie) {
@@ -795,7 +793,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
+    LOG.info("Cancelling {}", DelegationTokenIdentifier.stringifyToken(token));
     try {
       token.cancel(conf);
     } catch (InterruptedException ie) {
@@ -839,8 +837,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     public void cancel(Token<?> token, Configuration conf) throws IOException {
       Token<DelegationTokenIdentifier> delToken =
           (Token<DelegationTokenIdentifier>) token;
-      LOG.info("Cancelling " +
-          DelegationTokenIdentifier.stringifyToken(delToken));
+      LOG.info("Cancelling {}", DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         nn.cancelDelegationToken(delToken);
@@ -2056,7 +2053,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long getStateAtIndex(long[] states, int index) {
+  public static long getStateAtIndex(long[] states, int index) {
     return states.length > index ? states[index] : -1;
   }
 
@@ -2709,8 +2706,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       reportBadBlocks(lblocks);
     } catch (IOException ie) {
-      LOG.info("Found corruption while reading " + file
-          + ". Error repairing corrupt blocks. Bad blocks remain.", ie);
+      LOG.info("Found corruption while reading {}"
+          + ". Error repairing corrupt blocks. Bad blocks remain.", file, ie);
     }
   }
 
@@ -3090,10 +3087,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  void updateFileSystemReadStats(int distance, int nRead) {
+  void updateFileSystemReadStats(int distance, int readBytes, long readTimeMS) {
     if (stats != null) {
-      stats.incrementBytesRead(nRead);
-      stats.incrementBytesReadByDistance(distance, nRead);
+      stats.incrementBytesRead(readBytes);
+      stats.incrementBytesReadByDistance(distance, readBytes);
+      if (distance > 0) {
+        //remote read
+        stats.increaseRemoteReadTime(readTimeMS);
+      }
     }
   }
 

@@ -432,6 +432,22 @@ enum ExecutionTypeProto {
   OPPORTUNISTIC = 2;
 }
 
+message DeregisterSubClustersProto {
+  optional string subClusterId = 1;
+  optional string deregisterState = 2;
+  optional string lastHeartBeatTime = 3;
+  optional string information = 4;
+  optional string subClusterState = 5;
+}
+
+message FederationQueueWeightProto {
+  optional string routerWeight = 1;
+  optional string amrmWeight = 2;
+  optional string headRoomAlpha = 3;
+  optional string queue = 4;
+  optional string policyManagerClassName = 5;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

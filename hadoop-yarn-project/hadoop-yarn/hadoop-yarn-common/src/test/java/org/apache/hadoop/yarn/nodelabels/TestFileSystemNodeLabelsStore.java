@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
@@ -143,7 +144,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
             "p4", toSet(toNodeId("n4")),
             "p2", toSet(toNodeId("n2"))));
 
-    // stutdown mgr and start a new mgr
+    // shutdown mgr and start a new mgr
     mgr.stop();
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
@@ -351,24 +352,40 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   void testRootMkdirOnInitStore(String className) throws Exception {
     initTestFileSystemNodeLabelsStore(className);
     final FileSystem mockFs = Mockito.mock(FileSystem.class);
+    final FileSystemNodeLabelsStore mockStore = createMockNodeLabelsStore(mockFs);
+    final int expectedMkdirsCount = 1;
+
+    Mockito.when(mockStore.getFs().mkdirs(Mockito.any(Path.class))).thenReturn(true);
+    verifyMkdirsCount(mockStore, expectedMkdirsCount);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  void testRootMkdirOnInitStoreRetryLogic(String className) throws Exception {
+    initTestFileSystemNodeLabelsStore(className);
+    final FileSystem mockFs = Mockito.mock(FileSystem.class);
+    final FileSystemNodeLabelsStore mockStore = createMockNodeLabelsStore(mockFs);
+    final int expectedMkdirsCount = 3;
+
+    Mockito.when(mockStore.getFs().mkdirs(Mockito.any(Path.class)))
+        .thenThrow(SafeModeException.class).thenThrow(SafeModeException.class)
+        .thenReturn(true);
+    verifyMkdirsCount(mockStore, expectedMkdirsCount);
+  }
+
+  private FileSystemNodeLabelsStore createMockNodeLabelsStore(FileSystem mockFs) {
     FileSystemNodeLabelsStore mockStore = new FileSystemNodeLabelsStore() {
       public void initFileSystem(Configuration config) throws IOException {
         setFs(mockFs);
       }
     };
-
     mockStore.setFs(mockFs);
-    verifyMkdirsCount(mockStore, true, 1);
-    verifyMkdirsCount(mockStore, false, 2);
-    verifyMkdirsCount(mockStore, true, 3);
-    verifyMkdirsCount(mockStore, false, 4);
+    return mockStore;
   }
 
   private void verifyMkdirsCount(FileSystemNodeLabelsStore store,
-      boolean existsRetVal, int expectedNumOfCalls)
+      int expectedNumOfCalls)
       throws Exception {
-    Mockito.when(store.getFs().exists(Mockito.any(
-        Path.class))).thenReturn(existsRetVal);
     store.init(conf, mgr);
     Mockito.verify(store.getFs(), Mockito.times(
         expectedNumOfCalls)).mkdirs(Mockito.any(Path

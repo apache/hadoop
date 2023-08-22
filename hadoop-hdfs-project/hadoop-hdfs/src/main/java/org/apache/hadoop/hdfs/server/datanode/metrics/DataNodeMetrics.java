@@ -258,7 +258,7 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
-      readTransferRateQuantiles[i] = registry.newQuantiles(
+      readTransferRateQuantiles[i] = registry.newInverseQuantiles(
           "readTransferRate" + interval + "s",
           "Rate at which bytes are read from datanode calculated in bytes per second",
           "ops", "rate", interval);
@@ -344,6 +344,10 @@ public class DataNodeMetrics {
 
   public void incrBlocksRemoved(int delta) {
     blocksRemoved.incr(delta);
+  }
+
+  public long getBlocksRemoved() {
+    return blocksRemoved.value();
   }
 
   public void incrBytesWritten(int delta) {

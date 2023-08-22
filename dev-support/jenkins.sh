@@ -48,7 +48,7 @@ is_platform_change() {
   declare in_path
   in_path="${SOURCEDIR}"/"${1}"
 
-  for path in "${SOURCEDIR}"/dev-support/docker/Dockerfile* "${SOURCEDIR}"/dev-support/docker/pkg-resolver/*.json; do
+  for path in "${DOCKERFILE}" "${SOURCEDIR}"/dev-support/docker/pkg-resolver/*.json; do
     if [ "${in_path}" == "${path}" ]; then
       echo "Found C/C++ platform related changes in ${in_path}"
       return 0
@@ -114,22 +114,47 @@ function check_ci_run() {
 function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
-  # this must be clean for every run
-  if [[ -d "${PATCHDIR}" ]]; then
-    rm -rf "${PATCHDIR:?}"
-  fi
-  mkdir -p "${PATCHDIR}"
+  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    echo "Building in a Windows environment, skipping some Yetus related settings"
+  else
+    # run in docker mode and specifically point to our
+    # Dockerfile since we don't want to use the auto-pulled version.
+    YETUS_ARGS+=("--docker")
+    YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
+    YETUS_ARGS+=("--mvn-custom-repos")
+    YETUS_ARGS+=("--dockermemlimit=22g")
 
-  # if given a JIRA issue, process it. If CHANGE_URL is set
-  # (e.g., Github Branch Source plugin), process it.
-  # otherwise exit, because we don't want Hadoop to do a
-  # full build.  We wouldn't normally do this check for smaller
-  # projects. :)
-  if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
-    YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
-  elif [[ -z "${CHANGE_URL}" ]]; then
-    echo "Full build skipped" >"${PATCHDIR}/report.html"
-    exit 0
+    # test with Java 8 and 11
+    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
+    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+    YETUS_ARGS+=("--multijdktests=compile")
+  fi
+
+  if [[ "$IS_NIGHTLY_BUILD" && "$IS_NIGHTLY_BUILD" == 1 ]]; then
+    YETUS_ARGS+=("--empty-patch")
+    YETUS_ARGS+=("--branch=${BRANCH_NAME}")
+  else
+    # this must be clean for every run
+    if [[ -d "${PATCHDIR}" ]]; then
+      rm -rf "${PATCHDIR:?}"
+    fi
+    mkdir -p "${PATCHDIR}"
+
+    # if given a JIRA issue, process it. If CHANGE_URL is set
+    # (e.g., Github Branch Source plugin), process it.
+    # otherwise exit, because we don't want Hadoop to do a
+    # full build.  We wouldn't normally do this check for smaller
+    # projects. :)
+    if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
+      YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
+    elif [[ -z "${CHANGE_URL}" ]]; then
+      echo "Full build skipped" >"${PATCHDIR}/report.html"
+      exit 0
+    fi
+
+    # write Yetus report as GitHub comment (YETUS-1102)
+    YETUS_ARGS+=("--github-write-comment")
+    YETUS_ARGS+=("--github-use-emoji-vote")
   fi
 
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
@@ -156,7 +181,6 @@ function run_ci() {
   # changing these to higher values may cause problems
   # with other jobs on systemd-enabled machines
   YETUS_ARGS+=("--proclimit=5500")
-  YETUS_ARGS+=("--dockermemlimit=22g")
 
   # -1 spotbugs issues that show up prior to the patch being applied
   YETUS_ARGS+=("--spotbugs-strict-precheck")
@@ -175,29 +199,14 @@ function run_ci() {
   # much attention to them
   YETUS_ARGS+=("--tests-filter=checkstyle")
 
-  # run in docker mode and specifically point to our
-  # Dockerfile since we don't want to use the auto-pulled version.
-  YETUS_ARGS+=("--docker")
-  YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
-  YETUS_ARGS+=("--mvn-custom-repos")
-
   # effectively treat dev-suport as a custom maven module
   YETUS_ARGS+=("--skip-dirs=dev-support")
 
   # help keep the ASF boxes clean
   YETUS_ARGS+=("--sentinel")
 
-  # test with Java 8 and 11
-  YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
-  YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
-  YETUS_ARGS+=("--multijdktests=compile")
-
   # custom javadoc goals
   YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
-
-  # write Yetus report as GitHub comment (YETUS-1102)
-  YETUS_ARGS+=("--github-write-comment")
-  YETUS_ARGS+=("--github-use-emoji-vote")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }

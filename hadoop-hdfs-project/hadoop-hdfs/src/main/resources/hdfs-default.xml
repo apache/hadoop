@@ -334,6 +334,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.redundancy.considerLoadByVolume</name>
+    <value>false</value>
+    <description>Decide if chooseTarget considers the target's volume load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>
@@ -4714,6 +4722,15 @@
   </property>
 
   <property>
+    <name>dfs.datanode.data.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that can utilize for reading block.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
     <value>0</value>
     <description>
@@ -5239,7 +5256,7 @@
   <name>dfs.namenode.file.close.num-committed-allowed</name>
   <value>0</value>
   <description>
-    Normally a file can only be closed with all its blocks are committed.
+    Normally a file can only be closed with all its blocks are complete.
     When this value is set to a positive integer N, a file can be closed
     when N blocks are committed and the rest complete. In case of Erasure Coded
     blocks, the committed block shall be allowed only when the block group is

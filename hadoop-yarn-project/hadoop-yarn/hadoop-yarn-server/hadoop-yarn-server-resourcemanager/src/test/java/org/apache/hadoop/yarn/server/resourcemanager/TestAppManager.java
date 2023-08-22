@@ -283,7 +283,7 @@ public class TestAppManager extends AppManagerTestBase{
     setupDispatcher(rmContext, conf);
   }
 
-  private static PlacementManager createMockPlacementManager(
+  public static PlacementManager createMockPlacementManager(
       String userRegex, String placementQueue, String placementParentQueue
   ) throws YarnException {
     PlacementManager placementMgr = mock(PlacementManager.class);
@@ -353,6 +353,33 @@ public class TestAppManager extends AppManagerTestBase{
     verifyAppSubmissionFailure(newAppMonitor,
         createAppSubmissionContext(MockApps.newAppID(2)),
         "test1");
+  }
+
+  @Test
+  public void testQueueSubmitWithLeafQueueName()
+      throws YarnException {
+    YarnConfiguration conf = createYarnACLEnabledConfiguration();
+    CapacitySchedulerConfiguration csConf = new
+        CapacitySchedulerConfiguration(conf, false);
+    csConf.set(PREFIX + "root.queues", "default,test");
+
+    csConf.setCapacity("root.default", 50.0f);
+    csConf.setMaximumCapacity("root.default", 100.0f);
+
+    csConf.setCapacity("root.test", 50.0f);
+    csConf.setMaximumCapacity("root.test", 100.0f);
+
+    MockRM newMockRM = new MockRM(csConf);
+    RMContext newMockRMContext = newMockRM.getRMContext();
+    TestRMAppManager newAppMonitor = createAppManager(newMockRMContext, conf);
+
+    ApplicationSubmissionContext submission = createAppSubmissionContext(MockApps.newAppID(1));
+    submission.setQueue("test");
+    verifyAppSubmission(submission,
+        newAppMonitor,
+        newMockRMContext,
+        "test",
+        "root.test");
   }
 
   @Test

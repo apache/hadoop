@@ -1088,7 +1088,7 @@ public final class Constants {
    * Default retention policy: {@value}.
    */
   public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
-      DIRECTORY_MARKER_POLICY_DELETE;
+      DIRECTORY_MARKER_POLICY_KEEP;
 
 
   /**
@@ -1255,4 +1255,37 @@ public final class Constants {
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
+
+  /**
+   * Option to enable or disable the multipart uploads.
+   * Value: {@value}.
+   * <p>
+   * Default is {@link #DEFAULT_MULTIPART_UPLOAD_ENABLED}.
+   */
+  public static final String MULTIPART_UPLOADS_ENABLED = "fs.s3a.multipart.uploads.enabled";
+
+  /**
+   * Default value for multipart uploads.
+   * {@value}
+   */
+  public static final boolean DEFAULT_MULTIPART_UPLOAD_ENABLED = true;
+
+  /**
+   * Stream supports multipart uploads to the given path.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+      "fs.s3a.capability.multipart.uploads.enabled";
+
+  /**
+   * Prefetch max blocks count config.
+   * Value = {@value}
+   */
+  public static final String PREFETCH_MAX_BLOCKS_COUNT = "fs.s3a.prefetch.max.blocks.count";
+
+  /**
+   * Default value for max blocks count config.
+   * Value = {@value}
+   */
+  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
+
 }

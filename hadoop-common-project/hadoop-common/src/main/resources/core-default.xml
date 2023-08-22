@@ -74,6 +74,27 @@
 </property>
 
 <property>
+  <name>security.service.authorization.default.acl</name>
+  <value></value>
+  <description>
+    Define the default acl for the Hadoop service if the acl of Hadoop
+    service is not defined in hadoop-policy.xml. If not set, `*` is applied
+    meaning that all users are allowed to access the service. The list of
+    users and groups are both comma-separated list of names separated by
+    a space. Example: `user1,user2 group1,group2`.
+  </description>
+</property>
+
+<property>
+  <name>security.service.authorization.default.acl.blocked</name>
+  <value></value>
+  <description>
+    This property specifies the list of users and groups who are not
+    authorized to access Hadoop service.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.instrumentation.requires.admin</name>
   <value>false</value>
   <description>
@@ -222,6 +243,17 @@
     longer than the value configured, the command is aborted and the groups
     resolver would return a result of no groups found. A value of 0s (default)
     would mean an infinite wait (i.e. wait until the command exits on its own).
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ctx.factory.class</name>
+  <value></value>
+  <description>
+    Used to specify the fully qualified class name of the initial context
+    factory when connecting to an LDAP server. The default value is
+    "com.sun.jndi.ldap.LdapCtxFactory", but set to null now to avoid
+    LifecycleExecutionException with JDK 11(see HADOOP-15941).
   </description>
 </property>
 
@@ -803,7 +835,19 @@
 <property>
   <name>hadoop.token.files</name>
   <value></value>
-  <description>List of token cache files that have delegation tokens for hadoop service</description>
+  <description>
+    A comma-separated list of token cache files that have delegation tokens
+    for hadoop service
+  </description>
+</property>
+
+<property>
+  <name>hadoop.tokens</name>
+  <value></value>
+  <description>
+    A comma-separated list of delegation tokens from base64 encoding
+    for hadoop service.
+  </description>
 </property>
 
 <!-- i/o properties -->
@@ -853,6 +897,65 @@
   The value of "system-native" indicates that the default system
   library should be used.  To indicate that the algorithm should
   operate entirely in Java, specify "java-builtin".</description>
+</property>
+
+<property>
+  <name>io.compression.codec.lz4.buffersize</name>
+  <value>262144</value>
+  <description>
+    Internal buffer size for Lz4 compressor/decompressors.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.lz4.use.lz4hc</name>
+  <value>false</value>
+  <description>
+    Enable lz4hc(slow but with high compression ratio) for lz4 compression.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.lzo.buffersize</name>
+  <value>65536</value>
+  <description>
+    Internal buffer size for Lzo compressor/decompressors.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.lzo.class</name>
+  <value>org.apache.hadoop.io.compress.LzoCodec</value>
+  <description>
+    Codec class that implements Lzo compression algorithm.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.snappy.buffersize</name>
+  <value>262144</value>
+  <description>
+    Internal buffer size for Snappy compressor/decompressors.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.zstd.buffersize</name>
+  <value>0</value>
+  <description>
+    Indicate ZStandard buffer size. The default value 0 means use the
+    recommended zstd buffer size that the library recommends.
+  </description>
+</property>
+
+<property>
+  <name>io.compression.codec.zstd.level</name>
+  <value>3</value>
+  <description>
+    Indicate ZStandard compression level. The higher the compression level,
+    the higher the compression ratio and memory usage, but the slower the
+    compression and decompression speed.
+  </description>
 </property>
 
 <property>
@@ -920,6 +1023,16 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.native.enabled</name>
+  <value>true</value>
+  <description>
+    Used to decide whether to enable native codec. If set to false, native codec
+    would not be created and ISA-L support would be disabled. Recommend to set to
+    false when your CPU does not support ISA-L.
+  </description>
+</property>
+
   <!-- file system properties -->
 
 <property>
@@ -961,6 +1074,14 @@
   Every time the checkpointer runs it creates a new checkpoint
   out of current and removes checkpoints created more than
   fs.trash.interval minutes ago.
+  </description>
+</property>
+
+<property>
+  <name>fs.trash.clean.trashroot.enable</name>
+  <value>false</value>
+  <description>Whether clean some directories and files
+    in Trash home which are not under checkpoint directory.
   </description>
 </property>
 
@@ -1128,6 +1249,33 @@
 </property>
 
 <property>
+  <name>fs.file.impl</name>
+  <value></value>
+  <description>
+    Specify the implementation class used for accessing the file system. It
+    is a fully qualified class name, including both the package name and the
+    class name.
+  </description>
+</property>
+
+<property>
+  <name>fs.creation.parallel.count</name>
+  <value>64</value>
+  <description>
+    This property sets a a semaphore to throttle the number of FileSystem
+    instances which can be created simultaneously. This is designed to reduce
+    the impact of many threads in an application calling FileSystem#get() on
+    a filesystem which takes time to instantiate -for example to an object
+    where HTTPS connections are set up during initialization. Many threads
+    trying to do this may create spurious delays by conflicting for access
+    to synchronized blocks, when simply limiting the parallelism diminishes
+    the conflict, so speeds up all threads trying to access the store. If a
+    service appears to be blocking on all threads initializing connections to
+    abfs, s3a or store, try a smaller (possibly significantly smaller) value.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>
@@ -1210,6 +1358,22 @@
   exit using a JVM shutdown hook. Setting this property to false disables this
   behavior. This is an advanced option that should only be used by server applications
   requiring a more carefully orchestrated shutdown sequence.
+  </description>
+</property>
+
+<property>
+  <name>fs.iostatistics.logging.level</name>
+  <value>debug</value>
+  <description>
+    Logging level for IOStatistics.
+  </description>
+</property>
+
+<property>
+  <name>fs.iostatistics.thread.level.enabled</name>
+  <value>true</value>
+  <description>
+    Enable IOStatisticsContext support for thread level.
   </description>
 </property>
 
@@ -2155,9 +2319,11 @@ The switch to turn S3A auditing on or off.
 
   <property>
     <name>fs.azure.buffer.dir</name>
-    <value>${hadoop.tmp.dir}/abfs</value>
+    <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/abfs</value>
     <description>Directory path for buffer files needed to upload data blocks
-      in AbfsOutputStream.</description>
+      in AbfsOutputStream.
+      Yarn container path will be used as default value on yarn applications,
+      otherwise fall back to hadoop.tmp.dir </description>
   </property>
 
 <property>
@@ -2210,12 +2376,27 @@ The switch to turn S3A auditing on or off.
 
 
 <!-- ipc properties -->
+<property>
+  <name>ipc.client.async.calls.max</name>
+  <value>100</value>
+  <description>
+    Define the maximum number of outstanding async calls.
+  </description>
+</property>
 
 <property>
   <name>ipc.client.idlethreshold</name>
   <value>4000</value>
   <description>Defines the threshold number of connections after which
                connections will be inspected for idleness.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connection.idle-scan-interval.ms</name>
+  <value>10000</value>
+  <description>
+    Indicate how often the server scans for idle connections.
   </description>
 </property>
 
@@ -2267,6 +2448,14 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.client.connect.max.retries.on.sasl</name>
+  <value>5</value>
+  <description>
+    The maximum retries on SASL connection failures in RPC client.
+  </description>
+</property>
+
+<property>
   <name>ipc.client.tcpnodelay</name>
   <value>true</value>
   <description>Use TCP_NODELAY flag to bypass Nagle's algorithm transmission delays.
@@ -2310,6 +2499,41 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.server.tcpnodelay</name>
+  <value>true</value>
+  <description>
+    If true then disable Nagle's Algorithm.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.handler.queue.size</name>
+  <value>100</value>
+  <description>
+    Indicates how many calls per handler are allowed in the queue. This value can
+    determine the maximum call queue size by multiplying the number of handler threads.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.max.response.size</name>
+  <value>1048576</value>
+  <description>
+    The maximum size when large IPC handler response buffer is reset.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.metrics.update.runner.interval</name>
+  <value>5000</value>
+  <description>
+    To configure scheduling of server metrics update thread. This config is
+    used to indicate initial delay and delay between each execution of the
+    metric update runnable thread.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting
@@ -2331,6 +2555,22 @@ The switch to turn S3A auditing on or off.
   <value>15</value>
   <description>Define how often calls are cleaned up in the server.
     The default is 15 minutes. The unit is minutes.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.read.connection-queue.size</name>
+  <value>100</value>
+  <description>
+    Number of pending connections that may be queued per socket reader.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.read.threadpool.size</name>
+  <value>1</value>
+  <description>
+    Indicates the number of threads in RPC server reading from the socket.
   </description>
 </property>
 
@@ -2360,6 +2600,14 @@ The switch to turn S3A auditing on or off.
   <description>Enables the SO_REUSEADDR TCP option on the server.
     Useful if BindException often prevents a certain service to be restarted
     because the server side is stuck in TIME_WAIT state.
+  </description>
+</property>
+
+<property>
+  <name>callqueue.overflow.trigger.failover</name>
+  <value>false</value>
+  <description>
+    Enable callqueue overflow trigger failover for stateless servers.
   </description>
 </property>
 
@@ -2444,6 +2692,20 @@ The switch to turn S3A auditing on or off.
     If scheduler queue is not defined at port level, this default
     config is used and hence, this is fallback config to
     config with port.
+  </description>
+</property>
+
+<property>
+  <name>ipc.[port_number].callqueue.capacity.weights</name>
+  <value></value>
+  <description>
+    When FairCallQueue is enabled, user can specify capacity allocation
+    among all sub-queues via this property. The value of this config is
+    a comma-separated list of positive integers, each of which specifies
+    the weight associated with the sub-queue at that index. This list
+    length should be IPC scheduler priority levels, defined by
+    "scheduler.priority.levels". By default, each sub-queue is associated
+    with weight 1, i.e., all sub-queues are allocated with the same capacity.
   </description>
 </property>
 
@@ -2712,6 +2974,24 @@ The switch to turn S3A auditing on or off.
     IP address and the second column specifies the rack where the address maps.
     If no entry corresponding to a host in the cluster is found, then
     /default-rack is assumed.
+  </description>
+</property>
+
+<property>
+  <name>net.topology.configured.node.mapping</name>
+  <value></value>
+  <description>
+    Key to define the node mapping as a comma-delimited list of host=rack
+    mappings. e.g. host1=r1,host2=r1,host3=r2. Important: spaces not trimmed
+    and are considered significant.
+  </description>
+</property>
+
+<property>
+  <name>net.topology.dependency.script.file.name</name>
+  <value></value>
+  <description>
+    Key to the dependency script filename.
   </description>
 </property>
 
@@ -3246,6 +3526,17 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>hadoop.user.group.metrics.percentiles.intervals</name>
+  <value></value>
+  <description>
+    A comma-delimited list of integers denoting the desired rollover
+    intervals (in seconds) for percentile latency metrics on the Namenode
+    and Datanode for each user in the group. By default, percentile
+    latency metrics are disabled.
+  </description>
+</property>
+
+<property>
   <name>rpc.metrics.quantile.enable</name>
   <value>false</value>
   <description>
@@ -3500,6 +3791,24 @@ The switch to turn S3A auditing on or off.
     Specifically, the time between two failover attempts will not
     exceed +/- 50% of hadoop.security.client.failover.sleep.max.millis
     milliseconds.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.max.retries</name>
+  <value></value>
+  <description>
+    Default value is the number of providers specified.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kerberos.ticket.cache.path</name>
+  <value></value>
+  <description>
+    Path to the Kerberos ticket cache.  Setting this will force
+    UserGroupInformation to use only this ticket cache file when
+    creating a FileSystem instance.
   </description>
 </property>
 
@@ -3914,6 +4223,59 @@ The switch to turn S3A auditing on or off.
         the ZK CLI).
     </description>
   </property>
+
+  <property>
+    <name>hadoop.zk.server.principal</name>
+    <value></value>
+    <description>
+      Principal name for zookeeper servers.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.kerberos.principal</name>
+    <value></value>
+    <description>
+      Kerberos principal name for zookeeper connection.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.kerberos.keytab</name>
+    <value></value>
+    <description>
+      Kerberos keytab for zookeeper connection.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.location</name>
+    <description>
+      Keystore location for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.password</name>
+    <description>
+      Keystore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.location</name>
+    <decription>
+        Truststore location for ZooKeeper client connection over SSL.
+    </decription>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.password</name>
+    <description>
+      Truststore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
   <property>
     <name>hadoop.system.tags</name>
     <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT
@@ -3928,7 +4290,15 @@ The switch to turn S3A auditing on or off.
     <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT
       ,SERVER,DEBUG,DEPRECATED,COMMON,OPTIONAL</value>
     <description>
-      System tags to group related properties together.
+      A comma-separated list of system tags to group related properties together.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.tags.custom</name>
+    <value></value>
+    <description>
+      A comma-separated list of custom tags to group related properties together.
     </description>
   </property>
 

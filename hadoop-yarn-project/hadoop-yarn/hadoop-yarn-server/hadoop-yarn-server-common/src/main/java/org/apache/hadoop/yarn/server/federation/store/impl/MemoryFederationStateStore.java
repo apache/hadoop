@@ -31,14 +31,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -97,6 +100,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembership
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,6 +120,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private int maxAppsInStateStore;
   private AtomicInteger sequenceNum;
   private AtomicInteger masterKeyId;
+  private static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(1, 1);
+  private byte[] version;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -134,6 +141,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
     sequenceNum = new AtomicInteger();
     masterKeyId = new AtomicInteger();
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override
@@ -209,6 +217,17 @@ public class MemoryFederationStateStore implements FederationStateStore {
     return SubClusterHeartbeatResponse.newInstance();
   }
 
+  @VisibleForTesting
+  public void setSubClusterLastHeartbeat(SubClusterId subClusterId,
+      long lastHeartbeat) throws YarnException {
+    SubClusterInfo subClusterInfo = membership.get(subClusterId);
+    if (subClusterInfo == null) {
+      throw new YarnException(
+          "Subcluster " + subClusterId.toString() + " does not exist");
+    }
+    subClusterInfo.setLastHeartBeat(lastHeartbeat);
+  }
+
   @Override
   public GetSubClusterInfoResponse getSubCluster(GetSubClusterInfoRequest request)
       throws YarnException {
@@ -247,8 +266,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster homeSubCluster = request.getApplicationHomeSubCluster();
-
+    SubClusterId homeSubClusterId = homeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext appSubmissionContext = homeSubCluster.getApplicationSubmissionContext();
     ApplicationId appId = homeSubCluster.getApplicationId();
+
+    LOG.info("appId = {}, homeSubClusterId = {}, appSubmissionContext = {}.",
+        appId, homeSubClusterId, appSubmissionContext);
 
     if (!applications.containsKey(appId)) {
       applications.put(appId, homeSubCluster);
@@ -287,8 +310,20 @@ public class MemoryFederationStateStore implements FederationStateStore {
           "Application %s does not exist.", appId);
     }
 
-    return GetApplicationHomeSubClusterResponse.newInstance(appId,
-        applications.get(appId).getHomeSubCluster());
+    // Whether the returned result contains context
+    ApplicationHomeSubCluster appHomeSubCluster = applications.get(appId);
+    ApplicationSubmissionContext submissionContext =
+        appHomeSubCluster.getApplicationSubmissionContext();
+    boolean containsAppSubmissionContext = request.getContainsAppSubmissionContext();
+    long creatTime = appHomeSubCluster.getCreateTime();
+    SubClusterId homeSubClusterId = appHomeSubCluster.getHomeSubCluster();
+
+    if (containsAppSubmissionContext && submissionContext != null) {
+      return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime,
+          submissionContext);
+    }
+
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime);
   }
 
   @Override
@@ -367,22 +402,21 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    throw new NotImplementedException("Code is not implemented");
+    return CURRENT_VERSION_INFO;
   }
 
   @Override
   public Version loadVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    if (version != null) {
+      VersionProto versionProto = VersionProto.parseFrom(version);
+      return new VersionPBImpl(versionProto);
+    }
+    return null;
   }
 
   @Override
   public void storeVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
-  }
-
-  @Override
-  public void checkVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override
@@ -635,5 +669,18 @@ public class MemoryFederationStateStore implements FederationStateStore {
     }
     SubClusterInfo subClusterInfo = membership.get(subClusterId);
     subClusterInfo.setLastHeartBeat(heartBearTime);
+  }
+
+  @VisibleForTesting
+  public void setApplicationContext(String subClusterId, ApplicationId applicationId,
+      long createTime) {
+    ApplicationSubmissionContext context =
+        ApplicationSubmissionContext.newInstance(applicationId, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    SubClusterId homeSubClusterId = SubClusterId.newInstance(subClusterId);
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId, createTime, homeSubClusterId, context);
+    this.applications.put(applicationId, applicationHomeSubCluster);
   }
 }

@@ -35,7 +35,7 @@ import java.util.Map;
  * From the user perspective this is equivalent to a LeafQueue,
  * but functionality wise is a sub-class of ParentQueue
  */
-public abstract class AbstractManagedParentQueue extends ParentQueue {
+public abstract class AbstractManagedParentQueue extends AbstractParentQueue {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractManagedParentQueue.class);

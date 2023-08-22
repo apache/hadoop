@@ -403,6 +403,30 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       this.committer = committer;
       conf = job.getConfiguration();
     }
+
+    public Job getJob() {
+      return job;
+    }
+
+    public JobContext getJContext() {
+      return jContext;
+    }
+
+    public TaskAttemptContext getTContext() {
+      return tContext;
+    }
+
+    public AbstractS3ACommitter getCommitter() {
+      return committer;
+    }
+
+    public Configuration getConf() {
+      return conf;
+    }
+
+    public Path getWrittenTextPath() {
+      return writtenTextPath;
+    }
   }
 
   /**

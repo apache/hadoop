@@ -220,6 +220,12 @@ public class RouterSecurityManager {
   /**
    * A utility method for creating credentials.
    * Used by web hdfs to return url encoded token.
+   *
+   * @param router the router object.
+   * @param ugi object with username and group information for the given user.
+   * @param renewer the renewer for the token.
+   * @return the credentials object for tokens.
+   * @throws IOException if error occurs while obtaining the credentials.
    */
   public static Credentials createCredentials(
       final Router router, final UserGroupInformation ugi,
@@ -239,6 +245,10 @@ public class RouterSecurityManager {
   /**
    * Delegation token verification.
    * Used by web hdfs to verify url encoded token.
+   *
+   * @param identifier the delegation token identifier.
+   * @param password the password in the token.
+   * @throws SecretManager.InvalidToken if password doesn't match.
    */
   public void verifyToken(DelegationTokenIdentifier identifier,
       byte[] password) throws SecretManager.InvalidToken {

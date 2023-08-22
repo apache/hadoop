@@ -35,7 +35,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             applicationId   VARCHAR(64) COLLATE Latin1_General_100_BIN2 NOT NULL,
             homeSubCluster  VARCHAR(256) NOT NULL,
             createTime      DATETIME2 NOT NULL CONSTRAINT ts_createAppTime DEFAULT GETUTCDATE(),
-
+            applicationContext VARBINARY(MAX) NULL,
             CONSTRAINT [pk_applicationId] PRIMARY KEY
             (
                 [applicationId]
@@ -308,5 +308,35 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
     END
 ELSE
     PRINT 'Table sequenceTable exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'versions'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table versions does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[versions](
+            fedVersion VARBINARY(1024) NOT NULL,
+            versionComment VARCHAR(255) NOT NULL
+            CONSTRAINT [pk_fedVersion] PRIMARY KEY
+            (
+                [fedVersion]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table versions created.'
+    END
+ELSE
+    PRINT 'Table versions exists, no operation required...'
     GO
 GO

@@ -162,6 +162,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private static final DatanodeStorage.State DEFAULT_STATE =
       DatanodeStorage.State.NORMAL;
 
+  public static final String CONFIG_PROPERTY_NONDFSUSED =
+      "dfs.datanode.simulateddatastorage.nondfsused";
+
+  public static final long DEFAULT_NONDFSUSED = 0L;
+
   static final byte[] nullCrcFileData;
 
   private final DataNodeLockManager datasetLockManager;
@@ -467,11 +472,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         new ConcurrentHashMap<>();
 
     private final long capacity;  // in bytes
+    private long nonDfsUsed;
     private final DatanodeStorage dnStorage;
     private final SimulatedVolume volume;
 
     synchronized long getFree() {
-      return capacity - getUsed();
+      return capacity - getUsed() - getNonDfsUsed();
     }
 
     long getCapacity() {
@@ -484,6 +490,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         used += bpStorage.getUsed();
       }
       return used;
+    }
+
+    synchronized long getNonDfsUsed() {
+      return nonDfsUsed;
     }
 
     synchronized long getBlockPoolUsed(String bpid) throws IOException {
@@ -506,7 +516,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       getBPStorage(bpid).free(amount);
     }
 
-    SimulatedStorage(long cap, DatanodeStorage.State state,
+    SimulatedStorage(long cap, DatanodeStorage.State state, long nonDfsUsed,
         FileIoProvider fileIoProvider, Configuration conf) {
       capacity = cap;
       dnStorage = new DatanodeStorage(
@@ -515,6 +525,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       DataNodeVolumeMetrics volumeMetrics =
           DataNodeVolumeMetrics.create(conf, dnStorage.getStorageID());
       this.volume = new SimulatedVolume(this, fileIoProvider, volumeMetrics);
+      this.nonDfsUsed = nonDfsUsed;
     }
 
     synchronized void addBlockPool(String bpid) {
@@ -548,7 +559,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     synchronized StorageReport getStorageReport(String bpid) {
       return new StorageReport(dnStorage,
           false, getCapacity(), getUsed(), getFree(),
-          map.get(bpid).getUsed(), 0L);
+          map.get(bpid).getUsed(), getNonDfsUsed());
     }
 
     SimulatedVolume getVolume() {
@@ -733,6 +744,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       this.storages.add(new SimulatedStorage(
           conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY),
           conf.getEnum(CONFIG_PROPERTY_STATE, DEFAULT_STATE),
+          conf.getLong(CONFIG_PROPERTY_NONDFSUSED, DEFAULT_NONDFSUSED),
           fileIoProvider, conf));
     }
   }
@@ -927,6 +939,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return 0L;
   }
 
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
   /**
    * Get metrics from the metrics source
    *
@@ -1016,6 +1033,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     if (error) {
       throw new IOException("Invalidate: Missing blocks.");
     }
+  }
+
+  @Override
+  public void invalidateMissingBlock(String bpid, Block block)
+      throws IOException {
+    this.invalidate(bpid, new Block[]{block});
   }
 
   @Override // FSDatasetSpi
@@ -1613,6 +1636,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return null;
+  }
+
+  @Override
+  public void setLastDirScannerFinishTime(long time) {
+    throw new UnsupportedOperationException();
   }
 }
 

@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.IOException;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
@@ -157,7 +160,7 @@ public class TestHAMetrics {
 
       // Save fsimage so that nn does not build up namesystem by replaying
       // edits, but load from the image.
-      ((DistributedFileSystem)fs).setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      ((DistributedFileSystem)fs).setSafeMode(SafeModeAction.ENTER);
       ((DistributedFileSystem)fs).saveNamespace();
 
       // Flip the two namenodes and restart the standby, which will load
@@ -175,5 +178,57 @@ public class TestHAMetrics {
       cluster.shutdown();
     }
 
+  }
+
+  /**
+   * Test the getNameNodeState() API added to NameNode.java.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetNameNodeState() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, Integer.MAX_VALUE);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
+        MiniDFSNNTopology.simpleHATopology(3)).numDataNodes(1).build();
+
+    cluster.waitActive();
+
+    NameNode nn0 = cluster.getNameNode(0);
+    NameNode nn1 = cluster.getNameNode(1);
+    NameNode nn2 = cluster.getNameNode(2);
+
+    // All namenodes are in standby by default
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(),
+        nn0.getNameNodeState());
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(),
+        nn1.getNameNodeState());
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(),
+        nn2.getNameNodeState());
+
+    // Transition nn0 to be active
+    cluster.transitionToActive(0);
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(),
+        nn0.getNameNodeState());
+
+    // Transition nn1 to be active
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(),
+        nn0.getNameNodeState());
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(),
+        nn1.getNameNodeState());
+
+    // Transition nn2 to observer
+    cluster.transitionToObserver(2);
+    assertEquals(HAServiceProtocol.HAServiceState.OBSERVER.ordinal(),
+        nn2.getNameNodeState());
+
+    // Shutdown nn2. Now getNameNodeState should return the INITIALIZING state.
+    cluster.shutdownNameNode(2);
+    assertEquals(HAServiceProtocol.HAServiceState.INITIALIZING.ordinal(),
+        nn2.getNameNodeState());
   }
 }

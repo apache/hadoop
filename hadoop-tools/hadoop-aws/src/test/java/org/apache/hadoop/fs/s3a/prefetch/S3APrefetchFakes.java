@@ -36,12 +36,15 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockCache;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -60,6 +63,8 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
 
 /**
@@ -85,6 +90,8 @@ public final class S3APrefetchFakes {
   public static final String VERSION_ID = "v1";
 
   public static final long MODIFICATION_TIME = 0L;
+
+  private static final Configuration CONF = new Configuration();
 
   public static final ChangeDetectionPolicy CHANGE_POLICY =
       ChangeDetectionPolicy.createPolicy(
@@ -308,7 +315,8 @@ public final class S3APrefetchFakes {
     private final int writeDelay;
 
     public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
-      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics(),
+          Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT);
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -335,7 +343,9 @@ public final class S3APrefetchFakes {
     private long fileCount = 0;
 
     @Override
-    protected Path getCacheFilePath() throws IOException {
+    protected Path getCacheFilePath(final Configuration conf,
+        final LocalDirAllocator localDirAllocator)
+        throws IOException {
       fileCount++;
       return Paths.get(Long.toString(fileCount));
     }
@@ -363,9 +373,12 @@ public final class S3APrefetchFakes {
         ExecutorServiceFuturePool futurePool,
         S3ARemoteObjectReader reader,
         BlockData blockData,
-        int bufferPoolSize) {
+        int bufferPoolSize,
+        Configuration conf,
+        LocalDirAllocator localDirAllocator) {
       super(futurePool, reader, blockData, bufferPoolSize,
-          new EmptyS3AStatisticsContext().newInputStreamStatistics());
+          new EmptyS3AStatisticsContext().newInputStreamStatistics(),
+          conf, localDirAllocator);
     }
 
     @Override
@@ -376,7 +389,7 @@ public final class S3APrefetchFakes {
     }
 
     @Override
-    protected BlockCache createCache() {
+    protected BlockCache createCache(int maxBlocksCount) {
       final int readDelayMs = 50;
       final int writeDelayMs = 200;
       return new FakeS3FilePerBlockCache(readDelayMs, writeDelayMs);
@@ -390,7 +403,9 @@ public final class S3APrefetchFakes {
         S3ObjectAttributes s3Attributes,
         S3AInputStream.InputStreamCallbacks client,
         S3AInputStreamStatistics streamStatistics) {
-      super(context, s3Attributes, client, streamStatistics);
+      super(context, s3Attributes, client, streamStatistics, CONF,
+          new LocalDirAllocator(
+              CONF.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR));
     }
 
     @Override
@@ -405,9 +420,11 @@ public final class S3APrefetchFakes {
         ExecutorServiceFuturePool futurePool,
         S3ARemoteObjectReader reader,
         BlockData blockData,
-        int bufferPoolSize) {
+        int bufferPoolSize,
+        Configuration conf,
+        LocalDirAllocator localDirAllocator) {
       return new FakeS3ACachingBlockManager(futurePool, reader, blockData,
-          bufferPoolSize);
+          bufferPoolSize, conf, localDirAllocator);
     }
   }
 }

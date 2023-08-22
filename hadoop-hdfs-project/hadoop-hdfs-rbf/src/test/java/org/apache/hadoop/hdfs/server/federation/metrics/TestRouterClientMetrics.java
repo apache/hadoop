@@ -170,5 +170,12 @@ public class TestRouterClientMetrics {
         getMetrics(ROUTER_METRICS));
   }
 
+  @Test
+  public void testGetSlowDatanodeReport() throws Exception {
+    router.getRpcServer().getSlowDatanodeReport();
+    assertCounter("GetSlowDatanodeReportOps", 2L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentGetSlowDatanodeReportOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
 }
 

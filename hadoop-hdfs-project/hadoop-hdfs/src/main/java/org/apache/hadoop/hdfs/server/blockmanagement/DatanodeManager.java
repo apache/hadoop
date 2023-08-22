@@ -253,7 +253,6 @@ public class DatanodeManager {
     final boolean dataNodePeerStatsEnabledVal =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
             DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.maxSlowPeerReportNodes = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT);
@@ -261,9 +260,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
-      startSlowPeerCollector();
-    }
+    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
     this.defaultXferPort = NetUtils.createSocketAddr(
@@ -376,10 +373,16 @@ public class DatanodeManager {
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) :
         new SlowPeerDisabledTracker(conf, timer);
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
+    } else {
+      stopSlowPeerCollector();
+    }
   }
 
   private void startSlowPeerCollector() {
     if (slowPeerCollectorDaemon != null) {
+      LOG.warn("Slow peers collection thread has been started.");
       return;
     }
     slowPeerCollectorDaemon = new Daemon(new Runnable() {
@@ -402,9 +405,11 @@ public class DatanodeManager {
       }
     });
     slowPeerCollectorDaemon.start();
+    LOG.info("Slow peers collection thread start.");
   }
 
   public void stopSlowPeerCollector() {
+    LOG.info("Slow peers collection thread shutdown");
     if (slowPeerCollectorDaemon == null) {
       return;
     }
@@ -413,6 +418,8 @@ public class DatanodeManager {
       slowPeerCollectorDaemon.join();
     } catch (InterruptedException e) {
       LOG.error("Slow peers collection thread did not shutdown", e);
+    } finally {
+      slowPeerCollectorDaemon = null;
     }
   }
 
@@ -504,7 +511,9 @@ public class DatanodeManager {
   }
 
   private boolean isInactive(DatanodeInfo datanode) {
-    return datanode.isDecommissioned() || datanode.isEnteringMaintenance() ||
+    return datanode.isDecommissioned() ||
+        datanode.isDecommissionInProgress() ||
+        datanode.isEnteringMaintenance() ||
         (avoidStaleDataNodesForRead && datanode.isStale(staleInterval));
   }
 
@@ -533,7 +542,7 @@ public class DatanodeManager {
   /**
    * Sort the non-striped located blocks by the distance to the target host.
    *
-   * For striped blocks, it will only move decommissioned/stale/slow
+   * For striped blocks, it will only move decommissioned/decommissioning/stale/slow
    * nodes to the bottom. For example, assume we have storage list:
    * d0, d1, d2, d3, d4, d5, d6, d7, d8, d9
    * mapping to block indices:
@@ -563,7 +572,7 @@ public class DatanodeManager {
   }
 
   /**
-   * Move decommissioned/entering_maintenance/stale/slow
+   * Move decommissioned/decommissioning/entering_maintenance/stale/slow
    * datanodes to the bottom. After sorting it will
    * update block indices and block tokens respectively.
    *
@@ -581,7 +590,8 @@ public class DatanodeManager {
       locToIndex.put(di[i], lsb.getBlockIndices()[i]);
       locToToken.put(di[i], lsb.getBlockTokens()[i]);
     }
-    // Move decommissioned/stale datanodes to the bottom
+    // Arrange the order of datanodes as follows:
+    // live(in-service) -> stale -> entering_maintenance -> decommissioning -> decommissioned
     Arrays.sort(di, comparator);
 
     // must update cache since we modified locations array
@@ -595,7 +605,7 @@ public class DatanodeManager {
   }
 
   /**
-   * Move decommissioned/entering_maintenance/stale/slow
+   * Move decommissioned/decommissioning/entering_maintenance/stale/slow
    * datanodes to the bottom. Also, sort nodes by network
    * distance.
    *
@@ -627,8 +637,8 @@ public class DatanodeManager {
     }
 
     DatanodeInfoWithStorage[] di = lb.getLocations();
-    // Move decommissioned/entering_maintenance/stale/slow
-    // datanodes to the bottom
+    // Arrange the order of datanodes as follows:
+    // live(in-service) -> stale -> entering_maintenance -> decommissioning -> decommissioned
     Arrays.sort(di, comparator);
 
     // Sort nodes by network distance only for located blocks
@@ -1710,9 +1720,11 @@ public class DatanodeManager {
       // Skip stale nodes during recovery
       final List<DatanodeStorageInfo> recoveryLocations =
           new ArrayList<>(storages.length);
-      for (DatanodeStorageInfo storage : storages) {
-        if (!storage.getDatanodeDescriptor().isStale(staleInterval)) {
-          recoveryLocations.add(storage);
+      final List<Integer> storageIdx = new ArrayList<>(storages.length);
+      for (int i = 0; i < storages.length; ++i) {
+        if (!storages[i].getDatanodeDescriptor().isStale(staleInterval)) {
+          recoveryLocations.add(storages[i]);
+          storageIdx.add(i);
         }
       }
       // If we are performing a truncate recovery than set recovery fields
@@ -1745,7 +1757,8 @@ public class DatanodeManager {
         rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
             uc.getBlockRecoveryId());
         if (b.isStriped()) {
-          rBlock = new RecoveringStripedBlock(rBlock, uc.getBlockIndices(),
+          rBlock = new RecoveringStripedBlock(rBlock,
+              uc.getBlockIndicesForSpecifiedStorages(storageIdx),
               ((BlockInfoStriped) b).getErasureCodingPolicy());
         }
       }
@@ -2102,6 +2115,17 @@ public class DatanodeManager {
       }
 
       @Override
+      public double getInServiceXceiverAverageForVolume() {
+        double avgLoad = 0;
+        final int volumes = heartbeatManager.getInServiceAvailableVolumeCount();
+        if (volumes > 0) {
+          final long xceivers = heartbeatManager.getInServiceXceiverCount();
+          avgLoad = (double)xceivers/volumes;
+        }
+        return avgLoad;
+      }
+
+      @Override
       public Map<StorageType, StorageTypeStats> getStorageTypeStats() {
         return heartbeatManager.getStorageTypeStats();
       }
@@ -2258,5 +2282,10 @@ public class DatanodeManager {
   public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowPeerTracker.setMaxSlowPeersToReport(maxSlowPeersToReport);
+  }
+
+  @VisibleForTesting
+  public boolean isSlowPeerCollectorInitialized() {
+    return slowPeerCollectorDaemon == null;
   }
 }

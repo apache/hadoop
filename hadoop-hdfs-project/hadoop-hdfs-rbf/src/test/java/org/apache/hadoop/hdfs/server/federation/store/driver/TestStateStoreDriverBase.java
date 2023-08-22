@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -94,6 +95,7 @@ public class TestStateStoreDriverBase {
   public static void tearDownCluster() {
     if (stateStore != null) {
       stateStore.stop();
+      stateStore = null;
     }
   }
 
@@ -306,7 +308,24 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result1 = driver.putAll(insertList, false, true);
+    assertTrue(result1.isOperationSuccessful());
+    assertEquals(0, result1.getFailedRecordsKeys().size());
+
+    StateStoreOperationResult result2 = driver.putAll(insertList.subList(0, 1), false, true);
+    assertFalse(result2.isOperationSuccessful());
+    assertEquals(1, result2.getFailedRecordsKeys().size());
+    assertEquals(insertList.get(0).getPrimaryKey(), result2.getFailedRecordsKeys().get(0));
+
+    StateStoreOperationResult result3 = driver.putAll(insertList.subList(0, 2), false, true);
+    assertFalse(result3.isOperationSuccessful());
+    assertEquals(2, result3.getFailedRecordsKeys().size());
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(0), t.getPrimaryKey())));
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(1), t.getPrimaryKey())));
+
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -383,7 +402,10 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result = driver.putAll(insertList, false, true);
+    assertTrue(result.isOperationSuccessful());
+    assertEquals(0, result.getFailedRecordsKeys().size());
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -688,4 +710,5 @@ public class TestStateStoreDriverBase {
     }
     return null;
   }
+
 }

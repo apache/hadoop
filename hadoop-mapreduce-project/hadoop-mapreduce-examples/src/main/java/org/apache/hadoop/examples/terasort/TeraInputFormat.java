@@ -236,8 +236,8 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
       offset = (RECORD_LENGTH - (start % RECORD_LENGTH)) % RECORD_LENGTH;
       length = ((FileSplit)split).getLength();
       final FutureDataInputStreamBuilder builder = fs.openFile(p)
-          .opt(FS_OPTION_OPENFILE_SPLIT_START, start)
-          .opt(FS_OPTION_OPENFILE_SPLIT_END, start + length)
+          .optLong(FS_OPTION_OPENFILE_SPLIT_START, start)
+          .optLong(FS_OPTION_OPENFILE_SPLIT_END, start + length)
           .opt(FS_OPTION_OPENFILE_READ_POLICY,
               FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL);
       in = FutureIO.awaitFuture(builder.build());

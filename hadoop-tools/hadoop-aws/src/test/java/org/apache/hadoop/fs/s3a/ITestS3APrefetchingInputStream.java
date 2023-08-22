@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.net.URI;
-
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +32,8 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMaximum;
@@ -48,7 +46,6 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_A
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPENED;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS;
-import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Test the prefetching input stream, validates that the underlying S3ACachingInputStream and
@@ -63,44 +60,39 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3APrefetchingInputStream.class);
 
-  private static final int S_1K = 1024;
+  private static final int S_500 = 512;
+  private static final int S_1K = S_500 * 2;
   private static final int S_1M = S_1K * S_1K;
-  // Path for file which should have length > block size so S3ACachingInputStream is used
-  private Path largeFile;
-  private FileSystem largeFileFS;
   private int numBlocks;
-  private int blockSize;
-  private long largeFileSize;
-  // Size should be < block size so S3AInMemoryInputStream is used
-  private static final int SMALL_FILE_SIZE = S_1K * 16;
 
+  // Size should be > block size so S3ACachingInputStream is used
+  private long largeFileSize;
+
+  // Size should be < block size so S3AInMemoryInputStream is used
+  private static final int SMALL_FILE_SIZE = S_1K * 9;
+
+  private static final int TIMEOUT_MILLIS = 5000;
+  private static final int INTERVAL_MILLIS = 500;
+  private static final int BLOCK_SIZE = S_1K * 10;
 
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_BLOCK_SIZE_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
+    conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     return conf;
   }
 
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    cleanupWithLogger(LOG, largeFileFS);
-    largeFileFS = null;
-  }
-
-  private void openFS() throws Exception {
-    Configuration conf = getConfiguration();
-    String largeFileUri = S3ATestUtils.getCSVTestFile(conf);
-
-    largeFile = new Path(largeFileUri);
-    blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
-    largeFileFS = new S3AFileSystem();
-    largeFileFS.initialize(new URI(largeFileUri), getConfiguration());
+  private void createLargeFile() throws Exception {
+    byte[] data = ContractTestUtils.dataset(S_1K * 72, 'x', 26);
+    Path largeFile = methodPath();
+    FileSystem largeFileFS = getFileSystem();
+    ContractTestUtils.writeDataset(getFileSystem(), largeFile, data, data.length, 16, true);
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
-    numBlocks = calculateNumBlocks(largeFileSize, blockSize);
+    numBlocks = calculateNumBlocks(largeFileSize, BLOCK_SIZE);
   }
 
   private static int calculateNumBlocks(long largeFileSize, int blockSize) {
@@ -114,10 +106,11 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testReadLargeFileFully() throws Throwable {
     describe("read a large file fully, uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
-    openFS();
+    createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -147,10 +140,11 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   public void testReadLargeFileFullyLazySeek() throws Throwable {
     describe("read a large file using readFully(position,buffer,offset,length),"
         + " uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
-    openFS();
+    createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
@@ -178,37 +172,44 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testRandomReadLargeFile() throws Throwable {
     describe("random read on a large file, uses S3ACachingInputStream");
+    skipIfClientSideEncryption();
     IOStatistics ioStats;
-    openFS();
+    createLargeFile();
 
-    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+    try (FSDataInputStream in = getFileSystem().open(methodPath())) {
       ioStats = in.getIOStatistics();
 
-      byte[] buffer = new byte[blockSize];
+      byte[] buffer = new byte[BLOCK_SIZE];
 
       // Don't read block 0 completely so it gets cached on read after seek
-      in.read(buffer, 0, blockSize - S_1K * 10);
+      in.read(buffer, 0, BLOCK_SIZE - S_500 * 10);
 
       // Seek to block 2 and read all of it
-      in.seek(blockSize * 2);
-      in.read(buffer, 0, blockSize);
+      in.seek(BLOCK_SIZE * 2);
+      in.read(buffer, 0, BLOCK_SIZE);
 
       // Seek to block 4 but don't read: noop.
-      in.seek(blockSize * 4);
+      in.seek(BLOCK_SIZE * 4);
 
       // Backwards seek, will use cached block 0
-      in.seek(S_1K * 5);
+      in.seek(S_500 * 5);
       in.read();
 
       // Expected to get block 0 (partially read), 1 (prefetch), 2 (fully read), 3 (prefetch)
       // Blocks 0, 1, 3 were not fully read, so remain in the file cache
-      verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+      LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+        LOG.info("IO stats: {}", ioStats);
+        verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
+        verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
+        verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
+        verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+      });
     }
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+      LOG.info("IO stats: {}", ioStats);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    });
   }
 
   @Test
@@ -224,9 +225,9 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
       byte[] buffer = new byte[SMALL_FILE_SIZE];
 
-      in.read(buffer, 0, S_1K * 4);
-      in.seek(S_1K * 12);
-      in.read(buffer, 0, S_1K * 4);
+      in.read(buffer, 0, S_1K * 2);
+      in.seek(S_1K * 7);
+      in.read(buffer, 0, S_1K * 2);
 
       verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 1);
       verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 1);
@@ -251,9 +252,9 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     FSDataInputStream in = getFileSystem().open(smallFile);
 
     byte[] buffer = new byte[SMALL_FILE_SIZE];
-    in.read(buffer, 0, S_1K * 4);
-    in.seek(S_1K * 12);
-    in.read(buffer, 0, S_1K * 4);
+    in.read(buffer, 0, S_1K * 2);
+    in.seek(S_1K * 7);
+    in.read(buffer, 0, S_1K * 2);
 
     long pos = in.getPos();
     IOStatistics ioStats = in.getIOStatistics();
@@ -288,7 +289,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
         inputStreamStatistics, newInputStreamStatistics);
 
     assertFalse("seekToNewSource() not supported with prefetch", in.seekToNewSource(10));
-
   }
 
 }

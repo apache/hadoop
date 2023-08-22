@@ -721,6 +721,47 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   }
 
   /**
+   *  Test rename a dir from src dir (mapped to both ns0 and ns1) to ns0.
+   */
+  @Test
+  public void testRenameWithMultiDestinations() throws Exception {
+    //create a mount point with multiple destinations
+    String srcDir = "/mount-source-dir";
+    Path path = new Path(srcDir);
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", srcDir);
+    destMap.put("ns1", srcDir);
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance(srcDir, destMap);
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    assertTrue(addMountTable(addEntry));
+
+    //create a mount point with a single destinations ns0
+    String targetDir = "/ns0_test";
+    nnFs0.mkdirs(new Path(targetDir));
+    MountTable addDstEntry = MountTable.newInstance(targetDir,
+        Collections.singletonMap("ns0", targetDir));
+    assertTrue(addMountTable(addDstEntry));
+
+    //mkdir sub dirs in srcDir  mapping ns0 & ns1
+    routerFs.mkdirs(new Path(srcDir + "/dir1"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_1"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_2"));
+    routerFs.mkdirs(new Path(targetDir));
+
+    //try to rename sub dir in srcDir (mapping to ns0 & ns1) to targetDir
+    // (mapping ns0)
+    LambdaTestUtils.intercept(IOException.class, "The number of" +
+            " remote locations for both source and target should be same.",
+        () -> {
+          routerFs.rename(new Path(srcDir + "/dir1/dir_1"),
+              new Path(targetDir));
+        });
+  }
+
+  /**
    * Test to verify rename operation on directories in case of multiple
    * destinations.
    * @param order order to be followed by the mount entry.
