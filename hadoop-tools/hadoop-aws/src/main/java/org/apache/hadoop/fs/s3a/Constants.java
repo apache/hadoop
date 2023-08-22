@@ -25,8 +25,6 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-
 /**
  * Constants used with the {@link S3AFileSystem}.
  *
@@ -163,9 +161,9 @@ public final class Constants {
   public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
 
   /**
-   * Default value for {@value CONNECTION_TTL}: {@value}.
+   * Default value for {@code CONNECTION_TTL}: {@value}.
    */
-  public static final long DEFAULT_CONNECTION_TTL = 5 * 60 * 1000;
+  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
