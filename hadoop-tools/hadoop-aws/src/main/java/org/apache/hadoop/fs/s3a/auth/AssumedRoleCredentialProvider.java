@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.StsException;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,6 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.buildAWSProviderList;

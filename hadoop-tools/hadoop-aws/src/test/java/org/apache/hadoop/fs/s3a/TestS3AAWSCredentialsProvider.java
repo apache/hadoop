@@ -43,6 +43,8 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
@@ -51,7 +53,6 @@ import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
