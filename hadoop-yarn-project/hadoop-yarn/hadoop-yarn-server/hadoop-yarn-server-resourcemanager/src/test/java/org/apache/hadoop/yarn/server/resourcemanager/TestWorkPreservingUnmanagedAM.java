@@ -267,7 +267,7 @@ public class TestWorkPreservingUnmanagedAM
     conts = allocateResponse.getAllocatedContainers();
     while (conts.size() < numContainers) {
       nm.nodeHeartbeat(true);
-      allocateResponse = 
+      allocateResponse =
           am.allocate(new ArrayList<ResourceRequest>(), new ArrayList<ContainerId>());
       allocateResponse.getNMTokens().forEach(token -> tokenCacheClientSide.add(token.getNodeId()));
       conts.addAll(allocateResponse.getAllocatedContainers());
