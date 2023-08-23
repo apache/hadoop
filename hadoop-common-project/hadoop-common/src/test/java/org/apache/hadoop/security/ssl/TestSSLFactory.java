@@ -27,6 +27,7 @@ import static org.apache.hadoop.security.ssl.SSLFactory.SSL_REQUIRE_CLIENT_CERT_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -152,18 +153,20 @@ public class TestSSLFactory {
     assertNotEquals(conf, sslConfLoaded);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void clientMode() throws Exception {
     Configuration conf = createConfiguration(false, true);
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-    try {
-      sslFactory.init();
-      Assert.assertNotNull(sslFactory.createSSLSocketFactory());
-      Assert.assertNotNull(sslFactory.getHostnameVerifier());
-      sslFactory.createSSLServerSocketFactory();
-    } finally {
-      sslFactory.destroy();
-    }
+    assertThrows(IllegalStateException.class, () -> {
+      try {
+        sslFactory.init();
+        Assert.assertNotNull(sslFactory.createSSLSocketFactory());
+        Assert.assertNotNull(sslFactory.getHostnameVerifier());
+        sslFactory.createSSLServerSocketFactory();
+      } finally {
+        sslFactory.destroy();
+      }
+    });
   }
 
   private void serverMode(boolean clientCert, boolean socket) throws Exception {
@@ -184,24 +187,32 @@ public class TestSSLFactory {
   }
 
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void serverModeWithoutClientCertsSocket() throws Exception {
-    serverMode(false, true);
+    assertThrows(IllegalStateException.class, () -> {
+      serverMode(false, true);
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void serverModeWithClientCertsSocket() throws Exception {
-    serverMode(true, true);
+    assertThrows(IllegalStateException.class, () -> {
+      serverMode(true, true);
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void serverModeWithoutClientCertsVerifier() throws Exception {
-    serverMode(false, false);
+    assertThrows(IllegalStateException.class, () -> {
+      serverMode(false, false);
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void serverModeWithClientCertsVerifier() throws Exception {
-    serverMode(true, false);
+    assertThrows(IllegalStateException.class, () -> {
+      serverMode(true, false);
+    });
   }
 
   private void runDelegatedTasks(SSLEngineResult result, SSLEngine engine)
@@ -357,16 +368,18 @@ public class TestSSLFactory {
     sslFactory.destroy();
   }
 
-  @Test(expected = GeneralSecurityException.class)
+  @Test
   public void invalidHostnameVerifier() throws Exception {
     Configuration conf = createConfiguration(false, true);
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "foo");
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-    try {
-      sslFactory.init();
-    } finally {
-      sslFactory.destroy();
-    }
+    assertThrows(GeneralSecurityException.class, () -> {
+      try {
+        sslFactory.init();
+      } finally {
+        sslFactory.destroy();
+      }
+    });
   }
 
   @Test
