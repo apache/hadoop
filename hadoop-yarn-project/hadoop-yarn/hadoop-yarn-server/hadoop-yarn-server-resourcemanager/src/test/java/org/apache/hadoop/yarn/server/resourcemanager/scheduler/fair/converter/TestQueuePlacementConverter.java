@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -85,7 +85,7 @@ public class TestQueuePlacementConverter {
     MappingRulesDescription description = convert();
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.USER);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -96,7 +96,7 @@ public class TestQueuePlacementConverter {
     MappingRulesDescription description = convert();
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.SPECIFIED);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -120,7 +120,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -134,7 +134,7 @@ public class TestQueuePlacementConverter {
     assertEquals("Number of rules", 1, description.getRules().size());
 
     verifyRule(description.getRules().get(0), Policy.CUSTOM);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -147,7 +147,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.DEFAULT_QUEUE);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -168,7 +168,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.REJECT);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -182,7 +182,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP_USER);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -197,7 +197,7 @@ public class TestQueuePlacementConverter {
 
     assertEquals("Number of rules", 1, description.getRules().size());
     verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP_USER);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -215,7 +215,7 @@ public class TestQueuePlacementConverter {
     Rule rule = description.getRules().get(0);
     verifyRule(description.getRules().get(0), Policy.USER);
     assertEquals("Parent path", "root.abc", rule.getParentQueue());
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -245,7 +245,7 @@ public class TestQueuePlacementConverter {
     verifyRule(description.getRules().get(0), Policy.USER);
     verifyRule(description.getRules().get(1), Policy.PRIMARY_GROUP);
     verifyRule(description.getRules().get(2), Policy.SECONDARY_GROUP);
-    verifyNoInteractions(ruleHandler);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -363,7 +363,7 @@ public class TestQueuePlacementConverter {
           any(Policy.class));
       verifyNoMoreInteractions(ruleHandler);
     } else {
-      verifyNoInteractions(ruleHandler);
+      verifyZeroInteractions(ruleHandler);
     }
   }
 

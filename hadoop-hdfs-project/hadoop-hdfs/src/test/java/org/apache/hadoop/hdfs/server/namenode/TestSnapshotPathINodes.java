@@ -447,6 +447,6 @@ public class TestSnapshotPathINodes {
     INodesInPath iip = Mockito.mock(INodesInPath.class);
     List<INodeDirectory> snapDirs = new ArrayList<>();
     FSDirSnapshotOp.checkSnapshot(fsn.getFSDirectory(), iip, snapDirs);
-    Mockito.verifyNoInteractions(iip);
+    Mockito.verifyZeroInteractions(iip);
   }
 }
