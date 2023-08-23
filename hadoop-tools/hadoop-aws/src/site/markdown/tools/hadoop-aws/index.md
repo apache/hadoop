@@ -1709,6 +1709,23 @@ the storage class you want.
 Please note that S3A does not support reading from archive storage classes at the moment.
 `AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
+## <a name="upload"></a>Configuring S3A for S3 on Outposts 
+
+S3A now supports S3 on Outposts, and is available in Hadoop v.3.3.7 and beyond.  AWS Outposts is a fully managed service that offers the same AWS infrastructure, AWS services, APIs, and tools to virtually any data center, co-location space, or on-premises. For more information, see the [AWS Outposts User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html). Amazon S3 on Outposts delivers object storage to your on-premises AWS Outposts rack environment.  S3 on Outposts provides a new storage class, OUTPOSTS,  and you communicate with your Outposts bucket by using an access point and endpoint connection over a virtual private cloud (VPC). For more information see the [S3 on Outposts User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html). 
+
+Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name. The only supported storage class on Outposts is **OUTPOSTS**, and by default objects are encrypted with (SSE-S3), for more information, see [Data encryption in S3 on Outposts](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-outposts-data-encryption.html). You can set the Access Point ARN property using the following per bucket configuration property:
+
+```
+<property>
+<name>fs.s3a.bucket.sample-outpost-bucket.accesspoint.arn</name>
+<value>arn:aws:s3-outposts:region:account-id:outpost/outpost-id/accesspoint/accesspoint-name</value>
+<description>Configure S3a traffic to us this S3 on Outposts Access Point ARN</description>
+</property>
+```
+
+This configures access to the sample-outpost-bucket for S3A, to go through the new Access Point ARN. So, for example s3a://sample-outpost-bucket/key will now use your configured ARN when getting data from S3 on Outpost instead of your bucket.
+
+
 ## <a name="upload"></a>How S3A writes data to S3
 
 The original S3A client implemented file writes by
