@@ -24,7 +24,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.apache.hadoop.test.Whitebox.getInternalState;
@@ -73,6 +72,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
 /**
@@ -423,7 +423,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     FSNamesystem ns0 = nn0.getNamesystem();
     HAContext nn0haCtx = (HAContext)getInternalState(ns0, "haContext");
     HAContext mockCtx = mock(HAContext.class);
-    doThrow(new StandbyException("Mock")).when(mockCtx).checkOperation(any());
+    doThrow(new StandbyException("Mock")).when(mockCtx).checkOperation(Mockito.any());
     setInternalState(ns0, "haContext", mockCtx);
 
     // router0 should throw an exception
