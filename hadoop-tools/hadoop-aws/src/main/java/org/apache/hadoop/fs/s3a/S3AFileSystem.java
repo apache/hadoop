@@ -982,6 +982,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withExecutionInterceptors(auditManager.createExecutionInterceptors())
         .withMinimumPartSize(partSize)
+        .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(region);
 
