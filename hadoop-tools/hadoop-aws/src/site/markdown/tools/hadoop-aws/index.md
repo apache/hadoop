@@ -1712,7 +1712,7 @@ Please note that S3A does not support reading from archive storage classes at th
 ## <a name="upload"></a>Configuring S3A for S3 on Outposts
 
 S3A now supports [S3 on Outposts](https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html). 
-Accessing data through an access point is done by using its ARN, as opposed to just the bucket name.
+Accessing data through an access point is done by using its Amazon Resource Name (ARN), as opposed to just the bucket name.
 The only supported storage class on Outposts is **OUTPOSTS**, and by default objects are encrypted with [SSE-S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-outposts-data-encryption.html). 
 You can set the Access Point ARN property using the following per bucket configuration property:
 
