@@ -21,6 +21,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +53,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 
 /**
  * Tests for the CGroups handler implementation.
@@ -192,7 +192,7 @@ public class TestCGroupsHandlerImpl {
     assertTrue("cgroup dir should be cerated", cgroup.mkdirs());
     //Since we enabled (deferred) cgroup controller mounting, no interactions
     //should have occurred, with this mock
-    verifyZeroInteractions(privilegedOperationExecutorMock);
+    Mockito.verifyNoInteractions(privilegedOperationExecutorMock);
     File emptyMtab = createEmptyCgroups();
 
     try {
@@ -238,7 +238,7 @@ public class TestCGroupsHandlerImpl {
   public void testCGroupPaths() throws IOException {
     //As per junit behavior, we expect a new mock object to be available
     //in this test.
-    verifyZeroInteractions(privilegedOperationExecutorMock);
+    Mockito.verifyNoInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
     File mtab = createEmptyCgroups();
 
@@ -281,7 +281,7 @@ public class TestCGroupsHandlerImpl {
   public void testCGroupOperations() throws IOException {
     //As per junit behavior, we expect a new mock object to be available
     //in this test.
-    verifyZeroInteractions(privilegedOperationExecutorMock);
+    Mockito.verifyNoInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
     File mtab = createEmptyCgroups();
 

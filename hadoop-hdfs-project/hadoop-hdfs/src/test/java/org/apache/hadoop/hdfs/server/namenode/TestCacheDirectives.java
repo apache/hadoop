@@ -1575,7 +1575,7 @@ public class TestCacheDirectives {
     CacheManager cm = cluster.getNamesystem().getCacheManager();
     LocatedBlocks locations = Mockito.mock(LocatedBlocks.class);
     cm.setCachedLocations(locations);
-    Mockito.verifyZeroInteractions(locations);
+    Mockito.verifyNoInteractions(locations);
   }
 
   @Test(timeout=120000)
