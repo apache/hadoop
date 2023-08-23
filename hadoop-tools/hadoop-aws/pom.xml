@@ -519,10 +519,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>software.amazon.awssdk.crt</groupId>
-      <artifactId>aws-crt</artifactId>
-    </dependency>
-    <dependency>
       <groupId>software.amazon.eventstream</groupId>
       <artifactId>eventstream</artifactId>
       <scope>test</scope>

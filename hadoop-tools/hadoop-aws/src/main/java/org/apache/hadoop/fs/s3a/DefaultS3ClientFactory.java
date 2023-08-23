@@ -37,6 +37,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.commons.lang3.StringUtils;
@@ -98,17 +99,25 @@ public class DefaultS3ClientFactory extends Configured
 
     Configuration conf = getConf();
     String bucket = uri.getHost();
+
     NettyNioAsyncHttpClient.Builder httpClientBuilder = AWSClientConfig
         .createAsyncHttpClientBuilder(conf)
         .proxyConfiguration(AWSClientConfig.createAsyncProxyConfiguration(conf, bucket));
+
+    MultipartConfiguration multipartConfiguration = MultipartConfiguration.builder()
+        .minimumPartSizeInBytes(parameters.getMinimumPartSize())
+        .thresholdInBytes(parameters.getMultiPartThreshold())
+        .build();
+
     return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
         .httpClientBuilder(httpClientBuilder)
+        .multipartConfiguration(multipartConfiguration)
+        .multipartEnabled(true)
         .build();
   }
 
   @Override
   public S3TransferManager createS3TransferManager(final S3AsyncClient s3AsyncClient) {
-
     return S3TransferManager.builder()
         .s3Client(s3AsyncClient)
         .build();
