@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.proto.YarnProtos.FederationQueueWeightProto;

@@ -412,11 +412,10 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
     QueryFederationQueuePoliciesRequestProto requestProto =
         ((QueryFederationQueuePoliciesRequestPBImpl) request).getProto();
     try {
-      // return new QueryFederationQueuePoliciesResponsePBImpl(
-      //    proxy.batchSaveFederationQueuePolicies(null, requestProto));
-    } catch (Exception e) {
-      // RPCUtil.unwrapAndThrowException(e);
-      return null;
+      return new QueryFederationQueuePoliciesResponsePBImpl(
+          proxy.listFederationQueuePolicies(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
     }
     return null;
   }

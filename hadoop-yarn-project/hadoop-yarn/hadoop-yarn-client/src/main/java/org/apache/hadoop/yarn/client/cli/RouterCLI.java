@@ -400,7 +400,7 @@ public class RouterCLI extends Configured implements Tool {
       // Batch SavePolicies.
       return handBatchSavePolicies(format, filePath);
     } else if(cliParser.hasOption(OPTION_L) || cliParser.hasOption(OPTION_LIST)) {
-
+      return handListPolicies();
     } else {
       // printUsage
       printUsage(args[0]);
@@ -634,6 +634,10 @@ public class RouterCLI extends Configured implements Tool {
       }
     }
     return StringUtils.join(amRmPolicyWeights, ",");
+  }
+
+  protected int handListPolicies() {
+    return 0;
   }
 
   @Override

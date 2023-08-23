@@ -1066,8 +1066,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    *
    */
   private QueryFederationQueuePoliciesResponse filterPoliciesConfigurationsByQueue(String queue,
-      Map<String, SubClusterPolicyConfiguration> policiesConfigurations, int pageSize, int currentPage)
-      throws YarnException {
+      Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+      int pageSize, int currentPage) throws YarnException {
 
     // Step1. Check the parameters, if the policy list is empty, return empty directly.
     if (MapUtils.isEmpty(policiesConfigurations)) {
@@ -1098,8 +1098,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    * @return federation queue policies response.
    * @throws YarnException indicates exceptions from yarn servers.
    */
-  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurationsByQueues(List<String> queues,
-      Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurationsByQueues(
+      List<String> queues, Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
       int pageSize, int currentPage) throws YarnException {
 
     // Step1. Check the parameters, if the policy list is empty, return empty directly.
@@ -1149,7 +1149,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       ByteBuffer params = policyConf.getParams();
       WeightedPolicyInfo weightedPolicyInfo = WeightedPolicyInfo.fromByteBuffer(params);
       Map<SubClusterIdInfo, Float> amrmPolicyWeights = weightedPolicyInfo.getAMRMPolicyWeights();
-      Map<SubClusterIdInfo, Float> routerPolicyWeights = weightedPolicyInfo.getRouterPolicyWeights();
+      Map<SubClusterIdInfo, Float> routerPolicyWeights =
+          weightedPolicyInfo.getRouterPolicyWeights();
       float headroomAlpha = weightedPolicyInfo.getHeadroomAlpha();
       String policyManagerClassName = policyConf.getType();
 

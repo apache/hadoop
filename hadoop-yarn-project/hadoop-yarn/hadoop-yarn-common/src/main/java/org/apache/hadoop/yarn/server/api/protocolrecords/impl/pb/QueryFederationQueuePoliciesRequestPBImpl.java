@@ -34,7 +34,7 @@ public class QueryFederationQueuePoliciesRequestPBImpl
       QueryFederationQueuePoliciesRequestProto.getDefaultInstance();
   private QueryFederationQueuePoliciesRequestProto.Builder builder = null;
   private boolean viaProto = false;
-  List<String> queues = null;
+  private List<String> queues = null;
 
   public QueryFederationQueuePoliciesRequestPBImpl() {
     builder = QueryFederationQueuePoliciesRequestProto.newBuilder();
@@ -130,10 +130,10 @@ public class QueryFederationQueuePoliciesRequestPBImpl
   @Override
   public boolean equals(Object other) {
     if (other == null) {
-        return false;
+      return false;
     }
     if (other.getClass().isAssignableFrom(this.getClass())) {
-        return this.getProto().equals(this.getClass().cast(other).getProto());
+      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
   }
@@ -171,7 +171,7 @@ public class QueryFederationQueuePoliciesRequestPBImpl
 
   private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
-        builder = QueryFederationQueuePoliciesRequestProto.newBuilder(proto);
+      builder = QueryFederationQueuePoliciesRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
