@@ -727,11 +727,19 @@ public final class Constants {
   public static final String STREAM_READ_GAUGE_INPUT_POLICY =
       "stream_read_gauge_input_policy";
 
+  /**
+   * S3 Client Factory implementation class: {@value}.
+   * Unstable and incompatible between v1 and v2 SDK versions.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =
       "fs.s3a.s3.client.factory.impl";
 
+  /**
+   * Default factory:
+   * {@code org.apache.hadoop.fs.s3a.DefaultS3ClientFactory}.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final Class<? extends S3ClientFactory>

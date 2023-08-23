@@ -348,7 +348,7 @@ public final class AWSClientConfig {
     if (configKey != null) {
       String signerOverride = conf.getTrimmed(configKey, "");
       if (!signerOverride.isEmpty()) {
-        LOG.debug("Signer override for {}} = {}", awsServiceIdentifier, signerOverride);
+        LOG.debug("Signer override for {} = {}", awsServiceIdentifier, signerOverride);
         clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
             SignerFactory.createSigner(signerOverride, configKey));
       }

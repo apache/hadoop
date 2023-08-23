@@ -60,7 +60,7 @@ public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
    */
   public SimpleAWSCredentialsProvider(final URI uri, final Configuration conf)
       throws IOException {
-      this(getAWSAccessKeys(uri, conf));
+    this(getAWSAccessKeys(uri, conf));
   }
 
   /**
@@ -72,8 +72,8 @@ public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
   @VisibleForTesting
   SimpleAWSCredentialsProvider(final S3xLoginHelper.Login login)
       throws IOException {
-      this.accessKey = login.getUser();
-      this.secretKey = login.getPassword();
+    this.accessKey = login.getUser();
+    this.secretKey = login.getPassword();
   }
 
   @Override
@@ -87,7 +87,10 @@ public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName();
+    return "SimpleAWSCredentialsProvider{" +
+        "accessKey.empty=" + accessKey.isEmpty() +
+        ", secretKey.empty'" + secretKey.isEmpty() +
+        '}';
   }
 
 }
