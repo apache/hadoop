@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -61,6 +62,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -888,8 +890,9 @@ public class TestLoadBalancingKMSClientProvider {
   public void testTokenServiceCreationWithLegacyFormat() throws Exception {
     Configuration conf = new Configuration();
     // Create keyprovider with old token format (ip:port)
+    String confStrUri = "kms:/something";
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        "kms:/something");
+        confStrUri);
     String authority = "host1:9600";
     URI kmsUri = URI.create("kms://http@" + authority + "/kms/foo");
     KeyProvider kp =
@@ -897,7 +900,7 @@ public class TestLoadBalancingKMSClientProvider {
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     LoadBalancingKMSClientProvider lbkp = (LoadBalancingKMSClientProvider) kp;
     assertEquals(1, lbkp.getProviders().length);
-    assertEquals(authority, lbkp.getCanonicalServiceName());
+    assertEquals(confStrUri, lbkp.getCanonicalServiceName());
     for (KMSClientProvider provider : lbkp.getProviders()) {
       assertEquals(authority, provider.getCanonicalServiceName());
     }
@@ -935,9 +938,7 @@ public class TestLoadBalancingKMSClientProvider {
 
     final URI kmsUri = URI.create(providerUriString);
     // create a fake kms dt
-    final Token token = new Token();
-    token.setKind(TOKEN_KIND);
-    token.setService(new Text(providerUriString));
+    List<Token> tokenList = getMockTokenList(providerUriString);
     // call getActualUgi() with the current user.
     UserGroupInformation actualUgi =
         ugi.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
@@ -948,7 +949,9 @@ public class TestLoadBalancingKMSClientProvider {
             final LoadBalancingKMSClientProvider lbkp =
                 (LoadBalancingKMSClientProvider) kp;
             final Credentials creds = new Credentials();
-            creds.addToken(token.getService(), token);
+            for (Token t : tokenList) {
+              creds.addToken(t.getService(), t);
+            }
             UserGroupInformation.getCurrentUser().addCredentials(creds);
 
             KMSClientProvider[] providers = lbkp.getProviders();
@@ -982,5 +985,53 @@ public class TestLoadBalancingKMSClientProvider {
 
     // test client without hadoop.security.key.provider.path configured.
     testTokenSelectionWithConf(conf);
+  }
+
+  public List<Token> getMockTokenList(String providerUriString) throws Exception {
+    final URI kmsUri = URI.create(providerUriString);
+    final List<Token> tokenList = new ArrayList<>();
+    String protocal = "";
+    Token token = new Token();
+    token.setKind(TOKEN_KIND);
+    token.setService(new Text(providerUriString));
+    tokenList.add(token);
+
+    String authority = kmsUri.getAuthority();
+    // check for ';' which delimits the backup hosts
+    if (Strings.isNullOrEmpty(authority)) {
+      throw new IOException(
+          "No valid authority in kms uri [" + kmsUri + "]");
+    }
+    // Check if port is present in authority
+    // In the current scheme, all hosts have to run on the same port
+    int port = -1;
+    String hostsPart = authority;
+    if (hostsPart.contains("@")) {
+      String[] tmps = authority.split("@");
+      if (tmps.length > 1) {
+        authority = tmps[1];
+        protocal = tmps[0];
+      }
+    }
+    if (authority.contains(":")) {
+      String[] t = authority.split(":");
+      try {
+        port = Integer.parseInt(t[1]);
+      } catch (Exception e) {
+        throw new IOException(
+            "Could not parse port in kms uri [" + kmsUri + "]");
+      }
+      hostsPart = t[0];
+    }
+    String[] hosts = hostsPart.split(";");
+    for (int i = 0; i < hosts.length; i++) {
+      token = new Token();
+      token.setKind(TOKEN_KIND);
+      URI tmpUri = new URI(kmsUri.getScheme(), protocal, hosts[i], port,
+          kmsUri.getPath(), null, null);
+      token.setService(new Text(tmpUri.toString()));
+      tokenList.add(token);
+    }
+    return tokenList;
   }
 }

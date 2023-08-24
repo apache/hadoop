@@ -44,6 +44,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.KMSUtil;
@@ -109,13 +110,13 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       // canonical service (credentials alias) will be the first underlying
       // provider's service.  must be deterministic before shuffle so multiple
       // calls for a token do not obtain another unnecessary token.
-      canonicalService = new Text(providers[0].getCanonicalServiceName());
+      canonicalService =  KMSClientProvider.getDtService(KMSUtil.getKeyProviderUri(conf));
     }
 
     // shuffle unless seed is 0 which is used by tests for determinism.
     this.providers = (seed != 0) ? shuffle(providers) : providers;
     for (KMSClientProvider provider : providers) {
-      provider.setClientTokenProvider(this);
+      provider.setClientTokenProvider(provider);
     }
     this.currentIdx = new AtomicInteger((int)(seed % providers.length));
     int maxNumRetries = conf.getInt(CommonConfigurationKeysPublic.
@@ -570,5 +571,32 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     List<KMSClientProvider> list = Arrays.asList(providers);
     Collections.shuffle(list);
     return list.toArray(providers);
+  }
+
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers() throws IOException {
+    KMSClientProvider[] providers = getProviders();
+    DelegationTokenIssuer[] result = new DelegationTokenIssuer[providers.length];
+    for (int i = 0; i < providers.length; ++i) {
+      final KMSClientProvider provider = providers[i];
+      result[i] = new DelegationTokenIssuer() {
+        @Override
+        public String getCanonicalServiceName() {
+          return provider.getCanonicalServiceName();
+        }
+
+        @Override
+        public Token<?> getDelegationToken(String renewer) {
+          LOG.debug("KMS provider at [{}] call getDelegationToken()", provider.getKMSUrl());
+          try {
+            return provider.getDelegationToken(renewer);
+          } catch (IOException ioe) {
+            LOG.warn("KMS provider at [{}] threw an IOException", provider.getKMSUrl(), ioe);
+            return null;
+          }
+        }
+      };
+    }
+    return result;
   }
 }
