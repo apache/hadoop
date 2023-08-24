@@ -63,7 +63,6 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -119,7 +118,8 @@ public class TestRouterAdmin {
    * @throws IOException
    * @throws NoSuchFieldException
    */
-  private static void setUpMocks() throws IOException, NoSuchFieldException, IllegalAccessException {
+  private static void setUpMocks() throws IOException, NoSuchFieldException,
+          IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
     Field rpcServerField = Router.class.getDeclaredField("rpcServer");
