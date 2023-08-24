@@ -515,25 +515,25 @@ public class ITestS3AConfiguration {
 
   @Test(timeout = 10_000L)
   public void testConnectTtlPropagation() throws Exception {
-    Configuration config = new Configuration();
+    Configuration config = new Configuration(false);
     ClientConfiguration awsConf  = new ClientConfiguration();
     initConnectionSettings(config, awsConf);
     Assertions.assertThat(awsConf.getConnectionTTL())
-            .describedAs(String.format("connection ttl should be set to default value as" +
-                    " %s is not set", CONNECTION_TTL))
+            .describedAs("connection ttl should be set to default value as" +
+                    " %s is not set", CONNECTION_TTL)
             .isEqualTo(DEFAULT_CONNECTION_TTL);
     long connectionTtlTestVal = 1000;
     config.setLong(CONNECTION_TTL, connectionTtlTestVal);
     initConnectionSettings(config, awsConf);
     Assertions.assertThat(awsConf.getConnectionTTL())
-            .describedAs(String.format("%s not propagated to aws conf", CONNECTION_TTL))
+            .describedAs("%s not propagated to aws conf", CONNECTION_TTL)
             .isEqualTo(connectionTtlTestVal);
 
     long connectionTtlTestVal1 = -1;
     config.setLong(CONNECTION_TTL, connectionTtlTestVal1);
     initConnectionSettings(config, awsConf);
     Assertions.assertThat(awsConf.getConnectionTTL())
-            .describedAs(String.format("%s not propagated to aws conf", CONNECTION_TTL))
+            .describedAs("%s not propagated to aws conf", CONNECTION_TTL)
             .isEqualTo(connectionTtlTestVal1);
 
     long connectionTtlTestVal2 = -100;

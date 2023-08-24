@@ -472,7 +472,7 @@ public class Invoker {
       // you only get here if the operation didn't complete
       // normally, hence caught != null
       LOG.debug("{} ; {}, ", text, caught.toString());
-      LOG.trace("{}", caught);
+      LOG.trace("", caught);
       // translate the exception into an IOE for the retry logic
       IOException translated;
       if (caught instanceof IOException) {
