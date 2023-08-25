@@ -303,7 +303,6 @@ public class TestBlockReportLease {
       StorageReport[] storages = dn.getFSDataset().getStorageReports(poolId);
 
       // Send heartbeat and request full block report lease.
-      
       HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
           dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
           SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
