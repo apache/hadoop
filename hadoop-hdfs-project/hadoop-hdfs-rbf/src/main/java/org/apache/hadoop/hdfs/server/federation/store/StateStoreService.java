@@ -64,12 +64,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * <li>File {@link
  * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl
  * StateStoreFileImpl}
- * <li>FileSystem {@link
- * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl
- * StateStoreFileSystemImpl}
- * <li>MySQL {@link
- * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl
- * StateStoreMySQLImpl}
  * <li>ZooKeeper {@link
  * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl
  * StateStoreZooKeeperImpl}
