@@ -83,14 +83,12 @@ public class MembershipNamenodeResolver
   /** Cached lookup of NN for block pool. Invalidated on cache refresh. */
   private Map<String, List<? extends FederationNamenodeContext>> cacheBP;
 
-
   public MembershipNamenodeResolver(
       Configuration conf, StateStoreService store) throws IOException {
     this.stateStore = store;
 
     this.cacheNS = new ConcurrentHashMap<>();
     this.cacheBP = new ConcurrentHashMap<>();
-
     if (this.stateStore != null) {
       // Request cache updates from the state store
       this.stateStore.registerCacheExternal(this);
@@ -477,5 +475,28 @@ public class MembershipNamenodeResolver
   @Override
   public void setRouterId(String router) {
     this.routerId = router;
+  }
+
+  /**
+   * Shuffle cache, to ensure that the current nn will not be accessed first next time.
+   *
+   *
+   * @param nsId name service id
+   * @param namenode namenode contexts
+   */
+  @Override
+  public synchronized void shuffleCache(String nsId, FederationNamenodeContext namenode) {
+    cacheNS.compute(Pair.of(nsId, false), (ns, namenodeContexts) -> {
+      if (namenodeContexts != null
+              && namenodeContexts.size() > 0
+              && !namenodeContexts.get(0).getState().equals(ACTIVE)
+              && namenodeContexts.get(0).getRpcAddress().equals(namenode.getRpcAddress())) {
+        List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
+        Collections.rotate(rotatedNnContexts, -1);
+        return rotatedNnContexts;
+      } else {
+        return namenodeContexts;
+      }
+    });
   }
 }

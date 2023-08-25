@@ -397,6 +397,10 @@ public class MockResolver
   public void setRouterId(String router) {
   }
 
+  @Override
+  public void shuffleCache(String nsId, FederationNamenodeContext namenode) {
+  }
+
   /**
    * Mocks the availability of default namespace.
    * @param b if true default namespace is unset.

@@ -146,4 +146,12 @@ public interface ActiveNamenodeResolver {
    * @param routerId Unique string identifier for the router.
    */
   void setRouterId(String routerId);
+
+  /**
+   * Shuffle cache, to ensure that the current nn will not be accessed first next time
+   *
+   * @param nsId name service id
+   * @param namenode namenode contexts
+   */
+  void shuffleCache(String nsId, FederationNamenodeContext namenode);
 }
