@@ -136,9 +136,7 @@ public class CapacitySchedulerQueueInfo {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
     }
-    QueueCapacities qCapacities = q.getQueueCapacities();
-    QueueResourceQuotas qResQuotas = q.getQueueResourceQuotas();
-    populateQueueCapacities(qCapacities, qResQuotas);
+    populateQueueCapacities(q);
 
     mode = CapacitySchedulerInfoHelper.getMode(q);
     queueType = CapacitySchedulerInfoHelper.getQueueType(q);
@@ -210,10 +208,8 @@ public class CapacitySchedulerQueueInfo {
     resources = new ResourcesInfo(queueResourceUsage, false);
   }
 
-  protected void populateQueueCapacities(QueueCapacities qCapacities,
-      QueueResourceQuotas qResQuotas) {
-    capacities = new QueueCapacitiesInfo(qCapacities, qResQuotas,
-        false);
+  protected void populateQueueCapacities(CSQueue queue) {
+    capacities = new QueueCapacitiesInfo(queue, false);
   }
 
   public float getCapacity() {
