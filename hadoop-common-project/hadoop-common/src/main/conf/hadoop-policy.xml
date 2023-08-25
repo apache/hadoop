@@ -64,6 +64,16 @@
   </property>
 
   <property>
+    <name>security.datanode.lifeline.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for DatanodeLifelineProtocol, which is used by a
+    DataNode to send lifeline messages to the NameNode.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
     <name>security.namenode.protocol.acl</name>
     <value>*</value>
     <description>ACL for NamenodeProtocol, the protocol used by the secondary
@@ -83,6 +93,16 @@
   </property>
 
   <property>
+    <name>security.get.user.mappings.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for GetUserMappingsProtocol, implemented by the NameNode
+    and Job Tracker which maps users to groups.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
     <name>security.refresh.user.mappings.protocol.acl</name>
     <value>*</value>
     <description>ACL for RefreshUserMappingsProtocol. Used to refresh
@@ -93,10 +113,40 @@
   </property>
 
   <property>
+    <name>security.reconfiguration.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ReconfigurationProtocol, used by HDFS admin to
+    reload configuration for NameNode/DataNode without restarting them.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
     <name>security.refresh.policy.protocol.acl</name>
     <value>*</value>
     <description>ACL for RefreshAuthorizationPolicyProtocol, used by the
     dfsadmin and mradmin commands to refresh the security policy in-effect.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.refresh.callqueue.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for RefreshCallQueueProtocol, which is used to refresh
+    the call queue in use currently.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.refresh.generic.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for GenericRefreshProtocol, which is used to refresh
+    arbitrary things at runtime.
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>

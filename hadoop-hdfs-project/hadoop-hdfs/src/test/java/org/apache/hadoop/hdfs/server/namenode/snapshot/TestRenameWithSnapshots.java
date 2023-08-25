@@ -24,11 +24,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
@@ -163,6 +163,7 @@ public class TestRenameWithSnapshots {
     
     hdfs.delete(bar, false);
     Assert.assertEquals(1, withCount.getReferenceCount());
+    restartClusterAndCheckImage(true);
   }
   
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
@@ -196,6 +197,7 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
     assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName(),
         null));
+    restartClusterAndCheckImage(true);
   }
 
   /**
@@ -218,6 +220,7 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
         file2.getName()));
+    restartClusterAndCheckImage(true);
   }
 
   @Test (timeout=60000)
@@ -565,9 +568,9 @@ public class TestRenameWithSnapshots {
     SnapshotTestHelper.dumpTree2File(fsdir, fsnMiddle);
    
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(REPL).build();
@@ -1811,9 +1814,9 @@ public class TestRenameWithSnapshots {
     // correct. Note that when loading fsimage, foo and bar will be converted 
     // back to normal INodeDirectory and INodeFile since they do not store any 
     // snapshot data
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(REPL).build();
@@ -2485,9 +2488,9 @@ public class TestRenameWithSnapshots {
     deleteSnapshot(sub1, snap6);
     deleteSnapshot(sub1, snap3);
     // save namespace and restart Namenode
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
   }
 

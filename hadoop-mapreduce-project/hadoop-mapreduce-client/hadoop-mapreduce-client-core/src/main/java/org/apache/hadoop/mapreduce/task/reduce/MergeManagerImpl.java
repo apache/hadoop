@@ -879,4 +879,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       return super.compareTo(obj);
     }
   }
+
+  @VisibleForTesting
+  OnDiskMerger getOnDiskMerger() {
+    return onDiskMerger;
+  }
 }

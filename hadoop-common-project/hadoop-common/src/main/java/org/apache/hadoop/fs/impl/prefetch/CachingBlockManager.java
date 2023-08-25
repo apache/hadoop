@@ -33,6 +33,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static java.util.Objects.requireNonNull;
@@ -95,6 +97,10 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private final PrefetchingStatistics prefetchingStatistics;
 
+  private final Configuration conf;
+
+  private final LocalDirAllocator localDirAllocator;
+
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
@@ -102,14 +108,19 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    * @param prefetchingStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
+   * @param maxBlocksCount max blocks count to be kept in cache at any time.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
       ExecutorServiceFuturePool futurePool,
       BlockData blockData,
       int bufferPoolSize,
-      PrefetchingStatistics prefetchingStatistics) {
+      PrefetchingStatistics prefetchingStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator,
+      int maxBlocksCount) {
     super(blockData);
 
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
@@ -120,15 +131,17 @@ public abstract class CachingBlockManager extends BlockManager {
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
+    this.conf = requireNonNull(conf);
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache();
+      this.cache = this.createCache(maxBlocksCount);
     }
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
+    this.localDirAllocator = localDirAllocator;
   }
 
   /**
@@ -302,7 +315,12 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private void read(BufferData data) throws IOException {
     synchronized (data) {
-      readBlock(data, false, BufferData.State.BLANK);
+      try {
+        readBlock(data, false, BufferData.State.BLANK);
+      } catch (IOException e) {
+        LOG.error("error reading block {}", data.getBlockNumber(), e);
+        throw e;
+      }
     }
   }
 
@@ -362,9 +380,6 @@ public abstract class CachingBlockManager extends BlockManager {
         buffer.flip();
         data.setReady(expectedState);
       } catch (Exception e) {
-        String message = String.format("error during readBlock(%s)", data.getBlockNumber());
-        LOG.error(message, e);
-
         if (isPrefetch && tracker != null) {
           tracker.failed();
         }
@@ -406,7 +421,8 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        LOG.error("error during prefetch", e);
+        LOG.info("error prefetching block {}. {}", data.getBlockNumber(), e.getMessage());
+        LOG.debug("error prefetching block {}", data.getBlockNumber(), e);
       }
       return null;
     }
@@ -465,7 +481,8 @@ public abstract class CachingBlockManager extends BlockManager {
         blockFuture = cf;
       }
 
-      CachePutTask task = new CachePutTask(data, blockFuture, this, Instant.now());
+      CachePutTask task =
+          new CachePutTask(data, blockFuture, this, Instant.now());
       Future<Void> actionFuture = futurePool.executeFunction(task);
       data.setCaching(actionFuture);
       ops.end(op);
@@ -493,7 +510,8 @@ public abstract class CachingBlockManager extends BlockManager {
         return;
       }
     } catch (Exception e) {
-      LOG.error("error waiting on blockFuture: {}", data, e);
+      LOG.info("error waiting on blockFuture: {}. {}", data, e.getMessage());
+      LOG.debug("error waiting on blockFuture: {}", data, e);
       data.setDone();
       return;
     }
@@ -523,8 +541,8 @@ public abstract class CachingBlockManager extends BlockManager {
         data.setDone();
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
-        String message = String.format("error adding block to cache after wait: %s", data);
-        LOG.error(message, e);
+        LOG.info("error adding block to cache after wait: {}. {}", data, e.getMessage());
+        LOG.debug("error adding block to cache after wait: {}", data, e);
         data.setDone();
       }
 
@@ -541,8 +559,8 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  protected BlockCache createCache() {
-    return new SingleFilePerBlockCache(prefetchingStatistics);
+  protected BlockCache createCache(int maxBlocksCount) {
+    return new SingleFilePerBlockCache(prefetchingStatistics, maxBlocksCount);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
@@ -550,7 +568,7 @@ public abstract class CachingBlockManager extends BlockManager {
       return;
     }
 
-    cache.put(blockNumber, buffer);
+    cache.put(blockNumber, buffer, conf, localDirAllocator);
   }
 
   private static class CachePutTask implements Supplier<Void> {

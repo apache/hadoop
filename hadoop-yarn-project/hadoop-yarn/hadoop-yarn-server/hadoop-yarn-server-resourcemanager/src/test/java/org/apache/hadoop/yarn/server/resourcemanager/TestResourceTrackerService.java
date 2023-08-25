@@ -56,13 +56,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -143,6 +146,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -610,7 +614,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -652,7 +656,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -701,7 +705,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -754,7 +758,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -805,7 +809,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -848,7 +852,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     NodeAttribute nodeAttribute1 = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "Attr1",
             NodeAttributeType.STRING, "V1");
@@ -895,7 +899,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     NodeAttribute validNodeAttribute = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "Attr1",
             NodeAttributeType.STRING, "V1");
@@ -998,7 +1002,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1070,7 +1074,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1147,7 +1151,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1281,7 +1285,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1438,7 +1442,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1491,7 +1495,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -1539,7 +1543,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -1608,7 +1612,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeId nodeId = BuilderUtils.newNodeId("host", 1234);
     req.setNodeId(nodeId);
 
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     RegisterNodeManagerResponse response1 =
         resourceTrackerService.registerNodeManager(req);
@@ -2345,8 +2349,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
 
     //Test decommed/ing node that transitions to untracked,timer should remove
-    testNodeRemovalUtilDecomToUntracked(rmContext, conf, nm1, nm2, nm3,
-        maxThreadSleeptime, doGraceful);
+    testNodeRemovalUtilDecomToUntracked(rmContext, conf, nm1, nm2, nm3, doGraceful);
     rm.stop();
   }
 
@@ -2354,41 +2357,41 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   // max allowed length.
   private void testNodeRemovalUtilDecomToUntracked(
       RMContext rmContext, Configuration conf,
-      MockNM nm1, MockNM nm2, MockNM nm3,
-      long maxThreadSleeptime, boolean doGraceful) throws Exception {
+      MockNM nm1, MockNM nm2, MockNM nm3, boolean doGraceful
+  ) throws Exception {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
     String ip = NetUtils.normalizeHostName("localhost");
-    CountDownLatch latch = new CountDownLatch(1);
     writeToHostsFile("host1", ip, "host2");
     writeToHostsFile(excludeHostFile, "host2");
     refreshNodesOption(doGraceful, conf);
     nm1.nodeHeartbeat(true);
     //nm2.nodeHeartbeat(true);
     nm3.nodeHeartbeat(true);
-    latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
-    RMNode rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
-             rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertNotEquals("Timer for this node was not canceled!",
-        rmNode, null);
-    Assert.assertTrue("Node should be DECOMMISSIONED or DECOMMISSIONING",
-        (rmNode.getState() == NodeState.DECOMMISSIONED) ||
-            (rmNode.getState() == NodeState.DECOMMISSIONING));
+    Supplier<RMNode> nodeSupplier = doGraceful
+        ? () -> rmContext.getRMNodes().get(nm2.getNodeId())
+        : () -> rmContext.getInactiveRMNodes().get(nm2.getNodeId());
+    pollingAssert(() -> nodeSupplier.get() != null,
+        "Timer for this node was not canceled!");
+    final List<NodeState> expectedStates = Arrays.asList(
+        NodeState.DECOMMISSIONED,
+        NodeState.DECOMMISSIONING
+    );
+    pollingAssert(() -> expectedStates.contains(nodeSupplier.get().getState()),
+        "Node should be in one of these states: " + expectedStates);
+
 
     writeToHostsFile("host1", ip);
     writeToHostsFile(excludeHostFile, "");
     refreshNodesOption(doGraceful, conf);
     nm2.nodeHeartbeat(true);
-    latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
-    rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
-             rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertEquals("Node should have been forgotten!",
-        rmNode, null);
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumDecommisionedNMs(), 0);
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumShutdownNMs(), 0);
-    Assert.assertEquals("Active nodes should be 2",
-        metrics.getNumActiveNMs(), 2);
+    pollingAssert(() -> nodeSupplier.get() == null,
+        "Node should have been forgotten!");
+    pollingAssert(metrics::getNumDecommisionedNMs, 0,
+        "metrics#getNumDecommisionedNMs should be 0 now");
+    pollingAssert(metrics::getNumShutdownNMs, 0,
+        "metrics#getNumShutdownNMs should be 0 now");
+    pollingAssert(metrics::getNumActiveNMs, 2,
+        "metrics#getNumActiveNMs should be 2 now");
   }
 
   private void testNodeRemovalUtilLost(boolean doGraceful) throws Exception {
@@ -2775,7 +2778,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
 
     NodeStatus mockNodeStatus = createMockNodeStatus();
 
@@ -2959,6 +2962,18 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     mockRM.stop();
   }
 
+  private void pollingAssert(Supplier<Boolean> supplier, String message)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(supplier,
+        100, 10_000, message);
+  }
+
+  private <T> void pollingAssert(Supplier<T> supplier, T expected, String message)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> Objects.equals(supplier.get(), expected),
+        100, 10_000, message);
+  }
+
   /**
    * A no-op implementation of NodeAttributeStore for testing
    */
@@ -3044,7 +3059,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request.setNodeId(nodeId);
     request.setHttpPort(1234);
-    request.setResource(BuilderUtils.newResource(1024, 1));
+    request.setResource(Resources.createResource(1024));
     resourceTrackerService.registerNodeManager(request);
 
     org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus =
@@ -3204,6 +3219,87 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // nm4 is still active node at last
     assertEquals(Sets.newHashSet(nm4.getNodeId()),
         rm.getRMContext().getRMNodes().keySet());
+
+    rm.close();
+  }
+
+  /**
+   * Decommissioning with selective states for untracked nodes.
+   */
+  @Test
+  public void testDecommissionWithSelectiveStates() throws Exception {
+    // clear exclude hosts
+    writeToHostsFile(excludeHostFile, "");
+    // init conf:
+    // (1) set untracked removal timeout to 500ms
+    // (2) set exclude path (no include path)
+    // (3) enable node untracked without pre-configured include path
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC, 500);
+    conf.setBoolean(YarnConfiguration.RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH, true);
+    conf.setStrings(YarnConfiguration.RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE,
+         "DECOMMISSIONED", "SHUTDOWN");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostFile.getAbsolutePath());
+
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    MockNM nm2 = rm.registerNode("host2:1234", 10240);
+    MockNM nm3 = rm.registerNode("host3:1234", 10240);
+    MockNM nm4 = rm.registerNode("host4:1234", 10240);
+    assertEquals(4, rm.getRMContext().getRMNodes().size());
+    assertEquals(0, rm.getRMContext().getInactiveRMNodes().size());
+
+    // decommission nm1 via adding nm1 into exclude hosts
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    writeToHostsFile(excludeHostFile, "host1");
+    rm.getNodesListManager().refreshNodes(conf);
+    rm.drainEvents();
+    assertEquals(rmNode1.getState(), NodeState.DECOMMISSIONED);
+    assertEquals(3, rm.getRMContext().getRMNodes().size());
+    assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
+    assertEquals(new HashSet(Arrays.asList(nm1.getNodeId())),
+         rm.getRMContext().getInactiveRMNodes().keySet());
+
+    // remove nm1 from exclude hosts, so that it will be marked as untracked
+    // and removed from inactive nodes after the timeout
+    writeToHostsFile(excludeHostFile, "");
+    rm.getNodesListManager().refreshNodes(conf);
+    // confirmed that nm1 should be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 0,
+         100, 1000);
+
+    // lost nm2
+    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
+    rm.getRMContext().getDispatcher().getEventHandler()
+         .handle(new RMNodeEvent(nm2.getNodeId(), RMNodeEventType.EXPIRE));
+    rm.drainEvents();
+    assertEquals(rmNode2.getState(), NodeState.LOST);
+    assertEquals(2, rm.getRMContext().getRMNodes().size());
+    assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
+    // confirmed that nm2 should not be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 1,
+         100, 1000);
+
+    // shutdown nm3
+    RMNode rmNode3 = rm.getRMContext().getRMNodes().get(nm3.getNodeId());
+    rm.getRMContext().getDispatcher().getEventHandler()
+         .handle(new RMNodeEvent(nm3.getNodeId(), RMNodeEventType.SHUTDOWN));
+    rm.drainEvents();
+    assertEquals(rmNode3.getState(), NodeState.SHUTDOWN);
+    assertEquals(1, rm.getRMContext().getRMNodes().size());
+    assertEquals(2, rm.getRMContext().getInactiveRMNodes().size());
+    // confirmed that nm3 should be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 1,
+         100, 1000);
+
+    // nm4 is still active node at last
+    assertEquals(new HashSet(Arrays.asList(nm4.getNodeId())),
+         rm.getRMContext().getRMNodes().keySet());
+
+    // nm2 is still inactive node at last, not removed
+    assertEquals(new HashSet(Arrays.asList(nm2.getNodeId())),
+         rm.getRMContext().getInactiveRMNodes().keySet());
 
     rm.close();
   }

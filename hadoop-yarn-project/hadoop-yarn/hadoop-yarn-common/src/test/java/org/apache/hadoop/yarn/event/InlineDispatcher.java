@@ -20,9 +20,6 @@ package org.apache.hadoop.yarn.event;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Event;
-import org.apache.hadoop.yarn.event.EventHandler;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class InlineDispatcher extends AsyncDispatcher {

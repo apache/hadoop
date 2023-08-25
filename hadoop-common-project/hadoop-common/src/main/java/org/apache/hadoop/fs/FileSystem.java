@@ -2413,8 +2413,14 @@ public abstract class FileSystem extends Configured
         if (stat.isFile()) { // file
           curFile = stat;
         } else if (recursive) { // directory
-          itors.push(curItor);
-          curItor = listLocatedStatus(stat.getPath());
+          try {
+            RemoteIterator<LocatedFileStatus> newDirItor = listLocatedStatus(stat.getPath());
+            itors.push(curItor);
+            curItor = newDirItor;
+          } catch (FileNotFoundException ignored) {
+            LOGGER.debug("Directory {} deleted while attempting for recursive listing",
+                stat.getPath());
+          }
         }
       }
 
@@ -3596,9 +3602,9 @@ public abstract class FileSystem extends Configured
       } catch (IOException | RuntimeException e) {
         // exception raised during initialization.
         // log summary at warn and full stack at debug
-        LOGGER.warn("Failed to initialize fileystem {}: {}",
+        LOGGER.warn("Failed to initialize filesystem {}: {}",
             uri, e.toString());
-        LOGGER.debug("Failed to initialize fileystem", e);
+        LOGGER.debug("Failed to initialize filesystem", e);
         // then (robustly) close the FS, so as to invoke any
         // cleanup code.
         IOUtils.cleanupWithLogger(LOGGER, fs);
@@ -3936,6 +3942,7 @@ public abstract class FileSystem extends Configured
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
       private volatile long bytesReadErasureCoded;
+      private volatile long remoteReadTimeMS;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3953,6 +3960,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded += other.bytesReadErasureCoded;
+        this.remoteReadTimeMS += other.remoteReadTimeMS;
       }
 
       /**
@@ -3971,6 +3979,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
+        this.remoteReadTimeMS = -this.remoteReadTimeMS;
       }
 
       @Override
@@ -4018,6 +4027,10 @@ public abstract class FileSystem extends Configured
 
       public long getBytesReadErasureCoded() {
         return bytesReadErasureCoded;
+      }
+
+      public long getRemoteReadTimeMS() {
+        return remoteReadTimeMS;
       }
     }
 
@@ -4247,6 +4260,14 @@ public abstract class FileSystem extends Configured
     }
 
     /**
+     * Increment the time taken to read bytes from remote in the statistics.
+     * @param durationMS time taken in ms to read bytes from remote
+     */
+    public void increaseRemoteReadTime(final long durationMS) {
+      getThreadStatistics().remoteReadTimeMS += durationMS;
+    }
+
+    /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
      *
@@ -4391,6 +4412,25 @@ public abstract class FileSystem extends Configured
         break;
       }
       return bytesRead;
+    }
+
+    /**
+     * Get total time taken in ms for bytes read from remote.
+     * @return time taken in ms for remote bytes read.
+     */
+    public long getRemoteReadTime() {
+      return visitAll(new StatisticsAggregator<Long>() {
+        private long remoteReadTimeMS = 0;
+
+        @Override
+        public void accept(StatisticsData data) {
+          remoteReadTimeMS += data.remoteReadTimeMS;
+        }
+
+        public Long aggregate() {
+          return remoteReadTimeMS;
+        }
+      });
     }
 
     /**

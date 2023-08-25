@@ -150,7 +150,7 @@ public class HttpFSServer {
    * @return FileSystemExecutor response
    *
    * @throws IOException thrown if an IO error occurs.
-   * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */
   private <T> T fsExecute(UserGroupInformation ugi, FileSystemAccess.FileSystemExecutor<T> executor)
@@ -161,8 +161,8 @@ public class HttpFSServer {
   }
 
   /**
-   * Returns a filesystem instance. The fileystem instance is wired for release at the completion of
-   * the current Servlet request via the {@link FileSystemReleaseFilter}.
+   * Returns a filesystem instance. The filesystem instance is wired for release at the completion
+   * of the current Servlet request via the {@link FileSystemReleaseFilter}.
    * <p>
    * If a do-as user is specified, the current user must be a valid proxyuser, otherwise an
    * <code>AccessControlException</code> will be thrown.
@@ -173,7 +173,7 @@ public class HttpFSServer {
    *
    * @throws IOException thrown if an IO error occurred. Thrown exceptions are
    * handled by {@link HttpFSExceptionProvider}.
-   * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */
   private FileSystem createFileSystem(UserGroupInformation ugi)
@@ -526,6 +526,22 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETECPOLICIES: {
+      FSOperations.FSGetErasureCodingPolicies command =
+          new FSOperations.FSGetErasureCodingPolicies();
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETECCODECS: {
+      FSOperations.FSGetErasureCodingCodecs command =
+          new FSOperations.FSGetErasureCodingCodecs();
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GET_BLOCK_LOCATIONS: {
       long offset = 0;
       long len = Long.MAX_VALUE;
@@ -544,6 +560,20 @@ public class HttpFSServer {
       Map locations = fsExecute(user, command);
       final String json = JsonUtil.toJsonString("LocatedBlocks", locations);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETFILELINKSTATUS: {
+      FSOperations.FSFileLinkStatus command =
+          new FSOperations.FSFileLinkStatus(path);
+      @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETSTATUS: {
+      FSOperations.FSStatus command = new FSOperations.FSStatus(path);
+      @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
     default: {

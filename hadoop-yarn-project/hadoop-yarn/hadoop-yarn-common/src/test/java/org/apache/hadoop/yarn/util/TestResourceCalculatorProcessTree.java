@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.hamcrest.core.IsInstanceOf.*;
-import static org.hamcrest.core.IsSame.*;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.hamcrest.core.IsSame.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * A JUnit test to test {@link ResourceCalculatorPlugin}
@@ -73,7 +76,7 @@ public class TestResourceCalculatorProcessTree {
   }
 
   @Test
-  public void testCreateInstance() {
+  void testCreateInstance() {
     ResourceCalculatorProcessTree tree;
     tree = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("1", EmptyProcessTree.class, new Configuration());
     assertNotNull(tree);
@@ -81,7 +84,7 @@ public class TestResourceCalculatorProcessTree {
   }
 
   @Test
-  public void testCreatedInstanceConfigured() {
+  void testCreatedInstanceConfigured() {
     ResourceCalculatorProcessTree tree;
     Configuration conf = new Configuration();
     tree = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("1", EmptyProcessTree.class, conf);

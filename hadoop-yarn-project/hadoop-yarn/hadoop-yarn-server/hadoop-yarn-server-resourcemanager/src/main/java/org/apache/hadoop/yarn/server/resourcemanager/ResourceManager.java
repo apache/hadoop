@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.apache.hadoop.yarn.server.webproxy.DefaultAppReportFetcher;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -702,6 +704,32 @@ public class ResourceManager extends CompositeService
           + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "=" + expireIntvl
           + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
           + heartbeatIntvl);
+    }
+
+    if (HAUtil.isFederationEnabled(conf)) {
+      /*
+       * In Yarn Federation, we need UAMs in secondary sub-clusters to stay
+       * alive when the next attempt AM in home sub-cluster gets launched. If
+       * the previous AM died because the node is lost after NM timeout. It will
+       * already be too late if AM timeout is even shorter.
+       */
+      String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+      long amExpireIntvl;
+      if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
+        amExpireIntvl = conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+      } else {
+        amExpireIntvl = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
+      }
+
+      if (amExpireIntvl <= expireIntvl) {
+        throw new YarnRuntimeException("When Yarn Federation is enabled, "
+            + "AM expiry interval should be no less than NM expiry interval, "
+            + YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS + "=" + amExpireIntvl
+            + ", " + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "="
+            + expireIntvl);
+      }
     }
   }
 
@@ -1399,9 +1427,9 @@ public class ResourceManager extends CompositeService
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       if (HAUtil.isHAEnabled(conf)) {
-        fetcher = new AppReportFetcher(conf);
+        fetcher = new DefaultAppReportFetcher(conf);
       } else {
-        fetcher = new AppReportFetcher(conf, getClientRMService());
+        fetcher = new DefaultAppReportFetcher(conf, getClientRMService());
       }
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
@@ -1657,6 +1685,7 @@ public class ResourceManager extends CompositeService
 
   /**
    * Create RMDelegatedNodeLabelsUpdater based on configuration.
+   * @return RMDelegatedNodeLabelsUpdater.
    */
   protected RMDelegatedNodeLabelsUpdater createRMDelegatedNodeLabelsUpdater() {
     if (conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
@@ -1813,9 +1842,9 @@ public class ResourceManager extends CompositeService
   }
 
   /**
-   * Retrieve RM bind address from configuration
+   * Retrieve RM bind address from configuration.
    * 
-   * @param conf
+   * @param conf Configuration.
    * @return InetSocketAddress
    */
   public static InetSocketAddress getBindAddress(Configuration conf) {
@@ -1826,8 +1855,8 @@ public class ResourceManager extends CompositeService
   /**
    * Deletes the RMStateStore
    *
-   * @param conf
-   * @throws Exception
+   * @param conf Configuration.
+   * @throws Exception error occur.
    */
   @VisibleForTesting
   static void deleteRMStateStore(Configuration conf) throws Exception {

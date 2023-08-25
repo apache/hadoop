@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.api.records;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * The class to test {@link Resource}.
@@ -41,5 +43,28 @@ class TestResource {
         Resource.castToIntSafely(Long.MAX_VALUE),
         "Cast to Integer.MAX_VALUE if the long is greater than "
             + "Integer.MAX_VALUE");
+  }
+
+  @Test
+  public void testResourceFormatted() {
+    Resource resource = spy(Resource.class);
+    resource.setResources(new ResourceInformation[0]);
+    when(resource.getVirtualCores()).thenReturn(1);
+
+    // We set 10MB
+    String expectedResult1 = "<memory:10 MB, vCores:1>";
+    assertEquals(expectedResult1, resource.getFormattedString(10));
+
+    // We set 1024 MB = 1GB
+    String expectedResult2 = "<memory:1 GB, vCores:1>";
+    assertEquals(expectedResult2, resource.getFormattedString(1024));
+
+    // We set 1024 * 1024 MB = 1024 GB = 1TB
+    String expectedResult3 = "<memory:1 TB, vCores:1>";
+    assertEquals(expectedResult3, resource.getFormattedString(1024 * 1024));
+
+    // We set 1024 * 1024 * 1024 MB = 1024 * 1024 GB = 1 * 1024 TB = 1 PB
+    String expectedResult4 = "<memory:1 PB, vCores:1>";
+    assertEquals(expectedResult4, resource.getFormattedString(1024 * 1024 * 1024));
   }
 }

@@ -73,7 +73,7 @@ public class AutoRefreshNoHARMFailoverProxyProvider<T>
 
   /**
    * Stop the current proxy when performFailover.
-   * @param currentProxy
+   * @param currentProxy currentProxy.
    */
   @Override
   public synchronized void performFailover(T currentProxy) {

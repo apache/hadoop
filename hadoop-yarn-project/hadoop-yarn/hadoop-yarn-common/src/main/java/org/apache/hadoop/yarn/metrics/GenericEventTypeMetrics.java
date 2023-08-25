@@ -57,10 +57,8 @@ public class GenericEventTypeMetrics<T extends Enum<T>>
 
     //Initialize enum
     for (final T type : enums) {
-      String eventCountMetricsName =
-          type.toString() + "_" + "event_count";
-      String processingTimeMetricsName =
-          type.toString() + "_" + "processing_time";
+      String eventCountMetricsName = type + "_" + "event_count";
+      String processingTimeMetricsName = type + "_" + "processing_time";
       eventCountMetrics.put(type, this.registry.
           newGauge(eventCountMetricsName, eventCountMetricsName, 0L));
       processingTimeMetrics.put(type, this.registry.

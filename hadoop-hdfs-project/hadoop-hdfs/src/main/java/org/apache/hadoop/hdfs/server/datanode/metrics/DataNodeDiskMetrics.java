@@ -80,7 +80,7 @@ public class DataNodeDiskMetrics {
   /**
    * The number of slow disks that needs to be excluded.
    */
-  private int maxSlowDisksToExclude;
+  private volatile int maxSlowDisksToExclude;
   /**
    * List of slow disks that need to be excluded.
    */
@@ -272,6 +272,14 @@ public class DataNodeDiskMetrics {
 
   public List<String> getSlowDisksToExclude() {
     return slowDisksToExclude;
+  }
+
+  public int getMaxSlowDisksToExclude() {
+    return maxSlowDisksToExclude;
+  }
+
+  public void setMaxSlowDisksToExclude(int maxSlowDisksToExclude) {
+    this.maxSlowDisksToExclude = maxSlowDisksToExclude;
   }
 
   public void setLowThresholdMs(long thresholdMs) {

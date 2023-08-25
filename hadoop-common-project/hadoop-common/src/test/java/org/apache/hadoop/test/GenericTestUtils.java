@@ -49,8 +49,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -117,27 +115,9 @@ public abstract class GenericTestUtils {
   public static final String ERROR_INVALID_ARGUMENT =
       "Total wait time should be greater than check interval time";
 
-  /**
-   * @deprecated use {@link #disableLog(org.slf4j.Logger)} instead
-   */
-  @Deprecated
-  @SuppressWarnings("unchecked")
-  public static void disableLog(Log log) {
-    // We expect that commons-logging is a wrapper around Log4j.
-    disableLog((Log4JLogger) log);
-  }
-
   @Deprecated
   public static Logger toLog4j(org.slf4j.Logger logger) {
     return LogManager.getLogger(logger.getName());
-  }
-
-  /**
-   * @deprecated use {@link #disableLog(org.slf4j.Logger)} instead
-   */
-  @Deprecated
-  public static void disableLog(Log4JLogger log) {
-    log.getLogger().setLevel(Level.OFF);
   }
 
   /**
@@ -152,45 +132,6 @@ public abstract class GenericTestUtils {
     disableLog(toLog4j(logger));
   }
 
-  /**
-   * @deprecated
-   * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
-   */
-  @Deprecated
-  @SuppressWarnings("unchecked")
-  public static void setLogLevel(Log log, Level level) {
-    // We expect that commons-logging is a wrapper around Log4j.
-    setLogLevel((Log4JLogger) log, level);
-  }
-
-  /**
-   * A helper used in log4j2 migration to accept legacy
-   * org.apache.commons.logging apis.
-   * <p>
-   * And will be removed after migration.
-   *
-   * @param log   a log
-   * @param level level to be set
-   */
-  @Deprecated
-  public static void setLogLevel(Log log, org.slf4j.event.Level level) {
-    setLogLevel(log, Level.toLevel(level.toString()));
-  }
-
-  /**
-   * @deprecated
-   * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
-   */
-  @Deprecated
-  public static void setLogLevel(Log4JLogger log, Level level) {
-    log.getLogger().setLevel(level);
-  }
-
-  /**
-   * @deprecated
-   * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
-   */
-  @Deprecated
   public static void setLogLevel(Logger logger, Level level) {
     logger.setLevel(level);
   }
@@ -535,13 +476,15 @@ public abstract class GenericTestUtils {
     private WriterAppender appender;
     private Logger logger;
 
-    public static LogCapturer captureLogs(Log l) {
-      Logger logger = ((Log4JLogger)l).getLogger();
-      return new LogCapturer(logger);
+    public static LogCapturer captureLogs(org.slf4j.Logger logger) {
+      if (logger.getName().equals("root")) {
+        return new LogCapturer(org.apache.log4j.Logger.getRootLogger());
+      }
+      return new LogCapturer(toLog4j(logger));
     }
 
-    public static LogCapturer captureLogs(org.slf4j.Logger logger) {
-      return new LogCapturer(toLog4j(logger));
+    public static LogCapturer captureLogs(Logger logger) {
+      return new LogCapturer(logger);
     }
 
     private LogCapturer(Logger logger) {

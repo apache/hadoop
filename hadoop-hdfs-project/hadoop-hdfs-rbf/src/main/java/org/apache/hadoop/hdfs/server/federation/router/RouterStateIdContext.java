@@ -22,14 +22,15 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashSet;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
@@ -83,14 +84,17 @@ class RouterStateIdContext implements AlignmentContext {
     if (namespaceIdMap.isEmpty()) {
       return;
     }
-    HdfsServerFederationProtos.RouterFederatedStateProto.Builder federatedStateBuilder =
-        HdfsServerFederationProtos.RouterFederatedStateProto.newBuilder();
-    namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
-    headerBuilder.setRouterFederatedState(federatedStateBuilder.build().toByteString());
+    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
+    namespaceIdMap.forEach((k, v) -> builder.putNamespaceStateIds(k, v.get()));
+    headerBuilder.setRouterFederatedState(builder.build().toByteString());
   }
 
   public LongAccumulator getNamespaceStateId(String nsId) {
     return namespaceIdMap.computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+  }
+
+  public List<String> getNamespaces() {
+    return Collections.list(namespaceIdMap.keys());
   }
 
   public void removeNamespaceStateId(String nsId) {
@@ -102,9 +106,9 @@ class RouterStateIdContext implements AlignmentContext {
    */
   public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
     if (byteString != null) {
-      HdfsServerFederationProtos.RouterFederatedStateProto federatedState;
+      RouterFederatedStateProto federatedState;
       try {
-        federatedState = HdfsServerFederationProtos.RouterFederatedStateProto.parseFrom(byteString);
+        federatedState = RouterFederatedStateProto.parseFrom(byteString);
       } catch (InvalidProtocolBufferException e) {
         throw new RuntimeException(e);
       }

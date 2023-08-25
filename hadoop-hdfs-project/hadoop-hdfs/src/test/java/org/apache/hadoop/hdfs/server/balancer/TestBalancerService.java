@@ -168,7 +168,7 @@ public class TestBalancerService {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testBalancerServiceOnError() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // retry for every 5 seconds

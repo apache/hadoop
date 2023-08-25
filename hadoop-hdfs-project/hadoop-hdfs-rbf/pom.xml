@@ -50,10 +50,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>log4j</groupId>
           <artifactId>log4j</artifactId>
         </exclusion>
@@ -122,6 +118,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -158,6 +158,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.derby</groupId>
+      <artifactId>derby</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
@@ -167,6 +172,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -174,6 +184,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -228,10 +243,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/hdfs-rbf-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -283,6 +298,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <excludePackageNames>
+            org.apache.hadoop.hdfs.federation.protocol.proto:org.apache.hadoop.hdfs.protocol.proto
+          </excludePackageNames>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>

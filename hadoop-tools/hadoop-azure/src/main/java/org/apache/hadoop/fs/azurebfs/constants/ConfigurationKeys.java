@@ -35,6 +35,11 @@ public final class ConfigurationKeys {
    * path to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+  /**
+   * Enable or disable expect hundred continue header.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
   public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
   public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
@@ -42,6 +47,8 @@ public final class ConfigurationKeys {
 
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
+  public static final String FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = "fs.azure.account.throttling.enabled";
+
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
@@ -121,6 +128,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
   public static final String FS_AZURE_METRIC_IDLE_TIMEOUT = "fs.azure.metric.idle.timeout";
   public static final String FS_AZURE_METRIC_ANALYSIS_TIMEOUT = "fs.azure.metric.analysis.timeout";
+  public static final String FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT = "fs.azure.account.operation.idle.timeout";
+  public static final String FS_AZURE_ANALYSIS_PERIOD = "fs.azure.analysis.period";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
   /** This config ensures that during create overwrite an existing file will be
@@ -236,6 +245,9 @@ public final class ConfigurationKeys {
 
   /** Key for rate limit capacity, as used by IO operations which try to throttle themselves. */
   public static final String FS_AZURE_ABFS_IO_RATE_LIMIT = "fs.azure.io.rate.limit";
+
+  /** Add extra resilience to rename failures, at the expense of performance. */
+  public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

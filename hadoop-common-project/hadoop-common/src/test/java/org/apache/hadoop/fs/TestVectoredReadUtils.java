@@ -61,6 +61,9 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("Slicing on the same offset shouldn't " +
                     "create a new buffer")
             .isEqualTo(slice);
+    Assertions.assertThat(slice.position())
+        .describedAs("Slicing should return buffers starting from position 0")
+        .isEqualTo(0);
 
     // try slicing a range
     final int offset = 100;
@@ -77,6 +80,9 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("Slicing should use the same underlying " +
                     "data")
             .isEqualTo(slice.array());
+    Assertions.assertThat(slice.position())
+        .describedAs("Slicing should return buffers starting from position 0")
+        .isEqualTo(0);
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
     for(int i=0; i < sliceLength / Integer.BYTES; ++i) {

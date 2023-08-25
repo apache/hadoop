@@ -95,6 +95,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
@@ -1028,6 +1034,65 @@ public class AdminService extends CompositeService implements
         "AdminService");
     return recordFactory
         .newRecordInstance(NodesToAttributesMappingResponse.class);
+  }
+
+  /**
+   * In YARN Federation mode, We allow users to mark subClusters
+   * With no heartbeat for a long time as SC_LOST state.
+   *
+   * RM does not support deregisterSubCluster, deregisterSubCluster is supported by Router.
+   *
+   * If we include a specific subClusterId in the request, check for the specified subCluster.
+   * If subClusterId is empty, all subClusters are checked.
+   *
+   * @param request deregisterSubCluster request.
+   * The request contains the id of to deregister sub-cluster.
+   * @return Response from deregisterSubCluster.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(
+      DeregisterSubClusterRequest request) throws YarnException {
+    throw new YarnException("It is not allowed to call the RM's deregisterSubCluster to " +
+        "set the subCluster(s) state to SC_LOST, " +
+        "Please call Router's deregisterSubCluster to set.");
+  }
+
+  /**
+   * In YARN-Federation mode, We will be storing the Policy information for Queues.
+   *
+   * RM does not support saveFederationQueuePolicy,
+   * saveFederationQueuePolicy is supported by Router.
+   *
+   * @param request saveFederationQueuePolicy Request
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+    throw new YarnException("It is not allowed to call the RM's saveFederationQueuePolicy. " +
+        " Please call Router's saveFederationQueuePolicy to set Policy.");
+  }
+
+  /**
+   * In YARN-Federation mode, this method provides a way to save queue policies in batches.
+   *
+   * RM does not support batchSaveFederationQueuePolicies,
+   * batchSaveFederationQueuePolicies is supported by Router.
+   *
+   * @param request BatchSaveFederationQueuePolicies Request
+   * @return Response from batchSaveFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    throw new YarnException("It is not allowed to call the RM's " +
+        " batchSaveFederationQueuePolicies. " +
+        " Please call Router's batchSaveFederationQueuePolicies to set Policies.");
   }
 
   private void validateAttributesExists(

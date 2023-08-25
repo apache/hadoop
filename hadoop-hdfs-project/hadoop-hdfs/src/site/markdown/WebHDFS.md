@@ -57,6 +57,12 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
+    * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
+    * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
+    * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
+    * [`GETSTATUS`](#Get_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus)
+    * [`GETECPOLICIES`](#Get_EC_Policies)
+    * [`GETECCODECS`](#Get_EC_Codecs)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -517,6 +523,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "replication"     : 0,
             "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
+            "ecPolicy"        : "RS-6-3-1024k"
           }
         }
 
@@ -1107,6 +1114,164 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAclSta
         Content-Length: 0
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
+
+### Get Server Defaults
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSERVERDEFAULTS"
+
+  The client receives a response with a [`ServerDefaults` JSON object](Server_Defaults_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FsServerDefaults": {
+                "replication": 3,
+                "encryptDataTransfer": "false",
+                "defaultStoragePolicyId":7,
+                "writePacketSize": 65536,
+                "fileBufferSize": 4096,
+                "checksumType": 2,
+                "trashInterval": 10080,
+                "keyProviderUri": "",
+                "blockSize": 134217728,
+                "bytesPerChecksum": 512
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults
+
+### Get Link Target
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETLINKTARGET"
+
+    The client receives a response with a [`Path` JSON object](#Path_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/user/username/targetFile"}
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
+
+### Get File Link Status
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILELINKSTATUS"
+
+  The client receives a response with a [`FileStatus` JSON object](#FileStatuses_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FileStatus": {
+                "accessTime": 0,
+                "blockSize": 0,
+                "childrenNum":0,
+                "fileId": 16388,
+                "group": "supergroup",
+                "length": 0,
+                "modificationTime": 1681916788427,
+                "owner": "hadoop",
+                "pathSuffix": "",
+                "permission": "777",
+                "replication": 0,
+                "storagePolicy": 0,
+                "symlink": "/webHdfsTest/file",
+                "type": "SYMLINK"
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkInfo
+
+### Get EC Policies
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETECPOLICIES"
+
+  The client receives a response with a [`ECPolicies` JSON object](#EC_Policies_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+          "ErasureCodingPolicies": {
+            "ErasureCodingPolicyInfo": [
+              {
+                "state": "ENABLED",
+                "policy": {
+                  "name": "RS-6-3-1024k",
+                  "schema": {
+                    "codecName": "rs",
+                    "numDataUnits": 6,
+                    "numParityUnits": 3,
+                    "extraOptions": {}
+                  },
+                  "cellSize": 1048576,
+                  "id": 1,
+                  "replicationPolicy": false,
+                  "codecName": "rs",
+                  "numDataUnits": 6,
+                  "numParityUnits": 3,
+                  "systemPolicy": true
+                }
+              }
+            ]
+          }
+        }
+
+### Get Status
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSTATUS"
+
+  The client receives a response with a [`FsStatus` JSON object](#FsStatus_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FsStatus": {
+                "used": 29229154304,
+                "remaining": 292893392896,
+                "capacity":322122547200
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus
+
+### Get EC Codecs
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETALLECCODECS"
+
+  The client receives a response with a [`ECCodecs` JSON object](#EC_Codecs_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "ErasureCodeCodecs": {
+                "rs": "rs_native, rs_java",
+                "rs-legacy": "rs-legacy_java",
+                "xor":"xor_native, xor_java"
+            }
+        }
 
 Storage Policy Operations
 -------------------------
@@ -2311,6 +2476,26 @@ var fileStatusProperties =
       "description": "The type of the path object.",
       "enum"       : ["FILE", "DIRECTORY", "SYMLINK"],
       "required"   : true
+    },
+    "aclBit":
+    {
+       "description": "Has ACLs set or not.",
+       "type"       : "boolean",
+    },
+    "encBit":
+    {
+       "description": "Is Encrypted or not.",
+       "type"       : "boolean",
+    },
+    "ecBit":
+    {
+       "description": "Is ErasureCoded or not.",
+       "type"       : "boolean",
+    },
+    "ecPolicy":
+    {
+       "description": "The namenode of ErasureCodePolicy.",
+       "type"       : "String",
     }
   }
 };
@@ -3020,6 +3205,76 @@ var blockLocationProperties =
     }
   }
 };
+```
+### Server Defaults JSON Schema
+
+```json
+{
+  "FsServerDefaults": {
+    "replication": 3,
+    "encryptDataTransfer": false,
+    "defaultStoragePolicyId": 7,
+    "writePacketSize": 65536,
+    "fileBufferSize": 4096,
+    "checksumType": 2,
+    "trashInterval": 10080,
+    "keyProviderUri": "",
+    "blockSize": 134217728,
+    "bytesPerChecksum": 512
+  }
+}
+```
+### FsStatus JSON Schema
+
+```json
+{
+  "FsStatus": {
+    "used": 29229154304,
+    "remaining": 292893392896,
+    "capacity": 322122547200
+  }
+}
+```
+### EC Policies JSON Schema
+
+```json
+{
+  "ErasureCodingPolicies": {
+    "ErasureCodingPolicyInfo": [
+      {
+        "state": "ENABLED",
+        "policy": {
+          "name": "RS-6-3-1024k",
+          "schema": {
+            "codecName": "rs",
+            "numDataUnits": 6,
+            "numParityUnits": 3,
+            "extraOptions": {}
+          },
+          "cellSize": 1048576,
+          "id": 1,
+          "replicationPolicy": false,
+          "codecName": "rs",
+          "numDataUnits": 6,
+          "numParityUnits": 3,
+          "systemPolicy": true
+        }
+      }
+    ]
+  }
+}
+```
+
+### EC Codecs JSON Schema
+
+```json
+{
+  "ErasureCodingCodecs": {
+    "rs": "rs_native, rs_java",
+    "rs-legacy": "rs-legacy_java",
+    "xor": "xor_native, xor_java"
+  }
+}
 ```
 
 HTTP Query Parameter Dictionary

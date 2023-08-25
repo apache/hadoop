@@ -423,8 +423,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
+  private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
+  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
   private ConfigurationProperties configurationProperties;
+
+  public static QueueCapacityConfigParser getQueueCapacityConfigParser() {
+    return queueCapacityConfigParser;
+  }
 
   public int getMaximumAutoCreatedQueueDepth(String queuePath) {
     return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
@@ -493,6 +499,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int maxApplications =
       getInt(MAXIMUM_SYSTEM_APPLICATIONS, DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS);
     return maxApplications;
+  }
+
+  public void setMaximumApplicationMasterResourcePercent(float percent) {
+    setFloat(PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
   public float getMaximumApplicationMasterResourcePercent() {
@@ -572,8 +582,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    boolean isCapacityVectorFormat = queueCapacityConfigParser
+        .isCapacityVectorFormat(configuredCapacity);
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || isCapacityVectorFormat) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
@@ -623,7 +635,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find()
+        || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity);
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -819,6 +832,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
 
+  public void setCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
+  public void setMaximumCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + MAXIMUM_CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
   private boolean configuredWeightAsCapacity(String configureValue) {
     if (configureValue == null) {
       return false;
@@ -843,7 +866,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
             configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
@@ -1203,6 +1226,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configurationProperties = new ConfigurationProperties(props);
   }
 
+  public void setQueueMaximumAllocationMb(String queue, int value) {
+    String queuePrefix = getQueuePrefix(queue);
+    setInt(queuePrefix + MAXIMUM_ALLOCATION_MB, value);
+  }
+
+  public void setQueueMaximumAllocationVcores(String queue, int value) {
+    String queuePrefix = getQueuePrefix(queue);
+    setInt(queuePrefix + MAXIMUM_ALLOCATION_VCORES, value);
+  }
+
   public long getQueueMaximumAllocationMb(String queue) {
     String queuePrefix = getQueuePrefix(queue);
     return getInt(queuePrefix + MAXIMUM_ALLOCATION_MB, (int)UNDEFINED);
@@ -1477,6 +1510,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return new ArrayList<>();
   }
 
+  public void setMappingRuleFormat(String format) {
+    set(MAPPING_RULE_FORMAT, format);
+  }
+
+  public void setMappingRuleJson(String json) {
+    set(MAPPING_RULE_JSON, json);
+  }
+
   public List<MappingRule> getMappingRules() throws IOException {
     String mappingFormat =
         get(MAPPING_RULE_FORMAT, MAPPING_RULE_FORMAT_DEFAULT);
@@ -1693,8 +1734,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             + QUEUE_PREEMPTION_DISABLED, defaultVal);
   }
 
+  public void setPreemptionObserveOnly(boolean value) {
+    setBoolean(PREEMPTION_OBSERVE_ONLY, value);
+  }
+
+  public boolean getPreemptionObserveOnly() {
+    return getBoolean(PREEMPTION_OBSERVE_ONLY, DEFAULT_PREEMPTION_OBSERVE_ONLY);
+  }
+
   /**
-   * Get configured node labels in a given queuePath
+   * Get configured node labels in a given queuePath.
+   *
+   * @param queuePath queue path.
+   * @return configured node labels.
    */
   public Set<String> getConfiguredNodeLabels(String queuePath) {
     Set<String> configuredNodeLabels = new HashSet<String>();
@@ -1794,29 +1846,48 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
-  public Integer getMaxParallelAppsForQueue(String queue) {
-    int defaultMaxParallelAppsForQueue =
-        getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
+  public void setDefaultMaxParallelApps(int value) {
+    setInt(PREFIX + MAX_PARALLEL_APPLICATIONS, value);
+  }
+
+  public Integer getDefaultMaxParallelApps() {
+    return getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
         DEFAULT_MAX_PARALLEL_APPLICATIONS);
+  }
 
-    String maxParallelAppsForQueue = get(getQueuePrefix(queue)
-        + MAX_PARALLEL_APPLICATIONS);
+  public void setDefaultMaxParallelAppsPerUser(int value) {
+    setInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS, value);
+  }
 
-    return (maxParallelAppsForQueue != null) ?
-        Integer.parseInt(maxParallelAppsForQueue)
-        : defaultMaxParallelAppsForQueue;
+  public Integer getDefaultMaxParallelAppsPerUser() {
+    return getInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS,
+        DEFAULT_MAX_PARALLEL_APPLICATIONS);
+  }
+
+  public void setMaxParallelAppsForUser(String user, int value) {
+    setInt(getUserPrefix(user) + MAX_PARALLEL_APPLICATIONS, value);
   }
 
   public Integer getMaxParallelAppsForUser(String user) {
-    int defaultMaxParallelAppsForUser =
-        getInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS,
-        DEFAULT_MAX_PARALLEL_APPLICATIONS);
     String maxParallelAppsForUser = get(getUserPrefix(user)
         + MAX_PARALLEL_APPLICATIONS);
 
     return (maxParallelAppsForUser != null) ?
-        Integer.parseInt(maxParallelAppsForUser)
-        : defaultMaxParallelAppsForUser;
+        Integer.valueOf(maxParallelAppsForUser)
+        : getDefaultMaxParallelAppsPerUser();
+  }
+
+  public void setMaxParallelAppsForQueue(String queue, String value) {
+    set(getQueuePrefix(queue) + MAX_PARALLEL_APPLICATIONS, value);
+  }
+
+  public Integer getMaxParallelAppsForQueue(String queue) {
+    String maxParallelAppsForQueue = get(getQueuePrefix(queue)
+        + MAX_PARALLEL_APPLICATIONS);
+
+    return (maxParallelAppsForQueue != null) ?
+        Integer.valueOf(maxParallelAppsForQueue)
+        : getDefaultMaxParallelApps();
   }
 
   public boolean getAllowZeroCapacitySum(String queue) {
@@ -2701,7 +2772,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
+      String capacityString = get(propertyName);
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
+    }
+
+    return queueResourceVectors;
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
+      String queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+      String capacityString = get(propertyName);
+      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString,
+          queuePath);
+      if (capacityVector.isEmpty()) {
+        capacityVector = defaultVector;
+      }
+      queueResourceVectors.put(label, capacityVector);
     }
 
     return queueResourceVectors;
@@ -2806,6 +2898,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     String units = getUnits(splits[1]);
+
+    if (!UnitsConversionUtil.KNOWN_UNITS.contains(units)) {
+      return;
+    }
+
     Long resourceValue = Long
         .valueOf(splits[1].substring(0, splits[1].length() - units.length()));
 
@@ -2886,6 +2983,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     return normalizePolicyName(policyClassName.trim());
+  }
+
+  public boolean isLegacyQueueMode() {
+    return getBoolean(LEGACY_QUEUE_MODE_ENABLED, DEFAULT_LEGACY_QUEUE_MODE);
+  }
+
+  public void setLegacyQueueModeEnabled(boolean value) {
+    setBoolean(LEGACY_QUEUE_MODE_ENABLED, value);
   }
 
   public boolean getMultiNodePlacementEnabled() {

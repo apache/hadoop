@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +48,8 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
+import org.apache.hadoop.fs.impl.BackReference;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.azurebfs.commit.ResilientCommitByRename;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -113,6 +113,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
@@ -123,6 +124,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -158,14 +160,21 @@ public class AzureBlobFileSystem extends FileSystem
 
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
+
+  /** Storing full path uri for better logging. */
+  private URI fullPathUri;
+
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
+    configuration = ProviderUtils.excludeIncompatibleCredentialProviders(
+        configuration, AzureBlobFileSystem.class);
     uri = ensureAuthority(uri, configuration);
     super.initialize(uri, configuration);
     setConf(configuration);
 
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
+    this.fullPathUri = uri;
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     abfsCounters = new AbfsCountersImpl(uri);
     // name of the blockFactory to be used.
@@ -192,6 +201,7 @@ public class AzureBlobFileSystem extends FileSystem
             .withAbfsCounters(abfsCounters)
             .withBlockFactory(blockFactory)
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
+            .withBackReference(new BackReference(this))
             .build();
 
     this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);
@@ -204,9 +214,9 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
         try {
           this.createFileSystem(tracingContext);
@@ -228,7 +238,6 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
@@ -237,9 +246,10 @@ public class AzureBlobFileSystem extends FileSystem
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "AzureBlobFileSystem{");
-    sb.append("uri=").append(uri);
+    sb.append("uri=").append(fullPathUri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
+    sb.append("[" + CAPABILITY_SAFE_READAHEAD + "]");
     sb.append('}');
     return sb.toString();
   }
@@ -296,7 +306,7 @@ public class AzureBlobFileSystem extends FileSystem
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
         parameters.getMandatoryKeys(),
-        Collections.emptySet(),
+        FS_OPTION_OPENFILE_STANDARD_OPTIONS,
         "for " + path);
     return LambdaUtils.eval(
         new CompletableFuture<>(), () ->
@@ -445,7 +455,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
+    if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
 
@@ -1654,6 +1664,11 @@ public class AzureBlobFileSystem extends FileSystem
           new TracingContext(clientCorrelationId, fileSystemId,
               FSOperationType.HAS_PATH_CAPABILITY, tracingHeaderFormat,
               listener));
+
+      // probe for presence of the HADOOP-18546 readahead fix.
+    case CAPABILITY_SAFE_READAHEAD:
+      return true;
+
     default:
       return super.hasPathCapability(p, capability);
     }

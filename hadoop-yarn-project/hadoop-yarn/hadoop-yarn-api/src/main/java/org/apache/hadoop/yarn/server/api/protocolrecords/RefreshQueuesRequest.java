@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -33,4 +34,20 @@ public abstract class RefreshQueuesRequest {
         Records.newRecord(RefreshQueuesRequest.class);
     return request;
   }
+
+  @Public
+  @Stable
+  public static RefreshQueuesRequest newInstance(String subClusterId) {
+    RefreshQueuesRequest request = Records.newRecord(RefreshQueuesRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  @Public
+  @Unstable
+  public abstract String getSubClusterId();
+
+  @Private
+  @Unstable
+  public abstract void setSubClusterId(String subClusterId);
 }

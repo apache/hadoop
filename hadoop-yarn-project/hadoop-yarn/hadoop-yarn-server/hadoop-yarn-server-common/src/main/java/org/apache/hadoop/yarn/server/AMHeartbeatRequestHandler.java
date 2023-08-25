@@ -153,6 +153,7 @@ public class AMHeartbeatRequestHandler extends Thread {
 
   /**
    * Set the UGI for RM connection.
+   * @param ugi UserGroupInformation.
    */
   public void setUGI(UserGroupInformation ugi) {
     this.userUgi = ugi;

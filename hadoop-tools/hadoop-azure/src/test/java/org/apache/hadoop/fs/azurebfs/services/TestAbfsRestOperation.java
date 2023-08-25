@@ -41,9 +41,9 @@ public class TestAbfsRestOperation extends
     AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(getFileSystem()));
 
     // Mock instance of AbfsRestOperation
-    AbfsRestOperation op = TestAbfsClient.getRestOp(
+    AbfsRestOperation op = ITestAbfsClient.getRestOp(
         DeletePath, testClient, HTTP_METHOD_DELETE,
-       TestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), TestAbfsClient.getTestRequestHeaders(testClient));
+       ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
 
     ArrayList<Integer> retryCounts = new ArrayList<>(Arrays.asList(35, 28, 31, 45, 10, 2, 9));
     int statusCode = HttpURLConnection.HTTP_UNAVAILABLE;

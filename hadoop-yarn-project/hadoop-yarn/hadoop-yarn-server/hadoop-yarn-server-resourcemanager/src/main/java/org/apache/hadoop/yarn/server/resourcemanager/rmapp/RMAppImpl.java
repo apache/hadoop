@@ -1088,8 +1088,13 @@ public class RMAppImpl implements RMApp, Recoverable {
       // otherwise, add it to ranNodes for further process
       app.ranNodes.add(nodeAddedEvent.getNodeId());
 
-      app.logAggregation.addReportIfNecessary(
-          nodeAddedEvent.getNodeId(), app.getApplicationId());
+      if (!nodeAddedEvent.isCreatedFromAcquiredState()) {
+        app.logAggregation.addReportIfNecessary(
+            nodeAddedEvent.getNodeId(), app.getApplicationId());
+      } else {
+        LOG.debug("Not considering node for log aggregation yet. nodeId: {}, appId: {}",
+            nodeAddedEvent.getNodeId(), app.getApplicationId());
+      }
     }
   }
 
@@ -1900,10 +1905,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   /**
-     * catch the InvalidStateTransition.
-     * @param state
-     * @param rmAppEventType
-     */
+   * catch the InvalidStateTransition.
+   *
+   * @param state RMAppState.
+   * @param rmAppEventType RMAppEventType.
+   */
   protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
               RMAppState state){
       /* TODO fail the application on the failed transition */

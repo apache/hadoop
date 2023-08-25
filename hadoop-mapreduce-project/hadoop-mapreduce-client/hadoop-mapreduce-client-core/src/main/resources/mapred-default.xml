@@ -840,11 +840,8 @@
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
-    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -852,12 +849,8 @@
   <name>yarn.app.mapreduce.am.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for the ApplicationMaster logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for the ApplicationMaster when both
-    yarn.app.mapreduce.am.container.log.limit.kb and
-    yarn.app.mapreduce.am.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -1811,6 +1804,18 @@
    <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
 </property>
 
+<property>
+  <name>mapreduce.jvm.add-opens-as-default</name>
+  <value>true</value>
+  <description>Since on JDK17 it's no longer possible to use the reflection API to
+    access non-public fields and methods add-opens flags should be added to MR AM
+    and map/reduce containers regardless of the user specified java opts. Setting
+    this to true will add the flags to the container launch commands on nodes with
+    JDK17 or higher. Defaults to true, but the setting has no effect on nodes using
+    JDK16 and before.
+  </description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>
@@ -2242,23 +2247,23 @@
   </description>
 </property>
 
-<!-- not yet enabled by default.
-
+<!-- use manifest committer for abfs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
   <description>
-    The default committer factory for ABFS is for the manifest committer with
-    abfs-specific tuning.
+    The default committer factory for ABFS is the manifest committer with
+    abfs-specific recovery.
   </description>
 </property>
 
+<!-- use manifest committer for gs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.gs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
   <description>
-    The default committer factory for google cloud storage is for the manifest committer.
+    The default committer factory for google cloud storage is the manifest committer.
   </description>
 </property>
--->
+
 </configuration>

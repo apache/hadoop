@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -55,9 +55,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -109,7 +109,7 @@ public class TestLocalDistributedCacheManager {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     mockfs = mock(FileSystem.class);
     localDir = new File(System.getProperty("test.build.dir", "target/test-dir"),
@@ -118,7 +118,7 @@ public class TestLocalDistributedCacheManager {
     localDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     delete(localDir);
   }
@@ -163,8 +163,8 @@ public class TestLocalDistributedCacheManager {
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(new Answer<FileStatus>() {
       @Override
       public FileStatus answer(InvocationOnMock args) throws Throwable {
-        Path p = (Path)args.getArguments()[0];
-        if("file.txt".equals(p.getName())) {
+        Path p = (Path) args.getArguments()[0];
+        if ("file.txt".equals(p.getName())) {
           return createMockTestFileStatus(filePath);
         }  else {
           throw notMocked(p);
@@ -180,7 +180,7 @@ public class TestLocalDistributedCacheManager {
     // anything else: FNFE
     when(mockfs.openFile(any(Path.class))).thenAnswer(
         (Answer<FutureDataInputStreamBuilder>) args -> {
-          Path src = (Path)args.getArguments()[0];
+          Path src = (Path) args.getArguments()[0];
           if ("file.txt".equals(src.getName())) {
             return new MockOpenFileBuilder(mockfs, src,
                 () -> CompletableFuture.completedFuture(in));
@@ -228,15 +228,15 @@ public class TestLocalDistributedCacheManager {
 
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(
         (Answer<FileStatus>) args -> {
-          Path p = (Path)args.getArguments()[0];
+          Path p = (Path) args.getArguments()[0];
           throw notMocked(p);
         });
 
     when(mockfs.getConf()).thenReturn(conf);
     when(mockfs.openFile(any(Path.class))).thenAnswer(
         (Answer<FutureDataInputStreamBuilder>) args -> {
-          Path src = (Path)args.getArguments()[0];
-            throw notMocked(src);
+          Path src = (Path) args.getArguments()[0];
+          throw notMocked(src);
         });
     conf.set(MRJobConfig.CACHE_FILES, "");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
@@ -272,8 +272,8 @@ public class TestLocalDistributedCacheManager {
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(new Answer<FileStatus>() {
       @Override
       public FileStatus answer(InvocationOnMock args) throws Throwable {
-        Path p = (Path)args.getArguments()[0];
-        if("file.txt".equals(p.getName())) {
+        Path p = (Path) args.getArguments()[0];
+        if ("file.txt".equals(p.getName())) {
           return createMockTestFileStatus(filePath);
         }  else {
           throw notMocked(p);
@@ -286,7 +286,7 @@ public class TestLocalDistributedCacheManager {
         new FSDataInputStream(new MockInputStream(TEST_DATA));
     when(mockfs.openFile(any(Path.class))).thenAnswer(
         (Answer<FutureDataInputStreamBuilder>) args -> {
-          Path src = (Path)args.getArguments()[0];
+          Path src = (Path) args.getArguments()[0];
           if ("file.txt".equals(src.getName())) {
             return new MockOpenFileBuilder(mockfs, src,
                 () -> CompletableFuture.completedFuture(in));

@@ -389,6 +389,6 @@ public class DiskBalancerCluster {
    * @return DiskBalancerDataNode.
    */
   public DiskBalancerDataNode getNodeByName(String hostName) {
-    return hostNames.get(hostName);
+    return hostNames.get(hostName.toLowerCase(Locale.US));
   }
 }

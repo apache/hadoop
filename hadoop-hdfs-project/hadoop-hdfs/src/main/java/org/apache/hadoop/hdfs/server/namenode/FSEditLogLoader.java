@@ -132,7 +132,8 @@ public class FSEditLogLoader {
   /** Limit logging about edit loading to every 5 seconds max. */
   @VisibleForTesting
   static final long LOAD_EDIT_LOG_INTERVAL_MS = 5000;
-  private final LogThrottlingHelper loadEditsLogHelper =
+  @VisibleForTesting
+  static final LogThrottlingHelper LOAD_EDITS_LOG_HELPER =
       new LogThrottlingHelper(LOAD_EDIT_LOG_INTERVAL_MS);
 
   private final FSNamesystem fsNamesys;
@@ -173,7 +174,7 @@ public class FSEditLogLoader {
     fsNamesys.writeLock();
     try {
       long startTime = timer.monotonicNow();
-      LogAction preLogAction = loadEditsLogHelper.record("pre", startTime);
+      LogAction preLogAction = LOAD_EDITS_LOG_HELPER.record("pre", startTime);
       if (preLogAction.shouldLog()) {
         FSImage.LOG.info("Start loading edits file " + edits.getName()
             + " maxTxnsToRead = " + maxTxnsToRead +
@@ -182,7 +183,7 @@ public class FSEditLogLoader {
       long numEdits = loadEditRecords(edits, false, expectedStartingTxId,
           maxTxnsToRead, startOpt, recovery);
       long endTime = timer.monotonicNow();
-      LogAction postLogAction = loadEditsLogHelper.record("post", endTime,
+      LogAction postLogAction = LOAD_EDITS_LOG_HELPER.record("post", endTime,
           numEdits, edits.length(), endTime - startTime);
       if (postLogAction.shouldLog()) {
         FSImage.LOG.info("Loaded {} edits file(s) (the last named {}) of " +
@@ -912,6 +913,7 @@ public class FSEditLogLoader {
       fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
+      fsNamesys.setNeedRollbackFsImage(false);
       break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {

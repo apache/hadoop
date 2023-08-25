@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
@@ -41,6 +42,8 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
@@ -72,6 +75,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -820,6 +824,57 @@ public class JsonUtilClient {
         toDiffList(getList(m, "diffList"));
     return new SnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot,
         diffList);
+  }
+
+  public static FsStatus toFsStatus(Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(FsStatus.class.getSimpleName());
+    long capacity = getLong(m, "capacity", Long.MAX_VALUE);
+    long used = getLong(m, "used", 0);
+    long remaining = getLong(m, "remaining", Long.MAX_VALUE);
+    return new FsStatus(capacity, used, remaining);
+  }
+
+  public static Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies(
+      Map<?, ?> json) {
+    Map<?, ?> erasureCodingPoliciesJson = (Map<?, ?>) json.get("ErasureCodingPolicies");
+    if (erasureCodingPoliciesJson != null) {
+      List<?> objs = (List<?>) erasureCodingPoliciesJson.get(ErasureCodingPolicyInfo.class
+          .getSimpleName());
+      if (objs != null) {
+        ErasureCodingPolicyInfo[] erasureCodingPolicies = new ErasureCodingPolicyInfo[objs
+            .size()];
+        for (int i = 0; i < objs.size(); i++) {
+          final Map<?, ?> m = (Map<?, ?>) objs.get(i);
+          ErasureCodingPolicyInfo erasureCodingPolicyInfo = toECPolicyInfo(m);
+          erasureCodingPolicies[i] = erasureCodingPolicyInfo;
+        }
+        return Arrays.asList(erasureCodingPolicies);
+      }
+    }
+    return new ArrayList<ErasureCodingPolicyInfo>(0);
+  }
+
+  public static ErasureCodingPolicyInfo toECPolicyInfo(Map<?, ?> m) {
+    if (m == null) {
+      return null;
+    }
+    ErasureCodingPolicy ecPolicy = toECPolicy((Map<?, ?>) m.get("policy"));
+    String state = getString(m, "state", "DISABLE");
+    final ErasureCodingPolicyState ecPolicyState = ErasureCodingPolicyState.valueOf(state);
+    return new ErasureCodingPolicyInfo(ecPolicy, ecPolicyState);
+  }
+
+  public static Map<String, String> getErasureCodeCodecs(Map<?, ?> json) {
+    Map<String, String> map = new HashMap<>();
+    Map<?, ?> m = (Map<?, ?>) json.get("ErasureCodingCodecs");
+    m.forEach((key, value) -> {
+      map.put((String) key, (String) value);
+    });
+    return map;
   }
 
   private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(

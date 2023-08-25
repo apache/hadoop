@@ -23,11 +23,10 @@
 
 ###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
 
-1. This release can safely list/index/read S3 buckets where "empty directory"
-markers are retained.
-
-1. This release can be configured to retain these directory makers at the
-expense of being backwards incompatible.
+This release does not delete directory markers when creating
+files or directories underneath.
+This is incompatible with versions of the Hadoop S3A client released
+before 2021.
 
 Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
 full details.
@@ -505,7 +504,7 @@ providers listed after it will be ignored.
 
 ### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which supports the secret
+This is the standard credential provider, which supports the secret
 key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
 values.
 
@@ -1108,6 +1107,7 @@ options are covered in [Testing](./testing.md).
   <value>8MB</value>
   <description>
       The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
   </description>
 </property>
 
@@ -1392,7 +1392,7 @@ an S3 implementation that doesn't return eTags.
 
 When `true` (default) and 'Get Object' doesn't return eTag or
 version ID (depending on configured 'source'), a `NoVersionAttributeException`
-will be thrown.  When `false` and and eTag or version ID is not returned,
+will be thrown.  When `false` and eTag or version ID is not returned,
 the stream can be read, but without any version checking.
 
 
@@ -1709,6 +1709,24 @@ the storage class you want.
 Please note that S3A does not support reading from archive storage classes at the moment.
 `AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
+## <a name="upload"></a>Configuring S3A for S3 on Outposts
+
+S3A now supports [S3 on Outposts](https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html).
+Accessing data through an access point is done by using its Amazon Resource Name (ARN), as opposed to just the bucket name.
+The only supported storage class on Outposts is **OUTPOSTS**, and by default objects are encrypted with [SSE-S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-outposts-data-encryption.html).
+You can set the Access Point ARN property using the following per bucket configuration property:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.sample-outpost-bucket.accesspoint.arn</name>
+  <value>arn:aws:s3-outposts:region:account-id:outpost/outpost-id/accesspoint/accesspoint-name</value>
+  <description>Configure S3a traffic to use this S3 on Outposts Access Point ARN</description>
+</property>
+```
+
+This configures access to the `sample-outpost-bucket` for S3A to go through the new Access Point ARN. So, for example `s3a://sample-outpost-bucket/key` will now use your configured ARN when getting data from S3 on Outpost instead of your bucket.
+
+
 ## <a name="upload"></a>How S3A writes data to S3
 
 The original S3A client implemented file writes by
@@ -1726,7 +1744,9 @@ The "fast" output stream
 
 1.  Uploads large files as blocks with the size set by
     `fs.s3a.multipart.size`. That is: the threshold at which multipart uploads
-    begin and the size of each upload are identical.
+    begin and the size of each upload are identical. This behavior can be enabled
+    or disabled by using the flag `fs.s3a.multipart.uploads.enabled` which by
+    default is set to true.
 1.  Buffers blocks to disk (default) or in on-heap or off-heap memory.
 1.  Uploads blocks in parallel in background threads.
 1.  Begins uploading blocks as soon as the buffered data exceeds this partition
@@ -1868,7 +1888,7 @@ in byte arrays in the JVM's heap prior to upload.
 This *may* be faster than buffering to disk.
 
 The amount of data which can be buffered is limited by the available
-size of the JVM heap heap. The slower the write bandwidth to S3, the greater
+size of the JVM heap. The slower the write bandwidth to S3, the greater
 the risk of heap overflows. This risk can be mitigated by
 [tuning the upload settings](#upload_thread_tuning).
 

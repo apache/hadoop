@@ -21,6 +21,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -41,7 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
@@ -630,9 +630,9 @@ public class ProportionalCapacityPreemptionPolicy
           partitionToLookAt, killable, absCap, absMaxCap, partitionResource,
           reserved, curQueue, effMinRes, effMaxRes);
 
-      if (curQueue instanceof ParentQueue) {
+      if (curQueue instanceof AbstractParentQueue) {
         String configuredOrderingPolicy =
-            ((ParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
+            ((AbstractParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
 
         // Recursively add children
         for (CSQueue c : curQueue.getChildQueues()) {

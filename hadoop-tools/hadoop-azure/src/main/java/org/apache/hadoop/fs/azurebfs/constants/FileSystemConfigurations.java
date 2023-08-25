@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 public final class FileSystemConfigurations {
 
   public static final String DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "";
-
+  public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
   private static final int SIXTY_SECONDS = 60 * 1000;
@@ -96,6 +96,9 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = true;
   public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60 * 1000;
   public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60 * 1000;
+  public static final boolean DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = true;
+  public static final int DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS = 60_000;
+  public static final int DEFAULT_ANALYSIS_PERIOD_MS = 10_000;
 
   public static final DelegatingSSLSocketFactory.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
       = DelegatingSSLSocketFactory.SSLChannelMode.Default;
@@ -117,6 +120,7 @@ public final class FileSystemConfigurations {
 
   public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
+  public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
 
   /**
    * Limit of queued block upload operations before writes

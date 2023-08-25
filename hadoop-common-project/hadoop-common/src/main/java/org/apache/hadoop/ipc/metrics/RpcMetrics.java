@@ -69,16 +69,23 @@ public class RpcMetrics {
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
     metricsTimeUnit = getMetricsTimeUnit(conf);
     if (rpcQuantileEnable) {
+      rpcEnQueueTimeQuantiles =
+          new MutableQuantiles[intervals.length];
       rpcQueueTimeQuantiles =
           new MutableQuantiles[intervals.length];
       rpcLockWaitTimeQuantiles =
           new MutableQuantiles[intervals.length];
       rpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
+      rpcResponseTimeQuantiles =
+          new MutableQuantiles[intervals.length];
       deferredRpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
       for (int i = 0; i < intervals.length; i++) {
         int interval = intervals[i];
+        rpcEnQueueTimeQuantiles[i] = registry.newQuantiles("rpcEnQueueTime"
+            + interval + "s", "rpc enqueue time in " + metricsTimeUnit, "ops",
+            "latency", interval);
         rpcQueueTimeQuantiles[i] = registry.newQuantiles("rpcQueueTime"
             + interval + "s", "rpc queue time in " + metricsTimeUnit, "ops",
             "latency", interval);
@@ -89,6 +96,10 @@ public class RpcMetrics {
         rpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "rpcProcessingTime" + interval + "s",
             "rpc processing time in " + metricsTimeUnit, "ops",
+            "latency", interval);
+        rpcResponseTimeQuantiles[i] = registry.newQuantiles(
+            "rpcResponseTime" + interval + "s",
+            "rpc response time in " + metricsTimeUnit, "ops",
             "latency", interval);
         deferredRpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "deferredRpcProcessingTime" + interval + "s",
@@ -108,12 +119,16 @@ public class RpcMetrics {
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
   @Metric("Number of sent bytes") MutableCounterLong sentBytes;
+  @Metric("EQueue time") MutableRate rpcEnQueueTime;
+  MutableQuantiles[] rpcEnQueueTimeQuantiles;
   @Metric("Queue time") MutableRate rpcQueueTime;
   MutableQuantiles[] rpcQueueTimeQuantiles;
   @Metric("Lock wait time") MutableRate rpcLockWaitTime;
   MutableQuantiles[] rpcLockWaitTimeQuantiles;
   @Metric("Processing time") MutableRate rpcProcessingTime;
   MutableQuantiles[] rpcProcessingTimeQuantiles;
+  @Metric("Response time") MutableRate rpcResponseTime;
+  MutableQuantiles[] rpcResponseTimeQuantiles;
   @Metric("Deferred Processing time") MutableRate deferredRpcProcessingTime;
   MutableQuantiles[] deferredRpcProcessingTimeQuantiles;
   @Metric("Number of authentication failures")
@@ -130,6 +145,8 @@ public class RpcMetrics {
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
   MutableCounterLong rpcRequeueCalls;
+  @Metric("Number of successful RPC calls")
+  MutableCounterLong rpcCallSuccesses;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -248,6 +265,23 @@ public class RpcMetrics {
   }
 
   /**
+   * Sometimes, the request time observed by the client is much longer than
+   * the queue + process time on the RPC server.Perhaps the RPC request
+   * 'waiting enQueue' took too long on the RPC server, so we should add
+   * enQueue time to RpcMetrics. See HADOOP-18840 for details.
+   * Add an RPC enqueue time sample
+   * @param enQTime the queue time
+   */
+  public void addRpcEnQueueTime(long enQTime) {
+    rpcEnQueueTime.add(enQTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcEnQueueTimeQuantiles) {
+        q.add(enQTime);
+      }
+    }
+  }
+
+  /**
    * Add an RPC queue time sample
    * @param qTime the queue time
    */
@@ -282,6 +316,15 @@ public class RpcMetrics {
     }
   }
 
+  public void addRpcResponseTime(long responseTime) {
+    rpcResponseTime.add(responseTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcResponseTimeQuantiles) {
+        q.add(responseTime);
+      }
+    }
+  }
+
   public void addDeferredRpcProcessingTime(long processingTime) {
     deferredRpcProcessingTime.add(processingTime);
     if (rpcQuantileEnable) {
@@ -311,6 +354,13 @@ public class RpcMetrics {
    */
   public void incrRequeueCalls() {
     rpcRequeueCalls.incr();
+  }
+
+  /**
+   * One RPC call success event.
+   */
+  public void incrRpcCallSuccesses() {
+    rpcCallSuccesses.incr();
   }
 
   /**

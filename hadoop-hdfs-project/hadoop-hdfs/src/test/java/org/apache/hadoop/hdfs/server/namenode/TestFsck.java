@@ -19,11 +19,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,12 +31,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -61,7 +59,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import java.util.function.Supplier;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -119,14 +116,13 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.RollingFileAppender;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -137,10 +133,7 @@ public class TestFsck {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestFsck.class.getName());
 
-  static final String AUDITLOG_FILE =
-      GenericTestUtils.getTempPath("TestFsck-audit.log");
-  
-  // Pattern for: 
+  // Pattern for:
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
@@ -164,6 +157,8 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
+  private static LogCapturer auditLogCapture;
+
   public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
                         throws Exception {
@@ -183,6 +178,16 @@ public class TestFsck {
 
   private MiniDFSCluster cluster = null;
   private Configuration conf = null;
+
+  @BeforeClass
+  public static void beforeClass() {
+    auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    auditLogCapture.stopCapturing();
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -222,7 +227,6 @@ public class TestFsck {
     final Path file = new Path(fileName);
     long aTime = fs.getFileStatus(file).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
@@ -246,55 +250,29 @@ public class TestFsck {
     util.cleanup(fs, "/srcdat");
   }
 
-  /** Sets up log4j logger for auditlogs. */
-  private void setupAuditLogs() throws IOException {
-    File file = new File(AUDITLOG_FILE);
-    if (file.exists()) {
-      file.delete();
+  private void verifyAuditLogs() {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int fileStatusSuccess = 0;
+    int fsckCount = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
+      }
+      String extractedAuditLog = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", extractedAuditLog);
+      if (extractedAuditLog.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(
+          extractedAuditLog).matches()) {
+        fileStatusSuccess++;
+      } else if (FSCK_PATTERN.matcher(extractedAuditLog).matches()) {
+        fsckCount++;
+      }
     }
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.removeAllAppenders();
-    logger.setLevel(Level.INFO);
-    PatternLayout layout = new PatternLayout("%m%n");
-    RollingFileAppender appender =
-        new RollingFileAppender(layout, AUDITLOG_FILE);
-    logger.addAppender(appender);
-  }
-  
-  private void verifyAuditLogs() throws IOException {
-    // Turn off the logs
-    GenericTestUtils.disableLog(LoggerFactory.getLogger(
-        FSNamesystem.class.getName() + ".audit"));
-
-    BufferedReader reader = null;
-    try {
-      // Audit log should contain one getfileinfo and one fsck
-      reader = new BufferedReader(new FileReader(AUDITLOG_FILE));
-      String line;
-
-      // one extra getfileinfo stems from resolving the path
-      //
-      for (int i = 0; i < 2; i++) {
-        line = reader.readLine();
-        assertNotNull(line);
-        assertTrue("Expected getfileinfo event not found in audit log",
-            GET_FILE_INFO_PATTERN.matcher(line).matches());
-      }
-      line = reader.readLine();
-      assertNotNull(line);
-      assertTrue("Expected fsck event not found in audit log", FSCK_PATTERN
-          .matcher(line).matches());
-      assertNull("Unexpected event in audit log", reader.readLine());
-    } finally {
-      // Close the reader and remove the appender to release the audit log file
-      // handle after verifying the content of the file.
-      if (reader != null) {
-        reader.close();
-      }
-      Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-      if (logger != null) {
-        logger.removeAllAppenders();
-      }
+    if (fileStatusSuccess < 2) {
+      throw new AssertionError(
+          "getfileinfo cmd should occur at least 2 times. Actual count: " + fileStatusSuccess);
+    }
+    if (fsckCount < 1) {
+      throw new AssertionError("fsck should be present at least once. Actual count: " + fsckCount);
     }
   }
   
@@ -1078,8 +1056,6 @@ public class TestFsck {
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
     assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
     assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
-
-
   }
 
   /** Test if fsck can return -1 in case of failure.
@@ -1412,7 +1388,6 @@ public class TestFsck {
     util.waitReplication(fs, fileName, (short)3);
     long aTime = fc.getFileStatus(symlink).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(aTime, fc.getFileStatus(symlink).getAccessTime());
@@ -1706,6 +1681,91 @@ public class TestFsck {
   }
 
   /**
+   * Test for blockIdCK with datanode staleness.
+   */
+  @Test
+  public void testBlockIdCKStaleness() throws Exception {
+    final short replFactor = 1;
+    final long blockSize = 512;
+    Configuration configuration = new Configuration();
+
+    // Shorten dfs.namenode.stale.datanode.interval for easier testing.
+    configuration.setLong(DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY, 5000);
+    configuration.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    configuration.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, replFactor);
+
+    String[] racks = {"/rack1", "/rack2"};
+    String[] hosts = {"host1", "host2"};
+
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(configuration, builderBaseDir)
+        .hosts(hosts).racks(racks).build();
+    assertNotNull("Failed Cluster Creation", cluster);
+    cluster.waitClusterUp();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    assertNotNull("Failed to get FileSystem", fs);
+
+    try {
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName(getClass().getSimpleName()).setNumFiles(1).build();
+
+      // Create one file.
+      final String pathString = new String("/testfile");
+      final Path path = new Path(pathString);
+      util.createFile(fs, path, 1024L, replFactor, 1024L);
+      util.waitReplication(fs, path, replFactor);
+      StringBuilder sb = new StringBuilder();
+      for (LocatedBlock lb: util.getAllBlocks(fs, path)) {
+        sb.append(lb.getBlock().getLocalBlock().getBlockName() + " ");
+      }
+      String[] bIds = sb.toString().split(" ");
+
+      // Make sure datanode is HEALTHY before down.
+      String outStr = runFsck(configuration, 0, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
+      DatanodeManager dnm = bm.getDatanodeManager();
+      DatanodeDescriptor dn = dnm.getDatanode(cluster.getDataNodes().get(0)
+          .getDatanodeId());
+      final String dnName = dn.getXferAddr();
+
+      // Make the block on datanode enter stale state.
+      cluster.stopDataNode(0);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            DatanodeInfo datanodeInfo = null;
+            for (DatanodeInfo info : fs.getDataNodeStats()) {
+              if (dnName.equals(info.getXferAddr())) {
+                datanodeInfo = info;
+              }
+            }
+            if (datanodeInfo != null && datanodeInfo.isStale(5000)) {
+              return true;
+            }
+          } catch (Exception e) {
+            LOG.warn("Unexpected exception: " + e);
+            return false;
+          }
+          return false;
+        }
+      }, 500, 30000);
+      outStr = runFsck(configuration, 6, true, "/", "-blockId", bIds[0]);
+      assertTrue(outStr.contains(NamenodeFsck.STALE_STATUS));
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * Test for blockIdCK with block corruption.
    */
   @Test
@@ -1770,6 +1830,51 @@ public class TestFsck {
     outStr = runFsck(conf, 1, false, "/", "-blockId", block.getBlockName());
     System.out.println(outStr);
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+  }
+
+  /**
+   * Test for blockIdCK with block excess.
+   */
+  @Test
+  public void testBlockIdCKExcess() throws Exception {
+    final Configuration configuration = new Configuration();
+    // Disable redundancy monitor check so that excess block can be verified.
+    configuration.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 5000);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(configuration).
+        numDataNodes(2).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Create file.
+      Path file = new Path("/test");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 2, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 2);
+
+      List<LocatedBlock> locatedBlocks = DFSTestUtil.getAllBlocks(fs, file);
+      assertEquals(1, locatedBlocks.size());
+      String blockName = locatedBlocks.get(0).getBlock().getBlockName();
+
+      // Validate block is HEALTHY.
+      String outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 2));
+      assertTrue(outStr.contains("No. of live Replica: " + 2));
+      assertTrue(outStr.contains("No. of excess Replica: " + 0));
+
+      // Make the block on one  datanode enter excess state.
+      fs.setReplication(file, (short)1);
+
+      // Validate the one block is EXCESS.
+      outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.EXCESS_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 1));
+      assertTrue(outStr.contains("No. of live Replica: " + 1));
+      assertTrue(outStr.contains("No. of excess Replica: " + 1));
+    }
   }
 
   private void writeFile(final DistributedFileSystem dfs,
@@ -1899,7 +2004,7 @@ public class TestFsck {
 
     // check the replica status should be healthy(0) after decommission
     // is done
-    String fsckOut = runFsck(conf, 0, true, testFile);
+    runFsck(conf, 0, true, testFile);
   }
 
   /**
@@ -2056,7 +2161,6 @@ public class TestFsck {
     long replTime = fs.getFileStatus(replFilePath).getAccessTime();
     long ecTime = fs.getFileStatus(largeFilePath).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(replTime, fs.getFileStatus(replFilePath).getAccessTime());
@@ -2448,6 +2552,68 @@ public class TestFsck {
     assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
     outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
     assertTrue(outStr.contains("has 1 CORRUPT blocks"));
+  }
+
+  @Test
+  public void testFsckECBlockIdRedundantInternalBlocks() throws Exception {
+    final int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+    final int parityBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+    final int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
+    final short groupSize = (short) (dataBlocks + parityBlocks);
+    final File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    final Path dirPath = new Path("/ec_dir");
+    final Path filePath = new Path(dirPath, "file");
+
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf, builderBaseDir).numDataNodes(groupSize + 1).build();
+    cluster.waitActive();
+
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+
+    try {
+      fs.mkdirs(dirPath);
+      fs.setErasureCodingPolicy(dirPath, StripedFileTestUtil.getDefaultECPolicy().getName());
+      DFSTestUtil.createFile(fs, filePath, cellSize * dataBlocks * 2, (short) 1, 0L);
+      LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      Assert.assertEquals(groupSize, block.getLocations().length);
+
+      //general test.
+      String runFsckResult = runFsck(conf, 0, true, "/",
+          "-blockId", block.getBlock().getBlockName());
+      assertTrue(runFsckResult.contains(block.getBlock().getBlockName()));
+      assertTrue(runFsckResult.contains("No. of Expected Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of live Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of redundant Replica: " + 0));
+
+      // stop a dn.
+      DatanodeInfo dnToStop = block.getLocations()[0];
+      MiniDFSCluster.DataNodeProperties dnProp = cluster.stopDataNode(dnToStop.getXferAddr());
+      cluster.setDataNodeDead(dnToStop);
+
+      // wait for reconstruction to happen.
+      DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
+
+      // bring the dn back: 10 internal blocks now.
+      cluster.restartDataNode(dnProp);
+      cluster.waitActive();
+
+      blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      Assert.assertEquals(groupSize + 1, block.getLocations().length);
+
+      //general test, number of redundant internal block replicas.
+      runFsckResult = runFsck(conf, 0, true, "/",
+          "-blockId", block.getBlock().getBlockName());
+      assertTrue(runFsckResult.contains(block.getBlock().getBlockName()));
+      assertTrue(runFsckResult.contains("No. of Expected Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of live Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of redundant Replica: " + 1));
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   private void waitForUnrecoverableBlockGroup(Configuration configuration)

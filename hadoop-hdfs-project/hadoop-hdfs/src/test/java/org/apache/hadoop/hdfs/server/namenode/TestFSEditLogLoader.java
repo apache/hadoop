@@ -807,12 +807,13 @@ public class TestFSEditLogLoader {
   }
 
   @Test
-  public void setLoadFSEditLogThrottling() throws Exception {
+  public void testLoadFSEditLogThrottling() throws Exception {
     FSNamesystem namesystem = mock(FSNamesystem.class);
     namesystem.dir = mock(FSDirectory.class);
 
     FakeTimer timer = new FakeTimer();
     FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0, timer);
+    FSEditLogLoader.LOAD_EDITS_LOG_HELPER.reset();
 
     LogCapturer capture = LogCapturer.captureLogs(FSImage.LOG);
     loader.loadFSEdits(getFakeEditLogInputStream(1, 10), 1);

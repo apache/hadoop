@@ -48,8 +48,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
@@ -104,6 +102,7 @@ import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
@@ -113,6 +112,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -185,9 +185,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -341,18 +338,15 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Lists;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.slf4j.LoggerFactory;
 
 /**
  * FSNamesystem is a container of both transient
@@ -387,8 +381,7 @@ import org.slf4j.LoggerFactory;
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
 
-  public static final org.slf4j.Logger LOG = LoggerFactory
-      .getLogger(FSNamesystem.class.getName());
+  public static final Logger LOG = LoggerFactory.getLogger(FSNamesystem.class);
 
   // The following are private configurations
   public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
@@ -405,7 +398,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
-    return (!isDefaultAuditLogger || auditLog.isInfoEnabled())
+    return (!isDefaultAuditLogger || AUDIT_LOG.isInfoEnabled())
         && !auditLoggers.isEmpty();
   }
 
@@ -461,7 +454,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void appendClientPortToCallerContextIfAbsent() {
-    final CallerContext ctx = CallerContext.getCurrent();
+    CallerContext ctx = CallerContext.getCurrent();
     if (isClientPortInfoAbsent(ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
@@ -471,6 +464,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               .setSignature(origSignature)
               .build());
     }
+    ctx = CallerContext.getCurrent();
+    if (isFromProxyUser(ctx)) {
+      CallerContext.setCurrent(
+          new CallerContext.Builder(ctx.getContext(), contextFieldSeparator)
+              .append(CallerContext.PROXY_USER_PORT, String.valueOf(Server.getRemotePort()))
+              .setSignature(ctx.getSignature())
+              .build());
+    }
   }
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
@@ -478,6 +479,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
+  private boolean isFromProxyUser(CallerContext ctx) {
+    return ctx != null && ctx.getContext() != null &&
+        ctx.getContext().contains(CallerContext.REAL_USER_STR);
+  }
   /**
    * Logger for audit events, noting successful FSNamesystem operations. Emits
    * to FSNamesystem.audit at INFO. Each event causes a set of tab-separated
@@ -491,8 +496,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * perm=&lt;permissions (optional)&gt;
    * </code>
    */
-  public static final Log auditLog = LogFactory.getLog(
-      FSNamesystem.class.getName() + ".audit");
+  public static final Logger AUDIT_LOG =
+      LoggerFactory.getLogger(FSNamesystem.class.getName() + ".audit");
 
   private final int maxCorruptFileBlocksReturn;
   private final boolean isPermissionEnabled;
@@ -862,11 +867,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
     LOG.info("KeyProvider: " + provider);
-    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
-                        DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog(conf);
-    }
+    checkForAsyncLogEnabledByOldConfigs(conf);
     auditLogWithRemotePort =
         conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY,
             DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT);
@@ -1077,6 +1078,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.error(getClass().getSimpleName() + " initialization failed.", re);
       close();
       throw re;
+    }
+  }
+
+  private static void checkForAsyncLogEnabledByOldConfigs(Configuration conf) {
+    // dfs.namenode.audit.log.async is no longer in use. Use log4j properties instead.
+    if (conf.getBoolean("dfs.namenode.audit.log.async", false)) {
+      LOG.warn("Use log4j properties to enable async log for audit logs. "
+          + "dfs.namenode.audit.log.async is no longer in use.");
     }
   }
 
@@ -1389,7 +1398,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // During startup, we're already open for write during initialization.
         editLog.initJournalsForWrite();
         // May need to recover
-        editLog.recoverUnclosedStreams();
+        editLog.recoverUnclosedStreams(true);
         
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
@@ -3044,12 +3053,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     FSDirWriteFileOp.ValidateAddBlockResult r;
-    checkOperation(OperationCategory.READ);
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      checkOperation(OperationCategory.WRITE);
       r = FSDirWriteFileOp.validateAddBlock(this, pc, src, fileId, clientName,
                                             previous, onRetryBlock);
     } finally {
@@ -3095,12 +3104,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
     final BlockType blockType;
-    checkOperation(OperationCategory.READ);
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(null);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      // Changing this operation category to WRITE instead of making getAdditionalDatanode as a
+      // read method is aim to let Active NameNode to handle this RPC, because Active NameNode
+      // contains a more complete DN selection context than Observer NameNode.
+      checkOperation(OperationCategory.WRITE);
       //check safe mode
       checkNameNodeSafeMode("Cannot add datanode; src=" + src + ", blk=" + blk);
       final INodesInPath iip = dir.resolvePath(pc, src, fileId);
@@ -3621,10 +3633,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    if(!allowOwnerSetQuota) {
+      checkSuperuserPrivilege(operationName, src);
+    }
     try {
-      if(!allowOwnerSetQuota) {
-        checkSuperuserPrivilege(operationName, src);
-      }
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -3792,7 +3804,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             lastBlock.getBlockType());
       }
 
-      if (uc.getNumExpectedLocations() == 0 && lastBlock.getNumBytes() == 0) {
+      int minLocationsNum = 1;
+      if (lastBlock.isStriped()) {
+        minLocationsNum = ((BlockInfoStriped) lastBlock).getRealDataBlockNum();
+      }
+      if (uc.getNumExpectedLocations() < minLocationsNum &&
+          lastBlock.getNumBytes() == 0) {
         // There is no datanode reported to this block.
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
@@ -3800,8 +3817,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         pendingFile.removeLastBlock(lastBlock);
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
-            + "Removed empty last block and closed file " + src);
+        if (uc.getNumExpectedLocations() == 0) {
+          // If uc.getNumExpectedLocations() is 0, regardless of whether it
+          // is a striped block or not, we should consider it as an empty block.
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed empty last block and closed file " + src);
+        } else {
+          // If uc.getNumExpectedLocations() is greater than 0, it means that
+          // minLocationsNum must be greater than 1, so this must be a striped
+          // block.
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed last unrecoverable block group and closed file " + src);
+        }
         return true;
       }
       // Start recovery of the last block for this file
@@ -4174,7 +4201,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && isObserver()) {
+    if (dl != null && needLocation && isObserver()) {
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
@@ -4876,6 +4903,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"PendingSPSPaths", "The number of paths to be processed by storage policy satisfier"})
   public int getPendingSPSPaths() {
     return blockManager.getPendingSPSPaths();
+  }
+
+  /**
+   * Get the progress of the reconstruction queues initialisation.
+   */
+  @Override // FSNamesystemMBean
+  @Metric
+  public float getReconstructionQueuesInitProgress() {
+    return blockManager.getReconstructionQueuesInitProgress();
   }
 
   /**
@@ -5931,8 +5967,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       block.setGenerationStamp(nextGenerationStamp(
           blockManager.isLegacyBlock(block.getLocalBlock())));
 
-      locatedBlock = BlockManager.newLocatedBlock(
-          block, file.getLastBlock(), null, -1);
+      BlockInfo lastBlockInfo = file.getLastBlock();
+      locatedBlock = BlockManager.newLocatedBlock(block, lastBlockInfo,
+          null, -1);
+      if (lastBlockInfo.isStriped() &&
+          ((BlockInfoStriped) lastBlockInfo).getTotalBlockNum() >
+              ((LocatedStripedBlock) locatedBlock).getBlockIndices().length) {
+        // The location info in BlockUnderConstructionFeature may not be
+        // complete after a failover, so we just return all block tokens for a
+        // striped block. This will disrupt the correspondence between
+        // LocatedStripedBlock.blockIndices and LocatedStripedBlock.locs,
+        // which is not used in client side. The correspondence between
+        // LocatedStripedBlock.blockIndices and LocatedBlock.blockToken is
+        // ensured.
+        byte[] indices =
+            new byte[((BlockInfoStriped) lastBlockInfo).getTotalBlockNum()];
+        for (int i = 0; i < indices.length; ++i) {
+          indices[i] = (byte) i;
+        }
+        ((LocatedStripedBlock) locatedBlock).setBlockIndices(indices);
+      }
       blockManager.setBlockToken(locatedBlock,
           BlockTokenIdentifier.AccessMode.WRITE);
     } finally {
@@ -5940,6 +5994,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     // Ensure we record the new generation stamp
     getEditLog().logSync();
+    LOG.info("bumpBlockGenerationStamp({}, client={}) success",
+        locatedBlock.getBlock(), clientName);
     return locatedBlock;
   }
   
@@ -6652,6 +6708,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           node.getLeavingServiceStatus().getOutOfServiceOnlyReplicas())
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
+          .put("decommissionDuration",
+              monotonicNow() - node.getLeavingServiceStatus().getStartTime())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -7761,8 +7819,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     String poolName = req == null ? null : req.getPoolName();
+    checkSuperuserPrivilege(operationName, poolName);
     try {
-      checkSuperuserPrivilege(operationName, poolName);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7788,8 +7846,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
+    checkSuperuserPrivilege(operationName, poolNameStr);
     try {
-      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7815,8 +7873,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "removeCachePool";
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
+    checkSuperuserPrivilege(operationName, poolNameStr);
     try {
-      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -8017,11 +8075,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           SafeModeException, AccessControlException {
     final String operationName = "createEncryptionZone";
     FileStatus resultingStat = null;
+    checkSuperuserPrivilege(operationName, src);
     try {
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-      checkSuperuserPrivilege(operationName, src);
       checkOperation(OperationCategory.WRITE);
       writeLock();
       try {
@@ -8100,11 +8158,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException {
     final String operationName = "reencryptEncryptionZone";
     boolean success = false;
+    checkSuperuserPrivilege(operationName, zone);
     try {
       Preconditions.checkNotNull(zone, "zone is null.");
       checkOperation(OperationCategory.WRITE);
       final FSPermissionChecker pc = dir.getPermissionChecker();
-      checkSuperuserPrivilege(operationName, zone);
       checkNameNodeSafeMode("NameNode in safemode, cannot " + action
           + " re-encryption on zone " + zone);
       reencryptEncryptionZoneInt(pc, zone, action, logRetryCache);
@@ -8780,15 +8838,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FileStatus status, CallerContext callerContext, UserGroupInformation ugi,
         DelegationTokenSecretManager dtSecretManager) {
 
-      if (auditLog.isDebugEnabled() ||
-          (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
+      if (AUDIT_LOG.isDebugEnabled() ||
+          (AUDIT_LOG.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = STRING_BUILDER.get();
         src = escapeJava(src);
         dst = escapeJava(dst);
         sb.setLength(0);
+        String ipAddr = addr != null ? "/" + addr.getHostAddress() : "null";
         sb.append("allowed=").append(succeeded).append("\t")
             .append("ugi=").append(userName).append("\t")
-            .append("ip=").append(addr).append("\t")
+            .append("ip=").append(ipAddr).append("\t")
             .append("cmd=").append(cmd).append("\t")
             .append("src=").append(src).append("\t")
             .append("dst=").append(dst).append("\t");
@@ -8850,38 +8909,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     public void logAuditMessage(String message) {
-      auditLog.info(message);
+      AUDIT_LOG.info(message);
     }
   }
 
-  private static void enableAsyncAuditLog(Configuration conf) {
-    if (!(auditLog instanceof Log4JLogger)) {
-      LOG.warn("Log4j is required to enable async auditlog");
-      return;
-    }
-    Logger logger = ((Log4JLogger)auditLog).getLogger();
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    // failsafe against trying to async it more than once
-    if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
-      AsyncAppender asyncAppender = new AsyncAppender();
-      asyncAppender.setBlocking(conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
-      ));
-      asyncAppender.setBufferSize(conf.getInt(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
-      ));
-      // change logger to have an async appender containing all the
-      // previously configured appenders
-      for (Appender appender : appenders) {
-        logger.removeAppender(appender);
-        asyncAppender.addAppender(appender);
-      }
-      logger.addAppender(asyncAppender);        
-    }
-  }
   /**
    * Return total number of Sync Operations on FSEditLog.
    */
@@ -9034,9 +9065,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
-    for (LocatedBlock b : blocks.getLocatedBlocks()) {
-      if (b.getLocations() == null || b.getLocations().length == 0) {
-        throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+    if (blocks == null) {
+      return;
+    }
+    List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
+    if (locatedBlockList != null) {
+      for (LocatedBlock b : locatedBlockList) {
+        if (b.getLocations() == null || b.getLocations().length == 0) {
+          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+        }
       }
     }
   }

@@ -121,7 +121,7 @@ class FSDirConcatOp {
     for(String src : srcs) {
       final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       // permission check for srcs
-      if (pc != null) {
+      if (pc != null && fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ); // read the file
         fsd.checkParentAccess(pc, iip, FsAction.WRITE); // for delete
       }

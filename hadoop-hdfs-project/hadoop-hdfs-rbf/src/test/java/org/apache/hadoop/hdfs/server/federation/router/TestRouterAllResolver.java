@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -190,6 +192,18 @@ public class TestRouterAllResolver {
         routerFs.getFileStatus(testFilePath).getLen() > 110);
     assertDirsEverywhere(path, 9);
     assertFilesDistributed(path, 15);
+
+    // Test truncate
+    String testTruncateFile = path + "/dir2/dir22/dir220/file-truncate.txt";
+    createTestFile(routerFs, testTruncateFile);
+    Path testTruncateFilePath = new Path(testTruncateFile);
+    routerFs.truncate(testTruncateFilePath, 10);
+    TestFileTruncate.checkBlockRecovery(testTruncateFilePath,
+        (DistributedFileSystem) routerFs);
+    assertEquals("Truncate file fails", 10,
+        routerFs.getFileStatus(testTruncateFilePath).getLen());
+    assertDirsEverywhere(path, 9);
+    assertFilesDistributed(path, 16);
 
     // Removing a directory should remove it from every subcluster
     routerFs.delete(new Path(path + "/dir2/dir22/dir220"), true);

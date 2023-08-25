@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -80,6 +77,12 @@ public class FsImageValidation {
 
   static final String FS_IMAGE = "FS_IMAGE";
 
+  static String getEnv(String property) {
+    final String value = System.getenv().get(property);
+    LOG.info("ENV: {} = {}", property, value);
+    return value;
+  }
+
   static FsImageValidation newInstance(String... args) {
     final String f = Cli.parse(args);
     if (f == null) {
@@ -125,15 +128,10 @@ public class FsImageValidation {
     }
 
     static void setLogLevel(Class<?> clazz, Level level) {
-      final Log log = LogFactory.getLog(clazz);
-      if (log instanceof Log4JLogger) {
-        final org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
-        logger.setLevel(level);
-        LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}",
-            clazz.getName(), level, logger.getEffectiveLevel());
-      } else {
-        LOG.warn("Failed setLogLevel {} to {}", clazz.getName(), level);
-      }
+      final org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(clazz);
+      logger.setLevel(level);
+      LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}", clazz.getName(), level,
+          logger.getEffectiveLevel());
     }
 
     static String toCommaSeparatedNumber(long n) {
@@ -310,10 +308,7 @@ public class FsImageValidation {
     static String parse(String... args) {
       final String f;
       if (args == null || args.length == 0) {
-        f = System.getenv().get(FS_IMAGE);
-        if (f != null) {
-          println("Environment variable %s = %s", FS_IMAGE, f);
-        }
+        f = getEnv(FS_IMAGE);
       } else if (args.length == 1) {
         f = args[0];
       } else {

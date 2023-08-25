@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -59,6 +60,13 @@ public class TestQueueMappings {
     cs.setRMContext(rmContext);
     cs.init(conf);
     cs.start();
+  }
+
+  @After
+  public void tearDown() {
+    if (cs != null) {
+      cs.stop();
+    }
   }
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {

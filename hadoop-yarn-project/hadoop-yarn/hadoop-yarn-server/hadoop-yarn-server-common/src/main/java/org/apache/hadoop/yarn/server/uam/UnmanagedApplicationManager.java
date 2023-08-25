@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -62,9 +63,9 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,6 +100,7 @@ public class UnmanagedApplicationManager {
   private long asyncApiPollIntervalMillis;
   private RecordFactory recordFactory;
   private boolean keepContainersAcrossApplicationAttempts;
+  private ApplicationSubmissionContext applicationSubmissionContext;
 
   /*
    * This flag is used as an indication that this method launchUAM/reAttachUAM
@@ -117,13 +119,15 @@ public class UnmanagedApplicationManager {
    * @param submitter user name of the app
    * @param appNameSuffix the app name suffix to use
    * @param rmName name of the YarnRM
+   * @param originalApplicationSubmissionContext ApplicationSubmissionContext
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery. See {@link ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)}
    */
   public UnmanagedApplicationManager(Configuration conf, ApplicationId appId,
       String queueName, String submitter, String appNameSuffix,
-      boolean keepContainersAcrossApplicationAttempts, String rmName) {
+      boolean keepContainersAcrossApplicationAttempts, String rmName,
+      ApplicationSubmissionContext originalApplicationSubmissionContext) {
     Preconditions.checkNotNull(conf, "Configuration cannot be null");
     Preconditions.checkNotNull(appId, "ApplicationId cannot be null");
     Preconditions.checkNotNull(submitter, "App submitter cannot be null");
@@ -136,7 +140,7 @@ public class UnmanagedApplicationManager {
     this.userUgi = null;
     // Relayer's rmClient will be set after the RM connection is created
     this.rmProxyRelayer =
-        new AMRMClientRelayer(null, this.applicationId, rmName);
+        new AMRMClientRelayer(null, this.applicationId, rmName, this.conf);
     this.heartbeatHandler = createAMHeartbeatRequestHandler(this.conf,
         this.applicationId, this.rmProxyRelayer);
 
@@ -144,12 +148,11 @@ public class UnmanagedApplicationManager {
     this.registerRequest = null;
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     this.asyncApiPollIntervalMillis = conf.getLong(
-        YarnConfiguration.
-            YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS,
-        YarnConfiguration.
-            DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
+        YarnConfiguration.YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     this.keepContainersAcrossApplicationAttempts =
         keepContainersAcrossApplicationAttempts;
+    this.applicationSubmissionContext = originalApplicationSubmissionContext;
   }
 
   @VisibleForTesting
@@ -171,8 +174,7 @@ public class UnmanagedApplicationManager {
     this.connectionInitiated = true;
 
     // Blocking call to RM
-    Token<AMRMTokenIdentifier> amrmToken =
-        initializeUnmanagedAM(this.applicationId);
+    Token<AMRMTokenIdentifier> amrmToken = initializeUnmanagedAM(this.applicationId);
 
     // Creates the UAM connection
     createUAMProxy(amrmToken);
@@ -213,8 +215,8 @@ public class UnmanagedApplicationManager {
    * @throws IOException if register fails
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request)
-      throws YarnException, IOException {
+      RegisterApplicationMasterRequest request) throws YarnException, IOException {
+
     // Save the register request for re-register later
     this.registerRequest = request;
 
@@ -224,16 +226,17 @@ public class UnmanagedApplicationManager {
         this.rmProxyRelayer.registerApplicationMaster(this.registerRequest);
     this.heartbeatHandler.resetLastResponseId();
 
-    for (Container container : response.getContainersFromPreviousAttempts()) {
-      LOG.debug("RegisterUAM returned existing running container {}",
-          container.getId());
+    if (LOG.isDebugEnabled()) {
+      for (Container container : response.getContainersFromPreviousAttempts()) {
+        LOG.debug("RegisterUAM returned existing running container {}", container.getId());
+      }
+
+      for (NMToken nmToken : response.getNMTokensFromPreviousAttempts()) {
+        LOG.debug("RegisterUAM returned existing NM token for node {}", nmToken.getNodeId());
+      }
     }
-    for (NMToken nmToken : response.getNMTokensFromPreviousAttempts()) {
-      LOG.debug("RegisterUAM returned existing NM token for node {}",
-          nmToken.getNodeId());
-    }
-    LOG.info(
-        "RegisterUAM returned {} existing running container and {} NM tokens",
+
+    LOG.info("RegisterUAM returned {} existing running container and {} NM tokens",
         response.getContainersFromPreviousAttempts().size(),
         response.getNMTokensFromPreviousAttempts().size());
 
@@ -253,8 +256,8 @@ public class UnmanagedApplicationManager {
    * @throws IOException if finishAM call fails
    */
   public FinishApplicationMasterResponse finishApplicationMaster(
-      FinishApplicationMasterRequest request)
-      throws YarnException, IOException {
+      FinishApplicationMasterRequest request) throws YarnException, IOException {
+
     if (this.userUgi == null) {
       if (this.connectionInitiated) {
         // This is possible if the async launchUAM is still
@@ -318,8 +321,7 @@ public class UnmanagedApplicationManager {
         LOG.info("Unmanaged AM still not successfully launched/registered yet."
             + " Saving the allocate request and send later.");
       } else {
-        throw new YarnException(
-            "AllocateAsync should not be called before launchUAM");
+        throw new YarnException("AllocateAsync should not be called before launchUAM");
       }
     }
   }
@@ -354,7 +356,7 @@ public class UnmanagedApplicationManager {
    * Returns RM proxy for the specified protocol type. Unit test cases can
    * override this method and return mock proxy instances.
    *
-   * @param protocol protocal of the proxy
+   * @param protocol protocol of the proxy
    * @param config configuration
    * @param user ugi for the proxy connection
    * @param token token for the connection
@@ -407,8 +409,8 @@ public class UnmanagedApplicationManager {
     }
   }
 
-  private void submitUnmanagedApp(ApplicationId appId)
-      throws YarnException, IOException {
+  private void submitUnmanagedApp(ApplicationId appId) throws YarnException, IOException {
+
     SubmitApplicationRequest submitRequest =
         this.recordFactory.newRecordInstance(SubmitApplicationRequest.class);
 
@@ -418,17 +420,28 @@ public class UnmanagedApplicationManager {
     context.setApplicationId(appId);
     context.setApplicationName(APP_NAME + "-" + appNameSuffix);
     if (StringUtils.isBlank(this.queueName)) {
-      context.setQueue(this.conf.get(DEFAULT_QUEUE_CONFIG,
-          YarnConfiguration.DEFAULT_QUEUE_NAME));
+      context.setQueue(this.conf.get(DEFAULT_QUEUE_CONFIG, YarnConfiguration.DEFAULT_QUEUE_NAME));
     } else {
       context.setQueue(this.queueName);
     }
 
     ContainerLaunchContext amContainer =
         this.recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     context.setAMContainerSpec(amContainer);
+    if (applicationSubmissionContext != null) {
+      context.setApplicationType(applicationSubmissionContext.getApplicationType());
+      context.setKeepContainersAcrossApplicationAttempts(
+          applicationSubmissionContext.getKeepContainersAcrossApplicationAttempts());
+      context.setApplicationTags(applicationSubmissionContext.getApplicationTags());
+      context.setApplicationTimeouts(applicationSubmissionContext.getApplicationTimeouts());
+      context.setLogAggregationContext(applicationSubmissionContext.getLogAggregationContext());
+      context.setNodeLabelExpression(applicationSubmissionContext.getNodeLabelExpression());
+      context.setApplicationSchedulingPropertiesMap(
+          applicationSubmissionContext.getApplicationSchedulingPropertiesMap());
+      context.setPriority(applicationSubmissionContext.getPriority());
+    }
     submitRequest.setApplicationSubmissionContext(context);
 
     context.setUnmanagedAM(true);
@@ -451,8 +464,7 @@ public class UnmanagedApplicationManager {
    * @throws IOException if getApplicationReport fails
    */
   private ApplicationAttemptReport monitorCurrentAppAttempt(ApplicationId appId,
-      Set<YarnApplicationState> appStates,
-      YarnApplicationAttemptState attemptState)
+      Set<YarnApplicationState> appStates, YarnApplicationAttemptState attemptState)
       throws YarnException, IOException {
 
     long startTime = System.currentTimeMillis();
@@ -479,25 +491,26 @@ public class UnmanagedApplicationManager {
       }
 
       if (appAttemptId != null) {
-        GetApplicationAttemptReportRequest req = this.recordFactory
-            .newRecordInstance(GetApplicationAttemptReportRequest.class);
+        GetApplicationAttemptReportRequest req =
+             this.recordFactory.newRecordInstance(GetApplicationAttemptReportRequest.class);
         req.setApplicationAttemptId(appAttemptId);
-        ApplicationAttemptReport attemptReport = this.rmClient
-            .getApplicationAttemptReport(req).getApplicationAttemptReport();
-        if (attemptState
-            .equals(attemptReport.getYarnApplicationAttemptState())) {
+        GetApplicationAttemptReportResponse appAttemptReport =
+            this.rmClient.getApplicationAttemptReport(req);
+        ApplicationAttemptReport attemptReport = appAttemptReport.getApplicationAttemptReport();
+        YarnApplicationAttemptState appAttemptState =
+            attemptReport.getYarnApplicationAttemptState();
+        if (attemptState.equals(appAttemptState)) {
           return attemptReport;
         }
-        LOG.info("Current attempt state of " + appAttemptId + " is "
-            + attemptReport.getYarnApplicationAttemptState()
-            + ", waiting for current attempt to reach " + attemptState);
+        LOG.info("Current attempt state of {} is {}, waiting for current attempt to reach {}.",
+            appAttemptId, appAttemptState, attemptState);
       }
 
       try {
         Thread.sleep(this.asyncApiPollIntervalMillis);
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting for current attempt of " + appId
-            + " to reach " + attemptState);
+        LOG.warn("Interrupted while waiting for current attempt of {} to reach {}.",
+            appId, attemptState);
       }
 
       if (System.currentTimeMillis() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
@@ -522,8 +535,7 @@ public class UnmanagedApplicationManager {
     if (amrmToken != null) {
       token = ConverterUtils.convertFromYarn(amrmToken, (Text) null);
     } else {
-      LOG.warn(
-          "AMRMToken not found in the application report for application: {}",
+      LOG.warn("AMRMToken not found in the application report for application: {}",
           this.applicationId);
     }
     return token;
@@ -550,5 +562,10 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   protected boolean isHeartbeatThreadAlive() {
     return this.heartbeatHandler.isAlive();
+  }
+
+  @VisibleForTesting
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    return applicationSubmissionContext;
   }
 }

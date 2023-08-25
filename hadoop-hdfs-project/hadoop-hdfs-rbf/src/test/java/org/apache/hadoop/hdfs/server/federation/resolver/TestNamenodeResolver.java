@@ -91,6 +91,98 @@ public class TestNamenodeResolver {
   }
 
   @Test
+  public void testShuffleObserverNNs() throws Exception {
+    // Add an active entry to the store
+    NamenodeStatusReport activeReport = createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE);
+    assertTrue(namenodeResolver.registerNamenode(activeReport));
+
+    // Add a standby entry to the store
+    NamenodeStatusReport standbyReport = createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY);
+    assertTrue(namenodeResolver.registerNamenode(standbyReport));
+
+    // Load cache
+    stateStore.refreshCaches(true);
+
+    // Get namenodes from state store.
+    List<? extends FederationNamenodeContext> withoutObserver =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(2, withoutObserver.size());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, withoutObserver.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, withoutObserver.get(1).getState());
+
+    // Get namenodes from cache.
+    withoutObserver = namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(2, withoutObserver.size());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, withoutObserver.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, withoutObserver.get(1).getState());
+
+    // Add an observer entry to the store
+    NamenodeStatusReport observerReport1 = createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[2], HAServiceState.OBSERVER);
+    assertTrue(namenodeResolver.registerNamenode(observerReport1));
+
+    // Load cache
+    stateStore.refreshCaches(true);
+
+    // Get namenodes from state store.
+    List<? extends FederationNamenodeContext> observerList =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(3, observerList.size());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, observerList.get(1).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, observerList.get(2).getState());
+
+    // Get namenodes from cache.
+    observerList = namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(3, observerList.size());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, observerList.get(1).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, observerList.get(2).getState());
+
+    // Add one new observer entry to the store
+    NamenodeStatusReport observerReport2 = createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[3], HAServiceState.OBSERVER);
+    assertTrue(namenodeResolver.registerNamenode(observerReport2));
+
+    // Load cache
+    stateStore.refreshCaches(true);
+
+    // Get namenodes from state store.
+    List<? extends FederationNamenodeContext> observerList2 =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(4, observerList2.size());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList2.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList2.get(1).getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, observerList2.get(2).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, observerList2.get(3).getState());
+
+    // Get namenodes from cache.
+    observerList2 = namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+    assertEquals(4, observerList2.size());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList2.get(0).getState());
+    assertEquals(FederationNamenodeServiceState.OBSERVER, observerList2.get(1).getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, observerList2.get(2).getState());
+    assertEquals(FederationNamenodeServiceState.STANDBY, observerList2.get(3).getState());
+
+    // Test shuffler
+    List<? extends FederationNamenodeContext> observerList3;
+    boolean hit = false;
+    for (int i = 0; i < 1000; i++) {
+      observerList3 = namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+      assertEquals(FederationNamenodeServiceState.OBSERVER, observerList3.get(0).getState());
+      assertEquals(FederationNamenodeServiceState.OBSERVER, observerList3.get(1).getState());
+      if (observerList3.get(0).getNamenodeId().equals(observerList2.get(1).getNamenodeId()) &&
+          observerList3.get(1).getNamenodeId().equals(observerList2.get(0).getNamenodeId())) {
+        hit = true;
+        break;
+      }
+    }
+    assertTrue(hit);
+  }
+
+  @Test
   public void testStateStoreDisconnected() throws Exception {
 
     // Add an entry to the store

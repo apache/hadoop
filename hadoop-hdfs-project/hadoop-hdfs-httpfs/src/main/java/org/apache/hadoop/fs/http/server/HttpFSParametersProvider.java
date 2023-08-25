@@ -128,6 +128,10 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETECPOLICY, new Class[] {});
     PARAMS_DEF.put(Operation.UNSETECPOLICY, new Class[] {});
     PARAMS_DEF.put(Operation.SATISFYSTORAGEPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.GETFILELINKSTATUS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETSTATUS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETECPOLICIES, new Class[]{});
+    PARAMS_DEF.put(Operation.GETECCODECS, new Class[]{});
     PARAMS_DEF.put(Operation.GET_BLOCK_LOCATIONS, new Class[] {OffsetParam.class, LenParam.class});
   }
 

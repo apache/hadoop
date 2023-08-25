@@ -69,6 +69,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -138,10 +139,17 @@ public class DFSUtil {
   public static class ServiceComparator implements Comparator<DatanodeInfo> {
     @Override
     public int compare(DatanodeInfo a, DatanodeInfo b) {
-      // Decommissioned nodes will still be moved to the end of the list
+      // Decommissioned nodes will be moved to the end of the list.
       if (a.isDecommissioned()) {
         return b.isDecommissioned() ? 0 : 1;
       } else if (b.isDecommissioned()) {
+        return -1;
+      }
+
+      // Decommissioning nodes will be placed before decommissioned nodes.
+      if (a.isDecommissionInProgress()) {
+        return b.isDecommissionInProgress() ? 0 : 1;
+      } else if (b.isDecommissionInProgress()) {
         return -1;
       }
 
@@ -158,9 +166,9 @@ public class DFSUtil {
 
   /**
    * Comparator for sorting DataNodeInfo[] based on
-   * slow, stale, entering_maintenance and decommissioned states.
+   * slow, stale, entering_maintenance, decommissioning and decommissioned states.
    * Order: live {@literal ->} slow {@literal ->} stale {@literal ->}
-   * entering_maintenance {@literal ->} decommissioned
+   * entering_maintenance {@literal ->} decommissioning {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
   public static class StaleAndSlowComparator extends ServiceComparator {
@@ -1935,5 +1943,19 @@ public class DFSUtil {
 
     return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
         || parent.equals(Path.SEPARATOR);
+  }
+
+  /**
+   * Add transfer rate metrics for valid data read and duration values.
+   * @param metrics metrics for datanodes
+   * @param read bytes read
+   * @param duration read duration
+   */
+  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
+    if (read >= 0 && duration > 0) {
+        metrics.addReadTransferRate(read * 1000 / duration);
+    } else {
+      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
+    }
   }
 }

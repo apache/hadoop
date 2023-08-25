@@ -45,6 +45,9 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Refre
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RemoveFromClusterNodeLabelsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ReplaceLabelsOnNodeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.UpdateNodeResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeregisterSubClusterRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.SaveFederationQueuePolicyRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.BatchSaveFederationQueuePoliciesRequestProto;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
@@ -75,6 +78,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
@@ -103,6 +112,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOn
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOnNodeResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeregisterSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeregisterSubClusterResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SaveFederationQueuePolicyRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SaveFederationQueuePolicyResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.BatchSaveFederationQueuePoliciesRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.BatchSaveFederationQueuePoliciesResponsePBImpl;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
@@ -111,8 +126,8 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
 
   private ResourceManagerAdministrationProtocolPB proxy;
   
-  public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
-      Configuration conf) throws IOException {
+  public ResourceManagerAdministrationProtocolPBClientImpl(
+      long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class, 
         ProtobufRpcEngine2.class);
     proxy = (ResourceManagerAdministrationProtocolPB)RPC.getProxy(
@@ -129,7 +144,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws YarnException, IOException {
-    RefreshQueuesRequestProto requestProto = 
+    RefreshQueuesRequestProto requestProto =
       ((RefreshQueuesRequestPBImpl)request).getProto();
     try {
       return new RefreshQueuesResponsePBImpl(
@@ -143,7 +158,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
   throws YarnException, IOException {
-    RefreshNodesRequestProto requestProto = 
+    RefreshNodesRequestProto requestProto =
       ((RefreshNodesRequestPBImpl)request).getProto();
     try {
       return new RefreshNodesResponsePBImpl(
@@ -158,7 +173,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws YarnException, IOException {
-    RefreshSuperUserGroupsConfigurationRequestProto requestProto = 
+    RefreshSuperUserGroupsConfigurationRequestProto requestProto =
       ((RefreshSuperUserGroupsConfigurationRequestPBImpl)request).getProto();
     try {
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
@@ -173,7 +188,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request) throws YarnException,
       IOException {
-    RefreshUserToGroupsMappingsRequestProto requestProto = 
+    RefreshUserToGroupsMappingsRequestProto requestProto =
       ((RefreshUserToGroupsMappingsRequestPBImpl)request).getProto();
     try {
       return new RefreshUserToGroupsMappingsResponsePBImpl(
@@ -187,7 +202,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request) throws YarnException, IOException {
-    RefreshAdminAclsRequestProto requestProto = 
+    RefreshAdminAclsRequestProto requestProto =
       ((RefreshAdminAclsRequestPBImpl)request).getProto();
     try {
       return new RefreshAdminAclsResponsePBImpl(
@@ -338,6 +353,48 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
     try {
       return new NodesToAttributesMappingResponsePBImpl(
           proxy.mapAttributesToNodes(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(
+      DeregisterSubClusterRequest request) throws YarnException, IOException {
+    DeregisterSubClusterRequestProto requestProto =
+        ((DeregisterSubClusterRequestPBImpl) request).getProto();
+    try {
+      return new DeregisterSubClusterResponsePBImpl(
+          proxy.deregisterSubCluster(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+    SaveFederationQueuePolicyRequestProto requestProto =
+        ((SaveFederationQueuePolicyRequestPBImpl) request).getProto();
+    try {
+      return new SaveFederationQueuePolicyResponsePBImpl(
+          proxy.saveFederationQueuePolicy(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    BatchSaveFederationQueuePoliciesRequestProto requestProto =
+        ((BatchSaveFederationQueuePoliciesRequestPBImpl) request).getProto();
+    try {
+      return new BatchSaveFederationQueuePoliciesResponsePBImpl(
+          proxy.batchSaveFederationQueuePolicies(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

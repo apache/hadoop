@@ -19,29 +19,51 @@
 package org.apache.hadoop.yarn.server.router;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.EnumSet;
 import java.io.IOException;
 
 /**
@@ -60,7 +82,7 @@ public final class RouterServerUtil {
 
   private static final String EPOCH_PREFIX = "e";
 
-  private static Random rand = new Random(System.currentTimeMillis());
+  private static final String RESERVEIDSTR_PREFIX = "reservation_";
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -109,6 +131,19 @@ public final class RouterServerUtil {
       LOG.error(errMsg);
       throw new YarnException(errMsg);
     }
+  }
+
+  /**
+   * Throws an exception due to an error.
+   *
+   * @param errMsg the error message
+   * @throws YarnException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowException(String errMsg) throws YarnException {
+    LOG.error(errMsg);
+    throw new YarnException(errMsg);
   }
 
   public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
@@ -300,6 +335,28 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Throws an YarnRuntimeException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return YarnRuntimeException
+   */
+  @Public
+  @Unstable
+  public static YarnRuntimeException logAndReturnYarnRunTimeException(
+      Throwable t, String errMsgFormat, Object... args) {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      return new YarnRuntimeException(msg, t);
+    } else {
+      LOG.error(msg);
+      return new YarnRuntimeException(msg);
+    }
+  }
+
+  /**
    * Check applicationId is accurate.
    *
    * We need to ensure that applicationId cannot be empty and
@@ -456,39 +513,297 @@ public final class RouterServerUtil {
     }
   }
 
+  public static boolean isAllowedDelegationTokenOp() throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
+          UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
+          UserGroupInformation.AuthenticationMethod.CERTIFICATE)
+          .contains(UserGroupInformation.getCurrentUser()
+          .getRealAuthenticationMethod());
+    } else {
+      return true;
+    }
+  }
+
+  public static String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)
+      throws IOException {
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    // we can always renew our own tokens
+    return loginUser.getUserName().equals(user.getUserName())
+        ? token.decodeIdentifier().getRenewer().toString() : user.getShortUserName();
+  }
+
   /**
-   * Randomly pick ActiveSubCluster.
-   * During the selection process, we will exclude SubClusters from the blacklist.
+   * Set User information.
    *
-   * @param activeSubClusters List of active subClusters.
-   * @param blackList blacklist.
-   * @return Active SubClusterId.
-   * @throws YarnException When there is no Active SubCluster,
-   * an exception will be thrown (No active SubCluster available to submit the request.)
+   * If the username is empty, we will use the Yarn Router user directly.
+   * Do not create a proxy user if userName matches the userName on current UGI.
+   *
+   * @param userName userName.
+   * @return UserGroupInformation.
    */
-  public static SubClusterId getRandomActiveSubCluster(
-      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-      throws YarnException {
+  public static UserGroupInformation setupUser(final String userName) {
+    UserGroupInformation user = null;
+    try {
+      // If userName is empty, we will return UserGroupInformation.getCurrentUser.
+      // Do not create a proxy user if user name matches the user name on
+      // current UGI
+      if (userName == null || userName.trim().isEmpty()) {
+        user = UserGroupInformation.getCurrentUser();
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+      } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
+        user = UserGroupInformation.getCurrentUser();
+      } else {
+        user = UserGroupInformation.createProxyUser(userName,
+            UserGroupInformation.getCurrentUser());
+      }
+      return user;
+    } catch (IOException e) {
+      throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
+          "Error while creating Router Service for user : %s.", user);
+    }
+  }
 
-    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
-    if (MapUtils.isEmpty(activeSubClusters)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+  /**
+   * Check reservationId is accurate.
+   *
+   * We need to ensure that reservationId cannot be empty and
+   * can be converted to ReservationId object normally.
+   *
+   * @param reservationId reservationId.
+   * @throws IllegalArgumentException If the format of the reservationId is not accurate,
+   * an IllegalArgumentException needs to be thrown.
+   */
+  @Public
+  @Unstable
+  public static void validateReservationId(String reservationId) throws IllegalArgumentException {
+
+    if (reservationId == null || reservationId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
-    // Change activeSubClusters to List
-    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
-
-    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
-    if (CollectionUtils.isNotEmpty(blackList)) {
-      subClusterIds.removeAll(blackList);
+    if (!reservationId.startsWith(RESERVEIDSTR_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
     }
 
-    // Check there are still active subcluster after removing the blacklist
-    if (CollectionUtils.isEmpty(subClusterIds)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    String[] resFields = reservationId.split("_");
+    if (resFields.length != 3) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
     }
 
-    // Randomly choose a SubCluster
-    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
+    String clusterTimestamp = resFields[1];
+    String id = resFields[2];
+    if (!NumberUtils.isDigits(id) || !NumberUtils.isDigits(clusterTimestamp)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+  }
+
+  /**
+   * Convert ReservationDefinitionInfo to ReservationDefinition.
+   *
+   * @param definitionInfo ReservationDefinitionInfo Object.
+   * @return ReservationDefinition.
+   */
+  public static ReservationDefinition convertReservationDefinition(
+      ReservationDefinitionInfo definitionInfo) {
+    if (definitionInfo == null || definitionInfo.getReservationRequests() == null
+        || definitionInfo.getReservationRequests().getReservationRequest() == null
+        || definitionInfo.getReservationRequests().getReservationRequest().isEmpty()) {
+      throw new RuntimeException("definitionInfo Or ReservationRequests is Null.");
+    }
+
+    // basic variable
+    long arrival = definitionInfo.getArrival();
+    long deadline = definitionInfo.getDeadline();
+
+    // ReservationRequests reservationRequests
+    String name = definitionInfo.getReservationName();
+    String recurrenceExpression = definitionInfo.getRecurrenceExpression();
+    Priority priority = Priority.newInstance(definitionInfo.getPriority());
+
+    // reservation requests info
+    List<ReservationRequest> reservationRequestList = new ArrayList<>();
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+
+    List<ReservationRequestInfo> reservationRequestInfos =
+        reservationRequestsInfo.getReservationRequest();
+
+    for (ReservationRequestInfo resRequestInfo : reservationRequestInfos) {
+      ResourceInfo resourceInfo = resRequestInfo.getCapability();
+      Resource capability =
+          Resource.newInstance(resourceInfo.getMemorySize(), resourceInfo.getvCores());
+      ReservationRequest reservationRequest = ReservationRequest.newInstance(capability,
+          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(),
+          resRequestInfo.getDuration());
+      reservationRequestList.add(reservationRequest);
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter reservationRequestInterpreter =
+        values[reservationRequestsInfo.getReservationRequestsInterpreter()];
+    ReservationRequests reservationRequests = ReservationRequests.newInstance(
+        reservationRequestList, reservationRequestInterpreter);
+
+    ReservationDefinition definition = ReservationDefinition.newInstance(
+        arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
+
+    return definition;
+  }
+
+  /**
+   * Checks if the ApplicationSubmissionContext submitted with the application
+   * is valid.
+   *
+   * Current checks:
+   * - if its size is within limits.
+   *
+   * @param appContext the app context to check.
+   * @throws IOException if an IO error occurred.
+   * @throws YarnException yarn exception.
+   */
+  @Public
+  @Unstable
+  public static void checkAppSubmissionContext(ApplicationSubmissionContextPBImpl appContext,
+      Configuration conf) throws IOException, YarnException {
+    // Prevents DoS over the ApplicationClientProtocol by checking the context
+    // the application was submitted with for any excessively large fields.
+    double bytesOfMaxAscSize = conf.getStorageSize(
+        YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE, StorageUnit.BYTES);
+    if (appContext != null) {
+      int bytesOfSerializedSize = appContext.getProto().getSerializedSize();
+      if (bytesOfSerializedSize >= bytesOfMaxAscSize) {
+        logContainerLaunchContext(appContext);
+        String applicationId = appContext.getApplicationId().toString();
+        String limit = StringUtils.byteDesc((long) bytesOfMaxAscSize);
+        String appContentSize = StringUtils.byteDesc(bytesOfSerializedSize);
+        String errMsg = String.format(
+            "The size of the ApplicationSubmissionContext of the application %s is " +
+            "above the limit %s, size = %s.", applicationId, limit, appContentSize);
+        LOG.error(errMsg);
+        throw new YarnException(errMsg);
+      }
+    }
+  }
+
+  /**
+   * Private helper for checkAppSubmissionContext that logs the fields in the
+   * context for debugging.
+   *
+   * @param appContext the app context.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Unstable
+  private static void logContainerLaunchContext(ApplicationSubmissionContextPBImpl appContext)
+      throws IOException {
+    if (appContext == null || appContext.getAMContainerSpec() == null ||
+        !(appContext.getAMContainerSpec() instanceof ContainerLaunchContextPBImpl)) {
+      return;
+    }
+
+    ContainerLaunchContext launchContext = appContext.getAMContainerSpec();
+    ContainerLaunchContextPBImpl clc = (ContainerLaunchContextPBImpl) launchContext;
+    LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
+
+    // ContainerLaunchContext contains:
+    // 1) Map<String, LocalResource> localResources,
+    List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
+    logContainerLaunchContext("LocalResource size: {}. Length: {}.", lrs);
+
+    // 2) Map<String, String> environment, List<String> commands,
+    List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
+    logContainerLaunchContext("Environment size: {}. Length: {}.", envs);
+
+    List<String> cmds = clc.getCommands();
+    if (CollectionUtils.isNotEmpty(cmds)) {
+      LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
+    }
+
+    // 3) Map<String, ByteBuffer> serviceData,
+    List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
+    logContainerLaunchContext("ServiceData size: {}. Length: {}.", serviceData);
+
+    // 4) Map<ApplicationAccessType, String> acls
+    List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
+    logContainerLaunchContext("ACLs size: {}. Length: {}.", acls);
+  }
+
+  /**
+   * Log ContainerLaunchContext Data SerializedSize.
+   *
+   * @param format format of logging.
+   * @param lists data list.
+   * @param <R> generic type R.
+   */
+  private static <R extends GeneratedMessageV3> void logContainerLaunchContext(String format,
+      List<R> lists) {
+    if (CollectionUtils.isNotEmpty(lists)) {
+      int sumLength = 0;
+      for (R item : lists) {
+        sumLength += item.getSerializedSize();
+      }
+      LOG.warn(format, lists.size(), sumLength);
+    }
+  }
+
+  /**
+   * Serialize an object in ByteArray.
+   *
+   * @return obj ByteArray.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Unstable
+  private static byte[] serialize(Object obj) throws IOException {
+    try (ByteArrayOutputStream b = new ByteArrayOutputStream()) {
+      try (ObjectOutputStream o = new ObjectOutputStream(b)) {
+        o.writeObject(obj);
+      }
+      return b.toByteArray();
+    }
+  }
+
+  /**
+   * Get trimmed version of ApplicationSubmissionContext to be saved to
+   * Federation State Store.
+   *
+   * @param actualContext actual ApplicationSubmissionContext.
+   * @return trimmed ApplicationSubmissionContext.
+   */
+  @Private
+  @Unstable
+  public static ApplicationSubmissionContext getTrimmedAppSubmissionContext(
+      ApplicationSubmissionContext actualContext) {
+    if (actualContext == null) {
+      return null;
+    }
+
+    // Set Basic information
+    ApplicationSubmissionContext trimmedContext =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    trimmedContext.setApplicationId(actualContext.getApplicationId());
+    trimmedContext.setApplicationName(actualContext.getApplicationName());
+    trimmedContext.setQueue(actualContext.getQueue());
+    trimmedContext.setPriority(actualContext.getPriority());
+    trimmedContext.setApplicationType(actualContext.getApplicationType());
+    trimmedContext.setNodeLabelExpression(actualContext.getNodeLabelExpression());
+    trimmedContext.setLogAggregationContext(actualContext.getLogAggregationContext());
+    trimmedContext.setApplicationTags(actualContext.getApplicationTags());
+    trimmedContext.setApplicationSchedulingPropertiesMap(
+        actualContext.getApplicationSchedulingPropertiesMap());
+    trimmedContext.setKeepContainersAcrossApplicationAttempts(
+        actualContext.getKeepContainersAcrossApplicationAttempts());
+    trimmedContext.setApplicationTimeouts(actualContext.getApplicationTimeouts());
+
+    return trimmedContext;
+  }
+
+  public static boolean isRouterWebProxyEnable(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE);
   }
 }

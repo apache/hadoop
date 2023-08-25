@@ -86,10 +86,10 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private final List<LightWeightLinkedSet<BlockInfo>> priorityQueues
       = new ArrayList<>(LEVEL);
 
-  /** The number of corrupt blocks with replication factor 1 */
 
   private final LongAdder lowRedundancyBlocks = new LongAdder();
   private final LongAdder corruptBlocks = new LongAdder();
+  /** The number of corrupt blocks with replication factor 1 */
   private final LongAdder corruptReplicationOneBlocks = new LongAdder();
   private final LongAdder lowRedundancyECBlockGroups = new LongAdder();
   private final LongAdder corruptECBlockGroups = new LongAdder();
@@ -369,11 +369,11 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    * @return true if the block was found and removed from one of the priority
    *         queues
    */
-  boolean remove(BlockInfo block, int priLevel) {
+  synchronized boolean remove(BlockInfo block, int priLevel) {
     return remove(block, priLevel, block.getReplication());
   }
 
-  boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
+  synchronized boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
     if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(

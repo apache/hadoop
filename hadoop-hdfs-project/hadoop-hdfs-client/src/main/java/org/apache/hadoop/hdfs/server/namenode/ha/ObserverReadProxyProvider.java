@@ -24,7 +24,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,6 +51,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +93,17 @@ public class ObserverReadProxyProvider<T>
       HdfsClientConfigKeys.Failover.PREFIX + "observer.probe.retry.period";
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
+
+  /**
+   * Timeout in ms to cancel the ha-state probe rpc request for an namenode.
+   * To disable timeout, set it to 0 or a negative value.
+   */
+  static final String NAMENODE_HA_STATE_PROBE_TIMEOUT =
+      HdfsClientConfigKeys.Failover.PREFIX + "namenode.ha-state.probe.timeout";
+  /**
+   * Default to disable namenode ha-state probe timeout.
+   */
+  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 0;
 
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;
@@ -156,10 +173,20 @@ public class ObserverReadProxyProvider<T>
   private long observerProbeRetryPeriodMs;
 
   /**
+   * Timeout in ms when we try to get the HA state of a namenode.
+   */
+  private long namenodeHAStateProbeTimeoutMs;
+
+  /**
    * The previous time where zero observer were found. If there was observer,
    * or it is initialization, this is set to 0.
    */
   private long lastObserverProbeTime;
+
+  /**
+   * Threadpool to send the getHAServiceState requests.
+   */
+  private final BlockingThreadPoolExecutorService nnProbingThreadPool;
 
   /**
    * By default ObserverReadProxyProvider uses
@@ -213,6 +240,8 @@ public class ObserverReadProxyProvider<T>
     observerProbeRetryPeriodMs = conf.getTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY,
         OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
+    namenodeHAStateProbeTimeoutMs = conf.getTimeDuration(NAMENODE_HA_STATE_PROBE_TIMEOUT,
+        NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
 
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
@@ -221,6 +250,15 @@ public class ObserverReadProxyProvider<T>
           + "class does not implement {}", uri, ClientProtocol.class.getName());
       this.observerReadEnabled = false;
     }
+
+    /*
+     * At most 4 threads will be running and each thread will die after 10
+     * seconds of no use. Up to 132 tasks (4 active + 128 waiting) can be
+     * submitted simultaneously.
+     */
+    nnProbingThreadPool =
+        BlockingThreadPoolExecutorService.newInstance(4, 128, 10L, TimeUnit.SECONDS,
+            "nn-ha-state-probing");
   }
 
   public AlignmentContext getAlignmentContext() {
@@ -284,11 +322,65 @@ public class ObserverReadProxyProvider<T>
     }
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
-    currentProxy.setCachedState(getHAServiceState(currentProxy));
+    currentProxy.setCachedState(getHAServiceStateWithTimeout(currentProxy));
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
     return currentProxy;
+  }
+
+  /**
+   * Execute getHAServiceState() call with a timeout, to avoid a long wait when
+   * an NN becomes irresponsive to rpc requests
+   * (when a thread/heap dump is being taken, e.g.).
+   *
+   * For each getHAServiceState() call, a task is created and submitted to a
+   * threadpool for execution. We will wait for a response up to
+   * namenodeHAStateProbeTimeoutSec and cancel these requests if they time out.
+   *
+   * The implementation is split into two functions so that we can unit test
+   * the second function.
+   */
+  HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo) {
+    Callable<HAServiceState> getHAServiceStateTask = () -> getHAServiceState(proxyInfo);
+
+    try {
+      Future<HAServiceState> task =
+          nnProbingThreadPool.submit(getHAServiceStateTask);
+      return getHAServiceStateWithTimeout(proxyInfo, task);
+    } catch (RejectedExecutionException e) {
+      LOG.warn("Run out of threads to submit the request to query HA state. "
+          + "Ok to return null and we will fallback to use active NN to serve "
+          + "this request.");
+      return null;
+    }
+  }
+
+  HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo,
+      Future<HAServiceState> task) {
+    HAServiceState state = null;
+    try {
+      if (namenodeHAStateProbeTimeoutMs > 0) {
+        state = task.get(namenodeHAStateProbeTimeoutMs, TimeUnit.MILLISECONDS);
+      } else {
+        // Disable timeout by waiting indefinitely when namenodeHAStateProbeTimeoutSec is set to 0
+        // or a negative value.
+        state = task.get();
+      }
+      LOG.debug("HA State for {} is {}", proxyInfo.proxyInfo, state);
+    } catch (TimeoutException e) {
+      // Cancel the task on timeout
+      String msg = String.format("Cancel NN probe task due to timeout for %s", proxyInfo.proxyInfo);
+      LOG.warn(msg, e);
+      if (task != null) {
+        task.cancel(true);
+      }
+    } catch (InterruptedException|ExecutionException e) {
+      String msg = String.format("Exception in NN probe task for %s", proxyInfo.proxyInfo);
+      LOG.warn(msg, e);
+    }
+
+    return state;
   }
 
   /**
@@ -553,6 +645,7 @@ public class ObserverReadProxyProvider<T>
       }
     }
     failoverProxy.close();
+    nnProbingThreadPool.shutdown();
   }
 
   @Override

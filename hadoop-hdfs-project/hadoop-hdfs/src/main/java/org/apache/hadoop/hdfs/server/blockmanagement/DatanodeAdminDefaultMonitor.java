@@ -114,6 +114,15 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       numBlocksPerCheck =
           DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_DEFAULT;
     }
+
+    final String deprecatedKey = "dfs.namenode.decommission.nodes.per.interval";
+    final String strNodes = conf.get(deprecatedKey);
+    if (strNodes != null) {
+      LOG.warn("Deprecated configuration key {} will be ignored.", deprecatedKey);
+      LOG.warn("Please update your configuration to use {} instead.",
+          DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
+    }
+
     LOG.info("Initialized the Default Decommission and Maintenance monitor");
   }
 

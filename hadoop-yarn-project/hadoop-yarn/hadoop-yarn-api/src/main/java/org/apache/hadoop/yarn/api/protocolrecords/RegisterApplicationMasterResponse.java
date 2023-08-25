@@ -94,7 +94,7 @@ public abstract class RegisterApplicationMasterResponse {
 
   /**
    * Set the <code>ApplicationACL</code>s for the application. 
-   * @param acls
+   * @param acls ApplicationACLs for the application.
    */
   @Private
   @Unstable
@@ -113,6 +113,8 @@ public abstract class RegisterApplicationMasterResponse {
 
   /**
    * Set ClientToAMToken master key.
+   *
+   * @param key ClientToAMToken master key.
    */
   @Public
   @Stable
@@ -127,7 +129,8 @@ public abstract class RegisterApplicationMasterResponse {
   public abstract String getQueue();
   
   /**
-   * <p>Set the queue that the application was placed in.<p>
+   * <p>Set the queue that the application was placed in.</p>
+   * @param queue queue.
    */
   @Public
   @Stable

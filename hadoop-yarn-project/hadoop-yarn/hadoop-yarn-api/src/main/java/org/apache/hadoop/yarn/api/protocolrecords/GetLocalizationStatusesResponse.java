@@ -80,6 +80,8 @@ public abstract class GetLocalizationStatusesResponse {
   /**
    * Set the containerId-to-exception map in which the exception indicates error
    * from per container for failed request.
+   *
+   * @param failedContainers containerId-to-exception map.
    */
   @InterfaceAudience.Private
   public abstract void setFailedRequests(

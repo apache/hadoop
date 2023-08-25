@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -188,6 +190,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String FILE_STATUSES_JSON = "FileStatuses";
   public static final String FILE_STATUS_JSON = "FileStatus";
+  public static final String FS_STATUS_JSON = "FsStatus";
   public static final String PATH_SUFFIX_JSON = "pathSuffix";
   public static final String TYPE_JSON = "type";
   public static final String LENGTH_JSON = "length";
@@ -208,6 +211,9 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTRNAMES_JSON = "XAttrNames";
   public static final String ECPOLICY_JSON = "ecPolicyObj";
   public static final String SYMLINK_JSON = "symlink";
+  public static final String CAPACITY_JSON = "capacity";
+  public static final String USED_JSON = "used";
+  public static final String REMAINING_JSON = "remaining";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -277,6 +283,10 @@ public class HttpFSFileSystem extends FileSystem
     GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
+    GETFILELINKSTATUS(HTTP_GET),
+    GETSTATUS(HTTP_GET),
+    GETECPOLICIES(HTTP_GET),
+    GETECCODECS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1646,6 +1656,7 @@ public class HttpFSFileSystem extends FileSystem
     case CommonPathCapabilities.FS_SNAPSHOTS:
     case CommonPathCapabilities.FS_STORAGEPOLICY:
     case CommonPathCapabilities.FS_XATTRS:
+    case CommonPathCapabilities.FS_TRUNCATE:
       return true;
     case CommonPathCapabilities.FS_SYMLINKS:
       return false;
@@ -1740,6 +1751,51 @@ public class HttpFSFileSystem extends FileSystem
       return null;
     }
     return getFileBlockLocations(status.getPath(), offset, length);
+  }
+
+  @Override
+  public FileStatus getFileLinkStatus(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETFILELINKSTATUS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETFILELINKSTATUS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
+    return status.makeQualified(getUri(), path);
+  }
+
+  @Override
+  public FsStatus getStatus(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETSTATUS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETSTATUS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toFsStatus(json);
+  }
+
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECPOLICIES.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getAllErasureCodingPolicies(json);
+  }
+
+  public Map<String, String> getAllErasureCodingCodecs() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECCODECS.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECCODECS.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getErasureCodeCodecs(json);
   }
 
   @VisibleForTesting
