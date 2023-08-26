@@ -83,12 +83,14 @@ public class MembershipNamenodeResolver
   /** Cached lookup of NN for block pool. Invalidated on cache refresh. */
   private Map<String, List<? extends FederationNamenodeContext>> cacheBP;
 
+
   public MembershipNamenodeResolver(
       Configuration conf, StateStoreService store) throws IOException {
     this.stateStore = store;
 
     this.cacheNS = new ConcurrentHashMap<>();
     this.cacheBP = new ConcurrentHashMap<>();
+
     if (this.stateStore != null) {
       // Request cache updates from the state store
       this.stateStore.registerCacheExternal(this);
@@ -480,20 +482,30 @@ public class MembershipNamenodeResolver
   /**
    * Shuffle cache, to ensure that the current nn will not be accessed first next time.
    *
-   *
    * @param nsId name service id
    * @param namenode namenode contexts
    */
   @Override
   public synchronized void shuffleCache(String nsId, FederationNamenodeContext namenode) {
     cacheNS.compute(Pair.of(nsId, false), (ns, namenodeContexts) -> {
-      if (namenodeContexts != null
-              && namenodeContexts.size() > 0
-              && !namenodeContexts.get(0).getState().equals(ACTIVE)
-              && namenodeContexts.get(0).getRpcAddress().equals(namenode.getRpcAddress())) {
-        List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
-        Collections.rotate(rotatedNnContexts, -1);
-        return rotatedNnContexts;
+      if (namenodeContexts != null && namenodeContexts.size() > 1) {
+        FederationNamenodeContext firstNamenodeContext = namenodeContexts.get(0);
+        /*
+         * 1.If the first nn in the cache is active, the active nn priority cannot be lowered.
+         * This happens when other threads have already updated the cache.
+         *
+         * 2.If the first nn in the cache at this time is not the nn
+         * that needs to be lowered in priority, there is no need to rotate.
+         * This happens when other threads have already rotated the cache.
+         */
+        if (!firstNamenodeContext.getState().equals(ACTIVE)
+                && firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())) {
+          List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
+          Collections.rotate(rotatedNnContexts, -1);
+          return rotatedNnContexts;
+        } else {
+          return namenodeContexts;
+        }
       } else {
         return namenodeContexts;
       }

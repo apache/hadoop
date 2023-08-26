@@ -366,7 +366,7 @@ public class TestRouterClientRejectOverload {
   /**
    * When failover occurs, the router may record that the ns has no active namenode.
    * Only when the router updates the cache next time can the memory status be updated,
-   * causing the router to report NoNamenodesAvailableException for a long time
+   * causing the router to report NoNamenodesAvailableException for a long time.
    */
   @Test
   public void testNoNamenodesAvailableLongTimeWhenNsFailover() throws Exception {
@@ -388,7 +388,8 @@ public class TestRouterClientRejectOverload {
 
     // Make sure all namenodes are in standby state
     for (MiniRouterDFSCluster.NamenodeContext namenodeContext : namenodes) {
-      assertTrue(namenodeContext.getNamenode().getNameNodeState() == STANDBY.ordinal());
+      assertEquals(STANDBY.ordinal(),
+              namenodeContext.getNamenode().getNameNodeState());
     }
 
     Configuration conf = cluster.getRouterClientConf();
@@ -399,7 +400,10 @@ public class TestRouterClientRejectOverload {
 
     for (RouterContext routerContext : cluster.getRouters()) {
       // Get the second namenode in the router cache and make it active
-      List<? extends FederationNamenodeContext> ns0 = routerContext.getRouter().getNamenodeResolver().getNamenodesForNameserviceId("ns0", false);
+      List<? extends FederationNamenodeContext> ns0 = routerContext.getRouter()
+              .getNamenodeResolver()
+              .getNamenodesForNameserviceId("ns0", false);
+
       String nsId = ns0.get(1).getNamenodeId();
       cluster.switchToActive("ns0", nsId);
       // Manually trigger the heartbeat, but the router does not manually load the cache
@@ -408,7 +412,8 @@ public class TestRouterClientRejectOverload {
       for (NamenodeHeartbeatService service : heartbeatServices) {
         service.periodicInvoke();
       }
-      assertTrue(cluster.getNamenode("ns0", nsId).getNamenode().getNameNodeState() == ACTIVE.ordinal());
+      assertEquals(ACTIVE.ordinal(),
+              cluster.getNamenode("ns0", nsId).getNamenode().getNameNodeState());
     }
 
     // Get router0 metrics
@@ -417,14 +422,20 @@ public class TestRouterClientRejectOverload {
     // Original failures
     long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
 
-    // At this time, the router has recorded 2 standby namenodes in memory, and the first accessed namenode is indeed standby,
-    // then an NoNamenodesAvailableException will be reported for the first access, and the next access will be successful
+    /*
+     * At this time, the router has recorded 2 standby namenodes in memory,
+     * and the first accessed namenode is indeed standby,
+     * then an NoNamenodesAvailableException will be reported for the first access,
+     * and the next access will be successful.
+     */
     routerClient.getFileInfo("/");
     long successReadTime = Time.now();
     assertEquals(originalRouter0Failures + 1, rpcMetrics0.getProxyOpNoNamenodes());
 
-    // access the active namenode without waiting for the router to update the cache,
-    // even if there are 2 standby states recorded in the router memory
+    /*
+     * access the active namenode without waiting for the router to update the cache,
+     * even if there are 2 standby states recorded in the router memory.
+     */
     assertTrue(successReadTime - firstLoadTime < DEFAULT_CACHE_INTERVAL_MS);
   }
 
