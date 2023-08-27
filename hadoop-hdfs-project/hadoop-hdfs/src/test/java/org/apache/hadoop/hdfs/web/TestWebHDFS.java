@@ -59,7 +59,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
