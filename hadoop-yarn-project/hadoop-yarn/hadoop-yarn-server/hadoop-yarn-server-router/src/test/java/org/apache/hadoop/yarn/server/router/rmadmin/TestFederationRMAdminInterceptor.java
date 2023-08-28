@@ -31,37 +31,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
-import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -803,10 +773,10 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
    * Generating Policy Weight Data.
    *
    * @param pSubClusters set of sub-clusters.
-   * @return policy Weight String, like SC-1:0.7,SC-2:0.
+   * @return policy Weight String, like SC-1:0.7,SC-2:0.3
    */
   private String generatePolicyWeight(List<String> pSubClusters) {
-    List<String> weights = generateWeights(subClusters.size());
+    List<String> weights = generateWeights(pSubClusters.size());
     List<String> subClusterWeight = new ArrayList<>();
     for (int i = 0; i < pSubClusters.size(); i++) {
       String subCluster = pSubClusters.get(i);
@@ -855,5 +825,49 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     policyWeights.put(sc2, 0.3f);
     String policyWeight = interceptor.parsePolicyWeights(policyWeights);
     assertEquals("SC-1:0.7,SC-2:0.3", policyWeight);
+  }
+
+  @Test
+  public void testFilterPoliciesConfigurationsByQueues() throws IOException, YarnException {
+    // SubClusters : SC-1,SC-2
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // We initialize 26 queues, queue root.a~root.z
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    for (char letter = 'a'; letter <= 'z'; letter++) {
+      FederationQueueWeight leaf =
+          generateFederationQueueWeight("root." + letter, subClusterLists);
+      federationQueueWeights.add(leaf);
+    }
+
+    // Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // We query 12 queues, root.a ~ root.l
+    List<String> queues = new ArrayList<>();
+    for (char letter = 'a'; letter <= 'l'; letter++) {
+      queues.add("root." + letter);
+    }
+
+    // Queue1: We query page 1, 10 items per page, and the returned result should be 10 items.
+    QueryFederationQueuePoliciesRequest request1 =
+         QueryFederationQueuePoliciesRequest.newInstance(10, 1, "", queues);
+    QueryFederationQueuePoliciesResponse response = interceptor.listFederationQueuePolicies(request1);
+    assertNotNull(response);
+    assertEquals(1, response.getCurrentPage());
+    assertEquals(10, response.getPageSize());
+    assertEquals(2, response.getTotalPage());
+    assertEquals(12, response.getTotalSize());
+
   }
 }

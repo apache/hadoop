@@ -81,28 +81,69 @@ public class QueryFederationQueuePoliciesResponsePBImpl
 
   @Override
   public int getTotalSize() {
-    Preconditions.checkNotNull(proto);
-    return proto.getTotalSize();
+    QueryFederationQueuePoliciesResponseProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasTotalSize = p.hasTotalSize();
+    if (hasTotalSize) {
+      return p.getTotalSize();
+    }
+    return 0;
   }
 
   @Override
   public void setTotalSize(int totalSize) {
+    maybeInitBuilder();
     Preconditions.checkNotNull(builder);
     builder.setTotalSize(totalSize);
   }
 
   @Override
-  public int getPage() {
-    // Preconditions.checkNotNull(proto);
-    // return proto.getPageSize();
+  public int getTotalPage() {
+    QueryFederationQueuePoliciesResponseProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasTotalPage = p.hasTotalPage();
+    if (hasTotalPage) {
+      return p.getTotalPage();
+    }
     return 0;
   }
 
   @Override
-  public void setPage(int pageSize) {
-    // Preconditions.checkNotNull(builder);
-    // builder.setPageSize(pageSize);
-    return;
+  public void setTotalPage(int totalPage) {
+    maybeInitBuilder();
+    Preconditions.checkNotNull(builder);
+    builder.setTotalPage(totalPage);
+  }
+
+  @Override
+  public int getCurrentPage() {
+    QueryFederationQueuePoliciesResponseProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasCurrentPage = p.hasCurrentPage();
+    if (hasCurrentPage) {
+      return p.getCurrentPage();
+    }
+    return 0;
+  }
+
+  @Override
+  public void setCurrentPage(int currentPage) {
+    maybeInitBuilder();
+    Preconditions.checkNotNull(builder);
+    builder.setCurrentPage(currentPage);
+  }
+
+  @Override
+  public int getPageSize() {
+    QueryFederationQueuePoliciesResponseProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasPageSize = p.hasPageSize();
+    if (hasPageSize) {
+      return p.getPageSize();
+    }
+    return 0;
+  }
+
+  @Override
+  public void setPageSize(int pageSize) {
+    Preconditions.checkNotNull(builder);
+    builder.setPageSize(pageSize);
   }
 
   private void initFederationQueueWeightsMapping() {

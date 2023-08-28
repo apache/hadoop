@@ -48,26 +48,36 @@ public class QueryFederationQueuePoliciesRequestPBImpl
 
   @Override
   public void setPageSize(int pageSize) {
+    maybeInitBuilder();
     Preconditions.checkNotNull(builder);
     builder.setPageSize(pageSize);
   }
 
   @Override
   public int getPageSize() {
-    Preconditions.checkNotNull(proto);
-    return proto.getPageSize();
+    QueryFederationQueuePoliciesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasPageSize = p.hasPageSize();
+    if (hasPageSize) {
+      return p.getPageSize();
+    }
+    return 0;
   }
 
   @Override
   public void setCurrentPage(int currentPage) {
+    maybeInitBuilder();
     Preconditions.checkNotNull(builder);
     builder.setCurrentPage(currentPage);
   }
 
   @Override
   public int getCurrentPage() {
-    Preconditions.checkNotNull(proto);
-    return proto.getCurrentPage();
+    QueryFederationQueuePoliciesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasCurrentPage = p.hasCurrentPage();
+    if (hasCurrentPage) {
+      return p.getCurrentPage();
+    }
+    return 0;
   }
 
   @Override
@@ -107,6 +117,9 @@ public class QueryFederationQueuePoliciesRequestPBImpl
         this.queues.clear();
       }
       return;
+    }
+    if (this.queues == null) {
+      this.queues = new ArrayList<>();
     }
     this.queues.clear();
     this.queues.addAll(pQueues);

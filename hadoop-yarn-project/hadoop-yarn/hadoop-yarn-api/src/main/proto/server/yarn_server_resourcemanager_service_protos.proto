@@ -197,8 +197,10 @@ message QueryFederationQueuePoliciesRequestProto {
 
 message QueryFederationQueuePoliciesResponseProto {
   optional int32 totalSize = 1;
-  optional int32 page = 2;
-  repeated FederationQueueWeightProto federationQueueWeights = 3;
+  optional int32 totalPage = 2;
+  optional int32 currentPage = 3;
+  optional int32 pageSize = 4;
+  repeated FederationQueueWeightProto federationQueueWeights = 5;
 }
 
 //////////////////////////////////////////////////////////////////

@@ -1027,6 +1027,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       int currentPage = request.getCurrentPage();
       int pageSize = request.getPageSize();
 
+      LOG.info("queue = {}, queues={}, currentPage={}, pageSize={}",
+          queue, queues.size(), currentPage, pageSize);
+
       Map<String, SubClusterPolicyConfiguration> policiesConfigurations =
           federationFacade.getPoliciesConfigurations();
 

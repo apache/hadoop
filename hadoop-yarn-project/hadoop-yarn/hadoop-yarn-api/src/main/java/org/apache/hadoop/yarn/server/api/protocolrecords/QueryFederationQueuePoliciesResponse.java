@@ -42,7 +42,9 @@ public abstract class QueryFederationQueuePoliciesResponse {
     QueryFederationQueuePoliciesResponse response =
         Records.newRecord(QueryFederationQueuePoliciesResponse.class);
     response.setTotalSize(totalSize);
-    // response.setPage(page);
+    response.setTotalPage(totalPage);
+    response.setCurrentPage(currentPage);
+    response.setPageSize(pageSize);
     response.setFederationQueueWeights(federationQueueWeights);
     return response;
   }
@@ -77,7 +79,7 @@ public abstract class QueryFederationQueuePoliciesResponse {
    */
   @Public
   @Unstable
-  public abstract int getPage();
+  public abstract int getTotalPage();
 
   /**
    * Sets the page.
@@ -86,7 +88,24 @@ public abstract class QueryFederationQueuePoliciesResponse {
    */
   @Private
   @Unstable
-  public abstract void setPage(int page);
+  public abstract void setTotalPage(int page);
+
+  @Public
+  @Unstable
+  public abstract int getCurrentPage();
+
+  @Private
+  @Unstable
+  public abstract void setCurrentPage(int currentPage);
+
+
+  @Public
+  @Unstable
+  public abstract int getPageSize();
+
+  @Private
+  @Unstable
+  public abstract void setPageSize(int pageSize);
 
   /**
    * Get a list of FederationQueueWeight objects of different queues.
