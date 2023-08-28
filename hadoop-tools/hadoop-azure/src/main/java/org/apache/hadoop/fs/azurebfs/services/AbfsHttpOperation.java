@@ -29,6 +29,7 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpUrlConnection;
+import org.apache.hadoop.fs.azurebfs.conn.https.AbfsDelegateHttpsURLConnection;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -281,11 +282,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
-      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
-      if (sslSocketFactory != null) {
-        secureConn.setSSLSocketFactory(sslSocketFactory);
-      }
+//      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
+//      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+//      if (sslSocketFactory != null) {
+//        secureConn.setSSLSocketFactory(sslSocketFactory);
+//      }
     }
 
     this.connection.setConnectTimeout(CONNECT_TIMEOUT);
@@ -346,7 +347,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
           LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
-          ((AbfsHttpUrlConnection) connection).failed100cont();
+//          ((AbfsHttpUrlConnection) connection).failed100cont();
           return;
         } else {
           LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
@@ -480,6 +481,14 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
+    if(url.getProtocol().equals("https")) {
+      AbfsDelegateHttpsURLConnection conn = new AbfsDelegateHttpsURLConnection(url, null, new sun.net.www.protocol.https.Handler());
+      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+      if (sslSocketFactory != null) {
+        conn.setSSLSocketFactory(sslSocketFactory);
+      }
+      return conn;
+    }
 //    if (!isTraceEnabled) {
 //      return (HttpURLConnection) url.openConnection();
 //    }
