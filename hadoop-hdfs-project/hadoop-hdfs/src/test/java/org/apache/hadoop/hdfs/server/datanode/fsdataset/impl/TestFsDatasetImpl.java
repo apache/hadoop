@@ -78,6 +78,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
@@ -1110,6 +1112,12 @@ public class TestFsDatasetImpl {
       BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
       assertEquals("Corrupt replica blocks could not be reflected with the heartbeat", 1,
           cluster.getNamesystem().getCorruptReplicaBlocks());
+
+      DataNodeMetrics dataNodeMetrics = dataNode.getMetrics();
+      assertEquals("Expect one reportBadBlocks action.", 1,
+          getLongCounter("ActorAction", getMetrics(dataNodeMetrics.name())));
+      assertTrue(".",
+          getLongCounter("ProcessQueueMessagesNumOps", getMetrics(dataNodeMetrics.name())) >= 1);
     }
   }
 

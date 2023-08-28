@@ -142,6 +142,8 @@ public class DataNodeMetrics {
   @Metric MutableRate sendDataPacketTransferNanos;
   final MutableQuantiles[] sendDataPacketTransferNanosQuantiles;
 
+  @Metric MutableRate processQueueMessages;
+
   @Metric("Count of blocks in pending IBR")
   private MutableGaugeLong blocksInPendingIBR;
   @Metric("Count of blocks at receiving status in pending IBR")
@@ -204,6 +206,8 @@ public class DataNodeMetrics {
   private MutableCounterLong replaceBlockOpOnSameMount;
   @Metric("Number of replaceBlock ops to another node")
   private MutableCounterLong replaceBlockOpToOtherHost;
+  @Metric("Number of errorReport and reportBadBlocks")
+  private MutableCounterLong actorAction;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
@@ -491,6 +495,10 @@ public class DataNodeMetrics {
     }
   }
 
+  public void addprocessQueueMessages(long timeTaken) {
+    processQueueMessages.add(timeTaken);
+  }
+
   public void incrRamDiskBlocksWrite() {
     ramDiskBlocksWrite.incr();
   }
@@ -775,6 +783,10 @@ public class DataNodeMetrics {
 
   public void incrReplaceBlockOpToOtherHost() {
     replaceBlockOpToOtherHost.incr();
+  }
+
+  public void incrActorAction() {
+    actorAction.incr();
   }
 
 }

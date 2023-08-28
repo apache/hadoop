@@ -803,7 +803,9 @@ class BPServiceActor implements Runnable {
       } finally {
         DataNodeFaultInjector.get().endOfferService();
       }
+      long start = Time.monotonicNow();
       processQueueMessages();
+      dn.getMetrics().addprocessQueueMessages(Time.monotonicNow() - start);
     } // while (shouldRun())
   } // offerService
 
@@ -1017,6 +1019,7 @@ class BPServiceActor implements Runnable {
         LOG.debug("BPServiceActor ( {} ) processing queued messages. Action item: {}", this,
             actionItem);
         actionItem.reportTo(bpNamenode, bpRegistration);
+        dn.getMetrics().incrActorAction();
       } catch (BPServiceActorActionException baae) {
         LOG.warn(baae.getMessage() + nnAddr , baae);
         // Adding it back to the queue if not present
