@@ -373,6 +373,8 @@ public class ImageServlet extends HttpServlet {
         + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
       + imageType
+      // Excluding the STORAGEINFO_PARAM means the NameNode handling the request
+      // will send it's fsimage without checking the storage info
       + (isBootstrapStandbyRollingUpgrade ? "" : "&" + STORAGEINFO_PARAM + "="
         + remoteStorageInfo.toColonSeparatedString())
       + "&" + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
