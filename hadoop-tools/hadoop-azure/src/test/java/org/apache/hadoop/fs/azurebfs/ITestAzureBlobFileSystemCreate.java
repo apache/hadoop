@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,8 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -144,6 +147,26 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
     assertIsFile(fs, testFile);
+  }
+
+  @Test
+  public void testCreateOnRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testFile = path(AbfsHttpConstants.ROOT_PATH);
+    try {
+      fs.create(testFile, true);
+      fail("Should've thrown AbfsRestOperationException");
+    } catch (AbfsRestOperationException e) {
+      Assertions.assertThat(e.getStatusCode()).describedAs(
+          "Request should fail with 409 Conflict").isEqualTo(HTTP_CONFLICT);
+    }
+    try {
+      fs.createNonRecursive(testFile, FsPermission.getDefault(), false, 1024, (short) 1, 1024, null);
+      fail("Should've thrown AbfsRestOperationException");
+    } catch (AbfsRestOperationException e) {
+      Assertions.assertThat(e.getStatusCode()).describedAs(
+          "Request should fail with 409 Conflict").isEqualTo(HTTP_CONFLICT);
+    }
   }
 
   /**

@@ -110,6 +110,7 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
@@ -324,6 +325,12 @@ public class AzureBlobFileSystem extends FileSystem
 
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
+    if (f.isRoot()) {
+      throw new AbfsRestOperationException(HTTP_CONFLICT,
+          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+          "Cannot create file on the root path",
+          null);
+    }
 
     Path qualifiedPath = makeQualified(f);
 
@@ -348,6 +355,12 @@ public class AzureBlobFileSystem extends FileSystem
       final Progressable progress) throws IOException {
 
     statIncrement(CALL_CREATE_NON_RECURSIVE);
+    if (f.isRoot()) {
+      throw new AbfsRestOperationException(HTTP_CONFLICT,
+          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+          "Cannot create file on the root path",
+          null);
+    }
     final Path parent = f.getParent();
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.CREATE_NON_RECURSIVE, tracingHeaderFormat,
@@ -1488,7 +1501,7 @@ public class AzureBlobFileSystem extends FileSystem
       case HttpURLConnection.HTTP_NOT_FOUND:
         throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      case HttpURLConnection.HTTP_CONFLICT:
+      case HTTP_CONFLICT:
         throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
       case HttpURLConnection.HTTP_FORBIDDEN:
