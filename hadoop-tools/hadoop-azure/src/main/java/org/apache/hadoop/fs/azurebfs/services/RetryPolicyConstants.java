@@ -23,6 +23,15 @@ public final class RetryPolicyConstants {
   private RetryPolicyConstants() {
 
   }
+
+  /**
+   * Constant for Exponential Retry Policy Abbreviation
+   * @value Constant string is "E"
+   */
   public static final String EXPONENTIAL_RETRY_POLICY_ABBREVIATION= "E";
+  /**
+   * Constant for Static Retry Policy Abbreviation
+   * @value Constant string is "S"
+   */
   public static final String STATIC_RETRY_POLICY_ABBREVIATION = "S";
 }

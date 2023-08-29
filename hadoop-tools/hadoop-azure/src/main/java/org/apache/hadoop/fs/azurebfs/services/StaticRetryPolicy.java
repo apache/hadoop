@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
  * */
 public class StaticRetryPolicy extends AbfsRetryPolicy {
 
-  private static final int STATIC_RETRY_INTERVAL_DEFAULT = 2000; // 2s
+  private static final int STATIC_RETRY_INTERVAL_DEFAULT = 2_000; // 2s
 
   /**
    * Represents the constant retry interval to be used with Static Retry Policy
@@ -37,7 +37,7 @@ public class StaticRetryPolicy extends AbfsRetryPolicy {
    * @param maxIoRetries Maximum Retry Count Allowed
    */
   public StaticRetryPolicy(final int maxIoRetries) {
-    super(maxIoRetries);
+    super(maxIoRetries, RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION);
     this.retryInterval = STATIC_RETRY_INTERVAL_DEFAULT;
   }
 
@@ -59,10 +59,5 @@ public class StaticRetryPolicy extends AbfsRetryPolicy {
   @Override
   public long getRetryInterval(final int retryCount) {
     return retryInterval;
-  }
-
-  @Override
-  public String getAbbreviation() {
-    return RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
   }
 }

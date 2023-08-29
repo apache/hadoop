@@ -218,7 +218,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null, "E");
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     String header = tracingContext.getHeader();
     String clientRequestIdUsed = header.split(":")[1];
     String[] clientRequestIdUsedParts = clientRequestIdUsed.split("-");
@@ -230,7 +230,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT", "E");
+    tracingContext.constructHeader(abfsHttpOperation, READ_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     header = tracingContext.getHeader();
     String primaryRequestId = header.split(":")[3];
 
@@ -321,20 +321,22 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private void checkHeaderForRetryPolicyAbbreviation(String header, String expectedFailureReason, String expectedRetryPolicyAbbreviation) {
     String headerContents[] = header.split(":");
     String previousReqContext = headerContents[6];
-    if (expectedFailureReason != null) {
-      Assertions.assertThat(previousReqContext.split("_")[1])
-          .isEqualTo(expectedFailureReason);
-      Assertions.assertThat(previousReqContext.split("_")).hasSize(2);
-    } else {
-      Assertions.assertThat(previousReqContext.split("_")).hasSize(1);
-    }
 
-    if (expectedRetryPolicyAbbreviation != null) {
-      Assertions.assertThat(previousReqContext.split("_")[2])
-          .isEqualTo(expectedRetryPolicyAbbreviation);
-      Assertions.assertThat(previousReqContext.split("_")).hasSize(3);
+    if (expectedFailureReason != null) {
+      Assertions.assertThat(previousReqContext.split("_")[1]).describedAs(
+          "Failure reason Is not as expected").isEqualTo(expectedFailureReason);
+      if (expectedRetryPolicyAbbreviation != null) {
+        Assertions.assertThat(previousReqContext.split("_")).describedAs(
+            "Retry Count, Failure Reason and Retry Policy should be present").hasSize(3);
+        Assertions.assertThat(previousReqContext.split("_")[2]).describedAs(
+            "Retry policy is not as expected").isEqualTo(expectedRetryPolicyAbbreviation);
+      } else {
+        Assertions.assertThat(previousReqContext.split("_")).describedAs(
+            "Retry Count and Failure Reason should be present").hasSize(2);
+      }
     } else {
-      Assertions.assertThat(previousReqContext.split("_")).hasSize(2);
+      Assertions.assertThat(previousReqContext.split("_")).describedAs(
+          "Only Retry Count should be present").hasSize(1);
     }
   }
 }

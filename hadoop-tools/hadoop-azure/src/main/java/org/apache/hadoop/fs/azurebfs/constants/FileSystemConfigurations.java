@@ -35,14 +35,14 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60 * 1000;
+  private static final int SIXTY_SECONDS = 60_1000;
 
   // Retry parameter defaults.
-  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000;  // 3s
-  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000;  // 30s
+  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3_1000;  // 3s
+  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30_1000;  // 30s
   public static final boolean DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
   public static final int DEFAULT_STATIC_RETRY_INTERVAL = 1_1000; // 1s
-  public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
+  public static final int DEFAULT_BACKOFF_INTERVAL = 3_1000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
 

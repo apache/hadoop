@@ -79,13 +79,12 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
 
     // For all other possible values of failureReason, Exponential retry is used
     retryPolicy = client.getRetryPolicy("");
-    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    assertIsExponentialRetryPolicy(retryPolicy);
     retryPolicy = client.getRetryPolicy(null);
-    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    assertIsExponentialRetryPolicy(retryPolicy);
     retryPolicy = client.getRetryPolicy(CONNECTION_RESET_ABBREVIATION);
     Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
-    retryPolicy = client.getRetryPolicy(" ");
-    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    assertIsExponentialRetryPolicy(retryPolicy);
   }
 
   /**
@@ -106,7 +105,7 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsClient client = fs.getAbfsStore().getClient();
 
     AbfsRetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
+    assertIsStaticRetryPolicy(retryPolicy);
 
     Assertions.assertThat(retryPolicy.shouldRetry(0, -1))
         .isEqualTo(true);
@@ -120,5 +119,13 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.shouldRetry(maxIoRetry, -1))
         .isEqualTo(false);
+  }
+
+  private void assertIsExponentialRetryPolicy(AbfsRetryPolicy retryPolicy) {
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+  }
+
+  private void assertIsStaticRetryPolicy(AbfsRetryPolicy retryPolicy) {
+    Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
   }
 }

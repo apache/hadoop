@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -162,4 +163,29 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     return createAbfsOutputStreamWithFlushEnabled(fs1, pathFs1);
   }
 
+  @Test
+  public void testParallelism() throws Exception {
+    long pid = getProcessId();
+    long fileSize = 1024L * 1024L * 1024L;
+    long bytesWritten = 0;
+    try (AbfsOutputStream out = getStream()) {
+      byte[] testBytes = new byte[4096];
+      while (bytesWritten < fileSize) {
+        out.write(testBytes);
+        bytesWritten += testBytes.length;
+        System.out.println("Uploaded: " + bytesWritten + " bytes");
+      }
+
+      // Flush and close the stream
+      out.hflush();
+      out.close();
+      System.out.println("File uploaded successfully. Process ID: " + pid);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  private static long getProcessId() {
+    String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+    return Long.parseLong(jvmName.split("@")[0]);
+  }
 }

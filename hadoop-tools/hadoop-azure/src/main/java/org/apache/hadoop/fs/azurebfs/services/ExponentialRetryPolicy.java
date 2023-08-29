@@ -104,7 +104,7 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
    *                     between retries.
    */
   public ExponentialRetryPolicy(final int maxRetryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
-    super(maxRetryCount);
+    super(maxRetryCount, RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;
     this.deltaBackoff = deltaBackoff;
@@ -123,16 +123,13 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
         + this.randRef.nextInt((int) (this.deltaBackoff * MAX_RANDOM_RATIO)
         - (int) (this.deltaBackoff * MIN_RANDOM_RATIO));
 
-    final double incrementDelta = (Math.pow(2, retryCount - 1)) * boundedRandDelta;
+    final double incrementDelta = (Math.pow(2, retryCount - 1))
+        * boundedRandDelta;
 
-    final long retryInterval = (int) Math.round(Math.min(this.minBackoff + incrementDelta, maxBackoff));
+    final long retryInterval = (int) Math.round(
+        Math.min(this.minBackoff + incrementDelta, maxBackoff));
 
     return retryInterval;
-  }
-
-  @Override
-  public String getAbbreviation() {
-    return RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
   }
 
   @VisibleForTesting

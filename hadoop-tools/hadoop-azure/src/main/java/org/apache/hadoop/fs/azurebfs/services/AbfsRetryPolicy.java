@@ -33,8 +33,14 @@ public abstract class AbfsRetryPolicy {
    */
   private final int maxRetryCount;
 
-  public AbfsRetryPolicy(final int maxRetryCount) {
+  /**
+   * Retry Policy Abbreviation for logging purpose.
+   */
+  private final String retryPolicyAbbreviation;
+
+  protected AbfsRetryPolicy(final int maxRetryCount, final String retryPolicyAbbreviation) {
     this.maxRetryCount = maxRetryCount;
+    this.retryPolicyAbbreviation = retryPolicyAbbreviation;
   }
 
   /**
@@ -65,9 +71,24 @@ public abstract class AbfsRetryPolicy {
    */
   public abstract long getRetryInterval(final int retryCount);
 
-  public abstract String getAbbreviation();
+  /**
+   * Returns a String value of the abbreviation
+   * denoting which type of retry policy is used
+   * @return retry policy abbreviation
+   */
+  public String getAbbreviation() {
+    return retryPolicyAbbreviation;
+  }
 
   protected int getMaxRetryCount() {
     return maxRetryCount;
+  }
+
+  @Override
+  public String toString() {
+    return "AbfsRetryPolicy of subtype: " +
+        retryPolicyAbbreviation +
+        " and max retry count: " +
+        maxRetryCount;
   }
 }

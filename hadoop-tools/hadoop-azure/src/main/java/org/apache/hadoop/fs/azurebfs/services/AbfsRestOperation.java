@@ -339,22 +339,22 @@ public class AbfsRestOperation {
     } finally {
       int status = httpOperation.getStatusCode();
       /*
-       * A status less than 300 (2xx range) or greater than or equal
-       * to 500 (5xx range) should contribute to throttling metrics being updated.
-       * Less than 200 or greater than or equal to 500 show failed operations. 2xx
-       * range contributes to successful operations. 3xx range is for redirects
-       * and 4xx range is for user errors. These should not be a part of
-       * throttling backoff computation.
-       * */
+       A status less than 300 (2xx range) or greater than or equal
+       to 500 (5xx range) should contribute to throttling metrics being updated.
+       Less than 200 or greater than or equal to 500 show failed operations. 2xx
+       range contributes to successful operations. 3xx range is for redirects
+       and 4xx range is for user errors. These should not be a part of
+       throttling backoff computation.
+       */
       boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
               || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
       /*
-       * Connection Timeout failures should not contribute to throttling
-       * In case the current request fails with Connection Timeout we will have
-       * ioExceptionThrown true and failure reason as CT
-       * In case the current request failed with 5xx, failure reason will be
-       * updated after finally block but wasIOExceptionThrown will be false;
+       Connection Timeout failures should not contribute to throttling
+       In case the current request fails with Connection Timeout we will have
+       ioExceptionThrown true and failure reason as CT
+       In case the current request failed with 5xx, failure reason will be
+       updated after finally block but wasIOExceptionThrown will be false;
        */
       boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && wasIOExceptionThrown;
 
