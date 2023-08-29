@@ -32,19 +32,11 @@ public class StaticRetryPolicy extends AbfsRetryPolicy {
 
   /**
    * Initializes a new instance of the {@link StaticRetryPolicy} class.
-   * @param maxIoRetries Maximum Retry Count Allowed
-   */
-  public StaticRetryPolicy(final int maxIoRetries, final int retryInterval) {
-    super(maxIoRetries, RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION);
-    this.retryInterval = retryInterval;
-  }
-
-  /**
-   * Initializes a new instance of the {@link StaticRetryPolicy} class.
    * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
    */
   public StaticRetryPolicy(AbfsConfiguration conf) {
-    this(conf.getMaxIoRetries(), conf.getStaticRetryInterval());
+    super(conf.getMaxIoRetries(), RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION);
+    this.retryInterval = conf.getStaticRetryInterval();
   }
 
   /**
