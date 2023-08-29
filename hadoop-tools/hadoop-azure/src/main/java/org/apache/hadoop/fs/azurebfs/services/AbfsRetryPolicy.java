@@ -54,7 +54,7 @@ public abstract class AbfsRetryPolicy {
    * @return true if the request should be retried; false otherwise.
    */
   public boolean shouldRetry(final int retryCount, final int statusCode) {
-    return retryCount < this.maxRetryCount
+    return retryCount < maxRetryCount
         && (statusCode < HTTP_CONTINUE
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
@@ -80,6 +80,10 @@ public abstract class AbfsRetryPolicy {
     return retryPolicyAbbreviation;
   }
 
+  /**
+   * Returns maximum number of retries allowed in this retry policy
+   * @return max retry count
+   */
   protected int getMaxRetryCount() {
     return maxRetryCount;
   }
