@@ -457,6 +457,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
             }
           }
         }
+//        ((AbfsHttpUrlConnection) connection).closeServer();
       } catch (IOException ex) {
         LOG.warn("IO/Network error: {} {}: {}",
             method, getMaskedUrl(), ex.getMessage());
