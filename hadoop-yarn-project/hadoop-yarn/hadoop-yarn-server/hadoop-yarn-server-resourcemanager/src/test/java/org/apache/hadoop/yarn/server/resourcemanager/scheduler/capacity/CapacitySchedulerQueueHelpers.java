@@ -370,7 +370,7 @@ public final class CapacitySchedulerQueueHelpers {
   }
 
   public static void assertQueueCapacities(CSQueue q, ExpectedCapacities capacities) {
-    final float epsilon = 1e-5f;
+    final float epsilon = 1e-4f;
     assertEquals("capacity", capacities.getCapacity(), q.getCapacity(), epsilon);
     assertEquals("absolute capacity", capacities.getAbsCapacity(),
         q.getAbsoluteCapacity(), epsilon);

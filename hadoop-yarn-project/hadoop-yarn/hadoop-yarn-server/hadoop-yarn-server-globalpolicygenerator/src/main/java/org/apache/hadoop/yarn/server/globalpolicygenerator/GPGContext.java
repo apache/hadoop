@@ -28,4 +28,8 @@ public interface GPGContext {
   FederationStateStoreFacade getStateStoreFacade();
 
   void setStateStoreFacade(FederationStateStoreFacade facade);
+
+  GPGPolicyFacade getPolicyFacade();
+
+  void setPolicyFacade(GPGPolicyFacade facade);
 }

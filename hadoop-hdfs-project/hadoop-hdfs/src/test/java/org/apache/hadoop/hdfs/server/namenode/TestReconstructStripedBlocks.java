@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -52,6 +53,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
@@ -513,6 +515,65 @@ public class TestReconstructStripedBlocks {
 
     assertEquals(0, bm.countNodes(blockInfo).excessReplicas());
     assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
+  }
+
+  @Test
+  public void testReconstructionWithStorageTypeNotEnough() throws Exception {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+
+    // Nine disk node eleven archive node.
+    int numDn = groupSize * 2 + 2;
+    StorageType[][] storageTypes = new StorageType[numDn][];
+    Arrays.fill(storageTypes, 0, groupSize,
+        new StorageType[]{StorageType.DISK, StorageType.DISK});
+    Arrays.fill(storageTypes, groupSize, numDn,
+        new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE});
+
+    // Nine disk racks and one archive rack.
+    String[] racks = {
+        "/rack1", "/rack2", "/rack3", "/rack4", "/rack5", "/rack6", "/rack7", "/rack8",
+        "/rack9", "/rack0", "/rack0", "/rack0", "/rack0", "/rack0", "/rack0", "/rack0",
+        "/rack0", "/rack0", "/rack0", "/rack0"};
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDn)
+        .storageTypes(storageTypes)
+        .racks(racks)
+        .build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+
+    try {
+      fs.mkdirs(dirPath);
+      fs.setStoragePolicy(dirPath, "COLD");
+      fs.setErasureCodingPolicy(dirPath,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
+      DFSTestUtil.createFile(fs, filePath,
+          cellSize * dataBlocks * 2, (short) 1, 0L);
+
+      // Stop one dn.
+      LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      DatanodeInfo dnToStop = block.getLocations()[0];
+      cluster.stopDataNode(dnToStop.getXferAddr());
+      cluster.setDataNodeDead(dnToStop);
+
+      // Wait for reconstruction to happen.
+      StripedFileTestUtil.waitForReconstructionFinished(filePath, fs, groupSize);
+      blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      BitSet bitSet = new BitSet(groupSize);
+      for (byte index : block.getBlockIndices()) {
+        bitSet.set(index);
+      }
+      for (int i = 0; i < groupSize; i++) {
+        Assert.assertTrue(bitSet.get(i));
+      }
+    } finally {
+      cluster.shutdown();
+    }
   }
 
 }

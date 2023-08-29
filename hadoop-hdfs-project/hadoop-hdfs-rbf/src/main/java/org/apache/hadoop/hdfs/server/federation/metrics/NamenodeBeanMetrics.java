@@ -884,6 +884,11 @@ public class NamenodeBeanMetrics
     return 0;
   }
 
+  @Override
+  public float getReconstructionQueuesInitProgress() {
+    return 0;
+  }
+
   private Router getRouter() throws IOException {
     if (this.router == null) {
       throw new IOException("Router is not initialized");

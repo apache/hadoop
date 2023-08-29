@@ -66,6 +66,7 @@ public class HttpFSServerMetrics {
   private @Metric MutableCounterLong opsCheckAccess;
   private @Metric MutableCounterLong opsStatus;
   private @Metric MutableCounterLong opsAllECPolicies;
+  private @Metric MutableCounterLong opsECCodecs;
 
   private final MetricsRegistry registry = new MetricsRegistry("httpfsserver");
   private final String name;
@@ -169,5 +170,9 @@ public class HttpFSServerMetrics {
 
   public void incrOpsAllECPolicies() {
     opsAllECPolicies.incr();
+  }
+
+  public void incrOpsECCodecs() {
+    opsECCodecs.incr();
   }
 }

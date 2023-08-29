@@ -51,6 +51,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -2205,6 +2206,13 @@ public class JobConf extends Configuration {
           " jvm max heap size to " + xmxArg);
 
       javaOpts += " " + xmxArg;
+    }
+
+    // JDK17 support: automatically add --add-opens=java.base/java.lang=ALL-UNNAMED
+    // so the tasks can launch on a JDK17 node.
+    if (getBoolean(MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT,
+            MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT)) {
+      javaOpts += " " + ApplicationConstants.JVM_ADD_OPENS_VAR;
     }
 
     return javaOpts;

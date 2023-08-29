@@ -82,6 +82,7 @@ import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
@@ -162,9 +163,15 @@ public class TestIPC {
   static LongWritable call(Client client, LongWritable param,
       InetSocketAddress addr, int rpcTimeout, Configuration conf)
           throws IOException {
+    return call(client, param, addr, rpcTimeout, conf, null);
+  }
+
+  static LongWritable call(Client client, LongWritable param,
+      InetSocketAddress addr, int rpcTimeout, Configuration conf, AlignmentContext alignmentContext)
+      throws IOException {
     final ConnectionId remoteId = getConnectionId(addr, rpcTimeout, conf);
     return (LongWritable)client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
-        RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        RPC.RPC_SERVICE_CLASS_DEFAULT, null, alignmentContext);
   }
 
   static class TestServer extends Server {
@@ -1325,6 +1332,37 @@ public class TestIPC {
       final SerialCaller caller = new SerialCaller(client, addr, 10);
       caller.run();
       assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
+  /**
+   * Verify that stateID is received into call before
+   * caller is notified.
+   * @throws IOException
+   */
+  @Test(timeout=60000)
+  public void testReceiveStateBeforeCallerNotification() throws IOException {
+    AtomicBoolean stateReceived = new AtomicBoolean(false);
+    AlignmentContext alignmentContext = Mockito.mock(AlignmentContext.class);
+    Mockito.doAnswer((Answer<Void>) invocation -> {
+      Thread.sleep(1000);
+      stateReceived.set(true);
+      return null;
+    }).when(alignmentContext)
+        .receiveResponseState(any(RpcHeaderProtos.RpcResponseHeaderProto.class));
+
+    final Client client = new Client(LongWritable.class, conf);
+    final TestServer server = new TestServer(1, false);
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      call(client, new LongWritable(RANDOM.nextLong()), addr,
+          0, conf, alignmentContext);
+      Assert.assertTrue(stateReceived.get());
     } finally {
       client.stop();
       server.stop();

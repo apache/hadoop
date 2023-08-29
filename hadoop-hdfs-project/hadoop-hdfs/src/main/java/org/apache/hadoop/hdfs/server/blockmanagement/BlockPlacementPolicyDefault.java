@@ -1085,12 +1085,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                          int maxTargetPerRack, boolean considerLoad,
                          List<DatanodeStorageInfo> results,
                          boolean avoidStaleNodes) {
-    // check if the node is (being) decommissioned
+    // check if the node is in state 'In Service'
     if (!node.isInService()) {
       logNodeIsNotChosen(node, NodeNotChosenReason.NOT_IN_SERVICE);
       return false;
     }
 
+    // check if the target is a stale node
     if (avoidStaleNodes) {
       if (node.isStale(this.staleInterval)) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_STALE);
@@ -1218,7 +1219,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     DatanodeStorageInfo minSpaceStorage = null;
 
     // Pick the node with the oldest heartbeat or with the least free space,
-    // if all hearbeats are within the tolerable heartbeat interval
+    // if all heartbeats are within the tolerable heartbeat interval
     for(DatanodeStorageInfo storage : pickupReplicaSet(moreThanOne,
         exactlyOne, rackMap)) {
       if (!excessTypes.contains(storage.getStorageType())) {

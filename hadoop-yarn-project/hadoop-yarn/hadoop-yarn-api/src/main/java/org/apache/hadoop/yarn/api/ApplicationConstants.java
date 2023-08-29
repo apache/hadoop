@@ -78,6 +78,13 @@ public interface ApplicationConstants {
     "APPLICATION_WEB_PROXY_BASE";
 
   /**
+   * The environmental variable for JDK17's add-opens workaround. This
+   * should be replaced either a correctly formatted add-opens option if JDK17 is used
+   * or an empty string if not on container launch.
+   */
+  String JVM_ADD_OPENS_VAR = "<ADD_OPENS>";
+
+  /**
    * The temporary environmental variable for container log directory. This
    * should be replaced by real container log directory on container launch.
    */

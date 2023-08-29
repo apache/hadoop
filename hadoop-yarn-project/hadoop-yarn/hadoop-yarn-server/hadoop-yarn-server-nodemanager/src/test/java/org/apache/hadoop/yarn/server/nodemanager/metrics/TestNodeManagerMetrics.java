@@ -130,9 +130,12 @@ public class TestNodeManagerMetrics {
 
     // Update resource and check available resource again
     metrics.addResource(total);
+    metrics.addContainerMonitorCostTime(200L);
+
     MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");
     assertGauge("AvailableGB", 12, rb);
     assertGauge("AvailableVCores", 19, rb);
+    assertGauge("ContainersMonitorCostTime", 200L, rb);
   }
 
   public static void checkMetrics(int launched, int completed, int failed,

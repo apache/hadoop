@@ -871,4 +871,45 @@ public class TestObserverWithRouter {
       Assertions.fail("Unknown config setting: " + configSetting);
     }
   }
+
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testMsyncOnlyToNamespaceWithObserver(ConfigSetting configSetting) throws Exception {
+    Configuration confOverride = new Configuration(false);
+    String namespaceWithObserverReadsDisabled = "ns0";
+    // Disable observer reads for ns0
+    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES,
+        namespaceWithObserverReadsDisabled);
+    startUpCluster(1, confOverride);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+
+    // Send msync request
+    fileSystem.msync();
+
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // There should only be one call to the namespace that has an observer.
+    assertEquals("Only one call to the namespace with an observer", 1, rpcCountForActive);
+  }
+
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testMsyncWithNoNamespacesEligibleForCRS(ConfigSetting configSetting)
+      throws Exception {
+    Configuration confOverride = new Configuration(false);
+    // Disable observer reads for all namespaces.
+    confOverride.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, false);
+    startUpCluster(1, confOverride);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+
+    // Send msync request.
+    fileSystem.msync();
+
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // There should no calls to any namespace.
+    assertEquals("No calls to any namespace", 0, rpcCountForActive);
+  }
 }

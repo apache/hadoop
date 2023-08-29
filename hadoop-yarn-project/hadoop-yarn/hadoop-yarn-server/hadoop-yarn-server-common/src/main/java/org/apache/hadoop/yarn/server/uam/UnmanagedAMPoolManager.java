@@ -76,7 +76,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
   private ExecutorService threadpool;
 
-  private String dispatcherThreadName = "UnmanagedAMPoolManager-Finish-Thread";
+  private final String dispatcherThreadName = "UnmanagedAMPoolManager-Finish-Thread";
 
   private Thread finishApplicationThread;
 
@@ -138,7 +138,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
       boolean keepContainersAcrossApplicationAttempts, String rmName,
       ApplicationSubmissionContext originalAppSubmissionContext)
       throws YarnException, IOException {
-    ApplicationId appId = null;
+    ApplicationId appId;
     ApplicationClientProtocol rmClient;
     try {
       UserGroupInformation appSubmitter =
@@ -198,14 +198,16 @@ public class UnmanagedAMPoolManager extends AbstractService {
     if (this.unmanagedAppMasterMap.containsKey(uamId)) {
       throw new YarnException("UAM " + uamId + " already exists");
     }
+
     UnmanagedApplicationManager uam = createUAM(conf, appId, queueName,
         submitter, appNameSuffix, keepContainersAcrossApplicationAttempts,
         rmName, originalAppSubmissionContext);
+
     // Put the UAM into map first before initializing it to avoid additional UAM
     // for the same uamId being created concurrently
     this.unmanagedAppMasterMap.put(uamId, uam);
 
-    Token<AMRMTokenIdentifier> amrmToken = null;
+    Token<AMRMTokenIdentifier> amrmToken;
     try {
       LOG.info("Launching UAM id {} for application {}", uamId, appId);
       amrmToken = uam.launchUAM();
@@ -390,7 +392,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
   public Set<String> getAllUAMIds() {
     // Return a clone of the current id set for concurrency reasons, so that the
     // returned map won't change with the actual map
-    return new HashSet<String>(this.unmanagedAppMasterMap.keySet());
+    return new HashSet<>(this.unmanagedAppMasterMap.keySet());
   }
 
   /**
@@ -439,7 +441,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    *
    * @param request FinishApplicationMasterRequest
    * @param appId application Id
-   * @return Returns the Map map,
+   * @return Returns the Map,
    *         the key is subClusterId, the value is FinishApplicationMasterResponse
    */
   public Map<String, FinishApplicationMasterResponse> batchFinishApplicationMaster(

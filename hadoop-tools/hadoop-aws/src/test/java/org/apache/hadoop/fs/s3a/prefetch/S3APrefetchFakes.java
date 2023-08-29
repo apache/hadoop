@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -314,7 +315,8 @@ public final class S3APrefetchFakes {
     private final int writeDelay;
 
     public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
-      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics(),
+          Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT);
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -387,7 +389,7 @@ public final class S3APrefetchFakes {
     }
 
     @Override
-    protected BlockCache createCache() {
+    protected BlockCache createCache(int maxBlocksCount) {
       final int readDelayMs = 50;
       final int writeDelayMs = 200;
       return new FakeS3FilePerBlockCache(readDelayMs, writeDelayMs);

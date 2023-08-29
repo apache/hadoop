@@ -337,6 +337,7 @@ public class TestAbsoluteResourceConfiguration {
     Assert.assertTrue(String.format("Summarized resource %s of all children is greater than " +
         "their parent's %s", res, resParent),
         Resources.lessThan(cs.getResourceCalculator(), cs.getClusterResource(), res, resParent));
+    rm.stop();
   }
 
   @Test
@@ -571,9 +572,13 @@ public class TestAbsoluteResourceConfiguration {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     try {
       cs.reinitialize(csConf, rm.getRMContext());
-      Assert.fail();
+      if (csConf.isLegacyQueueMode()) {
+        Assert.fail("legacy queue mode does not support mixed queue modes");
+      }
     } catch (IOException e) {
-      Assert.assertTrue(e instanceof IOException);
+      if (!csConf.isLegacyQueueMode()) {
+        Assert.fail("new queue mode supports mixed queue modes");
+      }
       Assert.assertTrue(e.getMessage().contains("Failed to re-init queues"));
     }
 
@@ -588,13 +593,18 @@ public class TestAbsoluteResourceConfiguration {
 
     try {
       cs.reinitialize(csConf1, rm.getRMContext());
-      Assert.fail();
+      if (csConf.isLegacyQueueMode()) {
+        Assert.fail("legacy queue mode enforces that parent.capacity >= sum(children.capacity)");
+      }
     } catch (IOException e) {
-      Assert.assertTrue(e instanceof IOException);
+      if (!csConf.isLegacyQueueMode()) {
+        Assert.fail("new queue mode allows that parent.capacity >= sum(children.capacity)");
+      }
       Assert.assertEquals("Failed to re-init queues : Parent Queues capacity: "
           + "<memory:51200, vCores:5> is less than to its children:"
           + "<memory:102400, vCores:10> for queue:queueA", e.getMessage());
     }
+    rm.stop();
   }
 
   @Test
@@ -646,6 +656,7 @@ public class TestAbsoluteResourceConfiguration {
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }
+    rm.stop();
   }
 
   @Test
@@ -682,6 +693,7 @@ public class TestAbsoluteResourceConfiguration {
     Assert.assertTrue("Children of root have more resource than overall cluster resource",
         Resources.greaterThan(cs.getResourceCalculator(), cs.getClusterResource(),
             root.getEffectiveCapacity(X_LABEL), childrenResource));
+    rm.stop();
   }
 
   @Test

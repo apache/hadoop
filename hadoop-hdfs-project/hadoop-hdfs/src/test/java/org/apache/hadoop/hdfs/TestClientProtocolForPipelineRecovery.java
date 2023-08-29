@@ -327,7 +327,7 @@ public class TestClientProtocolForPipelineRecovery {
       // Wait long enough to receive an OOB ack before closing the file.
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
-      // Retart the datanode 
+      // Restart the datanode
       cluster.restartDataNode(0, true);
       // The following forces a data packet and end of block packets to be sent. 
       out.close();

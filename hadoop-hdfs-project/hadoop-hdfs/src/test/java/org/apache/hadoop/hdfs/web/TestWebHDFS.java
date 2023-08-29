@@ -2318,6 +2318,30 @@ public class TestWebHDFS {
     }
   }
 
+  @Test
+  public void getAllErasureCodingCodecs() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+
+      final WebHdfsFileSystem webHdfs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+              WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      Map<String, String> webHdfsEcCodecs = webHdfs.getAllErasureCodingCodecs();
+
+      Map<String, String> dfsEcCodecs = dfs.getAllErasureCodingCodecs();
+
+      //Validate erasureCodingCodecs are the same as DistributedFileSystem
+      assertEquals(webHdfsEcCodecs, dfsEcCodecs);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Get FileStatus JSONObject from ListStatus response.
    */

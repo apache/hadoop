@@ -415,7 +415,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     try {
       CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(
           policy.leafQueueTemplate.getQueueCapacities(),
-          parentQueueCapacities, policy.leafQueueTemplateNodeLabels);
+          parentQueueCapacities, policy.leafQueueTemplateNodeLabels,
+          managedParentQueue.getQueueContext().getConfiguration().isLegacyQueueMode());
       policy.leafQueueTemplateCapacities =
           policy.leafQueueTemplate.getQueueCapacities();
     } finally {

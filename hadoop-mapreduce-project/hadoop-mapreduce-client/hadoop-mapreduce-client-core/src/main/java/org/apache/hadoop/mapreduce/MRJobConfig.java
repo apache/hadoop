@@ -305,6 +305,15 @@ public interface MRJobConfig {
     "os.name,os.version,java.home,java.runtime.version,java.vendor," +
     "java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name";
 
+  /*
+   * Flag to indicate whether JDK17's required add-opens flags should be added to MR AM and
+   * map/reduce containers regardless of the user specified java opts.
+   */
+  public static final String MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT =
+    "mapreduce.jvm.add-opens-as-default";
+
+  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = true;
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final int DEFAULT_IO_SORT_FACTOR = 10;

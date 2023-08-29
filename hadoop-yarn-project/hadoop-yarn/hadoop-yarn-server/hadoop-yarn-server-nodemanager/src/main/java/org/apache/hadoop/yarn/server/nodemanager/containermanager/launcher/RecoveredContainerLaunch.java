@@ -74,7 +74,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
     dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
         ContainerEventType.CONTAINER_LAUNCHED));
 
-    boolean notInterrupted = true;
+    boolean interrupted = false;
     try {
       File pidFile = locatePidFile(appIdStr, containerIdStr);
       if (pidFile != null) {
@@ -92,11 +92,11 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
       }
     } catch (InterruptedException | InterruptedIOException e) {
       LOG.warn("Interrupted while waiting for exit code from " + containerId);
-      notInterrupted = false;
+      interrupted = true;
     } catch (IOException e) {
       LOG.error("Unable to recover container " + containerIdStr, e);
     } finally {
-      if (notInterrupted) {
+      if (!interrupted) {
         this.completed.set(true);
         exec.deactivateContainer(containerId);
         try {

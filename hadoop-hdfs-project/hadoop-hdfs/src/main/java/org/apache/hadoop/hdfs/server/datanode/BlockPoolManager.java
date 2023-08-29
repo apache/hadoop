@@ -308,13 +308,6 @@ class BlockPoolManager {
     return bpByNameserviceId;
   }
 
-  boolean isSlownodeByNameserviceId(String nsId) {
-    if (bpByNameserviceId.containsKey(nsId)) {
-      return bpByNameserviceId.get(nsId).isSlownode();
-    }
-    return false;
-  }
-
   boolean isSlownodeByBlockPoolId(String bpId) {
     if (bpByBlockPoolId.containsKey(bpId)) {
       return bpByBlockPoolId.get(bpId).isSlownode();

@@ -91,7 +91,7 @@ public class ParentQueue extends AbstractParentQueue {
       } catch (IOException e) {
         LOG.warn("Caught Exception during auto queue creation", e);
       }
-      if (!weightsAreUsed) {
+      if (!weightsAreUsed && queueContext.getConfiguration().isLegacyQueueMode()) {
         throw new SchedulerDynamicEditException(
             "Trying to create new queue=" + childQueuePath
                 + " but not all the queues under parent=" + this.getQueuePath()

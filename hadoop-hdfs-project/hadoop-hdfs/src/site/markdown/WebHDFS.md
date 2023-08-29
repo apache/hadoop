@@ -62,6 +62,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
     * [`GETSTATUS`](#Get_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus)
     * [`GETECPOLICIES`](#Get_EC_Policies)
+    * [`GETECCODECS`](#Get_EC_Codecs)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1251,6 +1252,26 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLi
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus
+
+### Get EC Codecs
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETALLECCODECS"
+
+  The client receives a response with a [`ECCodecs` JSON object](#EC_Codecs_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "ErasureCodeCodecs": {
+                "rs": "rs_native, rs_java",
+                "rs-legacy": "rs-legacy_java",
+                "xor":"xor_native, xor_java"
+            }
+        }
 
 Storage Policy Operations
 -------------------------
@@ -3240,6 +3261,18 @@ var blockLocationProperties =
         }
       }
     ]
+  }
+}
+```
+
+### EC Codecs JSON Schema
+
+```json
+{
+  "ErasureCodingCodecs": {
+    "rs": "rs_native, rs_java",
+    "rs-legacy": "rs-legacy_java",
+    "xor": "xor_native, xor_java"
   }
 }
 ```

@@ -227,6 +227,11 @@ public class ResourceCalculationDriver {
             context.getResourceName(), context.getCapacityType())) {
           continue;
         }
+
+        if (!overallRemainingResourcePerLabel.containsKey(label)) {
+          continue;
+        }
+
         double usedResourceByChild = setChildResources(context, label);
         double aggregatedUsedResource = usedResourceByCurrentCalculatorPerLabel.getOrDefault(label,
             0d);

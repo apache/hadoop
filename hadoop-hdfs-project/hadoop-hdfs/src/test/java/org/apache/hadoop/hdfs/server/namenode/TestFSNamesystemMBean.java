@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
@@ -33,9 +34,12 @@ import javax.management.ObjectName;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.eclipse.jetty.util.ajax.JSON;
 
@@ -223,6 +227,46 @@ public class TestFSNamesystemMBean {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  /**
+   * Test metrics associated with reconstructionQueuesInitProgress.
+   */
+  @Test
+  public void testReconstructionQueuesInitProgressMetrics() throws Exception {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final FSNamesystem fsNamesystem = cluster.getNamesystem();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Validate init reconstructionQueuesInitProgress value.
+      assertEquals(0.0, fsNamesystem.getReconstructionQueuesInitProgress(), 0);
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName =
+          new ObjectName("Hadoop:service=NameNode,name=FSNamesystemState");
+      float reconstructionQueuesInitProgress =
+          (float) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
+      assertEquals(0.0, reconstructionQueuesInitProgress, 0);
+
+      // Create file.
+      Path file = new Path("/test");
+      long fileLength = 1024 * 1024 * 3;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 1, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 1);
+
+      // Restart nameNode to run processMisReplicatedBlocks.
+      cluster.restartNameNode(true);
+
+      // Validate reconstructionQueuesInitProgress value.
+      GenericTestUtils.waitFor(
+          () -> cluster.getNamesystem().getReconstructionQueuesInitProgress() == 1.0,
+          100, 5 * 1000);
+
+      reconstructionQueuesInitProgress =
+          (float) mbs.getAttribute(mxbeanName, "ReconstructionQueuesInitProgress");
+      assertEquals(1.0, reconstructionQueuesInitProgress, 0);
     }
   }
 }

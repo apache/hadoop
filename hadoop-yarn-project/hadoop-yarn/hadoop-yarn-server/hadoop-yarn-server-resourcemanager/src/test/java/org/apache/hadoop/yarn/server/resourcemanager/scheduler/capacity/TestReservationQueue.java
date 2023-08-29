@@ -26,8 +26,11 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
@@ -53,6 +56,7 @@ public class TestReservationQueue {
       new DefaultResourceCalculator();
   private ReservationQueue autoCreatedLeafQueue;
   private PlanQueue planQueue;
+  private final Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
 
   @Before
   public void setup() throws IOException, SchedulerDynamicEditException {
@@ -65,6 +69,11 @@ public class TestReservationQueue {
         CapacitySchedulerQueueManager.class);
     ConfiguredNodeLabels labels = new ConfiguredNodeLabels(csConf);
     when(csQm.getConfiguredNodeLabelsForAllQueues()).thenReturn(labels);
+    NullRMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(csConf);
+    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    when(csQm.getQueueCapacityHandler()).thenReturn(
+        new CapacitySchedulerQueueCapacityHandler(mgr, csConf));
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(csQm);
     when(csContext.getConf()).thenReturn(conf);
@@ -73,7 +82,7 @@ public class TestReservationQueue {
     when(csContext.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(16 * GB, 32));
     when(csContext.getClusterResource()).thenReturn(
-        Resources.createResource(100 * 16 * GB, 100 * 32));
+        clusterResource);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     RMContext mockRMContext = TestUtils.getMockRMContext();
@@ -100,9 +109,9 @@ public class TestReservationQueue {
     autoCreatedLeafQueue.setCapacity(1.0F);
     autoCreatedLeafQueue.setMaxCapacity(1.0F);
 
+
     planQueue.updateClusterResource(
-        Resources.createResource(100 * 16 * GB, 100 * 32),
-        new ResourceLimits(Resources.createResource(100 * 16 * GB, 100 * 32)));
+        clusterResource, new ResourceLimits(clusterResource));
 
     validateAutoCreatedLeafQueue(1);
     autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(0.9f, 1f));

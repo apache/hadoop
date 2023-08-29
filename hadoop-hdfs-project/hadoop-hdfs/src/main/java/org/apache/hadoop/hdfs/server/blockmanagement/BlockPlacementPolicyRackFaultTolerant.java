@@ -170,7 +170,7 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
     NotEnoughReplicasException lastException = e;
     int bestEffortMaxNodesPerRack = maxNodesPerRack;
     while (results.size() != totalReplicaExpected &&
-        numResultsOflastChoose != results.size()) {
+        bestEffortMaxNodesPerRack < totalReplicaExpected) {
       // Exclude the chosen nodes
       final Set<Node> newExcludeNodes = new HashSet<>();
       for (DatanodeStorageInfo resultStorage : results) {
@@ -192,11 +192,22 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       } finally {
         excludedNodes.addAll(newExcludeNodes);
       }
+      // To improve performance, the maximum value of 'bestEffortMaxNodesPerRack'
+      // is calculated only when it is not possible to select a node.
+      if (numResultsOflastChoose == results.size()) {
+        Map<String, Integer> nodesPerRack = new HashMap<>();
+        for (DatanodeStorageInfo dsInfo : results) {
+          String rackName = dsInfo.getDatanodeDescriptor().getNetworkLocation();
+          nodesPerRack.merge(rackName, 1, Integer::sum);
+        }
+        bestEffortMaxNodesPerRack =
+            Math.max(bestEffortMaxNodesPerRack, Collections.max(nodesPerRack.values()));
+      }
     }
 
-    if (numResultsOflastChoose != totalReplicaExpected) {
+    if (results.size() != totalReplicaExpected) {
       LOG.debug("Best effort placement failed: expecting {} replicas, only "
-          + "chose {}.", totalReplicaExpected, numResultsOflastChoose);
+          + "chose {}.", totalReplicaExpected, results.size());
       throw lastException;
     }
   }

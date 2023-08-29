@@ -110,6 +110,7 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param prefetchingStatistics statistics for this stream.
    * @param conf the configuration.
    * @param localDirAllocator the local dir allocator instance.
+   * @param maxBlocksCount max blocks count to be kept in cache at any time.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
@@ -118,7 +119,8 @@ public abstract class CachingBlockManager extends BlockManager {
       int bufferPoolSize,
       PrefetchingStatistics prefetchingStatistics,
       Configuration conf,
-      LocalDirAllocator localDirAllocator) {
+      LocalDirAllocator localDirAllocator,
+      int maxBlocksCount) {
     super(blockData);
 
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
@@ -129,16 +131,16 @@ public abstract class CachingBlockManager extends BlockManager {
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
+    this.conf = requireNonNull(conf);
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache();
+      this.cache = this.createCache(maxBlocksCount);
     }
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
-    this.conf = requireNonNull(conf);
     this.localDirAllocator = localDirAllocator;
   }
 
@@ -557,8 +559,8 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  protected BlockCache createCache() {
-    return new SingleFilePerBlockCache(prefetchingStatistics);
+  protected BlockCache createCache(int maxBlocksCount) {
+    return new SingleFilePerBlockCache(prefetchingStatistics, maxBlocksCount);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {

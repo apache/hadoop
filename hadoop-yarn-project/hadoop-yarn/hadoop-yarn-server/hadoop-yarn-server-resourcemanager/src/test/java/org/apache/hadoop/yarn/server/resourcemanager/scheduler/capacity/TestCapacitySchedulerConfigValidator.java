@@ -386,7 +386,7 @@ public class TestCapacitySchedulerConfigValidator {
   public void testValidateCSConfigAddALeafQueueInvalid() {
     Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
             .createBasicCSConfiguration();
-    Configuration newConfig = new Configuration(oldConfig);
+    CapacitySchedulerConfiguration newConfig = new CapacitySchedulerConfiguration(oldConfig);
     newConfig
             .set("yarn.scheduler.capacity.root.queues", "test1, test2, test3");
     newConfig
@@ -398,7 +398,9 @@ public class TestCapacitySchedulerConfigValidator {
     try {
       CapacitySchedulerConfigValidator
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      fail("Invalid capacity for children of queue root");
+      if (newConfig.isLegacyQueueMode()) {
+        fail("Invalid capacity for children of queue root");
+      }
     } catch (IOException e) {
       Assert.assertTrue(e.getCause().getMessage()
               .startsWith("Illegal capacity"));
@@ -555,7 +557,8 @@ public class TestCapacitySchedulerConfigValidator {
   public void testValidateCSConfigInvalidQueueDeletion2() {
     Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
             .createBasicCSConfiguration();
-    Configuration newConfig = new Configuration(oldConfig);
+    oldConfig.set("yarn.scheduler.capacity.root.test2.state", "STOPPED");
+    CapacitySchedulerConfiguration newConfig = new CapacitySchedulerConfiguration(oldConfig);
     newConfig.set("yarn.scheduler.capacity.root.queues", "test1");
     newConfig.unset("yarn.scheduler.capacity.root.test2.maximum-capacity");
     newConfig.unset("yarn.scheduler.capacity.root.test2.state");
@@ -565,7 +568,9 @@ public class TestCapacitySchedulerConfigValidator {
     try {
       CapacitySchedulerConfigValidator
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      fail("Invalid capacity for children of queue root");
+      if (newConfig.isLegacyQueueMode()) {
+        fail("Invalid capacity for children of queue root");
+      }
     } catch (IOException e) {
       Assert.assertTrue(e.getCause().getMessage()
               .contains("Illegal capacity"));

@@ -2192,6 +2192,13 @@ function hadoop_daemon_handler
   case ${daemonmode} in
     status)
       hadoop_status_daemon "${daemon_pidfile}"
+      if [[ $? == 0 ]]; then
+        echo "${daemonname} is running as process $(cat "${daemon_pidfile}")."
+      elif [[ $? == 1 ]]; then
+        echo "${daemonname} is stopped."
+      else
+        hadoop_error "hadoop_status_daemon error."
+      fi
       exit $?
     ;;
 

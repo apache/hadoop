@@ -20,6 +20,8 @@ package org.apache.hadoop.tools;
 
 import static org.mockito.Mockito.*;
 
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
@@ -165,6 +167,72 @@ public class TestCopyListing extends SimpleCopyListing {
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
+  }
+
+  @Test(expected = DuplicateFileException.class, timeout = 10000)
+  public void testDiffBasedSimpleCopyListing() throws IOException {
+    FileSystem fs = null;
+    Configuration configuration = getConf();
+    DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
+    Path listingFile = new Path("/tmp/list");
+    // Throws DuplicateFileException as it recursively traverses src3 directory
+    // and also adds 3.txt,4.txt twice
+    configuration.setBoolean(
+        DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
+    try {
+      fs = FileSystem.get(getConf());
+      buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp");
+    }
+  }
+
+  @Test(timeout=10000)
+  public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory()
+      throws IOException {
+    FileSystem fs = null;
+    Configuration configuration = getConf();
+    DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
+    Path listingFile = new Path("/tmp/list");
+    // no exception expected in this case
+    configuration.setBoolean(
+        DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, false);
+    try {
+      fs = FileSystem.get(getConf());
+      buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp");
+    }
+  }
+
+  private void buildListingUsingSnapshotDiff(FileSystem fs,
+      Configuration configuration, DistCpSync distCpSync, Path listingFile)
+      throws IOException {
+    List<Path> srcPaths = new ArrayList<>();
+    srcPaths.add(new Path("/tmp/in"));
+    TestDistCpUtils.createFile(fs, "/tmp/in/src1/1.txt");
+    TestDistCpUtils.createFile(fs, "/tmp/in/src2/1.txt");
+    TestDistCpUtils.createFile(fs, "/tmp/in/src3/3.txt");
+    TestDistCpUtils.createFile(fs, "/tmp/in/src3/4.txt");
+    Path target = new Path("/tmp/out");
+    // adding below flags useDiff & sync only to enable context.shouldUseSnapshotDiff()
+    final DistCpOptions options =
+        new DistCpOptions.Builder(srcPaths, target).withUseDiff("snap1",
+            "snap2").withSyncFolder(true).build();
+    // Create a dummy DiffInfo List that contains a directory + paths inside
+    // that directory as part of the diff.
+    ArrayList<DiffInfo> diffs = new ArrayList<>();
+    diffs.add(new DiffInfo(new Path("/tmp/in/src3/"), new Path("/tmp/in/src3/"),
+        SnapshotDiffReport.DiffType.CREATE));
+    diffs.add(new DiffInfo(new Path("/tmp/in/src3/3.txt"),
+        new Path("/tmp/in/src3/3.txt"), SnapshotDiffReport.DiffType.CREATE));
+    diffs.add(new DiffInfo(new Path("/tmp/in/src3/4.txt"),
+        new Path("/tmp/in/src3/4.txt"), SnapshotDiffReport.DiffType.CREATE));
+    Mockito.when(distCpSync.prepareDiffListForCopyListing()).thenReturn(diffs);
+    final DistCpContext context = new DistCpContext(options);
+    CopyListing listing =
+        new SimpleCopyListing(configuration, CREDENTIALS, distCpSync);
+    listing.buildListing(listingFile, context);
   }
 
   @Test

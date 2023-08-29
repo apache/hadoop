@@ -136,7 +136,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setDynamicQueueProperties() {
+  protected void parseAndSetDynamicTemplates() {
     String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
         CapacitySchedulerConfiguration
             .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);

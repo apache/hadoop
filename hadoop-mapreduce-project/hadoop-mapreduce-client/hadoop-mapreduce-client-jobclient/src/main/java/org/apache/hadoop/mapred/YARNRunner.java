@@ -485,6 +485,13 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.MR_AM_COMMAND_OPTS, MRJobConfig.MR_AM_ENV);
     vargs.add(mrAppMasterUserOptions);
 
+    // JDK17 support: automatically add --add-opens=java.base/java.lang=ALL-UNNAMED
+    // so the tasks can launch on a JDK17 node.
+    if (conf.getBoolean(MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT,
+            MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT)) {
+      vargs.add(ApplicationConstants.JVM_ADD_OPENS_VAR);
+    }
+
     if (jobConf.getBoolean(MRJobConfig.MR_AM_PROFILE,
         MRJobConfig.DEFAULT_MR_AM_PROFILE)) {
       final String profileParams = jobConf.get(MRJobConfig.MR_AM_PROFILE_PARAMS,

@@ -468,9 +468,9 @@ public class BlockRecoveryWorker {
       // notify Namenode the new size and locations
       final DatanodeID[] newLocs = new DatanodeID[totalBlkNum];
       final String[] newStorages = new String[totalBlkNum];
-      for (int i = 0; i < blockIndices.length; i++) {
-        newLocs[blockIndices[i]] = DatanodeID.EMPTY_DATANODE_ID;
-        newStorages[blockIndices[i]] = "";
+      for (int i = 0; i < newLocs.length; i++) {
+        newLocs[i] = DatanodeID.EMPTY_DATANODE_ID;
+        newStorages[i] = "";
       }
       for (BlockRecord r : rurList) {
         int index = (int) (r.rInfo.getBlockId() &

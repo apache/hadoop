@@ -616,6 +616,9 @@ public abstract class Server {
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
 
+    long enQueueTime = details.get(Timing.ENQUEUE, rpcMetrics.getMetricsTimeUnit());
+    rpcMetrics.addRpcEnQueueTime(enQueueTime);
+
     long queueTime = details.get(Timing.QUEUE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcQueueTime(queueTime);
 

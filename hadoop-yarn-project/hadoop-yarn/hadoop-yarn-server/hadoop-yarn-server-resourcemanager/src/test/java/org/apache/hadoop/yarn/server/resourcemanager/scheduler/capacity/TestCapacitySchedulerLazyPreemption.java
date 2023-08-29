@@ -619,6 +619,7 @@ public class TestCapacitySchedulerLazyPreemption
     editPolicy.editSchedule();
     Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
     waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
+    rm1.stop();
   }
 
   @Test (timeout = 60000)

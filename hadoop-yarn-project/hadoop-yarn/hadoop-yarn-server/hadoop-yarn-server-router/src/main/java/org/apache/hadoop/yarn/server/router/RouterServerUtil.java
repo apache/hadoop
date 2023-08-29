@@ -801,4 +801,9 @@ public final class RouterServerUtil {
 
     return trimmedContext;
   }
+
+  public static boolean isRouterWebProxyEnable(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE);
+  }
 }

@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoR
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -309,6 +310,18 @@ public final class FederationStateStoreFacade {
         return response.getPolicyConfiguration();
       }
     }
+  }
+
+  /**
+   * Set a policy configuration into the state store.
+   *
+   * @param policyConf the policy configuration to set
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void setPolicyConfiguration(SubClusterPolicyConfiguration policyConf)
+      throws YarnException {
+    stateStore.setPolicyConfiguration(
+        SetSubClusterPolicyConfigurationRequest.newInstance(policyConf));
   }
 
   /**
@@ -806,7 +819,7 @@ public final class FederationStateStoreFacade {
         return true;
       }
     } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by applicationId = {} error.", applicationId, e);
+      LOG.debug("get homeSubCluster by applicationId = {} error.", applicationId, e);
     }
     return false;
   }
@@ -893,7 +906,7 @@ public final class FederationStateStoreFacade {
         return true;
       }
     } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
+      LOG.debug("get homeSubCluster by reservationId = {} error.", reservationId, e);
     }
     return false;
   }

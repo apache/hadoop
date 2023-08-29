@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -91,6 +92,13 @@ public class TestAbsoluteResourceWithAutoQueue
   public void setUp() throws Exception {
 
     accessibleNodeLabelsOnC.add(NO_LABEL);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   private CapacitySchedulerConfiguration setupMinMaxResourceConfiguration(

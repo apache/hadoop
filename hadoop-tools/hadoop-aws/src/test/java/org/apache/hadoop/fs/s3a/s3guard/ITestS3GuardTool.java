@@ -70,6 +70,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testLandsatBucketRequireUnencrypted() throws Throwable {
+    skipIfClientSideEncryption();
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         getLandsatCSVFile(getConfiguration()));
@@ -178,8 +179,9 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       // least a second old
       describe("Sleeping 1 second then confirming upload still there");
       Thread.sleep(1000);
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> { assertNumUploadsAge(path, 1, 1); });
+      LambdaTestUtils.eventually(5000, 1000, () -> {
+        assertNumUploadsAge(path, 1, 1);
+      });
 
       // 7. Assert deletion works when age filter matches
       describe("Doing aged deletion");
@@ -231,8 +233,8 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
    *                   search all parts
    * @throws Exception on failure
    */
-  private void uploadCommandAssertCount(S3AFileSystem fs, String options[],
-      Path path, int numUploads, int ageSeconds)
+  private void uploadCommandAssertCount(S3AFileSystem fs, String[] options, Path path,
+      int numUploads, int ageSeconds)
       throws Exception {
     List<String> allOptions = new ArrayList<>();
     List<String> output = new ArrayList<>();

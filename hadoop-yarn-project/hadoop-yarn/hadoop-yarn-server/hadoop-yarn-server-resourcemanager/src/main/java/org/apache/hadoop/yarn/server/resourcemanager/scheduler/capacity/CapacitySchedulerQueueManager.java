@@ -101,7 +101,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     this.queueStateManager = new QueueStateManager<>();
     this.appPriorityACLManager = appPriorityACLManager;
     this.configuredNodeLabels = new ConfiguredNodeLabels();
-    this.queueCapacityHandler = new CapacitySchedulerQueueCapacityHandler(labelManager);
+    this.queueCapacityHandler = new CapacitySchedulerQueueCapacityHandler(labelManager,
+        new CapacitySchedulerConfiguration(conf));
   }
 
   @Override

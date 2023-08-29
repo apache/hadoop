@@ -110,6 +110,14 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
       // note: we currently set maxCapacity to capacity
       // this might be revised later
       setMaxCapacity(nodeLabel, entitlement.getMaxCapacity());
+
+      setConfiguredMinCapacityVector(nodeLabel,
+          QueueCapacityVector.of(queueCapacities.getCapacity(nodeLabel) * 100,
+              QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+      setConfiguredMaxCapacityVector(nodeLabel,
+          QueueCapacityVector.of(queueCapacities.getMaximumCapacity(nodeLabel) * 100,
+              QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+
       LOG.debug("successfully changed to {} for queue {}", capacity, this
             .getQueuePath());
 

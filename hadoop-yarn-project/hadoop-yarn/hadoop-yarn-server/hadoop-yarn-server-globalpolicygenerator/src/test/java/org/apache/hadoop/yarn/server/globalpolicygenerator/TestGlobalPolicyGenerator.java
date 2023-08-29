@@ -19,8 +19,13 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Unit test for GlobalPolicyGenerator.
@@ -34,5 +39,20 @@ public class TestGlobalPolicyGenerator {
 
     // If GPG starts running, this call will not return
     GlobalPolicyGenerator.startGPG(new String[0], conf);
+  }
+
+  @Test
+  public void testGpgWithFederation() throws InterruptedException, TimeoutException {
+    // In this test case, we hope that gpg can start normally in federation mode.
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+
+    GlobalPolicyGenerator gpg = new GlobalPolicyGenerator();
+    gpg.initAndStart(conf, false);
+
+    GenericTestUtils.waitFor(() -> {
+      List<Service> services = gpg.getServices();
+      return (services.size() == 1 && gpg.getWebApp() != null);
+    }, 100, 5000);
   }
 }

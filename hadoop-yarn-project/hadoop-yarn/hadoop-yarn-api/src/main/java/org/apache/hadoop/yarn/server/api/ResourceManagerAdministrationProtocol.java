@@ -58,6 +58,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -173,4 +177,30 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
       throws YarnException, IOException;
+
+  /**
+   * In YARN-Federation mode, We will be storing the Policy information for Queues.
+   *
+   * @param request saveFederationQueuePolicy Request
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Idempotent
+  SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException;
+
+  /**
+   * In YARN-Federation mode, this method provides a way to save queue policies in batches.
+   *
+   * @param request BatchSaveFederationQueuePolicies Request
+   * @return Response from batchSaveFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Idempotent
+  BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException;
 }

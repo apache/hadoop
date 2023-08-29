@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
@@ -34,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
@@ -54,8 +56,10 @@ public class CapacitySchedulerQueueCapacityHandler {
       new RootQueueCapacityCalculator();
   private final RMNodeLabelsManager labelsManager;
   private final Collection<String> definedResources = new LinkedHashSet<>();
+  private final boolean isLegacyQueueMode;
 
-  public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager) {
+  public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager,
+                                               CapacitySchedulerConfiguration configuration) {
     this.calculators = new HashMap<>();
     this.labelsManager = labelsManager;
 
@@ -65,6 +69,7 @@ public class CapacitySchedulerQueueCapacityHandler {
         new PercentageQueueCapacityCalculator());
     this.calculators.put(ResourceUnitCapacityType.WEIGHT,
         new WeightQueueCapacityCalculator());
+    this.isLegacyQueueMode = configuration.isLegacyQueueMode();
 
     loadResourceNames();
   }
@@ -121,7 +126,7 @@ public class CapacitySchedulerQueueCapacityHandler {
 
   private void updateChildrenAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, ResourceLimits resourceLimits) {
-    ParentQueue parentQueue = (ParentQueue) resourceCalculationDriver.getQueue();
+    AbstractParentQueue parentQueue = (AbstractParentQueue) resourceCalculationDriver.getQueue();
     for (CSQueue childQueue : parentQueue.getChildQueues()) {
       updateQueueCapacities(resourceCalculationDriver, childQueue);
 
@@ -144,8 +149,7 @@ public class CapacitySchedulerQueueCapacityHandler {
     queue.getWriteLock().lock();
     try {
       for (String label : queue.getConfiguredNodeLabels()) {
-        QueueCapacityVector capacityVector = queue.getConfiguredCapacityVector(label);
-        if (capacityVector.isMixedCapacityVector()) {
+        if (!isLegacyQueueMode) {
           // Post update capacities based on the calculated effective resource values
           setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(
               label), queue, label);
@@ -177,6 +181,15 @@ public class CapacitySchedulerQueueCapacityHandler {
     }
 
     AbstractCSQueue csQueue = (AbstractCSQueue) queue;
+    // Do not override reservations when there are no cluster resources yet
+    if ((csQueue instanceof ReservationQueue ||
+        csQueue instanceof PlanQueue) &&
+        Stream.of(clusterResource.getResources())
+            .map(ResourceInformation::getValue)
+            .noneMatch(num -> num > 0)) {
+      return;
+    }
+
     ResourceCalculator resourceCalculator = csQueue.resourceCalculator;
 
     CSQueue parent = queue.getParent();

@@ -674,6 +674,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkAMResourceLimit(rm, "a", 640, "y");
     checkAMResourceLimit(rm, "a", 0, "z");
     checkAMResourceLimit(rm, "a", 0, "");
+    rm.stop();
   }
 
   @Test(timeout = 60000)
@@ -952,5 +953,6 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     // Last node with label x is replaced by CLI or REST.
     Assert.assertEquals(0,
         waitForNodeLabelSchedulerEventUpdate(rm, "x", 0, 3000L));
+    rm.stop();
   }
 }

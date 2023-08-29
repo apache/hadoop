@@ -426,8 +426,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT_TORRENT),
-            ALLOW_S3_GET_BUCKET_LOCATION,
-            STATEMENT_ALLOW_SSE_KMS_RW));
+            ALLOW_S3_GET_BUCKET_LOCATION, STATEMENT_ALLOW_KMS_RW));
     Path path = path("testAssumeRoleStillIncludesRolePerms");
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     assertTouchForbidden(roleFS, path);
@@ -447,8 +446,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3,
-            STATEMENT_ALLOW_SSE_KMS_READ));
+            STATEMENT_ALL_S3, STATEMENT_ALLOW_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -495,8 +493,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_BUCKET_READ_ACCESS,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_BUCKET_READ_ACCESS, STATEMENT_ALLOW_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
           .addResources(directory(restrictedDir)));
@@ -563,8 +560,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.delete(basePath, true);
     fs.mkdirs(readOnlyDir);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -714,8 +710,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     fs.delete(destDir, true);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)
@@ -746,8 +741,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();

@@ -170,6 +170,13 @@ public class ContainerLaunch implements Callable<Integer> {
     var = var.replace(ApplicationConstants.CLASS_PATH_SEPARATOR,
       File.pathSeparator);
 
+    if (Shell.isJavaVersionAtLeast(17)) {
+      var = var.replace(ApplicationConstants.JVM_ADD_OPENS_VAR,
+              "--add-opens=java.base/java.lang=ALL-UNNAMED");
+    } else {
+      var = var.replace(ApplicationConstants.JVM_ADD_OPENS_VAR, "");
+    }
+
     // replace parameter expansion marker. e.g. {{VAR}} on Windows is replaced
     // as %VAR% and on Linux replaced as "$VAR"
     if (Shell.WINDOWS) {

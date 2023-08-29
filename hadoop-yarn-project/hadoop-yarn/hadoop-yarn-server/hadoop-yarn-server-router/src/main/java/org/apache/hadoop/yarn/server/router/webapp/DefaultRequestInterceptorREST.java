@@ -103,6 +103,7 @@ public class DefaultRequestInterceptorREST
 
   @Override
   public void init(String user) {
+    super.init(user);
     webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(getConf());
     client = RouterWebServiceUtil.createJerseyClient(getConf());
   }

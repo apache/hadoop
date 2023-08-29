@@ -97,4 +97,58 @@ public class TestStandbyBlockManagement {
     }
   }
 
+  /**
+   * Test Standby/Observer NameNode should not handle redundant replica block logic
+   * when set decrease replication.
+   * @throws Exception
+   */
+  @Test(timeout = 60000)
+  public void testNotHandleRedundantReplica() throws Exception {
+    Configuration conf = new Configuration();
+    HAUtil.setAllowStandbyReads(conf, true);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
+    // Create HA Cluster.
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(4).build()) {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+
+      NameNode nn1 = cluster.getNameNode(0);
+      assertEquals("ACTIVE", nn1.getNamesystem().getState().name());
+      NameNode nn2 = cluster.getNameNode(1);
+      assertEquals("STANDBY", nn2.getNamesystem().getState().name());
+
+      cluster.triggerHeartbeats();
+      // Sending the FBR.
+      cluster.triggerBlockReports();
+
+      // Default excessRedundancyMap size as 0.
+      assertEquals(0, nn1.getNamesystem().getBlockManager().getExcessBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getExcessBlocksCount());
+
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+
+      // Create test file.
+      Path file = new Path("/test");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 4, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 4);
+
+      // Set decrease 3 replication.
+      fs.setReplication(file, (short) 3);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+
+      // Make sure the DN has deleted the block and report to NNs.
+      cluster.triggerHeartbeats();
+      HATestUtil.waitForDNDeletions(cluster);
+      cluster.triggerDeletionReports();
+
+      DFSTestUtil.waitReplication(fs, file, (short) 3);
+
+      // Delete excess replica, active and standby nn excessRedundancyMap size as 0.
+      assertEquals(0, nn1.getNamesystem().getBlockManager().getExcessBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getExcessBlocksCount());
+    }
+  }
 }

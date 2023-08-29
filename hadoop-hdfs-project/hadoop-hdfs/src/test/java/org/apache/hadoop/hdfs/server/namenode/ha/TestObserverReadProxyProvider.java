@@ -46,7 +46,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.event.Level;
@@ -59,8 +58,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -367,8 +366,10 @@ public class TestObserverReadProxyProvider {
 
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     final HAServiceState state = HAServiceState.STANDBY;
+    @SuppressWarnings("unchecked")
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
+    @SuppressWarnings("unchecked")
     Future<HAServiceState> task = mock(Future.class);
     when(task.get(anyLong(), any(TimeUnit.class))).thenReturn(state);
 
@@ -389,8 +390,10 @@ public class TestObserverReadProxyProvider {
     proxyLog.clearOutput();
 
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
+    @SuppressWarnings("unchecked")
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    @SuppressWarnings("unchecked")
     Future<HAServiceState> task = mock(Future.class);
     TimeoutException e = new TimeoutException("Timeout");
     when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(e);
@@ -413,8 +416,10 @@ public class TestObserverReadProxyProvider {
     proxyLog.clearOutput();
 
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
+    @SuppressWarnings("unchecked")
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    @SuppressWarnings("unchecked")
     Future<HAServiceState> task = mock(Future.class);
     InterruptedException e = new InterruptedException("Interrupted");
     when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(e);
@@ -436,8 +441,10 @@ public class TestObserverReadProxyProvider {
     proxyLog.clearOutput();
 
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
+    @SuppressWarnings("unchecked")
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    @SuppressWarnings("unchecked")
     Future<HAServiceState> task = mock(Future.class);
     Exception e = new ExecutionException(new InterruptedException("Interrupted"));
     when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(e);
@@ -452,7 +459,7 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test GetHAServiceState when timeout is disabled (test the else { task.get() } code path)
+   * Test GetHAServiceState when timeout is disabled (test the else { task.get() } code path).
    */
   @Test
   public void testGetHAServiceStateWithoutTimeout() throws Exception {
@@ -460,8 +467,10 @@ public class TestObserverReadProxyProvider {
     setupProxyProvider(1, 0);
 
     final HAServiceState state = HAServiceState.STANDBY;
+    @SuppressWarnings("unchecked")
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
+    @SuppressWarnings("unchecked")
     Future<HAServiceState> task = mock(Future.class);
     when(task.get()).thenReturn(state);
 

@@ -50,6 +50,7 @@ public class RegexCopyFilter extends CopyFilter {
   /**
    * Constructor, sets up a File object to read filter patterns from and
    * the List to store the patterns.
+   * @param filtersFilename name of the filtersFile
    */
   protected RegexCopyFilter(String filtersFilename) {
     filtersFile = new File(filtersFilename);

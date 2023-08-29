@@ -168,9 +168,11 @@ class DataXceiverServer implements Runnable {
 
   final BlockBalanceThrottler balanceThrottler;
 
-  private final DataTransferThrottler transferThrottler;
+  private volatile DataTransferThrottler transferThrottler;
 
-  private final DataTransferThrottler writeThrottler;
+  private volatile DataTransferThrottler writeThrottler;
+
+  private volatile DataTransferThrottler readThrottler;
 
   /**
    * Stores an estimate for block size to check if the disk partition has enough
@@ -200,7 +202,10 @@ class DataXceiverServer implements Runnable {
             DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
+    initBandwidthPerSec(conf);
+  }
 
+  private void initBandwidthPerSec(Configuration conf) {
     long bandwidthPerSec = conf.getLongBytes(
         DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
         DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT);
@@ -217,6 +222,15 @@ class DataXceiverServer implements Runnable {
       this.writeThrottler = new DataTransferThrottler(bandwidthPerSec);
     } else {
       this.writeThrottler = null;
+    }
+
+    bandwidthPerSec = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT);
+    if (bandwidthPerSec > 0) {
+      this.readThrottler = new DataTransferThrottler(bandwidthPerSec);
+    } else {
+      this.readThrottler = null;
     }
   }
 
@@ -475,6 +489,10 @@ class DataXceiverServer implements Runnable {
     return writeThrottler;
   }
 
+  public DataTransferThrottler getReadThrottler() {
+    return readThrottler;
+  }
+
   /**
    * Release a peer.
    *
@@ -523,5 +541,17 @@ class DataXceiverServer implements Runnable {
   @VisibleForTesting
   public int getMaxXceiverCount() {
     return maxXceiverCount;
+  }
+
+  public void setTransferThrottler(DataTransferThrottler transferThrottler) {
+    this.transferThrottler = transferThrottler;
+  }
+
+  public void setWriteThrottler(DataTransferThrottler writeThrottler) {
+    this.writeThrottler = writeThrottler;
+  }
+
+  public void setReadThrottler(DataTransferThrottler readThrottler) {
+    this.readThrottler = readThrottler;
   }
 }

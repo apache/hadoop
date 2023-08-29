@@ -328,7 +328,7 @@ public class TestDFSRollback {
           UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs,
-          storageInfo, UpgradeUtilities.getCurrentBlockPoolID(cluster));
+          storageInfo, UpgradeUtilities.getCurrentBlockPoolID(null));
       startNameNodeShouldFail("Cannot rollback to storage version 1 using this version");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     } // end numDir loop

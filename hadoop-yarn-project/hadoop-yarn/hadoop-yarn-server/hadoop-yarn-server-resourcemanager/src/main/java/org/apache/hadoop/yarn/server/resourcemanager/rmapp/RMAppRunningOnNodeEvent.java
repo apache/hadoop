@@ -23,13 +23,27 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 
 public class RMAppRunningOnNodeEvent extends RMAppEvent {
   private final NodeId node;
+  private final boolean createdFromAcquiredState;
 
   public RMAppRunningOnNodeEvent(ApplicationId appId, NodeId node) {
+    this(appId, node, false);
+  }
+
+  public RMAppRunningOnNodeEvent(
+      ApplicationId appId,
+      NodeId node,
+      boolean createdFromAcquiredState
+  ) {
     super(appId, RMAppEventType.APP_RUNNING_ON_NODE);
     this.node = node;
+    this.createdFromAcquiredState = createdFromAcquiredState;
   }
   
   public NodeId getNodeId() {
     return node;
+  }
+
+  public boolean isCreatedFromAcquiredState() {
+    return createdFromAcquiredState;
   }
 }

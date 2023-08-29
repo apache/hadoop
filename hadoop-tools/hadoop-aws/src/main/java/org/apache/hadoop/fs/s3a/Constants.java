@@ -154,6 +154,17 @@ public final class Constants {
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
 
+  /**
+   * Configuration option to configure expiration time of
+   * s3 http connection from the connection pool in milliseconds: {@value}.
+   */
+  public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
+
+  /**
+   * Default value for {@code CONNECTION_TTL}: {@value}.
+   */
+  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
+
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
       "fs.s3a.connection.ssl.enabled";
@@ -1275,5 +1286,17 @@ public final class Constants {
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
       "fs.s3a.capability.multipart.uploads.enabled";
+
+  /**
+   * Prefetch max blocks count config.
+   * Value = {@value}
+   */
+  public static final String PREFETCH_MAX_BLOCKS_COUNT = "fs.s3a.prefetch.max.blocks.count";
+
+  /**
+   * Default value for max blocks count config.
+   * Value = {@value}
+   */
+  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
 }

@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
 
 public abstract class AbstractParentQueue extends AbstractCSQueue {
@@ -1136,11 +1137,43 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
         labelManager.getResourceByLabel(null, clusterResource),
         RMNodeLabelsManager.NO_LABEL, this);
+
+    LOG.info("Refresh after resource calculation (PARENT) {}\n"
+            + "effectiveMinResource = {}\n"
+            + "effectiveMaxResource = {}\n"
+            + "capacity = {}\n"
+            + "maxCapacity = {}\n"
+            + "absoluteCapacity = {}\n"
+            + "absoluteMaxCapacity = {}",
+        queuePath,
+        getEffectiveCapacity(NO_LABEL),
+        getEffectiveMaxCapacity(NO_LABEL),
+        getCapacity(),
+        getMaximumCapacity(),
+        getAbsoluteCapacity(),
+        getAbsoluteMaximumCapacity());
   }
 
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
+    if (queueContext.getConfiguration().isLegacyQueueMode()) {
+      updateClusterResourceLegacyMode(clusterResource, resourceLimits);
+      return;
+    }
+
+    CapacitySchedulerQueueCapacityHandler handler =
+        queueContext.getQueueManager().getQueueCapacityHandler();
+    if (rootQueue) {
+      handler.updateRoot(this, clusterResource);
+      handler.updateChildren(clusterResource, this);
+    } else {
+      handler.updateChildren(clusterResource, getParent());
+    }
+  }
+
+  public void updateClusterResourceLegacyMode(Resource clusterResource,
+                                              ResourceLimits resourceLimits) {
     writeLock.lock();
     try {
       // Special handle root queue

@@ -151,6 +151,22 @@ All snapshots of the directory must be deleted before disallowing snapshots.
 See also the corresponding Java API
 `void disallowSnapshot(Path path)` in `HdfsAdmin`.
 
+#### Provision SnapshotTrash
+
+Provision trash root in one or all snapshottable directories.
+
+* Command:
+
+        hdfs dfsadmin -provisionSnapshotTrash <path> [-all]
+
+* Arguments:
+
+  | --- | --- |
+  | path | The path of the snapshottable directory. |
+  | -all | Which is an optional argument, when it is set will provision trash root in all  snapshottable directories. |
+
+See also the corresponding Java API
+`void provisionSnapshotTrash(Path path)` in `HdfsAdmin`.
 
 ### User Operations
 

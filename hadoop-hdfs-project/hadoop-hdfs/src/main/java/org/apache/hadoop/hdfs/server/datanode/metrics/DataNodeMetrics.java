@@ -346,6 +346,10 @@ public class DataNodeMetrics {
     blocksRemoved.incr(delta);
   }
 
+  public long getBlocksRemoved() {
+    return blocksRemoved.value();
+  }
+
   public void incrBytesWritten(int delta) {
     bytesWritten.incr(delta);
   }

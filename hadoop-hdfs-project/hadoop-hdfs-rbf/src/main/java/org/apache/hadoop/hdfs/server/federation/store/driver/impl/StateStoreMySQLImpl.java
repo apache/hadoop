@@ -67,7 +67,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       SQL_STATE_STORE_CONF_PREFIX + "connection.driver";
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(StateStoreSerializableImpl.class);
+      LoggerFactory.getLogger(StateStoreMySQLImpl.class);
   private SQLConnectionFactory connectionFactory;
   /** If the driver has been initialized. */
   private boolean initialized = false;

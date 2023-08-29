@@ -2206,6 +2206,19 @@ public class WebHdfsFileSystem extends FileSystem
     }.run();
   }
 
+  public Map<String, String> getAllErasureCodingCodecs()
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_CODECS);
+    final HttpOpParam.Op op = GetOpParam.Op.GETECCODECS;
+    return new FsPathResponseRunner<Map<String, String>>(op, null) {
+      @Override
+      Map<String, String> decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.getErasureCodeCodecs(json);
+      }
+    }.run();
+  }
+
   @VisibleForTesting
   InetSocketAddress[] getResolvedNNAddr() {
     return nnAddrs;

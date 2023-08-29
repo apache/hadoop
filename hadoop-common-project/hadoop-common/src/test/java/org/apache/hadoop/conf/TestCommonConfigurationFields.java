@@ -157,6 +157,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
     xmlPropsToSkipCompare.add("ipc.scheduler.impl");
     xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.priority.levels");
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.capacity.weights");
     xmlPropsToSkipCompare.add(
         "ipc.[port_number].faircallqueue.multiplexer.weights");
     xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");

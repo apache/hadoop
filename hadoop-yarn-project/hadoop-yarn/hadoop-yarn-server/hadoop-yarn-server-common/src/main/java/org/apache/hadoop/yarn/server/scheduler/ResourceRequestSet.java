@@ -36,6 +36,8 @@ public class ResourceRequestSet {
 
   private ResourceRequestSetKey key;
   private int numContainers;
+  // Whether the ANY RR is relaxable
+  private boolean relaxable;
   // ResourceName -> RR
   private Map<String, ResourceRequest> asks;
 
@@ -49,6 +51,7 @@ public class ResourceRequestSet {
     this.key = key;
     // leave it zero for now, as if it is a cancel
     this.numContainers = 0;
+    this.relaxable = true;
     this.asks = new HashMap<>();
   }
 
@@ -61,6 +64,7 @@ public class ResourceRequestSet {
     this.key = other.key;
     this.numContainers = other.numContainers;
     this.asks = new HashMap<>();
+    this.relaxable = other.relaxable;
     // The assumption is that the RR objects should not be modified without
     // making a copy
     this.asks.putAll(other.asks);
@@ -86,6 +90,7 @@ public class ResourceRequestSet {
       // For G requestSet, update the numContainers only for ANY RR
       if (ask.getResourceName().equals(ResourceRequest.ANY)) {
         this.numContainers = ask.getNumContainers();
+        this.relaxable = ask.getRelaxLocality();
       }
     } else {
       // The assumption we made about O asks is that all RR in a requestSet has
@@ -180,6 +185,15 @@ public class ResourceRequestSet {
       clone.setNumContainers(newValue);
       this.asks.put(ResourceRequest.ANY, clone);
     }
+  }
+
+  /**
+   * Whether the request set is relaxable at ANY level.
+   *
+   * @return whether the request set is relaxable at ANY level
+   */
+  public boolean isANYRelaxable() {
+    return this.relaxable;
   }
 
   @Override

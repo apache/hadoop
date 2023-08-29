@@ -251,8 +251,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     nm1.registerNode();
 
     NodeLabel gpuLabel = Records.newRecord(NodeLabel.class);
-    ssdLabel.setName(NODEL_LABEL_GPU);
-    ssdLabel.setExclusivity(true);
+    gpuLabel.setName(NODEL_LABEL_GPU);
+    gpuLabel.setExclusivity(true);
 
     //Label = GPU
     nm2 = new MockNM("h2:1234",
@@ -485,6 +485,20 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
 
     return conf;
+  }
+
+  public static void setupQueueConfigurationForSingleFlexibleAutoCreatedLeafQueue(
+          CapacitySchedulerConfiguration conf) {
+
+    //setup new queues with one of them auto enabled
+    // Define top-level queues
+    // Set childQueue for root
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+            new String[] {"c"});
+    conf.setCapacity(C, 100f);
+
+    conf.setUserLimitFactor(C, 1.0f);
+    conf.setAutoQueueCreationV2Enabled(C, true);
   }
 
   @After
