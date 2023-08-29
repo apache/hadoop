@@ -355,7 +355,8 @@ public class BootstrapStandby implements Tool, Configurable {
 
       // Download that checkpoint into our storage directories.
       MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        proxyInfo.getHttpAddress(), imageTxId, storage, true, true);
+        proxyInfo.getHttpAddress(), imageTxId, storage, true, true,
+        proxy.isRollingUpgrade());
       image.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE, imageTxId,
           hash);
 

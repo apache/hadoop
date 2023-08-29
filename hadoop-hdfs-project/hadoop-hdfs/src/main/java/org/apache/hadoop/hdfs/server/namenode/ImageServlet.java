@@ -367,14 +367,15 @@ public class ImageServlet extends HttpServlet {
   }
 
   static String getParamStringForImage(NameNodeFile nnf, long txid,
-      StorageInfo remoteStorageInfo, boolean isBootstrapStandby) {
+      StorageInfo remoteStorageInfo, boolean isBootstrapStandby,
+      boolean isBootstrapStandbyRollingUpgrade) {
     final String imageType = nnf == null ? "" : "&" + IMAGE_FILE_TYPE + "="
         + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
       + imageType
-      + "&" + STORAGEINFO_PARAM + "="
-      + remoteStorageInfo.toColonSeparatedString() + "&"
-      + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
+      + (isBootstrapStandbyRollingUpgrade ? "" : "&" + STORAGEINFO_PARAM + "="
+        + remoteStorageInfo.toColonSeparatedString())
+      + "&" + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
   }
 
   static String getParamStringForLog(RemoteEditLog log,
