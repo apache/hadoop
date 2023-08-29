@@ -235,7 +235,7 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 |`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
 |`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
-How to configure the policy-manager?
+How to configure the policy-manager
 --------------------
 
 Router Policy
@@ -317,7 +317,7 @@ Policy Manager
   - WeightedLocalityPolicyManager
     - Policy that allows operator to configure "weights" for routing. This picks a LocalityRouterPolicy for the router and a LocalityMulticastAMRMProxyPolicy for the amrmproxy as they are designed to work together.
 
-How to configure the queue policy?
+How to configure the queue policy
 --------------------
 
 We will provide a set of commands to view and save queue policies.
@@ -433,14 +433,14 @@ Cache:
 Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
 We currently provide two Cache implementations: `JCache` and `GuavaCache`.
 
-> JCache
+- JCache
 
 We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project.
 It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
 In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`.
 If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
 
-> GuavaCache
+- GuavaCache
 
 This is a Cache implemented based on the Guava framework.
 If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
@@ -506,6 +506,7 @@ How to build a Test Federation Cluster
 The purpose of this document is to help users quickly set up a testing environment for YARN Federation. With this testing environment, users can utilize the core functionality of YARN Federation. This is the simplest test cluster setup (based on Linux) with only essential configurations (YARN non-HA mode). We require 3 machines, and each machine should have at least <4C, 8GB> of resources. We only cover YARN configuration in this document. For information on configuring HDFS and ZooKeeper, please refer to other documentation sources.
 
 Test Environment Description:
+
 - We need to build a HDFS test environment, this part can refer to HDFS documentation. [HDFS SingleCluster](../../hadoop-project-dist/hadoop-common/SingleCluster.html)
 - We need two YARN clusters, each YARN cluster has one RM and one NM, The RM and NM on the same node.
 - We need one ZK cluster(We only need one ZooKeeper node.), this part can refer to Zookeeper documentation. [ZookeeperStarted](https://zookeeper.apache.org/doc/current/zookeeperStarted.html)
