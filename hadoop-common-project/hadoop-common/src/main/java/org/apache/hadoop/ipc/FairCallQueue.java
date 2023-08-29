@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -90,7 +89,16 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   public FairCallQueue(int priorityLevels, int capacity, String ns,
       Configuration conf) {
     this(priorityLevels, capacity, ns,
-        CallQueueManager.getDefaultQueueCapacityWeights(priorityLevels), conf);
+        CallQueueManager.getDefaultQueueCapacityWeights(priorityLevels),
+        false, conf);
+  }
+
+  @VisibleForTesting
+  public FairCallQueue(int priorityLevels, int capacity, String ns, boolean serverFailOverEnabled,
+      Configuration conf) {
+    this(priorityLevels, capacity, ns,
+        CallQueueManager.getDefaultQueueCapacityWeights(priorityLevels),
+        serverFailOverEnabled, conf);
   }
 
   /**
@@ -101,18 +109,21 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
    * @param ns the prefix to use for configuration
    * @param capacityWeights the weights array for capacity allocation
    *                        among subqueues
+   * @param serverFailOverEnabled whether or not to enable callqueue overflow trigger failover
+   *                              for stateless servers when RPC call queue is filled
    * @param conf the configuration to read from
    * Notes: Each sub-queue has a capacity of `capacity / numSubqueues`.
    * The first or the highest priority sub-queue has an excess capacity
    * of `capacity % numSubqueues`
    */
   public FairCallQueue(int priorityLevels, int capacity, String ns,
-      int[] capacityWeights, Configuration conf) {
+      int[] capacityWeights, boolean serverFailOverEnabled, Configuration conf) {
     if(priorityLevels < 1) {
       throw new IllegalArgumentException("Number of Priority Levels must be " +
           "at least 1");
     }
     int numQueues = priorityLevels;
+    this.serverFailOverEnabled = serverFailOverEnabled;
     LOG.info("FairCallQueue is in use with " + numQueues +
         " queues with total capacity of " + capacity);
 
@@ -135,10 +146,6 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       }
       this.overflowedCalls.add(new AtomicLong(0));
     }
-    this.serverFailOverEnabled = conf.getBoolean(
-        ns + "." +
-        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
-        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT);
 
     this.multiplexer = new WeightedRoundRobinMultiplexer(numQueues, ns, conf);
     // Make this the active source of metrics
@@ -492,5 +499,10 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @VisibleForTesting
   public void setMultiplexer(RpcMultiplexer newMux) {
     this.multiplexer = newMux;
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabled() {
+    return serverFailOverEnabled;
   }
 }

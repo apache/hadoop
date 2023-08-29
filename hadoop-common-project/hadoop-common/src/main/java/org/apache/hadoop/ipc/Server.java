@@ -3857,6 +3857,16 @@ public abstract class Server {
     callQueue.setClientBackoffEnabled(value);
   }
 
+  @VisibleForTesting
+  public boolean isServerFailOverEnabled() {
+    return callQueue.isServerFailOverEnabled();
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabledByQueue() {
+    return callQueue.isServerFailOverEnabledByQueue();
+  }
+
   /**
    * The maximum size of the rpc call queue of this server.
    * @return The maximum size of the rpc call queue.
