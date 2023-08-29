@@ -33,7 +33,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -703,7 +703,7 @@ public class TestFSConfigToCSConfigConverter {
     converter.setPlacementConverter(placementConverter);
     converter.convert(params);
 
-    verifyZeroInteractions(placementConverter);
+    verifyNoInteractions(placementConverter);
   }
 
   @Test

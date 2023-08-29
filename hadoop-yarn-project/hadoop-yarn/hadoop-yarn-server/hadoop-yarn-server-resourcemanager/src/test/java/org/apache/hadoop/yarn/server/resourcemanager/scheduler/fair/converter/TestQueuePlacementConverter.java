@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -72,7 +72,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(true);
 
     verifyMapping(properties, "u:%user:%user");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test
@@ -92,7 +92,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(userAsDefaultQueue);
 
     verifyMapping(properties, "u:%user:%user");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test
@@ -103,7 +103,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMappingNoOverride(properties, 1);
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test
@@ -126,7 +126,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:%primary_group");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:%secondary_group");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class TestQueuePlacementConverter {
     Map<String, String> properties = convert(false);
 
     verifyMapping(properties, "u:%user:abc");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -229,7 +229,7 @@ public class TestQueuePlacementConverter {
 
     verifyMapping(properties,
         "u:%user:%user,u:%user:%primary_group,u:%user:%secondary_group");
-    verifyZeroInteractions(ruleHandler);
+    verifyNoInteractions(ruleHandler);
   }
 
   private void initPlacementManagerMock(
