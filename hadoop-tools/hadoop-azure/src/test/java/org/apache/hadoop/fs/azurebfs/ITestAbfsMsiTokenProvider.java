@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Date;
 
-import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -105,7 +104,6 @@ public final class ITestAbfsMsiTokenProvider
    */
   @Test
   public void testRetryForThrottling() throws Exception {
-    final int HTTP_TOO_MANY_REQUESTS = 429;
     AbfsConfiguration conf = getConfiguration();
 
     // Exception to be thrown with throttling error code 429.
