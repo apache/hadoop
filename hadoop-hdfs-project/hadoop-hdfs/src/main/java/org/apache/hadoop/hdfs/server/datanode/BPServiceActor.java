@@ -1212,11 +1212,11 @@ class BPServiceActor implements Runnable {
         commandProcessingThread.enqueue(cmds);
       } catch (Throwable t) {
         LOG.warn("InterruptedException in FBR Task Handler.", t);
-        sleepAndLogInterrupts(5000, "offering FBR service");
+       /* sleepAndLogInterrupts(5000, "offering FBR service");
         synchronized(ibrManager) {
           scheduler.forceFullBlockReportNow();
           ibrManager.notifyAll();
-        }
+        }*/
       }
     }
   }
