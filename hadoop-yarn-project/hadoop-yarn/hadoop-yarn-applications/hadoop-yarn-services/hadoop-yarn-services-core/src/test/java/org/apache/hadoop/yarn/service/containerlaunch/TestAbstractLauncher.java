@@ -43,7 +43,7 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -90,7 +90,7 @@ public class TestAbstractLauncher {
 
     providerService.buildContainerRetry(mockLauncher, getConfig(),
         componentLaunchContext, componentInstance);
-    verifyZeroInteractions(mockLauncher);
+    verifyNoInteractions(mockLauncher);
 
 
     //OnFailure restart policy
