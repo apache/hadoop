@@ -398,7 +398,8 @@ public class MockResolver
   }
 
   @Override
-  public void rotateCache(String nsId, FederationNamenodeContext namenode) {
+  public void rotateCache(
+          String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
   }
 
   /**

@@ -485,10 +485,12 @@ public class MembershipNamenodeResolver
    *
    * @param nsId name service id
    * @param namenode namenode contexts
+   * @param listObserversFirst Observer read case, observer NN will be ranked first
    */
   @Override
-  public synchronized void rotateCache(String nsId, FederationNamenodeContext namenode) {
-    cacheNS.compute(Pair.of(nsId, false), (ns, namenodeContexts) -> {
+  public synchronized void rotateCache(
+          String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
+    cacheNS.compute(Pair.of(nsId, listObserversFirst), (ns, namenodeContexts) -> {
       if (namenodeContexts == null || namenodeContexts.size() <= 1) {
         return namenodeContexts;
       }
@@ -509,9 +511,8 @@ public class MembershipNamenodeResolver
         List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
         Collections.rotate(rotatedNnContexts, -1);
         return rotatedNnContexts;
-      }else {
-        return namenodeContexts;
       }
+      return namenodeContexts;
     });
   }
 }

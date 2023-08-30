@@ -600,7 +600,7 @@ public class RouterRpcClient {
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
           if (this.namenodeResolver != null) {
-            this.namenodeResolver.rotateCache(nsId, namenode);
+            this.namenodeResolver.rotateCache(nsId, namenode, shouldUseObserver);
           }
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);

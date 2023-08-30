@@ -153,6 +153,7 @@ public interface ActiveNamenodeResolver {
    *
    * @param nsId name service id
    * @param namenode namenode contexts
+   * @param listObserversFirst Observer read case, observer NN will be ranked first
    */
-  void rotateCache(String nsId, FederationNamenodeContext namenode);
+  void rotateCache(String nsId, FederationNamenodeContext namenode, boolean listObserversFirst);
 }
