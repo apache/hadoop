@@ -19,13 +19,20 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
+import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.HTTPS_PREFIX;
+import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.HTTP_PREFIX;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -64,9 +71,10 @@ public final class GPGUtils {
     if (selectParam != null) {
       webResource = webResource.queryParam(RMWSConsts.DESELECTS, selectParam);
     }
+
     ClientResponse response = null;
     try {
-      response = webResource.path("ws/v1/cluster").path(path)
+      response = webResource.path(RM_WEB_SERVICE_PATH).path(path)
           .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
       if (response.getStatus() == SC_OK) {
         obj = response.getEntity(returnType);

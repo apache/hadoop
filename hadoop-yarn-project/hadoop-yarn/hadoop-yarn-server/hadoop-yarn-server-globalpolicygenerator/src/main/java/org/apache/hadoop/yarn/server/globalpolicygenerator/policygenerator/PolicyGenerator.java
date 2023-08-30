@@ -159,7 +159,7 @@ public class PolicyGenerator implements Runnable, Configurable {
           clusterInfo.put(sci.getSubClusterId(), new HashMap<>());
         }
         Object ret = GPGUtils.invokeRMWebService(sci.getRMWebServiceAddress(),
-            e.getValue(), e.getKey());
+            e.getValue(), e.getKey(), getConf());
         clusterInfo.get(sci.getSubClusterId()).put(e.getKey(), ret);
       }
     }
@@ -181,12 +181,11 @@ public class PolicyGenerator implements Runnable, Configurable {
     for (SubClusterInfo sci : activeSubClusters.values()) {
       SchedulerTypeInfo sti = GPGUtils
           .invokeRMWebService(sci.getRMWebServiceAddress(),
-              RMWSConsts.SCHEDULER, SchedulerTypeInfo.class);
+              RMWSConsts.SCHEDULER, SchedulerTypeInfo.class, getConf());
       if(sti != null){
         schedInfo.put(sci.getSubClusterId(), sti.getSchedulerInfo());
       } else {
-        LOG.warn("Skipped null scheduler info from SubCluster " + sci
-            .getSubClusterId().toString());
+        LOG.warn("Skipped null scheduler info from SubCluster {}.", sci.getSubClusterId());
       }
     }
     return schedInfo;
