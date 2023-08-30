@@ -115,12 +115,12 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Access to currentKey is protected by this object lock
    */
-  private DelegationKey currentKey;
+  private volatile DelegationKey currentKey;
   
-  private long keyUpdateInterval;
-  private long tokenMaxLifetime;
-  private long tokenRemoverScanInterval;
-  private long tokenRenewInterval;
+  private final long keyUpdateInterval;
+  private final long tokenMaxLifetime;
+  private final long tokenRemoverScanInterval;
+  private final long tokenRenewInterval;
   /**
    * Whether to store a token's tracking ID in its TokenInformation.
    * Can be overridden by a subclass.
@@ -486,7 +486,7 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  protected synchronized byte[] createPassword(TokenIdent identifier) {
+  protected byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
     long now = Time.now();
     sequenceNum = incrementDelegationTokenSeqNum();
@@ -521,7 +521,6 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
-    assert Thread.holdsLock(this);
     DelegationTokenInformation info = getTokenInfo(identifier);
     String err;
     if (info == null) {
@@ -541,7 +540,7 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  public synchronized byte[] retrievePassword(TokenIdent identifier)
+  public byte[] retrievePassword(TokenIdent identifier)
       throws InvalidToken {
     return checkToken(identifier).getPassword();
   }
@@ -553,7 +552,7 @@ extends AbstractDelegationTokenIdentifier>
     return null;
   }
 
-  public synchronized String getTokenTrackingId(TokenIdent identifier) {
+  public String getTokenTrackingId(TokenIdent identifier) {
     DelegationTokenInformation info = getTokenInfo(identifier);
     if (info == null) {
       return null;
@@ -567,7 +566,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param password Password in the token.
    * @throws InvalidToken InvalidToken.
    */
-  public synchronized void verifyToken(TokenIdent identifier, byte[] password)
+  public void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     byte[] storedPassword = retrievePassword(identifier);
     if (!MessageDigest.isEqual(password, storedPassword)) {
@@ -584,7 +583,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws InvalidToken if the token is invalid
    * @throws AccessControlException if the user can't renew token
    */
-  public synchronized long renewToken(Token<TokenIdent> token,
+  public long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -646,7 +645,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws InvalidToken for invalid token
    * @throws AccessControlException if the user isn't allowed to cancel
    */
-  public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
+  public TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
