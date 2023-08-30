@@ -60,12 +60,14 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
 
-      Assert.assertEquals(4, errorFields.length);
+      // Expected Fields are: Message, StatusCode, Method, URL, ActivityId(rId)
+      Assert.assertEquals(5, errorFields.length);
       // Check status message, status code, HTTP Request Type and URL.
       Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());
       Assert.assertEquals("HEAD", errorFields[2].trim());
       Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+      Assert.assertTrue(errorFields[4].trim().startsWith("rId:"));
     }
 
     try {
@@ -76,16 +78,17 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       String[] errorFields = errorMessage.split(",");
       Assertions.assertThat(errorFields)
           .describedAs("fields in exception of %s", ex)
-          .hasSize(6);
+          .hasSize(7);
       // Check status message, status code, HTTP Request Type and URL.
       Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());
       Assert.assertEquals("GET", errorFields[2].trim());
       Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+      Assert.assertTrue(errorFields[4].trim().startsWith("rId:"));
       // Check storage error code and storage error message.
-      Assert.assertEquals("PathNotFound", errorFields[4].trim());
-      Assert.assertTrue(errorFields[5].contains("RequestId")
-              && errorFields[5].contains("Time"));
+      Assert.assertEquals("PathNotFound", errorFields[5].trim());
+      Assert.assertTrue(errorFields[6].contains("RequestId")
+              && errorFields[6].contains("Time"));
     }
   }
 
