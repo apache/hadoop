@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 
-import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
@@ -49,7 +48,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     final Path testPath = path("setGetXAttr");
     fs.create(testPath);
-    testGetSetXAttrHelper(fs, testPath, testPath);
+    testGetSetXAttrHelper(fs, testPath);
   }
 
   @Test
@@ -91,14 +90,12 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testGetSetXAttrOnRoot() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = new Path("a/b");
     final Path testPath = new Path("/");
-    fs.create(filePath);
-    testGetSetXAttrHelper(fs, filePath, testPath);
+    testGetSetXAttrHelper(fs, testPath);
   }
 
   private void testGetSetXAttrHelper(final AzureBlobFileSystem fs,
-      final Path filePath, final Path testPath) throws Exception {
+      final Path testPath) throws Exception {
 
     String attributeName1 = "user.attribute1";
     String attributeName2 = "user.attribute2";
@@ -112,12 +109,18 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     assertNull(fs.getXAttr(testPath, attributeName2));
 
     // Set the Attributes
+    fs.registerListener(
+        new TracingHeaderValidator(fs.getAbfsStore().getAbfsConfiguration()
+            .getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.SET_ATTR, true, 0));
     fs.setXAttr(testPath, attributeName1, attributeValue1);
 
     // Check if the attribute is retrievable
+    fs.setListenerOperation(FSOperationType.GET_ATTR);
     byte[] rv = fs.getXAttr(testPath, attributeName1);
     assertTrue(Arrays.equals(rv, attributeValue1));
     assertEquals(decodedAttributeValue1, fs.getAbfsStore().decodeAttribute(rv));
+    fs.registerListener(null);
 
     // Set the second Attribute
     fs.setXAttr(testPath, attributeName2, attributeValue2);
