@@ -5559,7 +5559,7 @@
       The interval at which the application cleaner runs, -1 means disabled.
     </description>
     <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
-    <value>-1</value>
+    <value>-1s</value>
   </property>
 
   <property>

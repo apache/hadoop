@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -74,15 +75,15 @@ public class TestDefaultApplicationCleaner {
     appCleaner = new TestableDefaultApplicationCleaner();
     appCleaner.init(conf, gpgContext);
 
-    routerAppIds = new HashSet<ApplicationId>();
+    routerAppIds = new HashSet<>();
 
-    appIds = new ArrayList<ApplicationId>();
+    appIds = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       appIds.add(appId);
 
       SubClusterId subClusterId =
-          SubClusterId.newInstance("SUBCLUSTER-" + Integer.toString(i));
+          SubClusterId.newInstance("SUBCLUSTER-" + i);
 
       stateStore.addApplicationHomeSubCluster(
           AddApplicationHomeSubClusterRequest.newInstance(
@@ -91,9 +92,10 @@ public class TestDefaultApplicationCleaner {
   }
 
   @After
-  public void breakDown() throws Exception {
+  public void breakDown() {
     if (stateStore != null) {
       stateStore.close();
+      stateStore = null;
     }
   }
 
