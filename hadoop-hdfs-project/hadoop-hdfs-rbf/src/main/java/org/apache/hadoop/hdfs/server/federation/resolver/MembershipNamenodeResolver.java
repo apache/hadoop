@@ -499,7 +499,7 @@ public class MembershipNamenodeResolver
        * If the first nn in the cache is active, the active nn priority cannot be lowered.
        * This happens when other threads have already updated the cache.
        */
-      if(firstNamenodeContext.getState().equals(ACTIVE)){
+      if (firstNamenodeContext.getState().equals(ACTIVE)) {
         return namenodeContexts;
       }
       /*
@@ -507,7 +507,7 @@ public class MembershipNamenodeResolver
        * that needs to be lowered in priority, there is no need to rotate.
        * This happens when other threads have already rotated the cache.
        */
-      if(firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())){
+      if (firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())) {
         List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
         Collections.rotate(rotatedNnContexts, -1);
         return rotatedNnContexts;
