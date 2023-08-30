@@ -22,13 +22,14 @@ import java.time.Duration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
  * Little duration counter.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class OperationDuration {
+public class OperationDuration implements DurationTracker {
 
   /**
    * Time in millis when the operation started.
@@ -63,6 +64,16 @@ public class OperationDuration {
    */
   public void finished() {
     finished = time();
+  }
+
+  @Override
+  public void failed() {
+    finished();
+  }
+
+  @Override
+  public void close() {
+    finished();
   }
 
   /**

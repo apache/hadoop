@@ -93,7 +93,7 @@ public class DurationInfo extends OperationDuration
 
   @Override
   public void close() {
-    finished();
+    super.close();
     if (logAtInfo) {
       log.info("{}", this);
     } else {
