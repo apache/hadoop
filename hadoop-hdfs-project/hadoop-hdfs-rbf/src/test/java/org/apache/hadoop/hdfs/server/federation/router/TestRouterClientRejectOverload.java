@@ -23,7 +23,6 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simul
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateThrowExceptionRouterRpcServer;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToStandby;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToActive;
-import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_CACHE_INTERVAL_MS;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -388,8 +387,7 @@ public class TestRouterClientRejectOverload {
 
     // Make sure all namenodes are in standby state
     for (MiniRouterDFSCluster.NamenodeContext namenodeContext : namenodes) {
-      assertEquals(STANDBY.ordinal(),
-              namenodeContext.getNamenode().getNameNodeState());
+      assertEquals(STANDBY.ordinal(), namenodeContext.getNamenode().getNameNodeState());
     }
 
     Configuration conf = cluster.getRouterClientConf();
@@ -436,7 +434,7 @@ public class TestRouterClientRejectOverload {
      * access the active namenode without waiting for the router to update the cache,
      * even if there are 2 standby states recorded in the router memory.
      */
-    assertTrue(successReadTime - firstLoadTime < DEFAULT_CACHE_INTERVAL_MS);
+    assertTrue(successReadTime - firstLoadTime < cluster.getCacheFlushInterval());
   }
 
 

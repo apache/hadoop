@@ -148,10 +148,11 @@ public interface ActiveNamenodeResolver {
   void setRouterId(String routerId);
 
   /**
-   * Shuffle cache, to ensure that the current nn will not be accessed first next time.
+   * Rotate cache, make the current namenode have the lowest priority,
+   * to ensure that the current namenode will not be accessed first next time.
    *
    * @param nsId name service id
    * @param namenode namenode contexts
    */
-  void shuffleCache(String nsId, FederationNamenodeContext namenode);
+  void rotateCache(String nsId, FederationNamenodeContext namenode);
 }

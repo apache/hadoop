@@ -480,33 +480,36 @@ public class MembershipNamenodeResolver
   }
 
   /**
-   * Shuffle cache, to ensure that the current nn will not be accessed first next time.
+   * Rotate cache, make the current namenode have the lowest priority,
+   * to ensure that the current namenode will not be accessed first next time.
    *
    * @param nsId name service id
    * @param namenode namenode contexts
    */
   @Override
-  public synchronized void shuffleCache(String nsId, FederationNamenodeContext namenode) {
+  public synchronized void rotateCache(String nsId, FederationNamenodeContext namenode) {
     cacheNS.compute(Pair.of(nsId, false), (ns, namenodeContexts) -> {
-      if (namenodeContexts != null && namenodeContexts.size() > 1) {
-        FederationNamenodeContext firstNamenodeContext = namenodeContexts.get(0);
-        /*
-         * 1.If the first nn in the cache is active, the active nn priority cannot be lowered.
-         * This happens when other threads have already updated the cache.
-         *
-         * 2.If the first nn in the cache at this time is not the nn
-         * that needs to be lowered in priority, there is no need to rotate.
-         * This happens when other threads have already rotated the cache.
-         */
-        if (!firstNamenodeContext.getState().equals(ACTIVE)
-                && firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())) {
-          List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
-          Collections.rotate(rotatedNnContexts, -1);
-          return rotatedNnContexts;
-        } else {
-          return namenodeContexts;
-        }
-      } else {
+      if (namenodeContexts == null || namenodeContexts.size() <= 1) {
+        return namenodeContexts;
+      }
+      FederationNamenodeContext firstNamenodeContext = namenodeContexts.get(0);
+      /*
+       * If the first nn in the cache is active, the active nn priority cannot be lowered.
+       * This happens when other threads have already updated the cache.
+       */
+      if(firstNamenodeContext.getState().equals(ACTIVE)){
+        return namenodeContexts;
+      }
+      /*
+       * If the first nn in the cache at this time is not the nn
+       * that needs to be lowered in priority, there is no need to rotate.
+       * This happens when other threads have already rotated the cache.
+       */
+      if(firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())){
+        List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
+        Collections.rotate(rotatedNnContexts, -1);
+        return rotatedNnContexts;
+      }else {
         return namenodeContexts;
       }
     });

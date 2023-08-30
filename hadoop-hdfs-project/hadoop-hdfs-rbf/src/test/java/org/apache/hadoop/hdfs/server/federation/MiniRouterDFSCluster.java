@@ -134,7 +134,7 @@ public class MiniRouterDFSCluster {
 
   protected static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
-  public static final long DEFAULT_CACHE_INTERVAL_MS =
+  protected static final long DEFAULT_CACHE_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
   /** Heartbeat interval in milliseconds. */
   private long heartbeatInterval;
@@ -1201,5 +1201,9 @@ public class MiniRouterDFSCluster {
     } catch (Exception e) {
       throw new IOException("Cannot wait for the namenodes", e);
     }
+  }
+
+  public long getCacheFlushInterval() {
+    return cacheFlushInterval;
   }
 }
