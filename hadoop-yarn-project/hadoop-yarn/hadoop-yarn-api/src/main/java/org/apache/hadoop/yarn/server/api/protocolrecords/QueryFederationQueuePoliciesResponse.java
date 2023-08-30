@@ -27,8 +27,9 @@ import java.util.List;
 /**
  * This is the QueryFederationQueuePoliciesResponse, which contains the following information:
  * 1. Number of policy information included,
- * 2. Page number,
- * 3. Result of queue weight information returned.
+ * 2. total Page number,
+ * 3. pageSize Conditions passed by the user,
+ * 4. Result of queue weight information returned.
  */
 @Private
 @Unstable

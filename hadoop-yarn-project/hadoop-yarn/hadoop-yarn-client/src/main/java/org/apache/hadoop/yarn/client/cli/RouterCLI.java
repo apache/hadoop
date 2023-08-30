@@ -36,14 +36,7 @@ import org.apache.hadoop.yarn.client.util.MemoryPageUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -135,6 +128,12 @@ public class RouterCLI extends Configured implements Tool {
   private static final String XML_TAG_FEDERATION_WEIGHTS = "federationWeights";
   private static final String XML_TAG_QUEUE = "queue";
   private static final String XML_TAG_NAME = "name";
+
+  private static final String LIST_POLICIES_TITLE =
+      "Yarn Federation Queue Policies";
+  // Columns information
+  private static final List<String> LIST_POLICIES_HEADER = Arrays.asList(
+      "SubCluster Id", "Deregister State", "Last HeartBeatTime", "Information", "SubCluster State");
 
   public RouterCLI() {
     super();
@@ -349,11 +348,24 @@ public class RouterCLI extends Configured implements Tool {
     Option fileOpt = new Option("f", "input-file", true,
         "The location of the input configuration file. ");
     formatOpt.setOptionalArg(true);
-
+    Option listOpt = new Option(OPTION_L, OPTION_LIST, false,
+        "We can display the configured queue strategy according to the parameters.");
+    Option pageSizeOpt = new Option(null, "pageSize", true,
+        "The number of Policies displayed per page.");
+    Option currentPageOpt = new Option(null, "currentPage", true,
+        "Since users may configure numerous policies, we will choose to display them in pages. " +
+        "This parameter represents the page number to be displayed.");
+    Option queueOpt = new Option(null, "queue", true, "The queue we need to filter.");
+    Option queuesOpt = new Option(null, "queues", true, "list of queues to filter.");
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
     opts.addOption(formatOpt);
     opts.addOption(fileOpt);
+    opts.addOption(listOpt);
+    opts.addOption(pageSizeOpt);
+    opts.addOption(currentPageOpt);
+    opts.addOption(queueOpt);
+    opts.addOption(queuesOpt);
 
     // Parse command line arguments.
     CommandLine cliParser;
@@ -400,7 +412,7 @@ public class RouterCLI extends Configured implements Tool {
       // Batch SavePolicies.
       return handBatchSavePolicies(format, filePath);
     } else if(cliParser.hasOption(OPTION_L) || cliParser.hasOption(OPTION_LIST)) {
-      return handListPolicies();
+
     } else {
       // printUsage
       printUsage(args[0]);
@@ -445,19 +457,6 @@ public class RouterCLI extends Configured implements Tool {
       System.out.println("We currently only support XML formats.");
       return EXIT_ERROR;
     }
-  }
-
-  /**
-   * Lists policies based on the Yarn Federation Queue Policies.
-   *
-   * @param pageSize The number of items to display per page.
-   * @param currentPage The current page number.
-   * @param queue The specific queue to filter the policies by.
-   * @param queues A list of available queues for filtering (optional).
-   * @return 0, success; 1, failed.
-   */
-  private int listPolicies(int pageSize, int currentPage, String queue, List<String> queues) {
-    return 0;
   }
 
   /**
@@ -636,8 +635,43 @@ public class RouterCLI extends Configured implements Tool {
     return StringUtils.join(amRmPolicyWeights, ",");
   }
 
-  protected int handListPolicies() {
-    return 0;
+  /**
+   * Handles the list federation policies based on the specified parameters.
+   *
+   * @param pageSize Records displayed per page.
+   * @param currentPage The current page number.
+   * @param queue The name of the queue to be filtered.
+   * @param queues list of queues to filter.
+   * @return 0, success; 1, failed.
+   */
+  protected int handListPolicies(int pageSize, int currentPage, String queue, List<String> queues) {
+    LOG.info("List Federation Policies,  pageSize = {}, currentPage = {}, queue = {}, queues = {}",
+        pageSize, currentPage, queue, queues);
+    try {
+      PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+          System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+      QueryFederationQueuePoliciesRequest request =
+          QueryFederationQueuePoliciesRequest.newInstance(pageSize, currentPage, queue, queues);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      QueryFederationQueuePoliciesResponse response = adminProtocol.listFederationQueuePolicies(request);
+      System.out.println("TotalPage = " + response.getTotalPage());
+
+      FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(LIST_POLICIES_TITLE)
+          .addHeaders(LIST_POLICIES_HEADER);
+      List<FederationQueueWeight> federationQueueWeights = response.getFederationQueueWeights();
+      federationQueueWeights.forEach(federationQueueWeight -> {
+        String queueName = federationQueueWeight.getQueue();
+        String amrmWeight = federationQueueWeight.getAmrmWeight();
+        String routerWeight = federationQueueWeight.getRouterWeight();
+        formattingCLIUtils.addLine(queueName, amrmWeight, routerWeight);
+      });
+      writer.print(formattingCLIUtils.render());
+      writer.flush();
+      return EXIT_SUCCESS;
+    } catch (YarnException | IOException e) {
+      LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
   }
 
   @Override

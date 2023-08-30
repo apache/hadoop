@@ -31,7 +31,39 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.*;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -828,7 +860,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   }
 
   @Test
-  public void testFilterPoliciesConfigurationsByQueues() throws IOException, YarnException {
+  public void testFilterPoliciesConfigurationsByQueues() throws Exception {
     // SubClusters : SC-1,SC-2
     List<String> subClusterLists = new ArrayList<>();
     subClusterLists.add("SC-1");
@@ -860,14 +892,74 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     }
 
     // Queue1: We query page 1, 10 items per page, and the returned result should be 10 items.
+    // TotalPage should be 2, TotalSize should be 12.
     QueryFederationQueuePoliciesRequest request1 =
-         QueryFederationQueuePoliciesRequest.newInstance(10, 1, "", queues);
-    QueryFederationQueuePoliciesResponse response = interceptor.listFederationQueuePolicies(request1);
-    assertNotNull(response);
-    assertEquals(1, response.getCurrentPage());
-    assertEquals(10, response.getPageSize());
-    assertEquals(2, response.getTotalPage());
-    assertEquals(12, response.getTotalSize());
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, "", queues);
+    QueryFederationQueuePoliciesResponse response1 = interceptor.listFederationQueuePolicies(request1);
+    assertNotNull(response1);
+    assertEquals(1, response1.getCurrentPage());
+    assertEquals(10, response1.getPageSize());
+    assertEquals(2, response1.getTotalPage());
+    assertEquals(12, response1.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights1 = response1.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights1);
+    assertEquals(10, federationQueueWeights1.size());
 
+    // Queue2: We query page 1, 12 items per page, and the returned result should be 12 items.
+    // TotalPage should be 1, TotalSize should be 12.
+    QueryFederationQueuePoliciesRequest request2 =
+        QueryFederationQueuePoliciesRequest.newInstance(12, 1, "", queues);
+    QueryFederationQueuePoliciesResponse response2 = interceptor.listFederationQueuePolicies(request2);
+    assertNotNull(response2);
+    assertEquals(1, response2.getCurrentPage());
+    assertEquals(12, response2.getPageSize());
+    assertEquals(1, response2.getTotalPage());
+    assertEquals(12, response2.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights2 = response2.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights2);
+    assertEquals(12, federationQueueWeights2.size());
+
+    // Queue3: Boundary limit exceeded
+    // We filter 12 queues, should return 12 records, 12 per page,
+    // should return 1 page, but we are going to return page 2.
+    QueryFederationQueuePoliciesRequest request3 =
+        QueryFederationQueuePoliciesRequest.newInstance(12, 2, "", queues);
+    QueryFederationQueuePoliciesResponse response3 = interceptor.listFederationQueuePolicies(request3);
+    assertNotNull(response3);
+    assertEquals(2, response3.getCurrentPage());
+    assertEquals(12, response3.getPageSize());
+    assertEquals(1, response2.getTotalPage());
+    assertEquals(12, response3.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights3 = response3.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights3);
+    assertEquals(0, federationQueueWeights3.size());
+
+    // Queue4: Boundary limit exceeded
+    // We pass in some negative parameters and we will get some exceptions
+    QueryFederationQueuePoliciesRequest request4 =
+        QueryFederationQueuePoliciesRequest.newInstance(-1, 2, "", queues);
+    LambdaTestUtils.intercept(YarnException.class, "PageSize cannot be negative or zero.",
+        () -> interceptor.listFederationQueuePolicies(request4));
+
+    // Queue5: Boundary limit exceeded
+    // We pass in some negative parameters and we will get some exceptions
+    QueryFederationQueuePoliciesRequest request5 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, -1, "", queues);
+    LambdaTestUtils.intercept(YarnException.class, "CurrentPage cannot be negative or zero.",
+        () -> interceptor.listFederationQueuePolicies(request5));
+
+    // Queue6: We use Queue as the condition,
+    // at this time we will only get the only one return value.
+    QueryFederationQueuePoliciesRequest request6 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, "root.a", null);
+    QueryFederationQueuePoliciesResponse response6 = interceptor.listFederationQueuePolicies(request6);
+    assertNotNull(response6);
+    assertEquals(1, response6.getCurrentPage());
+    assertEquals(10, response6.getPageSize());
+    assertEquals(1, response6.getTotalPage());
+    assertEquals(1, response6.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights6 = response6.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights6);
+    assertEquals(1, federationQueueWeights6.size());
   }
 }

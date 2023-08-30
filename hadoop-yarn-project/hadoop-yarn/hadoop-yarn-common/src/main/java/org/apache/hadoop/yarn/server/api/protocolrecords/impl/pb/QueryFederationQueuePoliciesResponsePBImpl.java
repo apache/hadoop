@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.proto.YarnProtos.FederationQueueWeightProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.QueryFederationQueuePoliciesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.QueryFederationQueuePoliciesResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 
@@ -198,12 +196,13 @@ public class QueryFederationQueuePoliciesResponsePBImpl
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof BatchSaveFederationQueuePoliciesRequest)) {
+    if (other == null) {
       return false;
     }
-
-    QueryFederationQueuePoliciesResponsePBImpl otherImpl = this.getClass().cast(other);
-    return new EqualsBuilder().append(this.getProto(), otherImpl.getProto()).isEquals();
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
   }
 
   @Override

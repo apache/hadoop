@@ -40,7 +40,7 @@ public abstract class QueryFederationQueuePoliciesRequest {
   @Private
   @Unstable
   public static QueryFederationQueuePoliciesRequest newInstance(
-      Integer pageSize, Integer currentPage, String queue, List<String> queues) {
+      int pageSize, int currentPage, String queue, List<String> queues) {
     QueryFederationQueuePoliciesRequest request =
         Records.newRecord(QueryFederationQueuePoliciesRequest.class);
     request.setPageSize(pageSize);

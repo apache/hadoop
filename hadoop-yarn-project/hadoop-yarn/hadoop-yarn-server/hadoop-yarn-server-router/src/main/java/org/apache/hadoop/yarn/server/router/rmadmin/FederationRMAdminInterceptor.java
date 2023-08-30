@@ -1002,10 +1002,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   /**
    * List the Queue Policies for the Federation.
    *
-   * @param request QueryFederationQueuePoliciesRequest Request.
-   * @return
-   * @throws YarnException
-   * @throws IOException
+   * @param request QueryFederationQueuePolicies Request.
+   * @return QueryFederationQueuePolicies Response.
+   *
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
    */
   @Override
   public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
@@ -1018,6 +1019,18 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           "Missing ListFederationQueuePolicies Request.", null);
     }
 
+    if (request.getPageSize() <= 0) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "PageSize cannot be negative or zero.", null);
+    }
+
+    if (request.getCurrentPage() <= 0) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "CurrentPage cannot be negative or zero.", null);
+    }
+
     try {
       QueryFederationQueuePoliciesResponse response = null;
 
@@ -1027,8 +1040,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       int currentPage = request.getCurrentPage();
       int pageSize = request.getPageSize();
 
+      // Print log
       LOG.info("queue = {}, queues={}, currentPage={}, pageSize={}",
-          queue, queues.size(), currentPage, pageSize);
+          queue, queues, currentPage, pageSize);
 
       Map<String, SubClusterPolicyConfiguration> policiesConfigurations =
           federationFacade.getPoliciesConfigurations();
