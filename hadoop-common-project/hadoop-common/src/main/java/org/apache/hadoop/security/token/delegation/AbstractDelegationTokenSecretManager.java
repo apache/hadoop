@@ -492,11 +492,12 @@ extends AbstractDelegationTokenIdentifier>
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
-    identifier.setMasterKeyId(currentKey.getKeyId());
+    DelegationKey delegationCurrentKey = currentKey;
+    identifier.setMasterKeyId(delegationCurrentKey.getKeyId());
     identifier.setSequenceNumber(sequenceNum);
     LOG.info("Creating password for identifier: " + formatTokenId(identifier)
-        + ", currentKey: " + currentKey.getKeyId());
-    byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+        + ", currentKey: " + delegationCurrentKey.getKeyId());
+    byte[] password = createPassword(identifier.getBytes(), delegationCurrentKey.getKey());
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
