@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
@@ -147,12 +148,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge keyCache;
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
-  private int currentSeqNum;
-  private int currentMaxSeqNum;
-
-  private final ReentrantLock currentSeqNumLock;
-
-
+  private AtomicInteger currentSeqNum;
+  private AtomicInteger currentMaxSeqNum;
+  private final ReentrantReadWriteLock currentSeqNumLock;
   private final boolean isTokenWatcherEnabled;
 
   public ZKDelegationTokenSecretManager(Configuration conf) {
@@ -168,7 +166,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
-    this.currentSeqNumLock = new ReentrantLock(true);
+    this.currentSeqNumLock = new ReentrantReadWriteLock(true);
     if (CURATOR_TL.get() != null) {
       zkClient =
           CURATOR_TL.get().usingNamespace(
@@ -287,10 +285,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
       // the first batch range should be allocated during this starting window
       // by calling the incrSharedCount
-      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+      currentSeqNum.set(incrSharedCount(delTokSeqCounter, seqNumBatchSize));
+      currentMaxSeqNum.set(currentSeqNum.get() + seqNumBatchSize);
       LOG.info("Fetched initial range of seq num, from {} to {} ",
-          currentSeqNum+1, currentMaxSeqNum);
+          currentSeqNum.incrementAndGet(), currentMaxSeqNum);
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
     }
@@ -525,15 +523,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
-    try{
-      this.currentSeqNumLock.lock();
-      if (currentSeqNum >= currentMaxSeqNum) {
+    try {
+      this.currentSeqNumLock.readLock().lock();
+      if (currentSeqNum.get() >= currentMaxSeqNum.get()) {
         try {
           // after a successful batch request, we can get the range starting point
-          currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-          currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-          LOG.info("Fetched new range of seq num, from {} to {} ",
-                  currentSeqNum+1, currentMaxSeqNum);
+          this.currentSeqNumLock.readLock().unlock();
+          try {
+            this.currentSeqNumLock.writeLock().lock();
+            if (currentSeqNum.get() >= currentMaxSeqNum.get()) {
+              currentSeqNum.set(incrSharedCount(delTokSeqCounter, seqNumBatchSize));
+              currentMaxSeqNum.set(currentSeqNum.get() + seqNumBatchSize );
+              LOG.info("Fetched new range of seq num, from {} to {} ",
+                  currentSeqNum.get()+1, currentMaxSeqNum);
+            }
+          } finally {
+            this.currentSeqNumLock.writeLock().unlock();
+          }
         } catch (InterruptedException e) {
           // The ExpirationThread is just finishing.. so dont do anything..
           LOG.debug(
@@ -543,14 +549,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
           throw new RuntimeException("Could not increment shared counter !!", e);
         }
       }
-
-      return ++currentSeqNum;
-
-    }finally{
-      this.currentSeqNumLock.unlock();
+      return currentSeqNum.incrementAndGet();
+    } finally {
+      if( this.currentSeqNumLock.getReadHoldCount() > 0) {
+        this.currentSeqNumLock.readLock().unlock();
+      }
     }
-
-
   }
 
   @Override
