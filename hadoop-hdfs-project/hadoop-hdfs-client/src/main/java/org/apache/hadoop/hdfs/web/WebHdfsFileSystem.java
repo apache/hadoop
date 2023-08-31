@@ -1972,7 +1972,6 @@ public class WebHdfsFileSystem extends FileSystem
           }.run();
       return trashRoots;
     } catch (IOException e) {
-      LOG.warn("Cannot get all trash roots", e);
       return super.getTrashRoots(allUsers);
     }
   }
