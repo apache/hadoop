@@ -103,8 +103,9 @@ class BPServiceActor implements Runnable {
   
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
-  private final Object sendIBRLock;
+  private final Object sendBRLock;
   private final ExecutorService ibrExecutorService;
+  private final ExecutorService fbrExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -161,10 +162,13 @@ class BPServiceActor implements Runnable {
     }
     commandProcessingThread = new CommandProcessingThread(this);
     commandProcessingThread.start();
-    sendIBRLock = new Object();
+    sendBRLock = new Object();
     ibrExecutorService = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("ibr-executor-%d").build());
+    fbrExecutorService = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat("fbr-executor-%d").build());
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -397,10 +401,8 @@ class BPServiceActor implements Runnable {
     // we have a chance that we will miss the delHint information
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
-    synchronized (sendIBRLock) {
-      ibrManager.sendIBRs(bpNamenode, bpRegistration,
-          bpos.getBlockPoolId(), getRpcMetricSuffix());
-    }
+    ibrManager.sendIBRs(bpNamenode, bpRegistration,
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -481,8 +483,6 @@ class BPServiceActor implements Runnable {
                   (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
           ".");
     }
-    scheduler.updateLastBlockReportTime(monotonicNow());
-    scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
   }
 
@@ -636,6 +636,9 @@ class BPServiceActor implements Runnable {
     if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
     }
+    if (fbrExecutorService != null && !fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
+    }
   }
   
   //This must be called only by blockPoolManager
@@ -661,6 +664,9 @@ class BPServiceActor implements Runnable {
     bpos.shutdownActor(this);
     if (!ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
+    }
+    if (!fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
     }
   }
 
@@ -758,17 +764,17 @@ class BPServiceActor implements Runnable {
           }
         }
 
-        List<DatanodeCommand> cmds = null;
         boolean forceFullBr =
             scheduler.forceFullBlockReport.getAndSet(false);
         if (forceFullBr) {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          cmds = blockReport(fullBlockReportLeaseId);
+          fbrExecutorService.submit(new FBRTaskHandler(fullBlockReportLeaseId));
           fullBlockReportLeaseId = 0;
+          scheduler.updateLastBlockReportTime(monotonicNow());
+          scheduler.scheduleNextBlockReport();
         }
-        commandProcessingThread.enqueue(cmds);
 
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();
@@ -1170,7 +1176,7 @@ class BPServiceActor implements Runnable {
           final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
           if (!dn.areIBRDisabledForTests() &&
               (ibrManager.sendImmediately() || sendHeartbeat)) {
-            synchronized (sendIBRLock) {
+            synchronized (sendBRLock) {
               ibrManager.sendIBRs(bpNamenode, bpRegistration,
                   bpos.getBlockPoolId(), getRpcMetricSuffix());
             }
@@ -1185,6 +1191,34 @@ class BPServiceActor implements Runnable {
       }
     }
 
+  }
+
+  final class FBRTaskHandler implements Runnable {
+
+    private long fullBlockReportLeaseId;
+
+    private FBRTaskHandler(long fullBlockReportLeaseId) {
+      this.fullBlockReportLeaseId = fullBlockReportLeaseId;
+    }
+
+    @Override
+    public void run() {
+      LOG.debug("Start sending full blockreport.");
+      List<DatanodeCommand> cmds = null;
+      try {
+        synchronized (sendBRLock) {
+          cmds = blockReport(this.fullBlockReportLeaseId);
+        }
+        commandProcessingThread.enqueue(cmds);
+      } catch (Throwable t) {
+        LOG.warn("InterruptedException in FBR Task Handler.", t);
+        sleepAndLogInterrupts(5000, "offering FBR service");
+        synchronized(ibrManager) {
+          scheduler.forceFullBlockReportNow();
+          ibrManager.notifyAll();
+        }
+      }
+    }
   }
 
   /**
