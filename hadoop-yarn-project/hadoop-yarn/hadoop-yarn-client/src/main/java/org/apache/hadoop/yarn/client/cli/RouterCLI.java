@@ -58,6 +58,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkHeadRoomAlphaValid;
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkSubClusterQueueWeightRatioValid;
@@ -78,7 +79,8 @@ public class RouterCLI extends Configured implements Tool {
          // Command2: policy
         .put("-policy", new UsageInfo(
         "[-s|--save [queue;router weight;amrm weight;headroomalpha]] " +
-         "[-bs|--batch-save [--format xml] [-f|--input-file fileName]]",
+         "[-bs|--batch-save [--format xml] [-f|--input-file fileName]]" +
+         "[-l|--list [--pageSize][--currentPage][--queue][--queues]]",
         "We provide a set of commands for Policy:" +
         " Include list policies, save policies, batch save policies. " +
         " (Note: The policy type will be directly read from the" +
@@ -117,6 +119,10 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_INPUT_FILE = "input-file";
   private static final String OPTION_L = "l";
   private static final String OPTION_LIST = "list";
+  private static final String OPTION_PAGE_SIZE = "pageSize";
+  private static final String OPTION_CURRENT_PAGE = "currentPage";
+  private static final String OPTION_QUEUE = "queue";
+  private static final String OPTION_QUEUES = "queues";
 
   private static final String CMD_POLICY = "-policy";
   private static final String FORMAT_XML = "xml";
@@ -133,7 +139,7 @@ public class RouterCLI extends Configured implements Tool {
       "Yarn Federation Queue Policies";
   // Columns information
   private static final List<String> LIST_POLICIES_HEADER = Arrays.asList(
-      "SubCluster Id", "Deregister State", "Last HeartBeatTime", "Information", "SubCluster State");
+      "Queue Name", "AMRM Weight", "Router Weight");
 
   public RouterCLI() {
     super();
@@ -193,7 +199,7 @@ public class RouterCLI extends Configured implements Tool {
         .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
         .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha] " +
                 "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]] " +
-                "[-l|--list [-p|--pageSize] [-c|--currentPage] [-q|--queue] [-qs|--queues]]\n")
+                "[-l|--list [--pageSize][--currentPage][--queue][--queues]]\n")
         .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -351,12 +357,14 @@ public class RouterCLI extends Configured implements Tool {
     Option listOpt = new Option(OPTION_L, OPTION_LIST, false,
         "We can display the configured queue strategy according to the parameters.");
     Option pageSizeOpt = new Option(null, "pageSize", true,
-        "The number of Policies displayed per page.");
+        "The number of policies displayed per page.");
     Option currentPageOpt = new Option(null, "currentPage", true,
         "Since users may configure numerous policies, we will choose to display them in pages. " +
         "This parameter represents the page number to be displayed.");
-    Option queueOpt = new Option(null, "queue", true, "The queue we need to filter.");
-    Option queuesOpt = new Option(null, "queues", true, "list of queues to filter.");
+    Option queueOpt = new Option(null, "queue", true,
+        "the queue we need to filter. example: root.a");
+    Option queuesOpt = new Option(null, "queues", true,
+        "list of queues to filter. example: root.a,root.b,root.c");
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
     opts.addOption(formatOpt);
@@ -413,6 +421,28 @@ public class RouterCLI extends Configured implements Tool {
       return handBatchSavePolicies(format, filePath);
     } else if(cliParser.hasOption(OPTION_L) || cliParser.hasOption(OPTION_LIST)) {
 
+      int pageSize = 10;
+      if (cliParser.hasOption(OPTION_PAGE_SIZE)) {
+        pageSize = Integer.parseInt(cliParser.getOptionValue(OPTION_PAGE_SIZE));
+      }
+
+      int currentPage = 1;
+      if (cliParser.hasOption(OPTION_CURRENT_PAGE)) {
+        currentPage = Integer.parseInt(cliParser.getOptionValue(OPTION_CURRENT_PAGE));
+      }
+
+      String queue = null;
+      if (cliParser.hasOption(OPTION_QUEUE)) {
+        queue = cliParser.getOptionValue(OPTION_QUEUE);
+      }
+
+      List<String> queues = null;
+      if (cliParser.hasOption(OPTION_QUEUES)) {
+        String tmpQueues = cliParser.getOptionValue(OPTION_QUEUES);
+        queues = Arrays.stream(tmpQueues.split(",")).collect(Collectors.toList());
+      }
+
+      return handListPolicies(pageSize, currentPage, queue, queues);
     } else {
       // printUsage
       printUsage(args[0]);
