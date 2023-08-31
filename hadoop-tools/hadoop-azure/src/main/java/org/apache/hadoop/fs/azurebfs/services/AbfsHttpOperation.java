@@ -222,7 +222,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" rt=")
       .append(recvResponseTimeMs)
 
-    .append(" bs=")
+      .append(" bs=")
       .append(bytesSent)
       .append(" br=")
       .append(bytesReceived)
