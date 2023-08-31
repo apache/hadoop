@@ -94,7 +94,7 @@ public class MetricsInvariantChecker extends InvariantsChecker {
     // prepare bindings and evaluation engine
     this.bindings = new SimpleBindings();
     this.manager = new ScriptEngineManager();
-    this.scriptEngine = (Compilable) manager.getEngineByName("JavaScript");
+    this.scriptEngine = (Compilable) manager.getEngineByName("graal.js");
 
     // load metrics invariant from file
     this.invariantFile = getConf().get(MetricsInvariantChecker.INVARIANTS_FILE);
