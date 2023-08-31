@@ -105,12 +105,12 @@ public class ITestAzureBlobFileSystemAppend extends
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
     DataBlocks.DataBlock[] dataBlock = new DataBlocks.DataBlock[1];
-    Mockito.doAnswer(answer -> {
+    Mockito.doAnswer(getBlobFactoryInvocation -> {
       DataBlocks.BlockFactory factory = Mockito.spy(
-          (DataBlocks.BlockFactory) answer.callRealMethod());
-      Mockito.doAnswer(factoryCreate -> {
+          (DataBlocks.BlockFactory) getBlobFactoryInvocation.callRealMethod());
+      Mockito.doAnswer(factoryCreateInvocation -> {
         dataBlock[0] = Mockito.spy(
-            (DataBlocks.DataBlock) factoryCreate.callRealMethod());
+            (DataBlocks.DataBlock) factoryCreateInvocation.callRealMethod());
         return dataBlock[0];
       }).when(factory).create(Mockito.anyLong(), Mockito.anyInt(), Mockito.any(
           BlockUploadStatistics.class));
