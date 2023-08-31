@@ -20,15 +20,21 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Random;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.store.BlockUploadStatistics;
+import org.apache.hadoop.fs.store.DataBlocks;
 
 /**
  * Test append operations.
@@ -89,5 +95,30 @@ public class ITestAzureBlobFileSystemAppend extends
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.APPEND, false, 0));
     fs.append(testPath, 10);
+  }
+
+  @Test
+  public void testCloseOfDataBlockOnAppendComplete() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(configuration));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    DataBlocks.DataBlock[] dataBlock = new DataBlocks.DataBlock[1];
+    Mockito.doAnswer(answer -> {
+      DataBlocks.BlockFactory factory = Mockito.spy(
+          (DataBlocks.BlockFactory) answer.callRealMethod());
+      Mockito.doAnswer(factoryCreate -> {
+        dataBlock[0] = Mockito.spy(
+            (DataBlocks.DataBlock) factoryCreate.callRealMethod());
+        return dataBlock[0];
+      }).when(factory).create(Mockito.anyLong(), Mockito.anyInt(), Mockito.any(
+          BlockUploadStatistics.class));
+      return factory;
+    }).when(store).getBlockFactory();
+    OutputStream os = fs.create(new Path("/file"));
+    os.write(new byte[1]);
+    os.close();
+    Mockito.verify(dataBlock[0], Mockito.times(1)).close();
   }
 }
