@@ -58,7 +58,8 @@ public class TestCrossOriginFilter {
     CrossOriginFilter filter = new CrossOriginFilter();
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
-    Mockito.verifyNoInteractions(mockRes);
+
+    Mockito.verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -223,7 +224,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    Mockito.verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -251,7 +252,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    Mockito.verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -282,7 +283,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    Mockito.verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
