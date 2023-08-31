@@ -34,6 +34,7 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -245,6 +246,8 @@ public class Router extends CompositeService {
     StringUtils.startupShutdownMessage(Router.class, argv, LOG);
     Router router = new Router();
     try {
+
+      new GenericOptionsParser(conf, argv);
 
       // Remove the old hook if we are rebooting.
       if (null != routerShutdownHook) {

@@ -36,6 +36,7 @@ import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -290,7 +291,9 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   public static void main(String[] argv) {
     try {
-      startGPG(argv, new YarnConfiguration());
+      YarnConfiguration conf = new YarnConfiguration();
+      new GenericOptionsParser(conf, argv);
+      startGPG(argv, conf);
     } catch (Throwable t) {
       LOG.error("Error starting global policy generator", t);
       System.exit(-1);
