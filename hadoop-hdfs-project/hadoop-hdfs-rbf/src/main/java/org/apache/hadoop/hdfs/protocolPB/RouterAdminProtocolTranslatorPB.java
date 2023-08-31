@@ -112,7 +112,7 @@ import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
- * This class forwards RouterAdminProtocol calls as RPC calls to the Router admin server
+ * This class forwards RouterAdminProtocol calls as RPC calls to the RouterAdmin server
  * while translating from the parameter types used in RouterAdminProtocol to the
  * new PB types.
  */
