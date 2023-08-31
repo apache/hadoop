@@ -110,17 +110,8 @@ public class TransferFsImage {
   public static MD5Hash downloadImageToStorage(URL fsName, long imageTxId,
       Storage dstStorage, boolean needDigest, boolean isBootstrapStandby)
       throws IOException {
-   return downloadImageToStorage(fsName, imageTxId, dstStorage, needDigest,
-     isBootstrapStandby, false);
-  }
-
-  public static MD5Hash downloadImageToStorage(URL fsName, long imageTxId,
-      Storage dstStorage, boolean needDigest, boolean isBootstrapStandby,
-      boolean isBootstrapStandbyRollingUpgrade)
-      throws IOException {
     String fileid = ImageServlet.getParamStringForImage(null,
-        imageTxId, dstStorage, isBootstrapStandby,
-        isBootstrapStandbyRollingUpgrade);
+        imageTxId, dstStorage, isBootstrapStandby);
     String fileName = NNStorage.getCheckpointImageFileName(imageTxId);
     
     List<File> dstFiles = dstStorage.getFiles(

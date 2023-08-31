@@ -367,17 +367,14 @@ public class ImageServlet extends HttpServlet {
   }
 
   static String getParamStringForImage(NameNodeFile nnf, long txid,
-      StorageInfo remoteStorageInfo, boolean isBootstrapStandby,
-      boolean isBootstrapStandbyRollingUpgrade) {
+      StorageInfo remoteStorageInfo, boolean isBootstrapStandby) {
     final String imageType = nnf == null ? "" : "&" + IMAGE_FILE_TYPE + "="
         + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
       + imageType
-      // Excluding the STORAGEINFO_PARAM means the NameNode handling the request
-      // will send it's fsimage without checking the storage info
-      + (isBootstrapStandbyRollingUpgrade ? "" : "&" + STORAGEINFO_PARAM + "="
-        + remoteStorageInfo.toColonSeparatedString())
-      + "&" + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
+      + "&" + STORAGEINFO_PARAM + "="
+      + remoteStorageInfo.toColonSeparatedString() + "&"
+      + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
   }
 
   static String getParamStringForLog(RemoteEditLog log,

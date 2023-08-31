@@ -48,6 +48,7 @@ public class StorageInfo {
   public int   namespaceID;     // id of the file system
   public String clusterID;      // id of the cluster
   public long  cTime;           // creation time of the file system state
+  public int serviceLayoutVersion; // software layout version of the storage data
 
   protected final NodeType storageType; // Type of the node using this storage 
   
@@ -63,6 +64,9 @@ public class StorageInfo {
     namespaceID = nsID;
     cTime = cT;
     storageType = type;
+    serviceLayoutVersion = storageType == NodeType.DATA_NODE ?
+        HdfsServerConstants.DATANODE_LAYOUT_VERSION :
+        HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
   }
   
   public StorageInfo(StorageInfo from) {
@@ -98,6 +102,7 @@ public class StorageInfo {
     clusterID = from.clusterID;
     namespaceID = from.namespaceID;
     cTime = from.cTime;
+    serviceLayoutVersion = from.serviceLayoutVersion;
   }
 
   public boolean versionSupportsFederation(

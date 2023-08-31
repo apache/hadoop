@@ -170,6 +170,7 @@ public class BootstrapStandby implements Tool, Configurable {
     NamenodeProtocol proxy = null;
     NamespaceInfo nsInfo = null;
     boolean isUpgradeFinalized = false;
+    boolean isRollingUpgrade = false;
     RemoteNameNodeInfo proxyInfo = null;
     for (int i = 0; i < remoteNNs.size(); i++) {
       proxyInfo = remoteNNs.get(i);
@@ -182,6 +183,7 @@ public class BootstrapStandby implements Tool, Configurable {
         // replacing a failed NN), then this will bootstrap from any node in the cluster.
         nsInfo = proxy.versionRequest();
         isUpgradeFinalized = proxy.isUpgradeFinalized();
+        isRollingUpgrade = proxy.isRollingUpgrade();
         break;
       } catch (IOException ioe) {
         LOG.warn("Unable to fetch namespace information from remote NN at " + otherIpcAddress
@@ -199,10 +201,15 @@ public class BootstrapStandby implements Tool, Configurable {
       return ERR_CODE_FAILED_CONNECT;
     }
 
-    if (!checkLayoutVersion(nsInfo)) {
-      LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
-          + ") does not match " + "this node's layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
+    if (!checkLayoutVersion(nsInfo, isRollingUpgrade)) {
+      String msg = isRollingUpgrade ? "Layout version on remote node in rolling"
+          + "upgrade (" + nsInfo.getLayoutVersion() + ") is not compatible (<"
+          + HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION + ")"
+          : "Layout version and service layout version on remote node ("
+          + nsInfo.getLayoutVersion() + ", " + nsInfo.getServiceLayoutVersion()
+          + ") does not match this node's service layout version ("
+          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+      LOG.error(msg);
       return ERR_CODE_INVALID_VERSION;
     }
 
@@ -217,7 +224,9 @@ public class BootstrapStandby implements Tool, Configurable {
         "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
         "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+        "   Service Layout version: " + nsInfo.getServiceLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
+        "         isRollingUpgrade: " + isRollingUpgrade + "\n" +
         "=====================================================");
     
     NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
@@ -355,8 +364,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
       // Download that checkpoint into our storage directories.
       MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        proxyInfo.getHttpAddress(), imageTxId, storage, true, true,
-        proxy.isRollingUpgrade());
+        proxyInfo.getHttpAddress(), imageTxId, storage, true, true);
       image.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE, imageTxId,
           hash);
 
@@ -406,8 +414,18 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+  private boolean checkLayoutVersion(NamespaceInfo nsInfo, boolean isRollingUpgrade) {
+    if (isRollingUpgrade) {
+      // During a rolling upgrade the service layout versions may be different,
+      // but we should check that the layout version being sent is compatible
+      return nsInfo.getLayoutVersion() >
+          HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
+    } else {
+      return nsInfo.getLayoutVersion() ==
+            HdfsServerConstants.NAMENODE_LAYOUT_VERSION &&
+          nsInfo.getServiceLayoutVersion() ==
+            HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+    }
   }
 
   private void parseConfAndFindOtherNN() throws IOException {
