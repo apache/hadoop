@@ -207,29 +207,29 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     final StringBuilder sb = new StringBuilder();
     sb.append("s=")
-            .append(statusCode)
-            .append(" e=")
-            .append(storageErrorCode)
-            .append(" ci=")
-            .append(getClientRequestId())
-            .append(" ri=")
-            .append(requestId)
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(getClientRequestId())
+      .append(" ri=")
+      .append(requestId)
 
-            .append(" ct=")
-            .append(connectionTimeMs)
-            .append(" st=")
-            .append(sendRequestTimeMs)
-            .append(" rt=")
-            .append(recvResponseTimeMs)
+      .append(" ct=")
+      .append(connectionTimeMs)
+      .append(" st=")
+      .append(sendRequestTimeMs)
+      .append(" rt=")
+      .append(recvResponseTimeMs)
 
-            .append(" bs=")
-            .append(bytesSent)
-            .append(" br=")
-            .append(bytesReceived)
-            .append(" m=")
-            .append(method)
-            .append(" u=")
-            .append(getMaskedEncodedUrl());
+    .append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(getMaskedEncodedUrl());
 
     return sb.toString();
   }
