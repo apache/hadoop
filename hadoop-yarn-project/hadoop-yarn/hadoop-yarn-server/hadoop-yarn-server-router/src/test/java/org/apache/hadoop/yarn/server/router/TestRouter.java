@@ -185,6 +185,20 @@ public class TestRouter {
     router.stop();
   }
 
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "DUMMYAUTH");
+    Router router = new Router();
+    try {
+      router.init(dummyConf);
+    } finally {
+      router.stop();
+    }
+  }
+
   private class HttpServletResponseForRouterTest implements HttpServletResponse {
     private final Map<String, String> headers = new HashMap<>(1);
 
