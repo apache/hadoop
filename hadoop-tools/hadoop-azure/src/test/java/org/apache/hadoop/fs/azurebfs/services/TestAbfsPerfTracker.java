@@ -113,7 +113,7 @@ public final class TestAbfsPerfTracker {
       assertThat(latencyDetails).describedAs("AbfsPerfTracker should return non-null record").isNotNull();
       assertThat(latencyDetails).describedAs("Latency record should be in the correct format")
         .containsPattern("h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller"
-          + " ce=oneOperationCallee r=Succeeded l=[0-9]+ s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET"
+          + " ce=oneOperationCallee r=Succeeded l=[0-9]+ s=0 e= ci=[^ ]* ri=[^ ]* ct=[^ ]* st=[^ ]* rt=[^ ]* bs=0 br=0 m=GET"
           + " u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile");
     }
 
@@ -154,7 +154,7 @@ public final class TestAbfsPerfTracker {
       assertThat(latencyDetails).describedAs("Latency record should be in the correct format")
         .containsPattern("h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller"
                 + " ce=oneOperationCallee r=Succeeded l=[0-9]+ ls=[0-9]+ lc=" + TEST_AGGREGATE_COUNT
-                + " s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile");
+                + " s=0 e= ci=[^ ]* ri=[^ ]* ct=[^ ]* st=[^ ]* rt=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile");
     }
 
     latencyDetails = abfsPerfTracker.getClientLatency();
