@@ -163,7 +163,7 @@ public class ExponentialRetryPolicy {
   }
 
   @VisibleForTesting
-  int getRetryCount() {
+  public int getRetryCount() {
     return this.retryCount;
   }
 

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Date;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -128,14 +129,8 @@ public final class ITestAbfsMsiTokenProvider
               Mockito.anyString(), Mockito.any(), Mockito.anyString(),
               Mockito.anyBoolean())).thenThrow(httpException);
 
-      // Mock the tokenFetchRetryPolicy to verify retries.
-      ExponentialRetryPolicy exponentialRetryPolicy = Mockito.spy(
-          conf.getOauthTokenFetchRetryPolicy());
-      Field tokenFetchRetryPolicy = AzureADAuthenticator.class.getDeclaredField(
-          "tokenFetchRetryPolicy");
-      tokenFetchRetryPolicy.setAccessible(true);
-      tokenFetchRetryPolicy.set(ExponentialRetryPolicy.class,
-          exponentialRetryPolicy);
+      ExponentialRetryPolicy exponentialRetryPolicy = conf.getOauthTokenFetchRetryPolicy();
+      AzureADAuthenticator.setTokenFetchRetryPolicy(exponentialRetryPolicy);
 
       AccessTokenProvider tokenProvider = new MsiTokenProvider(authEndpoint,
           tenantGuid, clientId, authority);
@@ -145,9 +140,11 @@ public final class ITestAbfsMsiTokenProvider
 
       // If the status code doesn't qualify for retry shouldRetry returns false and the loop ends.
       // It being called multiple times verifies that the retry was done for the throttling status code 429.
-      Mockito.verify(exponentialRetryPolicy,
-              times(DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS + 1))
-          .shouldRetry(Mockito.anyInt(), Mockito.anyInt());
+      int actualRetries = exponentialRetryPolicy.getRetryCount();
+      Assertions.assertThat(actualRetries)
+              .describedAs("Number of retries should be equal to "
+                      + "max attempts for token fetch.")
+              .isEqualTo(DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS);
     }
   }
 }

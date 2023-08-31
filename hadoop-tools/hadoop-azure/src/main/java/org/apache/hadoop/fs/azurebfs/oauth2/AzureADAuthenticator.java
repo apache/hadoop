@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -68,6 +69,11 @@ public final class AzureADAuthenticator {
 
   public static void init(AbfsConfiguration abfsConfiguration) {
     tokenFetchRetryPolicy = abfsConfiguration.getOauthTokenFetchRetryPolicy();
+  }
+
+  @VisibleForTesting
+  public static void setTokenFetchRetryPolicy(ExponentialRetryPolicy retryPolicy) {
+    tokenFetchRetryPolicy = retryPolicy;
   }
 
   /**
