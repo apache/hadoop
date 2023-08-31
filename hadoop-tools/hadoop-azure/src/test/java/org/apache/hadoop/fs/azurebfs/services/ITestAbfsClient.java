@@ -144,15 +144,15 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void verifybBasicInfo() throws Exception {
+  public void verify_b_BasicInfo() throws Exception {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
-    verifybBasicInfo(getUserAgentString(abfsConfiguration, false));
+    verify_b_BasicInfo(getUserAgentString(abfsConfiguration, false));
   }
 
-  private void verifybBasicInfo(String userAgentStr) {
+  private void verify_b_BasicInfo(String userAgentStr) {
     Assertions.assertThat(userAgentStr)
         .describedAs("User-Agent string [" + userAgentStr
             + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
@@ -181,7 +181,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
       .contains(FS_AZURE_USER_AGENT_PREFIX);
@@ -191,7 +191,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain " + FS_AZURE_USER_AGENT_PREFIX)
       .doesNotContain(FS_AZURE_USER_AGENT_PREFIX);
@@ -216,7 +216,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
             .describedAs("User-Agent string should contain " + HUNDRED_CONTINUE_USER_AGENT)
             .contains(HUNDRED_CONTINUE_USER_AGENT);
@@ -226,7 +226,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
             .describedAs("User-Agent string should not contain " + HUNDRED_CONTINUE_USER_AGENT)
             .doesNotContain(HUNDRED_CONTINUE_USER_AGENT);
@@ -242,14 +242,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, true);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain sslProvider")
       .contains(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
 
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain sslProvider")
       .doesNotContain(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
@@ -265,7 +265,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain cluster name")
       .contains(clusterName);
@@ -275,7 +275,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain cluster name")
       .doesNotContain(clusterName)
@@ -293,7 +293,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain cluster type")
       .contains(clusterType);
@@ -303,7 +303,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verify_b_BasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain cluster type")
       .doesNotContain(clusterType)
