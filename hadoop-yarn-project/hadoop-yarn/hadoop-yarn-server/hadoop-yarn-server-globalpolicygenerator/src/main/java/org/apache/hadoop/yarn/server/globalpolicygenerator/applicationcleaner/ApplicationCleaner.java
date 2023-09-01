@@ -101,7 +101,7 @@ public abstract class ApplicationCleaner implements Runnable {
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
 
     LOG.info(String.format("Contacting router at: %s", webAppAddress));
-    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, "apps", AppsInfo.class,
+    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, "apps", AppsInfo.class, conf,
         DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
 
     Set<ApplicationId> appSet = new HashSet<>();

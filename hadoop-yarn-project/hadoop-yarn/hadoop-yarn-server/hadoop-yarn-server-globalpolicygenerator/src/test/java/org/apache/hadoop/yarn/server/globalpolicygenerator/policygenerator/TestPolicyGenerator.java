@@ -299,7 +299,7 @@ public class TestPolicyGenerator {
     String webAppAddress = getServiceAddress(NetUtils.createSocketAddr(rmAddress));
 
     SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.SCHEDULER,
-        SchedulerTypeInfo.class, this.conf);
+        SchedulerTypeInfo.class, conf);
 
     Assert.assertNotNull(sti);
     SchedulerInfo schedulerInfo = sti.getSchedulerInfo();

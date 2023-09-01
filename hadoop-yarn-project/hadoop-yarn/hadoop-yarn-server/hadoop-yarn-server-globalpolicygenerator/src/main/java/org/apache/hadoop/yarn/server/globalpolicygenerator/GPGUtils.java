@@ -63,11 +63,17 @@ public final class GPGUtils {
    * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
-      String selectParam) {
+      Configuration conf, String selectParam) {
     Client client = Client.create();
     T obj;
 
-    WebResource webResource = client.resource(webAddr);
+    // webAddr stores the form of host:port in subClusterInfo
+    InetSocketAddress socketAddress = NetUtils
+        .getConnectAddress(NetUtils.createSocketAddr(webAddr));
+    String scheme = YarnConfiguration.useHttps(conf) ? HTTPS_PREFIX : HTTP_PREFIX;
+    String webAddress = scheme + socketAddress.getHostName() + ":" + socketAddress.getPort();
+    WebResource webResource = client.resource(webAddress);
+
     if (selectParam != null) {
       webResource = webResource.queryParam(RMWSConsts.DESELECTS, selectParam);
     }
@@ -99,11 +105,12 @@ public final class GPGUtils {
    * @param webAddr WebAddress.
    * @param path url path.
    * @param returnType return type.
+   * @param config configuration.
    * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr,
-      String path, final Class<T> returnType) {
-    return invokeRMWebService(webAddr, path, returnType, null);
+      String path, final Class<T> returnType, Configuration config) {
+    return invokeRMWebService(webAddr, path, returnType, config, null);
   }
 
   /**
