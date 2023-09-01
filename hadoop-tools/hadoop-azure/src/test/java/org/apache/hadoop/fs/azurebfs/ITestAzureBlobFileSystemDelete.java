@@ -29,6 +29,7 @@ import java.util.concurrent.Future;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -257,14 +258,15 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
-    AbfsRestOperation idempotencyRetOp = ITestAbfsClient.getRestOp(
+    AbfsRestOperation idempotencyRetOp = Mockito.spy(ITestAbfsClient.getRestOp(
         DeletePath, mockClient, HTTP_METHOD_DELETE,
         ITestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
-        ITestAbfsClient.getTestRequestHeaders(mockClient));
+        ITestAbfsClient.getTestRequestHeaders(mockClient)));
     idempotencyRetOp.hardSetResult(HTTP_OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);
+    doReturn(tracingContext).when(idempotencyRetOp).createNewTracingContext(any());
     when(mockClient.deletePath("/NonExistingPath", false, null, tracingContext))
         .thenCallRealMethod();
 

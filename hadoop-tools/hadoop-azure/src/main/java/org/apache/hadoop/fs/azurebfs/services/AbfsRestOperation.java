@@ -426,7 +426,7 @@ public class AbfsRestOperation {
    * @return tracingContext
    */
   @VisibleForTesting
-  final TracingContext createNewTracingContext(final TracingContext tracingContext) {
+  public TracingContext createNewTracingContext(final TracingContext tracingContext) {
     return new TracingContext(tracingContext);
   }
 
