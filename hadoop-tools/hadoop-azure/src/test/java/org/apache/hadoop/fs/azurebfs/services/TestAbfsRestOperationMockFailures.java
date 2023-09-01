@@ -218,7 +218,9 @@ public class TestAbfsRestOperationMockFailures {
       // Operation will fail with CT first and then 503 thereafter.
       abfsRestOperation.execute(tracingContext);
     } catch(AbfsRestOperationException ex) {
-      Assertions.assertThat(ex.getStatusCode()).isEqualTo(HTTP_UNAVAILABLE);
+      Assertions.assertThat(ex.getStatusCode())
+          .describedAs("Status Code must be HTTP_UNAVAILABLE(409)")
+          .isEqualTo(HTTP_UNAVAILABLE);
     }
 
     // Assert that httpOperation.processResponse was called 3 times.

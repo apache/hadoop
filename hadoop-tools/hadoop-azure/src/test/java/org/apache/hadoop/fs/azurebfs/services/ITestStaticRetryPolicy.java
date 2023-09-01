@@ -75,7 +75,9 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
 
     // Assert that static retry policy will be used only for CT Failures
     AbfsRetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Assertions.assertThat(retryPolicy).isInstanceOf(retryPolicyClass);
+    Assertions.assertThat(retryPolicy)
+        .describedAs("RetryPolicy Type is Not As Expected")
+        .isInstanceOf(retryPolicyClass);
 
     // For all other possible values of failureReason, Exponential retry is used
     retryPolicy = client.getRetryPolicy("");
@@ -83,7 +85,6 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     retryPolicy = client.getRetryPolicy(null);
     assertIsExponentialRetryPolicy(retryPolicy);
     retryPolicy = client.getRetryPolicy(CONNECTION_RESET_ABBREVIATION);
-    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
     assertIsExponentialRetryPolicy(retryPolicy);
   }
 
@@ -108,24 +109,34 @@ public class ITestStaticRetryPolicy extends AbstractAbfsIntegrationTest {
     assertIsStaticRetryPolicy(retryPolicy);
 
     Assertions.assertThat(retryPolicy.shouldRetry(0, -1))
+        .describedAs("Should retry should be true")
         .isEqualTo(true);
     Assertions.assertThat(retryPolicy.getRetryInterval(0))
+        .describedAs("Retry Interval Value Not as expected")
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(1))
+        .describedAs("Retry Interval Value Not as expected")
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(2))
+        .describedAs("Retry Interval Value Not as expected")
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.getRetryInterval(3))
+        .describedAs("Retry Interval Value Not as expected")
         .isEqualTo(retryInterval);
     Assertions.assertThat(retryPolicy.shouldRetry(maxIoRetry, -1))
+        .describedAs("Should retry for maxretrycount should be false")
         .isEqualTo(false);
   }
 
   private void assertIsExponentialRetryPolicy(AbfsRetryPolicy retryPolicy) {
-    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    Assertions.assertThat(retryPolicy)
+        .describedAs("Exponential Retry policy must be used")
+        .isInstanceOf(ExponentialRetryPolicy.class);
   }
 
   private void assertIsStaticRetryPolicy(AbfsRetryPolicy retryPolicy) {
-    Assertions.assertThat(retryPolicy).isInstanceOf(StaticRetryPolicy.class);
+    Assertions.assertThat(retryPolicy)
+        .describedAs("Static Retry policy must be used")
+        .isInstanceOf(StaticRetryPolicy.class);
   }
 }
