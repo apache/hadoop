@@ -34,6 +34,7 @@ import org.apache.commons.io.FileUtils;
  */
 public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
+  private static final String OAUTH2_TOKEN_PATH = "/oauth2/v2.0/token";
   private final String authEndpoint;
 
   private final String clientId;
@@ -53,7 +54,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(tokenFile, "tokenFile");
 
-    this.authEndpoint = authority + tenantId + "/oauth2/v2.0/token";
+    this.authEndpoint = authority + tenantId + OAUTH2_TOKEN_PATH;
     this.clientId = clientId;
     this.tokenFile = tokenFile;
   }

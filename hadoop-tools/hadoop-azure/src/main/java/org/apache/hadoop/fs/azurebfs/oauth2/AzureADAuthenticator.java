@@ -58,6 +58,7 @@ public final class AzureADAuthenticator {
   private static final String RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SCOPE = "https://storage.azure.com/.default";
   private static final String JWT_BEARER_ASSERTION = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+  private static final String CLIENT_CREDENTIALS = "client_credentials";
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
@@ -104,7 +105,7 @@ public final class AzureADAuthenticator {
     } else {
       qp.add("resource", RESOURCE_NAME);
     }
-    qp.add("grant_type", "client_credentials");
+    qp.add("grant_type", CLIENT_CREDENTIALS);
     qp.add("client_id", clientId);
     qp.add("client_secret", clientSecret);
     LOG.debug("AADToken: starting to fetch token using client creds for client ID " + clientId);
@@ -144,7 +145,7 @@ public final class AzureADAuthenticator {
     } else {
       qp.add("resource", RESOURCE_NAME);
     }
-    qp.add("grant_type", "client_credentials");
+    qp.add("grant_type", CLIENT_CREDENTIALS);
     qp.add("client_id", clientId);
     qp.add("client_assertion", clientAssertion);
     qp.add("client_assertion_type", JWT_BEARER_ASSERTION);
