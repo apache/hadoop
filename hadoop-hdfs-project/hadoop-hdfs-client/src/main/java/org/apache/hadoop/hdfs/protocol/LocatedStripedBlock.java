@@ -36,7 +36,7 @@ public class LocatedStripedBlock extends LocatedBlock {
   private static final byte[] EMPTY_INDICES = {};
   private static final Token<BlockTokenIdentifier> EMPTY_TOKEN = new Token<>();
 
-  private final byte[] blockIndices;
+  private byte[] blockIndices;
   private Token<BlockTokenIdentifier>[] blockTokens;
 
   @SuppressWarnings({"unchecked"})
@@ -70,6 +70,10 @@ public class LocatedStripedBlock extends LocatedBlock {
 
   public byte[] getBlockIndices() {
     return this.blockIndices;
+  }
+
+  public void setBlockIndices(byte[] blockIndices) {
+    this.blockIndices = blockIndices;
   }
 
   @Override

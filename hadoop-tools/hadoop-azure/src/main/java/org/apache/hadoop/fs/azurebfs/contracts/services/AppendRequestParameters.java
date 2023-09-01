@@ -35,6 +35,7 @@ public class AppendRequestParameters {
   private final boolean isAppendBlob;
   private final String leaseId;
   private boolean isExpectHeaderEnabled;
+  private boolean isRetryDueToExpect;
 
   public AppendRequestParameters(final long position,
       final int offset,
@@ -50,6 +51,7 @@ public class AppendRequestParameters {
     this.isAppendBlob = isAppendBlob;
     this.leaseId = leaseId;
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
+    this.isRetryDueToExpect = false;
   }
 
   public long getPosition() {
@@ -78,6 +80,14 @@ public class AppendRequestParameters {
 
   public boolean isExpectHeaderEnabled() {
     return isExpectHeaderEnabled;
+  }
+
+  public boolean isRetryDueToExpect() {
+    return isRetryDueToExpect;
+  }
+
+  public void setRetryDueToExpect(boolean retryDueToExpect) {
+    isRetryDueToExpect = retryDueToExpect;
   }
 
   public void setExpectHeaderEnabled(boolean expectHeaderEnabled) {
