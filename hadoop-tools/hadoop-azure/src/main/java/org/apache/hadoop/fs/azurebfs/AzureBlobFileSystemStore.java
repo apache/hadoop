@@ -1941,7 +1941,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   @VisibleForTesting
-  protected DataBlocks.BlockFactory getBlockFactory() {
+  DataBlocks.BlockFactory getBlockFactory() {
     return blockFactory;
   }
 
