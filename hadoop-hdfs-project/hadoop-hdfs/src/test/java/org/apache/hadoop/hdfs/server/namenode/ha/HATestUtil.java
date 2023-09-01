@@ -58,6 +58,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
@@ -232,7 +233,7 @@ public abstract class HATestUtil {
     }
 
     MiniQJMHACluster.Builder qjmBuilder = new MiniQJMHACluster.Builder(conf)
-        .setNumNameNodes(2 + numObservers);
+        .setNumNameNodes(2);
     qjmBuilder.getDfsBuilder().numDataNodes(numDataNodes)
         .simulatedCapacities(simulatedCapacities)
         .racks(racks);
@@ -242,8 +243,9 @@ public abstract class HATestUtil {
     dfsCluster.transitionToActive(0);
     dfsCluster.waitActive(0);
 
+    conf.setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
     for (int i = 0; i < numObservers; i++) {
-      dfsCluster.transitionToObserver(2 + i);
+      dfsCluster.addNameNode(conf, dfsCluster.getNameNodePort());
     }
     return qjmhaCluster;
   }
