@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.GPGWebApp;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,6 +132,7 @@ public class GlobalPolicyGenerator extends CompositeService {
 
     // super.serviceInit after all services are added
     super.serviceInit(conf);
+    WebServiceClient.initialize(conf);
   }
 
   @Override
@@ -207,6 +209,7 @@ public class GlobalPolicyGenerator extends CompositeService {
     }
     DefaultMetricsSystem.shutdown();
     super.serviceStop();
+    WebServiceClient.destroy();
   }
 
   public String getName() {

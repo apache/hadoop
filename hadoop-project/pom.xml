@@ -71,7 +71,6 @@
     <!-- jackson versions -->
     <jackson2.version>2.12.7</jackson2.version>
     <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
-    <jackson2.dataformat-yaml.version>2.15.2</jackson2.dataformat-yaml.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -183,7 +182,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.367</aws-java-sdk.version>
+    <aws-java-sdk.version>1.12.499</aws-java-sdk.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
@@ -1300,11 +1299,6 @@
         <groupId>com.fasterxml.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-cbor</artifactId>
         <version>${jackson2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.dataformat</groupId>
-        <artifactId>jackson-dataformat-yaml</artifactId>
-        <version>${jackson2.dataformat-yaml.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
