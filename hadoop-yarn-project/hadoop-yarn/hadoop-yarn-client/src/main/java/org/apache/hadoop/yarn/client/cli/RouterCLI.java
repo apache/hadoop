@@ -683,7 +683,8 @@ public class RouterCLI extends Configured implements Tool {
       QueryFederationQueuePoliciesRequest request =
           QueryFederationQueuePoliciesRequest.newInstance(pageSize, currentPage, queue, queues);
       ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-      QueryFederationQueuePoliciesResponse response = adminProtocol.listFederationQueuePolicies(request);
+      QueryFederationQueuePoliciesResponse response =
+          adminProtocol.listFederationQueuePolicies(request);
       System.out.println("TotalPage = " + response.getTotalPage());
 
       FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(LIST_POLICIES_TITLE)

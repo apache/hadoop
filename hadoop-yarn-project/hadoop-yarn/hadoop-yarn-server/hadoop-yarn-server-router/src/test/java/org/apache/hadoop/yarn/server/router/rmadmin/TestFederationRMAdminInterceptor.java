@@ -895,7 +895,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // TotalPage should be 2, TotalSize should be 12.
     QueryFederationQueuePoliciesRequest request1 =
         QueryFederationQueuePoliciesRequest.newInstance(10, 1, "", queues);
-    QueryFederationQueuePoliciesResponse response1 = interceptor.listFederationQueuePolicies(request1);
+    QueryFederationQueuePoliciesResponse response1 =
+        interceptor.listFederationQueuePolicies(request1);
     assertNotNull(response1);
     assertEquals(1, response1.getCurrentPage());
     assertEquals(10, response1.getPageSize());
@@ -909,7 +910,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // TotalPage should be 1, TotalSize should be 12.
     QueryFederationQueuePoliciesRequest request2 =
         QueryFederationQueuePoliciesRequest.newInstance(12, 1, "", queues);
-    QueryFederationQueuePoliciesResponse response2 = interceptor.listFederationQueuePolicies(request2);
+    QueryFederationQueuePoliciesResponse response2 =
+        interceptor.listFederationQueuePolicies(request2);
     assertNotNull(response2);
     assertEquals(1, response2.getCurrentPage());
     assertEquals(12, response2.getPageSize());
@@ -924,7 +926,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // should return 1 page, but we are going to return page 2.
     QueryFederationQueuePoliciesRequest request3 =
         QueryFederationQueuePoliciesRequest.newInstance(12, 2, "", queues);
-    QueryFederationQueuePoliciesResponse response3 = interceptor.listFederationQueuePolicies(request3);
+    QueryFederationQueuePoliciesResponse response3 =
+        interceptor.listFederationQueuePolicies(request3);
     assertNotNull(response3);
     assertEquals(2, response3.getCurrentPage());
     assertEquals(12, response3.getPageSize());
@@ -952,7 +955,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // at this time we will only get the only one return value.
     QueryFederationQueuePoliciesRequest request6 =
         QueryFederationQueuePoliciesRequest.newInstance(10, 1, "root.a", null);
-    QueryFederationQueuePoliciesResponse response6 = interceptor.listFederationQueuePolicies(request6);
+    QueryFederationQueuePoliciesResponse response6 =
+        interceptor.listFederationQueuePolicies(request6);
     assertNotNull(response6);
     assertEquals(1, response6.getCurrentPage());
     assertEquals(10, response6.getPageSize());
