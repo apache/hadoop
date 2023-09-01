@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.util.List;
 
@@ -85,6 +86,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private boolean expect100failureReceived = false;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -339,9 +341,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
            the caller. The caller is responsible for setting the correct status code.
            If expect header is not enabled, we throw back the exception.
          */
+        if (!"Server rejected operation".equals(e.getMessage())) {
+          throw e;
+        }
         String expectHeader = getConnProperty(EXPECT);
-        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
-          LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
+        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
+            && e instanceof ProtocolException
+            && !"Server rejected operation".equals(e.getMessage())) {
+          LOG.debug(
+              "Getting output stream failed with expect header enabled, returning back ",
+              e);
+          expect100failureReceived = true;
           return;
         } else {
           LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
@@ -391,6 +401,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.statusDescription = getConnResponseMessage();
 
+    if(expect100failureReceived) {
+      return;
+    }
     this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
