@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
@@ -210,6 +211,39 @@ public class TestObserverNode {
     dfsCluster.rollEditLogAndTail(0);
     dfs.getFileStatus(testPath);
     assertSentTo(2);
+
+    dfs.mkdir(testPath2, FsPermission.getDefault());
+    assertSentTo(0);
+  }
+
+  @Test
+  public void testConfigStartup() throws Exception {
+    int numNameNodes = dfsCluster.getNumNameNodes();
+
+    // Transition all current observers to standby
+    for (int i = 0; i < numNameNodes; i++) {
+        if (dfsCluster.getNameNode(i).isObserverState()) {
+            dfsCluster.transitionToStandby(i);
+        }
+    }
+
+    // Add a new namenode with the observer startup option
+    conf.setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
+    dfsCluster.addNameNode(conf, dfsCluster.getNameNodePort());
+
+    dfsCluster.waitNameNodeUp(numNameNodes);
+    assertTrue("The Observer NameNode did not started using "
+        + DFS_NAMENODE_OBSERVER_ENABLED_KEY,
+        dfsCluster.getNameNode(numNameNodes).isObserverState());
+
+    Path testPath2 = new Path(testPath, "test2");
+
+    dfs.mkdir(testPath, FsPermission.getDefault());
+    assertSentTo(0);
+
+    dfsCluster.rollEditLogAndTail(0);
+    dfs.getFileStatus(testPath);
+    assertSentTo(numNameNodes);
 
     dfs.mkdir(testPath2, FsPermission.getDefault());
     assertSentTo(0);
