@@ -180,6 +180,14 @@ message SaveFederationQueuePolicyResponseProto {
   required string message = 1;
 }
 
+message BatchSaveFederationQueuePoliciesRequestProto {
+  repeated FederationQueueWeightProto federationQueueWeights = 1;
+}
+
+message BatchSaveFederationQueuePoliciesResponseProto {
+  required string message = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

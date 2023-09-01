@@ -217,4 +217,27 @@ public class TestRouterCLI {
     args = new String[]{"-policy", "-save", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
     assertEquals(0, rmAdminCLI.run(args));
   }
+
+  @Test
+  public void testParsePoliciesByXml() throws Exception {
+    String filePath =
+        TestRouterCLI.class.getClassLoader().getResource("federation-weights.xml").getFile();
+    List<FederationQueueWeight> federationQueueWeights = rmAdminCLI.parsePoliciesByXml(filePath);
+    assertNotNull(federationQueueWeights);
+    assertEquals(2, federationQueueWeights.size());
+
+    // Queue1: root.a
+    FederationQueueWeight queueWeight1 = federationQueueWeights.get(0);
+    assertNotNull(queueWeight1);
+    assertEquals("root.a", queueWeight1.getQueue());
+    assertEquals("SC-1:0.7,SC-2:0.3", queueWeight1.getAmrmWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", queueWeight1.getRouterWeight());
+
+    // Queue2: root.b
+    FederationQueueWeight queueWeight2 = federationQueueWeights.get(1);
+    assertNotNull(queueWeight2);
+    assertEquals("root.b", queueWeight2.getQueue());
+    assertEquals("SC-1:0.8,SC-2:0.2", queueWeight2.getAmrmWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", queueWeight2.getRouterWeight());
+  }
 }

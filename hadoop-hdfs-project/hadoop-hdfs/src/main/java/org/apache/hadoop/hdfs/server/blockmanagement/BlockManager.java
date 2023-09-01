@@ -2909,7 +2909,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
             strBlockReportId, fullBrLeaseId, nodeID);
-        blockReportLeaseManager.removeLease(node);
+        removeDNLeaseIfNeeded(node);
         return !node.hasStaleStorages();
       }
 
@@ -2955,6 +2955,23 @@ public class BlockManager implements BlockStatsMXBean {
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
+  }
+
+  /**
+   * Remove the DN lease only when we have received block reports,
+   * for all storages for a particular DN.
+   */
+  void removeDNLeaseIfNeeded(DatanodeDescriptor node) {
+    boolean needRemoveLease = true;
+    for (DatanodeStorageInfo sInfo : node.getStorageInfos()) {
+      if (sInfo.getBlockReportCount() == 0) {
+        needRemoveLease = false;
+        break;
+      }
+    }
+    if (needRemoveLease) {
+      blockReportLeaseManager.removeLease(node);
+    }
   }
 
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
@@ -4030,6 +4047,11 @@ public class BlockManager implements BlockStatsMXBean {
 
     // update neededReconstruction priority queues
     b.setReplication(newRepl);
+
+    // Process the block only when active NN is out of safe mode.
+    if (!isPopulatingReplQueues()) {
+      return;
+    }
     NumberReplicas num = countNodes(b);
     updateNeededReconstructions(b, 0, newRepl - oldRepl);
     if (shouldProcessExtraRedundancy(num, newRepl)) {

@@ -628,6 +628,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshClusterMaxPriority call");
       metrics.incrSaveFederationQueuePolicyFailedRetrieved();
     }
+
+    public void getBatchSaveFederationQueuePoliciesFailedRetrieved() {
+      LOG.info("Mocked: failed BatchSaveFederationQueuePolicies call");
+      metrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -962,6 +967,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful SaveFederationQueuePolicy call with duration {}",
           duration);
       metrics.succeededSaveFederationQueuePolicyRetrieved(duration);
+    }
+
+    public void getBatchSaveFederationQueuePoliciesRetrieved(long duration) {
+      LOG.info("Mocked: successful BatchSaveFederationQueuePoliciesRetrieved " +
+          " call with duration {}", duration);
+      metrics.succeededBatchSaveFederationQueuePoliciesRetrieved(duration);
     }
   }
 
@@ -2240,5 +2251,30 @@ public class TestRouterMetrics {
         metrics.getNumSucceededSaveFederationQueuePolicyRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededSaveFederationQueuePolicyRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetBatchSaveFederationQueuePoliciesFailedRetrieved() {
+    long totalBadBefore = metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved();
+    badSubCluster.getBatchSaveFederationQueuePoliciesFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetBatchSaveFederationQueuePoliciesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved();
+    goodSubCluster.getBatchSaveFederationQueuePoliciesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededBatchSaveFederationQueuePoliciesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getBatchSaveFederationQueuePoliciesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededBatchSaveFederationQueuePoliciesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
   }
 }
