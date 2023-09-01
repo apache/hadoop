@@ -600,10 +600,18 @@ public class NNStorage extends Storage implements Closeable,
    * Format all available storage directories.
    */
   public void format(NamespaceInfo nsInfo) throws IOException {
+    format(nsInfo, false);
+  }
+
+  /**
+   * Format all available storage directories.
+   */
+  public void format(NamespaceInfo nsInfo, boolean isRollingUpgrade)
+      throws IOException {
     Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() ==
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION,
-        "Bad layout version: %s", nsInfo.getLayoutVersion());
+        nsInfo.getLayoutVersion() == 
+            HdfsServerConstants.NAMENODE_LAYOUT_VERSION ||
+        isRollingUpgrade, "Bad layout version: %s", nsInfo.getLayoutVersion());
     
     this.setStorageInfo(nsInfo);
     this.blockpoolID = nsInfo.getBlockPoolID();

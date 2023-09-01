@@ -203,12 +203,12 @@ public class BootstrapStandby implements Tool, Configurable {
 
     if (!checkLayoutVersion(nsInfo, isRollingUpgrade)) {
       String msg = isRollingUpgrade ? "Layout version on remote node in rolling"
-          + "upgrade (" + nsInfo.getLayoutVersion() + ") is not compatible (<"
+          + "upgrade (" + nsInfo.getLayoutVersion() + ", " + proxyInfo.getIpcAddress()
+          + ") is not compatible based on minimum compatible version ("
           + HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION + ")"
-          : "Layout version and service layout version on remote node ("
-          + nsInfo.getLayoutVersion() + ", " + nsInfo.getServiceLayoutVersion()
+          : "Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match this node's service layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")";
       LOG.error(msg);
       return ERR_CODE_INVALID_VERSION;
     }
@@ -240,7 +240,7 @@ public class BootstrapStandby implements Tool, Configurable {
       if (!doPreUpgrade(storage, nsInfo)) {
         return ERR_CODE_ALREADY_FORMATTED;
       }
-    } else if (!format(storage, nsInfo)) { // prompt the user to format storage
+    } else if (!format(storage, nsInfo, isRollingUpgrade)) { // prompt the user to format storage
       return ERR_CODE_ALREADY_FORMATTED;
     }
 
@@ -268,15 +268,15 @@ public class BootstrapStandby implements Tool, Configurable {
    * formatted. Format the storage if necessary and allowed by the user.
    * @return True if formatting is processed
    */
-  private boolean format(NNStorage storage, NamespaceInfo nsInfo)
-      throws IOException {
+  private boolean format(NNStorage storage, NamespaceInfo nsInfo,
+      boolean isRollingUpgrade) throws IOException {
     // Check with the user before blowing away data.
     if (!Storage.confirmFormat(storage.dirIterable(null), force, interactive)) {
       storage.close();
       return false;
     } else {
       // Format the storage (writes VERSION file)
-      storage.format(nsInfo);
+      storage.format(nsInfo, isRollingUpgrade);
       return true;
     }
   }
@@ -311,7 +311,7 @@ public class BootstrapStandby implements Tool, Configurable {
     // format the storage. Although this format is done through the new
     // software, since in HA setup the SBN is rolled back through
     // "-bootstrapStandby", we should still be fine.
-    if (!isFormatted && !format(storage, nsInfo)) {
+    if (!isFormatted && !format(storage, nsInfo, false)) {
       return false;
     }
 
@@ -418,7 +418,7 @@ public class BootstrapStandby implements Tool, Configurable {
     if (isRollingUpgrade) {
       // During a rolling upgrade the service layout versions may be different,
       // but we should check that the layout version being sent is compatible
-      return nsInfo.getLayoutVersion() >
+      return nsInfo.getLayoutVersion() <
           HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
     } else {
       return nsInfo.getLayoutVersion() ==
