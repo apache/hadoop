@@ -592,7 +592,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
         .when(testClient)
-        .getAbfsRestOperationForAppend(Mockito.any(),
+        .getAbfsRestOperation(AbfsRestOperationType.Append,
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.nullable(int.class), Mockito.nullable(int.class),
             Mockito.any());
