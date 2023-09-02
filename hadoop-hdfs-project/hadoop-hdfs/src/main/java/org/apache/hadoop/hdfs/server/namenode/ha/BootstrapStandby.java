@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -198,13 +199,15 @@ public class BootstrapStandby implements Tool, Configurable {
               + remoteNNs);
       return ERR_CODE_FAILED_CONNECT;
     }
-
     if (!checkLayoutVersion(nsInfo)) {
       LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match " + "this node's layout version ("
           + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
       return ERR_CODE_INVALID_VERSION;
     }
+
+    NNStorage storage = getStorage(conf, dirsToFormat, editUrisToFormat);
+    storage.setStorageInfo(nsInfo);
 
     System.out.println(
         "=====================================================\n" +
@@ -219,8 +222,6 @@ public class BootstrapStandby implements Tool, Configurable {
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
         "=====================================================");
-    
-    NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
 
     if (!isUpgradeFinalized) {
       // the remote NameNode is in upgrade state, this NameNode should also
@@ -252,6 +253,12 @@ public class BootstrapStandby implements Tool, Configurable {
       LOG.info("Skipping InMemoryAliasMap bootstrap as it was not configured");
     }
     return 0;
+  }
+
+  @VisibleForTesting
+  public NNStorage getStorage(Configuration conf, Collection<URI> dirsToFormat,
+      List<URI> editUrisToFormat) throws IOException {
+     return new NNStorage(conf, dirsToFormat, editUrisToFormat);
   }
 
   /**
@@ -406,7 +413,7 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+    return (nsInfo.getLayoutVersion() == nsInfo.getServiceLayoutVersion());
   }
 
   private void parseConfAndFindOtherNN() throws IOException {
