@@ -20,6 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +32,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.Supplier;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -170,6 +181,67 @@ public class TestBootstrapStandby {
 
     // We should now be able to start the standby successfully.
     restartNameNodesFromIndex(1);
+  }
+
+  /**
+   * Test for downloading a checkpoint made at a later checkpoint
+   * from the active.
+   */
+  @Test
+  public void testRollingUpgradeBootstrapStandby() throws Exception {
+    removeStandbyNameDirs();
+
+    int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
+
+    DistributedFileSystem fs = cluster.getFileSystem(0);
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    // Setup BootstrapStandby to think it is a future NameNode version
+    BootstrapStandby bs = spy(new BootstrapStandby());
+    Answer<NNStorage> storageAnswer = storage ->  {
+      NNStorage storageSpy = (NNStorage) spy(storage.callRealMethod());
+      doReturn(futureVersion).when(storageSpy).getServiceLayoutVersion();
+      return storageSpy;
+    };
+    doAnswer(storageAnswer).when(bs).getStorage(any(), any(), any());
+
+    bs.setConf(cluster.getConfiguration(1));
+
+    // Start rolling upgrade
+    fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    nn0 = spy(nn0);
+
+    // Make nn0 think it is a future version
+    Answer<FSImage> fsImageAnswer = fsImage -> {
+      FSImage fsImageSpy = (FSImage) spy(fsImage.callRealMethod());
+      doAnswer(storageAnswer).when(fsImageSpy).getStorage();
+      return fsImageSpy;
+    };
+    doAnswer(fsImageAnswer).when(nn0).getFSImage();
+
+    // Roll edit logs a few times to inflate txid
+    nn0.getRpcServer().rollEditLog();
+    nn0.getRpcServer().rollEditLog();
+    // Make checkpoint
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    NameNodeAdapter.saveNamespace(nn0);
+    NameNodeAdapter.leaveSafeMode(nn0);
+
+    long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
+        .getFSImage().getMostRecentCheckpointTxId();
+    assertEquals(11, expectedCheckpointTxId);
+
+    bs.run(new String[]{"-force"});
+    FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
+        ImmutableList.of((int) expectedCheckpointTxId));
+
+    // Make sure the bootstrap was successful
+    FSImageTestUtil.assertNNFilesMatch(cluster);
+
+    // We should now be able to start the standby successfully
+    cluster.restartNameNode(1, true, "-rollingUpgrade", "started");
   }
 
   /**

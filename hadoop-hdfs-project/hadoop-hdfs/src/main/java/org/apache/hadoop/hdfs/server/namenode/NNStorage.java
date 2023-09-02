@@ -609,8 +609,7 @@ public class NNStorage extends Storage implements Closeable,
   public void format(NamespaceInfo nsInfo, boolean isRollingUpgrade)
       throws IOException {
     Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() == 
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION ||
+        nsInfo.getLayoutVersion() == getServiceLayoutVersion() ||
         isRollingUpgrade, "Bad layout version: %s", nsInfo.getLayoutVersion());
     
     this.setStorageInfo(nsInfo);
@@ -629,7 +628,7 @@ public class NNStorage extends Storage implements Closeable,
   }
   
   public void format() throws IOException {
-    this.layoutVersion = HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+    this.layoutVersion = getServiceLayoutVersion();
     for (Iterator<StorageDirectory> it =
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -691,7 +690,7 @@ public class NNStorage extends Storage implements Closeable,
             "storage directory " + sd.getRoot().getAbsolutePath());
       }
       props.setProperty("layoutVersion",
-          Integer.toString(HdfsServerConstants.NAMENODE_LAYOUT_VERSION));
+          Integer.toString(getServiceLayoutVersion()));
     }
     setFieldsFromProperties(props, sd);
   }
@@ -714,7 +713,7 @@ public class NNStorage extends Storage implements Closeable,
    * This should only be used during upgrades.
    */
   String getDeprecatedProperty(String prop) {
-    assert getLayoutVersion() > HdfsServerConstants.NAMENODE_LAYOUT_VERSION :
+    assert getLayoutVersion() > getServiceLayoutVersion() :
       "getDeprecatedProperty should only be done when loading " +
       "storage from past versions during upgrade.";
     return deprecatedProperties.get(prop);

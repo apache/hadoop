@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -208,10 +209,13 @@ public class BootstrapStandby implements Tool, Configurable {
           + HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION + ")"
           : "Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match this node's service layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")";
+          + nsInfo.getServiceLayoutVersion() + ")";
       LOG.error(msg);
       return ERR_CODE_INVALID_VERSION;
     }
+
+    NNStorage storage = getStorage(conf, dirsToFormat, editUrisToFormat);
+    storage.setStorageInfo(nsInfo);
 
     System.out.println(
         "=====================================================\n" +
@@ -220,16 +224,14 @@ public class BootstrapStandby implements Tool, Configurable {
         "        Other Namenode ID: " + proxyInfo.getNameNodeID() + "\n" +
         "  Other NN's HTTP address: " + proxyInfo.getHttpAddress() + "\n" +
         "  Other NN's IPC  address: " + proxyInfo.getIpcAddress() + "\n" +
-        "             Namespace ID: " + nsInfo.getNamespaceID() + "\n" +
-        "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
-        "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
-        "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
-        "   Service Layout version: " + nsInfo.getServiceLayoutVersion() + "\n" +
+        "             Namespace ID: " + storage.getNamespaceID() + "\n" +
+        "            Block pool ID: " + storage.getBlockPoolID() + "\n" +
+        "               Cluster ID: " + storage.getClusterID() + "\n" +
+        "           Layout version: " + storage.getLayoutVersion() + "\n" +
+        "   Service Layout version: " + storage.getServiceLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
         "         isRollingUpgrade: " + isRollingUpgrade + "\n" +
         "=====================================================");
-    
-    NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
 
     if (!isUpgradeFinalized) {
       // the remote NameNode is in upgrade state, this NameNode should also
@@ -261,6 +263,12 @@ public class BootstrapStandby implements Tool, Configurable {
       LOG.info("Skipping InMemoryAliasMap bootstrap as it was not configured");
     }
     return 0;
+  }
+
+  @VisibleForTesting
+  public NNStorage getStorage(Configuration conf, Collection<URI> dirsToFormat,
+      List<URI> editUrisToFormat) throws IOException {
+     return new NNStorage(conf, dirsToFormat, editUrisToFormat);
   }
 
   /**
@@ -422,9 +430,7 @@ public class BootstrapStandby implements Tool, Configurable {
           HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
     } else {
       return nsInfo.getLayoutVersion() ==
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION &&
-          nsInfo.getServiceLayoutVersion() ==
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+          nsInfo.getServiceLayoutVersion();
     }
   }
 
