@@ -46,7 +46,7 @@ public class TestMockSubCluster {
   }
 
   public void startYarnSubCluster() {
-    MiniYARNCluster yrCluster = new MiniYARNCluster(subClusterId, 3, 1, 1);
+    MiniYARNCluster yrCluster = new MiniYARNCluster(subClusterId, 3, 1, 1, false);
     yrCluster.init(conf);
     yrCluster.start();
   }

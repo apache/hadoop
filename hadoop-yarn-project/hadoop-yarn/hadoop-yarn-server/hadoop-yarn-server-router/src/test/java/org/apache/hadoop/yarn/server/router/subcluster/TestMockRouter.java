@@ -36,8 +36,7 @@ public class TestMockRouter {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMockRouter.class);
 
-  public TestMockRouter(){
-
+  public TestMockRouter() {
   }
 
   public static void main(String[] args) throws YarnException {
