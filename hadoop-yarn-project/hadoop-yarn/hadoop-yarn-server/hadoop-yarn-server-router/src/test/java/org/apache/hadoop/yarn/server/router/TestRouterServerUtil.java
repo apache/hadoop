@@ -14,7 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */package org.apache.hadoop.yarn.server.router;
+ */
+package org.apache.hadoop.yarn.server.router;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;

@@ -619,6 +619,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     protected synchronized void serviceStart() throws Exception {
+      nodeManagers[index].disableWebServer();
       nodeManagers[index].start();
       if (nodeManagers[index].getServiceState() != STATE.STARTED) {
         // NM could have failed.
