@@ -489,7 +489,7 @@ public class MembershipNamenodeResolver
    */
   @Override
   public synchronized void rotateCache(
-          String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
+      String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
     cacheNS.compute(Pair.of(nsId, listObserversFirst), (ns, namenodeContexts) -> {
       if (namenodeContexts == null || namenodeContexts.size() <= 1) {
         return namenodeContexts;

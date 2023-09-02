@@ -601,6 +601,7 @@ public class RouterRpcClient {
               nsId, rpcAddress, ioe.getMessage());
           if (this.namenodeResolver != null) {
             this.namenodeResolver.rotateCache(nsId, namenode, shouldUseObserver);
+            LOG.info("Rotate cache of pair: <ns: {}, observer use: {}>", nsId, shouldUseObserver);
           }
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);

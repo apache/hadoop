@@ -1203,6 +1203,11 @@ public class MiniRouterDFSCluster {
     }
   }
 
+  /**
+   * Get cache flush interval in milliseconds.
+   *
+   * @return Cache flush interval in milliseconds.
+   */
   public long getCacheFlushInterval() {
     return cacheFlushInterval;
   }
