@@ -36,7 +36,16 @@ import org.apache.hadoop.yarn.client.util.MemoryPageUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.*;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -198,8 +207,8 @@ public class RouterCLI extends Configured implements Tool {
         .append("routeradmin\n")
         .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
         .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha] " +
-                "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]] " +
-                "[-l|--list [--pageSize][--currentPage][--queue][--queues]]\n")
+        "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]] " +
+        "[-l|--list [--pageSize][--currentPage][--queue][--queues]]\n")
         .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -442,6 +451,7 @@ public class RouterCLI extends Configured implements Tool {
         queues = Arrays.stream(tmpQueues.split(",")).collect(Collectors.toList());
       }
 
+      // List Policies.
       return handListPolicies(pageSize, currentPage, queue, queues);
     } else {
       // printUsage

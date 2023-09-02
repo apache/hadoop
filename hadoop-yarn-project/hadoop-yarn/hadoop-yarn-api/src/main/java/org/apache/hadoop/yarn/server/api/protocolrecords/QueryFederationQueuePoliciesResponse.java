@@ -91,19 +91,39 @@ public abstract class QueryFederationQueuePoliciesResponse {
   @Unstable
   public abstract void setTotalPage(int page);
 
+  /**
+   * Returns the current page number in the FederationQueuePolicies pagination.
+   *
+   * @return The current page number.
+   */
   @Public
   @Unstable
   public abstract int getCurrentPage();
 
+  /**
+   * Sets the current page in the FederationQueuePolicies pagination.
+   *
+   * @param currentPage The current page number.
+   */
   @Private
   @Unstable
   public abstract void setCurrentPage(int currentPage);
 
 
+  /**
+   * Retrieves the page size.
+   *
+   * @return The number of policies to display per page.
+   */
   @Public
   @Unstable
   public abstract int getPageSize();
 
+  /**
+   * Sets the page size for FederationQueuePolicies pagination.
+   *
+   * @param pageSize The number of policies to display per page.
+   */
   @Private
   @Unstable
   public abstract void setPageSize(int pageSize);
