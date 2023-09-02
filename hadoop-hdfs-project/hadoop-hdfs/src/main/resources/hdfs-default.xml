@@ -2802,6 +2802,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.observer.enabled</name>
+  <value>false</value>
+  <description>
+    This causes NameNode on startup to become an observer node if
+    set to true, otherwise startup is no different.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
