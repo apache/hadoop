@@ -75,6 +75,19 @@ public abstract class FederationQueueWeight {
     return federationQueueWeight;
   }
 
+  @Private
+  @Unstable
+  public static FederationQueueWeight newInstance(String routerWeight,
+      String amrmWeight, String headRoomAlpha, String queue, String policyManagerClassName) {
+    FederationQueueWeight federationQueueWeight = Records.newRecord(FederationQueueWeight.class);
+    federationQueueWeight.setRouterWeight(routerWeight);
+    federationQueueWeight.setAmrmWeight(amrmWeight);
+    federationQueueWeight.setHeadRoomAlpha(headRoomAlpha);
+    federationQueueWeight.setQueue(queue);
+    federationQueueWeight.setPolicyManagerClassName(policyManagerClassName);
+    return federationQueueWeight;
+  }
+
   @Public
   @Unstable
   public abstract String getRouterWeight();
@@ -165,5 +178,33 @@ public abstract class FederationQueueWeight {
    */
   protected static boolean isNumeric(String value) {
     return NumberUtils.isCreatable(value);
+  }
+
+  @Public
+  @Unstable
+  public abstract String getQueue();
+
+  @Public
+  @Unstable
+  public abstract void setQueue(String queue);
+
+  @Public
+  @Unstable
+  public abstract String getPolicyManagerClassName();
+
+  @Public
+  @Unstable
+  public abstract void setPolicyManagerClassName(String policyManagerClassName);
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("FederationQueueWeight { ");
+    builder.append("Queue: ").append(getQueue()).append(", ");
+    builder.append("RouterWeight: ").append(getRouterWeight()).append(", ");
+    builder.append("AmrmWeight: ").append(getAmrmWeight()).append(", ");
+    builder.append("PolicyManagerClassName: ").append(getPolicyManagerClassName());
+    builder.append(" }");
+    return builder.toString();
   }
 }

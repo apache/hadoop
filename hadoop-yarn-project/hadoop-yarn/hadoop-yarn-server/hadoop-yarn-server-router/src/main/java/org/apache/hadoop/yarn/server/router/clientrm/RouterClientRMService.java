@@ -19,11 +19,14 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -104,11 +107,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,6 +143,7 @@ public class RouterClientRMService extends AbstractService
   // and remove the oldest used ones.
   private Map<String, RequestInterceptorChainWrapper> userPipelineMap;
 
+  private URL redirectURL;
   private RouterDelegationTokenSecretManager routerDTSecretManager;
 
   public RouterClientRMService() {
@@ -156,6 +162,10 @@ public class RouterClientRMService extends AbstractService
             YarnConfiguration.ROUTER_CLIENTRM_ADDRESS,
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_ADDRESS,
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PORT);
+
+    if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
+      redirectURL = getRedirectURL();
+    }
 
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
@@ -318,7 +328,22 @@ public class RouterClientRMService extends AbstractService
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException, IOException {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
-    return pipeline.getRootInterceptor().getApplicationReport(request);
+    GetApplicationReportResponse response = pipeline.getRootInterceptor()
+        .getApplicationReport(request);
+    if (RouterServerUtil.isRouterWebProxyEnable(getConfig())) {
+      // After redirect url, tracking url in application report will
+      // redirect to embeded proxy server of router
+      URL url = new URL(response.getApplicationReport().getTrackingUrl());
+      String redirectUrl = new URL(redirectURL.getProtocol(),
+          redirectURL.getHost(), redirectURL.getPort(), url.getFile())
+          .toString();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The tracking url of application {} is redirect from {} to {}",
+            response.getApplicationReport().getApplicationId(), url, redirectUrl);
+      }
+      response.getApplicationReport().setTrackingUrl(redirectUrl);
+    }
+    return response;
   }
 
   @Override
@@ -622,5 +647,21 @@ public class RouterClientRMService extends AbstractService
     int maxCacheSize = conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
         YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
     this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
+  }
+
+  private URL getRedirectURL() throws Exception {
+    Configuration conf = getConfig();
+    String webAppAddress = WebAppUtils.getWebAppBindURL(conf, YarnConfiguration.ROUTER_BIND_HOST,
+        WebAppUtils.getRouterWebAppURLWithoutScheme(conf));
+    String[] hostPort = StringUtils.split(webAppAddress, ':');
+    if (hostPort.length != 2) {
+      throw new YarnRuntimeException("Router can't get valid redirect proxy url");
+    }
+    String host = hostPort[0];
+    int port = Integer.parseInt(hostPort[1]);
+    if (StringUtils.isBlank(host) || host.equals("0.0.0.0")) {
+      host = InetAddress.getLocalHost().getCanonicalHostName();
+    }
+    return new URL(YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http", host, port, "");
   }
 }

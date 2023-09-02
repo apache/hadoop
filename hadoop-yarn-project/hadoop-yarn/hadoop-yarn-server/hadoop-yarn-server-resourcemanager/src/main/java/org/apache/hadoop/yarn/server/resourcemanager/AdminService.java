@@ -99,6 +99,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterReq
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
@@ -1056,11 +1058,41 @@ public class AdminService extends CompositeService implements
         "Please call Router's deregisterSubCluster to set.");
   }
 
+  /**
+   * In YARN-Federation mode, We will be storing the Policy information for Queues.
+   *
+   * RM does not support saveFederationQueuePolicy,
+   * saveFederationQueuePolicy is supported by Router.
+   *
+   * @param request saveFederationQueuePolicy Request
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
   @Override
   public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
       SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
     throw new YarnException("It is not allowed to call the RM's saveFederationQueuePolicy. " +
-        " Please call Router's deregisterSubCluster to set Policy.");
+        " Please call Router's saveFederationQueuePolicy to set Policy.");
+  }
+
+  /**
+   * In YARN-Federation mode, this method provides a way to save queue policies in batches.
+   *
+   * RM does not support batchSaveFederationQueuePolicies,
+   * batchSaveFederationQueuePolicies is supported by Router.
+   *
+   * @param request BatchSaveFederationQueuePolicies Request
+   * @return Response from batchSaveFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    throw new YarnException("It is not allowed to call the RM's " +
+        " batchSaveFederationQueuePolicies. " +
+        " Please call Router's batchSaveFederationQueuePolicies to set Policies.");
   }
 
   private void validateAttributesExists(

@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.12.367
+com.amazonaws:aws-java-sdk-bundle:1.12.499
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -242,7 +242,7 @@ com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.31
 com.squareup.okhttp3:okhttp:4.10.0
-com.squareup.okio:okio:3.2.0
+com.squareup.okio:okio:3.4.0
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.5.0

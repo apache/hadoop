@@ -53,7 +53,7 @@ public abstract class GlobalPolicy implements Configurable {
    *
    * @return a map of the object type and RM path.
    */
-  protected Map<Class, String> registerPaths() {
+  protected Map<Class<?>, String> registerPaths() {
     // Default register nothing
     return Collections.emptyMap();
   }

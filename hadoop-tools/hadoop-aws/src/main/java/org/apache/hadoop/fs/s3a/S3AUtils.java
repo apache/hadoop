@@ -1299,6 +1299,8 @@ public final class S3AUtils {
       ClientConfiguration awsConf) throws IOException {
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
+    awsConf.setConnectionTTL(longOption(conf, CONNECTION_TTL,
+            DEFAULT_CONNECTION_TTL, -1));
     initProtocolSettings(conf, awsConf);
     awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));

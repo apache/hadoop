@@ -23,6 +23,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -147,6 +150,27 @@ public class SQLDelegationTokenSecretManagerImpl
         }
       }
       return null;
+    });
+  }
+
+  @Override
+  protected Map<byte[], byte[]> selectStaleTokenInfos(long maxModifiedTime, int maxResults)
+      throws SQLException {
+    return retryHandler.execute(() -> {
+      try (Connection connection = connectionFactory.getConnection();
+          PreparedStatement statement = connection.prepareStatement(
+              "SELECT tokenIdentifier, tokenInfo FROM Tokens WHERE modifiedTime < ?")) {
+        statement.setTimestamp(1, new Timestamp(maxModifiedTime));
+        statement.setMaxRows(maxResults);
+        try (ResultSet result = statement.executeQuery()) {
+          Map<byte[], byte[]> results = new HashMap<>();
+          while (result.next()) {
+            results.put(result.getBytes("tokenIdentifier"),
+                result.getBytes("tokenInfo"));
+          }
+          return results;
+        }
+      }
     });
   }
 

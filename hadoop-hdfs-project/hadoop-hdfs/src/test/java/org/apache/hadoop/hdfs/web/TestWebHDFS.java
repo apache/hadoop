@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -2340,6 +2341,34 @@ public class TestWebHDFS {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testGetTrashRoots() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+
+    // Create user trash
+    Path currUserHome = webFS.getHomeDirectory();
+    Path currUserTrash = new Path(currUserHome, FileSystem.TRASH_PREFIX);
+    webFS.mkdirs(currUserTrash);
+
+    Collection<FileStatus> webTrashRoots = webFS.getTrashRoots(true);
+    assertEquals(1, webTrashRoots.size());
+
+    // Create trash root for user0
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user0");
+    String user0HomeStr = DFSUtilClient.getHomeDirectory(conf, ugi);
+    Path user0Trash = new Path(user0HomeStr, FileSystem.TRASH_PREFIX);
+    webFS.mkdirs(user0Trash);
+
+    webTrashRoots = webFS.getTrashRoots(true);
+    assertEquals(2, webTrashRoots.size());
+
+    webTrashRoots = webFS.getTrashRoots(false);
+    assertEquals(1,  webTrashRoots.size());
   }
 
   /**

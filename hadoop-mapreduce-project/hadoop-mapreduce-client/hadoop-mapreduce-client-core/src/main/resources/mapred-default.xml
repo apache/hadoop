@@ -1804,6 +1804,18 @@
    <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
 </property>
 
+<property>
+  <name>mapreduce.jvm.add-opens-as-default</name>
+  <value>true</value>
+  <description>Since on JDK17 it's no longer possible to use the reflection API to
+    access non-public fields and methods add-opens flags should be added to MR AM
+    and map/reduce containers regardless of the user specified java opts. Setting
+    this to true will add the flags to the container launch commands on nodes with
+    JDK17 or higher. Defaults to true, but the setting has no effect on nodes using
+    JDK16 and before.
+  </description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>

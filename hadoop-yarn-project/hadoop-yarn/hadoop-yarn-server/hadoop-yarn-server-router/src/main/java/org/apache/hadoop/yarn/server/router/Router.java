@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,10 @@ import org.apache.hadoop.yarn.server.router.cleaner.SubClusterCleaner;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
+import org.apache.hadoop.yarn.server.webproxy.FedAppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -94,6 +99,7 @@ public class Router extends CompositeService {
   @VisibleForTesting
   protected String webAppAddress;
   private static long clusterTimeStamp = System.currentTimeMillis();
+  private FedAppReportFetcher fetcher = null;
 
   /**
    * Priority of the Router shutdown hook.
@@ -157,7 +163,7 @@ public class Router extends CompositeService {
         ROUTER_DEREGISTER_SUBCLUSTER_ENABLED, DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED);
     if (isDeregisterSubClusterEnabled) {
       long scCleanerIntervalMs = this.conf.getTimeDuration(ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME,
-          DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME, TimeUnit.MINUTES);
+          DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME, TimeUnit.MILLISECONDS);
       this.scheduledExecutorService.scheduleAtFixedRate(this.subClusterCleaner,
           0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);
       LOG.info("Scheduled SubClusterCleaner With Interval: {}.",
@@ -212,9 +218,6 @@ public class Router extends CompositeService {
 
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 
-    Builder<Object> builder =
-        WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
-
     WebAppContext uiWebAppContext = null;
     boolean isWebUI2Enabled = conf.getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
         YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE);
@@ -256,6 +259,17 @@ public class Router extends CompositeService {
       return "";
     }
     return url.toString();
+  }
+
+  public static String getProxyHostAndPort(Configuration conf) {
+    String addr = conf.get(YarnConfiguration.PROXY_ADDRESS);
+    if(addr == null || addr.isEmpty()) {
+      InetSocketAddress address = conf.getSocketAddr(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PORT);
+      addr = WebAppUtils.getResolvedAddress(address);
+    }
+    return addr;
   }
 
   public static void main(String[] argv) {
@@ -312,5 +326,10 @@ public class Router extends CompositeService {
 
   public static long getClusterTimeStamp() {
     return clusterTimeStamp;
+  }
+
+  @VisibleForTesting
+  public FedAppReportFetcher getFetcher() {
+    return fetcher;
   }
 }
