@@ -335,7 +335,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.lastAllocateResponse
         .setResponseId(AMRMClientUtils.PRE_REGISTER_RESPONSE_ID);
 
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.subClusterResolver = this.federationFacade.getSubClusterResolver();
 
     // AMRMProxyPolicy will be initialized in registerApplicationMaster

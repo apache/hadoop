@@ -72,7 +72,7 @@ public class RouterDelegationTokenSecretManager
       long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(null);
   }
 
   @Override

@@ -183,7 +183,7 @@ public abstract class AbstractSecureRouterTest {
     assertNull("Router is already running", router);
     MemoryFederationStateStore stateStore = new MemoryFederationStateStore();
     stateStore.init(getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, getConf());
+    FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore, getConf());
     UserGroupInformation.setConfiguration(conf);
     router = new Router();
     router.init(conf);

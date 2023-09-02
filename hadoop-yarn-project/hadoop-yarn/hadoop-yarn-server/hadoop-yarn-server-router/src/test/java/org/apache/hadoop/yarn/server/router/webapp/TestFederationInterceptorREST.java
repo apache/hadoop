@@ -188,7 +188,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(this.getConf()).reinitialize(stateStore,
         this.getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
