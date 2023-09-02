@@ -218,6 +218,7 @@ public class TestObserverNode {
 
   @Test
   public void testConfigStartup() throws Exception {
+    int nnIdx = dfsCluster.getNumNameNodes() - 1;
 
     // Transition all current observers to standby
     for (int i = 0; i < dfsCluster.getNumNameNodes(); i++) {
@@ -226,15 +227,19 @@ public class TestObserverNode {
       }
     }
 
-    // Add a new namenode with the observer startup option as false
-    conf.setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, false);
-    dfsCluster.addNameNode(conf, dfsCluster.getNameNodePort());
-    int newNameNodeIdx = dfsCluster.getNumNameNodes() - 1;
+    // Confirm that the namenode at nnIdx is standby
+    assertTrue("The NameNode is observer despite being transitioned to standby",
+        dfsCluster.getNameNode(nnIdx).isStandbyState());
 
-    dfsCluster.waitNameNodeUp(newNameNodeIdx);
+    // Restart the NameNode with observer startup option as false
+    dfsCluster.getConfiguration(nnIdx)
+        .setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, false);
+    dfsCluster.restartNameNode(nnIdx);
+
+    dfsCluster.waitNameNodeUp(nnIdx);
     assertTrue("The NameNode started as Observer despite "
         + DFS_NAMENODE_OBSERVER_ENABLED_KEY + " being false",
-        dfsCluster.getNameNode(newNameNodeIdx).isStandbyState());
+        dfsCluster.getNameNode(nnIdx).isStandbyState());
 
     Path testPath2 = new Path(testPath, "test2");
 
@@ -246,21 +251,21 @@ public class TestObserverNode {
     assertSentTo(0);
 
     // Add a new namenode with the observer startup option as true
-    conf.setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
-    dfsCluster.addNameNode(conf, dfsCluster.getNameNodePort());
-    int observerIdx = dfsCluster.getNumNameNodes() - 1;
+    dfsCluster.getConfiguration(nnIdx)
+        .setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
+    dfsCluster.restartNameNode(nnIdx);
 
-    dfsCluster.waitNameNodeUp(observerIdx);
+    dfsCluster.waitNameNodeUp(nnIdx);
     assertTrue("The NameNode did not start as Observer despite "
         + DFS_NAMENODE_OBSERVER_ENABLED_KEY + " being true",
-        dfsCluster.getNameNode(observerIdx).isObserverState());
+        dfsCluster.getNameNode(nnIdx).isObserverState());
 
     dfs.mkdir(testPath2, FsPermission.getDefault());
     assertSentTo(0);
 
     dfsCluster.rollEditLogAndTail(0);
     dfs.getFileStatus(testPath);
-    assertSentTo(observerIdx);
+    assertSentTo(nnIdx);
   }
 
   @Test
