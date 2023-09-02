@@ -60,6 +60,7 @@ public final class GPGUtils {
    * @param path url path.
    * @param returnType return type.
    * @param selectParam query parameters.
+   * @param conf configuration.
    * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
