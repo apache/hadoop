@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.router.security;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.security.token.delegation.RouterDelegationTokenSupport;
@@ -69,10 +70,10 @@ public class RouterDelegationTokenSecretManager
    */
   public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
-      long delegationTokenRemoverScanInterval) {
+      long delegationTokenRemoverScanInterval, Configuration conf) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    this.federationFacade = FederationStateStoreFacade.getInstance(null);
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Override
