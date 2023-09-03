@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +42,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Verify the AbfsRestOperationException error message format.
  * */
 public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest{
-  private static final String RETRY_TEST_TOKEN_PROVIDER = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
+  private static final String RETRY_TEST_TOKEN_PROVIDER =
+      "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
 
   public ITestAbfsRestOperationException() throws Exception {
     super();
@@ -61,13 +61,29 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       String[] errorFields = errorMessage.split(",");
 
       // Expected Fields are: Message, StatusCode, Method, URL, ActivityId(rId)
-      Assert.assertEquals(5, errorFields.length);
+      Assertions.assertThat(errorFields)
+          .describedAs("Number of Fields in exception message are not as expected")
+          .hasSize(5);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
-      Assert.assertEquals("404", errorFields[1].trim());
-      Assert.assertEquals("HEAD", errorFields[2].trim());
-      Assert.assertTrue(errorFields[3].trim().startsWith("http"));
-      Assert.assertTrue(errorFields[4].trim().startsWith("rId:"));
+      Assertions.assertThat(errorFields[0].trim())
+          .describedAs("Error Message Field in exception message is wrong")
+          .isEqualTo("Operation failed: \"The specified path does not exist.\"");
+      Assertions.assertThat(errorFields[1].trim())
+          .describedAs("Status Code Field in exception message "
+              + "should be \"404\"")
+          .isEqualTo("404");
+      Assertions.assertThat(errorFields[2].trim())
+          .describedAs("Http Rest Method Field in exception message "
+              + "should be \"HEAD\"")
+          .isEqualTo("HEAD");
+      Assertions.assertThat(errorFields[3].trim())
+          .describedAs("Url Field in exception message"
+              + " should start with \"http\"")
+          .startsWith("http");
+      Assertions.assertThat(errorFields[4].trim())
+          .describedAs("ActivityId Field in exception message "
+              + "should start with \"rId:\"")
+          .startsWith("rId:");
     }
 
     try {
@@ -76,19 +92,43 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
+      // Expected Fields are: Message, StatusCode, Method, URL, ActivityId(rId), StorageErrorCode, StorageErrorMessage
       Assertions.assertThat(errorFields)
-          .describedAs("fields in exception of %s", ex)
+          .describedAs("Number of Fields in exception message are not as expected")
           .hasSize(7);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
-      Assert.assertEquals("404", errorFields[1].trim());
-      Assert.assertEquals("GET", errorFields[2].trim());
-      Assert.assertTrue(errorFields[3].trim().startsWith("http"));
-      Assert.assertTrue(errorFields[4].trim().startsWith("rId:"));
+      Assertions.assertThat(errorFields[0].trim())
+          .describedAs("Error Message Field in exception message is wrong")
+          .isEqualTo("Operation failed: \"The specified path does not exist.\"");
+      Assertions.assertThat(errorFields[1].trim())
+          .describedAs("Status Code Field in exception message"
+              + " should be \"404\"")
+          .isEqualTo("404");
+      Assertions.assertThat(errorFields[2].trim())
+          .describedAs("Http Rest Method Field in exception message"
+              + " should be \"GET\"")
+          .isEqualTo("GET");
+      Assertions.assertThat(errorFields[3].trim())
+          .describedAs("Url Field in exception message"
+              + " should start with \"http\"")
+          .startsWith("http");
+      Assertions.assertThat(errorFields[4].trim())
+          .describedAs("ActivityId Field in exception message"
+              + " should start with \"rId:\"")
+          .startsWith("rId:");
       // Check storage error code and storage error message.
-      Assert.assertEquals("PathNotFound", errorFields[5].trim());
-      Assert.assertTrue(errorFields[6].contains("RequestId")
-              && errorFields[6].contains("Time"));
+      Assertions.assertThat(errorFields[5].trim())
+          .describedAs("StorageErrorCode Field in exception message"
+              + " should be \"PathNotFound\"")
+          .isEqualTo("PathNotFound");
+      Assertions.assertThat(errorFields[6].trim())
+          .describedAs("StorageErrorMessage Field in exception message"
+              + " should contain \"RequestId\"")
+          .contains("RequestId");
+      Assertions.assertThat(errorFields[6].trim())
+          .describedAs("StorageErrorMessage Field in exception message"
+              + " should contain \"Time\"")
+          .contains("Time");
     }
   }
 
@@ -126,10 +166,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         });
 
     // Number of retries done should be as configured
-    Assert.assertEquals(
-        "Number of token fetch retries done does not match with fs.azure"
-            + ".custom.token.fetch.retry.count configured", numOfRetries,
-        retryTestTokenProvider.getRetryCount());
+    Assertions.assertThat(retryTestTokenProvider.getRetryCount())
+        .describedAs("Number of token fetch retries done does not "
+            + "match with fs.azure.custom.token.fetch.retry.count configured")
+        .isEqualTo(numOfRetries);
   }
 
   @Test
