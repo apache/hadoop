@@ -321,7 +321,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         SubClusterId.newInstance(YarnConfiguration.getClusterId(conf));
     this.homeRMRelayer = new AMRMClientRelayer(createHomeRMProxy(appContext,
         ApplicationMasterProtocol.class, appOwner), appId,
-        this.homeSubClusterId.toString());
+        this.homeSubClusterId.toString(), conf);
 
     this.homeHeartbeatHandler =
         createHomeHeartbeatHandler(conf, appId, this.homeRMRelayer);
@@ -335,7 +335,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.lastAllocateResponse
         .setResponseId(AMRMClientUtils.PRE_REGISTER_RESPONSE_ID);
 
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.subClusterResolver = this.federationFacade.getSubClusterResolver();
 
     // AMRMProxyPolicy will be initialized in registerApplicationMaster

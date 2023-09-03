@@ -50,7 +50,7 @@ public class MockRouter extends Router {
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
     if (isEnabled) {
-      facade = FederationStateStoreFacade.getInstance();
+      facade = FederationStateStoreFacade.getInstance(configuration);
       initTestFederationSubCluster();
     }
   }

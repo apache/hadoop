@@ -575,18 +575,21 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             + Apps.crossPlatformify("HADOOP_HOME") + "/share/hadoop/common/lib/*"
             + ApplicationConstants.CLASS_PATH_SEPARATOR
             + Apps.crossPlatformify("HADOOP_LOG_HOME")
-            + ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+            + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+            + " " + ApplicationConstants.JVM_ADD_OPENS_VAR;
 
     String res = ContainerLaunch.expandEnvironment(input, logPath);
 
+    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ?
+        "--add-opens=java.base/java.lang=ALL-UNNAMED" : "";
     if (Shell.WINDOWS) {
       Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
           + "%HADOOP_HOME%/share/hadoop/common/lib/*;"
-          + "%HADOOP_LOG_HOME%/nm/container/logs", res);
+          + "%HADOOP_LOG_HOME%/nm/container/logs" + " " + expectedAddOpens, res);
     } else {
       Assert.assertEquals("$HADOOP_HOME/share/hadoop/common/*:"
           + "$HADOOP_HOME/share/hadoop/common/lib/*:"
-          + "$HADOOP_LOG_HOME/nm/container/logs", res);
+          + "$HADOOP_LOG_HOME/nm/container/logs" + " " + expectedAddOpens, res);
     }
     System.out.println(res);
   }

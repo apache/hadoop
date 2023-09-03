@@ -43,7 +43,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
  */
 public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase {
 
-  private static final String EXPECTED_FILE_TMPL = "webapp/mixed-%s-%d.json";
+  private static final String EXPECTED_FILE_TMPL = "webapp/mixed-%s-%s.json";
 
   public TestRMWebServicesCapacitySchedulerMixedMode() {
     super(createWebAppDescriptor());

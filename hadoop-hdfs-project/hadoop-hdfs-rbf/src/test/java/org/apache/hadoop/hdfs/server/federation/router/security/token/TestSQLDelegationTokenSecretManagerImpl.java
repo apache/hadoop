@@ -25,13 +25,24 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.SQLDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -43,6 +54,8 @@ import org.junit.Test;
 public class TestSQLDelegationTokenSecretManagerImpl {
   private static final String CONNECTION_URL = "jdbc:derby:memory:TokenStore";
   private static final int TEST_MAX_RETRIES = 3;
+  private static final int TOKEN_EXPIRATION_SECONDS = 1;
+  private static final int TOKEN_EXPIRATION_SCAN_SECONDS = 1;
   private static Configuration conf;
 
   @Before
@@ -66,6 +79,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     conf.set(SQLConnectionFactory.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.MAX_RETRIES, TEST_MAX_RETRIES);
     conf.setInt(SQLSecretManagerRetriableHandlerImpl.RETRY_SLEEP_TIME_MS, 10);
+    conf.setInt(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, TOKEN_EXPIRATION_SCAN_SECONDS);
   }
 
   @AfterClass
@@ -109,6 +123,151 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       stopTokenManager(tokenManager1);
       stopTokenManager(tokenManager2);
     }
+  }
+
+  @Test
+  public void testCancelToken() throws Exception {
+    DelegationTokenManager tokenManager1 = createTokenManager(getShortLivedTokenConf());
+    DelegationTokenManager tokenManager2 = createTokenManager(getShortLivedTokenConf());
+
+    TestDelegationTokenSecretManager secretManager2 =
+        (TestDelegationTokenSecretManager) tokenManager2.getDelegationTokenSecretManager();
+
+    try {
+      // Create token on token manager 1
+      Token token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+
+      // Load token on token manager 2 to test it doesn't get stale
+      tokenManager2.verifyToken(token1);
+
+      // Cancel token on token manager 1
+      tokenManager1.cancelToken(token1, "foo");
+
+      // Validate that token cancellation is propagated to token manager 2
+      secretManager2.waitForTokenEviction(token1.decodeIdentifier());
+      LambdaTestUtils.intercept(SecretManager.InvalidToken.class,
+          () -> tokenManager2.verifyToken(token1));
+    } finally {
+      stopTokenManager(tokenManager1);
+      stopTokenManager(tokenManager2);
+    }
+  }
+
+  @Test
+  public void testRenewToken() throws Exception {
+    DelegationTokenManager tokenManager1 = createTokenManager(getShortLivedTokenConf());
+    DelegationTokenManager tokenManager2 = createTokenManager(getShortLivedTokenConf());
+
+    TestDelegationTokenSecretManager secretManager2 =
+        (TestDelegationTokenSecretManager) tokenManager2.getDelegationTokenSecretManager();
+
+    try {
+      // Create token on token manager 1
+      Token token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      long expirationTime = Time.monotonicNow() +
+          TimeUnit.SECONDS.toMillis(TOKEN_EXPIRATION_SECONDS) * 2;
+
+      // Load token on token manager 2 to test it doesn't get stale
+      tokenManager2.verifyToken(token1);
+
+      // Renew token on token manager 1 and verify token is updated on token manager 2
+      // Do this for long enough that the token should be expired if not renewed
+      AbstractDelegationTokenIdentifier token1Id =
+          (AbstractDelegationTokenIdentifier) token1.decodeIdentifier();
+      while (Time.monotonicNow() < expirationTime) {
+        tokenManager1.renewToken(token1, "foo");
+        callRemoveExpiredTokensAndValidateSQL(secretManager2, token1Id, true);
+        secretManager2.waitForTokenEviction(token1Id);
+        tokenManager2.verifyToken(token1);
+      }
+
+      // Stop renewing token and validate it's no longer valid and removed
+      // from SQL
+      Thread.sleep(TimeUnit.SECONDS.toMillis(TOKEN_EXPIRATION_SECONDS) * 2);
+      LambdaTestUtils.intercept(SecretManager.InvalidToken.class,
+          () -> tokenManager2.verifyToken(token1));
+      callRemoveExpiredTokensAndValidateSQL(secretManager2, token1Id, false);
+    } finally {
+      stopTokenManager(tokenManager1);
+      stopTokenManager(tokenManager2);
+    }
+  }
+
+  @Test
+  public void testRemoveExpiredTokens() throws Exception {
+    DelegationTokenManager tokenManager = createTokenManager(getShortLivedTokenConf());
+
+    try {
+      TestDelegationTokenSecretManager secretManager =
+          (TestDelegationTokenSecretManager) tokenManager.getDelegationTokenSecretManager();
+
+      // Create token to be constantly renewed.
+      Token token1 = tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      AbstractDelegationTokenIdentifier tokenId1 =
+          (AbstractDelegationTokenIdentifier) token1.decodeIdentifier();
+
+      // Create token expected to expire soon.
+      long expirationTime2 = Time.now();
+      AbstractDelegationTokenIdentifier tokenId2 = storeToken(secretManager, 2, expirationTime2);
+
+      // Create token not expected to expire soon.
+      long expirationTime3 = Time.now() + TimeUnit.SECONDS.toMillis(TOKEN_EXPIRATION_SECONDS) * 10;
+      AbstractDelegationTokenIdentifier tokenId3 = storeToken(secretManager, 3, expirationTime3);
+
+      GenericTestUtils.waitFor(() -> {
+        try {
+          // Constantly renew token so it doesn't expire.
+          tokenManager.renewToken(token1, "foo");
+
+          // Wait for cleanup to happen so expired token is deleted from SQL.
+          return !isTokenInSQL(secretManager, tokenId2);
+        } catch (IOException | SQLException e) {
+          throw new RuntimeException(e);
+        }
+      }, 100, 6000);
+
+      Assert.assertTrue("Renewed token must not be cleaned up",
+          isTokenInSQL(secretManager, tokenId1));
+      Assert.assertTrue("Token with future expiration must not be cleaned up",
+          isTokenInSQL(secretManager, tokenId3));
+    } finally {
+      stopTokenManager(tokenManager);
+    }
+  }
+
+  private AbstractDelegationTokenIdentifier storeToken(
+      TestDelegationTokenSecretManager secretManager, int sequenceNum, long expirationTime)
+      throws IOException {
+    AbstractDelegationTokenIdentifier tokenId = new DelegationTokenIdentifier(new Text("Test"));
+    tokenId.setOwner(new Text("foo"));
+    tokenId.setSequenceNumber(sequenceNum);
+
+    AbstractDelegationTokenSecretManager.DelegationTokenInformation tokenInfo =
+        new AbstractDelegationTokenSecretManager.DelegationTokenInformation(expirationTime, null);
+    secretManager.storeToken(tokenId, tokenInfo);
+
+    return tokenId;
+  }
+
+  private Configuration getShortLivedTokenConf() {
+    Configuration shortLivedConf = new Configuration(conf);
+    shortLivedConf.setTimeDuration(
+        SQLDelegationTokenSecretManager.SQL_DTSM_TOKEN_LOADING_CACHE_EXPIRATION,
+        200, TimeUnit.MILLISECONDS);
+    shortLivedConf.setInt(DelegationTokenManager.RENEW_INTERVAL, TOKEN_EXPIRATION_SECONDS);
+    return shortLivedConf;
+  }
+
+  private void callRemoveExpiredTokensAndValidateSQL(
+      TestDelegationTokenSecretManager secretManager, AbstractDelegationTokenIdentifier tokenId,
+      boolean expectedInSQL) throws SQLException {
+    secretManager.removeExpiredStoredToken(tokenId);
+    Assert.assertEquals(expectedInSQL, isTokenInSQL(secretManager, tokenId));
+  }
+
+  private boolean isTokenInSQL(TestDelegationTokenSecretManager secretManager,
+      AbstractDelegationTokenIdentifier tokenId) throws SQLException {
+    return secretManager.selectTokenInfo(tokenId.getSequenceNumber(), tokenId.getBytes()) != null;
   }
 
   @Test
@@ -292,8 +451,13 @@ public class TestSQLDelegationTokenSecretManagerImpl {
   }
 
   private DelegationTokenManager createTokenManager() {
+    return createTokenManager(conf);
+  }
+
+  private DelegationTokenManager createTokenManager(Configuration config) {
     DelegationTokenManager tokenManager = new DelegationTokenManager(new Configuration(), null);
-    tokenManager.setExternalDelegationTokenSecretManager(new TestDelegationTokenSecretManager());
+    tokenManager.setExternalDelegationTokenSecretManager(
+        new TestDelegationTokenSecretManager(config));
     return tokenManager;
   }
 
@@ -401,7 +565,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       return keyRollLock;
     }
 
-    TestDelegationTokenSecretManager() {
+    TestDelegationTokenSecretManager(Configuration conf) {
       super(conf, new TestConnectionFactory(conf),
           SQLSecretManagerRetriableHandlerImpl.getInstance(conf, new TestRetryHandler()));
     }
@@ -426,6 +590,21 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       } finally {
         unlockKeyRoll();
       }
+    }
+
+    public void waitForTokenEviction(TokenIdentifier tokenId)
+        throws InterruptedException, TimeoutException {
+      // Wait until token is not found on cache
+      GenericTestUtils.waitFor(() -> !this.currentTokens.containsKey(tokenId), 100, 5000);
+    }
+
+    public void removeExpiredStoredToken(TokenIdentifier tokenId) {
+      super.removeExpiredStoredToken((AbstractDelegationTokenIdentifier) tokenId);
+    }
+
+    public void storeToken(AbstractDelegationTokenIdentifier ident,
+        DelegationTokenInformation tokenInfo) throws IOException {
+      super.storeToken(ident, tokenInfo);
     }
 
     public void setReadOnly(boolean readOnly) {

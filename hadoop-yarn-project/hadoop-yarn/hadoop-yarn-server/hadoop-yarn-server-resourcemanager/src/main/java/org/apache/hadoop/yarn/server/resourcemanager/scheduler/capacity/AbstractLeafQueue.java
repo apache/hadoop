@@ -1701,13 +1701,13 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  protected void setDynamicQueueProperties() {
+  protected void parseAndSetDynamicTemplates() {
     // set to -1, to disable it
     queueContext.getConfiguration().setUserLimitFactor(getQueuePath(), -1);
     // Set Max AM percentage to a higher value
     queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
         getQueuePath(), 1f);
-    super.setDynamicQueueProperties();
+    super.parseAndSetDynamicTemplates();
   }
 
   @Override

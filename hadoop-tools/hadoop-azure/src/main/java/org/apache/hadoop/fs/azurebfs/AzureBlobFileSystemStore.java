@@ -1661,7 +1661,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private String getRelativePath(final Path path) {
     Preconditions.checkNotNull(path, "path");
-    return path.toUri().getPath();
+    String relPath = path.toUri().getPath();
+    if (relPath.isEmpty()) {
+      // This means that path passed by user is absolute path of root without "/" at end.
+      relPath = ROOT_PATH;
+    }
+    return relPath;
   }
 
   private long parseContentLength(final String contentLength) {

@@ -80,8 +80,8 @@ public class TestFederationStateStoreFacade {
   private Configuration conf;
   private FederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreTestUtil;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
+
   private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
@@ -90,6 +90,7 @@ public class TestFederationStateStoreFacade {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
     this.isCachingEnabled = isCachingEnabled;
+    facade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Before

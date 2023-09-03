@@ -32,6 +32,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
+import org.apache.hadoop.yarn.client.util.MemoryPageUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
@@ -40,16 +41,28 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRes
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +84,8 @@ public class RouterCLI extends Configured implements Tool {
         "set the state of the subCluster to SC_LOST."))
          // Command2: policy
         .put("-policy", new UsageInfo(
-        "[-s|--save [queue;router weight;amrm weight;headroomalpha]]",
+        "[-s|--save [queue;router weight;amrm weight;headroomalpha]] " +
+         "[-bs|--batch-save [--format xml] [-f|--input-file fileName]]",
         "We provide a set of commands for Policy:" +
         " Include list policies, save policies, batch save policies. " +
         " (Note: The policy type will be directly read from the" +
@@ -102,8 +116,23 @@ public class RouterCLI extends Configured implements Tool {
   // Command2: policy
   // save policy
   private static final String OPTION_S = "s";
+  private static final String OPTION_BATCH_S = "bs";
   private static final String OPTION_SAVE = "save";
+  private static final String OPTION_BATCH_SAVE = "batch-save";
+  private static final String OPTION_FORMAT = "format";
+  private static final String OPTION_FILE = "f";
+  private static final String OPTION_INPUT_FILE = "input-file";
+
   private static final String CMD_POLICY = "-policy";
+  private static final String FORMAT_XML = "xml";
+  private static final String FORMAT_JSON = "json";
+  private static final String XML_TAG_SUBCLUSTERIDINFO = "subClusterIdInfo";
+  private static final String XML_TAG_AMRMPOLICYWEIGHTS = "amrmPolicyWeights";
+  private static final String XML_TAG_ROUTERPOLICYWEIGHTS = "routerPolicyWeights";
+  private static final String XML_TAG_HEADROOMALPHA = "headroomAlpha";
+  private static final String XML_TAG_FEDERATION_WEIGHTS = "federationWeights";
+  private static final String XML_TAG_QUEUE = "queue";
+  private static final String XML_TAG_NAME = "name";
 
   public RouterCLI() {
     super();
@@ -161,7 +190,8 @@ public class RouterCLI extends Configured implements Tool {
         .append("The full syntax is: \n\n")
         .append("routeradmin\n")
         .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
-        .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha]]\n")
+        .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha] " +
+                "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]]\n")
         .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -304,7 +334,23 @@ public class RouterCLI extends Configured implements Tool {
         "We will save the policy information of the queue, " +
         "including queue and weight information");
     saveOpt.setOptionalArg(true);
+    Option batchSaveOpt = new Option(OPTION_BATCH_S, OPTION_BATCH_SAVE, false,
+        "We will save queue policies in bulk, " +
+         "where users can provide XML or JSON files containing the policies. " +
+         "This command will parse the file contents and store the results " +
+         "in the FederationStateStore.");
+    Option formatOpt = new Option(null, "format", true,
+        "Users can specify the file format using this option. " +
+        "Currently, there are one supported file formats: XML." +
+        "These files contain the policy information for storing queue policies.");
+    Option fileOpt = new Option("f", "input-file", true,
+        "The location of the input configuration file. ");
+    formatOpt.setOptionalArg(true);
+
     opts.addOption(saveOpt);
+    opts.addOption(batchSaveOpt);
+    opts.addOption(formatOpt);
+    opts.addOption(fileOpt);
 
     // Parse command line arguments.
     CommandLine cliParser;
@@ -317,12 +363,42 @@ public class RouterCLI extends Configured implements Tool {
     }
 
     // Try to parse the cmd save.
+    // Save a single queue policy
     if (cliParser.hasOption(OPTION_S) || cliParser.hasOption(OPTION_SAVE)) {
       String policy = cliParser.getOptionValue(OPTION_S);
       if (StringUtils.isBlank(policy)) {
         policy = cliParser.getOptionValue(OPTION_SAVE);
       }
       return handleSavePolicy(policy);
+    } else if (cliParser.hasOption(OPTION_BATCH_S) || cliParser.hasOption(OPTION_BATCH_SAVE)) {
+      // Save Queue Policies in Batches
+      // Determine whether the file format is accurate, XML or JSON format.
+      // If it is not XML or JSON, we will directly prompt the user with an error message.
+      String format = null;
+      if (cliParser.hasOption(OPTION_FORMAT)) {
+        format = cliParser.getOptionValue(OPTION_FORMAT);
+        if (StringUtils.isBlank(format) ||
+            !StringUtils.equalsAnyIgnoreCase(format, FORMAT_XML)) {
+          System.out.println("We currently only support policy configuration files " +
+              "in XML formats.");
+          return EXIT_ERROR;
+        }
+      }
+
+      // Parse configuration file path.
+      String filePath = null;
+      if (cliParser.hasOption(OPTION_FILE) || cliParser.hasOption(OPTION_INPUT_FILE)) {
+        filePath = cliParser.getOptionValue(OPTION_FILE);
+        if (StringUtils.isBlank(filePath)) {
+          filePath = cliParser.getOptionValue(OPTION_INPUT_FILE);
+        }
+      }
+
+      // Batch SavePolicies.
+      return handBatchSavePolicies(format, filePath);
+    } else {
+      // printUsage
+      printUsage(args[0]);
     }
 
     return EXIT_ERROR;
@@ -338,6 +414,30 @@ public class RouterCLI extends Configured implements Tool {
       return EXIT_SUCCESS;
     } catch (YarnException | IOException e) {
       LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
+  }
+
+  private int handBatchSavePolicies(String format, String policyFile) {
+
+    if(StringUtils.isBlank(format)) {
+      LOG.error("Batch Save Federation Policies. Format is Empty.");
+      return EXIT_ERROR;
+    }
+
+    if(StringUtils.isBlank(policyFile)) {
+      LOG.error("Batch Save Federation Policies. policyFile is Empty.");
+      return EXIT_ERROR;
+    }
+
+    LOG.info("Batch Save Federation Policies. Format = {}, PolicyFile = {}.",
+        format, policyFile);
+
+    switch (format) {
+    case FORMAT_XML:
+      return parseXml2PoliciesAndBatchSavePolicies(policyFile);
+    default:
+      System.out.println("We currently only support XML formats.");
       return EXIT_ERROR;
     }
   }
@@ -384,6 +484,140 @@ public class RouterCLI extends Configured implements Tool {
     return request;
   }
 
+  /**
+   * Parse Policies from XML and save them in batches to FederationStateStore.
+   *
+   * We save 20 policies in one batch.
+   * If the user needs to save 1000 policies, it will cycle 50 times.
+   *
+   * Every time a page is saved, we will print whether a page
+   * has been saved successfully or failed.
+   *
+   * @param policiesXml Policies Xml Path.
+   * @return 0, success; 1, failed.
+   */
+  protected int parseXml2PoliciesAndBatchSavePolicies(String policiesXml) {
+    try {
+      List<FederationQueueWeight> federationQueueWeightsList = parsePoliciesByXml(policiesXml);
+      MemoryPageUtils<FederationQueueWeight> memoryPageUtils = new MemoryPageUtils<>(20);
+      federationQueueWeightsList.forEach(federationQueueWeight ->
+          memoryPageUtils.addToMemory(federationQueueWeight));
+      int pages = memoryPageUtils.getPages();
+      for (int i = 0; i < pages; i++) {
+        List<FederationQueueWeight> federationQueueWeights =
+            memoryPageUtils.readFromMemory(i);
+        BatchSaveFederationQueuePoliciesRequest request =
+            BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+        ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+        BatchSaveFederationQueuePoliciesResponse response =
+            adminProtocol.batchSaveFederationQueuePolicies(request);
+        System.out.println("page <" + (i + 1) + "> : " + response.getMessage());
+      }
+    } catch (Exception e) {
+      LOG.error("BatchSaveFederationQueuePolicies error", e);
+    }
+    return EXIT_ERROR;
+  }
+
+  /**
+   * Parse FederationQueueWeight from the xml configuration file.
+   * <p>
+   * We allow users to provide an xml configuration file,
+   * which stores the weight information of the queue.
+   *
+   * @param policiesXml Policies Xml Path.
+   * @return FederationQueueWeight List.
+   * @throws IOException an I/O exception of some sort has occurred.
+   * @throws SAXException Encapsulate a general SAX error or warning.
+   * @throws ParserConfigurationException a serious configuration error..
+   */
+  protected List<FederationQueueWeight> parsePoliciesByXml(String policiesXml)
+      throws IOException, SAXException, ParserConfigurationException {
+
+    List<FederationQueueWeight> weights = new ArrayList<>();
+
+    File xmlFile = new File(policiesXml);
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder builder = factory.newDocumentBuilder();
+    Document document = builder.parse(xmlFile);
+
+    NodeList federationsList = document.getElementsByTagName(XML_TAG_FEDERATION_WEIGHTS);
+
+    for (int i = 0; i < federationsList.getLength(); i++) {
+
+      Node federationNode = federationsList.item(i);
+
+      if (federationNode.getNodeType() == Node.ELEMENT_NODE) {
+        Element federationElement = (Element) federationNode;
+        NodeList queueList = federationElement.getElementsByTagName(XML_TAG_QUEUE);
+
+        for (int j = 0; j < queueList.getLength(); j++) {
+
+          Node queueNode = queueList.item(j);
+          if (queueNode.getNodeType() == Node.ELEMENT_NODE) {
+            Element queueElement = (Element) queueNode;
+            // parse queueName.
+            String queueName = queueElement.getElementsByTagName(XML_TAG_NAME)
+                .item(0).getTextContent();
+
+            // parse amrmPolicyWeights / routerPolicyWeights.
+            String amrmWeight = parsePolicyWeightsNode(queueElement, XML_TAG_AMRMPOLICYWEIGHTS);
+            String routerWeight = parsePolicyWeightsNode(queueElement, XML_TAG_ROUTERPOLICYWEIGHTS);
+
+            // parse headroomAlpha.
+            String headroomAlpha = queueElement.getElementsByTagName(XML_TAG_HEADROOMALPHA)
+                .item(0).getTextContent();
+
+            String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
+                YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
+
+            LOG.debug("Queue: {}, AmrmPolicyWeights: {}, RouterWeight: {}, HeadroomAlpha: {}.",
+                queueName, amrmWeight, routerWeight, headroomAlpha);
+
+            FederationQueueWeight weight = FederationQueueWeight.newInstance(routerWeight,
+                amrmWeight, headroomAlpha, queueName, policyManager);
+
+            weights.add(weight);
+          }
+        }
+      }
+    }
+
+    return weights;
+  }
+
+  /**
+   * We will parse the policyWeight information.
+   *
+   * @param queueElement xml Element.
+   * @param weightType weightType, including 2 types, AmrmPolicyWeight and RouterPolicyWeight.
+   * @return concatenated string of sub-cluster weights.
+   */
+  private String parsePolicyWeightsNode(Element queueElement, String weightType) {
+    NodeList amrmPolicyWeightsList = queueElement.getElementsByTagName(weightType);
+    Node amrmPolicyWeightsNode = amrmPolicyWeightsList.item(0);
+    List<String> amRmPolicyWeights = new ArrayList<>();
+    if (amrmPolicyWeightsNode.getNodeType() == Node.ELEMENT_NODE) {
+      Element amrmPolicyWeightsElement = (Element) amrmPolicyWeightsNode;
+      NodeList subClusterIdInfoList =
+          amrmPolicyWeightsElement.getElementsByTagName(XML_TAG_SUBCLUSTERIDINFO);
+      for (int i = 0; i < subClusterIdInfoList.getLength(); i++) {
+        Node subClusterIdInfoNode = subClusterIdInfoList.item(i);
+        if (subClusterIdInfoNode.getNodeType() == Node.ELEMENT_NODE) {
+          Element subClusterIdInfoElement = (Element) subClusterIdInfoNode;
+          String subClusterId =
+              subClusterIdInfoElement.getElementsByTagName("id").item(0).getTextContent();
+          String weight =
+              subClusterIdInfoElement.getElementsByTagName("weight").item(0).getTextContent();
+          LOG.debug("WeightType[{}] - SubCluster ID: {}, Weight: {}.",
+              weightType, subClusterId, weight);
+          amRmPolicyWeights.add(subClusterId + ":" + weight);
+        }
+      }
+    }
+    return StringUtils.join(amRmPolicyWeights, ",");
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf = getConf() == null ?
@@ -405,14 +639,13 @@ public class RouterCLI extends Configured implements Tool {
         printHelp();
       }
       return EXIT_SUCCESS;
-    }
-
-    if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
+    } else if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
       return handleDeregisterSubCluster(args);
-    }
-
-    if (CMD_POLICY.equals(cmd)) {
+    } else if (CMD_POLICY.equals(cmd)) {
       return handlePolicy(args);
+    } else {
+      System.out.println("No related commands found.");
+      printHelp();
     }
 
     return EXIT_SUCCESS;
