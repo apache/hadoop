@@ -218,6 +218,9 @@ public class Router extends CompositeService {
 
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 
+    Builder<Object> builder =
+        WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+
     WebAppContext uiWebAppContext = null;
     boolean isWebUI2Enabled = conf.getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
         YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE);
