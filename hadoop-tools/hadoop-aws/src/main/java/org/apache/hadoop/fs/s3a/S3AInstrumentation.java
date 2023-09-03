@@ -900,7 +900,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
               StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
               StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
-              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
+              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ,
+              StreamStatisticNames.STREAM_FILE_CACHE_EVICTION)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(

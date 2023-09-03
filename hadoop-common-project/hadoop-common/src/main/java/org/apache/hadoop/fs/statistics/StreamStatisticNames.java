@@ -461,6 +461,12 @@ public final class StreamStatisticNames {
   public static final String STREAM_EVICT_BLOCKS_FROM_FILE_CACHE
       = "stream_evict_blocks_from_cache";
 
+  /**
+   * Track duration of LRU cache eviction for disk cache.
+   */
+  public static final String STREAM_FILE_CACHE_EVICTION
+      = "stream_file_cache_eviction";
+
   private StreamStatisticNames() {
   }
 
