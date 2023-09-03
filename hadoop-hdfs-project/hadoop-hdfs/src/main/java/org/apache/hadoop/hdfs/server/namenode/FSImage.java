@@ -258,7 +258,7 @@ public class FSImage implements Closeable {
     if (startOpt == StartupOption.METADATAVERSION) {
       System.out.println("HDFS Image Version: " + layoutVersion);
       System.out.println("Software format version: " +
-        storage.getServiceLayoutVersion());
+          storage.getServiceLayoutVersion());
       return false;
     }
 
