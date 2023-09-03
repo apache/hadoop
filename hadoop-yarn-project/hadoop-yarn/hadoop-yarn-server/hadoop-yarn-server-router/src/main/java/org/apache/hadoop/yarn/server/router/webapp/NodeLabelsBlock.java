@@ -73,7 +73,8 @@ public class NodeLabelsBlock extends RouterBlock {
   private NodeLabelsInfo getSubClusterNodeLabelsInfo(String subCluster) {
     try {
       SubClusterId subClusterId = SubClusterId.newInstance(subCluster);
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      FederationStateStoreFacade facade =
+          FederationStateStoreFacade.getInstance(router.getConfig());
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
 
       if (subClusterInfo != null) {
