@@ -67,6 +67,7 @@ public class RouterDelegationTokenSecretManager
    * @param delegationTokenRenewInterval       how often the tokens must be renewed
    *                                           in milliseconds
    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
+   * @param conf Configuration.
    */
   public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
