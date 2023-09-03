@@ -23,11 +23,7 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.TimeZone;
-import java.util.Comparator;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.recipes.shared.SharedCount;
@@ -194,11 +190,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private int maxAppsInStateStore;
 
   /** Directory to store the delegation token data. **/
+  private Map<Integer, String> routerAppRootHierarchies;
   private String routerRMDTSecretManagerRoot;
   private String routerRMDTMasterKeysRootPath;
   private String routerRMDelegationTokensRootPath;
   private String routerRMSequenceNumberPath;
   private String routerRMMasterKeyIdPath;
+
+  private int appIdNodeSplitIndex = 0;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -207,6 +206,27 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   private ZKFederationStateStoreOpDurations opDurations =
       ZKFederationStateStoreOpDurations.getInstance();
+
+  /*
+   * Indicates different app attempt state store operations.
+   */
+  private enum AppAttemptOp {
+    STORE,
+    UPDATE,
+    REMOVE
+  };
+
+  /**
+   * Encapsulates full app node path and corresponding split index.
+   */
+  private final static class AppNodeSplitInfo {
+    private final String path;
+    private final int splitIndex;
+    AppNodeSplitInfo(String path, int splitIndex) {
+      this.path = path;
+      this.splitIndex = splitIndex;
+    }
+  }
 
   @Override
   public void init(Configuration conf) throws YarnException {
