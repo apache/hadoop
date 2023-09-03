@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.EnumSet;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
@@ -61,7 +61,9 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // after creating a file, it must be possible to create a new xAttr
     touch(testFile);
     fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG);
-    assertArrayEquals(attributeValue, fs.getXAttr(testFile, attributeName));
+    Assertions.assertThat(fs.getXAttr(testFile, attributeName))
+        .describedAs("Retrieved Attribute Value is Not as Expected")
+        .containsExactly(attributeValue);
 
     // however after the xAttr is created, creating it again must fail
     intercept(IOException.class, () -> fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG));
@@ -84,7 +86,9 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // however after the xAttr is created, replacing it must succeed
     fs.setXAttr(testFile, attributeName, attributeValue1, CREATE_FLAG);
     fs.setXAttr(testFile, attributeName, attributeValue2, REPLACE_FLAG);
-    assertArrayEquals(attributeValue2, fs.getXAttr(testFile, attributeName));
+    Assertions.assertThat(fs.getXAttr(testFile, attributeName))
+        .describedAs("Retrieved Attribute Value is Not as Expected")
+        .containsExactly(attributeValue2);
   }
 
   @Test
@@ -105,8 +109,12 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute(decodedAttributeValue2);
 
     // Attribute not present initially
-    assertNull(fs.getXAttr(testPath, attributeName1));
-    assertNull(fs.getXAttr(testPath, attributeName2));
+    Assertions.assertThat(fs.getXAttr(testPath, attributeName1))
+        .describedAs("Cannot get attribute before setting it")
+        .isNull();
+    Assertions.assertThat(fs.getXAttr(testPath, attributeName2))
+        .describedAs("Cannot get attribute before setting it")
+        .isNull();
 
     // Set the Attributes
     fs.registerListener(
@@ -118,8 +126,12 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // Check if the attribute is retrievable
     fs.setListenerOperation(FSOperationType.GET_ATTR);
     byte[] rv = fs.getXAttr(testPath, attributeName1);
-    assertTrue(Arrays.equals(rv, attributeValue1));
-    assertEquals(decodedAttributeValue1, fs.getAbfsStore().decodeAttribute(rv));
+    Assertions.assertThat(rv)
+        .describedAs("Retrieved Attribute Does not Matches in Encoded Form")
+        .containsExactly(attributeValue1);
+    Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
+        .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
+        .isEqualTo(decodedAttributeValue1);
     fs.registerListener(null);
 
     // Set the second Attribute
@@ -127,10 +139,19 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
 
     // Check all the attributes present and previous Attribute not overridden
     rv = fs.getXAttr(testPath, attributeName1);
-    assertTrue(Arrays.equals(rv, attributeValue1));
-    assertEquals(decodedAttributeValue1, fs.getAbfsStore().decodeAttribute(rv));
+    Assertions.assertThat(rv)
+        .describedAs("Retrieved Attribute Does not Matches in Encoded Form")
+        .containsExactly(attributeValue1);
+    Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
+        .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
+        .isEqualTo(decodedAttributeValue1);
+
     rv = fs.getXAttr(testPath, attributeName2);
-    assertTrue(Arrays.equals(rv, attributeValue2));
-    assertEquals(decodedAttributeValue2, fs.getAbfsStore().decodeAttribute(rv));
+    Assertions.assertThat(rv)
+        .describedAs("Retrieved Attribute Does not Matches in Encoded Form")
+        .containsExactly(attributeValue2);
+    Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
+        .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
+        .isEqualTo(decodedAttributeValue2);
   }
 }

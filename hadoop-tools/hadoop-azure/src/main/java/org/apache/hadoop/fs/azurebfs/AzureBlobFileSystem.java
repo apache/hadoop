@@ -121,6 +121,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -328,7 +329,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (f.isRoot()) {
       throw new AbfsRestOperationException(HTTP_CONFLICT,
           AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-          "Cannot create file on the root path",
+          ERR_CREATE_ON_ROOT,
           null);
     }
 
@@ -358,7 +359,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (f.isRoot()) {
       throw new AbfsRestOperationException(HTTP_CONFLICT,
           AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-          "Cannot create file on the root path",
+          ERR_CREATE_ON_ROOT,
           null);
     }
     final Path parent = f.getParent();
