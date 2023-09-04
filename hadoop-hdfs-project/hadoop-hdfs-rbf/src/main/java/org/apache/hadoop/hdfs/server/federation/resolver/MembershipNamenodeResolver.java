@@ -488,7 +488,7 @@ public class MembershipNamenodeResolver
    * @param listObserversFirst Observer read case, observer NN will be ranked first
    */
   @Override
-  public synchronized void rotateCache(
+  public void rotateCache(
       String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
     cacheNS.compute(Pair.of(nsId, listObserversFirst), (ns, namenodeContexts) -> {
       if (namenodeContexts == null || namenodeContexts.size() <= 1) {
@@ -510,6 +510,10 @@ public class MembershipNamenodeResolver
       if (firstNamenodeContext.getRpcAddress().equals(namenode.getRpcAddress())) {
         List<FederationNamenodeContext> rotatedNnContexts = new ArrayList<>(namenodeContexts);
         Collections.rotate(rotatedNnContexts, -1);
+        String firstNamenodeId = namenodeContexts.get(0).getNamenodeId();
+        LOG.info("Rotate cache of pair <ns: {}, observer first: {}>, put namenode: {} in the " +
+            "first position of the cache and namenode: {} in the last position of the cache",
+            nsId, listObserversFirst, firstNamenodeId, namenode.getNamenodeId());
         return rotatedNnContexts;
       }
       return namenodeContexts;
