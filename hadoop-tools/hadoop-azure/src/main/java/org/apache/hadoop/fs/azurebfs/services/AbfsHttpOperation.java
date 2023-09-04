@@ -29,6 +29,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -401,9 +402,23 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.statusDescription = getConnResponseMessage();
 
-    if(expect100failureReceived) {
+    /*
+     * In case expect-100 assertion has failed, headers and inputStream should not
+     * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
+     * conn.getInputStream() will lead to repeated server call.
+     * ref: https://bugs.openjdk.org/browse/JDK-8314978
+     */
+    if (expect100failureReceived) {
+      LOG.debug("Expect-100 assertion has failed and hence not parsing headers"
+          + "and inputStream.");
       return;
     }
+    processConnHeadersAndInputStreams(buffer, offset, length);
+  }
+
+  void processConnHeadersAndInputStreams(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
     this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
@@ -417,6 +432,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       return;
     }
 
+    long startTime = 0;
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
@@ -444,7 +460,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
+                  - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
@@ -645,6 +662,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   String getConnResponseMessage() throws IOException {
     return connection.getResponseMessage();
+  }
+
+  @VisibleForTesting
+  Boolean getExpect100failureReceived() {
+    return expect100failureReceived;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

@@ -158,11 +158,13 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   public void testExpect100ContinueFailureInAppend() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, "true");
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration);
     Path path = new Path("/testFile");
-    AbfsOutputStream os = Mockito.spy((AbfsOutputStream) fs.create(path).getWrappedStream());
+    AbfsOutputStream os = Mockito.spy(
+        (AbfsOutputStream) fs.create(path).getWrappedStream());
     AbfsClient spiedClient = Mockito.spy(os.getClient());
-    AbfsHttpOperation[] httpOpForAppendTest = new AbfsHttpOperation[1];
+    AbfsHttpOperation[] httpOpForAppendTest = new AbfsHttpOperation[2];
     readyMocksForAppendTest(httpOpForAppendTest, spiedClient);
     Mockito.doReturn(spiedClient).when(os).getClient();
     fs.delete(path, true);
@@ -170,21 +172,31 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
       os.close();
     });
+    Assertions.assertThat(httpOpForAppendTest[0].getExpect100failureReceived())
+        .isTrue();
+    Mockito.verify(httpOpForAppendTest[0], Mockito.times(0))
+        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+            Mockito.anyInt(), Mockito.anyInt());
 
+    Assertions.assertThat(httpOpForAppendTest[1].getExpect100failureReceived())
+        .isFalse();
+    Mockito.verify(httpOpForAppendTest[1], Mockito.times(1))
+        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+            Mockito.anyInt(), Mockito.anyInt());
   }
 
   private void readyMocksForAppendTest(final AbfsHttpOperation[] httpOpForAppendTest,
       final AbfsClient spiedClient) {
+    int[] index = new int[1];
+    index[0] = 0;
     Mockito.doAnswer(abfsRestOpAppendGetInvocation -> {
           AbfsRestOperation op = Mockito.spy(
               (AbfsRestOperation) abfsRestOpAppendGetInvocation.callRealMethod());
-          if (httpOpForAppendTest[0] == null) {
-            Mockito.doAnswer(createHttpOpInvocation -> {
-              httpOpForAppendTest[0] = Mockito.spy(
-                  (AbfsHttpOperation) createHttpOpInvocation.callRealMethod());
-              return httpOpForAppendTest[0];
-            }).when(op).createHttpOperation();
-          }
+          Mockito.doAnswer(createHttpOpInvocation -> {
+            httpOpForAppendTest[index[0]] = Mockito.spy(
+                (AbfsHttpOperation) createHttpOpInvocation.callRealMethod());
+            return httpOpForAppendTest[index[0]++];
+          }).when(op).createHttpOperation();
           return op;
         })
         .when(spiedClient)
