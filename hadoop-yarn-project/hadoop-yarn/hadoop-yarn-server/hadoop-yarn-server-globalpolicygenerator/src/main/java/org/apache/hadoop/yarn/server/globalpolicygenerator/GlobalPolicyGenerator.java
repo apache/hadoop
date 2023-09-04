@@ -112,7 +112,7 @@ public class GlobalPolicyGenerator extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     // Set up the context
-    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance());
+    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance(conf));
     GPGPolicyFacade gpgPolicyFacade =
         new GPGPolicyFacade(this.gpgContext.getStateStoreFacade(), conf);
     this.gpgContext.setPolicyFacade(gpgPolicyFacade);

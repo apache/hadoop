@@ -110,7 +110,7 @@ public class TestFederationClientInterceptorRetry
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore,
         getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 

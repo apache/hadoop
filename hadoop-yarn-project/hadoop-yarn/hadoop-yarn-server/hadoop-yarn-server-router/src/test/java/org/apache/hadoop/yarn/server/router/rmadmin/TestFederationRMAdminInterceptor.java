@@ -120,8 +120,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // Initialize facade & stateSore
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    facade = FederationStateStoreFacade.getInstance();
-    facade.reinitialize(stateStore, getConf());
+    facade = FederationStateStoreFacade.getInstance(this.getConf());
+    facade.reinitialize(stateStore, this.getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     // Initialize interceptor
