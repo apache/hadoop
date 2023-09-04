@@ -183,8 +183,7 @@ public class TestBootstrapStandby {
   }
 
   /**
-   * Test for downloading a checkpoint made at a later checkpoint
-   * from the active.
+   * Test for downloading a checkpoint while the cluster is in rolling upgrade
    */
   @Test
   public void testRollingUpgradeBootstrapStandby() throws Exception {
@@ -240,7 +239,7 @@ public class TestBootstrapStandby {
     FSImageTestUtil.assertNNFilesMatch(cluster);
 
     // We should now be able to start the standby successfully
-    cluster.restartNameNode(1, true, "-rollingUpgrade", "started");
+    restartNameNodesFromIndex(1);
   }
 
   /**

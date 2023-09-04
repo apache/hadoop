@@ -1898,12 +1898,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Version of @see #getNamespaceInfo() that is not protected by a lock.
    */
   NamespaceInfo unprotectedGetNamespaceInfo() {
-    NamespaceInfo nsInfo = new NamespaceInfo(
-        getFSImage().getStorage().getNamespaceID(),
-        getClusterId(), getBlockPoolId(),
-        getFSImage().getStorage().getCTime(), getState());
-    nsInfo.setStorageInfo(getFSImage().getStorage());
-    return nsInfo;
+    return new NamespaceInfo(getFSImage().getStorage(), getState());
   }
 
   /**

@@ -1140,13 +1140,7 @@ public class NNStorage extends Storage implements Closeable,
 
   @Override
   public NamespaceInfo getNamespaceInfo() {
-    NamespaceInfo nsInfo = new NamespaceInfo(
-        getNamespaceID(),
-        getClusterID(),
-        getBlockPoolID(),
-        getCTime());
-    nsInfo.setStorageInfo(this);
-    return nsInfo;
+    return new NamespaceInfo(this);
   }
 
   public String getNNDirectorySize() {

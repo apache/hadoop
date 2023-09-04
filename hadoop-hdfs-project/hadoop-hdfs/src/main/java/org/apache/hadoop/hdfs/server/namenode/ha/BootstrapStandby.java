@@ -203,14 +203,16 @@ public class BootstrapStandby implements Tool, Configurable {
     }
 
     if (!checkLayoutVersion(nsInfo, isRollingUpgrade)) {
-      String msg = isRollingUpgrade ? "Layout version on remote node in rolling"
-          + "upgrade (" + nsInfo.getLayoutVersion() + ", " + proxyInfo.getIpcAddress()
-          + ") is not compatible based on minimum compatible version ("
-          + HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION + ")"
-          : "Layout version on remote node (" + nsInfo.getLayoutVersion()
-          + ") does not match this node's service layout version ("
-          + nsInfo.getServiceLayoutVersion() + ")";
-      LOG.error(msg);
+      if(isRollingUpgrade) {
+        LOG.error("Layout version on remote node in rolling upgrade ({}, {})"
+            + " is not compatible based on minimum compatible version ({})",
+            nsInfo.getLayoutVersion(), proxyInfo.getIpcAddress(),
+            HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION);
+      } else {
+        LOG.error("Layout version on remote node ({}) does not match this "
+            + "node's service layout version ({})", nsInfo.getLayoutVersion(),
+            nsInfo.getServiceLayoutVersion());
+      }
       return ERR_CODE_INVALID_VERSION;
     }
 
@@ -428,10 +430,8 @@ public class BootstrapStandby implements Tool, Configurable {
       // but we should check that the layout version being sent is compatible
       return nsInfo.getLayoutVersion() <
           HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
-    } else {
-      return nsInfo.getLayoutVersion() ==
-          nsInfo.getServiceLayoutVersion();
     }
+    return nsInfo.getLayoutVersion() == nsInfo.getServiceLayoutVersion();
   }
 
   private void parseConfAndFindOtherNN() throws IOException {
