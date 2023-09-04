@@ -115,6 +115,7 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param trackerFactory tracker with statistics to update.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
+  @SuppressWarnings("checkstyle:parameternumber")
   public CachingBlockManager(
       ExecutorServiceFuturePool futurePool,
       BlockData blockData,
