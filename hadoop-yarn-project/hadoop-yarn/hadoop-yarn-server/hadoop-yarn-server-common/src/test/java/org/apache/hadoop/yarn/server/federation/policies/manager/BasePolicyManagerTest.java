@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -72,13 +73,14 @@ public abstract class BasePolicyManagerTest {
       Class expAMRMProxyPolicy, Class expRouterPolicy) throws Exception {
 
     // serializeConf it in a context
+    Configuration conf = new Configuration();
     SubClusterPolicyConfiguration fpc = wfp.serializeConf();
     fpc.setType(policyManagerType.getCanonicalName());
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext();
     context.setSubClusterPolicyConfiguration(fpc);
     context
-        .setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
+        .setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
     context.setFederationSubclusterResolver(
         FederationPoliciesTestUtil.initResolver());
     context.setHomeSubcluster(SubClusterId.newInstance("homesubcluster"));

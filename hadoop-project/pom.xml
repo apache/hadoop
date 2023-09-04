@@ -84,9 +84,6 @@
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
 
-    <!-- org.mockito.mockito-core version -->
-    <mockito.version>4.11.0</mockito.version>
-
     <!--Protobuf version for backward compatibility-->
     <protobuf.version>2.5.0</protobuf.version>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
@@ -1306,20 +1303,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>${mockito.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-inline</artifactId>
-        <version>${mockito.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-          </exclusion>
-        </exclusions>
+        <version>2.28.2</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>

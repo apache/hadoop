@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -69,6 +68,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.FieldSetter;
 
 /**
  * The administrator interface of the {@link Router} implemented by
@@ -118,20 +118,18 @@ public class TestRouterAdmin {
    * @throws IOException
    * @throws NoSuchFieldException
    */
-  private static void setUpMocks() throws IOException, NoSuchFieldException,
-          IllegalAccessException {
+  private static void setUpMocks() throws IOException, NoSuchFieldException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
-    Field rpcServerField = Router.class.getDeclaredField("rpcServer");
-    rpcServerField.setAccessible(true);
-    rpcServerField.set(routerContext.getRouter(), spyRpcServer);
+    FieldSetter.setField(routerContext.getRouter(),
+        Router.class.getDeclaredField("rpcServer"), spyRpcServer);
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
 
     // mock rpc client for destination check when editing mount tables.
     mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
-    Field rpcClientField = RouterRpcServer.class.getDeclaredField("rpcClient");
-    rpcClientField.setAccessible(true);
-    rpcClientField.set(spyRpcServer, mockRpcClient);
+    FieldSetter.setField(spyRpcServer,
+        RouterRpcServer.class.getDeclaredField("rpcClient"),
+        mockRpcClient);
     RemoteLocation remoteLocation0 =
         new RemoteLocation("ns0", "/testdir", null);
     RemoteLocation remoteLocation1 =
