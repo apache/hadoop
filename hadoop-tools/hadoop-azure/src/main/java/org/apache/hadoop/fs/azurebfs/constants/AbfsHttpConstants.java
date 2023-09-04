@@ -69,6 +69,7 @@ public final class AbfsHttpConstants {
    * and should qualify for retry.
    */
   public static final int HTTP_CONTINUE = 100;
+  public static final String EXPECT_100_JDK_ERROR = "Server rejected operation";
 
   // Abfs generic constants
   public static final String SINGLE_WHITE_SPACE = " ";

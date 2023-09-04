@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 
@@ -348,7 +349,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
             && e instanceof ProtocolException
-            && "Server rejected operation".equals(e.getMessage())) {
+            && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
           LOG.debug(
               "Getting output stream failed with expect header enabled, returning back ",
               e);
