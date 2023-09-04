@@ -79,7 +79,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -133,7 +132,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -178,29 +176,26 @@ public class TestRouterWebServicesREST {
   /**
    * Wait until the webservice is up and running.
    */
-  private static void waitWebAppRunning(
+  public static void waitWebAppRunning(
       final String address, final String path) {
     try {
       final Client clientToRouter = Client.create();
       final WebResource toRouter = clientToRouter
           .resource(address)
           .path(path);
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            ClientResponse response = toRouter
-                .accept(APPLICATION_JSON)
-                .get(ClientResponse.class);
-            if (response.getStatus() == SC_OK) {
-              // process is up and running
-              return true;
-            }
-          } catch (ClientHandlerException e) {
-            // process is not up and running
+      GenericTestUtils.waitFor(() -> {
+        try {
+          ClientResponse response = toRouter
+              .accept(APPLICATION_JSON)
+              .get(ClientResponse.class);
+          if (response.getStatus() == SC_OK) {
+            // process is up and running
+            return true;
           }
-          return false;
+        } catch (ClientHandlerException e) {
+          // process is not up and running
         }
+        return false;
       }, 1000, 20 * 1000);
     } catch (Exception e) {
       fail("Web app not running");
@@ -278,19 +273,16 @@ public class TestRouterWebServicesREST {
     }
 
     return UserGroupInformation.createRemoteUser(userName)
-        .doAs(new PrivilegedExceptionAction<List<T>>() {
-          @Override
-          public List<T> run() throws Exception {
-            ClientResponse response =
-                toRouterBuilder.get(ClientResponse.class);
-            ClientResponse response2 = toRMBuilder.get(ClientResponse.class);
-            assertEquals(SC_OK, response.getStatus());
-            assertEquals(SC_OK, response2.getStatus());
-            List<T> responses = new ArrayList<>();
-            responses.add(response.getEntity(returnType));
-            responses.add(response2.getEntity(returnType));
-            return responses;
-          }
+        .doAs((PrivilegedExceptionAction<List<T>>) () -> {
+          ClientResponse response =
+              toRouterBuilder.get(ClientResponse.class);
+          ClientResponse response2 = toRMBuilder.get(ClientResponse.class);
+          assertEquals(SC_OK, response.getStatus());
+          assertEquals(SC_OK, response2.getStatus());
+          List<T> responses = new ArrayList<>();
+          responses.add(response.getEntity(returnType));
+          responses.add(response2.getEntity(returnType));
+          return responses;
         });
   }
 
@@ -302,45 +294,42 @@ public class TestRouterWebServicesREST {
       final HTTPMethods method) throws IOException, InterruptedException {
 
     return UserGroupInformation.createRemoteUser(userName)
-        .doAs(new PrivilegedExceptionAction<ClientResponse>() {
-          @Override
-          public ClientResponse run() throws Exception {
-            Client clientToRouter = Client.create();
-            WebResource toRouter = clientToRouter
-                .resource(routerAddress)
-                .path(webAddress);
+        .doAs((PrivilegedExceptionAction<ClientResponse>) () -> {
+          Client clientToRouter = Client.create();
+          WebResource toRouter = clientToRouter
+              .resource(routerAddress)
+              .path(webAddress);
 
-            WebResource toRouterWR = toRouter;
-            if (queryKey != null && queryValue != null) {
-              toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
-            }
-
-            Builder builder = null;
-            if (context != null) {
-              builder = toRouterWR.entity(context, APPLICATION_JSON);
-              builder = builder.accept(APPLICATION_JSON);
-            } else {
-              builder = toRouter.accept(APPLICATION_JSON);
-            }
-
-            ClientResponse response = null;
-
-            switch (method) {
-            case DELETE:
-              response = builder.delete(ClientResponse.class);
-              break;
-            case POST:
-              response = builder.post(ClientResponse.class);
-              break;
-            case PUT:
-              response = builder.put(ClientResponse.class);
-              break;
-            default:
-              break;
-            }
-
-            return response;
+          WebResource toRouterWR = toRouter;
+          if (queryKey != null && queryValue != null) {
+            toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
           }
+
+          Builder builder;
+          if (context != null) {
+            builder = toRouterWR.entity(context, APPLICATION_JSON);
+            builder = builder.accept(APPLICATION_JSON);
+          } else {
+            builder = toRouter.accept(APPLICATION_JSON);
+          }
+
+          ClientResponse response = null;
+
+          switch (method) {
+          case DELETE:
+            response = builder.delete(ClientResponse.class);
+            break;
+          case POST:
+            response = builder.post(ClientResponse.class);
+            break;
+          case PUT:
+            response = builder.put(ClientResponse.class);
+            break;
+          default:
+            break;
+          }
+
+          return response;
         });
   }
 
@@ -1353,17 +1342,14 @@ public class TestRouterWebServicesREST {
     testAppsXML();
 
     // Wait at most 10 seconds until we see all the applications
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          // Check if we have the 2 apps we submitted
-          return getNumApps() == iniNumApps + 2;
-        } catch (Exception e) {
-          fail();
-        }
-        return false;
+    GenericTestUtils.waitFor(() -> {
+      try {
+        // Check if we have the 2 apps we submitted
+        return getNumApps() == iniNumApps + 2;
+      } catch (Exception e) {
+        fail();
       }
+      return false;
     }, 100, 10 * 1000);
 
     // Multithreaded getApps()
@@ -1375,12 +1361,9 @@ public class TestRouterWebServicesREST {
     try {
       // Submit a bunch of operations concurrently
       for (int i = 0; i < NUM_THREADS_TESTS; i++) {
-        svc.submit(new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            assertEquals(iniNumApps + 2, getNumApps());
-            return null;
-          }
+        svc.submit(() -> {
+          assertEquals(iniNumApps + 2, getNumApps());
+          return null;
         });
       }
     } finally {

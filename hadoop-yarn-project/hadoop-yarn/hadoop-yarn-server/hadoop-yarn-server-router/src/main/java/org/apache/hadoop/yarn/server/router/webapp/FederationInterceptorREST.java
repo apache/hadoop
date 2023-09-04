@@ -188,7 +188,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     super.init(user);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(getConf());
 
     final Configuration conf = this.getConf();
 

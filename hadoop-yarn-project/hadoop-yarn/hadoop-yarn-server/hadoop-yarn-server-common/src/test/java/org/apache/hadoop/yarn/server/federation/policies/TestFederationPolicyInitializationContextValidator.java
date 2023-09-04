@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
@@ -45,7 +46,8 @@ public class TestFederationPolicyInitializationContextValidator {
 
   @Before
   public void setUp() throws Exception {
-    goodFacade = FederationPoliciesTestUtil.initFacade();
+    Configuration conf = new Configuration();
+    goodFacade = FederationPoliciesTestUtil.initFacade(conf);
     goodConfig = new MockPolicyManager().serializeConf();
     goodSR = FederationPoliciesTestUtil.initResolver();
     goodHome = SubClusterId.newInstance("homesubcluster");

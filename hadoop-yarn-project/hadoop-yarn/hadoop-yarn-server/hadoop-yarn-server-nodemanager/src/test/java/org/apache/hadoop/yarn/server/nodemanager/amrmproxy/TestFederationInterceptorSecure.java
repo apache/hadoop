@@ -144,7 +144,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);
 
     nmStateStore = new NMMemoryStateStoreService();
     nmStateStore.init(conf);
