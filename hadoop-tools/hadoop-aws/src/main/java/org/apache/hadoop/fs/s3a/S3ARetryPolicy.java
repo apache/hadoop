@@ -331,11 +331,11 @@ public class S3ARetryPolicy implements RetryPolicy {
    * Policy where AWS SDK exceptions are retried if they state that they are retryable.
    * See HADOOP-18871. S3ARetryPolicy to use sdk exception retryable() if it is valid.
    */
-  private static final class RetryFromAWSClientIOException implements RetryPolicy {
+  private static final class RetryFromAWSClientExceptionPolicy implements RetryPolicy {
 
     private final RetryPolicy next;
 
-    private RetryFromAWSClientIOException(RetryPolicy next) {
+    private RetryFromAWSClientExceptionPolicy(RetryPolicy next) {
       this.next = next;
     }
 
