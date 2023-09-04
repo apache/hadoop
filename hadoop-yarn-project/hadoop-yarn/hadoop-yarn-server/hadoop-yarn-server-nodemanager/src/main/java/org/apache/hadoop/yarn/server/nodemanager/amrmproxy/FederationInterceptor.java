@@ -264,7 +264,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   /*
    * For UAM, keepContainersAcrossApplicationAttempts is always true.
    * When re-register to RM, RM will clear node set and regenerate NMToken for transferred
-   * container. But If keepContainersAcrossApplicationAttempts of MA is false, AM may not
+   * container. But If keepContainersAcrossApplicationAttempts of AM is false, AM may not
    * called getNMTokensFromPreviousAttempts, so the NMToken which is pass from
    * RegisterApplicationMasterResponse will be missing. Here we cache these NMToken,
    * then pass to AM in allocate stage.
