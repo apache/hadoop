@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -246,20 +247,26 @@ public class Router extends CompositeService {
     StringUtils.startupShutdownMessage(Router.class, argv, LOG);
     Router router = new Router();
     try {
-
-      new GenericOptionsParser(conf, argv);
-
-      // Remove the old hook if we are rebooting.
-      if (null != routerShutdownHook) {
-        ShutdownHookManager.get().removeShutdownHook(routerShutdownHook);
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
+      if (argv.length > 1) {
+        if (argv[0].equals("-format-state-store")) {
+          // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
+        } else if (argv[0].equals("-remove-application-from-state-store") && argv.length == 2) {
+          // TODO: YARN-11547. [Federation] Router Supports Remove individual application records from FederationStateStore.
+        } else {
+          printUsage(System.err);
+        }
+      } else {
+        // Remove the old hook if we are rebooting.
+        if (null != routerShutdownHook) {
+          ShutdownHookManager.get().removeShutdownHook(routerShutdownHook);
+        }
+        routerShutdownHook = new CompositeServiceShutdownHook(router);
+        ShutdownHookManager.get().addShutdownHook(routerShutdownHook, SHUTDOWN_HOOK_PRIORITY);
+        router.init(conf);
+        router.start();
       }
-
-      routerShutdownHook = new CompositeServiceShutdownHook(router);
-      ShutdownHookManager.get().addShutdownHook(routerShutdownHook,
-          SHUTDOWN_HOOK_PRIORITY);
-
-      router.init(conf);
-      router.start();
     } catch (Throwable t) {
       LOG.error("Error starting Router", t);
       System.exit(-1);
@@ -300,5 +307,9 @@ public class Router extends CompositeService {
   @VisibleForTesting
   public FedAppReportFetcher getFetcher() {
     return fetcher;
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: yarn router [-format-state-store] | [-remove-application-from-state-store <appId>]");
   }
 }
