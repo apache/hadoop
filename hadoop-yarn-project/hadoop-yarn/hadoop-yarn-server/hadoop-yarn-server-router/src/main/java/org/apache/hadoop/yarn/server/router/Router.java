@@ -48,6 +48,9 @@ import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
 import org.apache.hadoop.yarn.server.webproxy.FedAppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -217,7 +220,19 @@ public class Router extends CompositeService {
 
     Builder<Object> builder =
         WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+    if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
+      fetcher = new FedAppReportFetcher(conf);
+      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
+              WebAppProxyServlet.class);
+      builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
+      String proxyHostAndPort = getProxyHostAndPort(conf);
+      String[] proxyParts = proxyHostAndPort.split(":");
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+    }
+    webApp = builder.start(new RouterWebApp(this), getUIWebAppContext());
+  }
 
+  private WebAppContext getUIWebAppContext() {
     WebAppContext uiWebAppContext = null;
     boolean isWebUI2Enabled = conf.getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
         YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE);
@@ -249,8 +264,7 @@ public class Router extends CompositeService {
         }
       }
     }
-
-    webApp = builder.start(new RouterWebApp(this), uiWebAppContext);
+    return uiWebAppContext;
   }
 
   private String getWebAppsPath(String appName) {
