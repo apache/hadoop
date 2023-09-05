@@ -23,7 +23,12 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.recipes.shared.SharedCount;
@@ -107,6 +112,7 @@ import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1693,5 +1699,64 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       throw new RuntimeException("Could not increment shared Master keyId counter !!", e);
     }
     return keyIdSeqCounter.getCount();
+  }
+
+  /**
+   * Get parent app node path based on full path and split index supplied.
+   * @param appIdPath App id path for which parent needs to be returned.
+   * @param splitIndex split index.
+   * @return parent app node path.
+   */
+  private String getSplitAppNodeParent(String appIdPath, int splitIndex) {
+    // Calculated as string upto index (appIdPath Length - split index - 1). We
+    // deduct 1 to exclude path separator.
+    return appIdPath.substring(0, appIdPath.length() - splitIndex - 1);
+  }
+
+  /**
+   * Checks if parent app node has no leaf nodes and if it does not have,
+   * removes it. Called while removing application.
+   *
+   * @param appIdPath path of app id to be removed.
+   * @param splitIndex split index.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private void checkRemoveParentAppNode(String appIdPath, int splitIndex)
+      throws Exception {
+    if (splitIndex != 0) {
+      String parentAppNode = getSplitAppNodeParent(appIdPath, splitIndex);
+      List<String> children = null;
+      try {
+        children = getChildren(parentAppNode);
+      } catch (KeeperException.NoNodeException ke) {
+        // It should be fine to swallow this exception as the parent app node we
+        // intend to delete is already deleted.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to remove app parent node {} as it does not exist.",
+              parentAppNode);
+        }
+        return;
+      }
+      // No apps stored under parent path.
+      if (children != null && children.isEmpty()) {
+        try {
+          zkManager.delete(parentAppNode);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("No leaf app node exists. Removing parent node {}.", parentAppNode);
+          }
+        } catch (KeeperException.NotEmptyException ke) {
+          // It should be fine to swallow this exception as the parent app node
+          // has to be deleted only if it has no children. And this node has.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unable to remove app parent node {} as it has children.",
+                parentAppNode);
+          }
+        }
+      }
+    }
+  }
+
+  List<String> getChildren(final String path) throws Exception {
+    return zkManager.getChildren(path);
   }
 }
