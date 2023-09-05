@@ -26,9 +26,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.recipes.shared.SharedCount;
@@ -112,6 +113,7 @@ import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
@@ -205,6 +207,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   private int appIdNodeSplitIndex = 0;
 
+  @VisibleForTesting
+  public static final String ROUTER_APP_ROOT_HIERARCHIES = "HIERARCHIES";
+
   private volatile Clock clock = SystemClock.getInstance();
 
   protected static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 1);
@@ -260,6 +265,23 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
     versionNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_VERSION);
 
+    String hierarchiesPath = getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES);
+    routerAppRootHierarchies = new HashMap<>(5);
+    routerAppRootHierarchies.put(0, appsZNode);
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      routerAppRootHierarchies.put(splitIndex,
+          getNodePath(hierarchiesPath, Integer.toString(splitIndex)));
+    }
+
+    appIdNodeSplitIndex = conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
+         YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
+    if (appIdNodeSplitIndex < 1 || appIdNodeSplitIndex > 4) {
+      LOG.info("Invalid value {} for config {} specified. Resetting it to {}",
+          appIdNodeSplitIndex, YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
+          YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
+      appIdNodeSplitIndex = YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX;
+    }
+
     // delegation token znodes
     routerRMDTSecretManagerRoot = getNodePath(baseZNode, ROUTER_RM_DT_SECRET_MANAGER_ROOT);
     routerRMDTMasterKeysRootPath = getNodePath(routerRMDTSecretManagerRoot,
@@ -276,6 +298,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
       zkManager.createRootDirRecursively(membershipZNode, zkAcl);
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
+      zkManager.createRootDirRecursively(
+          getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
+      for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+        zkManager.createRootDirRecursively(
+           routerAppRootHierarchies.get(splitIndex));
+      }
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
       zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
       zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
@@ -787,11 +815,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private void storeOrUpdateApplicationHomeSubCluster(final ApplicationId applicationId,
       final ApplicationHomeSubCluster applicationHomeSubCluster, boolean update)
       throws YarnException {
-    String appZNode = getNodePath(appsZNode, applicationId.toString());
-    ApplicationHomeSubClusterProto proto =
-        ((ApplicationHomeSubClusterPBImpl) applicationHomeSubCluster).getProto();
-    byte[] data = proto.toByteArray();
-    put(appZNode, data, update);
+    String appZNode;
+    try {
+      appZNode = getLeafAppIdNodePath(applicationId.toString(), true);
+      ApplicationHomeSubClusterProto proto =
+          ((ApplicationHomeSubClusterPBImpl) applicationHomeSubCluster).getProto();
+      byte[] data = proto.toByteArray();
+      put(appZNode, data, update);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 
   /**
@@ -1758,5 +1791,78 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   List<String> getChildren(final String path) throws Exception {
     return zkManager.getChildren(path);
+  }
+
+  /**
+   * Get alternate path for app id if path according to configured split index
+   * does not exist. We look for path based on all possible split indices.
+   * @param appId
+   * @return a {@link AppNodeSplitInfo} object containing the path and split
+   *    index if it exists, null otherwise.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private AppNodeSplitInfo getAlternatePath(String appId) throws Exception {
+    for (Map.Entry<Integer, String> entry : routerAppRootHierarchies.entrySet()) {
+      // Look for other paths
+      int splitIndex = entry.getKey();
+      if (splitIndex != appIdNodeSplitIndex) {
+        String alternatePath =
+            getLeafAppIdNodePath(appId, entry.getValue(), splitIndex, false);
+        if (exists(alternatePath)) {
+          return new AppNodeSplitInfo(alternatePath, splitIndex);
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns leaf app node path based on app id and passed split index. If the
+   * passed flag createParentIfNotExists is true, also creates the parent app
+   * node if it does not exist.
+   * @param appId application id.
+   * @param rootNode app root node based on split index.
+   * @param appIdNodeSplitIdx split index.
+   * @param createParentIfNotExists flag which determines if parent app node
+   *     needs to be created(as per split) if it does not exist.
+   * @return leaf app node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafAppIdNodePath(String appId, String rootNode,
+       int appIdNodeSplitIdx, boolean createParentIfNotExists) throws Exception {
+    if (appIdNodeSplitIdx == 0) {
+      return getNodePath(rootNode, appId);
+    }
+    String nodeName = appId;
+    int splitIdx = nodeName.length() - appIdNodeSplitIdx;
+    String rootNodePath =
+        getNodePath(rootNode, nodeName.substring(0, splitIdx));
+    if (createParentIfNotExists && !exists(rootNodePath)) {
+      try {
+        zkManager.create(rootNodePath);
+      } catch (KeeperException.NodeExistsException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to create app parent node {} as it already exists.",
+              rootNodePath);
+        }
+      }
+    }
+    return getNodePath(rootNodePath, nodeName.substring(splitIdx));
+  }
+
+  /**
+   * Returns leaf app node path based on app id and configured split index. If
+   * the passed flag createParentIfNotExists is true, also creates the parent
+   * app node if it does not exist.
+   * @param appId application id.
+   * @param createParentIfNotExists flag which determines if parent app node
+   *     needs to be created(as per split) if it does not exist.
+   * @return leaf app node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafAppIdNodePath(String appId,
+      boolean createParentIfNotExists) throws Exception {
+    return getLeafAppIdNodePath(appId, routerAppRootHierarchies.get(
+        appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
   }
 }
