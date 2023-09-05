@@ -1172,7 +1172,7 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_OBSERVER_ENABLED_DEFAULT)
         || startOpt == StartupOption.OBSERVER) {
       // Set Observer state using config instead of startup option
-      // This allows other startup options to be used when starting observer
+      // This allows other startup options to be used when starting observer.
       // e.g. rollingUpgrade
       return OBSERVER_STATE;
     } else {
