@@ -191,7 +191,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, getConf());
+    FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore, getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     interceptor.setConf(this.getConf());

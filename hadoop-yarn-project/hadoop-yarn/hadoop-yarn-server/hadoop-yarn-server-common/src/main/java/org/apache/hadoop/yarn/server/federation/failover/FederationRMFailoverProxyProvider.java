@@ -76,7 +76,7 @@ public class FederationRMFailoverProxyProvider<T>
     String clusterId = configuration.get(YarnConfiguration.RM_CLUSTER_ID);
     Preconditions.checkNotNull(clusterId, "Missing RM ClusterId");
     this.subClusterId = SubClusterId.newInstance(clusterId);
-    this.facade = FederationStateStoreFacade.getInstance();
+    this.facade = FederationStateStoreFacade.getInstance(configuration);
     if (configuration instanceof YarnConfiguration) {
       this.conf = (YarnConfiguration) configuration;
     }

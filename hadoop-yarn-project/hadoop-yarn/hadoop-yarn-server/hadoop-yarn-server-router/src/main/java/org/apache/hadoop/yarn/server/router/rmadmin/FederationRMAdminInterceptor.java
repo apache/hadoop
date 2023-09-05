@@ -130,7 +130,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
         0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(this.getConf());
     this.conf = this.getConf();
     this.adminRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();

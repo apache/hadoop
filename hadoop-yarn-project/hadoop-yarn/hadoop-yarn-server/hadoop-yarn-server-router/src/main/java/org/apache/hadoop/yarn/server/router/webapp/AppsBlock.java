@@ -104,7 +104,7 @@ public class AppsBlock extends RouterBlock {
   private AppsInfo getSubClusterAppsInfo(String subCluster, String states) {
     try {
       SubClusterId subClusterId = SubClusterId.newInstance(subCluster);
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(this.conf);
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
 
       if (subClusterInfo != null) {
