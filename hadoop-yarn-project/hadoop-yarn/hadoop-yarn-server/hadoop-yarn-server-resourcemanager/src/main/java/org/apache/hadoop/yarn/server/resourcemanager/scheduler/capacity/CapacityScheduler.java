@@ -1737,6 +1737,10 @@ public class CapacityScheduler extends
 
   private void allocateFromReservedContainer(FiCaSchedulerNode node,
       boolean withNodeHeartbeat, RMContainer reservedContainer) {
+    if(reservedContainer == null){
+      LOG.warn("reservedContainer is null,that may be unreserved by the proposal judgment thread");
+      return;
+    }
     FiCaSchedulerApp reservedApplication = getCurrentAttemptForContainer(
         reservedContainer.getContainerId());
     if (reservedApplication == null) {
