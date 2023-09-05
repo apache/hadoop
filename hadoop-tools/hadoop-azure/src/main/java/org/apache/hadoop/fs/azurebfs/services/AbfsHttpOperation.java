@@ -343,9 +343,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
            the caller. The caller is responsible for setting the correct status code.
            If expect header is not enabled, we throw back the exception.
          */
-        if (!"Server rejected operation".equals(e.getMessage())) {
-          throw e;
-        }
         String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
             && e instanceof ProtocolException
