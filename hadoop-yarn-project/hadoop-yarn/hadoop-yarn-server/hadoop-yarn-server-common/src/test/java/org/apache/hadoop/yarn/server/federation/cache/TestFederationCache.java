@@ -60,13 +60,14 @@ public class TestFederationCache {
   private Configuration conf;
   private FederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreTestUtil;
-  private FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
 
   public TestFederationCache(Class cacheClassName) {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 1);
     conf.setClass(YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
         cacheClassName, FederationCache.class);
+    facade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Before

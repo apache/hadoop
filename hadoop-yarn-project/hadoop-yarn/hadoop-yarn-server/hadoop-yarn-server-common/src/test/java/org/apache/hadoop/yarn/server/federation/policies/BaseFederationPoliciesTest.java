@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -75,7 +76,8 @@ public abstract class BaseFederationPoliciesTest {
         .newInstance("queue1", getPolicy().getClass().getCanonicalName(), buf));
     fpc.setFederationSubclusterResolver(
         FederationPoliciesTestUtil.initResolver());
-    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
+    Configuration conf = new Configuration();
+    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
     getPolicy().reinitialize(fpc);
   }
 
@@ -100,7 +102,8 @@ public abstract class BaseFederationPoliciesTest {
         .newInstance("queue1", "WrongPolicyName", buf));
     fpc.setFederationSubclusterResolver(
         FederationPoliciesTestUtil.initResolver());
-    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
+    Configuration conf = new Configuration();
+    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
     getPolicy().reinitialize(fpc);
   }
 
@@ -212,9 +215,9 @@ public abstract class BaseFederationPoliciesTest {
   public FederationStateStoreFacade getMemoryFacade() throws YarnException {
 
     // setting up a store and its facade (with caching off)
-    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance(conf);
     FederationStateStore store = new MemoryFederationStateStore();
     store.init(conf);
     fedFacade.reinitialize(store, conf);

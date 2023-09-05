@@ -1074,4 +1074,9 @@ public class NodeManager extends CompositeService
   public AsyncDispatcher getDispatcher() {
     return dispatcher;
   }
+
+  @VisibleForTesting
+  public void disableWebServer() {
+    removeService(((NMContext) context).webServer);
+  }
 }

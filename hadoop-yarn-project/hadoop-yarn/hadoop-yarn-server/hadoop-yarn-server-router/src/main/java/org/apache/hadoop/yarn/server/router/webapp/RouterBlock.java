@@ -51,7 +51,7 @@ public abstract class RouterBlock extends HtmlBlock {
     super(ctx);
     this.ctx = ctx;
     this.router = router;
-    this.facade = FederationStateStoreFacade.getInstance();
+    this.facade = FederationStateStoreFacade.getInstance(router.getConfig());
     this.conf = this.router.getConfig();
   }
 

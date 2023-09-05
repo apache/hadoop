@@ -87,8 +87,7 @@ public class TestPolicyGenerator {
 
   private Configuration conf;
   private FederationStateStore stateStore;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
 
   private List<SubClusterId> subClusterIds;
   private Map<SubClusterId, SubClusterInfo> subClusterInfos;
@@ -102,10 +101,11 @@ public class TestPolicyGenerator {
   public TestPolicyGenerator() {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
-
+    facade = FederationStateStoreFacade.getInstance(conf);
     gpgContext = new GPGContextImpl();
     gpgContext.setPolicyFacade(new GPGPolicyFacade(facade, conf));
     gpgContext.setStateStoreFacade(facade);
+
   }
 
   @Before
