@@ -223,7 +223,7 @@ public class Router extends CompositeService {
     if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
       fetcher = new FedAppReportFetcher(conf);
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
-              WebAppProxyServlet.class);
+          WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
       String proxyHostAndPort = getProxyHostAndPort(conf);
       String[] proxyParts = proxyHostAndPort.split(":");
