@@ -182,7 +182,7 @@ public class BootstrapStandby implements Tool, Configurable {
         // bootstrapping the other NNs from that layout, it will only contact the single NN.
         // However, if there cluster is already running and you are adding a NN later (e.g.
         // replacing a failed NN), then this will bootstrap from any node in the cluster.
-        nsInfo = proxy.versionRequest();
+        nsInfo = getProxyNamespaceInfo(proxy);
         isUpgradeFinalized = proxy.isUpgradeFinalized();
         isRollingUpgrade = proxy.isRollingUpgrade();
         break;
@@ -216,9 +216,6 @@ public class BootstrapStandby implements Tool, Configurable {
       return ERR_CODE_INVALID_VERSION;
     }
 
-    NNStorage storage = getStorage(conf, dirsToFormat, editUrisToFormat);
-    storage.setStorageInfo(nsInfo);
-
     System.out.println(
         "=====================================================\n" +
         "About to bootstrap Standby ID " + nnId + " from:\n" +
@@ -226,14 +223,16 @@ public class BootstrapStandby implements Tool, Configurable {
         "        Other Namenode ID: " + proxyInfo.getNameNodeID() + "\n" +
         "  Other NN's HTTP address: " + proxyInfo.getHttpAddress() + "\n" +
         "  Other NN's IPC  address: " + proxyInfo.getIpcAddress() + "\n" +
-        "             Namespace ID: " + storage.getNamespaceID() + "\n" +
-        "            Block pool ID: " + storage.getBlockPoolID() + "\n" +
-        "               Cluster ID: " + storage.getClusterID() + "\n" +
-        "           Layout version: " + storage.getLayoutVersion() + "\n" +
-        "   Service Layout version: " + storage.getServiceLayoutVersion() + "\n" +
+        "             Namespace ID: " + nsInfo.getNamespaceID() + "\n" +
+        "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
+        "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
+        "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+        "   Service Layout version: " + nsInfo.getServiceLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
         "         isRollingUpgrade: " + isRollingUpgrade + "\n" +
         "=====================================================");
+
+    NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
 
     if (!isUpgradeFinalized) {
       // the remote NameNode is in upgrade state, this NameNode should also
@@ -268,9 +267,9 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   @VisibleForTesting
-  public NNStorage getStorage(Configuration conf, Collection<URI> dirsToFormat,
-      List<URI> editUrisToFormat) throws IOException {
-    return new NNStorage(conf, dirsToFormat, editUrisToFormat);
+  public NamespaceInfo getProxyNamespaceInfo(NamenodeProtocol proxy)
+      throws IOException {
+    return proxy.versionRequest();
   }
 
   /**
@@ -428,7 +427,7 @@ public class BootstrapStandby implements Tool, Configurable {
     if (isRollingUpgrade) {
       // During a rolling upgrade the service layout versions may be different,
       // but we should check that the layout version being sent is compatible
-      return nsInfo.getLayoutVersion() <
+      return nsInfo.getLayoutVersion() <=
           HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
     }
     return nsInfo.getLayoutVersion() == nsInfo.getServiceLayoutVersion();
