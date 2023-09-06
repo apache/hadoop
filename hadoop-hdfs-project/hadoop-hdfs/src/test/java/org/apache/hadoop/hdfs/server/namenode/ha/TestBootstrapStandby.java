@@ -186,7 +186,7 @@ public class TestBootstrapStandby {
   }
 
   /**
-   * Test for downloading a checkpoint while the cluster is in rolling upgrade
+   * Test for downloading a checkpoint while the cluster is in rolling upgrade.
    */
   @Test
   public void testRollingUpgradeBootstrapStandby() throws Exception {
