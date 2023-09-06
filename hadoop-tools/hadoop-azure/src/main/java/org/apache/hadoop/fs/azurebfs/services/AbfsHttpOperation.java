@@ -347,9 +347,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
             && e instanceof ProtocolException
             && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
-          LOG.debug(
-              "Getting output stream failed with expect header enabled, returning back ",
-              e);
+          LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
           expect100failureReceived = true;
           return;
         } else {
