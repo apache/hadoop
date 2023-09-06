@@ -298,6 +298,7 @@ public class GlobalPolicyGenerator extends CompositeService {
       if (argv.length > 1) {
         if (argv[0].equals("-format-policy-store")) {
           // TODO: YARN-11561. [Federation] GPG Supports Format PolicyStateStore.
+          System.err.println("format-policy-store is not yet supported.");
         } else {
           printUsage(System.err);
         }

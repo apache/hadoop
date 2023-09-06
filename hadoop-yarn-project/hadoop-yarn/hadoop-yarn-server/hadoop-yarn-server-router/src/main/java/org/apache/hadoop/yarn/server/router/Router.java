@@ -252,8 +252,10 @@ public class Router extends CompositeService {
       if (argv.length > 1) {
         if (argv[0].equals("-format-state-store")) {
           // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
+          System.err.println("format-state-store is not yet supported.");
         } else if (argv[0].equals("-remove-application-from-state-store") && argv.length == 2) {
           // TODO: YARN-11547. [Federation] Router Supports Remove individual application records from FederationStateStore.
+          System.err.println("remove-application-from-state-store is not yet supported.");
         } else {
           printUsage(System.err);
         }
