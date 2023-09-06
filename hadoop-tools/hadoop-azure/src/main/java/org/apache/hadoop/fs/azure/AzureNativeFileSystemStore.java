@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
+import com.microsoft.azure.storage.AccessCondition;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -844,7 +845,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
 
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
+        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, true));
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
@@ -1598,6 +1599,24 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  private OutputStream openOutputStream(final CloudBlobWrapper blob, AccessCondition accessCondition)
+          throws StorageException {
+    if (blob instanceof CloudPageBlobWrapper){
+      return new PageBlobOutputStream(
+              (CloudPageBlobWrapper) blob, getInstrumentedContext(), sessionConfiguration);
+    } else {
+
+      // Handle both ClouldBlockBlobWrapperImpl and (only for the test code path)
+      // MockCloudBlockBlobWrapper.
+      if (accessCondition != null) {
+        return ((CloudBlockBlobWrapper) blob).openOutputStream(accessCondition, getUploadOptions(),
+                getInstrumentedContext());
+      }
+      return ((CloudBlockBlobWrapper) blob).openOutputStream(getUploadOptions(),
+              getInstrumentedContext());
+    }
+  }
+
   /**
    * Opens a new input stream for the given blob (page or block blob)
    * to read its data.
@@ -1829,13 +1848,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  public void storeEmptyLinkFile(String key, String tempBlobKey,
+                                 PermissionStatus permissionStatus) {
+  }
+
   /**
    * Stores an empty blob that's linking to the temporary file where're we're
    * uploading the initial data.
    */
   @Override
   public void storeEmptyLinkFile(String key, String tempBlobKey,
-      PermissionStatus permissionStatus) throws AzureException {
+      PermissionStatus permissionStatus, String eTag) throws AzureException {
     if (null == storageInteractionLayer) {
       final String errMsg = String.format(
           "Storage session expected for URI '%s' but does not exist.",
@@ -1858,7 +1881,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       CloudBlobWrapper blob = getBlobReference(key);
       storePermissionStatus(blob, permissionStatus);
       storeLinkAttribute(blob, tempBlobKey);
-      openOutputStream(blob).close();
+      AccessCondition accessCondition = new AccessCondition();
+      accessCondition.setIfMatch(eTag);
+      openOutputStream(blob, accessCondition).close();
     } catch (Exception e) {
       // Caught exception while attempting upload. Re-throw as an Azure
       // storage exception.
@@ -2219,7 +2244,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
                 key, // Always return denormalized key with metadata.
                 getDataLength(blob, properties),
                 properties.getLastModified().getTime(),
-                getPermissionStatus(blob), hadoopBlockSize);
+                getPermissionStatus(blob), hadoopBlockSize, properties.getEtag());
           }
         } catch(StorageException e){
           if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {

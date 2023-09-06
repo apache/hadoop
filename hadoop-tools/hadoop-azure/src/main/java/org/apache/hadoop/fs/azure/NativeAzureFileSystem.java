@@ -1879,6 +1879,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     FileMetadata existingMetadata = store.retrieveMetadata(key);
     if (existingMetadata != null) {
+      String eTag = existingMetadata.geteTag();
       if (existingMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");

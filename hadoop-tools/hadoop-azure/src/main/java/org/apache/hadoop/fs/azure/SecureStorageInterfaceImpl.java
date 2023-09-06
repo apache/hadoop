@@ -547,6 +547,13 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
       return ((CloudBlockBlob) getBlob()).openOutputStream(null, options, opContext);
     }
 
+    public OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException {
+      return ((CloudBlockBlob) getBlob()).openOutputStream(accessCondition, options, opContext);
+    }
+
     public void upload(InputStream sourceStream, OperationContext opContext)
         throws StorageException, IOException {
       getBlob().upload(sourceStream, 0, null, null, opContext);

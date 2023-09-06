@@ -34,6 +34,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TimeZone;
 import java.util.List;
+
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
@@ -528,6 +530,13 @@ public class MockStorageInterface extends StorageInterface {
         OperationContext opContext) throws StorageException {
       return backingStore.uploadBlockBlob(convertUriToDecodedString(uri),
           metadata);
+    }
+
+    public OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException {
+      return ((CloudBlockBlob) getBlob()).openOutputStream(accessCondition, options, opContext);
     }
 
     @Override

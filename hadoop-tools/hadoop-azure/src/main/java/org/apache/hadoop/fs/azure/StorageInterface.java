@@ -643,6 +643,11 @@ abstract class StorageInterface {
         BlobRequestOptions options,
         OperationContext opContext) throws StorageException;
 
+    OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException;
+
     /**
      *
      * @param filter    A {@link BlockListingFilter} value that specifies whether to download
