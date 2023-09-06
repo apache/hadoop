@@ -50,15 +50,16 @@ public class GPGPoliciesBlock extends HtmlBlock {
   @Override
   protected void render(Block html) {
     try {
-      Collection<SubClusterPolicyConfiguration> policies = facade.getPoliciesConfigurations().values();
+      Collection<SubClusterPolicyConfiguration> policies =
+          facade.getPoliciesConfigurations().values();
       initYarnFederationPolicies(policies, html);
     } catch (Exception e) {
       LOG.error("Get GPGPolicies Error.", e);
     }
   }
 
-  private void initYarnFederationPolicies(Collection<SubClusterPolicyConfiguration> policies, Block html)
-      throws FederationPolicyInitializationException {
+  private void initYarnFederationPolicies(Collection<SubClusterPolicyConfiguration> policies,
+      Block html) throws FederationPolicyInitializationException {
 
     Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.table("#policies").
         thead().
