@@ -1878,8 +1878,9 @@ public class NativeAzureFileSystem extends FileSystem {
     String key = pathToKey(absolutePath);
 
     FileMetadata existingMetadata = store.retrieveMetadata(key);
+    String eTag = null;
     if (existingMetadata != null) {
-      String eTag = existingMetadata.geteTag();
+      eTag = existingMetadata.geteTag();
       if (existingMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");
@@ -1941,7 +1942,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // we're
       // doing.
       // 3. Makes it easier to restore/cleanup data in the event of us crashing.
-      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus);
+      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus, eTag);
 
       // The key is encoded to point to a common container at the storage server.
       // This reduces the number of splits on the server side when load balancing.
