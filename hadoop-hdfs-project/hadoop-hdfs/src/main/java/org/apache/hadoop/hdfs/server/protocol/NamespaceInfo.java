@@ -114,6 +114,7 @@ public class NamespaceInfo extends StorageInfo {
     super(storage);
     if (storage instanceof NamespaceInfo) {
       this.capabilities = ((NamespaceInfo)storage).capabilities;
+      this.blockPoolID = ((NamespaceInfo)storage).blockPoolID;
     } else {
       this.capabilities = CAPABILITIES_SUPPORTED;
     }
