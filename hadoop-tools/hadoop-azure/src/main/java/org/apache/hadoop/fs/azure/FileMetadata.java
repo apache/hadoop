@@ -95,6 +95,13 @@ class FileMetadata extends FileStatus {
     this.eTag = eTag;
   }
 
+  public FileMetadata(String key, long lastModified,
+                      PermissionStatus permissionStatus, BlobMaterialization blobMaterialization,
+                      final long blockSize, String eTag) {
+    this(key, lastModified, permissionStatus, blobMaterialization, blockSize);
+    this.eTag = eTag;
+  }
+
   @Override
   public Path getPath() {
     Path p = super.getPath();
@@ -131,7 +138,7 @@ class FileMetadata extends FileStatus {
     key = null;
   }
 
-  public String geteTag() {
+  public String getEtag() {
     return eTag;
   }
 }

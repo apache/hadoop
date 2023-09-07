@@ -2786,18 +2786,23 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void rename(String srcKey, String dstKey) throws IOException {
-    rename(srcKey, dstKey, false, null, true);
+    rename(srcKey, dstKey, false, null, true, null);
+  }
+
+  @Override
+  public void rename(String srcKey, String dstKey, String eTag) throws IOException {
+    rename(srcKey, dstKey, false, null, true, eTag);
   }
 
   @Override
   public void rename(String srcKey, String dstKey, boolean acquireLease,
                      SelfRenewingLease existingLease) throws IOException {
-    rename(srcKey, dstKey, acquireLease, existingLease, true);
+    rename(srcKey, dstKey, acquireLease, existingLease, true, null);
   }
 
-    @Override
+  @Override
   public void rename(String srcKey, String dstKey, boolean acquireLease,
-      SelfRenewingLease existingLease, boolean overwriteDestination) throws IOException {
+      SelfRenewingLease existingLease, boolean overwriteDestination, String eTag) throws IOException {
 
     LOG.debug("Moving {} to {}", srcKey, dstKey);
 
@@ -2859,8 +2864,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // a more intensive exponential retry policy when the cluster is getting
       // throttled.
       try {
-        dstBlob.startCopyFromBlob(srcBlob, null,
-            getInstrumentedContext(), overwriteDestination);
+        if (eTag != null) {
+          dstBlob.startCopyFromBlob(srcBlob, null,
+                  getInstrumentedContext(), overwriteDestination, eTag);
+        } else {
+          dstBlob.startCopyFromBlob(srcBlob, null,
+                  getInstrumentedContext(), overwriteDestination);
+        }
       } catch (StorageException se) {
         if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
           int copyBlobMinBackoff = sessionConfiguration.getInt(
@@ -2883,8 +2893,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           options.setRetryPolicyFactory(new RetryExponentialRetry(
             copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff,
             copyBlobMaxRetries));
-          dstBlob.startCopyFromBlob(srcBlob, options,
-              getInstrumentedContext(), overwriteDestination);
+          if (eTag != null) {
+            dstBlob.startCopyFromBlob(srcBlob, options,
+                    getInstrumentedContext(), overwriteDestination, eTag);
+          } else {
+            dstBlob.startCopyFromBlob(srcBlob, options,
+                    getInstrumentedContext(), overwriteDestination);
+          }
         } else {
           throw se;
         }

@@ -443,6 +443,24 @@ class StorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
+    public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
+                                  OperationContext opContext, boolean overwriteDestination, String eTag)
+            throws StorageException, URISyntaxException {
+      AccessCondition dstAccessCondition =
+              overwriteDestination
+                      ? null
+                      : AccessCondition.generateIfNotExistsCondition();
+      if (dstAccessCondition != null) {
+        dstAccessCondition.setIfMatch(eTag);
+      } else {
+        dstAccessCondition = new AccessCondition();
+        dstAccessCondition.setIfMatch(eTag);
+      }
+      getBlob().startCopy(sourceBlob.getBlob().getQualifiedUri(),
+              null, dstAccessCondition, options, opContext);
+    }
+
+    @Override
     public void downloadRange(long offset, long length, OutputStream outStream,
         BlobRequestOptions options, OperationContext opContext)
             throws StorageException, IOException {

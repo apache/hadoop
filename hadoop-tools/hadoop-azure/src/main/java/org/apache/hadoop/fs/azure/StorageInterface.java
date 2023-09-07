@@ -408,6 +408,10 @@ abstract class StorageInterface {
     public abstract void startCopyFromBlob(CloudBlobWrapper sourceBlob,
         BlobRequestOptions options, OperationContext opContext, boolean overwriteDestination)
         throws StorageException, URISyntaxException;
+
+    public abstract void startCopyFromBlob(CloudBlobWrapper sourceBlob,
+                                         BlobRequestOptions options, OperationContext opContext, boolean overwriteDestination, String eTag)
+            throws StorageException, URISyntaxException;
     
     /**
      * Returns the blob's copy state.

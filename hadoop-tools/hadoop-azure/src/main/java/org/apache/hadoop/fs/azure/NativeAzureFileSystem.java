@@ -1033,9 +1033,10 @@ public class NativeAzureFileSystem extends FileSystem {
     private String key;
     private String keyEncoded;
     private OutputStream out;
+    private String eTag;
 
     public NativeAzureFsOutputStream(OutputStream out, String aKey,
-        String anEncodedKey) throws IOException {
+        String anEncodedKey, String eTag) throws IOException {
       // Check input arguments. The output stream should be non-null and the
       // keys
       // should be valid strings.
@@ -1242,7 +1243,10 @@ public class NativeAzureFileSystem extends FileSystem {
      * when the stream is closed.
      */
     private void restoreKey() throws IOException {
-      store.rename(getEncodedKey(), getKey());
+      String key = getKey();
+      FileMetadata existingMetadata = store.retrieveMetadata(key);
+      String eTag = existingMetadata.getEtag();
+      store.rename(getEncodedKey(), key, eTag);
     }
 
     /**
@@ -1880,7 +1884,7 @@ public class NativeAzureFileSystem extends FileSystem {
     FileMetadata existingMetadata = store.retrieveMetadata(key);
     String eTag = null;
     if (existingMetadata != null) {
-      eTag = existingMetadata.geteTag();
+      eTag = existingMetadata.getEtag();
       if (existingMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");
@@ -1955,7 +1959,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus, key), key, keyEncoded);
+          keyEncoded, permissionStatus, key), key, keyEncoded, eTag);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
@@ -3305,7 +3309,7 @@ public class NativeAzureFileSystem extends FileSystem {
         // files, redo a failed rename operation, or rename a directory
         // recursively; for these cases the destination may exist.
         store.rename(srcKey, dstKey, false, null,
-            false);
+            false, null);
       } catch(IOException ex) {
         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
