@@ -1033,10 +1033,9 @@ public class NativeAzureFileSystem extends FileSystem {
     private String key;
     private String keyEncoded;
     private OutputStream out;
-    private String eTag;
 
     public NativeAzureFsOutputStream(OutputStream out, String aKey,
-        String anEncodedKey, String eTag) throws IOException {
+        String anEncodedKey) throws IOException {
       // Check input arguments. The output stream should be non-null and the
       // keys
       // should be valid strings.
@@ -1959,7 +1958,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus, key), key, keyEncoded, eTag);
+          keyEncoded, permissionStatus, key), key, keyEncoded);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
