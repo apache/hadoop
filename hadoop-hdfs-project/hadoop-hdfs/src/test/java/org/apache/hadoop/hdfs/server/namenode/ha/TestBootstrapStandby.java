@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -195,9 +194,9 @@ public class TestBootstrapStandby {
     int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
 
     DistributedFileSystem fs = cluster.getFileSystem(0);
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    NameNodeAdapter.saveNamespace(nn0);
+    NameNodeAdapter.leaveSafeMode(nn0);
 
     // Setup BootstrapStandby to think it is a future NameNode version
     BootstrapStandby bs = spy(new BootstrapStandby());
