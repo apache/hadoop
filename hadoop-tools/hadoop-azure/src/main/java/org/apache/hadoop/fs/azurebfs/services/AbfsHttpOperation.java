@@ -88,7 +88,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
-  private boolean expect100failureReceived = false;
+  private boolean connectionDisconnectedOnError = false;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -338,17 +338,26 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
          */
         outputStream = getConnOutputStream();
       } catch (IOException e) {
-        /* If getOutputStream fails with an exception and expect header
-           is enabled, we return back without throwing an exception to
-           the caller. The caller is responsible for setting the correct status code.
-           If expect header is not enabled, we throw back the exception.
+        connectionDisconnectedOnError = true;
+        /* If getOutputStream fails with an expect-100 exception , we return back
+           without throwing an exception to the caller. Else, we throw back the exception.
          */
         String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
             && e instanceof ProtocolException
             && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
           LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
-          expect100failureReceived = true;
+          /*
+           * In case expect-100 assertion has failed, headers and inputStream should not
+           * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
+           * conn.getInputStream() will lead to repeated server call.
+           * ref: https://bugs.openjdk.org/browse/JDK-8314978.
+           * Reading conn.responseCode() and conn.getResponseMessage() is safe in
+           * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
+           * in the HttpUrlConnection object before throwing exception to the caller.
+           */
+          this.statusCode = getConnResponseCode();
+          this.statusDescription = getConnResponseMessage();
           return;
         } else {
           LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
@@ -383,7 +392,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
+    if (connectionDisconnectedOnError) {
+      LOG.debug("This connection was not successful or has been disconnected, "
+          + "hence not parsing headers and inputStream");
+      return;
+    }
+    processConnHeadersAndInputStreams(buffer, offset, length);
+  }
 
+  void processConnHeadersAndInputStreams(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
     // get the response
     long startTime = 0;
     if (this.isTraceEnabled) {
@@ -398,23 +417,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.statusDescription = getConnResponseMessage();
 
-    /*
-     * In case expect-100 assertion has failed, headers and inputStream should not
-     * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
-     * conn.getInputStream() will lead to repeated server call.
-     * ref: https://bugs.openjdk.org/browse/JDK-8314978
-     */
-    if (expect100failureReceived) {
-      LOG.debug("Expect-100 assertion has failed and hence not parsing headers"
-          + "and inputStream.");
-      return;
-    }
-    processConnHeadersAndInputStreams(buffer, offset, length);
-  }
-
-  void processConnHeadersAndInputStreams(final byte[] buffer,
-      final int offset,
-      final int length) throws IOException {
     this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
@@ -428,7 +430,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       return;
     }
 
-    long startTime = 0;
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
@@ -661,8 +662,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   @VisibleForTesting
-  Boolean getExpect100failureReceived() {
-    return expect100failureReceived;
+  Boolean getConnectionDisconnectedOnError() {
+    return connectionDisconnectedOnError;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

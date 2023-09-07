@@ -172,14 +172,14 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
       os.close();
     });
-    Assertions.assertThat(httpOpForAppendTest[0].getExpect100failureReceived())
+    Assertions.assertThat(httpOpForAppendTest[0].getConnectionDisconnectedOnError())
         .describedAs("First try from AbfsClient will have expect-100 "
             + "header and should fail with expect-100 error.").isTrue();
     Mockito.verify(httpOpForAppendTest[0], Mockito.times(0))
         .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
             Mockito.anyInt(), Mockito.anyInt());
 
-    Assertions.assertThat(httpOpForAppendTest[1].getExpect100failureReceived())
+    Assertions.assertThat(httpOpForAppendTest[1].getConnectionDisconnectedOnError())
         .describedAs("The retried operation from AbfsClient should not "
             + "fail with expect-100 error. The retried operation does not have"
             + "expect-100 header.").isFalse();
