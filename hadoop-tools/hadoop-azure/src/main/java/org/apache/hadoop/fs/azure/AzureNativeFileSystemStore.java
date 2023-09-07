@@ -845,7 +845,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
 
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, true));
+        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
@@ -1881,9 +1881,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       CloudBlobWrapper blob = getBlobReference(key);
       storePermissionStatus(blob, permissionStatus);
       storeLinkAttribute(blob, tempBlobKey);
-      AccessCondition accessCondition = new AccessCondition();
-      accessCondition.setIfMatch(eTag);
-      openOutputStream(blob, accessCondition).close();
+      if (eTag != null) {
+        AccessCondition accessCondition = new AccessCondition();
+        accessCondition.setIfMatch(eTag);
+        openOutputStream(blob, accessCondition).close();
+      } else {
+        openOutputStream(blob).close();
+      }
     } catch (Exception e) {
       // Caught exception while attempting upload. Re-throw as an Azure
       // storage exception.
