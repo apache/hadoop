@@ -457,8 +457,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
-                  - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
