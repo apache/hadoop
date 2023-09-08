@@ -823,16 +823,15 @@
 
 <property>
   <name>mapreduce.task.userlog.limit.kb</name>
-  <value>0</value>
-  <description>The maximum size of user-logs of each task in KB. 0 disables the cap.
+  <value>10240</value>
+  <description>The maximum size of user-logs of each task in KB.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.container.log.limit.kb</name>
-  <value>0</value>
+  <value>10240</value>
   <description>The maximum size of the MRAppMaster attempt container logs in KB.
-    0 disables the cap.
   </description>
 </property>
 
