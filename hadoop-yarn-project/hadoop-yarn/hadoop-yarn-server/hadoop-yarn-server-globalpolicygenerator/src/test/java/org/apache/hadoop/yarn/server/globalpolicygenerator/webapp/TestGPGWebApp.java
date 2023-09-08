@@ -34,6 +34,7 @@ public class TestGPGWebApp {
   public void testGPGPoliciesPageWebView()
       throws InterruptedException, YarnException, IOException {
     LOG.info("testGPGPoliciesPageWebView.");
-    WebAppTests.testPage(GPGPoliciesPage.class, GlobalPolicyGenerator.class, new GlobalPolicyGenerator());
+    WebAppTests.testPage(GPGPoliciesPage.class, GlobalPolicyGenerator.class,
+        new GlobalPolicyGenerator());
   }
 }
