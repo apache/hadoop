@@ -202,7 +202,7 @@ public class BootstrapStandby implements Tool, Configurable {
     if (!checkLayoutVersion(nsInfo)) {
       LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match " + "this node's layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
+          + nsInfo.getServiceLayoutVersion() + ")");
       return ERR_CODE_INVALID_VERSION;
     }
 
