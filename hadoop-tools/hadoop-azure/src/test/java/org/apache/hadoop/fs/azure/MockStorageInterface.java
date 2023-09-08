@@ -552,7 +552,8 @@ public class MockStorageInterface extends StorageInterface {
             AccessCondition accessCondition,
             BlobRequestOptions options,
             OperationContext opContext) throws StorageException {
-      return ((CloudBlockBlob) getBlob()).openOutputStream(accessCondition, options, opContext);
+      return backingStore.uploadBlockBlob(convertUriToDecodedString(uri),
+              metadata);
     }
 
     @Override

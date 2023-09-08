@@ -1888,10 +1888,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         AccessCondition accessCondition = new AccessCondition();
         accessCondition.setIfMatch(eTag);
         openOutputStream(blob, accessCondition).close();
-        createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        if (blob != null && blob.getBlob() != null) {
+          createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        }
       } else {
         openOutputStream(blob).close();
-        createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        if (blob != null && blob.getBlob() != null) {
+          createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        }
       }
     } catch (Exception e) {
       // Caught exception while attempting upload. Re-throw as an Azure
