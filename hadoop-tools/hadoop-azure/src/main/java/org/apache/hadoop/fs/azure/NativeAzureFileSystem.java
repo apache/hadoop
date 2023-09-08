@@ -1034,8 +1034,10 @@ public class NativeAzureFileSystem extends FileSystem {
     private String keyEncoded;
     private OutputStream out;
 
+    private final String keyPathEtag;
+
     public NativeAzureFsOutputStream(OutputStream out, String aKey,
-        String anEncodedKey) throws IOException {
+        String anEncodedKey, final String[] keyFileETag) throws IOException {
       // Check input arguments. The output stream should be non-null and the
       // keys
       // should be valid strings.
@@ -1059,6 +1061,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       setKey(aKey);
       setEncodedKey(anEncodedKey);
+      keyPathEtag = keyFileETag[0];
     }
 
     /**
@@ -1243,9 +1246,9 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     private void restoreKey() throws IOException {
       String key = getKey();
-      FileMetadata existingMetadata = store.retrieveMetadata(key);
-      String eTag = existingMetadata.getEtag();
-      store.rename(getEncodedKey(), key, eTag);
+//      FileMetadata existingMetadata = store.retrieveMetadata(key);
+//      String eTag = existingMetadata.getEtag();
+      store.rename(getEncodedKey(), key, keyPathEtag);
     }
 
     /**
@@ -1945,7 +1948,8 @@ public class NativeAzureFileSystem extends FileSystem {
       // we're
       // doing.
       // 3. Makes it easier to restore/cleanup data in the event of us crashing.
-      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus, eTag);
+      String[] keyFileETag = new String[1];
+      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus, eTag, keyFileETag);
 
       // The key is encoded to point to a common container at the storage server.
       // This reduces the number of splits on the server side when load balancing.
@@ -1958,7 +1962,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus, key), key, keyEncoded);
+          keyEncoded, permissionStatus, key), key, keyEncoded, keyFileETag);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);

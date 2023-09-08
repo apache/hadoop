@@ -1860,7 +1860,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   @Override
   public void storeEmptyLinkFile(String key, String tempBlobKey,
-      PermissionStatus permissionStatus, String eTag) throws AzureException {
+      PermissionStatus permissionStatus, String eTag,
+      final String[] createdFileETag) throws AzureException {
     if (null == storageInteractionLayer) {
       final String errMsg = String.format(
           "Storage session expected for URI '%s' but does not exist.",
@@ -1887,6 +1888,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         AccessCondition accessCondition = new AccessCondition();
         accessCondition.setIfMatch(eTag);
         openOutputStream(blob, accessCondition).close();
+        createdFileETag[0] = blob.getBlob().getProperties().getEtag();
       } else {
         openOutputStream(blob).close();
       }

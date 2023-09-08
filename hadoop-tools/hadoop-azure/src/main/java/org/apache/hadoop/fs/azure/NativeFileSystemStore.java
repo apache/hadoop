@@ -73,7 +73,8 @@ interface NativeFileSystemStore {
       PermissionStatus permissionStatus) throws AzureException;
 
   void storeEmptyLinkFile(String key, String tempBlobKey,
-                          PermissionStatus permissionStatus, String eTag) throws AzureException;
+                          PermissionStatus permissionStatus, String eTag,
+      final String[] createdFileETag) throws AzureException;
 
   String getLinkInFileMetadata(String key) throws AzureException;
 
