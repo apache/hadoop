@@ -1,10 +1,8 @@
 import os
 import re
 
-
 def trim_right_spaces(text):
     return text.rstrip()
-
 
 def main():
     directory_name = input("./")
@@ -20,7 +18,6 @@ def main():
             os.replace(
                 os.path.join(root, file_name + ".tmp"), os.path.join(root, file_name)
             )
-
 
 if __name__ == "__main__":
     main()
