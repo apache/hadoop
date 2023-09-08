@@ -1246,8 +1246,6 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     private void restoreKey() throws IOException {
       String key = getKey();
-//      FileMetadata existingMetadata = store.retrieveMetadata(key);
-//      String eTag = existingMetadata.getEtag();
       store.rename(getEncodedKey(), key, keyPathEtag);
     }
 
