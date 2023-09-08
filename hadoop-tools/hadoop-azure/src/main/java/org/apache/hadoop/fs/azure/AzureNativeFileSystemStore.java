@@ -845,7 +845,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
 
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
+        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, true));
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
@@ -1569,7 +1569,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         outputStream = blockBlobOutputStream;
       } else {
-        outputStream = openOutputStream(blob);
+        AccessCondition accessCondition = new AccessCondition();
+        accessCondition.setIfNoneMatch("*");
+        outputStream = openOutputStream(blob, accessCondition);
       }
 
       DataOutputStream dataOutStream = new SyncableDataOutputStream(outputStream);
