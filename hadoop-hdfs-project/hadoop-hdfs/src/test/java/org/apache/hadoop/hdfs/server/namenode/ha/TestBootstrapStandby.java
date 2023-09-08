@@ -230,7 +230,6 @@ public class TestBootstrapStandby {
     // Roll edit logs a few times to inflate txid
     nn0.getRpcServer().rollEditLog();
     nn0.getRpcServer().rollEditLog();
-
     // Make checkpoint
     NameNodeAdapter.enterSafeMode(nn0, false);
     NameNodeAdapter.saveNamespace(nn0);
