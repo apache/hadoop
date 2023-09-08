@@ -410,6 +410,8 @@ public interface MRJobConfig {
 
   public static final String TASK_USERLOG_LIMIT = "mapreduce.task.userlog.limit.kb";
 
+  public static final int DEFAULT_TASK_USERLOG_LIMIT = 10240;
+
   public static final String MAP_SORT_SPILL_PERCENT = "mapreduce.map.sort.spill.percent";
 
   public static final String MAP_INPUT_FILE = "mapreduce.map.input.file";
@@ -758,11 +760,11 @@ public interface MRJobConfig {
 
   public static final String MR_AM_LOG_KB =
       MR_AM_PREFIX + "container.log.limit.kb";
-  public static final int DEFAULT_MR_AM_LOG_KB = 0; // don't roll
+  public static final int DEFAULT_MR_AM_LOG_KB = 10240;
 
   public static final String MR_AM_LOG_BACKUPS =
       MR_AM_PREFIX + "container.log.backups";
-  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0;
+  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0; // don't roll
 
   /**The number of splits when reporting progress in MR*/
   public static final String MR_AM_NUM_PROGRESS_SPLITS = 
