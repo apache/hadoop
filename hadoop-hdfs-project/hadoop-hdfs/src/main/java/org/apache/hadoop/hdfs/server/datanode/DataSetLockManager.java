@@ -256,7 +256,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     threadCountMap.putIfAbsent(thread, new TrackLog(thread));
   }
 
-  public void lockLeakCheck() {
+  public synchronized void lockLeakCheck() {
     if (!openLockTrace) {
       LOG.warn("not open lock leak check func");
       return;
