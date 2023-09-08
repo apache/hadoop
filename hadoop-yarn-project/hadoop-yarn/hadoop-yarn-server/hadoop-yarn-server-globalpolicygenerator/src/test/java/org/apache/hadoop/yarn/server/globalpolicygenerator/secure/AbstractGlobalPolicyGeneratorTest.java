@@ -136,7 +136,7 @@ public abstract class AbstractGlobalPolicyGeneratorTest {
     assertNull("GPG is already running", gpg);
     MemoryFederationStateStore stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);
     UserGroupInformation.setConfiguration(conf);
     gpg = new GlobalPolicyGenerator();
     gpg.init(conf);

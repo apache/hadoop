@@ -245,6 +245,6 @@ public class TestableFederationClientInterceptor
         TimeUnit.MILLISECONDS);
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, conf);
   }
 }

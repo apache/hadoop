@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Test;
 
@@ -69,5 +71,16 @@ public class TestGlobalPolicyGenerator {
     GlobalPolicyGenerator.main(new String[]{"-help", "-format-policy-store"});
     assertTrue(dataErr.toString().contains(
         "Usage: yarn gpg [-format-policy-store]"));
+  }
+  
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    String errMsg = "Invalid attribute value for " +
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION + " of DUMMYAUTH";
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "DUMMYAUTH");
+    GlobalPolicyGenerator gpg = new GlobalPolicyGenerator();
+    LambdaTestUtils.intercept(IllegalArgumentException.class, errMsg, () -> gpg.init(dummyConf));
+    gpg.stop();
   }
 }

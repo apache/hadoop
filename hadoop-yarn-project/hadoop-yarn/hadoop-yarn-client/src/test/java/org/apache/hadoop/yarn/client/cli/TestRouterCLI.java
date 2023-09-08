@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -76,6 +78,19 @@ public class TestRouterCLI {
           Object obj = invocationOnMock.getArgument(0);
           SaveFederationQueuePolicyRequest request = (SaveFederationQueuePolicyRequest) obj;
           return SaveFederationQueuePolicyResponse.newInstance("success");
+        });
+
+    when(admin.listFederationQueuePolicies(any(QueryFederationQueuePoliciesRequest.class)))
+        .thenAnswer((Answer<QueryFederationQueuePoliciesResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          Object obj = invocationOnMock.getArgument(0);
+          QueryFederationQueuePoliciesRequest request = (QueryFederationQueuePoliciesRequest) obj;
+          String queue = request.getQueue();
+          List<FederationQueueWeight> weights = new ArrayList<>();
+          FederationQueueWeight weight = FederationQueueWeight.newInstance(
+              "SC-1:0.8,SC-2:0.2", "SC-1:0.6,SC-2:0.4", "1", queue, "test");
+          weights.add(weight);
+          return QueryFederationQueuePoliciesResponse.newInstance(1, 1, 1, 10, weights);
         });
 
     Configuration config = new Configuration();
@@ -239,5 +254,16 @@ public class TestRouterCLI {
     assertEquals("root.b", queueWeight2.getQueue());
     assertEquals("SC-1:0.8,SC-2:0.2", queueWeight2.getAmrmWeight());
     assertEquals("SC-1:0.6,SC-2:0.4", queueWeight2.getRouterWeight());
+  }
+
+  @Test
+  public void testListPolicies() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+
+    String[] args = {"-policy", "-l", "--queue", "root.a"};
+    assertEquals(0, rmAdminCLI.run(args));
   }
 }

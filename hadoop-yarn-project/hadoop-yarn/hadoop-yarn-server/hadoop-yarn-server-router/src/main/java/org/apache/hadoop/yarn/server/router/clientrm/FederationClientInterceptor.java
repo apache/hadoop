@@ -212,7 +212,7 @@ public class FederationClientInterceptor
   public void init(String userName) {
     super.init(userName);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(getConf());
     rand = new Random(System.currentTimeMillis());
 
     int numMinThreads = getNumMinThreads(getConf());
