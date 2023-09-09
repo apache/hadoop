@@ -2945,6 +2945,9 @@ public abstract class Server {
             }
           }
         } catch (IOException ioe) {
+          if (ioe instanceof RetriableException) {
+            rpcMetrics.incrRcRejectedByObserverCalls();
+          }
           throw new RpcServerException("Processing RPC request caught ", ioe);
         }
       }
