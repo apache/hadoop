@@ -1439,7 +1439,7 @@ public abstract class Server {
               readers[j].shutdown();
             }
             throw new IOException("The number of readers for the server is set larger than the system limit. " +
-              "Consider lowering " + CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY + 
+              "Consider lowering " + CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY +
               " or the number of readers configured for the server.", e);
           } else {
             throw e;
