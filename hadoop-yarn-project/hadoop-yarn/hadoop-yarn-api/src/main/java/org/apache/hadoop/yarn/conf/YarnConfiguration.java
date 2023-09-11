@@ -150,7 +150,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_CONTAINER_DEBUG_INFO =
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info-on-error.enabled";
+
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = true;
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR = false;
 
   ////////////////////////////////
   // IPC Configs
