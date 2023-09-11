@@ -251,4 +251,9 @@ public interface S3ATestConstants {
    * Value: {@value}.
    */
   String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
+
+  /**
+   * AWS ireland region.
+   */
+  String EU_WEST_1 = "eu-west-1";
 }

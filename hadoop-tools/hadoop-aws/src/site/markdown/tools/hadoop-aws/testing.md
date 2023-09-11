@@ -1004,71 +1004,19 @@ using an absolute XInclude reference to it.
 
 ## <a name="failure-injection"></a>Failure Injection
 
-**Warning do not enable any type of failure injection in production.  The
-following settings are for testing only.**
-
-One of the challenges with S3A integration tests was the fact that S3 was an
-eventually-consistent storage system. To simulate inconsistencies more
-frequently than they would normally surface, S3A supports a shim layer on top of the `AmazonS3Client`
-class which artificially delays certain paths from appearing in listings.
-This is implemented in the class `InconsistentAmazonS3Client`.
-
-Now that S3 is consistent, injecting inconsistency is no longer needed
-during testing.
-However, it is stil useful to use the other feature of the client:
-throttling simulation.
-
-## Simulating List Inconsistencies
-
-### Enabling the InconsistentAmazonS3CClient
+S3A provides an "Inconsistent S3 Client Factory" that can be used to
+simulate throttling by injecting random failures on S3 client requests.
 
 
-To enable the fault-injecting client via configuration, switch the
-S3A client to use the "Inconsistent S3 Client Factory" when connecting to
-S3:
+**Note**
 
-```xml
-<property>
-  <name>fs.s3a.s3.client.factory.impl</name>
-  <value>org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory</value>
-</property>
-```
-
-The inconsistent client will, on every AWS SDK request,
-generate a random number, and if less than the probability,
-raise a 503 exception.
-
-```xml
-
-<property>
-  <name>fs.s3a.failinject.throttle.probability</name>
-  <value>0.05</value>
-</property>
-```
-
-These exceptions are returned to S3; they do not test the
-AWS SDK retry logic.
+In previous releases, this factory could also be used to simulate
+inconsistencies during testing of S3Guard. Now that S3 is consistent,
+injecting inconsistency is no longer needed during testing.
 
 
-### Using the `InconsistentAmazonS3CClient` in downstream integration tests
 
-The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
-be used in integration tests.
-
-## <a name="s3guard"></a> Testing S3Guard
-
-As part of the removal of S3Guard from the production code, the tests have been updated
-so that
-
-* All S3Guard-specific tests have been deleted.
-* All tests parameterized on S3Guard settings have had those test configurations removed.
-* The maven profiles option to run tests with S3Guard have been removed.
-
-There is no need to test S3Guard -and so tests are lot faster.
-(We developers are all happy)
-
-
-##<a name="assumed_roles"></a> Testing Assumed Roles
+## <a name="assumed_roles"></a> Testing Assumed Roles
 
 Tests for the AWS Assumed Role credential provider require an assumed
 role to request.
@@ -1289,9 +1237,12 @@ time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
 
 # ---------------------------------------------------
 # S3 Select on Landsat
+# this will fail with a ClassNotFoundException unless
+# eventstore JAR is added to the classpath
 # ---------------------------------------------------
 
 export LANDSATGZ=s3a://landsat-pds/scene_list.gz
+
 
 bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
  "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
