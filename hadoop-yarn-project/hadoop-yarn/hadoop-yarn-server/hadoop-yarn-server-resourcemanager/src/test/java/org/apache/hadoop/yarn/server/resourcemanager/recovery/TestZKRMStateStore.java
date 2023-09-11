@@ -105,7 +105,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(TestZKRMStateStore.class);
-  private static final int ZK_TIMEOUT_MS = 5000;
+  private static final int ZK_TIMEOUT_MS = 1000;
   private TestingServer curatorTestingServer;
   private CuratorFramework curatorFramework;
 
