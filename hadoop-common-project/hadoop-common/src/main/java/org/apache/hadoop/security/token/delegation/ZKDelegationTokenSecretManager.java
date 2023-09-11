@@ -222,7 +222,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                         ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT)
                 )
                 .retryPolicy(
-                    new RetryNTimes(numRetries, sessionT / numRetries));
+                    new RetryNTimes(numRetries, numRetries == 0 ? 0 : sessionT / numRetries));
       } catch (Exception ex) {
         throw new RuntimeException("Could not Load ZK acls or auth: " + ex, ex);
       }
