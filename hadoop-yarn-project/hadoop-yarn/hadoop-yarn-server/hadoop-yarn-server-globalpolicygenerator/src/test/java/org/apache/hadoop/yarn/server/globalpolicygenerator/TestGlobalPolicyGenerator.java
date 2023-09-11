@@ -72,7 +72,7 @@ public class TestGlobalPolicyGenerator {
     assertTrue(dataErr.toString().contains(
         "Usage: yarn gpg [-format-policy-store]"));
   }
-  
+
   @Test
   public void testUserProvidedUGIConf() throws Exception {
     String errMsg = "Invalid attribute value for " +

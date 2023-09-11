@@ -256,7 +256,8 @@ public class Router extends CompositeService {
           // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
           System.err.println("format-state-store is not yet supported.");
         } else if (argv[0].equals("-remove-application-from-state-store") && argv.length == 2) {
-          // TODO: YARN-11547. [Federation] Router Supports Remove individual application records from FederationStateStore.
+          // TODO: YARN-11547. [Federation]
+          //  Router Supports Remove individual application records from FederationStateStore.
           System.err.println("remove-application-from-state-store is not yet supported.");
         } else {
           printUsage(System.err);
@@ -314,6 +315,7 @@ public class Router extends CompositeService {
   }
 
   private static void printUsage(PrintStream out) {
-    out.println("Usage: yarn router [-format-state-store] | [-remove-application-from-state-store <appId>]");
+    out.println("Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]");
   }
 }

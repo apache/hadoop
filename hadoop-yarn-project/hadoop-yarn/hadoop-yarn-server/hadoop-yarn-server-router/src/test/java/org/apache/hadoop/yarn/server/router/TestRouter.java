@@ -401,6 +401,7 @@ public class TestRouter {
     System.setErr(new PrintStream(dataErr));
     Router.main(new String[]{"-help", "-format-state-store"});
     assertTrue(dataErr.toString().contains(
-        "Usage: yarn router [-format-state-store] | [-remove-application-from-state-store <appId>]"));
+        "Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]"));
   }
 }
