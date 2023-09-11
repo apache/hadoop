@@ -509,7 +509,7 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportSlownode = false;
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
     this.dnConf = new DNConf(this);
-    this.dataSetLockManager = new DataSetLockManager(conf);
+    this.dataSetLockManager = new DataSetLockManager(conf, this);
     initOOBTimeout();
     storageLocationChecker = null;
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
@@ -528,7 +528,7 @@ public class DataNode extends ReconfigurableBase
     super(conf);
     this.tracer = createTracer(conf);
     this.fileIoProvider = new FileIoProvider(conf, this);
-    this.dataSetLockManager = new DataSetLockManager(conf);
+    this.dataSetLockManager = new DataSetLockManager(conf, this);
     this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
