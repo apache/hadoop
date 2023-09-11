@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -65,6 +67,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkHeadRoomAlphaValid;
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkSubClusterQueueWeightRatioValid;
@@ -85,7 +88,8 @@ public class RouterCLI extends Configured implements Tool {
          // Command2: policy
         .put("-policy", new UsageInfo(
         "[-s|--save [queue;router weight;amrm weight;headroomalpha]] " +
-         "[-bs|--batch-save [--format xml] [-f|--input-file fileName]]",
+         "[-bs|--batch-save [--format xml] [-f|--input-file fileName]]" +
+         "[-l|--list [--pageSize][--currentPage][--queue][--queues]]",
         "We provide a set of commands for Policy:" +
         " Include list policies, save policies, batch save policies. " +
         " (Note: The policy type will be directly read from the" +
@@ -122,6 +126,12 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_FORMAT = "format";
   private static final String OPTION_FILE = "f";
   private static final String OPTION_INPUT_FILE = "input-file";
+  private static final String OPTION_L = "l";
+  private static final String OPTION_LIST = "list";
+  private static final String OPTION_PAGE_SIZE = "pageSize";
+  private static final String OPTION_CURRENT_PAGE = "currentPage";
+  private static final String OPTION_QUEUE = "queue";
+  private static final String OPTION_QUEUES = "queues";
 
   private static final String CMD_POLICY = "-policy";
   private static final String FORMAT_XML = "xml";
@@ -133,6 +143,12 @@ public class RouterCLI extends Configured implements Tool {
   private static final String XML_TAG_FEDERATION_WEIGHTS = "federationWeights";
   private static final String XML_TAG_QUEUE = "queue";
   private static final String XML_TAG_NAME = "name";
+
+  private static final String LIST_POLICIES_TITLE =
+      "Yarn Federation Queue Policies";
+  // Columns information
+  private static final List<String> LIST_POLICIES_HEADER = Arrays.asList(
+      "Queue Name", "AMRM Weight", "Router Weight");
 
   public RouterCLI() {
     super();
@@ -191,7 +207,8 @@ public class RouterCLI extends Configured implements Tool {
         .append("routeradmin\n")
         .append("   [-deregisterSubCluster [-sc|--subClusterId [subCluster Id]]\n")
         .append("   [-policy [-s|--save [queue;router weight;amrm weight;headroomalpha] " +
-                "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]]\n")
+        "[-bs|--batch-save [--format xml,json] [-f|--input-file fileName]]] " +
+        "[-l|--list [--pageSize][--currentPage][--queue][--queues]]\n")
         .append("   [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -346,11 +363,26 @@ public class RouterCLI extends Configured implements Tool {
     Option fileOpt = new Option("f", "input-file", true,
         "The location of the input configuration file. ");
     formatOpt.setOptionalArg(true);
-
+    Option listOpt = new Option(OPTION_L, OPTION_LIST, false,
+        "We can display the configured queue strategy according to the parameters.");
+    Option pageSizeOpt = new Option(null, "pageSize", true,
+        "The number of policies displayed per page.");
+    Option currentPageOpt = new Option(null, "currentPage", true,
+        "Since users may configure numerous policies, we will choose to display them in pages. " +
+        "This parameter represents the page number to be displayed.");
+    Option queueOpt = new Option(null, "queue", true,
+        "the queue we need to filter. example: root.a");
+    Option queuesOpt = new Option(null, "queues", true,
+        "list of queues to filter. example: root.a,root.b,root.c");
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
     opts.addOption(formatOpt);
     opts.addOption(fileOpt);
+    opts.addOption(listOpt);
+    opts.addOption(pageSizeOpt);
+    opts.addOption(currentPageOpt);
+    opts.addOption(queueOpt);
+    opts.addOption(queuesOpt);
 
     // Parse command line arguments.
     CommandLine cliParser;
@@ -396,6 +428,31 @@ public class RouterCLI extends Configured implements Tool {
 
       // Batch SavePolicies.
       return handBatchSavePolicies(format, filePath);
+    } else if(cliParser.hasOption(OPTION_L) || cliParser.hasOption(OPTION_LIST)) {
+
+      int pageSize = 10;
+      if (cliParser.hasOption(OPTION_PAGE_SIZE)) {
+        pageSize = Integer.parseInt(cliParser.getOptionValue(OPTION_PAGE_SIZE));
+      }
+
+      int currentPage = 1;
+      if (cliParser.hasOption(OPTION_CURRENT_PAGE)) {
+        currentPage = Integer.parseInt(cliParser.getOptionValue(OPTION_CURRENT_PAGE));
+      }
+
+      String queue = null;
+      if (cliParser.hasOption(OPTION_QUEUE)) {
+        queue = cliParser.getOptionValue(OPTION_QUEUE);
+      }
+
+      List<String> queues = null;
+      if (cliParser.hasOption(OPTION_QUEUES)) {
+        String tmpQueues = cliParser.getOptionValue(OPTION_QUEUES);
+        queues = Arrays.stream(tmpQueues.split(",")).collect(Collectors.toList());
+      }
+
+      // List Policies.
+      return handListPolicies(pageSize, currentPage, queue, queues);
     } else {
       // printUsage
       printUsage(args[0]);
@@ -616,6 +673,46 @@ public class RouterCLI extends Configured implements Tool {
       }
     }
     return StringUtils.join(amRmPolicyWeights, ",");
+  }
+
+  /**
+   * Handles the list federation policies based on the specified parameters.
+   *
+   * @param pageSize Records displayed per page.
+   * @param currentPage The current page number.
+   * @param queue The name of the queue to be filtered.
+   * @param queues list of queues to filter.
+   * @return 0, success; 1, failed.
+   */
+  protected int handListPolicies(int pageSize, int currentPage, String queue, List<String> queues) {
+    LOG.info("List Federation Policies,  pageSize = {}, currentPage = {}, queue = {}, queues = {}",
+        pageSize, currentPage, queue, queues);
+    try {
+      PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+          System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+      QueryFederationQueuePoliciesRequest request =
+          QueryFederationQueuePoliciesRequest.newInstance(pageSize, currentPage, queue, queues);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      QueryFederationQueuePoliciesResponse response =
+          adminProtocol.listFederationQueuePolicies(request);
+      System.out.println("TotalPage = " + response.getTotalPage());
+
+      FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(LIST_POLICIES_TITLE)
+          .addHeaders(LIST_POLICIES_HEADER);
+      List<FederationQueueWeight> federationQueueWeights = response.getFederationQueueWeights();
+      federationQueueWeights.forEach(federationQueueWeight -> {
+        String queueName = federationQueueWeight.getQueue();
+        String amrmWeight = federationQueueWeight.getAmrmWeight();
+        String routerWeight = federationQueueWeight.getRouterWeight();
+        formattingCLIUtils.addLine(queueName, amrmWeight, routerWeight);
+      });
+      writer.print(formattingCLIUtils.render());
+      writer.flush();
+      return EXIT_SUCCESS;
+    } catch (YarnException | IOException e) {
+      LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
   }
 
   @Override

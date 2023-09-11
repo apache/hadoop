@@ -105,8 +105,7 @@ public final class FederationStateStoreFacade {
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationStateStoreFacade.class);
 
-  private static final FederationStateStoreFacade FACADE =
-      new FederationStateStoreFacade();
+  private static volatile FederationStateStoreFacade facade;
 
   private static Random rand = new Random(System.currentTimeMillis());
 
@@ -115,8 +114,8 @@ public final class FederationStateStoreFacade {
   private SubClusterResolver subclusterResolver;
   private FederationCache federationCache;
 
-  private FederationStateStoreFacade() {
-    initializeFacadeInternal(new Configuration());
+  private FederationStateStoreFacade(Configuration conf) {
+    initializeFacadeInternal(conf);
   }
 
   private void initializeFacadeInternal(Configuration config) {
@@ -199,7 +198,50 @@ public final class FederationStateStoreFacade {
    * @return the singleton {@link FederationStateStoreFacade} instance
    */
   public static FederationStateStoreFacade getInstance() {
-    return FACADE;
+    return getInstanceInternal(new Configuration());
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  public static FederationStateStoreFacade getInstance(Configuration conf) {
+    return getInstanceInternal(conf);
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  private static FederationStateStoreFacade getInstanceInternal(Configuration conf){
+    if (facade != null) {
+      return facade;
+    }
+    generateStateStoreFacade(conf);
+    return facade;
+  }
+
+  /**
+   * Generate the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   */
+  private static void generateStateStoreFacade(Configuration conf){
+    if (facade == null) {
+      synchronized (FederationStateStoreFacade.class) {
+        if (facade == null) {
+          Configuration yarnConf = new Configuration();
+          if (conf != null) {
+            yarnConf = conf;
+          }
+          facade = new FederationStateStoreFacade(yarnConf);
+        }
+      }
+    }
   }
 
   /**

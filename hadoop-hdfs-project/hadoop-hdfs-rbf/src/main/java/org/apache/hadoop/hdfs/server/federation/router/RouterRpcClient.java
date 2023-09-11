@@ -599,6 +599,8 @@ public class RouterRpcClient {
           }
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
+          // Rotate cache so that client can retry the next namenode in the cache
+          this.namenodeResolver.rotateCache(nsId, namenode, shouldUseObserver);
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);
         } else {

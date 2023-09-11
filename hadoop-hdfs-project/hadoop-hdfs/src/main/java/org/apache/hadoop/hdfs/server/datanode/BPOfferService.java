@@ -291,9 +291,8 @@ class BPOfferService {
   void reportBadBlocks(ExtendedBlock block,
                        String storageUuid, StorageType storageType) {
     checkBlock(block);
+    ReportBadBlockAction rbbAction = new ReportBadBlockAction(block, storageUuid, storageType);
     for (BPServiceActor actor : bpServices) {
-      ReportBadBlockAction rbbAction = new ReportBadBlockAction
-          (block, storageUuid, storageType);
       actor.bpThreadEnqueue(rbbAction);
     }
   }

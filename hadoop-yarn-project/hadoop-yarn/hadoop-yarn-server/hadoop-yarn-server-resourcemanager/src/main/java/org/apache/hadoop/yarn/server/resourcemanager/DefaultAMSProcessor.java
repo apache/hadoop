@@ -168,14 +168,13 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // and corresponding NM tokens.
     if (app.getApplicationSubmissionContext()
         .getKeepContainersAcrossApplicationAttempts()) {
+      // Clear the node set remembered by the secret manager. Necessary
+      // for UAM restart because we use the same attemptId.
+      rmContext.getNMTokenSecretManager().clearNodeSetForAttempt(applicationAttemptId);
       List<Container> transferredContainers = getScheduler()
           .getTransferredContainers(applicationAttemptId);
       if (!transferredContainers.isEmpty()) {
         response.setContainersFromPreviousAttempts(transferredContainers);
-        // Clear the node set remembered by the secret manager. Necessary
-        // for UAM restart because we use the same attemptId.
-        rmContext.getNMTokenSecretManager()
-            .clearNodeSetForAttempt(applicationAttemptId);
 
         List<NMToken> nmTokens = new ArrayList<NMToken>();
         for (Container container : transferredContainers) {
