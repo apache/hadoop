@@ -373,6 +373,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private boolean metadataKeyCaseSensitive;
 
+  public static final String AZURE_ETAG_CHECK = "fs.azure.etag.check";
+
+  public static final boolean DEFAULT_ETAG_CHECK = true;
+
+  private boolean eTagCheck;
+
   /** The error message template when container is not accessible. */
   public static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
       + "account %s in the configuration, and its container %s is not "
@@ -549,6 +555,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         DEFAULT_USE_SECURE_MODE);
     useLocalSasKeyMode = conf.getBoolean(KEY_USE_LOCAL_SAS_KEY_MODE,
         DEFAULT_USE_LOCAL_SAS_KEY_MODE);
+    eTagCheck = conf.getBoolean(AZURE_ETAG_CHECK, DEFAULT_ETAG_CHECK);
 
     if (null == this.storageInteractionLayer) {
       if (!useSecureMode) {
@@ -1884,7 +1891,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       CloudBlobWrapper blob = getBlobReference(key);
       storePermissionStatus(blob, permissionStatus);
       storeLinkAttribute(blob, tempBlobKey);
-      if (eTag != null) {
+      if (eTagCheck && eTag != null) {
         AccessCondition accessCondition = new AccessCondition();
         accessCondition.setIfMatch(eTag);
         openOutputStream(blob, accessCondition).close();
@@ -1892,9 +1899,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           createdFileETag[0] = blob.getBlob().getProperties().getEtag();
         }
       } else {
-        openOutputStream(blob).close();
-        if (blob.getBlob() != null) {
-          createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        if (eTagCheck) {
+          AccessCondition accessCondition = new AccessCondition();
+          accessCondition.setIfNoneMatch("*");
+          openOutputStream(blob, accessCondition).close();
+          if (blob.getBlob() != null) {
+            createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+          }
+        } else {
+          openOutputStream(blob).close();
         }
       }
     } catch (Exception e) {
@@ -2877,7 +2890,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // a more intensive exponential retry policy when the cluster is getting
       // throttled.
       try {
-        if (eTag != null) {
+        if (eTagCheck && eTag != null) {
           dstBlob.startCopyFromBlob(srcBlob, null,
                   getInstrumentedContext(), overwriteDestination, eTag);
         } else {
@@ -2906,7 +2919,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           options.setRetryPolicyFactory(new RetryExponentialRetry(
             copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff,
             copyBlobMaxRetries));
-          if (eTag != null) {
+          if (eTagCheck && eTag != null) {
             dstBlob.startCopyFromBlob(srcBlob, options,
                     getInstrumentedContext(), overwriteDestination, eTag);
           } else {
