@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SDK_V2_UPGRADE_LOG_NAME;
 
 /**
@@ -48,6 +49,9 @@ public final class V2Migration {
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
   private static final LogExactlyOnce WARN_ON_GET_OBJECT_METADATA =
+      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
+
+  private static final LogExactlyOnce WARN_ON_REGION_NOT_CONFIGURED =
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
   /**
@@ -93,6 +97,15 @@ public final class V2Migration {
   public static void v1GetObjectMetadataCalled() {
     WARN_ON_GET_OBJECT_METADATA.warn("getObjectMetadata() called. This operation and it's response "
         + "will be changed as part of upgrading S3A to AWS SDK V2");
+  }
+
+  /**
+   * Warns on use of getObjectMetadata.
+   */
+  public static void regionNotConfigured() {
+    WARN_ON_REGION_NOT_CONFIGURED.warn("A region has not been configured. Cross region support "
+            + "will be removed as part of upgrading S3A to AWS SDK V2. To avoid errors, set the "
+        + "bucket's region in {}.", AWS_REGION);
   }
 
 }

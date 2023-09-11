@@ -41,6 +41,8 @@ import com.amazonaws.services.s3.model.EncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
+
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -233,6 +235,12 @@ public class DefaultS3ClientFactory extends Configured
       final S3ClientCreationParameters parameters) {
     AmazonS3ClientBuilder b = AmazonS3Client.builder();
     configureBasicParams(b, awsConf, parameters);
+
+    String region = getConf().getTrimmed(AWS_REGION);
+
+    if (StringUtils.isBlank(region)) {
+      V2Migration.regionNotConfigured();
+    }
 
     // endpoint set up is a PITA
     AwsClientBuilder.EndpointConfiguration epr
