@@ -5153,7 +5153,7 @@
     <description>
       The number of threads to use for the Router scheduled executor service.
     </description>
-    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <name>yarn.router.scheduled.executor.threads</name>
     <value>1</value>
   </property>
 

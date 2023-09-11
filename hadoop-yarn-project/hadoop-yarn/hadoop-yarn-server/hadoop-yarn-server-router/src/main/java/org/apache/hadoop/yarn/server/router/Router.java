@@ -33,6 +33,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -120,6 +121,7 @@ public class Router extends CompositeService {
   @Override
   protected void serviceInit(Configuration config) throws Exception {
     this.conf = config;
+    UserGroupInformation.setConfiguration(this.conf);
     // ClientRM Proxy
     clientRMProxyService = createClientRMProxyService();
     addService(clientRMProxyService);

@@ -27,6 +27,7 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.http.CrossOriginFilter;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -182,6 +183,18 @@ public class TestRouter {
     // CrossOriginFilter will not set any value
     Assert.assertEquals(0, mockRes2.getHeaders().size());
 
+    router.stop();
+  }
+
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    String errMsg = "Invalid attribute value for " +
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION + " of DUMMYAUTH";
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "DUMMYAUTH");
+    Router router = new Router();
+    LambdaTestUtils.intercept(IllegalArgumentException.class, errMsg,
+        () -> router.init(dummyConf));
     router.stop();
   }
 

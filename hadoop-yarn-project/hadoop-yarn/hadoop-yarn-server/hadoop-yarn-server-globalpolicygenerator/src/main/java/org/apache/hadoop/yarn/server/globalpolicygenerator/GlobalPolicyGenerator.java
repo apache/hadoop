@@ -35,6 +35,7 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -113,8 +114,9 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     // Set up the context
-    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance());
+    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance(conf));
     GPGPolicyFacade gpgPolicyFacade =
         new GPGPolicyFacade(this.gpgContext.getStateStoreFacade(), conf);
     this.gpgContext.setPolicyFacade(gpgPolicyFacade);

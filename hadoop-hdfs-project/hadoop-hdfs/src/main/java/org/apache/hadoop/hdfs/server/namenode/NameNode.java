@@ -163,6 +163,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_BIN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
@@ -1125,7 +1127,7 @@ public class NameNode extends ReconfigurableBase implements
           + " this namenode/service.", clientNamenodeAddress);
     }
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    state = createHAState(getStartupOption(conf));
+    state = createHAState(conf);
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
@@ -1161,11 +1163,17 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
-  protected HAState createHAState(StartupOption startOpt) {
+  protected HAState createHAState(Configuration conf) {
+    StartupOption startOpt = getStartupOption(conf);
     if (!haEnabled || startOpt == StartupOption.UPGRADE
         || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
-    } else if (startOpt == StartupOption.OBSERVER) {
+    } else if (conf.getBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY,
+          DFS_NAMENODE_OBSERVER_ENABLED_DEFAULT)
+        || startOpt == StartupOption.OBSERVER) {
+      // Set Observer state using config instead of startup option
+      // This allows other startup options to be used when starting observer.
+      // e.g. rollingUpgrade
       return OBSERVER_STATE;
     } else {
       return STANDBY_STATE;

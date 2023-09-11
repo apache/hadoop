@@ -517,7 +517,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
 
   /** The address of the RM admin interface.*/
-  public static final String RM_ADMIN_ADDRESS = 
+  public static final String RM_ADMIN_ADDRESS =
     RM_PREFIX + "admin.address";
   public static final int DEFAULT_RM_ADMIN_PORT = 8033;
   public static final String DEFAULT_RM_ADMIN_ADDRESS = "0.0.0.0:" +

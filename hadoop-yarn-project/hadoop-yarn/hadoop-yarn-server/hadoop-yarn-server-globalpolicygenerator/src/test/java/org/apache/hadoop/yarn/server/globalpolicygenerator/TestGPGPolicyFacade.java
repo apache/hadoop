@@ -53,8 +53,7 @@ public class TestGPGPolicyFacade {
 
   private Configuration conf;
   private FederationStateStore stateStore;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
   private GPGPolicyFacade policyFacade;
 
   private Set<SubClusterId> subClusterIds;
@@ -70,6 +69,7 @@ public class TestGPGPolicyFacade {
     subClusterIds.add(SubClusterId.newInstance("sc0"));
     subClusterIds.add(SubClusterId.newInstance("sc1"));
     subClusterIds.add(SubClusterId.newInstance("sc2"));
+    facade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Before
