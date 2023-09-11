@@ -143,7 +143,7 @@ public class TestRouter {
     WebAppContext webAppContext = httpServer2.getWebAppContext();
     ServletHandler servletHandler = webAppContext.getServletHandler();
     FilterHolder holder = servletHandler.getFilter("Cross Origin Filter");
-    CrossOriginFilter filter = CrossOriginFilter.class.cast(holder.getFilter());
+    CrossOriginFilter filter = (CrossOriginFilter) holder.getFilter();
 
     // 1. Simulate [example.com] for access
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
