@@ -127,7 +127,7 @@ import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecre
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
 /**
- * ZooKeeper implementation of {@link FederationStateStore}.
+ * ZooKeeper's implementation of {@link FederationStateStore}.
  * The znode structure is as follows:
  *
  * ROOT_DIR_PATH
@@ -135,8 +135,16 @@ import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
  * |     |----- SC1
  * |     |----- SC2
  * |--- APPLICATION
- * |     |----- APP1
- * |     |----- APP2
+ * |     |----- HIERARCHIES
+ * |     |        |----- 1
+ * |     |        |      |----- (#ApplicationId barring last character)
+ * |     |        |      |       |       |----- APP Data
+ * |     |        |      ....
+ * |     |        |
+ * |     |        |----- 2
+ * |     |        |      |----- (#ApplicationId barring last 2 characters)
+ * |     |        |      |       |----- (#Last 2 characters of ApplicationId)
+ * |     |        |      |       |       |----- APP Data
  * |--- POLICY
  * |     |----- QUEUE1
  * |     |----- QUEUE1
@@ -502,9 +510,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     try {
       long start = clock.getTime();
       SubClusterId requestSC = request.getSubClusterId();
-      List<String> children = zkManager.getChildren(appsZNode);
-      List<ApplicationHomeSubCluster> result = children.stream()
-          .map(child -> generateAppHomeSC(child))
+      List<ApplicationHomeSubCluster> result = loadRouterApplications().stream()
           .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
           .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
           .limit(maxAppsInStateStore)
@@ -519,24 +525,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
 
     throw new YarnException("Cannot get app by request");
-  }
-
-  private ApplicationHomeSubCluster generateAppHomeSC(String appId) {
-    try {
-      // Parse ApplicationHomeSubCluster
-      ApplicationId applicationId = ApplicationId.fromString(appId);
-      ApplicationHomeSubCluster zkStoreApplicationHomeSubCluster =
-          getApplicationHomeSubCluster(applicationId);
-
-      // Prepare to return data
-      SubClusterId subClusterId = zkStoreApplicationHomeSubCluster.getHomeSubCluster();
-      ApplicationHomeSubCluster resultApplicationHomeSubCluster =
-          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
-      return resultApplicationHomeSubCluster;
-    } catch (Exception ex) {
-      LOG.error("get homeSubCluster by appId = {}.", appId, ex);
-    }
-    return null;
   }
 
   @Override
@@ -784,11 +772,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    *
    * @param appId Application identifier.
    * @return ApplicationHomeSubCluster identifier.
-   * @throws Exception If it cannot contact ZooKeeper.
+   * @throws YarnException If it cannot contact ZooKeeper.
    */
   private ApplicationHomeSubCluster getApplicationHomeSubCluster(
-      final ApplicationId appId) throws YarnException {
-    String appZNode = getNodePath(appsZNode, appId.toString());
+      final ApplicationId appId) throws YarnException{
+
+    String appZNode = getLeafAppIdNodePath(appId.toString(), false);
 
     ApplicationHomeSubCluster appHomeSubCluster = null;
     byte[] data = get(appZNode);
@@ -815,17 +804,108 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private void storeOrUpdateApplicationHomeSubCluster(final ApplicationId applicationId,
       final ApplicationHomeSubCluster applicationHomeSubCluster, boolean update)
       throws YarnException {
-    String appZNode;
     try {
-      appZNode = getLeafAppIdNodePath(applicationId.toString(), true);
       ApplicationHomeSubClusterProto proto =
           ((ApplicationHomeSubClusterPBImpl) applicationHomeSubCluster).getProto();
       byte[] data = proto.toByteArray();
-      put(appZNode, data, update);
+      if (update) {
+        updateApplicationStateInternal(applicationId, data);
+      } else {
+        storeApplicationStateInternal(applicationId, data);
+      }
     } catch (Exception e) {
       throw new YarnException(e);
     }
   }
+
+  protected void storeApplicationStateInternal(final ApplicationId applicationId, byte[] data)
+      throws Exception {
+    String nodeCreatePath = getLeafAppIdNodePath(applicationId.toString(), true);
+    LOG.debug("Storing info for app: {} at: {}.", applicationId, nodeCreatePath);
+    put(nodeCreatePath, data, false);
+  }
+
+  protected void updateApplicationStateInternal(final ApplicationId applicationId, byte[] data)
+      throws Exception {
+    String nodeUpdatePath = getLeafAppIdNodePath(applicationId.toString(), false);
+    if (!exists(nodeUpdatePath)) {
+      AppNodeSplitInfo alternatePathInfo = getAlternatePath(applicationId.toString());
+      if (alternatePathInfo != null) {
+        nodeUpdatePath = alternatePathInfo.path;
+      } else {
+        // No alternate path exists. Create path as per configured split index.
+        if (appIdNodeSplitIndex != 0) {
+          String rootNode = getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
+          if (!exists(rootNode)) {
+            zkManager.create(rootNode);
+          }
+        }
+      }
+    }
+    LOG.debug("Storing final state info for app: {} at: {}.", applicationId, nodeUpdatePath);
+    put(nodeUpdatePath, data, true);
+  }
+
+  private ApplicationHomeSubCluster loadRouterAppStateFromAppNode(String appNodePath)
+      throws Exception {
+    byte[] data = get(appNodePath);
+    LOG.debug("Loading application from znode: {}", appNodePath);
+
+    ApplicationHomeSubCluster appHomeSubCluster = null;
+    if (data != null) {
+      try {
+        appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
+            ApplicationHomeSubClusterProto.parseFrom(data));
+      } catch (InvalidProtocolBufferException e) {
+        String errMsg = "Cannot parse application at " + appNodePath;
+        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      }
+    }
+    return appHomeSubCluster;
+  }
+
+  private List<ApplicationHomeSubCluster> loadRouterApplications() throws Exception {
+    List<ApplicationHomeSubCluster> applicationHomeSubClusters = new ArrayList<>();
+    for (int splitIndex = 0; splitIndex <= 4; splitIndex++) {
+      String appRoot = routerAppRootHierarchies.get(splitIndex);
+      if (appRoot == null) {
+        continue;
+      }
+      List<String> childNodes = getChildren(appRoot);
+      boolean appNodeFound = false;
+      for (String childNodeName : childNodes) {
+        if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
+          appNodeFound = true;
+          if (splitIndex == 0) {
+            ApplicationHomeSubCluster applicationHomeSubCluster =
+                loadRouterAppStateFromAppNode(getNodePath(appRoot, childNodeName));
+            applicationHomeSubClusters.add(applicationHomeSubCluster);
+          } else {
+            // If AppId Node is partitioned.
+            String parentNodePath = getNodePath(appRoot, childNodeName);
+            List<String> leafNodes = getChildren(parentNodePath);
+            for (String leafNodeName : leafNodes) {
+              ApplicationHomeSubCluster applicationHomeSubCluster =
+                  loadRouterAppStateFromAppNode(getNodePath(parentNodePath, leafNodeName));
+              applicationHomeSubClusters.add(applicationHomeSubCluster);
+            }
+          }
+        } else if (!childNodeName.equals(ROUTER_APP_ROOT_HIERARCHIES)){
+          LOG.debug("Unknown child node with name {} under {}.", childNodeName, appRoot);
+        }
+      }
+      if (splitIndex != appIdNodeSplitIndex && !appNodeFound) {
+        // If no loaded app exists for a particular split index and the split
+        // index for which apps are being loaded is not the one configured, then
+        // we do not need to keep track of this hierarchy for storing/updating/
+        // removing app/app attempt znodes.
+        routerAppRootHierarchies.remove(splitIndex);
+      }
+    }
+    return applicationHomeSubClusters;
+  }
+
+
 
   /**
    * Get the current information for a subcluster from Zookeeper.
@@ -1841,10 +1921,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       try {
         zkManager.create(rootNodePath);
       } catch (KeeperException.NodeExistsException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to create app parent node {} as it already exists.",
-              rootNodePath);
-        }
+        LOG.debug("Unable to create app parent node {} as it already exists.", rootNodePath);
       }
     }
     return getNodePath(rootNodePath, nodeName.substring(splitIdx));
@@ -1858,11 +1935,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @param createParentIfNotExists flag which determines if parent app node
    *     needs to be created(as per split) if it does not exist.
    * @return leaf app node path.
-   * @throws Exception if any problem occurs while performing ZK operation.
+   * @throws YarnException if any problem occurs while performing ZK operation.
    */
   private String getLeafAppIdNodePath(String appId,
-      boolean createParentIfNotExists) throws Exception {
-    return getLeafAppIdNodePath(appId, routerAppRootHierarchies.get(
-        appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
+      boolean createParentIfNotExists) throws YarnException {
+    try {
+      return getLeafAppIdNodePath(appId, routerAppRootHierarchies.get(
+          appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 }
