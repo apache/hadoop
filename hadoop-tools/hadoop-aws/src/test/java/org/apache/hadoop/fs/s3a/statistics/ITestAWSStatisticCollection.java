@@ -53,7 +53,7 @@ public class ITestAWSStatisticCollection extends AbstractS3ATestBase {
     conf.unset("fs.s3a.bucket.landsat-pds.endpoint");
 
     try (S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(conf)) {
-      fs.getObjectMetadata(path);
+      fs.getS3AInternals().getObjectMetadata(path);
       IOStatistics iostats = fs.getIOStatistics();
       assertThatStatisticCounter(iostats,
           STORE_IO_REQUEST.getSymbol())
@@ -71,7 +71,7 @@ public class ITestAWSStatisticCollection extends AbstractS3ATestBase {
     conf.set(ENDPOINT, DEFAULT_ENDPOINT);
 
     try (S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(conf)) {
-      fs.getObjectMetadata(path);
+      fs.getS3AInternals().getObjectMetadata(path);
       IOStatistics iostats = fs.getIOStatistics();
       assertThatStatisticCounter(iostats,
           STORE_IO_REQUEST.getSymbol())
