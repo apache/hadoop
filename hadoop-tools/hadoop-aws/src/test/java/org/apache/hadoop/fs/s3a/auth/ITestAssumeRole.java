@@ -196,6 +196,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testAssumedRoleBadExternalId() throws Throwable {
+    describe("Attempt to create the FS with an invalid external id");
+    Configuration conf = createAssumedRoleConfig();
+    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "invalid_external_id!");
+    expectFileSystemCreateFailure(conf, AWSBadRequestException.class, "");
+  }
+
+  @Test
   public void testAssumeRoleFSBadARN() throws Exception {
     describe("Attemnpt to create the FS with an invalid ARN");
     Configuration conf = createAssumedRoleConfig();

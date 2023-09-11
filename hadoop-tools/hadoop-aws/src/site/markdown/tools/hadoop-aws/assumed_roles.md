@@ -143,6 +143,14 @@ Here are the full set of configuration options.
 </property>
 
 <property>
+  <name>fs.s3a.assumed.role.externalid</name>
+  <value />
+  <description>
+    Optional externalId to specify when assuming a role
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.assumed.role.session.name</name>
   <value />
   <description>
@@ -647,7 +655,7 @@ The security token included in the request is invalid.
   ... 25 more
 ```
 
-### <a name="invalid_session"></a> `AWSSecurityTokenServiceExceptiond`: "Member must satisfy regular expression pattern: `[\w+=,.@-]*`"
+### <a name="invalid_session"></a> `AWSSecurityTokenServiceException`: "Member must satisfy regular expression pattern: `[\w+=,.@-]*`"
 
 
 The session name, as set in `fs.s3a.assumed.role.session.name` must match the wildcard `[\w+=,.@-]*`.
@@ -685,6 +693,34 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
   at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
 ```
 
+Similarly, if `fs.s3a.assumed.role.externalid` is specified, it must match the same wildcard `[\w+=,.@-]*`.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException:
+ Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider:
+   com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+   1 validation error detected: Value 'invalid external id' at 'externalId' failed to satisfy constraint:
+   Member must satisfy regular expression pattern: [\w+=,.@:\/-]*
+   (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError;
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:241)
+  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:730)
+  at org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList(S3AUtils.java:644)
+  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:577)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:878)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:523)
+  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3563)
+  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:553)
+  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+
+Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+    1 validation error detected: Value 'invalid external id' at 'externalId'
+    failed to satisfy constraint:
+    Member must satisfy regular expression pattern: [\w+=,.@:\/-]*
+    (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError; Request ID: 2f53f2c9-ef6a-4561-ba43-bdec489136ae; Proxy: null)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1879)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1418)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1387)
+```
 
 ### <a name="access_denied"></a> `java.nio.file.AccessDeniedException` within a FileSystem API call
 

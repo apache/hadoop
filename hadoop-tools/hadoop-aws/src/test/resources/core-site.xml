@@ -34,8 +34,13 @@
 
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-    <value>${central.endpoint}</value>
+    <value>${oregon.endpoint}</value>
     <description>The endpoint for s3a://landsat-pds URLs</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+    <value>us-west-2</value>
   </property>
 
   <property>
@@ -61,7 +66,12 @@
 
   <property>
     <name>fs.s3a.bucket.usgs-landsat.endpoint</name>
-    <value>${central.endpoint}</value>
+    <value>${oregon.endpoint}</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.endpoint.region</name>
+    <value>us-west-2</value>
   </property>
 
   <property>

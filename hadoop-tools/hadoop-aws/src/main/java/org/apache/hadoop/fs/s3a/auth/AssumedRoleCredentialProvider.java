@@ -86,6 +86,8 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
 
   private final String arn;
 
+  private final String externalId;
+
   private final AWSCredentialProviderList credentialsToSTS;
 
   private final Invoker invoker;
@@ -122,16 +124,21 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
         buildSessionName());
     duration = conf.getTimeDuration(ASSUMED_ROLE_SESSION_DURATION,
         ASSUMED_ROLE_SESSION_DURATION_DEFAULT, TimeUnit.SECONDS);
+    externalId = conf.getTrimmed(ASSUMED_ROLE_EXTERNAL_ID);
     String policy = conf.getTrimmed(ASSUMED_ROLE_POLICY, "");
-
     LOG.debug("{}", this);
     STSAssumeRoleSessionCredentialsProvider.Builder builder
         = new STSAssumeRoleSessionCredentialsProvider.Builder(arn, sessionName);
     builder.withRoleSessionDurationSeconds((int) duration);
+    if (StringUtils.isNotEmpty(externalId)) {
+      LOG.debug("External Id {}", externalId);
+      builder.withExternalId(externalId);
+    }
     if (StringUtils.isNotEmpty(policy)) {
       LOG.debug("Scope down policy {}", policy);
       builder.withScopeDownPolicy(policy);
     }
+
     String endpoint = conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT, "");
     String region = conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
         ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT);
@@ -203,7 +210,8 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     final StringBuilder sb = new StringBuilder(
         "AssumedRoleCredentialProvider{");
     sb.append("role='").append(arn).append('\'');
-    sb.append(", session'").append(sessionName).append('\'');
+    sb.append(", session='").append(sessionName).append('\'');
+    sb.append(", externalId='").append(externalId).append('\'');
     sb.append(", duration=").append(duration);
     sb.append('}');
     return sb.toString();
