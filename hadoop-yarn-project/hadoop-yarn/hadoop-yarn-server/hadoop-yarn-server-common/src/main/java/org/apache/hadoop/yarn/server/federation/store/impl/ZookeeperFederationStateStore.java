@@ -382,6 +382,21 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
   }
 
+  /**
+   * Register the home {@code SubClusterId} of the newly submitted
+   * {@code ApplicationId}. Currently response is empty if the operation was
+   * successful, if not an exception reporting reason for a failure. If a
+   * mapping for the application already existed, the {@code SubClusterId} in
+   * this response will return the existing mapping which might be different
+   * from that in the {@code AddApplicationHomeSubClusterRequest}.
+   *
+   * @param request the request to register a new application with its home sub-cluster.
+   * @return upon successful registration of the application in the StateStore,
+   *         {@code AddApplicationHomeSubClusterRequest} containing the home
+   *         sub-cluster of the application. Otherwise, an exception reporting
+   *         reason for a failure.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
   @Override
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
@@ -429,6 +444,17 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     throw new YarnException("Cannot addApplicationHomeSubCluster by request");
   }
 
+  /**
+   * Update the home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation was
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param request the request to update the home sub-cluster of an
+   *          application.
+   * @return empty on successful update of the application in the StateStore, if
+   *         not an exception reporting reason for a failure
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
   @Override
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
@@ -464,6 +490,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
 
+  /**
+   * Get information about the application identified by the input
+   * {@code ApplicationId}.
+   *
+   * @param request contains the application queried
+   * @return {@code ApplicationHomeSubCluster} containing the application's home
+   *         subcluster
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
   @Override
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
@@ -499,6 +534,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         subClusterId, createTime);
   }
 
+  /**
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
+   *
+   * @param request empty representing all applications
+   * @return the mapping of all submitted application to it's home sub-cluster
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
@@ -527,30 +570,51 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     throw new YarnException("Cannot get app by request");
   }
 
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation was
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param request the request to delete the home sub-cluster of an
+   *          application.
+   * @return empty on successful update of the application in the StateStore, if
+   *         not an exception reporting reason for a failure
+   * @throws YarnException if the request is invalid/fails
+   */
   @Override
-  public DeleteApplicationHomeSubClusterResponse
-      deleteApplicationHomeSubCluster(
-          DeleteApplicationHomeSubClusterRequest request)
-              throws YarnException {
+  public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
+      DeleteApplicationHomeSubClusterRequest request) throws YarnException {
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
-    String appZNode = getNodePath(appsZNode, appId.toString());
+    String appIdRemovePath = getLeafAppIdNodePath(appId.toString(), false);
+    int splitIndex = appIdNodeSplitIndex;
 
-    boolean exists = false;
+    boolean exists = true;
     try {
-      exists = zkManager.exists(appZNode);
+      if (!exists(appIdRemovePath)) {
+        AppNodeSplitInfo alternatePathInfo = getAlternatePath(appId.toString());
+        if (alternatePathInfo != null) {
+          appIdRemovePath = alternatePathInfo.path;
+          splitIndex = alternatePathInfo.splitIndex;
+        } else {
+          exists = false;
+        }
+      }
     } catch (Exception e) {
       String errMsg = "Cannot check app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+
     if (!exists) {
       String errMsg = "Application " + appId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     try {
-      zkManager.delete(appZNode);
+      zkManager.delete(appIdRemovePath);
+      // Check if we should remove the parent app node as well.
+      checkRemoveParentAppNode(appIdRemovePath, splitIndex);
     } catch (Exception e) {
       String errMsg = "Cannot delete app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -845,67 +909,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     LOG.debug("Storing final state info for app: {} at: {}.", applicationId, nodeUpdatePath);
     put(nodeUpdatePath, data, true);
   }
-
-  private ApplicationHomeSubCluster loadRouterAppStateFromAppNode(String appNodePath)
-      throws Exception {
-    byte[] data = get(appNodePath);
-    LOG.debug("Loading application from znode: {}", appNodePath);
-
-    ApplicationHomeSubCluster appHomeSubCluster = null;
-    if (data != null) {
-      try {
-        appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
-            ApplicationHomeSubClusterProto.parseFrom(data));
-      } catch (InvalidProtocolBufferException e) {
-        String errMsg = "Cannot parse application at " + appNodePath;
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
-      }
-    }
-    return appHomeSubCluster;
-  }
-
-  private List<ApplicationHomeSubCluster> loadRouterApplications() throws Exception {
-    List<ApplicationHomeSubCluster> applicationHomeSubClusters = new ArrayList<>();
-    for (int splitIndex = 0; splitIndex <= 4; splitIndex++) {
-      String appRoot = routerAppRootHierarchies.get(splitIndex);
-      if (appRoot == null) {
-        continue;
-      }
-      List<String> childNodes = getChildren(appRoot);
-      boolean appNodeFound = false;
-      for (String childNodeName : childNodes) {
-        if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
-          appNodeFound = true;
-          if (splitIndex == 0) {
-            ApplicationHomeSubCluster applicationHomeSubCluster =
-                loadRouterAppStateFromAppNode(getNodePath(appRoot, childNodeName));
-            applicationHomeSubClusters.add(applicationHomeSubCluster);
-          } else {
-            // If AppId Node is partitioned.
-            String parentNodePath = getNodePath(appRoot, childNodeName);
-            List<String> leafNodes = getChildren(parentNodePath);
-            for (String leafNodeName : leafNodes) {
-              ApplicationHomeSubCluster applicationHomeSubCluster =
-                  loadRouterAppStateFromAppNode(getNodePath(parentNodePath, leafNodeName));
-              applicationHomeSubClusters.add(applicationHomeSubCluster);
-            }
-          }
-        } else if (!childNodeName.equals(ROUTER_APP_ROOT_HIERARCHIES)){
-          LOG.debug("Unknown child node with name {} under {}.", childNodeName, appRoot);
-        }
-      }
-      if (splitIndex != appIdNodeSplitIndex && !appNodeFound) {
-        // If no loaded app exists for a particular split index and the split
-        // index for which apps are being loaded is not the one configured, then
-        // we do not need to keep track of this hierarchy for storing/updating/
-        // removing app/app attempt znodes.
-        routerAppRootHierarchies.remove(splitIndex);
-      }
-    }
-    return applicationHomeSubClusters;
-  }
-
-
 
   /**
    * Get the current information for a subcluster from Zookeeper.
@@ -1915,8 +1918,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
     String nodeName = appId;
     int splitIdx = nodeName.length() - appIdNodeSplitIdx;
-    String rootNodePath =
-        getNodePath(rootNode, nodeName.substring(0, splitIdx));
+    String rootNodePath = getNodePath(rootNode, nodeName.substring(0, splitIdx));
     if (createParentIfNotExists && !exists(rootNodePath)) {
       try {
         zkManager.create(rootNodePath);
@@ -1940,10 +1942,68 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String getLeafAppIdNodePath(String appId,
       boolean createParentIfNotExists) throws YarnException {
     try {
-      return getLeafAppIdNodePath(appId, routerAppRootHierarchies.get(
-          appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
+      String rootNode = routerAppRootHierarchies.get(appIdNodeSplitIndex);
+      return getLeafAppIdNodePath(appId, rootNode, appIdNodeSplitIndex, createParentIfNotExists);
     } catch (Exception e) {
       throw new YarnException(e);
     }
+  }
+
+  private ApplicationHomeSubCluster loadRouterAppStateFromAppNode(String appNodePath)
+      throws Exception {
+    byte[] data = get(appNodePath);
+    LOG.debug("Loading application from znode: {}", appNodePath);
+    ApplicationHomeSubCluster appHomeSubCluster = null;
+    if (data != null) {
+      try {
+        appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
+            ApplicationHomeSubClusterProto.parseFrom(data));
+      } catch (InvalidProtocolBufferException e) {
+        String errMsg = "Cannot parse application at " + appNodePath;
+        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      }
+    }
+    return appHomeSubCluster;
+  }
+
+  private List<ApplicationHomeSubCluster> loadRouterApplications() throws Exception {
+    List<ApplicationHomeSubCluster> applicationHomeSubClusters = new ArrayList<>();
+    for (int splitIndex = 0; splitIndex <= 4; splitIndex++) {
+      String appRoot = routerAppRootHierarchies.get(splitIndex);
+      if (appRoot == null) {
+        continue;
+      }
+      List<String> childNodes = getChildren(appRoot);
+      boolean appNodeFound = false;
+      for (String childNodeName : childNodes) {
+        if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
+          appNodeFound = true;
+          if (splitIndex == 0) {
+            ApplicationHomeSubCluster applicationHomeSubCluster =
+                    loadRouterAppStateFromAppNode(getNodePath(appRoot, childNodeName));
+            applicationHomeSubClusters.add(applicationHomeSubCluster);
+          } else {
+            // If AppId Node is partitioned.
+            String parentNodePath = getNodePath(appRoot, childNodeName);
+            List<String> leafNodes = getChildren(parentNodePath);
+            for (String leafNodeName : leafNodes) {
+              ApplicationHomeSubCluster applicationHomeSubCluster =
+                      loadRouterAppStateFromAppNode(getNodePath(parentNodePath, leafNodeName));
+              applicationHomeSubClusters.add(applicationHomeSubCluster);
+            }
+          }
+        } else if (!childNodeName.equals(ROUTER_APP_ROOT_HIERARCHIES)){
+          LOG.debug("Unknown child node with name {} under {}.", childNodeName, appRoot);
+        }
+      }
+      if (splitIndex != appIdNodeSplitIndex && !appNodeFound) {
+        // If no loaded app exists for a particular split index and the split
+        // index for which apps are being loaded is not the one configured, then
+        // we do not need to keep track of this hierarchy for storing/updating/
+        // removing app/app attempt znodes.
+        routerAppRootHierarchies.remove(splitIndex);
+      }
+    }
+    return applicationHomeSubClusters;
   }
 }

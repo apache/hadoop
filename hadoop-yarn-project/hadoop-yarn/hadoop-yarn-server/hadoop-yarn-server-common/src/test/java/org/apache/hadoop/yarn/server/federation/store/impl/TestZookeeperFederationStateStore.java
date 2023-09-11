@@ -96,6 +96,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
       Configuration conf = new YarnConfiguration();
       conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
       conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
+      conf.setInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX, 1);
       setConf(conf);
     } catch (Exception e) {
       LOG.error("Cannot initialize ZooKeeper store", e);
