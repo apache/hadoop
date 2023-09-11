@@ -1576,9 +1576,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         outputStream = blockBlobOutputStream;
       } else {
-        AccessCondition accessCondition = new AccessCondition();
-        accessCondition.setIfNoneMatch("*");
-        outputStream = openOutputStream(blob, accessCondition);
+        if (eTagCheck) {
+          AccessCondition accessCondition = new AccessCondition();
+          accessCondition.setIfNoneMatch("*");
+          outputStream = openOutputStream(blob, accessCondition);
+        } else {
+          outputStream = openOutputStream(blob);
+        }
       }
 
       DataOutputStream dataOutStream = new SyncableDataOutputStream(outputStream);
