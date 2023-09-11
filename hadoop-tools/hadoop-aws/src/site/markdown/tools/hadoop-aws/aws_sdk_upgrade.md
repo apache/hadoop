@@ -145,7 +145,6 @@ should seamlessly upgrade. This also means that the same provider list, if restr
 those classes, will work across versions.
 
 
-
 ### `hadoop-aws` credential providers migration to V2
 
 All the fs.s3a credential providers have the same name and functionality as before.
@@ -263,7 +262,7 @@ The `S3ClientFactory` interface has been replaced by one that creates a V2 `S3Cl
 * Custom implementations will need to be updated.
 * The `InconsistentS3ClientFactory` class has been deleted.
 
-#### `S3AFileSystem` method changes: `S3AInternals`.
+### `S3AFileSystem` method changes: `S3AInternals`.
 
 The low-level s3 operations/client accessors have been moved into a new interface,
 `org.apache.hadoop.fs.s3a.S3AInternals`, which must be accessed via the
@@ -274,7 +273,7 @@ They have also been updated to return V2 SDK classes.
 @InterfaceStability.Unstable
 @InterfaceAudience.LimitedPrivate("testing/diagnostics")
 public interface S3AInternals {
-  S3Client getAmazonS3V2ClientForTesting(String reason);
+  S3Client getAmazonS3V2Client(String reason);
 
   @Retries.RetryTranslated
   @AuditEntryPoint
@@ -293,7 +292,7 @@ public interface S3AInternals {
 ```
 
 
-##### `S3AFileSystem.getAmazonS3ClientForTesting(String)` moved and return type changed
+#### `S3AFileSystem.getAmazonS3ClientForTesting(String)` moved and return type changed
 
 The `S3AFileSystem.getAmazonS3ClientForTesting()` method has been been deleted.
 
@@ -312,7 +311,7 @@ of the filesystem instance.
 ```
 
 ```java
-((S3AFilesystem)fs).getS3AInternals().getAmazonS3ClientForTesting("testing")
+((S3AFilesystem)fs).getS3AInternals().getAmazonS3Client("testing")
 ```
 
 ##### `S3AFileSystem.getObjectMetadata(Path path)`  moved to `S3AInternals`; return type changed
