@@ -176,6 +176,10 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
       LOG.info("IO stats: {}", ioStats);
       verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+      // stream_evict_blocks_from_cache is expected to be higher than 4, however we might face
+      // transient failures due to async prefetch get cancel issues. While TIMEOUT_MILLIS is
+      // sufficient wait time, consider re-running the test if stream_evict_blocks_from_cache
+      // value stays lower than 4.
       assertThatStatisticCounter(ioStats,
           STREAM_EVICT_BLOCKS_FROM_FILE_CACHE).isGreaterThanOrEqualTo(4);
       verifyStatisticCounterValues(ioStats, STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
