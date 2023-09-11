@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,7 +181,7 @@ public class BootstrapStandby implements Tool, Configurable {
         // bootstrapping the other NNs from that layout, it will only contact the single NN.
         // However, if there cluster is already running and you are adding a NN later (e.g.
         // replacing a failed NN), then this will bootstrap from any node in the cluster.
-        nsInfo = proxy.versionRequest();
+        nsInfo = getProxyNamespaceInfo(proxy);
         isUpgradeFinalized = proxy.isUpgradeFinalized();
         break;
       } catch (IOException ioe) {
@@ -198,11 +199,10 @@ public class BootstrapStandby implements Tool, Configurable {
               + remoteNNs);
       return ERR_CODE_FAILED_CONNECT;
     }
-
     if (!checkLayoutVersion(nsInfo)) {
       LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match " + "this node's layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
+          + nsInfo.getServiceLayoutVersion() + ")");
       return ERR_CODE_INVALID_VERSION;
     }
 
@@ -217,9 +217,10 @@ public class BootstrapStandby implements Tool, Configurable {
         "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
         "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+        "   Service Layout version: " + nsInfo.getServiceLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
         "=====================================================");
-    
+
     NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
 
     if (!isUpgradeFinalized) {
@@ -252,6 +253,12 @@ public class BootstrapStandby implements Tool, Configurable {
       LOG.info("Skipping InMemoryAliasMap bootstrap as it was not configured");
     }
     return 0;
+  }
+
+  @VisibleForTesting
+  public NamespaceInfo getProxyNamespaceInfo(NamenodeProtocol proxy)
+      throws IOException {
+    return proxy.versionRequest();
   }
 
   /**
@@ -406,7 +413,7 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+    return (nsInfo.getLayoutVersion() == nsInfo.getServiceLayoutVersion());
   }
 
   private void parseConfAndFindOtherNN() throws IOException {
