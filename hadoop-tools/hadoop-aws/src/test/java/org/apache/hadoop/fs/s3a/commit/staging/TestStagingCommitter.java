@@ -35,7 +35,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 
-import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -447,7 +446,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should have correct number of pending commits",
         files.size(), pending.size());
 
-    Set<String> keys = Sets.newHashSet();
+    Set<String> keys = new HashSet<>();
     for (SinglePendingCommit commit : pending) {
       assertEquals("Should write to the correct bucket: " + commit,
           BUCKET, commit.getBucket());
@@ -709,7 +708,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
       int numTasks, int numFiles)
       throws IOException {
     results.resetUploads();
-    Set<String> uploads = Sets.newHashSet();
+    Set<String> uploads = new HashSet<>();
 
     for (int taskId = 0; taskId < numTasks; taskId += 1) {
       TaskAttemptID attemptID = new TaskAttemptID(
@@ -746,7 +745,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
       throws IOException {
     Path attemptPath = staging.getTaskAttemptPath(attempt);
 
-    Set<String> files = Sets.newHashSet();
+    Set<String> files = new HashSet<>();
     for (int i = 0; i < numFiles; i += 1) {
       Path outPath = writeOutputFile(
           attempt.getTaskAttemptID(), attemptPath, UUID.randomUUID().toString(),

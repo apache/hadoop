@@ -25,6 +25,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +37,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import org.apache.hadoop.util.Sets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -192,7 +192,7 @@ public class TestS3AAWSCredentialsProvider {
         ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         Arrays.asList(
             EnvironmentVariableCredentialsProvider.class),
-        Sets.newHashSet());
+        new HashSet<>());
     assertTrue("empty credentials", credentials.size() > 0);
 
   }

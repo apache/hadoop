@@ -20,13 +20,13 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -145,7 +145,7 @@ public class TestStagingPartitionedTaskCommit
    */
   protected void verifyFilesCreated(
       final PartitionedStagingCommitter committer) {
-    Set<String> files = Sets.newHashSet();
+    Set<String> files = new HashSet<>();
     for (InitiateMultipartUploadRequest request :
         getMockResults().getRequests().values()) {
       assertEquals(BUCKET, request.getBucketName());
@@ -185,7 +185,7 @@ public class TestStagingPartitionedTaskCommit
   }
 
   public Set<String> buildExpectedList(StagingCommitter committer) {
-    Set<String> expected = Sets.newHashSet();
+    Set<String> expected = new HashSet<>();
     boolean unique = committer.useUniqueFilenames();
     for (String relative : relativeFiles) {
       expected.add(OUTPUT_PREFIX +

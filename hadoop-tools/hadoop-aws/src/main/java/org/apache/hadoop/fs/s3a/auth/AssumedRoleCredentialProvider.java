@@ -23,6 +23,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +35,6 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +115,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
         Arrays.asList(
             SimpleAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class),
-        Sets.newHashSet(this.getClass()));
+        new HashSet<>(Collections.singletonList(this.getClass())));
     LOG.debug("Credentials to obtain role credentials: {}", credentialsToSTS);
 
     // then the STS binding

@@ -28,13 +28,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -220,7 +220,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     // create all the input files on the local FS.
     List<String> expectedFiles = new ArrayList<>(numFiles);
-    Set<String> expectedKeys = Sets.newHashSet();
+    Set<String> expectedKeys = new HashSet<>();
     for (int i = 0; i < numFiles; i += 1) {
       File file = localFilesDir.newFile(i + ".text");
       try (FileOutputStream out = new FileOutputStream(file)) {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import org.apache.hadoop.util.Sets;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +33,9 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -271,12 +273,12 @@ public class TestDynamometerInfra {
     RMNodeLabelsManager nodeLabelManager = miniYARNCluster.getResourceManager()
         .getRMContext().getNodeLabelManager();
     nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(
-        Sets.newHashSet(NAMENODE_NODELABEL, DATANODE_NODELABEL));
+        new HashSet<>(Arrays.asList(NAMENODE_NODELABEL, DATANODE_NODELABEL)));
     Map<NodeId, Set<String>> nodeLabels = new HashMap<>();
     nodeLabels.put(miniYARNCluster.getNodeManager(0).getNMContext().getNodeId(),
-        Sets.newHashSet(NAMENODE_NODELABEL));
+        new HashSet<>(Collections.singletonList(NAMENODE_NODELABEL)));
     nodeLabels.put(miniYARNCluster.getNodeManager(1).getNMContext().getNodeId(),
-        Sets.newHashSet(DATANODE_NODELABEL));
+        new HashSet<>(Collections.singletonList(DATANODE_NODELABEL)));
     nodeLabelManager.addLabelsToNode(nodeLabels);
   }
 
