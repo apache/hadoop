@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.2.2</version>
+    <version>3.2.2-deco2</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.2.2</version>
+  <version>3.2.2-deco2</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -1918,30 +1918,6 @@
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${isal.lib}</PATH>
               </environmentVariables>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>test-patch</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <fork>true</fork>
-              <source>${javac.version}</source>
-              <target>${javac.version}</target>
-              <compilerArguments>
-                <Xlint/>
-				<Xlint:-unchecked/>
-                <Xmaxwarns>9999</Xmaxwarns>
-              </compilerArguments>
             </configuration>
           </plugin>
         </plugins>
