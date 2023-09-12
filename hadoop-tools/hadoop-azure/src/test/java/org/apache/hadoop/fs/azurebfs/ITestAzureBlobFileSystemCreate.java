@@ -152,23 +152,19 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testCreateOnRoot() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     Path testFile = path(AbfsHttpConstants.ROOT_PATH);
-    try {
-      intercept(AbfsRestOperationException.class, () ->
-          fs.create(testFile, true));
-    } catch (AbfsRestOperationException e) {
-      Assertions.assertThat(e.getStatusCode())
-          .describedAs("Request should fail with 409 Conflict")
-          .isEqualTo(HTTP_CONFLICT);
+    AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () ->
+        fs.create(testFile, true));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
     }
-    try {
-      intercept(AbfsRestOperationException.class, () ->
-          fs.createNonRecursive(testFile, FsPermission.getDefault(),
-              false, 1024, (short) 1, 1024, null));
 
-    } catch (AbfsRestOperationException e) {
-      Assertions.assertThat(e.getStatusCode())
-          .describedAs("Request should fail with 409 Conflict")
-          .isEqualTo(HTTP_CONFLICT);
+    ex = intercept(AbfsRestOperationException.class, () ->
+        fs.createNonRecursive(testFile, FsPermission.getDefault(),
+            false, 1024, (short) 1, 1024, null));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
     }
   }
 
