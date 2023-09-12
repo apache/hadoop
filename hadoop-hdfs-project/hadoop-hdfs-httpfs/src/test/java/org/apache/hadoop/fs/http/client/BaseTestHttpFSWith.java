@@ -2236,7 +2236,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
             " is not of type HttpFSFileSystem or WebHdfsFileSystem");
       }
 
-      //Validate getTrashRoots are the same as DistributedFileSystem
+      // Validate getTrashRoots are the same as DistributedFileSystem
       assertEquals(dfsTrashRoots.size(), diffTrashRoots.size());
     } else {
       Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");

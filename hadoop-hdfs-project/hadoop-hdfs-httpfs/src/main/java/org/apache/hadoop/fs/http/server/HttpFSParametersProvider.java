@@ -768,7 +768,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   }
 
   /**
-   * Class for alllusers parameter.
+   * Class for allusers parameter.
    */
   @InterfaceAudience.Private
   public static class AllUsersParam extends BooleanParam {
