@@ -47,6 +47,33 @@ public abstract class CopyFilter {
   public abstract boolean shouldCopy(Path path);
 
   /**
+   * Predicate to determine if a fileStatus can be excluded from copy.
+   * The fileStatus object has various attrs, so it is convenient to do
+   * more complex thing.
+   *
+   * The behaviour of calling shouldCopy() is like this：
+   *     if supportFileStatus() is true, then call shouldCopy(fileStatus)
+   *     if supportFileStatus() is false, then call shouldCopy(path)
+   *
+   *
+   * @param fileStatus a FileStatus to be considered for copying
+   * @return boolean, true to copy, false to exclude
+   */
+  public boolean shouldCopy(CopyListingFileStatus fileStatus){
+    return shouldCopy(fileStatus.getPath());
+  }
+
+  /**
+   * Indicate whether to use shouldCopy(fileStatus) or use shouldCopy(path)
+   * The default behaviour is to use shouldCopy(path).
+   *
+   * @return true, if call shouldCopy(fileStatus), or false.
+   */
+  public boolean supportFileStatus(){
+    return false;
+  }
+
+  /**
    * Public factory method which returns the appropriate implementation of
    * CopyFilter.
    *
