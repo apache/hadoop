@@ -46,6 +46,14 @@ public abstract class CopyFilter {
    */
   public abstract boolean shouldCopy(Path path);
 
+  public boolean shouldCopy(CopyListingFileStatus fileStatus){
+    return shouldCopy(fileStatus.getPath());
+  }
+
+  public boolean supportFileStatus(){
+    return false;
+  }
+
   /**
    * Public factory method which returns the appropriate implementation of
    * CopyFilter.

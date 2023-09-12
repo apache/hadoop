@@ -491,6 +491,10 @@ public class SimpleCopyListing extends CopyListing {
     return copyFilter.shouldCopy(path);
   }
 
+  protected boolean shouldCopy(CopyListingFileStatus fileStatus){
+    return copyFilter.shouldCopy(fileStatus);
+  }
+
   /** {@inheritDoc} */
   @Override
   protected long getBytesToCopy() {
@@ -634,7 +638,11 @@ public class SimpleCopyListing extends CopyListing {
         DistCpUtils.getRelativePath(sourcePathRoot, fileStatus.getPath()),
         fileStatus.getPath());
 
-    if (!shouldCopy(fileStatus.getPath())) {
+    if(copyFilter.supportFileStatus()){
+      if(!shouldCopy(fileStatus)){
+        return;
+      }
+    }else if (!shouldCopy(fileStatus.getPath())) {
       return;
     }
 
