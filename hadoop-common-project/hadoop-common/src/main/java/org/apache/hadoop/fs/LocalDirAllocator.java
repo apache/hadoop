@@ -480,7 +480,11 @@ public class LocalDirAllocator {
 
       // create a temp file on this directory
       File result = File.createTempFile(prefix, null, dir);
-      result.deleteOnExit();
+      // DE-5200: Prevent memory leak by not collecting files to delete
+      // This issue is fixed in Hadoop 3.3.
+      // Whether we register the files for deletion or not doesn't matter in this case
+      // because the tmp files will be cleaned up by K8s when the pod stops.
+      // result.deleteOnExit();
       return result;
     }
 
