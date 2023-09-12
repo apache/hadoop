@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -292,7 +294,19 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   public static void main(String[] argv) {
     try {
-      startGPG(argv, new YarnConfiguration());
+      YarnConfiguration conf = new YarnConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
+      if (argv.length > 1) {
+        if (argv[0].equals("-format-policy-store")) {
+          // TODO: YARN-11561. [Federation] GPG Supports Format PolicyStateStore.
+          System.err.println("format-policy-store is not yet supported.");
+        } else {
+          printUsage(System.err);
+        }
+      } else {
+        startGPG(argv, conf);
+      }
     } catch (Throwable t) {
       LOG.error("Error starting global policy generator", t);
       System.exit(-1);
@@ -306,5 +320,9 @@ public class GlobalPolicyGenerator extends CompositeService {
   @VisibleForTesting
   public WebApp getWebApp() {
     return webApp;
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: yarn gpg [-format-policy-store]");
   }
 }

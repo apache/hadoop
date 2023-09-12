@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,9 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
@@ -390,4 +393,15 @@ public class TestRouter {
     }
   }
 
+  @Test
+  public void testRouterCLI() {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    Router.main(new String[]{"-help", "-format-state-store"});
+    assertTrue(dataErr.toString().contains(
+        "Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]"));
+  }
 }

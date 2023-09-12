@@ -26,8 +26,12 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for GlobalPolicyGenerator.
@@ -56,6 +60,17 @@ public class TestGlobalPolicyGenerator {
       List<Service> services = gpg.getServices();
       return (services.size() == 1 && gpg.getWebApp() != null);
     }, 100, 5000);
+  }
+
+  @Test
+  public void testGPGCLI() {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    GlobalPolicyGenerator.main(new String[]{"-help", "-format-policy-store"});
+    assertTrue(dataErr.toString().contains(
+        "Usage: yarn gpg [-format-policy-store]"));
   }
 
   @Test
