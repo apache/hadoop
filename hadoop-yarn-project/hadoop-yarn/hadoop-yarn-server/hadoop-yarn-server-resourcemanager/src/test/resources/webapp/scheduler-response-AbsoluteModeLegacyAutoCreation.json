@@ -131,22 +131,6 @@
                     "resourceType" : "COUNTABLE",
                     "units" : "",
                     "value" : 0
-                  }, {
-                    "attributes" : { },
-                    "maximumAllocation" : 9223372036854775807,
-                    "minimumAllocation" : 0,
-                    "name" : "custom-resource-1",
-                    "resourceType" : "COUNTABLE",
-                    "units" : "k",
-                    "value" : 0
-                  }, {
-                    "attributes" : { },
-                    "maximumAllocation" : 9223372036854775807,
-                    "minimumAllocation" : 0,
-                    "name" : "custom-resource-2",
-                    "resourceType" : "COUNTABLE",
-                    "units" : "k",
-                    "value" : 0
                   } ]
                 }
               },
@@ -642,22 +626,6 @@
                         "resourceType" : "COUNTABLE",
                         "units" : "",
                         "value" : 0
-                      }, {
-                        "attributes" : { },
-                        "maximumAllocation" : 9223372036854775807,
-                        "minimumAllocation" : 0,
-                        "name" : "custom-resource-1",
-                        "resourceType" : "COUNTABLE",
-                        "units" : "k",
-                        "value" : 0
-                      }, {
-                        "attributes" : { },
-                        "maximumAllocation" : 9223372036854775807,
-                        "minimumAllocation" : 0,
-                        "name" : "custom-resource-2",
-                        "resourceType" : "COUNTABLE",
-                        "units" : "k",
-                        "value" : 0
                       } ]
                     }
                   },
@@ -1123,22 +1091,6 @@
                     "resourceType" : "COUNTABLE",
                     "units" : "",
                     "value" : 0
-                  }, {
-                    "attributes" : { },
-                    "maximumAllocation" : 9223372036854775807,
-                    "minimumAllocation" : 0,
-                    "name" : "custom-resource-1",
-                    "resourceType" : "COUNTABLE",
-                    "units" : "k",
-                    "value" : 0
-                  }, {
-                    "attributes" : { },
-                    "maximumAllocation" : 9223372036854775807,
-                    "minimumAllocation" : 0,
-                    "name" : "custom-resource-2",
-                    "resourceType" : "COUNTABLE",
-                    "units" : "k",
-                    "value" : 0
                   } ]
                 }
               },
@@ -1411,22 +1363,6 @@
                 "resourceType" : "COUNTABLE",
                 "units" : "",
                 "value" : 0
-              }, {
-                "attributes" : { },
-                "maximumAllocation" : 9223372036854775807,
-                "minimumAllocation" : 0,
-                "name" : "custom-resource-1",
-                "resourceType" : "COUNTABLE",
-                "units" : "k",
-                "value" : 0
-              }, {
-                "attributes" : { },
-                "maximumAllocation" : 9223372036854775807,
-                "minimumAllocation" : 0,
-                "name" : "custom-resource-2",
-                "resourceType" : "COUNTABLE",
-                "units" : "k",
-                "value" : 0
               } ]
             }
           },
@@ -1449,22 +1385,6 @@
                 "name" : "vcores",
                 "resourceType" : "COUNTABLE",
                 "units" : "",
-                "value" : 0
-              }, {
-                "attributes" : { },
-                "maximumAllocation" : 9223372036854775807,
-                "minimumAllocation" : 0,
-                "name" : "custom-resource-1",
-                "resourceType" : "COUNTABLE",
-                "units" : "k",
-                "value" : 0
-              }, {
-                "attributes" : { },
-                "maximumAllocation" : 9223372036854775807,
-                "minimumAllocation" : 0,
-                "name" : "custom-resource-2",
-                "resourceType" : "COUNTABLE",
-                "units" : "k",
                 "value" : 0
               } ]
             }
