@@ -22,7 +22,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,16 +35,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import org.apache.sshd.common.NamedFactory;
-import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.UserAuthFactory;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-
+import org.apache.sshd.server.subsystem.SubsystemFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 
@@ -82,8 +79,7 @@ public class TestSFTPFileSystem {
     sshd.setPort(0);
     sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
 
-    List<NamedFactory<UserAuth>> userAuthFactories =
-        new ArrayList<NamedFactory<UserAuth>>();
+    List<UserAuthFactory> userAuthFactories = new ArrayList<>();
     userAuthFactories.add(new UserAuthPasswordFactory());
 
     sshd.setUserAuthFactories(userAuthFactories);
@@ -100,7 +96,7 @@ public class TestSFTPFileSystem {
     });
 
     sshd.setSubsystemFactories(
-        Arrays.<NamedFactory<Command>>asList(new SftpSubsystemFactory()));
+        Collections.singletonList(new org.apache.sshd.sftp.server.SftpSubsystemFactory()));
 
     sshd.start();
     port = sshd.getPort();
