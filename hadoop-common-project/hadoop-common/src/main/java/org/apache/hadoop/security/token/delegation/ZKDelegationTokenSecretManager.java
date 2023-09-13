@@ -528,7 +528,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         try {
           // after a successful batch request, we can get the range starting point
           currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-          currentMaxSeqNum = currentSeqNum + seqNumBatchSize ;
+          currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
           LOG.info("Fetched new range of seq num, from {} to {} ",
               currentSeqNum+1, currentMaxSeqNum);
         } catch (InterruptedException e) {
@@ -542,8 +542,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
       return ++currentSeqNum;
     } finally {
-        this.currentSeqNumLock.unlock();
-      }
+      this.currentSeqNumLock.unlock();
+    }
   }
 
   @Override
