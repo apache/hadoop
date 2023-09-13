@@ -375,7 +375,7 @@ public final class DataBlocks {
      *
      * @return the current state.
      */
-    final DestState getState() {
+    public final DestState getState() {
       return state;
     }
 
