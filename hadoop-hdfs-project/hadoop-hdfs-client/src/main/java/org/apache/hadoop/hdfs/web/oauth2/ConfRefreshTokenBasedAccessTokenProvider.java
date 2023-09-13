@@ -119,7 +119,8 @@ public class ConfRefreshTokenBasedAccessTokenProvider
         .setConnectionRequestTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
         .setSocketTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
         .build();
-    try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
+    try (CloseableHttpClient client =
+             HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
       final HttpPost httpPost = new HttpPost(refreshURL);
       httpPost.setEntity(new UrlEncodedFormEntity(pairs, StandardCharsets.UTF_8));
       httpPost.setHeader(HttpHeaders.CONTENT_TYPE, URLENCODED);
