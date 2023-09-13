@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRespo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
@@ -1087,5 +1088,22 @@ public final class FederationStateStoreFacade {
   @VisibleForTesting
   public FederationCache getFederationCache() {
     return federationCache;
+  }
+
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation was
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param appId ApplicationId.
+   */
+  public void deleteApplicationHomeSubCluster(ApplicationId appId) {
+    try {
+      DeleteApplicationHomeSubClusterRequest request =
+          DeleteApplicationHomeSubClusterRequest.newInstance(appId);
+      stateStore.deleteApplicationHomeSubCluster(request);
+    } catch (Exception e) {
+      LOG.error("deleteApplicationHomeSubCluster error, applicationId = {}.", appId, e);
+    }
   }
 }
