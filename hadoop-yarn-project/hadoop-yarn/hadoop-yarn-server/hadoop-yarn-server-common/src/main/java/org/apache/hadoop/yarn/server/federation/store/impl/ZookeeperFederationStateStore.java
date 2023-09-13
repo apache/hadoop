@@ -113,7 +113,6 @@ import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
@@ -274,7 +273,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     versionNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_VERSION);
 
     String hierarchiesPath = getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES);
-    routerAppRootHierarchies = new HashMap<>(5);
+    routerAppRootHierarchies = new HashMap<>();
     routerAppRootHierarchies.put(0, appsZNode);
     for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
       routerAppRootHierarchies.put(splitIndex,
@@ -310,7 +309,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
           getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
       for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
         zkManager.createRootDirRecursively(
-           routerAppRootHierarchies.get(splitIndex));
+            routerAppRootHierarchies.get(splitIndex));
       }
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
       zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
