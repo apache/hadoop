@@ -132,6 +132,8 @@ public abstract class CredentialBasedAccessTokenProvider
 
         accessToken = responseBody.get(ACCESS_TOKEN).toString();
       }
+    } catch (RuntimeException e) {
+      throw new IOException("Unable to obtain access token from credential", e);
     } catch (Exception e) {
       throw new IOException("Unable to obtain access token from credential", e);
     }

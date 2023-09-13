@@ -138,6 +138,8 @@ public class ConfRefreshTokenBasedAccessTokenProvider
 
         accessToken = responseBody.get(ACCESS_TOKEN).toString();
       }
+    } catch (RuntimeException e) {
+      throw new IOException("Exception while refreshing access token", e);
     } catch (Exception e) {
       throw new IOException("Exception while refreshing access token", e);
     }
