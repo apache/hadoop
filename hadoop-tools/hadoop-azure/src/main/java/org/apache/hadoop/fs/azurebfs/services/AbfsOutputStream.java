@@ -344,8 +344,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             outputStreamStatistics.uploadSuccessful(bytesLength);
             return null;
           } finally {
-            IOUtils.close(blockUploadData);
-            blockToUpload.close();
+            IOUtils.close(blockUploadData, blockToUpload);
           }
         });
     writeOperations.add(new WriteOperation(job, offset, bytesLength));

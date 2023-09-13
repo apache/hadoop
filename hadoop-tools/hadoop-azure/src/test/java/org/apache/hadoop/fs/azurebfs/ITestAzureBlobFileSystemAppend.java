@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -42,6 +43,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLO
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_DISK;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
+import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Closed;
+import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
 
 /**
  * Test append operations.
@@ -131,10 +134,19 @@ public class ITestAzureBlobFileSystemAppend extends
                 BlockUploadStatistics.class));
         return factory;
       }).when(store).getBlockFactory();
-      OutputStream os = fs.create(new Path("/file_" + blockBufferType));
-      os.write(new byte[1]);
-      os.close();
-      Mockito.verify(dataBlock[0], Mockito.times(1)).close();
+      try (OutputStream os = fs.create(
+          new Path(getMethodName() + "_" + blockBufferType))) {
+        os.write(new byte[1]);
+        Assertions.assertThat(dataBlock[0].getState())
+            .describedAs(
+                "On write of data in outputStream, state should become Writing")
+            .isEqualTo(Writing);
+        os.close();
+        Mockito.verify(dataBlock[0], Mockito.times(1)).close();
+        Assertions.assertThat(dataBlock[0].getState())
+            .describedAs("On close of outputStream, state should become Closed")
+            .isEqualTo(Closed);
+      }
     }
   }
 }
