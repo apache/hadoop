@@ -41,9 +41,7 @@ import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.SubsystemFactory;
-import org.junit.After;
-import org.junit.AfterClass;
+import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
@@ -51,6 +49,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -96,7 +96,7 @@ public class TestSFTPFileSystem {
     });
 
     sshd.setSubsystemFactories(
-        Collections.singletonList(new org.apache.sshd.sftp.server.SftpSubsystemFactory()));
+        Collections.singletonList(new SftpSubsystemFactory()));
 
     sshd.start();
     port = sshd.getPort();
