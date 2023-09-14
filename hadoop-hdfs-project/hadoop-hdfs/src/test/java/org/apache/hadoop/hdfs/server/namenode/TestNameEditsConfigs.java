@@ -447,8 +447,12 @@ public class TestNameEditsConfigs {
           replication, SEED);
       checkFile(fileSys, file1, replication);
     } finally  {
-      fileSys.close();
-      cluster.shutdown();
+      if (fileSys != null) {
+        fileSys.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
 
     // 2
