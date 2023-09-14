@@ -1598,7 +1598,9 @@ public class TestDecommission extends AdminStatesBaseTest {
       assertTrue(usage.get("nodeUsage").get("min").
           equalsIgnoreCase(nodeusageAfterRecommi));
     } finally {
-      cleanupFile(fileSys, file1);
+      if (fileSys != null && fileSys.exists(file1)) {
+        fileSys.delete(file1, true);
+      }
     }
   }
 
