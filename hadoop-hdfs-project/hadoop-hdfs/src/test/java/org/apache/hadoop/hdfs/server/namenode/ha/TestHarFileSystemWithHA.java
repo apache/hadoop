@@ -57,7 +57,9 @@ public class TestHarFileSystemWithHA {
       Path p = new Path("har://hdfs-" + failoverUri.getAuthority() + TEST_HAR_PATH);
       p.getFileSystem(conf);
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   
