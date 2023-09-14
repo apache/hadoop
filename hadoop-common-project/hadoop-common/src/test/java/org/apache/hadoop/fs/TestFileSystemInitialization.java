@@ -77,6 +77,22 @@ public class TestFileSystemInitialization {
         .isEqualTo(1);
   }
 
+  @Test
+  public void testInvalidLocalFileSystem() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
+    try {
+      FileSystem.getLocal(conf);
+      fail("get local fs as RawLocalFileSystem should fail since RawLocalFileSystem does not"
+              + "extend LocalFileSystem");
+    } catch (IllegalArgumentException expected) {
+      // the getLocal is expected to throw an IllegalArgumentException indicating the error
+      assertEquals(expected.getMessage(), "fs.file.impl should extend "
+              + "org.apache.hadoop.fs.LocalFileSystem, "
+              + "actual: org.apache.hadoop.fs.RawLocalFileSystem");
+    }
+  }
+
   /**
    * An FS which will fail on both init and close, and update
    * counters of invocations as it does so.
