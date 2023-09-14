@@ -337,6 +337,10 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_CHECKSUM, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM)
+  private boolean isChecksumEnabled;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -1149,5 +1153,13 @@ public class AbfsConfiguration{
 
   void setRenameResilience(boolean actualResilience) {
     renameResilience = actualResilience;
+  }
+
+  public boolean getIsChecksumEnabled() {
+    return isChecksumEnabled;
+  }
+
+  void setIsChecksumEnabled(boolean isChecksumEnabled) {
+    this.isChecksumEnabled = isChecksumEnabled;
   }
 }

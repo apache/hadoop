@@ -49,6 +49,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningS
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.sun.tools.javac.util.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,6 +76,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
@@ -761,6 +763,8 @@ public class AbfsClient implements Closeable {
       requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
     }
 
+    addCheckSumHeaderForWrite(requestHeaders, buffer);
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -978,9 +982,12 @@ public class AbfsClient implements Closeable {
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
-    requestHeaders.add(new AbfsHttpHeader(RANGE,
-            String.format("bytes=%d-%d", position, position + bufferLength - 1)));
+
+    AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
+        String.format("bytes=%d-%d", position, position + bufferLength - 1));
+    requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    addCheckSumHeaderForRead(requestHeaders, bufferLength, rangeHeader);
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -998,6 +1005,8 @@ public class AbfsClient implements Closeable {
             bufferOffset,
             bufferLength, sasTokenForReuse);
     op.execute(tracingContext);
+
+    verifyCheckSumForRead(buffer, op.getResult());
 
     return op;
   }
@@ -1409,6 +1418,54 @@ public class AbfsClient implements Closeable {
     sb.append(regEx);
     if (shouldAppendSemiColon) {
       sb.append(SEMICOLON);
+    }
+  }
+
+  private void addCheckSumHeaderForRead(List<AbfsHttpHeader> requestHeaders,
+      final int bufferLength, final AbfsHttpHeader rangeHeader) {
+    if(getAbfsConfiguration().getIsChecksumEnabled() &&
+        requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB) {
+       requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
+    }
+  }
+
+  private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
+      final byte[] buffer) {
+    if(getAbfsConfiguration().getIsChecksumEnabled()) {
+      try {
+        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+        byte[] md5Bytes = md5Digest.digest(buffer);
+        String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
+        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
+      } catch (NoSuchAlgorithmException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  private void verifyCheckSumForRead(final byte[] buffer, final AbfsHttpOperation result)
+      throws AbfsRestOperationException{
+    if(getAbfsConfiguration().getIsChecksumEnabled()) {
+      // Number of bytes returned by server could be less than or equal to what
+      // caller requests. In case it is less, extra bytes will be initialized to 0
+      // Server returned MD5 Hash will be computed on what server returned.
+      // We need to get exact data that server returned and compute its md5 hash
+      // Computed hash should be equal to what server returned
+      int numberOfBytesRead = (int)result.getBytesReceived();
+      byte[] dataRead = new byte[numberOfBytesRead];
+      System.arraycopy(buffer, 0, dataRead, 0, numberOfBytesRead);
+
+      try {
+        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+        byte[] md5Bytes = md5Digest.digest(dataRead);
+        String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
+        String md5HashActual = result.getResponseHeader(CONTENT_MD5);
+        if (!md5HashComputed.equals(md5HashActual)) {
+          throw new AbfsRestOperationException(-1, "-1", "Checksum Check Failed", new IOException());
+        }
+      } catch (NoSuchAlgorithmException e) {
+        e.printStackTrace();
+      }
     }
   }
 
