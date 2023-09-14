@@ -52,6 +52,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
@@ -514,6 +515,8 @@ abstract class PBImageTextWriter implements Closeable {
   private File filename;
   private int numThreads;
   private String parallelOutputFile;
+  private final XAttr ecXAttr =
+      XAttrHelper.buildXAttr(XATTR_ERASURECODING_POLICY);
 
   /**
    * Construct a PB FsImage writer to generate text file.
@@ -1040,7 +1043,7 @@ abstract class PBImageTextWriter implements Closeable {
     List<XAttr> xattrs =
         FSImageFormatPBINode.Loader.loadXAttrs(xattrFeatureProto, stringTable);
     for (XAttr xattr : xattrs) {
-      if (XATTR_ERASURECODING_POLICY.contains(xattr.getName())){
+      if (xattr.equalsIgnoreValue(ecXAttr)){
         try{
           ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
           DataInputStream dIn = new DataInputStream(bIn);
