@@ -1173,7 +1173,7 @@ public class TestFsDatasetImpl {
       LOG.info("Exception in testMoveBlockFailure ", ex);
       fail("Exception while testing testMoveBlockFailure ");
     } finally {
-      if (cluster.isClusterUp()) {
+      if (cluster != null && cluster.isClusterUp()) {
         cluster.shutdown();
       }
     }
