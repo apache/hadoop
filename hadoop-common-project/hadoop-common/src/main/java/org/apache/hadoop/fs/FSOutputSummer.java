@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -52,6 +53,9 @@ abstract public class FSOutputSummer extends OutputStream implements
   
   protected FSOutputSummer(DataChecksum sum) {
     this.sum = sum;
+    Preconditions.checkArgument(
+            sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS > 0,
+            "Buffer size for FSOutputSummer should be a positive integer.");
     this.buf = new byte[sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS];
     this.checksum = new byte[getChecksumSize() * BUFFER_NUM_CHUNKS];
     this.count = 0;
