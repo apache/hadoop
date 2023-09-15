@@ -126,7 +126,7 @@ import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecre
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
 /**
- * ZooKeeper's implementation of {@link FederationStateStore}.
+ * ZooKeeper implementation of {@link FederationStateStore}.
  * The znode structure is as follows:
  *
  * ROOT_DIR_PATH
