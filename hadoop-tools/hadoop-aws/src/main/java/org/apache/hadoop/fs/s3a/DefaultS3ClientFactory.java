@@ -112,7 +112,7 @@ public class DefaultS3ClientFactory extends Configured
     return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
         .httpClientBuilder(httpClientBuilder)
         .multipartConfiguration(multipartConfiguration)
-        .multipartEnabled(true)
+        .multipartEnabled(parameters.isMultipartCopy())
         .build();
   }
 
