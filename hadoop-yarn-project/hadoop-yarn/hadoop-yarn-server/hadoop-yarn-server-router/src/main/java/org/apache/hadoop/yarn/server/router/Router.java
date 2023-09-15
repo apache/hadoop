@@ -114,7 +114,6 @@ public class Router extends CompositeService {
   private static final String CMD_FORMAT_STATE_STORE = "-format-state-store";
   private static final String CMD_REMOVE_APPLICATION_FROM_STATE_STORE =
       "-remove-application-from-state-store";
-  private static final String CMD_HELP = "-help";
 
   /**
    * Priority of the Router shutdown hook.
@@ -203,7 +202,7 @@ public class Router extends CompositeService {
   }
 
   protected void shutDown() {
-    new Thread(() -> Router.this.stop()).start();
+    new Thread(Router.this::stop).start();
   }
 
   protected RouterClientRMService createClientRMProxyService() {
@@ -311,13 +310,7 @@ public class Router extends CompositeService {
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
       argv = hParser.getRemainingArgs();
       if (argv.length > 1) {
-        if (argv[0].equals("-format-state-store")) {
-          System.err.println("format-state-store is not yet supported.");
-        } else if (argv[0].equals("-remove-application-from-state-store") && argv.length == 2) {
-          removeApplication(conf, argv[1]);
-        } else {
-          printUsage(System.err);
-        }
+        executeRouterCommand(conf, argv);
       } else {
         // Remove the old hook if we are rebooting.
         if (null != routerShutdownHook) {
@@ -380,21 +373,22 @@ public class Router extends CompositeService {
     LOG.info("Application is deleted from state store");
   }
 
-  private void handFormatStateStore() {
+  private static void handFormatStateStore() {
     // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
     System.err.println("format-state-store is not yet supported.");
   }
 
-  private void handRemoveApplicationFromStateStore(String applicationId) {
+  private static void handRemoveApplicationFromStateStore(Configuration conf,
+      String applicationId) {
     try {
       removeApplication(conf, applicationId);
       System.out.println("Application " + applicationId + " is deleted from state store");
     } catch (Exception e) {
-      System.err.println("Application " + applicationId + " error, excpetion = " + e);
+      System.err.println("Application " + applicationId + " error, exception = " + e);
     }
   }
 
-  private void executeRouterCommand(String[] args) {
+  private static void executeRouterCommand(Configuration conf, String[] args) {
     Options opts = new Options();
     Option formatStateStoreOpt = new Option("format-state-store",  false,
         " Formats the FederationStateStore. " +
@@ -412,25 +406,25 @@ public class Router extends CompositeService {
     CommandLine cliParser = null;
     try {
       cliParser = new DefaultParser().parse(opts, args);
+
+      if (CMD_FORMAT_STATE_STORE.equals(cmd)) {
+        handFormatStateStore();
+      } else if (CMD_REMOVE_APPLICATION_FROM_STATE_STORE.equals(cmd)) {
+        if (cliParser.hasOption(removeApplicationFromStateStoreOpt)) {
+          String applicationId = cliParser.getOptionValue(removeApplicationFromStateStoreOpt);
+          handRemoveApplicationFromStateStore(conf, applicationId);
+        } else {
+          System.err.println("remove-application-from-state-store requires application arg.");
+        }
+      } else {
+        System.out.println("No related commands found.");
+        printUsage(System.err);
+      }
     } catch (MissingArgumentException ex) {
       System.out.println("Missing argument for options.");
       printUsage(System.err);
     } catch (ParseException e) {
       System.out.println("Parsing of a command-line error.");
-      printUsage(System.err);
-    }
-
-    if (CMD_FORMAT_STATE_STORE.equals(cmd)) {
-      handFormatStateStore();
-    } else if (CMD_REMOVE_APPLICATION_FROM_STATE_STORE.equals(cmd)) {
-      if (cliParser.hasOption(removeApplicationFromStateStoreOpt)) {
-        String applicationId = cliParser.getOptionValue(removeApplicationFromStateStoreOpt);
-        handRemoveApplicationFromStateStore(applicationId);
-      } else {
-        System.err.println("remove-application-from-state-store requires application arg.");
-      }
-    } else {
-      System.out.println("No related commands found.");
       printUsage(System.err);
     }
   }
