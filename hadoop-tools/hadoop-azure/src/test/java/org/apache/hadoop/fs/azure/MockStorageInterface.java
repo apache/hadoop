@@ -36,6 +36,7 @@ import java.util.TimeZone;
 import java.util.List;
 
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
@@ -476,6 +477,12 @@ public class MockStorageInterface extends StorageInterface {
     @Override
     public void delete(OperationContext opContext, SelfRenewingLease lease)
         throws StorageException {
+      backingStore.delete(convertUriToDecodedString(uri));
+    }
+
+    @Override
+    public void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+            throws StorageException {
       backingStore.delete(convertUriToDecodedString(uri));
     }
 

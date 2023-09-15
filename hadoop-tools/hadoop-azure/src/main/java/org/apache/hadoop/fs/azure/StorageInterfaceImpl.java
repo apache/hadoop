@@ -315,6 +315,20 @@ class StorageInterfaceImpl extends StorageInterface {
           null, opContext);
     }
 
+    @Override
+    public void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+            throws StorageException {
+      AccessCondition accessCondition1 = getLeaseCondition(lease);
+      if (accessCondition1 != null) {
+        accessCondition1.setIfMatch(eTag);
+      } else {
+        accessCondition1 = new AccessCondition();
+        accessCondition1.setIfMatch(eTag);
+      }
+      getBlob().delete(DeleteSnapshotsOption.NONE, accessCondition1,
+              null, opContext);
+    }
+
     /**
      * Return and access condition for this lease, or else null if
      * there's no lease.

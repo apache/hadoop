@@ -97,7 +97,9 @@ interface NativeFileSystemStore {
    * @throws IOException Exception encountered while deleting in
    * azure storage.
    */
-  boolean delete(String key) throws IOException;
+  //boolean delete(String key) throws IOException;
+
+  boolean delete(String key, String eTag) throws IOException;
 
   void rename(String srcKey, String dstKey) throws IOException;
 
@@ -144,7 +146,7 @@ interface NativeFileSystemStore {
    * @throws IOException Exception encountered while deleting in
    * azure storage.
    */
-  boolean delete(String key, SelfRenewingLease lease) throws IOException;
+  boolean delete(String key, SelfRenewingLease lease, String eTag) throws IOException;
       
   SelfRenewingLease acquireLease(String key) throws AzureException;
 

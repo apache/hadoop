@@ -2721,10 +2721,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @param lease Azure blob lease, or null if no lease is to be used.
    * @throws StorageException
    */
-  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease) throws StorageException {
+  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease, String eTag) throws StorageException {
     OperationContext operationContext = getInstrumentedContext();
     try {
-      blob.delete(operationContext, lease);
+      blob.delete(operationContext, lease, eTag);
     } catch (StorageException e) {
       if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
         LOG.error("Encountered Storage Exception for delete on Blob: {}"
@@ -2755,7 +2755,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * API implementation to delete a blob in the back end azure storage.
    */
   @Override
-  public boolean delete(String key, SelfRenewingLease lease) throws IOException {
+  public boolean delete(String key, SelfRenewingLease lease, String eTag) throws IOException {
     try {
       if (checkContainer(ContainerAccessType.ReadThenWrite) == ContainerState.DoesntExist) {
         // Container doesn't exist, no need to do anything
@@ -2763,7 +2763,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       }
       // Get the blob reference and delete it.
       CloudBlobWrapper blob = getBlobReference(key);
-      safeDelete(blob, lease);
+      safeDelete(blob, lease, eTag);
       return true;
     } catch (Exception e) {
       if (e instanceof StorageException
@@ -2780,9 +2780,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * API implementation to delete a blob in the back end azure storage.
    */
   @Override
-  public boolean delete(String key) throws IOException {
+  public boolean delete(String key, String eTag) throws IOException {
     try {
-      return delete(key, null);
+      return delete(key, null, eTag);
     } catch (IOException e) {
       Throwable t = e.getCause();
       if (t instanceof StorageException) {
@@ -2791,7 +2791,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           SelfRenewingLease lease = null;
           try {
             lease = acquireLease(key);
-            return delete(key, lease);
+            return delete(key, lease, eTag);
           } catch (AzureException e3) {
             LOG.warn("Got unexpected exception trying to acquire lease on "
                 + key + "." + e3.getMessage());
@@ -2935,7 +2935,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         }
       }
       waitForCopyToComplete(dstBlob, getInstrumentedContext());
-      safeDelete(srcBlob, lease);
+      safeDelete(srcBlob, lease, srcBlob.getBlob().getProperties().getEtag());
     } catch (StorageException e) {
       if (e.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         LOG.warn("Rename: CopyBlob: StorageException: ServerBusy: Retry complete, will attempt client side copy for page blob");
@@ -2956,7 +2956,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           } else {
             throw new AzureException(e);
           }
-          safeDelete(srcBlob, lease);
+          safeDelete(srcBlob, lease, srcBlob.getBlob().getProperties().getEtag());
         } catch(StorageException se) {
           LOG.warn("Rename: CopyBlob: StorageException: Failed");
           throw new AzureException(se);

@@ -472,6 +472,9 @@ abstract class StorageInterface {
     void delete(OperationContext opContext, SelfRenewingLease lease)
         throws StorageException;
 
+    void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+      throws StorageException;
+
     /**
      * Checks to see if the blob exists, using the specified operation context.
      * 

@@ -588,7 +588,7 @@ public class NativeAzureFileSystem extends FileSystem {
           }
 
           // Now we can safely delete the source folder.
-          fs.getStoreInterface().delete(srcKey, lease);
+          fs.getStoreInterface().delete(srcKey, lease, srcMetaData.getEtag());
         } catch (Exception e) {
           LOG.info("Unable to delete source folder during folder rename redo. "
               + "If the source folder is already gone, this is not an error "
@@ -2011,6 +2011,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the metadata for the path.
     FileMetadata metaFile = null;
+    String eTag;
     try {
       metaFile = store.retrieveMetadata(key);
     } catch (IOException e) {
@@ -2028,6 +2029,8 @@ public class NativeAzureFileSystem extends FileSystem {
     if (null == metaFile) {
       // The path to be deleted does not exist.
       return false;
+    } else {
+      eTag = metaFile.getEtag();
     }
 
     FileMetadata parentMetadata = null;
@@ -2101,7 +2104,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       try {
-        if (store.delete(key)) {
+        if (store.delete(key, eTag)) {
           instrumentation.fileDeleted();
         } else {
           return false;
@@ -2326,7 +2329,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       try {
-        if (store.delete(key)) {
+        if (store.delete(key, metaFile.getEtag())) {
           instrumentation.fileDeleted();
         } else {
           return false;
@@ -2674,7 +2677,8 @@ public class NativeAzureFileSystem extends FileSystem {
    */
   @VisibleForTesting
   boolean deleteFile(String path, boolean isDir) throws IOException {
-    if (!store.delete(path)) {
+    FileMetadata metadata = store.retrieveMetadata(path);
+    if (!store.delete(path, metadata.getEtag())) {
       return false;
     }
 
@@ -3832,8 +3836,8 @@ public class NativeAzureFileSystem extends FileSystem {
       LOG.debug("Deleting dangling file {}", file.getKey());
       // Not handling delete return type as false return essentially
       // means its a no-op for the caller
-      store.delete(file.getKey());
-      store.delete(tempFile.getKey());
+      store.delete(file.getKey(), file.getEtag());
+      store.delete(tempFile.getKey(), tempFile.getEtag());
     }
   }
 
@@ -3859,7 +3863,7 @@ public class NativeAzureFileSystem extends FileSystem {
       store.rename(tempFile.getKey(), finalDestinationKey);
       if (!finalDestinationKey.equals(file.getKey())) {
         // Delete the empty link file now that we've restored it.
-        store.delete(file.getKey());
+        store.delete(file.getKey(), file.getEtag());
       }
     }
   }
