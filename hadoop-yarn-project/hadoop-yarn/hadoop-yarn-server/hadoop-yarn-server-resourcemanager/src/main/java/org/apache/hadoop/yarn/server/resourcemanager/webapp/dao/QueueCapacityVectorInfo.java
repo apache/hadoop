@@ -29,34 +29,35 @@ import java.util.List;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueCapacityVectorInfo {
-    private String configuredCapacityVector;
-    private List<QueueCapacityVectorEntryInfo> capacityVectorEntries;
+  private String configuredCapacityVector;
+  private List<QueueCapacityVectorEntryInfo> capacityVectorEntries;
 
-    public QueueCapacityVectorInfo() {
+  public QueueCapacityVectorInfo() {
+  }
+
+  public QueueCapacityVectorInfo(QueueCapacityVector queueCapacityVector) {
+    this.configuredCapacityVector = queueCapacityVector.toString();
+    this.capacityVectorEntries = new ArrayList<>();
+    for (QueueCapacityVector.QueueCapacityVectorEntry queueCapacityVectorEntry : queueCapacityVector) {
+      this.capacityVectorEntries.add(
+              new QueueCapacityVectorEntryInfo(queueCapacityVectorEntry.getResourceName(),
+                    queueCapacityVectorEntry.getResourceWithPostfix()));
     }
+  }
 
-    public QueueCapacityVectorInfo(QueueCapacityVector queueCapacityVector) {
-        this.configuredCapacityVector = queueCapacityVector.toString();
-        this.capacityVectorEntries = new ArrayList<>();
-        for (QueueCapacityVector.QueueCapacityVectorEntry queueCapacityVectorEntry : queueCapacityVector) {
-            this.capacityVectorEntries.add(new QueueCapacityVectorEntryInfo(
-                    queueCapacityVectorEntry.getResourceName(), queueCapacityVectorEntry.getResourceWithPostfix()));
-        }
-    }
-
-    public String getConfiguredCapacityVector() {
+  public String getConfiguredCapacityVector() {
         return configuredCapacityVector;
     }
 
-    public void setConfiguredCapacityVector(String configuredCapacityVector) {
-        this.configuredCapacityVector = configuredCapacityVector;
-    }
+  public void setConfiguredCapacityVector(String configuredCapacityVector) {
+    this.configuredCapacityVector = configuredCapacityVector;
+  }
 
-    public List<QueueCapacityVectorEntryInfo> getCapacityVectorEntries() {
+  public List<QueueCapacityVectorEntryInfo> getCapacityVectorEntries() {
         return capacityVectorEntries;
     }
 
-    public void setCapacityVectorEntries(List<QueueCapacityVectorEntryInfo> capacityVectorEntries) {
-        this.capacityVectorEntries = capacityVectorEntries;
-    }
+  public void setCapacityVectorEntries(List<QueueCapacityVectorEntryInfo> capacityVectorEntries) {
+    this.capacityVectorEntries = capacityVectorEntries;
+  }
 }

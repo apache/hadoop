@@ -24,30 +24,30 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueCapacityVectorEntryInfo {
-    private String resourceName;
-    private String resourceValue;
+  private String resourceName;
+  private String resourceValue;
 
-    public QueueCapacityVectorEntryInfo() {
+  public QueueCapacityVectorEntryInfo() {
+  }
+
+  public QueueCapacityVectorEntryInfo(String resourceName, String resourceValue) {
+    this.resourceName = resourceName;
+    this.resourceValue = resourceValue;
+  }
+
+  public String getResourceName() {
+        return this.resourceName;
     }
 
-    public QueueCapacityVectorEntryInfo(String resourceName, String resourceValue) {
+  public void setResourceName(String resourceName) {
         this.resourceName = resourceName;
-        this.resourceValue = resourceValue;
     }
 
-    public String getResourceName() {
-        return resourceName;
+  public String getResourceValue() {
+        return this.resourceValue;
     }
 
-    public void setResourceName(String resourceName) {
-        this.resourceName = resourceName;
-    }
-
-    public String getResourceValue() {
-        return resourceValue;
-    }
-
-    public void setResourceValue(String resourceValue) {
+  public void setResourceValue(String resourceValue) {
         this.resourceValue = resourceValue;
     }
 }

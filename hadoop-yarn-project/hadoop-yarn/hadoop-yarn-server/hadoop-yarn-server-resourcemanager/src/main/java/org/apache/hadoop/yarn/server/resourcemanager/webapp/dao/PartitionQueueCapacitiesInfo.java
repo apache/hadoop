@@ -50,7 +50,8 @@ public class PartitionQueueCapacitiesInfo {
   public PartitionQueueCapacitiesInfo() {
   }
 
-  public PartitionQueueCapacitiesInfo(String partitionName, QueueCapacityVectorInfo queueCapacityVectorInfo,
+  public PartitionQueueCapacitiesInfo(String partitionName,
+      QueueCapacityVectorInfo queueCapacityVectorInfo,
       float capacity, float usedCapacity, float maxCapacity, float absCapacity,
       float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage,
       float weight, float normalizedWeight,
