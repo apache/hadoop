@@ -356,6 +356,33 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   @Test
+  public void testQueueSubmitWithLeafQueueName()
+      throws YarnException {
+    YarnConfiguration conf = createYarnACLEnabledConfiguration();
+    CapacitySchedulerConfiguration csConf = new
+        CapacitySchedulerConfiguration(conf, false);
+    csConf.set(PREFIX + "root.queues", "default,test");
+
+    csConf.setCapacity("root.default", 50.0f);
+    csConf.setMaximumCapacity("root.default", 100.0f);
+
+    csConf.setCapacity("root.test", 50.0f);
+    csConf.setMaximumCapacity("root.test", 100.0f);
+
+    MockRM newMockRM = new MockRM(csConf);
+    RMContext newMockRMContext = newMockRM.getRMContext();
+    TestRMAppManager newAppMonitor = createAppManager(newMockRMContext, conf);
+
+    ApplicationSubmissionContext submission = createAppSubmissionContext(MockApps.newAppID(1));
+    submission.setQueue("test");
+    verifyAppSubmission(submission,
+        newAppMonitor,
+        newMockRMContext,
+        "test",
+        "root.test");
+  }
+
+  @Test
   public void testQueueSubmitWithACLsEnabledWithQueueMappingForLegacyAutoCreatedQueue()
       throws IOException, YarnException {
     YarnConfiguration conf = createYarnACLEnabledConfiguration();

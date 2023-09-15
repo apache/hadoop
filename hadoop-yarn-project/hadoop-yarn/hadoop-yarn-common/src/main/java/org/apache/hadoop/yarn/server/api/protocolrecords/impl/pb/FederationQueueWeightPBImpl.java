@@ -115,6 +115,46 @@ public class FederationQueueWeightPBImpl extends FederationQueueWeight {
   }
 
   @Override
+  public String getQueue() {
+    FederationQueueWeightProtoOrBuilder p = this.viaProto ? this.proto : this.builder;
+    boolean hasQueue = p.hasQueue();
+    if (hasQueue) {
+      return p.getQueue();
+    }
+    return null;
+  }
+
+  @Override
+  public void setQueue(String queue) {
+    maybeInitBuilder();
+    if (queue == null) {
+      builder.clearQueue();
+      return;
+    }
+    builder.setQueue(queue);
+  }
+
+  @Override
+  public String getPolicyManagerClassName() {
+    FederationQueueWeightProtoOrBuilder p = this.viaProto ? this.proto : this.builder;
+    boolean hasPolicyManagerClassName = p.hasPolicyManagerClassName();
+    if (hasPolicyManagerClassName) {
+      return p.getPolicyManagerClassName();
+    }
+    return null;
+  }
+
+  @Override
+  public void setPolicyManagerClassName(String policyManagerClassName) {
+    maybeInitBuilder();
+    if (policyManagerClassName == null) {
+      builder.clearPolicyManagerClassName();
+      return;
+    }
+    builder.setPolicyManagerClassName(policyManagerClassName);
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }

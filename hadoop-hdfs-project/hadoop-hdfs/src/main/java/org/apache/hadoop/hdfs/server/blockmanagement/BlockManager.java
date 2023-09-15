@@ -449,7 +449,7 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * Progress of the Reconstruction queues initialisation.
    */
-  private double reconstructionQueuesInitProgress = 0.0;
+  private float reconstructionQueuesInitProgress = 0.0f;
 
   /** for block replicas placement */
   private volatile BlockPlacementPolicies placementPolicies;
@@ -2909,7 +2909,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
             strBlockReportId, fullBrLeaseId, nodeID);
-        blockReportLeaseManager.removeLease(node);
+        removeDNLeaseIfNeeded(node);
         return !node.hasStaleStorages();
       }
 
@@ -2955,6 +2955,23 @@ public class BlockManager implements BlockStatsMXBean {
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
+  }
+
+  /**
+   * Remove the DN lease only when we have received block reports,
+   * for all storages for a particular DN.
+   */
+  void removeDNLeaseIfNeeded(DatanodeDescriptor node) {
+    boolean needRemoveLease = true;
+    for (DatanodeStorageInfo sInfo : node.getStorageInfos()) {
+      if (sInfo.getBlockReportCount() == 0) {
+        needRemoveLease = false;
+        break;
+      }
+    }
+    if (needRemoveLease) {
+      blockReportLeaseManager.removeLease(node);
+    }
   }
 
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
@@ -3889,8 +3906,10 @@ public class BlockManager implements BlockStatsMXBean {
         totalProcessed += processed;
         // there is a possibility that if any of the blocks deleted/added during
         // initialisation, then progress might be different.
-        reconstructionQueuesInitProgress = Math.min((double) totalProcessed
-            / totalBlocks, 1.0);
+        if (totalBlocks > 0) { // here avoid metrics appear as NaN.
+          reconstructionQueuesInitProgress = Math.min((float) totalProcessed
+              / totalBlocks, 1.0f);
+        }
 
         if (!blocksItr.hasNext()) {
           LOG.info("Total number of blocks            = {}", blocksMap.size());
@@ -3910,6 +3929,8 @@ public class BlockManager implements BlockStatsMXBean {
         }
       } finally {
         namesystem.writeUnlock("processMisReplicatesAsync");
+        LOG.info("Reconstruction queues initialisation progress: {}, total number of blocks " +
+            "processed: {}/{}", reconstructionQueuesInitProgress, totalProcessed, totalBlocks);
         // Make sure it is out of the write lock for sufficiently long time.
         Thread.sleep(sleepDuration);
       }
@@ -3924,7 +3945,7 @@ public class BlockManager implements BlockStatsMXBean {
    * 
    * @return Returns values between 0 and 1 for the progress.
    */
-  public double getReconstructionQueuesInitProgress() {
+  public float getReconstructionQueuesInitProgress() {
     return reconstructionQueuesInitProgress;
   }
 
@@ -4026,6 +4047,11 @@ public class BlockManager implements BlockStatsMXBean {
 
     // update neededReconstruction priority queues
     b.setReplication(newRepl);
+
+    // Process the block only when active NN is out of safe mode.
+    if (!isPopulatingReplQueues()) {
+      return;
+    }
     NumberReplicas num = countNodes(b);
     updateNeededReconstructions(b, 0, newRepl - oldRepl);
     if (shouldProcessExtraRedundancy(num, newRepl)) {

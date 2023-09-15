@@ -59,7 +59,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   @Test
   public void testRequesterPaysOptionSuccess() throws Throwable {
     describe("Test requester pays enabled case by reading last then first byte");
-
+    skipIfClientSideEncryption();
     Configuration conf = this.createConfiguration();
     conf.setBoolean(ALLOW_REQUESTER_PAYS, true);
     // Enable bucket exists check, the first failure point people may encounter
@@ -107,7 +107,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {
       intercept(
           AccessDeniedException.class,
-          "403 Forbidden",
+          "403",
           "Expected requester pays bucket to fail without header set",
           () -> fs.open(requesterPaysPath).close()
       );

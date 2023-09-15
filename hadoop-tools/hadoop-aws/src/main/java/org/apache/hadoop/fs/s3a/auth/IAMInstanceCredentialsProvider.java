@@ -21,17 +21,18 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.Closeable;
 import java.io.IOException;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This is an IAM credential provider which wraps
- * an {@code EC2ContainerCredentialsProviderWrapper}
+ * an {@code ContainerCredentialsProvider}
  * to provide credentials when the S3A connector is instantiated on AWS EC2
  * or the AWS container services.
  * <p>
@@ -41,17 +42,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>
  * It is implicitly public; marked evolving as we can change its semantics.
  *
- * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
- * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-@Deprecated
 public class IAMInstanceCredentialsProvider
-    implements AWSCredentialsProvider, Closeable {
+    implements AwsCredentialsProvider, Closeable {
 
-  private final AWSCredentialsProvider provider =
-      new EC2ContainerCredentialsProviderWrapper();
+  private final AwsCredentialsProvider containerCredentialsProvider =
+      ContainerCredentialsProvider.builder().build();
 
   public IAMInstanceCredentialsProvider() {
   }
@@ -63,23 +61,40 @@ public class IAMInstanceCredentialsProvider
    * @throws NoAwsCredentialsException on auth failure to indicate non-recoverable.
    */
   @Override
-  public AWSCredentials getCredentials() {
+  public AwsCredentials resolveCredentials() {
     try {
-      return provider.getCredentials();
-    } catch (AmazonClientException e) {
+      return getCredentials();
+    } catch (SdkClientException e) {
       throw new NoAwsCredentialsException("IAMInstanceCredentialsProvider",
           e.getMessage(),
           e);
     }
   }
 
-  @Override
-  public void refresh() {
-    provider.refresh();
+  /**
+   * First try {@link ContainerCredentialsProvider}, which will throw an exception if credentials
+   * cannot be retrieved from the container. Then resolve credentials
+   * using {@link InstanceProfileCredentialsProvider}.
+   *
+   * @return credentials
+   */
+  private AwsCredentials getCredentials() {
+    try {
+      return containerCredentialsProvider.resolveCredentials();
+    } catch (SdkClientException e) {
+      return InstanceProfileCredentialsProvider.create().resolveCredentials();
+    }
   }
 
   @Override
   public void close() throws IOException {
     // no-op.
+  }
+
+  @Override
+  public String toString() {
+    return "IAMInstanceCredentialsProvider{" +
+        "containerCredentialsProvider=" + containerCredentialsProvider +
+        '}';
   }
 }

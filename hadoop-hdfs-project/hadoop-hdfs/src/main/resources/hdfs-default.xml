@@ -2802,6 +2802,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.observer.enabled</name>
+  <value>false</value>
+  <description>
+    This causes NameNode on startup to become an observer node if
+    set to true, otherwise startup is no different.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
@@ -4722,6 +4731,15 @@
   </property>
 
   <property>
+    <name>dfs.datanode.data.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that can utilize for reading block.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
     <value>0</value>
     <description>
@@ -5247,7 +5265,7 @@
   <name>dfs.namenode.file.close.num-committed-allowed</name>
   <value>0</value>
   <description>
-    Normally a file can only be closed with all its blocks are committed.
+    Normally a file can only be closed with all its blocks are complete.
     When this value is set to a positive integer N, a file can be closed
     when N blocks are committed and the rest complete. In case of Erasure Coded
     blocks, the committed block shall be allowed only when the block group is

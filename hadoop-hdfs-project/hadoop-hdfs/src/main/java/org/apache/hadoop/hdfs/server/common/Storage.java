@@ -1114,11 +1114,7 @@ public abstract class Storage extends StorageInfo {
   }
 
   public NamespaceInfo getNamespaceInfo() {
-    return new NamespaceInfo(
-        getNamespaceID(),
-        getClusterID(),
-        null,
-        getCTime());
+    return new NamespaceInfo(this);
   }
 
   /**

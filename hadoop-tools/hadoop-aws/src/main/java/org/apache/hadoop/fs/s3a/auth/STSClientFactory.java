@@ -20,31 +20,38 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.Credentials;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
+import software.amazon.awssdk.thirdparty.org.apache.http.client.utils.URIBuilder;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 
 /**
@@ -71,17 +78,15 @@ public class STSClientFactory {
    * @return the builder to call {@code build()}
    * @throws IOException problem reading proxy secrets
    */
-  public static AWSSecurityTokenServiceClientBuilder builder(
+  public static StsClientBuilder builder(
       final Configuration conf,
       final String bucket,
-      final AWSCredentialsProvider credentials) throws IOException {
-    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket,
-        Constants.AWS_SERVICE_IDENTIFIER_STS);
+      final AwsCredentialsProvider credentials) throws IOException {
     String endpoint = conf.getTrimmed(DELEGATION_TOKEN_ENDPOINT,
         DEFAULT_DELEGATION_TOKEN_ENDPOINT);
     String region = conf.getTrimmed(DELEGATION_TOKEN_REGION,
         DEFAULT_DELEGATION_TOKEN_REGION);
-    return builder(credentials, awsConf, endpoint, region);
+    return builder(credentials, conf, endpoint, region, bucket);
   }
 
   /**
@@ -96,64 +101,89 @@ public class STSClientFactory {
    * @return the builder to call {@code build()}
    * @throws IOException problem reading proxy secrets
    */
-  public static AWSSecurityTokenServiceClientBuilder builder(
+  public static StsClientBuilder builder(
       final Configuration conf,
       final String bucket,
-      final AWSCredentialsProvider credentials,
+      final AwsCredentialsProvider credentials,
       final String stsEndpoint,
       final String stsRegion) throws IOException {
-    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket,
-        Constants.AWS_SERVICE_IDENTIFIER_STS);
-    return builder(credentials, awsConf, stsEndpoint, stsRegion);
+    return builder(credentials, conf, stsEndpoint, stsRegion, bucket);
   }
 
   /**
    * Create the builder ready for any final configuration options.
    * Picks up connection settings from the Hadoop configuration, including
    * proxy secrets.
-   * @param awsConf AWS configuration.
+   * @param conf AWS configuration.
    * @param credentials AWS credential chain to use
    * @param stsEndpoint optional endpoint "https://sns.us-west-1.amazonaws.com"
    * @param stsRegion the region, e.g "us-west-1". Must be set if endpoint is.
+   * @param bucket bucket name
    * @return the builder to call {@code build()}
+   * @throws IOException problem reading proxy secrets
    */
-  public static AWSSecurityTokenServiceClientBuilder builder(
-      final AWSCredentialsProvider credentials,
-      final ClientConfiguration awsConf,
-      final String stsEndpoint,
-      final String stsRegion) {
-    final AWSSecurityTokenServiceClientBuilder builder
-        = AWSSecurityTokenServiceClientBuilder.standard();
+  public static StsClientBuilder builder(final AwsCredentialsProvider credentials,
+      final Configuration conf, final String stsEndpoint, final String stsRegion,
+      final String bucket) throws IOException {
+    final StsClientBuilder stsClientBuilder = StsClient.builder();
+
     Preconditions.checkArgument(credentials != null, "No credentials");
-    builder.withClientConfiguration(awsConf);
-    builder.withCredentials(credentials);
+
+    final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
+        AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS);
+
+    final ApacheHttpClient.Builder httpClientBuilder =
+        AWSClientConfig.createHttpClientBuilder(conf);
+
+    final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
+
+    final ProxyConfiguration proxyConfig = AWSClientConfig.createProxyConfiguration(conf, bucket);
+
+    clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
+    httpClientBuilder.proxyConfiguration(proxyConfig);
+
+    stsClientBuilder.httpClientBuilder(httpClientBuilder)
+        .overrideConfiguration(clientOverrideConfigBuilder.build())
+        .credentialsProvider(credentials);
+
     boolean destIsStandardEndpoint = STS_STANDARD.equals(stsEndpoint);
     if (isNotEmpty(stsEndpoint) && !destIsStandardEndpoint) {
-      Preconditions.checkArgument(
-          isNotEmpty(stsRegion),
-          "STS endpoint is set to %s but no signing region was provided",
-          stsEndpoint);
+      Preconditions.checkArgument(isNotEmpty(stsRegion),
+          "STS endpoint is set to %s but no signing region was provided", stsEndpoint);
       LOG.debug("STS Endpoint={}; region='{}'", stsEndpoint, stsRegion);
-      builder.withEndpointConfiguration(
-          new AwsClientBuilder.EndpointConfiguration(stsEndpoint, stsRegion));
+      stsClientBuilder.endpointOverride(getSTSEndpoint(stsEndpoint)).region(Region.of(stsRegion));
     } else {
       Preconditions.checkArgument(isEmpty(stsRegion),
-          "STS signing region set set to %s but no STS endpoint specified",
-          stsRegion);
+          "STS signing region set set to %s but no STS endpoint specified", stsRegion);
     }
-    return builder;
+    return stsClientBuilder;
   }
 
   /**
+   * Given a endpoint string, create the endpoint URI.
+   *
+   * @param endpoint possibly null endpoint.
+   * @return an endpoint uri
+   */
+  private static URI getSTSEndpoint(String endpoint) {
+    try {
+      return new URIBuilder().setScheme("https").setHost(endpoint).build();
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+
+  /**
    * Create an STS Client instance.
-   * @param tokenService STS instance
+   * @param stsClient STS instance
    * @param invoker invoker to use
    * @return an STS client bonded to that interface.
    */
   public static STSClient createClientConnection(
-      final AWSSecurityTokenService tokenService,
+      final StsClient stsClient,
       final Invoker invoker) {
-    return new STSClient(tokenService, invoker);
+    return new STSClient(stsClient, invoker);
   }
 
   /**
@@ -161,21 +191,19 @@ public class STSClientFactory {
    */
   public static final class STSClient implements Closeable {
 
-    private final AWSSecurityTokenService tokenService;
+    private final StsClient stsClient;
 
     private final Invoker invoker;
 
-    private STSClient(final AWSSecurityTokenService tokenService,
+    private STSClient(final StsClient stsClient,
         final Invoker invoker) {
-      this.tokenService = tokenService;
+      this.stsClient = stsClient;
       this.invoker = invoker;
     }
 
     @Override
     public void close() throws IOException {
-      // Since we are not using AbstractAWSSecurityTokenService, we
-      // don't need to worry about catching UnsupportedOperationException.
-      tokenService.shutdown();
+      stsClient.close();
     }
 
     /**
@@ -192,13 +220,13 @@ public class STSClientFactory {
         final TimeUnit timeUnit) throws IOException {
       int durationSeconds = (int) timeUnit.toSeconds(duration);
       LOG.debug("Requesting session token of duration {}", duration);
-      final GetSessionTokenRequest request = new GetSessionTokenRequest();
-      request.setDurationSeconds(durationSeconds);
+      final GetSessionTokenRequest request =
+          GetSessionTokenRequest.builder().durationSeconds(durationSeconds).build();
       return invoker.retry("request session credentials", "",
           true,
           () ->{
             LOG.info("Requesting Amazon STS Session credentials");
-            return tokenService.getSessionToken(request).getCredentials();
+            return stsClient.getSessionToken(request).credentials();
           });
     }
 
@@ -222,15 +250,14 @@ public class STSClientFactory {
         final TimeUnit timeUnit) throws IOException {
       LOG.debug("Requesting role {} with duration {}; policy = {}",
           roleARN, duration, policy);
-      AssumeRoleRequest request = new AssumeRoleRequest();
-      request.setDurationSeconds((int) timeUnit.toSeconds(duration));
-      request.setRoleArn(roleARN);
-      request.setRoleSessionName(sessionName);
+      AssumeRoleRequest.Builder requestBuilder =
+          AssumeRoleRequest.builder().durationSeconds((int) timeUnit.toSeconds(duration))
+              .roleArn(roleARN).roleSessionName(sessionName);
       if (isNotEmpty(policy)) {
-        request.setPolicy(policy);
+        requestBuilder.policy(policy);
       }
       return invoker.retry("request role credentials", "", true,
-          () -> tokenService.assumeRole(request).getCredentials());
+          () -> stsClient.assumeRole(requestBuilder.build()).credentials());
     }
   }
 }

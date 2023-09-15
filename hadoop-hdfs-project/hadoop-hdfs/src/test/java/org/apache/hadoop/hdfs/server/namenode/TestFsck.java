@@ -1056,8 +1056,6 @@ public class TestFsck {
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
     assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
     assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
-
-
   }
 
   /** Test if fsck can return -1 in case of failure.
@@ -1834,6 +1832,51 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
   }
 
+  /**
+   * Test for blockIdCK with block excess.
+   */
+  @Test
+  public void testBlockIdCKExcess() throws Exception {
+    final Configuration configuration = new Configuration();
+    // Disable redundancy monitor check so that excess block can be verified.
+    configuration.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 5000);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(configuration).
+        numDataNodes(2).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Create file.
+      Path file = new Path("/test");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 2, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 2);
+
+      List<LocatedBlock> locatedBlocks = DFSTestUtil.getAllBlocks(fs, file);
+      assertEquals(1, locatedBlocks.size());
+      String blockName = locatedBlocks.get(0).getBlock().getBlockName();
+
+      // Validate block is HEALTHY.
+      String outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 2));
+      assertTrue(outStr.contains("No. of live Replica: " + 2));
+      assertTrue(outStr.contains("No. of excess Replica: " + 0));
+
+      // Make the block on one  datanode enter excess state.
+      fs.setReplication(file, (short)1);
+
+      // Validate the one block is EXCESS.
+      outStr = runFsck(configuration, 0, true,
+          "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.EXCESS_STATUS));
+      assertTrue(outStr.contains("No. of Expected Replica: " + 1));
+      assertTrue(outStr.contains("No. of live Replica: " + 1));
+      assertTrue(outStr.contains("No. of excess Replica: " + 1));
+    }
+  }
+
   private void writeFile(final DistributedFileSystem dfs,
       Path dir, String fileName) throws IOException {
     Path filePath = new Path(dir.toString() + Path.SEPARATOR + fileName);
@@ -1961,7 +2004,7 @@ public class TestFsck {
 
     // check the replica status should be healthy(0) after decommission
     // is done
-    String fsckOut = runFsck(conf, 0, true, testFile);
+    runFsck(conf, 0, true, testFile);
   }
 
   /**

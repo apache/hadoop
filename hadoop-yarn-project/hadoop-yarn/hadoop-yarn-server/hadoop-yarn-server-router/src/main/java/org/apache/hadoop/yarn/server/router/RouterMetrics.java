@@ -151,6 +151,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numDeregisterSubClusterFailedRetrieved;
   @Metric("# of saveFederationQueuePolicy failed to be retrieved")
   private MutableGaugeInt numSaveFederationQueuePolicyFailedRetrieved;
+  @Metric("# of batchSaveFederationQueuePolicies failed to be retrieved")
+  private MutableGaugeInt numBatchSaveFederationQueuePoliciesFailedRetrieved;
+  @Metric("# of listFederationQueuePolicies failed to be retrieved")
+  private MutableGaugeInt numListFederationQueuePoliciesFailedRetrieved;
   @Metric("# of refreshAdminAcls failed to be retrieved")
   private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
   @Metric("# of refreshServiceAcls failed to be retrieved")
@@ -299,6 +303,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededDeregisterSubClusterRetrieved;
   @Metric("Total number of successful Retrieved SaveFederationQueuePolicy and latency(ms)")
   private MutableRate totalSucceededSaveFederationQueuePolicyRetrieved;
+  @Metric("Total number of successful Retrieved BatchSaveFederationQueuePolicies and latency(ms)")
+  private MutableRate totalSucceededBatchSaveFederationQueuePoliciesRetrieved;
+  @Metric("Total number of successful Retrieved ListFederationQueuePolicies and latency(ms)")
+  private MutableRate totalSucceededListFederationQueuePoliciesFailedRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;
   @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
@@ -386,6 +394,8 @@ public final class RouterMetrics {
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
   private MutableQuantiles refreshDeregisterSubClusterLatency;
   private MutableQuantiles saveFederationQueuePolicyLatency;
+  private MutableQuantiles batchSaveFederationQueuePoliciesLatency;
+  private MutableQuantiles listFederationQueuePoliciesLatency;
   private MutableQuantiles refreshAdminAclsLatency;
   private MutableQuantiles refreshServiceAclsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
@@ -598,7 +608,15 @@ public final class RouterMetrics {
         "latency of deregister subcluster timeouts", "ops", "latency", 10);
 
     saveFederationQueuePolicyLatency = registry.newQuantiles("saveFederationQueuePolicyLatency",
-        "latency of refresh subcluster timeouts", "ops", "latency", 10);
+        "latency of save federation queue policy timeouts", "ops", "latency", 10);
+
+    batchSaveFederationQueuePoliciesLatency = registry.newQuantiles(
+        "batchSaveFederationQueuePoliciesLatency",
+        "latency of batch save federationqueuepolicies timeouts", "ops", "latency", 10);
+
+    listFederationQueuePoliciesLatency = registry.newQuantiles(
+        "listFederationQueuePoliciesLatency",
+        "latency of list federationqueuepolicies timeouts", "ops", "latency", 10);
 
     refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
         "latency of refresh admin acls timeouts", "ops", "latency", 10);
@@ -932,6 +950,16 @@ public final class RouterMetrics {
   @VisibleForTesting
   public long getNumSucceededSaveFederationQueuePolicyRetrieved() {
     return totalSucceededSaveFederationQueuePolicyRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededBatchSaveFederationQueuePoliciesRetrieved() {
+    return totalSucceededBatchSaveFederationQueuePoliciesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededListFederationQueuePoliciesFailedRetrieved() {
+    return totalSucceededListFederationQueuePoliciesFailedRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1285,6 +1313,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededBatchSaveFederationQueuePoliciesRetrieved() {
+    return totalSucceededBatchSaveFederationQueuePoliciesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededListFederationQueuePoliciesRetrieved() {
+    return totalSucceededListFederationQueuePoliciesFailedRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshAdminAclsRetrieved() {
     return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
   }
@@ -1581,6 +1619,14 @@ public final class RouterMetrics {
 
   public int getSaveFederationQueuePolicyFailedRetrieved() {
     return numSaveFederationQueuePolicyFailedRetrieved.value();
+  }
+
+  public int getBatchSaveFederationQueuePoliciesFailedRetrieved() {
+    return numBatchSaveFederationQueuePoliciesFailedRetrieved.value();
+  }
+
+  public int getListFederationQueuePoliciesFailedRetrieved() {
+    return numListFederationQueuePoliciesFailedRetrieved.value();
   }
 
   public int getNumRefreshAdminAclsFailedRetrieved() {
@@ -1940,6 +1986,16 @@ public final class RouterMetrics {
     saveFederationQueuePolicyLatency.add(duration);
   }
 
+  public void succeededBatchSaveFederationQueuePoliciesRetrieved(long duration) {
+    totalSucceededBatchSaveFederationQueuePoliciesRetrieved.add(duration);
+    batchSaveFederationQueuePoliciesLatency.add(duration);
+  }
+
+  public void succeededListFederationQueuePoliciesRetrieved(long duration) {
+    totalSucceededListFederationQueuePoliciesFailedRetrieved.add(duration);
+    listFederationQueuePoliciesLatency.add(duration);
+  }
+
   public void succeededRefreshAdminAclsRetrieved(long duration) {
     totalSucceededRefreshAdminAclsRetrieved.add(duration);
     refreshAdminAclsLatency.add(duration);
@@ -2220,6 +2276,14 @@ public final class RouterMetrics {
 
   public void incrSaveFederationQueuePolicyFailedRetrieved() {
     numSaveFederationQueuePolicyFailedRetrieved.incr();
+  }
+
+  public void incrBatchSaveFederationQueuePoliciesFailedRetrieved() {
+    numBatchSaveFederationQueuePoliciesFailedRetrieved.incr();
+  }
+
+  public void incrListFederationQueuePoliciesFailedRetrieved() {
+    numListFederationQueuePoliciesFailedRetrieved.incr();
   }
 
   public void incrRefreshAdminAclsFailedRetrieved() {

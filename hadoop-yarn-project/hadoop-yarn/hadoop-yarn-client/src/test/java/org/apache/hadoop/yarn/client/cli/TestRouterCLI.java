@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -76,6 +78,19 @@ public class TestRouterCLI {
           Object obj = invocationOnMock.getArgument(0);
           SaveFederationQueuePolicyRequest request = (SaveFederationQueuePolicyRequest) obj;
           return SaveFederationQueuePolicyResponse.newInstance("success");
+        });
+
+    when(admin.listFederationQueuePolicies(any(QueryFederationQueuePoliciesRequest.class)))
+        .thenAnswer((Answer<QueryFederationQueuePoliciesResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          Object obj = invocationOnMock.getArgument(0);
+          QueryFederationQueuePoliciesRequest request = (QueryFederationQueuePoliciesRequest) obj;
+          String queue = request.getQueue();
+          List<FederationQueueWeight> weights = new ArrayList<>();
+          FederationQueueWeight weight = FederationQueueWeight.newInstance(
+              "SC-1:0.8,SC-2:0.2", "SC-1:0.6,SC-2:0.4", "1", queue, "test");
+          weights.add(weight);
+          return QueryFederationQueuePoliciesResponse.newInstance(1, 1, 1, 10, weights);
         });
 
     Configuration config = new Configuration();
@@ -215,6 +230,40 @@ public class TestRouterCLI {
     assertEquals(0, rmAdminCLI.run(args));
 
     args = new String[]{"-policy", "-save", "root.a;SC-1:0.1,SC-2:0.9;SC-1:0.7,SC-2:0.3;1.0"};
+    assertEquals(0, rmAdminCLI.run(args));
+  }
+
+  @Test
+  public void testParsePoliciesByXml() throws Exception {
+    String filePath =
+        TestRouterCLI.class.getClassLoader().getResource("federation-weights.xml").getFile();
+    List<FederationQueueWeight> federationQueueWeights = rmAdminCLI.parsePoliciesByXml(filePath);
+    assertNotNull(federationQueueWeights);
+    assertEquals(2, federationQueueWeights.size());
+
+    // Queue1: root.a
+    FederationQueueWeight queueWeight1 = federationQueueWeights.get(0);
+    assertNotNull(queueWeight1);
+    assertEquals("root.a", queueWeight1.getQueue());
+    assertEquals("SC-1:0.7,SC-2:0.3", queueWeight1.getAmrmWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", queueWeight1.getRouterWeight());
+
+    // Queue2: root.b
+    FederationQueueWeight queueWeight2 = federationQueueWeights.get(1);
+    assertNotNull(queueWeight2);
+    assertEquals("root.b", queueWeight2.getQueue());
+    assertEquals("SC-1:0.8,SC-2:0.2", queueWeight2.getAmrmWeight());
+    assertEquals("SC-1:0.6,SC-2:0.4", queueWeight2.getRouterWeight());
+  }
+
+  @Test
+  public void testListPolicies() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+
+    String[] args = {"-policy", "-l", "--queue", "root.a"};
     assertEquals(0, rmAdminCLI.run(args));
   }
 }
