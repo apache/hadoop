@@ -355,10 +355,10 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   /**
    * Is this expected to be a multipart upload?
    * Assertions will change if not.
-   * @return true by default.
+   * @return what the filesystem expects.
    */
   protected boolean expectMultipartUpload() {
-    return true;
+    return getFileSystem().getS3AInternals().isMultipartCopyEnabled();
   }
 
   /**

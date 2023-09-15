@@ -115,4 +115,10 @@ public interface S3AInternals {
   @AuditEntryPoint
   @Retries.RetryTranslated
   HeadBucketResponse getBucketMetadata() throws IOException;
+
+  /**
+   * Is multipart copy enabled?
+   * @return true if the transfer manager is used to copy files.
+   */
+  boolean isMultipartCopyEnabled();
 }
