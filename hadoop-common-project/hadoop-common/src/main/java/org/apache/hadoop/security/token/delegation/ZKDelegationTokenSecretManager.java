@@ -27,6 +27,7 @@ import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
@@ -148,7 +149,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private final int seqNumBatchSize;
   private int currentSeqNum;
   private int currentMaxSeqNum;
-
+  private final ReentrantLock currentSeqNumLock;
   private final boolean isTokenWatcherEnabled;
 
   public ZKDelegationTokenSecretManager(Configuration conf) {
@@ -164,6 +165,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
+    this.currentSeqNumLock = new ReentrantLock(true);
     if (CURATOR_TL.get() != null) {
       zkClient =
           CURATOR_TL.get().usingNamespace(
@@ -520,24 +522,28 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
-    if (currentSeqNum >= currentMaxSeqNum) {
-      try {
-        // after a successful batch request, we can get the range starting point
-        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-        LOG.info("Fetched new range of seq num, from {} to {} ",
-            currentSeqNum+1, currentMaxSeqNum);
-      } catch (InterruptedException e) {
-        // The ExpirationThread is just finishing.. so dont do anything..
-        LOG.debug(
-            "Thread interrupted while performing token counter increment", e);
-        Thread.currentThread().interrupt();
-      } catch (Exception e) {
-        throw new RuntimeException("Could not increment shared counter !!", e);
+    try {
+      this.currentSeqNumLock.lock();
+      if (currentSeqNum >= currentMaxSeqNum) {
+        try {
+          // after a successful batch request, we can get the range starting point
+          currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+          currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+          LOG.info("Fetched new range of seq num, from {} to {} ",
+              currentSeqNum+1, currentMaxSeqNum);
+        } catch (InterruptedException e) {
+          // The ExpirationThread is just finishing.. so dont do anything..
+          LOG.debug(
+                  "Thread interrupted while performing token counter increment", e);
+          Thread.currentThread().interrupt();
+        } catch (Exception e) {
+          throw new RuntimeException("Could not increment shared counter !!", e);
+        }
       }
+      return ++currentSeqNum;
+    } finally {
+      this.currentSeqNumLock.unlock();
     }
-
-    return ++currentSeqNum;
   }
 
   @Override
