@@ -18,15 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import org.apache.hadoop.util.Preconditions;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_SCOPE_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_TYPE_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_MASK;
+
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.*;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.*;
 
 import java.io.BufferedOutputStream;
@@ -891,18 +884,25 @@ class OfflineImageReconstructor {
       int nsIdx = XAttrProtos.XAttrProto.
           XAttrNamespaceProto.valueOf(ns).ordinal();
       String name = xattr.removeChildStr(SECTION_NAME);
-      String valStr = xattr.removeChildStr(INODE_SECTION_VAL);
-      byte[] val = null;
-      if (valStr == null) {
-        String valHex = xattr.removeChildStr(INODE_SECTION_VAL_HEX);
-        if (valHex == null) {
-          throw new IOException("<xattr> had no <val> or <valHex> entry.");
-        }
-        val = new HexBinaryAdapter().unmarshal(valHex);
+      boolean numerable = xattr.removeChildBool(INODE_SECTION_NUMERABLE);
+      if (numerable) {
+        String valStr = xattr.removeChildStr(INODE_SECTION_VAL);
+        int valueId = registerStringId(valStr);
+        b.setValueInt(valueId);
       } else {
-        val = valStr.getBytes("UTF8");
+        String valStr = xattr.removeChildStr(INODE_SECTION_VAL);
+        byte[] val = null;
+        if (valStr == null) {
+          String valHex = xattr.removeChildStr(INODE_SECTION_VAL_HEX);
+          if (valHex == null) {
+            throw new IOException("<xattr> had no <val> or <valHex> entry.");
+          }
+          val = new HexBinaryAdapter().unmarshal(valHex);
+        } else {
+          val = valStr.getBytes("UTF8");
+        }
+        b.setValue(ByteString.copyFrom(val));
       }
-      b.setValue(ByteString.copyFrom(val));
 
       // The XAttrCompactProto name field uses a fairly complex format
       // to encode both the string table ID of the xattr name and the
@@ -911,7 +911,8 @@ class OfflineImageReconstructor {
       int encodedName = (nameId << XATTR_NAME_OFFSET) |
           ((nsIdx & XATTR_NAMESPACE_MASK) << XATTR_NAMESPACE_OFFSET) |
           (((nsIdx >> 2) & XATTR_NAMESPACE_EXT_MASK)
-              << XATTR_NAMESPACE_EXT_OFFSET);
+              << XATTR_NAMESPACE_EXT_OFFSET) |
+          (numerable ? 1 : 0) << XATTR_NUMERABLE_OFFSET;
       b.setName(encodedName);
       xattr.verifyNoRemainingKeys("xattr");
       bld.addXAttrs(b);

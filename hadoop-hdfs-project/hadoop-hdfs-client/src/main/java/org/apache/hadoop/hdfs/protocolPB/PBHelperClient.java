@@ -1106,6 +1106,9 @@ public class PBHelperClient {
     if (a.getValue() != null) {
       builder.setValue(getByteString(a.getValue()));
     }
+    if (a.isEnumerable()) {
+      builder.setEnumerable(true);
+    }
     return builder.build();
   }
 
@@ -1352,6 +1355,9 @@ public class PBHelperClient {
     }
     if (flag.contains(XAttrSetFlag.REPLACE)) {
       value |= XAttrSetFlagProto.XATTR_REPLACE.getNumber();
+    }
+    if (flag.contains(XAttrSetFlag.ENUM_VALUE)) {
+      value |= XAttrSetFlagProto.XATTR_ENUMERABLE.getNumber();
     }
     return value;
   }
@@ -2929,6 +2935,10 @@ public class PBHelperClient {
         XAttrSetFlagProto.XATTR_REPLACE_VALUE) {
       result.add(XAttrSetFlag.REPLACE);
     }
+    if ((flag & XAttrSetFlagProto.XATTR_ENUMERABLE.getNumber()) ==
+        XAttrSetFlagProto.XATTR_ENUMERABLE.getNumber()) {
+      result.add(XAttrSetFlag.ENUM_VALUE);
+    }
     return result;
   }
 
@@ -2940,6 +2950,9 @@ public class PBHelperClient {
     }
     if (a.hasValue()) {
       builder.setValue(a.getValue().toByteArray());
+    }
+    if (a.hasEnumerable()) {
+      builder.setEnumerable(a.getEnumerable());
     }
     return builder.build();
   }

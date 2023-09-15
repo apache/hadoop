@@ -92,6 +92,9 @@ public final class FSImageFormatPBINode {
   /* See the comments in fsimage.proto for an explanation of the following. */
   public static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
   public static final int XATTR_NAMESPACE_EXT_MASK = 1;
+  public static final int XATTR_NUMERABLE_OFFSET = 4;
+  public static final int XATTR_NUMERABLE_MASK = 1;
+  public static final int XATTR_VALUE_MASK = (1 << 24) - 1;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FSImageFormatPBINode.class);
@@ -121,10 +124,16 @@ public final class FSImageFormatPBINode {
       for (XAttrCompactProto xAttrCompactProto : proto.getXAttrsList()) {
         int v = xAttrCompactProto.getName();
         byte[] value = null;
-        if (xAttrCompactProto.getValue() != null) {
-          value = xAttrCompactProto.getValue().toByteArray();
+        if (XAttrFormat.isNumerable(v)) {
+          assert xAttrCompactProto.hasValueInt();
+          int valueInt = xAttrCompactProto.getValueInt();
+          b.add(XAttrFormat.toXAttr(v, valueInt, stringTable));
+        } else {
+          if (xAttrCompactProto.getValue() != null) {
+            value = xAttrCompactProto.getValue().toByteArray();
+          }
+          b.add(XAttrFormat.toXAttr(v, value, stringTable));
         }
-        b.add(XAttrFormat.toXAttr(v, value, stringTable));
       }
       
       return b;
@@ -648,8 +657,12 @@ public final class FSImageFormatPBINode {
             newBuilder();
         int v = XAttrFormat.toInt(a);
         xAttrCompactBuilder.setName(v);
-        if (a.getValue() != null) {
-          xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+        if (a.isEnumerable()) {
+          xAttrCompactBuilder.setValueInt(XAttrValueFormat.toInt(a.getValue()));
+        } else {
+          if (a.getValue() != null) {
+            xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+          }
         }
         b.addXAttrs(xAttrCompactBuilder.build());
       }

@@ -627,6 +627,12 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public void setXAttr(Path path, String name, byte[] value, boolean numerable)
+      throws IOException {
+    fs.setXAttr(path, name, value, numerable);
+  }
+
+  @Override
   public void setXAttr(Path path, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     fs.setXAttr(path, name, value, flag);

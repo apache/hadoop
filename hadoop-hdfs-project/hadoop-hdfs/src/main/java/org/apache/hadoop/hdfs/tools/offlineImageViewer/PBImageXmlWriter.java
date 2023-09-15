@@ -73,12 +73,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_MASK;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.*;
 
 /**
  * PBImageXmlWriter walks over an fsimage structure and writes out
@@ -177,6 +172,7 @@ public final class PBImageXmlWriter {
   public static final String INODE_SECTION_QUOTA = "quota";
   public static final String INODE_SECTION_TARGET = "target";
   public static final String INODE_SECTION_NS = "ns";
+  public static final String INODE_SECTION_NUMERABLE = "numerable";
   public static final String INODE_SECTION_VAL = "val";
   public static final String INODE_SECTION_VAL_HEX = "valHex";
   public static final String INODE_SECTION_INODE = "inode";
@@ -438,11 +434,19 @@ public final class PBImageXmlWriter {
       o(SECTION_NAME, SerialNumberManager.XATTR.getString(
           XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
           stringTable));
-      ByteString val = xattr.getValue();
-      if (val.isValidUtf8()) {
-        o(INODE_SECTION_VAL, val.toStringUtf8());
+      boolean numerable = (XATTR_NUMERABLE_MASK & (encodedName >> XATTR_NUMERABLE_OFFSET)) == 1;
+      o(INODE_SECTION_NUMERABLE, numerable);
+      if (numerable) {
+        int valueInt = xattr.getValueInt();
+        o(INODE_SECTION_VAL, SerialNumberManager.XATTR.getString(XATTR_VALUE_MASK & valueInt,
+            stringTable));
       } else {
-        o(INODE_SECTION_VAL_HEX, Hex.encodeHexString(val.toByteArray()));
+        ByteString val = xattr.getValue();
+        if (val.isValidUtf8()) {
+          o(INODE_SECTION_VAL, val.toStringUtf8());
+        } else {
+          o(INODE_SECTION_VAL_HEX, Hex.encodeHexString(val.toByteArray()));
+        }
       }
       out.print("</" + INODE_SECTION_XATTR + ">");
     }

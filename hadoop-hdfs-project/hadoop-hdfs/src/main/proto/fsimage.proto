@@ -119,10 +119,12 @@ message INodeSection {
      * so only 2 bits were needed. At that time, this bit was reserved. When a
      * 5th namespace was created (raw) this bit became used as a 3rd namespace
      * bit.
-     * [27:32) -- reserved for future uses.
+     * [27:28) -- indicating if the value is enumerable
+     * [28:32) -- reserved for future uses.
      */
     required fixed32 name = 1;
     optional bytes value = 2;
+    optional fixed32 valueInt = 3;
   }
   
   message XAttrFeatureProto {

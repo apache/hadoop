@@ -68,11 +68,13 @@ public class XAttr {
   private final NameSpace ns;
   private final String name;
   private final byte[] value;
+  private final boolean enumerable;
 
   public static class Builder {
     private NameSpace ns = NameSpace.USER;
     private String name;
     private byte[] value;
+    private boolean numerable;
 
     public Builder setNameSpace(NameSpace ns) {
       this.ns = ns;
@@ -89,15 +91,21 @@ public class XAttr {
       return this;
     }
 
+    public Builder setEnumerable(boolean isNumerable) {
+      this.numerable = isNumerable;
+      return this;
+    }
+
     public XAttr build() {
-      return new XAttr(ns, name, value);
+      return new XAttr(ns, name, value, numerable);
     }
   }
 
-  private XAttr(NameSpace ns, String name, byte[] value) {
+  private XAttr(NameSpace ns, String name, byte[] value, boolean enumerable) {
     this.ns = ns;
     this.name = name;
     this.value = value;
+    this.enumerable = enumerable;
   }
 
   public NameSpace getNameSpace() {
@@ -112,12 +120,17 @@ public class XAttr {
     return value;
   }
 
+  public boolean isEnumerable() {
+    return enumerable;
+  }
+
   @Override
   public int hashCode() {
     return new HashCodeBuilder(811, 67)
         .append(name)
         .append(ns)
         .append(value)
+        .append(enumerable)
         .toHashCode();
   }
 
@@ -133,6 +146,7 @@ public class XAttr {
         .append(ns, rhs.ns)
         .append(name, rhs.name)
         .append(value, rhs.value)
+        .append(enumerable, rhs.enumerable)
         .isEquals();
   }
 
@@ -152,12 +166,13 @@ public class XAttr {
     return new EqualsBuilder()
         .append(ns, rhs.ns)
         .append(name, rhs.name)
+        .append(isEnumerable(), rhs.isEnumerable())
         .isEquals();
   }
 
   @Override
   public String toString() {
-    return "XAttr [ns=" + ns + ", name=" + name + ", value="
+    return "XAttr [ns=" + ns + ", name=" + name + ", enumerable-" + enumerable + ", value="
         + Arrays.toString(value) + "]";
   }
 }
