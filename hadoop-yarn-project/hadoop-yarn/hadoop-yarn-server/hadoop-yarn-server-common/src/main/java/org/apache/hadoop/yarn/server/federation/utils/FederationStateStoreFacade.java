@@ -1118,19 +1118,4 @@ public final class FederationStateStoreFacade {
   public FederationCache getFederationCache() {
     return federationCache;
   }
-
-  /**
-   * Delete the mapping of home {@code SubClusterId} of a previously submitted
-   * {@code ApplicationId}. Currently response is empty if the operation was
-   * successful, if not an exception reporting reason for a failure.
-   *
-   * @param appId ApplicationId.
-   * @throws YarnException exceptions from yarn servers.
-   */
-  public void deleteApplicationHomeSubCluster(ApplicationId appId)
-      throws YarnException {
-    DeleteApplicationHomeSubClusterRequest request =
-        DeleteApplicationHomeSubClusterRequest.newInstance(appId);
-    stateStore.deleteApplicationHomeSubCluster(request);
-  }
 }
