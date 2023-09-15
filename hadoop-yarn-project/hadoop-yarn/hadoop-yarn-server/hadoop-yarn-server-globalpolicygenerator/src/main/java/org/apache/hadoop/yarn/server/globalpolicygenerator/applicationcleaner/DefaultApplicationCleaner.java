@@ -70,6 +70,8 @@ public class DefaultApplicationCleaner extends ApplicationCleaner {
           LOG.error("deleteApplicationHomeSubCluster failed at application {}.", appId, e);
         }
       }
+      // Clean up registry entries
+      cleanupAppRecordInRegistry(routerApps);
     } catch (Throwable e) {
       LOG.error("Application cleaner started at time {} fails. ", now, e);
     }
