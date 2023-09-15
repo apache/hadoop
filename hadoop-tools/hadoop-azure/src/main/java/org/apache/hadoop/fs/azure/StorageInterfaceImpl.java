@@ -319,9 +319,9 @@ class StorageInterfaceImpl extends StorageInterface {
     public void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
             throws StorageException {
       AccessCondition accessCondition1 = getLeaseCondition(lease);
-      if (accessCondition1 != null) {
+      if (accessCondition1 != null && eTag != null) {
         accessCondition1.setIfMatch(eTag);
-      } else {
+      } else if (eTag != null){
         accessCondition1 = new AccessCondition();
         accessCondition1.setIfMatch(eTag);
       }

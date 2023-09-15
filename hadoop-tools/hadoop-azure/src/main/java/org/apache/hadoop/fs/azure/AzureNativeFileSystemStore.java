@@ -2935,7 +2935,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         }
       }
       waitForCopyToComplete(dstBlob, getInstrumentedContext());
-      safeDelete(srcBlob, lease, srcBlob.getBlob().getProperties().getEtag());
+      safeDelete(srcBlob, lease, null);
     } catch (StorageException e) {
       if (e.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         LOG.warn("Rename: CopyBlob: StorageException: ServerBusy: Retry complete, will attempt client side copy for page blob");
@@ -2956,7 +2956,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           } else {
             throw new AzureException(e);
           }
-          safeDelete(srcBlob, lease, srcBlob.getBlob().getProperties().getEtag());
+          safeDelete(srcBlob, lease, null);
         } catch(StorageException se) {
           LOG.warn("Rename: CopyBlob: StorageException: Failed");
           throw new AzureException(se);

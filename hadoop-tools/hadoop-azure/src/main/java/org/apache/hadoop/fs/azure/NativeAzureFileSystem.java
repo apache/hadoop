@@ -2678,7 +2678,11 @@ public class NativeAzureFileSystem extends FileSystem {
   @VisibleForTesting
   boolean deleteFile(String path, boolean isDir) throws IOException {
     FileMetadata metadata = store.retrieveMetadata(path);
-    if (!store.delete(path, metadata.getEtag())) {
+    String eTag = null;
+    if (metadata != null) {
+      eTag = metadata.getEtag();
+    }
+    if (!store.delete(path, eTag)) {
       return false;
     }
 
