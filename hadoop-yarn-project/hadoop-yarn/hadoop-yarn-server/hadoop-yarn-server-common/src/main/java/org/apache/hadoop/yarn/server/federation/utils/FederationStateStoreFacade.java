@@ -1096,14 +1096,12 @@ public final class FederationStateStoreFacade {
    * successful, if not an exception reporting reason for a failure.
    *
    * @param appId ApplicationId.
+   * @throws YarnException exceptions from yarn servers.
    */
-  public void deleteApplicationHomeSubCluster(ApplicationId appId) {
-    try {
-      DeleteApplicationHomeSubClusterRequest request =
-          DeleteApplicationHomeSubClusterRequest.newInstance(appId);
-      stateStore.deleteApplicationHomeSubCluster(request);
-    } catch (Exception e) {
-      LOG.error("deleteApplicationHomeSubCluster error, applicationId = {}.", appId, e);
-    }
+  public void deleteApplicationHomeSubCluster(ApplicationId appId)
+      throws YarnException {
+    DeleteApplicationHomeSubClusterRequest request =
+        DeleteApplicationHomeSubClusterRequest.newInstance(appId);
+    stateStore.deleteApplicationHomeSubCluster(request);
   }
 }
