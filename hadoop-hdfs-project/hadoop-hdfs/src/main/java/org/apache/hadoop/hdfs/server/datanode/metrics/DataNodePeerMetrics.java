@@ -86,6 +86,9 @@ public class DataNodePeerMetrics {
     minOutlierDetectionNodes =
         conf.getLong(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
             DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+    Preconditions.checkArgument(minOutlierDetectionNodes > 0,
+        DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY +
+            " should be larger than 0");
     this.slowNodeDetector =
         new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
     sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
