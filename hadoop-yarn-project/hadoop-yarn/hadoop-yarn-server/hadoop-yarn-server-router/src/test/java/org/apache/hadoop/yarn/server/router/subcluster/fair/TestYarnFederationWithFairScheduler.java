@@ -71,5 +71,6 @@ public class TestYarnFederationWithFairScheduler {
       assertNotNull(clusterInfo);
       assertTrue(subClusters.contains(clusterInfo.getSubClusterId()));
     }
+    Thread.sleep(20000000);
   }
 }
