@@ -477,7 +477,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   int getDatanodeReadTimeout(int numNodes) {
     final int t = dfsClientConf.getSocketTimeout();
-    return t > 0? HdfsConstants.READ_TIMEOUT_EXTENSION*numNodes + t: 0;
+    int readTimeout = HdfsConstants.READ_TIMEOUT_EXTENSION*numNodes + t;
+    Preconditions.checkArgument(readTimeout >= 0,
+            "Read timeout should be non-negative.");
+    return t > 0? readTimeout: 0;
   }
 
   @VisibleForTesting
