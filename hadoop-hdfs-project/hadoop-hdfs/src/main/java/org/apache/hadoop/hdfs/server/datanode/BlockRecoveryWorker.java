@@ -512,8 +512,8 @@ public class BlockRecoveryWorker {
           r.updateReplicaUnderRecovery(bpid, recoveryId, r.rInfo.getBlockId(),
               newSize);
         } catch (IOException e) {
-          InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="
-              + ", datanode=" + r.id + ")", e);
+          InterDatanodeProtocol.LOG.warn("Failed to updateBlock (block={}, internalBlk={}, " +
+                  "datanode={})", block, r.rInfo, r.id, e);
           failedList.add(r.id);
         }
       }
