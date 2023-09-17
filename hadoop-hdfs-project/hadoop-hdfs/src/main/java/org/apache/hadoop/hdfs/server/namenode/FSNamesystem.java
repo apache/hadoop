@@ -6131,15 +6131,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static class CorruptFileBlockInfo {
     final String path;
     final Block block;
+    final int replication;
     
-    public CorruptFileBlockInfo(String p, Block b) {
+    public CorruptFileBlockInfo(String p, Block b, int r) {
       path = p;
       block = b;
+      replication = r;
     }
     
     @Override
     public String toString() {
-      return block.getBlockName() + "\t" + path;
+      return block.getBlockName() + "\t" + replication + "\t" + path;
     }
   }
   /**
@@ -6195,7 +6197,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (inode != null) {
           String src = inode.getFullPathName();
           if (isParentEntry(src, path)) {
-            corruptFiles.add(new CorruptFileBlockInfo(src, blk));
+            int repl = 0;
+            if (inode.isFile()) {
+              repl = inode.asFile().getFileReplication();
+            }
+            corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
               break;
