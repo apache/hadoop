@@ -144,31 +144,29 @@ public class BlockRecoveryWorker {
             } else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Block recovery: Ignored replica with invalid " +
-                    "original state: " + info + " from DataNode: " + id);
+                    "original state: {} from DataNode: {}", info, id);
               }
             }
           } else {
             if (LOG.isDebugEnabled()) {
               if (info == null) {
-                LOG.debug("Block recovery: DataNode: " + id + " does not have "
-                    + "replica for block: " + block);
+                LOG.debug("Block recovery: DataNode: {} does not have " +
+                    "replica for block: {}", id, block);
               } else {
                 LOG.debug("Block recovery: Ignored replica with invalid "
-                    + "generation stamp or length: " + info + " from " +
-                    "DataNode: " + id);
+                    + "generation stamp or length: {} from DataNode: {}", info, id);
               }
             }
           }
         } catch (RecoveryInProgressException ripE) {
           InterDatanodeProtocol.LOG.warn(
-              "Recovery for replica " + block + " on data-node " + id
-                  + " is already in progress. Recovery id = "
-                  + rBlock.getNewGenerationStamp() + " is aborted.", ripE);
+              "Recovery for replica {} on data-node {} is already in progress. " +
+                  "Recovery id = {} is aborted.", block, id, rBlock.getNewGenerationStamp(), ripE);
           return;
         } catch (IOException e) {
           ++errorCount;
-          InterDatanodeProtocol.LOG.warn("Failed to recover block (block="
-              + block + ", datanode=" + id + ")", e);
+          InterDatanodeProtocol.LOG.warn("Failed to recover block (block={}, datanode={})",
+              block, id, e);
         }
       }
 
@@ -406,14 +404,15 @@ public class BlockRecoveryWorker {
       //check generation stamps
       for (int i = 0; i < locs.length; i++) {
         DatanodeID id = locs[i];
+        ExtendedBlock internalBlk = null;
         try {
           DatanodeID bpReg = getDatanodeID(bpid);
+          internalBlk = new ExtendedBlock(block);
+          final long blockId = block.getBlockId() + blockIndices[i];
+          internalBlk.setBlockId(blockId);
           InterDatanodeProtocol proxyDN = bpReg.equals(id) ?
               datanode : DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
-          ExtendedBlock internalBlk = new ExtendedBlock(block);
-          final long blockId = block.getBlockId() + blockIndices[i];
-          internalBlk.setBlockId(blockId);
           ReplicaRecoveryInfo info = callInitReplicaRecovery(proxyDN,
               new RecoveringBlock(internalBlk, null, recoveryId));
 
@@ -427,26 +426,41 @@ public class BlockRecoveryWorker {
               // simply choose the one with larger length.
               // TODO: better usage of redundant replicas
               syncBlocks.put(blockId, new BlockRecord(id, proxyDN, info));
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Block recovery: Ignored replica with invalid " +
+                    "original state: {} from DataNode: {} by block: {}", info, id, block);
+              }
+            }
+          } else {
+            if (LOG.isDebugEnabled()) {
+              if (info == null) {
+                LOG.debug("Block recovery: DataNode: {} does not have " +
+                    "replica for block: (block={}, internalBlk={})", id, block, internalBlk);
+              } else {
+                LOG.debug("Block recovery: Ignored replica with invalid "
+                    + "generation stamp or length: {} from DataNode: {} by block: {}",
+                    info, id, block);
+              }
             }
           }
         } catch (RecoveryInProgressException ripE) {
           InterDatanodeProtocol.LOG.warn(
-              "Recovery for replica " + block + " on data-node " + id
-                  + " is already in progress. Recovery id = "
-                  + rBlock.getNewGenerationStamp() + " is aborted.", ripE);
+              "Recovery for replica (block={}, internalBlk={}) on data-node {} is already " +
+                  "in progress. Recovery id = {} is aborted.", block, internalBlk, id,
+              rBlock.getNewGenerationStamp(), ripE);
           return;
         } catch (IOException e) {
-          InterDatanodeProtocol.LOG.warn("Failed to recover block (block="
-              + block + ", datanode=" + id + ")", e);
+          InterDatanodeProtocol.LOG.warn("Failed to recover block (block={}, internalBlk={}, " +
+                  "datanode={})", block, internalBlk, id, e);
         }
       }
       checkLocations(syncBlocks.size());
 
       final long safeLength = getSafeLength(syncBlocks);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Recovering block " + block
-            + ", length=" + block.getNumBytes() + ", safeLength=" + safeLength
-            + ", syncList=" + syncBlocks);
+        LOG.debug("Recovering block {}, length={}, safeLength={}, syncList={}", block,
+            block.getNumBytes(), safeLength, syncBlocks);
       }
 
       // If some internal blocks reach the safe length, convert them to RUR
