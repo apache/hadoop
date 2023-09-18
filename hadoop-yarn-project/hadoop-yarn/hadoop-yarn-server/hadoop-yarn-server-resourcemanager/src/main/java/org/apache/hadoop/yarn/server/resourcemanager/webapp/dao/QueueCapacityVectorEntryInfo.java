@@ -36,18 +36,18 @@ public class QueueCapacityVectorEntryInfo {
   }
 
   public String getResourceName() {
-        return this.resourceName;
-    }
+    return this.resourceName;
+  }
 
   public void setResourceName(String resourceName) {
-        this.resourceName = resourceName;
-    }
+    this.resourceName = resourceName;
+  }
 
   public String getResourceValue() {
-        return this.resourceValue;
-    }
+    return this.resourceValue;
+  }
 
   public void setResourceValue(String resourceValue) {
-        this.resourceValue = resourceValue;
-    }
+    this.resourceValue = resourceValue;
+  }
 }

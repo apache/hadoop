@@ -38,7 +38,8 @@ public class QueueCapacityVectorInfo {
   public QueueCapacityVectorInfo(QueueCapacityVector queueCapacityVector) {
     this.configuredCapacityVector = queueCapacityVector.toString();
     this.capacityVectorEntries = new ArrayList<>();
-    for (QueueCapacityVector.QueueCapacityVectorEntry queueCapacityVectorEntry : queueCapacityVector) {
+    for (QueueCapacityVector.QueueCapacityVectorEntry
+            queueCapacityVectorEntry : queueCapacityVector) {
       this.capacityVectorEntries.add(
               new QueueCapacityVectorEntryInfo(queueCapacityVectorEntry.getResourceName(),
                     queueCapacityVectorEntry.getResourceWithPostfix()));
@@ -46,16 +47,16 @@ public class QueueCapacityVectorInfo {
   }
 
   public String getConfiguredCapacityVector() {
-        return configuredCapacityVector;
-    }
+    return configuredCapacityVector;
+  }
 
   public void setConfiguredCapacityVector(String configuredCapacityVector) {
     this.configuredCapacityVector = configuredCapacityVector;
   }
 
   public List<QueueCapacityVectorEntryInfo> getCapacityVectorEntries() {
-        return capacityVectorEntries;
-    }
+    return capacityVectorEntries;
+  }
 
   public void setCapacityVectorEntries(List<QueueCapacityVectorEntryInfo> capacityVectorEntries) {
     this.capacityVectorEntries = capacityVectorEntries;
