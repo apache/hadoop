@@ -237,8 +237,8 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 - yarn.federation.policy-manager-params
 
-  To configure the `yarn.federation.policy-manager-params` parameter, which represents the weight policy for the default queue, 
-  and where the relevant information will be parsed as `WeightedPolicyInfo`. 
+  To configure the `yarn.federation.policy-manager-params` parameter, which represents the weight policy for the default queue,
+  and where the relevant information will be parsed as `WeightedPolicyInfo`.
 
   We can use the following JSON format for configuration:
 
