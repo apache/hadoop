@@ -223,6 +223,9 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     assertEquals(quorumEntry.getRouterId(), ROUTERS[3]);
   }
 
+  /**
+   * Fix getRepresentativeQuorum when records have same date modified time.
+   */
   @Test
   public void testRegistrationMajorityQuorumEqDateModified()
           throws InterruptedException, IOException {

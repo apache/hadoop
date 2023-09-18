@@ -292,7 +292,7 @@ public class MembershipStoreImpl
     }
 
     // Select largest group
-    Set<MembershipState> largestSet = new TreeSet<>();
+    Set<MembershipState> largestSet = new HashSet<>();
     for (Set<MembershipState> matchingSet : occurenceMap.values()) {
       if (largestSet.size() < matchingSet.size()) {
         largestSet = matchingSet;
