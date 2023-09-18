@@ -279,22 +279,21 @@ public class MembershipStoreImpl
       Collection<MembershipState> records) {
 
     // Collate objects by field value: field value -> order set of records
-    Map<FederationNamenodeServiceState, TreeSet<MembershipState>> occurenceMap =
+    Map<FederationNamenodeServiceState, Set<MembershipState>> occurenceMap =
         new HashMap<>();
     for (MembershipState record : records) {
       FederationNamenodeServiceState state = record.getState();
-      TreeSet<MembershipState> matchingSet = occurenceMap.get(state);
+      Set<MembershipState> matchingSet = occurenceMap.get(state);
       if (matchingSet == null) {
-        // TreeSet orders elements by descending date via comparators
-        matchingSet = new TreeSet<>();
+        matchingSet = new HashSet<>();
         occurenceMap.put(state, matchingSet);
       }
       matchingSet.add(record);
     }
 
     // Select largest group
-    TreeSet<MembershipState> largestSet = new TreeSet<>();
-    for (TreeSet<MembershipState> matchingSet : occurenceMap.values()) {
+    Set<MembershipState> largestSet = new TreeSet<>();
+    for (Set<MembershipState> matchingSet : occurenceMap.values()) {
       if (largestSet.size() < matchingSet.size()) {
         largestSet = matchingSet;
       }
@@ -302,7 +301,8 @@ public class MembershipStoreImpl
 
     // If quorum, use the newest element here
     if (largestSet.size() > records.size() / 2) {
-      return largestSet.first();
+      TreeSet<MembershipState> sortedList = new TreeSet<>(largestSet);
+      return sortedList.first();
       // Otherwise, return most recent by class comparator
     } else if (records.size() > 0) {
       TreeSet<MembershipState> sortedList = new TreeSet<>(records);
