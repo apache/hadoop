@@ -1496,7 +1496,7 @@ public class FSDirectory implements Closeable {
   static byte getStoragePolicyId(INode inode) {
     return inode.isSymlink() ?
             HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED :
-            inode.getStoragePolicyID();
+            inode.getLocalStoragePolicyID();
   }
 
   static String normalizePath(String src) {

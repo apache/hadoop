@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -513,10 +514,14 @@ class FSDirRenameOp {
     if (srcStoragePolicyID != dstStoragePolicyID) {
       srcStoragePolicyCounts.add(srcIIP.getLastINode().
               computeQuotaUsage(bsps));
-      dstStoragePolicyCounts.add(srcIIP.getLastINode()
-              .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
-                      Snapshot.CURRENT_STATE_ID));
-    } else if (srcParentNode != dstParentNode || tx.withCount != null) {
+      if (srcStoragePolicyID == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
+        dstStoragePolicyCounts.add(srcIIP.getLastINode()
+                .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
+                        Snapshot.CURRENT_STATE_ID));
+      } else {
+        dstStoragePolicyCounts.add(srcStoragePolicyCounts);
+      }
+    } else if (srcParentNode != dstParentNode || tx.isSrcInSnapshot) {
       srcStoragePolicyCounts.add(srcIIP.getLastINode().computeQuotaUsage(bsps));
       dstStoragePolicyCounts.add(srcStoragePolicyCounts);
     }
