@@ -201,7 +201,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
-    datanode.metrics.addAcquireDataSetReadLock(Time.monotonicNowNanos() - startTimeNanos);
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetReadLock(Time.monotonicNowNanos() - startTimeNanos);
+    }
     return lock;
   }
 
@@ -222,7 +224,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
-    datanode.metrics.addAcquireDataSetWriteLock(Time.monotonicNowNanos() - startTimeNanos);
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetWriteLock(Time.monotonicNowNanos() - startTimeNanos);
+    }
     return lock;
   }
 
