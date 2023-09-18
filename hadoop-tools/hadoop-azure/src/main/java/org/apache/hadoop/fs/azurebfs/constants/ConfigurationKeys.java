@@ -242,7 +242,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
   /** Add extra integrity checks on data read and written using Md5 Hash Validation*/
-  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM = "fs.azure.enable.checksum";
+  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

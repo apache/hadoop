@@ -338,8 +338,8 @@ public class AbfsConfiguration{
   private boolean renameResilience;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ABFS_ENABLE_CHECKSUM, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM)
-  private boolean isChecksumEnabled;
+      FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
+  private boolean isChecksumValidationEnabled;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
@@ -1155,11 +1155,11 @@ public class AbfsConfiguration{
     renameResilience = actualResilience;
   }
 
-  public boolean getIsChecksumEnabled() {
-    return isChecksumEnabled;
+  public boolean getIsChecksumValidationEnabled() {
+    return isChecksumValidationEnabled;
   }
 
-  void setIsChecksumEnabled(boolean isChecksumEnabled) {
-    this.isChecksumEnabled = isChecksumEnabled;
+  void setIsChecksumValidationEnabled(boolean isChecksumEnabled) {
+    this.isChecksumValidationEnabled = isChecksumEnabled;
   }
 }

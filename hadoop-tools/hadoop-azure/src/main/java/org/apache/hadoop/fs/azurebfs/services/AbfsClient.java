@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidChecksumException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -49,7 +50,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningS
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import com.sun.tools.javac.util.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -763,7 +763,9 @@ public class AbfsClient implements Closeable {
       requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
     }
 
-    addCheckSumHeaderForWrite(requestHeaders, buffer);
+    if (isChecksumValidationEnabled()) {
+      addCheckSumHeaderForWrite(requestHeaders, buffer);
+    }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
@@ -987,7 +989,9 @@ public class AbfsClient implements Closeable {
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    addCheckSumHeaderForRead(requestHeaders, bufferLength, rangeHeader);
+    if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
+    }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -1006,7 +1010,9 @@ public class AbfsClient implements Closeable {
             bufferLength, sasTokenForReuse);
     op.execute(tracingContext);
 
-    verifyCheckSumForRead(buffer, op.getResult());
+    if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
+      verifyCheckSumForRead(buffer, op.getResult());
+    }
 
     return op;
   }
@@ -1421,52 +1427,50 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private void addCheckSumHeaderForRead(List<AbfsHttpHeader> requestHeaders,
-      final int bufferLength, final AbfsHttpHeader rangeHeader) {
-    if(getAbfsConfiguration().getIsChecksumEnabled() &&
-        requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB) {
-       requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
-    }
-  }
-
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final byte[] buffer) {
-    if(getAbfsConfiguration().getIsChecksumEnabled()) {
-      try {
-        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-        byte[] md5Bytes = md5Digest.digest(buffer);
-        String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
-        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
-      } catch (NoSuchAlgorithmException e) {
-        e.printStackTrace();
-      }
+    try {
+      MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+      byte[] md5Bytes = md5Digest.digest(buffer);
+      String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
+      requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
     }
   }
 
   private void verifyCheckSumForRead(final byte[] buffer, final AbfsHttpOperation result)
       throws AbfsRestOperationException{
-    if(getAbfsConfiguration().getIsChecksumEnabled()) {
-      // Number of bytes returned by server could be less than or equal to what
-      // caller requests. In case it is less, extra bytes will be initialized to 0
-      // Server returned MD5 Hash will be computed on what server returned.
-      // We need to get exact data that server returned and compute its md5 hash
-      // Computed hash should be equal to what server returned
-      int numberOfBytesRead = (int)result.getBytesReceived();
-      byte[] dataRead = new byte[numberOfBytesRead];
-      System.arraycopy(buffer, 0, dataRead, 0, numberOfBytesRead);
+    // Number of bytes returned by server could be less than or equal to what
+    // caller requests. In case it is less, extra bytes will be initialized to 0
+    // Server returned MD5 Hash will be computed on what server returned.
+    // We need to get exact data that server returned and compute its md5 hash
+    // Computed hash should be equal to what server returned
+    int numberOfBytesRead = (int)result.getBytesReceived();
+    byte[] dataRead = new byte[numberOfBytesRead];
+    System.arraycopy(buffer, 0, dataRead, 0, numberOfBytesRead);
 
-      try {
-        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-        byte[] md5Bytes = md5Digest.digest(dataRead);
-        String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
-        String md5HashActual = result.getResponseHeader(CONTENT_MD5);
-        if (!md5HashComputed.equals(md5HashActual)) {
-          throw new AbfsRestOperationException(-1, "-1", "Checksum Check Failed", new IOException());
-        }
-      } catch (NoSuchAlgorithmException e) {
-        e.printStackTrace();
+    try {
+      MessageDigest md5Digest = MessageDigest.getInstance(MD5);
+      byte[] md5Bytes = md5Digest.digest(dataRead);
+      String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
+      String md5HashActual = result.getResponseHeader(CONTENT_MD5);
+      if (!md5HashComputed.equals(md5HashActual)) {
+        throw new InvalidChecksumException(null);
       }
+    } catch (NoSuchAlgorithmException e) {
+      throw new InvalidChecksumException(e);
     }
+  }
+
+  private boolean isChecksumValidationEnabled(List<AbfsHttpHeader> requestHeaders,
+      final AbfsHttpHeader rangeHeader, final int bufferLength) {
+    return getAbfsConfiguration().getIsChecksumValidationEnabled() &&
+        requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB;
+  }
+
+  private boolean isChecksumValidationEnabled() {
+    return getAbfsConfiguration().getIsChecksumValidationEnabled();
   }
 
   @VisibleForTesting

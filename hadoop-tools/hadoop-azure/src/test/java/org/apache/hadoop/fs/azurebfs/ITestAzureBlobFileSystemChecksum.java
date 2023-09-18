@@ -42,7 +42,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AzureBlobFileSystem fs = getFileSystem();
     AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     // Enable checksum validations for Read and Write Requests
-    conf.setIsChecksumEnabled(true);
+    conf.setIsChecksumValidationEnabled(true);
 
     Path testpath = new Path("a/b.txt");
     String dataUploaded = "This is Sample Data";
@@ -56,7 +56,11 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     in.read(bytesRead);
 
     // Verify that the data read is same as data written
-    Assertions.assertThat(bytesRead).describedAs("").containsExactly(dataUploaded.getBytes(StandardCharsets.UTF_8));
-    Assertions.assertThat(new String(bytesRead, StandardCharsets.UTF_8)).describedAs("").isEqualTo(dataUploaded);
+    Assertions.assertThat(bytesRead)
+        .describedAs("Bytes read with checksum enabled are not as expected")
+        .containsExactly(dataUploaded.getBytes(StandardCharsets.UTF_8));
+    Assertions.assertThat(new String(bytesRead, StandardCharsets.UTF_8))
+        .describedAs("Data read with checksum enabled is not as expected")
+        .isEqualTo(dataUploaded);
   }
 }
