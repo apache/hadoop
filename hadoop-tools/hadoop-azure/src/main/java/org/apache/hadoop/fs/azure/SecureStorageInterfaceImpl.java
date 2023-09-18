@@ -527,7 +527,7 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
               overwriteDestination
                       ? null
                       : AccessCondition.generateIfNotExistsCondition();
-      if (!overwriteDestination && destEtag != null) {
+      if (overwriteDestination && destEtag != null) {
         dstAccessCondition = new AccessCondition();
         dstAccessCondition.setIfMatch(destEtag);
       }
