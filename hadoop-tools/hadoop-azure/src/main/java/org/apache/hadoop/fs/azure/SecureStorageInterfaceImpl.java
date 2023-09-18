@@ -521,29 +521,15 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
 
     @Override
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
-        OperationContext opContext, boolean overwriteDestination)
-            throws StorageException, URISyntaxException {
-      AccessCondition dstAccessCondition =
-          overwriteDestination
-              ? null
-              : AccessCondition.generateIfNotExistsCondition();
-      getBlob().startCopy(sourceBlob.getBlob().getQualifiedUri(),
-          null, dstAccessCondition, options, opContext);
-    }
-
-    @Override
-    public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
-                                  OperationContext opContext, boolean overwriteDestination, String eTag)
+                                  OperationContext opContext, boolean overwriteDestination, String destEtag)
             throws StorageException, URISyntaxException {
       AccessCondition dstAccessCondition =
               overwriteDestination
                       ? null
                       : AccessCondition.generateIfNotExistsCondition();
-      if (dstAccessCondition != null) {
-        dstAccessCondition.setIfMatch(eTag);
-      } else {
+      if (!overwriteDestination && destEtag != null) {
         dstAccessCondition = new AccessCondition();
-        dstAccessCondition.setIfMatch(eTag);
+        dstAccessCondition.setIfMatch(destEtag);
       }
       getBlob().startCopy(sourceBlob.getBlob().getQualifiedUri(),
               null, dstAccessCondition, options, opContext);

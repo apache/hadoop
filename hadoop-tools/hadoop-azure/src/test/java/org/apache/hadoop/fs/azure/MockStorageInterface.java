@@ -440,21 +440,6 @@ public class MockStorageInterface extends StorageInterface {
 
     @Override
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
-        OperationContext opContext, boolean overwriteDestination) throws StorageException, URISyntaxException {
-      if (!overwriteDestination && backingStore.exists(convertUriToDecodedString(uri))) {
-        throw new StorageException("BlobAlreadyExists",
-            "The blob already exists.",
-            HttpURLConnection.HTTP_CONFLICT,
-            null,
-            null);
-      }
-      backingStore.copy(convertUriToDecodedString(sourceBlob.getUri()), convertUriToDecodedString(uri));
-      //TODO: set the backingStore.properties.CopyState and
-      //      update azureNativeFileSystemStore.waitForCopyToComplete
-    }
-
-    @Override
-    public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
                                   OperationContext opContext, boolean overwriteDestination, String eTag)
             throws StorageException, URISyntaxException {
       if (!overwriteDestination && backingStore.exists(convertUriToDecodedString(uri))) {

@@ -103,13 +103,13 @@ interface NativeFileSystemStore {
 
   void rename(String srcKey, String dstKey) throws IOException;
 
-  void rename(String srcKey, String dstKey, String eTag) throws IOException;
+  void rename(String srcKey, String dstKey, String destEtag) throws IOException;
 
   void rename(String srcKey, String dstKey, boolean acquireLease, SelfRenewingLease existingLease)
       throws IOException;
 
   void rename(String srcKey, String dstKey, boolean acquireLease,
-              SelfRenewingLease existingLease, boolean overwriteDestination, String eTag)
+              SelfRenewingLease existingLease, boolean overwriteDestination, String destEtag)
       throws IOException;
 
   /**

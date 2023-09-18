@@ -2724,7 +2724,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease, String eTag) throws StorageException {
     OperationContext operationContext = getInstrumentedContext();
     try {
-      blob.delete(operationContext, lease, eTag);
+      if (eTagCheck) {
+        blob.delete(operationContext, lease, eTag);
+      } else {
+        blob.delete(operationContext, lease);
+      }
     } catch (StorageException e) {
       if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
         LOG.error("Encountered Storage Exception for delete on Blob: {}"
@@ -2832,7 +2836,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void rename(String srcKey, String dstKey, boolean acquireLease,
-      SelfRenewingLease existingLease, boolean overwriteDestination, String eTag) throws IOException {
+      SelfRenewingLease existingLease, boolean overwriteDestination, String destEtag) throws IOException {
 
     LOG.debug("Moving {} to {}", srcKey, dstKey);
 
@@ -2894,12 +2898,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // a more intensive exponential retry policy when the cluster is getting
       // throttled.
       try {
-        if (eTagCheck && eTag != null) {
+        if (eTagCheck && destEtag != null) {
           dstBlob.startCopyFromBlob(srcBlob, null,
-                  getInstrumentedContext(), overwriteDestination, eTag);
+                  getInstrumentedContext(), overwriteDestination, destEtag);
         } else {
           dstBlob.startCopyFromBlob(srcBlob, null,
-                  getInstrumentedContext(), overwriteDestination);
+                  getInstrumentedContext(), overwriteDestination, null);
         }
       } catch (StorageException se) {
         if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
@@ -2923,12 +2927,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           options.setRetryPolicyFactory(new RetryExponentialRetry(
             copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff,
             copyBlobMaxRetries));
-          if (eTagCheck && eTag != null) {
+          if (eTagCheck && destEtag != null) {
             dstBlob.startCopyFromBlob(srcBlob, options,
-                    getInstrumentedContext(), overwriteDestination, eTag);
+                    getInstrumentedContext(), overwriteDestination, destEtag);
           } else {
             dstBlob.startCopyFromBlob(srcBlob, options,
-                    getInstrumentedContext(), overwriteDestination);
+                    getInstrumentedContext(), overwriteDestination, null);
           }
         } else {
           throw se;
