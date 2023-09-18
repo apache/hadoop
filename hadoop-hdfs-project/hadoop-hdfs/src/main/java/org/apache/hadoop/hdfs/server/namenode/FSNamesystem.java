@@ -6131,9 +6131,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static class CorruptFileBlockInfo {
     final String path;
     final Block block;
-    final int replication;
+    private final int replication;
     
-    public CorruptFileBlockInfo(String p, Block b, int r) {
+    CorruptFileBlockInfo(String p, Block b, int r) {
       path = p;
       block = b;
       replication = r;
