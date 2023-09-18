@@ -70,7 +70,7 @@ class FSDirRenameOp {
    * dstInodes[dstInodes.length-1]
    */
   private static void verifyQuotaForRename(FSDirectory fsd, INodesInPath src,
-          INodesInPath dst, QuotaCounts counts) throws QuotaExceededException {
+      INodesInPath dst, QuotaCounts counts) throws QuotaExceededException {
     if (!fsd.getFSNamesystem().isImageLoaded() || fsd.shouldSkipQuotaChecks()) {
       // Do not check quota if edits log is still being processed
       return;
@@ -202,7 +202,7 @@ class FSDirRenameOp {
     BlockStoragePolicySuite bsps = fsd.getBlockStoragePolicySuite();
     RenameOperation tx = new RenameOperation(fsd, srcIIP, dstIIP);
     computeQuotaCounts(srcStoragePolicyCounts, dstStoragePolicyCounts,
-            srcIIP, dstIIP, bsps, tx);
+        srcIIP, dstIIP, bsps, tx);
 
     verifyQuotaForRename(fsd, srcIIP, dstIIP, dstStoragePolicyCounts);
 
@@ -255,7 +255,7 @@ class FSDirRenameOp {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     // returns resolved path
     return renameTo(fsd, pc, src, dst, collectedBlocks,
-            logRetryCache, options);
+        logRetryCache, options);
   }
 
   /**
@@ -426,7 +426,7 @@ class FSDirRenameOp {
     QuotaCounts dstStoragePolicyCounts = new QuotaCounts.Builder().build();
     RenameOperation tx = new RenameOperation(fsd, srcIIP, dstIIP);
     computeQuotaCounts(srcStoragePolicyCounts, dstStoragePolicyCounts,
-            srcIIP, dstIIP, bsps, tx);
+        srcIIP, dstIIP, bsps, tx);
 
     verifyQuotaForRename(fsd, srcIIP, dstIIP, dstStoragePolicyCounts);
 
@@ -445,7 +445,7 @@ class FSDirRenameOp {
 
       // add src as dst to complete rename
       INodesInPath renamedIIP = tx.
-              addSourceToDestination(dstStoragePolicyCounts);
+          addSourceToDestination(dstStoragePolicyCounts);
       if (renamedIIP != null) {
         undoRemoveSrc = false;
         if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -497,27 +497,27 @@ class FSDirRenameOp {
    *  the QuotaCount is calculated once using the storage policy of src.
    * */
   private static void computeQuotaCounts(
-          QuotaCounts srcStoragePolicyCounts,
-          QuotaCounts dstStoragePolicyCounts,
-          INodesInPath srcIIP,
-          INodesInPath dstIIP,
-          BlockStoragePolicySuite bsps,
-          RenameOperation tx) {
+      QuotaCounts srcStoragePolicyCounts,
+      QuotaCounts dstStoragePolicyCounts,
+      INodesInPath srcIIP,
+      INodesInPath dstIIP,
+      BlockStoragePolicySuite bsps,
+      RenameOperation tx) {
     INode dstParent = dstIIP.getINode(-2);
     INode srcParentNode = FSDirectory.
-            getFirstSetQuotaParentNode(srcIIP);
+        getFirstSetQuotaParentNode(srcIIP);
     INode srcInode = srcIIP.getLastINode();
     INode dstParentNode = FSDirectory.
-            getFirstSetQuotaParentNode(dstIIP);
+        getFirstSetQuotaParentNode(dstIIP);
     byte srcStoragePolicyID = FSDirectory.getStoragePolicyId(srcInode);
     byte dstStoragePolicyID = FSDirectory.getStoragePolicyId(dstParent);
     if (srcStoragePolicyID != dstStoragePolicyID) {
       srcStoragePolicyCounts.add(srcIIP.getLastINode().
-              computeQuotaUsage(bsps));
+          computeQuotaUsage(bsps));
       if (srcStoragePolicyID == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
         dstStoragePolicyCounts.add(srcIIP.getLastINode()
-                .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
-                        Snapshot.CURRENT_STATE_ID));
+            .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
+                Snapshot.CURRENT_STATE_ID));
       } else {
         dstStoragePolicyCounts.add(srcStoragePolicyCounts);
       }

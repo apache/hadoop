@@ -1199,7 +1199,7 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       return addLastINode(existing, child, modes,
-              true, null, true);
+          true, null, true);
     } finally {
       writeUnlock();
     }
@@ -1495,8 +1495,8 @@ public class FSDirectory implements Closeable {
 
   static byte getStoragePolicyId(INode inode) {
     return inode.isSymlink() ?
-            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED :
-            inode.getLocalStoragePolicyID();
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED :
+        inode.getLocalStoragePolicyID();
   }
 
   static String normalizePath(String src) {
