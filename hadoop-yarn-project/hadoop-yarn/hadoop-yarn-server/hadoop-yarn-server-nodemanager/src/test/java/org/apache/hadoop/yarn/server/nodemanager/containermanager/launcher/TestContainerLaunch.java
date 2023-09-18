@@ -1880,7 +1880,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       fos.close();
       FileUtil.setExecutable(tempFile, true);
       Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
-          new String[] { tempFile.getAbsolutePath() }, tmpDir);
+          new String[]{tempFile.getAbsolutePath()}, tmpDir);
       shexc.execute();
       assertThat(shexc.getExitCode()).isZero();
       File directorInfo =

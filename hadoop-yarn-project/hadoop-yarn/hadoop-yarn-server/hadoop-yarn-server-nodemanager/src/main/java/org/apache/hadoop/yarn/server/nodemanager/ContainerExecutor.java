@@ -489,13 +489,13 @@ public abstract class ContainerExecutor implements Configurable {
     return new File(dir.toString()).listFiles();
   }
 
-  private boolean shouldWriteDebugInformation(Configuration conf) {
-    return conf != null && (
-            conf.getBoolean(
+  private boolean shouldWriteDebugInformation(Configuration config) {
+    return config != null && (
+            config.getBoolean(
                 YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
                 YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO
             ) || (
-            conf.getBoolean(
+            config.getBoolean(
                 YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR,
                 YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR
             ) && containerExitCode != 0));
