@@ -1584,8 +1584,14 @@
 
 <property>
   <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors.</description>
+  <value>5</value>
+  <description>
+    Number of times the AWS client library should retry errors before
+    escalating to the S3A code: {@value}.
+    The S3A connector does its own selective retries; the only time the AWS
+    SDK operations are not wrapped is during multipart copy via the AWS SDK
+    transfer manager.
+  </description>
 </property>
 
 <property>

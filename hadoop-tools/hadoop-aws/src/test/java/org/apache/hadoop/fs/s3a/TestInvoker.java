@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -104,7 +105,7 @@ public class TestInvoker extends Assert {
           .cause(new Local.ConnectTimeoutException("timeout"))
           .build();
   private static final AwsServiceException BAD_REQUEST = serviceException(
-      AWSBadRequestException.STATUS_CODE,
+      SC_400_BAD_REQUEST,
       "bad request");
 
   @Before

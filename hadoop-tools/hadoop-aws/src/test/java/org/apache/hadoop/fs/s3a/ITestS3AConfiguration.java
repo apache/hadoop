@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.security.PrivilegedExceptionAction;
@@ -157,7 +159,7 @@ public class ITestS3AConfiguration {
     conf.setInt(Constants.PROXY_PORT, 1);
     String proxy =
         conf.get(Constants.PROXY_HOST) + ":" + conf.get(Constants.PROXY_PORT);
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "when using proxy " + proxy);
   }
 
@@ -211,10 +213,10 @@ public class ITestS3AConfiguration {
     conf.unset(Constants.PROXY_PORT);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.set(Constants.SECURE_CONNECTIONS, "true");
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "Expected a connection error for proxy server");
     conf.set(Constants.SECURE_CONNECTIONS, "false");
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "Expected a connection error for proxy server");
   }
 
@@ -552,6 +554,7 @@ public class ITestS3AConfiguration {
     config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
 
     config.set(AWS_REGION, EU_WEST_1);
+    disableFilesystemCaching(config);
     fs = S3ATestUtils.createTestFileSystem(config);
 
     S3Client s3Client = getS3Client("testS3SpecificSignerOverride");
@@ -564,7 +567,7 @@ public class ITestS3AConfiguration {
     intercept(StsException.class, "", () ->
         stsClient.getSessionToken());
 
-    intercept(AccessDeniedException.class, "", () ->
+    final IOException ioe = intercept(IOException.class, "", () ->
         Invoker.once("head", bucket, () ->
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build())));
 

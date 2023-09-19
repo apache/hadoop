@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -188,18 +189,22 @@ public class S3ARetryPolicy implements RetryPolicy {
     // inherit policies.
     Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
 
+    // connectivity problems are retried without worrying about idempotency
+    policyMap.put(ConnectTimeoutException.class, connectivityFailure);
+    policyMap.put(ConnectException.class, connectivityFailure);
+
+    // Access denial and auth exceptions are not retried
+    policyMap.put(AccessDeniedException.class, fail);
+    policyMap.put(FileNotFoundException.class, fail);
     // failfast exceptions which we consider unrecoverable
-    policyMap.put(UnknownHostException.class, fail);
-    policyMap.put(NoRouteToHostException.class, fail);
     policyMap.put(InterruptedException.class, fail);
     // note this does not pick up subclasses (like socket timeout)
     policyMap.put(InterruptedIOException.class, fail);
-    // Access denial and auth exceptions are not retried
-    policyMap.put(AccessDeniedException.class, fail);
-    policyMap.put(NoAuthWithAWSException.class, fail);
-    policyMap.put(FileNotFoundException.class, fail);
-    policyMap.put(UnknownStoreException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
+    policyMap.put(NoAuthWithAWSException.class, fail);
+    policyMap.put(NoRouteToHostException.class, fail);
+    policyMap.put(UnknownHostException.class, fail);
+    policyMap.put(UnknownStoreException.class, fail);
 
     // once the file has changed, trying again is not going to help
     policyMap.put(RemoteFileChangedException.class, fail);
@@ -214,10 +219,6 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
-
-    // connectivity problems are retried without worrying about idempotency
-    policyMap.put(ConnectTimeoutException.class, connectivityFailure);
-
     // this can be a sign of an HTTP connection breaking early.
     // which can be reacted to by another attempt if the request was idempotent.
     // But: could also be a sign of trying to read past the EOF on a GET,
@@ -228,8 +229,16 @@ public class S3ARetryPolicy implements RetryPolicy {
     // Treated as an immediate failure
     policyMap.put(AWSBadRequestException.class, fail);
 
-    // Status 500 error code is also treated as a connectivity problem
-    policyMap.put(AWSStatus500Exception.class, connectivityFailure);
+    // Status 5xx error code is an immediate failure
+    // this is sign of a server-side problem, and while
+    // rare in AWS S3, it does happen on third party stores.
+    // (out of disk space, etc).
+    // by the time we get here, the aws sdk will have
+    // already retried.
+    policyMap.put(AWSStatus500Exception.class, fail);
+
+    // server doesn't support a feature.
+    policyMap.put(AWSUnsupportedFeatureException.class, fail);
 
     // server didn't respond.
     policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);

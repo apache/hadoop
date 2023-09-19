@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -334,6 +335,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   /** Exactly once log to warn about setting the region in config to avoid probe. */
   private static final LogExactlyOnce SET_REGION_WARNING = new LogExactlyOnce(LOG);
+
+  /** Log to warn of storage class configuration problems. */
+  private static final LogExactlyOnce STORAGE_CLASS_WARNING = new LogExactlyOnce(LOG);
+
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
@@ -1073,7 +1078,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
             if (exception.statusCode() == SC_404_NOT_FOUND) {
               throw new UnknownStoreException("s3a://" + bucket + "/",
-                  " Bucket does " + "not exist");
+                  " Bucket does not exist: " + exception,
+                  exception);
             }
 
             throw exception;
@@ -1174,6 +1180,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // Any encoding type
     String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
+    if (contentEncoding != null) {
+      LOG.debug("Using content encoding set in {} = {}", CONTENT_ENCODING,  contentEncoding);
+    }
 
     String storageClassConf = getConf()
         .getTrimmed(STORAGE_CLASS, "")
@@ -1181,10 +1190,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     StorageClass storageClass = null;
     if (!storageClassConf.isEmpty()) {
       storageClass = StorageClass.fromValue(storageClassConf);
-
+      LOG.debug("Using storage class {}", storageClass);
       if (storageClass.equals(StorageClass.UNKNOWN_TO_SDK_VERSION)) {
-        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
-            STORAGE_CLASS, storageClassConf);
+        STORAGE_CLASS_WARNING.warn("Unknown storage class \"{}\" from option: {};"
+                + " falling back to default storage class",
+            storageClassConf, STORAGE_CLASS);
         storageClass = null;
       }
 
@@ -1431,7 +1441,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public String getBucketLocation(String bucketName) throws IOException {
       final String region = trackDurationAndSpan(
           STORE_EXISTS_PROBE, bucketName, null, () ->
-              invoker.retry("getBucketLocation()", bucketName, true, () ->
+              once("getBucketLocation()", bucketName, () ->
                   // If accessPoint then region is known from Arn
                   accessPoint != null
                       ? accessPoint.getRegion()
@@ -2888,6 +2898,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           trackDurationOfOperation(trackerFactory,
               OBJECT_LIST_REQUEST,
               () -> {
+                checkNotClosed();  // this listing is done in the thread pool, it may actually be closed
                 if (useListV1) {
                   return S3ListResult.v1(s3Client.listObjects(request.getV1()));
                 } else {
@@ -4293,7 +4304,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private void checkNotClosed() throws IOException {
     if (isClosed) {
-      throw new IOException(uri + ": " + E_FS_CLOSED);
+      throw new PathIOException(uri.toString(), E_FS_CLOSED);
     }
   }
 
@@ -4443,7 +4454,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // This means the File was deleted since LIST enumerated it.
       LOG.debug("getObjectMetadata({}) failed to find an expected file",
           srcKey, e);
-      // We create an exception, but the text depends on the S3Guard state
       throw new RemoteFileChangedException(
           keyToQualifiedPath(srcKey).toString(),
           action,
@@ -4454,6 +4464,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     CopyObjectRequest.Builder copyObjectRequestBuilder =
         getRequestFactory().newCopyObjectRequestBuilder(srcKey, dstKey, srcom);
     changeTracker.maybeApplyConstraint(copyObjectRequestBuilder);
+    final CopyObjectRequest copyRequest = copyObjectRequestBuilder.build();
+    LOG.debug("Copy Request: {}", copyRequest);
     CopyObjectResponse response;
 
     // transfer manager is skipped if disabled or the file is too small to worry about
@@ -4468,7 +4480,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
             Copy copy = transferManager.copy(
                 CopyRequest.builder()
-                    .copyObjectRequest(copyObjectRequestBuilder.build())
+                    .copyObjectRequest(copyRequest)
                     .build());
 
             try {
@@ -4477,6 +4489,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             } catch (CompletionException e) {
               Throwable cause = e.getCause();
               if (cause instanceof SdkException) {
+                // if this is a 412 precondition failure, it may
+                // be converted to a RemoteFileChangedException
                 SdkException awsException = (SdkException)cause;
                 changeTracker.processException(awsException, "copy");
                 throw awsException;
@@ -4493,7 +4507,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           () -> {
             LOG.debug("copyFile: single part copy {} -> {} of size {}", srcKey, dstKey, size);
             incrementStatistic(OBJECT_COPY_REQUESTS);
-            return s3Client.copyObject(copyObjectRequestBuilder.build());
+            try {
+              return s3Client.copyObject(copyRequest);
+            } catch (SdkException awsException) {
+              // if this is a 412 precondition failure, it may
+              // be converted to a RemoteFileChangedException
+              changeTracker.processException(awsException, "copy");
+              // otherwise, rethrow
+              throw awsException;
+            }
           });
     }
 
