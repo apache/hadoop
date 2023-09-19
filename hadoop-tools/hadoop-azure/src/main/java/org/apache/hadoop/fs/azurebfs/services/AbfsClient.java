@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -764,7 +765,7 @@ public class AbfsClient implements Closeable {
     }
 
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, buffer);
+      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
     }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -1011,7 +1012,7 @@ public class AbfsClient implements Closeable {
     op.execute(tracingContext);
 
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
-      verifyCheckSumForRead(buffer, op.getResult());
+      verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
     }
 
     return op;
@@ -1427,11 +1428,18 @@ public class AbfsClient implements Closeable {
     }
   }
 
+  /**
+   * Add MD5 hash as checksum request header to the append request
+   * @param requestHeaders
+   * @param reqParams
+   * @param buffer
+   */
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
-      final byte[] buffer) {
+      final AppendRequestParameters reqParams, final byte[] buffer) {
     try {
       MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-      byte[] md5Bytes = md5Digest.digest(buffer);
+      byte[] md5Bytes = md5Digest.digest(
+          Arrays.copyOfRange(buffer, reqParams.getoffset(), reqParams.getLength()));
       String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
     } catch (NoSuchAlgorithmException e) {
@@ -1439,7 +1447,14 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private void verifyCheckSumForRead(final byte[] buffer, final AbfsHttpOperation result)
+  /**
+   * T verify the checksum information received from server for the data read
+   * @param buffer stores the data received from server
+   * @param result HTTP Operation Result
+   * @param bufferOffset Position where data returned by server is saved in buffer
+   * @throws AbfsRestOperationException
+   */
+  private void verifyCheckSumForRead(final byte[] buffer, final AbfsHttpOperation result, final int bufferOffset)
       throws AbfsRestOperationException{
     // Number of bytes returned by server could be less than or equal to what
     // caller requests. In case it is less, extra bytes will be initialized to 0
@@ -1447,8 +1462,11 @@ public class AbfsClient implements Closeable {
     // We need to get exact data that server returned and compute its md5 hash
     // Computed hash should be equal to what server returned
     int numberOfBytesRead = (int)result.getBytesReceived();
+    if (numberOfBytesRead == 0) {
+      return;
+    }
     byte[] dataRead = new byte[numberOfBytesRead];
-    System.arraycopy(buffer, 0, dataRead, 0, numberOfBytesRead);
+    System.arraycopy(buffer, bufferOffset, dataRead, 0, numberOfBytesRead);
 
     try {
       MessageDigest md5Digest = MessageDigest.getInstance(MD5);
@@ -1463,6 +1481,18 @@ public class AbfsClient implements Closeable {
     }
   }
 
+  /**
+   * Conditions check for allowing checksum support for read operation
+   * As per the azure documentation following conditions should be met before
+   * sending MD5 hash as checksum header.
+   * https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
+   * 1. Range header should be present as one of the request headers
+   * 2. buffer length should not exceed 4MB.
+   * @param requestHeaders
+   * @param rangeHeader
+   * @param bufferLength
+   * @return true if all conditions are met
+   */
   private boolean isChecksumValidationEnabled(List<AbfsHttpHeader> requestHeaders,
       final AbfsHttpHeader rangeHeader, final int bufferLength) {
     return getAbfsConfiguration().getIsChecksumValidationEnabled() &&

@@ -18,15 +18,21 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 /**
  * Test For Verifying Checksum Related Operations
@@ -39,28 +45,86 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testWriteReadWithChecksum() throws Exception {
+    testWriteReadWithChecksumInternal(true);
+    testWriteReadWithChecksumInternal(false);
+  }
+
+  private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     // Enable checksum validations for Read and Write Requests
     conf.setIsChecksumValidationEnabled(true);
+    conf.setWriteBufferSize(4 * ONE_MB);
+    conf.setReadBufferSize(4 * ONE_MB);
+    conf.setReadAheadEnabled(readAheadEnabled);
+    final int datasize = 16 * ONE_MB + 1000;
 
-    Path testpath = new Path("a/b.txt");
-    String dataUploaded = "This is Sample Data";
-    FSDataOutputStream out = fs.create(testpath);
-    out.write(dataUploaded.getBytes(StandardCharsets.UTF_8));
+    Path testPath = new Path("a/b.txt");
+    byte[] bytesUploaded = generateRandomBytes(datasize);
+    FSDataOutputStream out = fs.create(testPath);
+    out.write(bytesUploaded);
     out.hflush();
     out.close();
 
-    FSDataInputStream in = fs.open(testpath);
-    byte[] bytesRead = new byte[dataUploaded.length()];
-    in.read(bytesRead);
+    FSDataInputStream in = fs.open(testPath);
+    byte[] bytesRead = new byte[bytesUploaded.length];
+    in.read(bytesRead, 0, datasize);
 
     // Verify that the data read is same as data written
     Assertions.assertThat(bytesRead)
         .describedAs("Bytes read with checksum enabled are not as expected")
-        .containsExactly(dataUploaded.getBytes(StandardCharsets.UTF_8));
-    Assertions.assertThat(new String(bytesRead, StandardCharsets.UTF_8))
-        .describedAs("Data read with checksum enabled is not as expected")
-        .isEqualTo(dataUploaded);
+        .containsExactly(bytesUploaded);
+
+    // Verify that reading from random position works
+    in = fs.open(testPath);
+    bytesRead = new byte[datasize];
+    in.seek(ONE_MB);
+    in.read(bytesRead, ONE_MB, datasize - 2 * ONE_MB);
+  }
+
+  @Test
+  public void testWriteReadWithChecksumAndOptions() throws Exception {
+    testWriteReadWithChecksumAndOptionsInternal(true);
+    testWriteReadWithChecksumAndOptionsInternal(false);
+  }
+
+  private void testWriteReadWithChecksumAndOptionsInternal(
+      final boolean readAheadEnabled) throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
+    // Enable checksum validations for Read and Write Requests
+    conf.setIsChecksumValidationEnabled(true);
+    conf.setWriteBufferSize(8 * ONE_MB);
+    conf.setReadBufferSize(ONE_MB);
+    conf.setReadAheadEnabled(readAheadEnabled);
+    final int datasize = 16 * ONE_MB + 1000;
+
+    Path testPath = new Path("a/b.txt");
+    byte[] bytesUploaded = generateRandomBytes(datasize);
+    FSDataOutputStream out = fs.create(testPath);
+    out.write(bytesUploaded);
+    out.hflush();
+    out.close();
+
+    Configuration cpm1 = new Configuration();
+    cpm1.setBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, true);
+    FSDataInputStream in = fs.openFileWithOptions(testPath,
+        new OpenFileParameters().withOptions(cpm1)
+            .withMandatoryKeys(new HashSet<>())).get();
+    byte[] bytesRead = new byte[datasize];
+    in.read(1, bytesRead, 1, 4 * ONE_MB);
+
+    // Verify that the data read is same as data written
+    Assertions.assertThat(Arrays.copyOfRange(bytesRead, 1, 4 * ONE_MB))
+        .describedAs("Bytes read with checksum enabled are not as expected")
+        .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, 4 * ONE_MB));
+  }
+
+  public static byte[] generateRandomBytes(int numBytes) {
+    SecureRandom secureRandom = new SecureRandom();
+    byte[] randomBytes = new byte[numBytes];
+    secureRandom.nextBytes(randomBytes);
+    return randomBytes;
   }
 }
