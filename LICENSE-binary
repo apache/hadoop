@@ -241,8 +241,6 @@ com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.31
-com.squareup.okhttp3:okhttp:4.10.0
-com.squareup.okio:okio:3.4.0
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.5.0
@@ -319,8 +317,8 @@ org.apache.hbase:hbase-common:1.7.1
 org.apache.hbase:hbase-protocol:1.7.1
 org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
-org.apache.httpcomponents:httpclient:4.5.6
-org.apache.httpcomponents:httpcore:4.4.10
+org.apache.httpcomponents:httpclient:4.5.13
+org.apache.httpcomponents:httpcore:4.4.13
 org.apache.kafka:kafka-clients:2.8.2
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
@@ -357,8 +355,6 @@ org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.51.v20230217
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.51.v20230217
 org.ehcache:ehcache:3.3.1
 org.ini4j:ini4j:0.5.4
-org.jetbrains.kotlin:kotlin-stdlib:1.4.10
-org.jetbrains.kotlin:kotlin-stdlib-common:1.4.10
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.1

@@ -162,10 +162,6 @@
       <version>${esdk.version}</version>
       <exclusions>
         <exclusion>
-          <artifactId>okio</artifactId>
-          <groupId>com.squareup.okio</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>log4j-core</artifactId>
           <groupId>org.apache.logging.log4j</groupId>
         </exclusion>
