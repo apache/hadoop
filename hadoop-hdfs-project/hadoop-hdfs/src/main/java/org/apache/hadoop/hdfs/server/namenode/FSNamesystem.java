@@ -6141,7 +6141,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
     @Override
     public String toString() {
-      return block.getBlockName() + "\t" + replication + "\t" + path;
+      return block.getBlockName() + "\t" +
+          (replication == -1 ? "EC" : replication) + "\t" + path;
     }
   }
   /**
@@ -6199,7 +6200,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           if (isParentEntry(src, path)) {
             int repl = 0;
             if (inode.isFile()) {
-              repl = inode.asFile().getFileReplication();
+              if (inode.asFile().isStriped()) {
+                repl = -1;
+              } else {
+                repl = inode.asFile().getFileReplication();
+              }
             }
             corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl));
             count++;
