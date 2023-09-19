@@ -243,25 +243,25 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     long dateModified = Time.now();
     // Active - oldest
     MembershipState report = createRegistration(
-            ns, nn, ROUTERS[1], FederationNamenodeServiceState.ACTIVE);
+        ns, nn, ROUTERS[1], FederationNamenodeServiceState.ACTIVE);
     report.setDateModified(dateModified);
     assertTrue(namenodeHeartbeat(report));
 
     // Active - 2nd oldest
     report = createRegistration(
-            ns, nn, ROUTERS[2], FederationNamenodeServiceState.ACTIVE);
+        ns, nn, ROUTERS[2], FederationNamenodeServiceState.ACTIVE);
     report.setDateModified(dateModified);
     assertTrue(namenodeHeartbeat(report));
 
     // Active - 3rd oldest
     report = createRegistration(
-            ns, nn, ROUTERS[3], FederationNamenodeServiceState.ACTIVE);
+        ns, nn, ROUTERS[3], FederationNamenodeServiceState.ACTIVE);
     report.setDateModified(dateModified);
     assertTrue(namenodeHeartbeat(report));
 
     // standby - newest overall
     report = createRegistration(
-            ns, nn, ROUTERS[0], FederationNamenodeServiceState.STANDBY);
+        ns, nn, ROUTERS[0], FederationNamenodeServiceState.STANDBY);
     assertTrue(namenodeHeartbeat(report));
 
     // Load and calculate quorum
@@ -269,9 +269,9 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
 
     // Verify quorum entry
     MembershipState quorumEntry = getNamenodeRegistration(
-            report.getNameserviceId(), report.getNamenodeId());
+        report.getNameserviceId(), report.getNamenodeId());
     assertNotNull(quorumEntry);
-    assertEquals(quorumEntry.getState(), FederationNamenodeServiceState.ACTIVE);
+    assertEquals(FederationNamenodeServiceState.ACTIVE, quorumEntry.getState());
   }
 
   @Test
