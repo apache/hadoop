@@ -1838,36 +1838,36 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    */
   private void checkRemoveParentAppNode(String appIdPath, int splitIndex)
       throws Exception {
-    if (splitIndex != 0) {
-      String parentAppNode = getSplitAppNodeParent(appIdPath, splitIndex);
-      List<String> children = null;
-      try {
-        children = getChildren(parentAppNode);
-      } catch (KeeperException.NoNodeException ke) {
-        // It should be fine to swallow this exception as the parent app node we
-        // intend to delete is already deleted.
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to remove app parent node {} as it does not exist.",
-              parentAppNode);
-        }
-        return;
-      }
-      // No apps stored under parent path.
-      if (children != null && children.isEmpty()) {
-        try {
-          zkManager.delete(parentAppNode);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("No leaf app node exists. Removing parent node {}.", parentAppNode);
-          }
-        } catch (KeeperException.NotEmptyException ke) {
-          // It should be fine to swallow this exception as the parent app node
-          // has to be deleted only if it has no children. And this node has.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to remove app parent node {} as it has children.",
-                parentAppNode);
-          }
-        }
-      }
+    if (splitIndex == 0) {
+      return;
+    }
+
+    String parentAppNode = getSplitAppNodeParent(appIdPath, splitIndex);
+    List<String> children;
+    try {
+      children = getChildren(parentAppNode);
+    } catch (KeeperException.NoNodeException ke) {
+      // It should be fine to swallow this exception as the parent app node we
+      // intend to delete is already deleted.
+      LOG.debug("Unable to remove app parent node {} as it does not exist.",
+          parentAppNode);
+      return;
+    }
+
+    // If children==null or children is not empty, we cannot delete the parent path.
+    if (children == null || !children.isEmpty()) {
+      return;
+    }
+
+    // No apps stored under parent path.
+    try {
+      zkManager.delete(parentAppNode);
+      LOG.debug("No leaf app node exists. Removing parent node {}.", parentAppNode);
+    } catch (KeeperException.NotEmptyException ke) {
+      // It should be fine to swallow this exception as the parent app node
+      // has to be deleted only if it has no children. And this node has.
+      LOG.debug("Unable to remove app parent node {} as it has children.",
+          parentAppNode);
     }
   }
 
