@@ -869,7 +869,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             ActivityDiagnosticConstant.NODE_HAS_BEEN_RESERVED, ActivityLevel.NODE);
         continue;
       }
-      
+
       if (reservedContainer == null) {
         result = preCheckForNodeCandidateSet(node,
             schedulingMode, resourceLimits, schedulerKey);

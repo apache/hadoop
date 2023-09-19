@@ -482,7 +482,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm.stop();
   }
 
-  @Test(timeout=3000000)
+  @Test(timeout=30000)
   public void testSkipAllocationOnNodeReservedByAnotherApp() throws Exception {
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration(conf);
@@ -533,20 +533,20 @@ public class TestCapacitySchedulerMultiNodes {
     Assert.assertEquals(1, reservedContainers.size());
     RMNode nodeWithReservedContainer = reservedContainers.iterator().next();
     LOG.debug("Reserved container on: {}", nodeWithReservedContainer);
-    
+
     //Move reservation to nm1 for easier testing
     if (nodeWithReservedContainer.getNodeID().getHost().startsWith("127.0.0.2")) {
       moveReservation(cs, rm1, nm1, nm2, am1);
     }
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     Assert.assertNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
-    
+
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
 
-    //Make sure to have available headroom on the child queue, see: RegularContainerAllocator#checkHeadroom, 
-    //that can make RegularContainerAllocator.preCheckForNodeCandidateSet to return ContainerAllocation.QUEUE_SKIPPED 
+    //Make sure to have available headroom on the child queue, see: RegularContainerAllocator#checkHeadroom,
+    //that can make RegularContainerAllocator.preCheckForNodeCandidateSet to return ContainerAllocation.QUEUE_SKIPPED
     MockNM nm3 = rm1.registerNode("127.0.0.3:1235", 3 * GB);
     
     //Allocate a container for app2, we expect this to be allocated on nm2 as nm1 has a reservation for another app
@@ -569,7 +569,7 @@ public class TestCapacitySchedulerMultiNodes {
     app.moveReservation(reservedContainer, cs.getNode(sourceNode.getNodeID()), cs.getNode(targetNode.getNodeID()));
   }
 
-  private static Set<RMNode> checkReservedContainers(CapacityScheduler cs, 
+  private static Set<RMNode> checkReservedContainers(CapacityScheduler cs,
       ConcurrentMap<NodeId, RMNode> rmNodes, int expectedNumberOfContainers) {
     Set<RMNode> result = new HashSet<>();
     for (Map.Entry<NodeId, RMNode> entry : rmNodes.entrySet()) {
@@ -577,7 +577,7 @@ public class TestCapacitySchedulerMultiNodes {
         result.add(entry.getValue());
       }
     }
-    
+
     Assert.assertEquals(expectedNumberOfContainers, result.size());
     return result;
   }

@@ -943,12 +943,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(RESERVE_CONT_LOOK_ALL_NODES,
         DEFAULT_RESERVE_CONT_LOOK_ALL_NODES);
   }
-  
+
   public boolean getPreferAllocateOnNodesWithoutReservedContainer() {
-    return getBoolean(PREFER_ALLOCATE_ON_NODES_WITHOUT_RESERVED_CONTAINERS, 
+    return getBoolean(PREFER_ALLOCATE_ON_NODES_WITHOUT_RESERVED_CONTAINERS,
         DEFAULT_PREFER_ALLOCATE_ON_NODES_WITHOUT_RESERVED_CONTAINERS);
   }
-  
+
   private static String getAclKey(QueueACL acl) {
     return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
