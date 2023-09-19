@@ -228,7 +228,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
    */
   @Test
   public void testRegistrationMajorityQuorumEqDateModified()
-          throws InterruptedException, IOException {
+        throws IOException {
 
     // Populate the state store with a set of non-matching elements
     // 1) ns0:nn0 - Standby (newest)
