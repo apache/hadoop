@@ -91,6 +91,7 @@ interface NativeFileSystemStore {
   /**
    * API to delete a blob in the back end azure storage.
    * @param key - key to the blob being deleted.
+   * @param eTag - eTag of file to be deleted.
    * @return return true when delete is successful, false if
    * blob cannot be found or delete is not possible without
    * exception.
@@ -140,6 +141,7 @@ interface NativeFileSystemStore {
    * API to delete a blob in the back end azure storage.
    * @param key - key to the blob being deleted.
    * @param lease - Active lease on the blob.
+   * @param eTag - eTag of the file to be deleted.
    * @return return true when delete is successful, false if
    * blob cannot be found or delete is not possible without
    * exception.
