@@ -389,6 +389,7 @@ public class Router extends CompositeService {
   }
 
   private static void executeRouterCommand(Configuration conf, String[] args) {
+    // Step1. Define Options.
     Options opts = new Options();
     Option formatStateStoreOpt = new Option("format-state-store",  false,
         " Formats the FederationStateStore. " +
@@ -401,11 +402,11 @@ public class Router extends CompositeService {
     opts.addOption(formatStateStoreOpt);
     opts.addOption(removeApplicationFromStateStoreOpt);
 
-    String cmd = args[0];
-
-    CommandLine cliParser = null;
+    // Step2. Parse Options.
     try {
-      cliParser = new DefaultParser().parse(opts, args);
+      String cmd = args[0];
+
+      CommandLine cliParser = new DefaultParser().parse(opts, args);
 
       if (CMD_FORMAT_STATE_STORE.equals(cmd)) {
         handFormatStateStore();
