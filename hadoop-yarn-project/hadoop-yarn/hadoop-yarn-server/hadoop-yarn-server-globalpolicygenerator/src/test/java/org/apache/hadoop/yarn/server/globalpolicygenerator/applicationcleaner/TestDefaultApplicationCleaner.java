@@ -124,6 +124,7 @@ public class TestDefaultApplicationCleaner {
     }
     if (registry != null) {
       registry.stop();
+      registry = null;
     }
   }
 

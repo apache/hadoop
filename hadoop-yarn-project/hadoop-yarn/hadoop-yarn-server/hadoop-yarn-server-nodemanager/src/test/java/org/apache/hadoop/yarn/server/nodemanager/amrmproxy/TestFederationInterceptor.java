@@ -1215,7 +1215,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
       // interceptor cleanupRegistry
       ApplicationId applicationId = interceptor.getAttemptId().getApplicationId();
-      client.removeAppFromRegistry(applicationId, false);
+      client.removeAppFromRegistry(applicationId);
       applications = client.getAllApplications();
       Assert.assertNotNull(applications);
       Assert.assertEquals(0, applications.size());

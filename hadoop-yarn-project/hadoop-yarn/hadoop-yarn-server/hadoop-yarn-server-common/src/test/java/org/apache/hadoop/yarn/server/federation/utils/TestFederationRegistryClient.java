@@ -80,7 +80,7 @@ public class TestFederationRegistryClient {
     Assert.assertEquals(2,
         this.registryClient.loadStateFromRegistry(appId).size());
 
-    this.registryClient.removeAppFromRegistry(appId, false);
+    this.registryClient.removeAppFromRegistry(appId);
 
     Assert.assertEquals(0, this.registryClient.getAllApplications().size());
     Assert.assertEquals(0,

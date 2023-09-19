@@ -85,10 +85,9 @@ public abstract class ApplicationCleaner implements Runnable {
           + this.minRouterSuccessCount + " should be positive");
     }
 
-    LOG.info(
-        "Initialized AppCleaner with Router query with min success {}, "
-            + "max retry {}, retry interval {}",
-        this.minRouterSuccessCount, this.maxRouterRetry,
+    LOG.info("Initialized AppCleaner with Router query with min success {}, " +
+        "max retry {}, retry interval {}.", this.minRouterSuccessCount,
+        this.maxRouterRetry,
         DurationFormatUtils.formatDurationISO(this.routerQueryIntevalMillis));
   }
 
@@ -105,8 +104,8 @@ public abstract class ApplicationCleaner implements Runnable {
   public Set<ApplicationId> getAppsFromRouter() throws YarnRuntimeException {
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
 
-    LOG.info(String.format("Contacting router at: %s", webAppAddress));
-    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, "apps", AppsInfo.class, conf,
+    LOG.info("Contacting router at: {}.", webAppAddress);
+    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.APPS, AppsInfo.class, conf,
         DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
 
     Set<ApplicationId> appSet = new HashSet<>();
@@ -155,7 +154,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
   protected void cleanupAppRecordInRegistry(Set<ApplicationId> knownApps) {
     List<String> allApps = this.registryClient.getAllApplications();
-    LOG.info("Got " + allApps.size() + " existing apps in registry");
+    LOG.info("Got {} existing apps in registry.", allApps.size());
     for (String app : allApps) {
       ApplicationId appId = ApplicationId.fromString(app);
       if (!knownApps.contains(appId)) {

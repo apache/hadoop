@@ -930,7 +930,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     if (this.registryClient != null && this.attemptId != null) {
       ApplicationId applicationId = this.attemptId.getApplicationId();
       if (applicationId != null) {
-        this.registryClient.removeAppFromRegistry(applicationId, false);
+        this.registryClient.removeAppFromRegistry(applicationId);
       }
     }
   }
