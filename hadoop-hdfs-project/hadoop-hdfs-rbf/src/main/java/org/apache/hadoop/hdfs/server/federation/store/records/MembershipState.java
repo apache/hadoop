@@ -361,9 +361,8 @@ public abstract class MembershipState extends BaseRecord
 
   /**
    * First use the comparator of the BaseRecord to compare the date modified.
-   * If they are equal, use {@link MembershipState#NAME_COMPARATOR} to continue the comparison
-   * to ensure that MembershipStates with the same date modified but reported by different routers
-   * will not be judged as equal.
+   * If they are equal, compare their primary keys to ensure that MembershipStates
+   * with the same date modified but reported by different routers will not be judged as equal.
    *
    * @param record the MembershipState object to be compared.
    * @return a negative integer, zero, or a positive integer as this object
@@ -373,7 +372,8 @@ public abstract class MembershipState extends BaseRecord
   public int compareTo(BaseRecord record) {
     int order = super.compareTo(record);
     if (order == 0) {
-      return NAME_COMPARATOR.compare(this, (MembershipState) record);
+      MembershipState other = (MembershipState) record;
+      return this.getPrimaryKey().compareTo(other.getPrimaryKey());
     }
     return order;
   }
