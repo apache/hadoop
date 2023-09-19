@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.JOB_ID_PREFIX;
@@ -54,6 +55,8 @@ public final class CommitUtilsWithMR {
    * @return the location of magic job attempts.
    */
   public static Path getMagicJobAttemptsPath(Path out, String jobUUID) {
+    Preconditions.checkArgument(jobUUID != null && !(jobUUID.isEmpty()),
+        "Invalid job ID: %s", jobUUID);
     return new Path(out, MAGIC_PATH_PREFIX + jobUUID);
   }
 

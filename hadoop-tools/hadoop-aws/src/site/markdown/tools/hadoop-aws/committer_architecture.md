@@ -1692,9 +1692,9 @@ must be used, which means: the V2 classes.
 #### Resolved issues
 
 
-**Magic Committer: Name of directory**
+**Magic Committer: Directory Naming**
 
-The design proposes the name ``"MAGIC PATH"`` for the directory. HDFS and
+The design proposes `__magic_job-` as the prefix for the magic paths of different jobs for the directory. HDFS and
 the various scanning routines always treat files and directories starting with `_`
 as temporary/excluded data.
 
