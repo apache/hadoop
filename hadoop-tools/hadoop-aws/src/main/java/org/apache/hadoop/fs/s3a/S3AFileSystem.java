@@ -3298,7 +3298,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
    * Parent elements are scanned to see if any are a file,
-   * <i>except under __magic</i> paths.
+   * <i>except under "MAGIC PATH"</i> paths.
    * There the FS assumes that the destination directory creation
    * did that scan and that paths in job/task attempts are all
    * "well formed"
@@ -4341,7 +4341,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Predicate: is a path under a magic commit path?
-   * True if magic commit is enabled and the path is under __magic,
+   * True if magic commit is enabled and the path is under "MAGIC PATH",
    * irrespective of file type.
    * @param path path to examine
    * @return true if the path is in a magic dir and the FS has magic writes enabled.

@@ -26,9 +26,11 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.JOB_ID_PREFIX;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 
 /**
@@ -49,10 +51,13 @@ public final class CommitUtilsWithMR {
   /**
    * Get the location of magic job attempts.
    * @param out the base output directory.
+   * @param jobUUID unique Job ID.
    * @return the location of magic job attempts.
    */
-  public static Path getMagicJobAttemptsPath(Path out) {
-    return new Path(out, MAGIC);
+  public static Path getMagicJobAttemptsPath(Path out, String jobUUID) {
+    Preconditions.checkArgument(jobUUID != null && !(jobUUID.isEmpty()),
+        "Invalid job ID: %s", jobUUID);
+    return new Path(out, MAGIC_PATH_PREFIX + jobUUID);
   }
 
   /**
@@ -76,7 +81,7 @@ public final class CommitUtilsWithMR {
       int appAttemptId,
       Path dest) {
     return new Path(
-        getMagicJobAttemptsPath(dest),
+        getMagicJobAttemptsPath(dest, jobUUID),
         formatAppAttemptDir(jobUUID, appAttemptId));
   }
 
@@ -88,9 +93,7 @@ public final class CommitUtilsWithMR {
    */
   public static Path getMagicJobPath(String jobUUID,
       Path dest) {
-    return new Path(
-        getMagicJobAttemptsPath(dest),
-        formatJobDir(jobUUID));
+    return getMagicJobAttemptsPath(dest, jobUUID);
   }
 
   /**
@@ -102,7 +105,7 @@ public final class CommitUtilsWithMR {
    */
   public static String formatJobDir(
       String jobUUID) {
-    return String.format("job-%s", jobUUID);
+    return JOB_ID_PREFIX + jobUUID;
   }
 
   /**

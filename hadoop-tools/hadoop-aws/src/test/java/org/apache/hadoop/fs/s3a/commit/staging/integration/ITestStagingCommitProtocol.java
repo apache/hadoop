@@ -109,7 +109,8 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p,
-      final long expectedLength) throws IOException {
+      final long expectedLength,
+      String jobId) throws IOException {
     // this is expected to be local FS
     ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }

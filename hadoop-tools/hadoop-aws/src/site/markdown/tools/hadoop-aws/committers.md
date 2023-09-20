@@ -514,7 +514,15 @@ performance.
 
 ### FileSystem client setup
 
+<<<<<<< HEAD
 1. Turn the magic on by `fs.s3a.committer.magic.enabled"`
+=======
+The S3A connector can recognize files created under paths with `${MAGIC PATH}/` as a parent directory.
+This allows it to handle those files in a special way, such as uploading to a different location
+and storing the information needed to complete pending multipart uploads.
+
+Turn the magic on by setting `fs.s3a.committer.magic.enabled` to `true`:
+>>>>>>> 5512c9f924 (HADOOP-18797.  Support Concurrent Writes With S3A Magic Committer (#6006))
 
 ```xml
 <property>
@@ -692,7 +700,7 @@ Conflict management is left to the execution engine itself.
 
 ### Disabling magic committer path rewriting
 
-The magic committer recognizes when files are created under paths with `__magic/` as a parent directory
+The magic committer recognizes when files are created under paths with `${MAGIC PATH}/` as a parent directory
 and redirects the upload to a different location, adding the information needed to complete the upload
 in the job commit operation.
 
@@ -713,10 +721,12 @@ By default it is true.
 
 ## <a name="concurrent-jobs"></a> Concurrent Jobs writing to the same destination
 
-It is sometimes possible for multiple jobs to simultaneously write to the same destination path.
+It is sometimes possible for multiple jobs to simultaneously write to the same destination path. To support
+such use case, The "MAGIC PATH" for each job is unique of the format `__magic_job-${jobId}` so that
+multiple job running simultaneously do not step into each other.
 
 Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
-by setting `fs.s3a.committer.abort.pending.uploads` to `false`
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `false`by default
 
 ```xml
 <property>
@@ -744,9 +754,6 @@ For example, for any job executed through Hadoop MapReduce, the Job ID can be us
   <value>part-${mapreduce.job.id}</value>
 </property>
 ```
-
-Even with these settings, the outcome of concurrent jobs to the same destination is
-inherently nondeterministic -use with caution.
 
 ## Troubleshooting
 
@@ -811,7 +818,7 @@ files which are actually written to a different destination than their stated pa
 
 This message should not appear through the committer itself &mdash;it will
 fail with the error message in the previous section, but may arise
-if other applications are attempting to create files under the path `/__magic/`.
+if other applications are attempting to create files under the path `/${MAGIC PATH}/`.
 
 
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)

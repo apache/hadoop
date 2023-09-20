@@ -105,7 +105,6 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       Path jobPath = getJobPath();
       final FileSystem destFS = getDestinationFS(jobPath,
           context.getConfiguration());
-      destFS.delete(jobPath, true);
       destFS.mkdirs(jobPath);
     }
   }
@@ -132,7 +131,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   public void cleanupStagingDirs() {
     final Path out = getOutputPath();
-    Path path = magicSubdir(out);
+    Path path = getMagicJobPath(getUUID(), out);
     try(DurationInfo ignored = new DurationInfo(LOG, true,
         "Deleting magic directory %s", path)) {
       Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),

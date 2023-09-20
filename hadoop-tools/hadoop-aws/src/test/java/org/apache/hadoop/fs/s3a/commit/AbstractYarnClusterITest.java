@@ -330,10 +330,11 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * called after the base assertions have all passed.
    * @param destPath destination of work
    * @param successData loaded success data
+   * @param jobId job id
    * @throws Exception failure
    */
   protected void customPostExecutionValidation(Path destPath,
-      SuccessData successData)
+      SuccessData successData, String jobId)
       throws Exception {
 
   }

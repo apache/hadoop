@@ -72,7 +72,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
   private HeaderProcessing headerProcessing;
 
   private static final String MAGIC_KEY
-      = "dest/__magic/job1/ta1/__base/output.csv";
+      = "dest/__magic_job-1/job1/ta1/__base/output.csv";
   private static final String MAGIC_FILE
       = "s3a://bucket/" + MAGIC_KEY;
 

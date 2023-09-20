@@ -1395,7 +1395,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     recordWriter.write(iw, iw);
     long expectedLength = 4;
     Path dest = recordWriter.getDest();
-    validateTaskAttemptPathDuringWrite(dest, expectedLength);
+    validateTaskAttemptPathDuringWrite(dest, expectedLength, jobData.getCommitter().getUUID());
     recordWriter.close(tContext);
     // at this point
     validateTaskAttemptPathAfterWrite(dest, expectedLength);
@@ -1809,10 +1809,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * itself.
    * @param p path
    * @param expectedLength
+   * @param jobId job id
    * @throws IOException IO failure
    */
   protected void validateTaskAttemptPathDuringWrite(Path p,
-      final long expectedLength) throws IOException {
+      final long expectedLength,
+      String jobId) throws IOException {
 
   }
 

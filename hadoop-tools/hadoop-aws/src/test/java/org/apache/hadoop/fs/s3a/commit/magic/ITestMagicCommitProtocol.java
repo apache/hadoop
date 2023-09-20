@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.getMagicJobPath;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
@@ -74,7 +75,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   public void assertJobAbortCleanedUp(JobData jobData)
       throws Exception {
     // special handling of magic directory; harmless in staging
-    Path magicDir = new Path(getOutDir(), MAGIC);
+    Path magicDir = getMagicJobPath(jobData.getCommitter().getUUID(), getOutDir());
     ContractTestUtils.assertPathDoesNotExist(getFileSystem(),
         "magic dir ", magicDir);
     super.assertJobAbortCleanedUp(jobData);
@@ -94,11 +95,12 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p,
-      final long expectedLength) throws IOException {
+      final long expectedLength,
+      String jobId) throws IOException {
     String pathStr = p.toString();
     Assertions.assertThat(pathStr)
         .describedAs("Magic path")
-        .contains(MAGIC);
+        .contains("/" + MAGIC_PATH_PREFIX + jobId + "/");
     assertPathDoesNotExist("task attempt visible", p);
   }
 
@@ -129,7 +131,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
 
   /**
    * The magic committer paths are always on S3, and always have
-   * "__magic" in the path.
+   * "MAGIC PATH" in the path.
    * @param committer committer instance
    * @param context task attempt context
    * @throws IOException IO failure
@@ -143,11 +145,11 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         + " with committer " + committer,
         "s3a", wd.getScheme());
     Assertions.assertThat(wd.getPath())
-        .contains('/' + CommitConstants.MAGIC + '/');
+        .contains("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/");
   }
 
   /**
-   * Verify that the __magic path for the application/tasks use the
+   * Verify that the "MAGIC PATH" for the application/tasks use the
    * committer UUID to ensure uniqueness in the case of more than
    * one job writing to the same destination path.
    */
@@ -164,7 +166,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     Assertions.assertThat(taskAttemptPath.toString())
         .describedAs("task path of %s", committer)
         .contains(committer.getUUID())
-        .contains(MAGIC)
+        .contains("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/")
         .doesNotContain(TEMP_DATA)
         .endsWith(BASE)
         .contains(ta0);
@@ -176,7 +178,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         .describedAs("Temp task path of %s", committer)
         .contains(committer.getUUID())
         .contains(TEMP_DATA)
-        .doesNotContain(MAGIC)
+        .doesNotContain("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/")
         .doesNotContain(BASE)
         .contains(ta0);
   }

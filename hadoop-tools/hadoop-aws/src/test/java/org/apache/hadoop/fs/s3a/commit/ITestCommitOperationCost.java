@@ -51,7 +51,8 @@ import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_INITIATED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
+import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.JOB_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.assertIsMagicStream;
 import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.makeMagic;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_FILES_LIST_OP;
@@ -123,12 +124,12 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
   @Test
   public void testMagicMkdir() throws Throwable {
-    describe("Mkdirs __magic always skips dir marker deletion");
+    describe("Mkdirs 'MAGIC PATH' always skips dir marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
     // create dest dir marker, always
     fs.mkdirs(baseDir);
-    Path magicDir = new Path(baseDir, MAGIC);
+    Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
     verifyMetrics(() -> {
       fs.mkdirs(magicDir);
       return fileSystemIOStats();
@@ -151,10 +152,10 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    */
   @Test
   public void testMagicMkdirs() throws Throwable {
-    describe("Mkdirs __magic/subdir always skips dir marker deletion");
+    describe("Mkdirs __magic_job-<jobId>/subdir always skips dir marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
-    Path magicDir = new Path(baseDir, MAGIC);
+    Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
     fs.delete(baseDir, true);
 
     Path magicSubdir = new Path(magicDir, "subdir");
