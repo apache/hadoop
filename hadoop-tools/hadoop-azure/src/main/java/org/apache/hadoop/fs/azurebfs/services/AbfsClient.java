@@ -39,6 +39,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidChecksumException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
@@ -1012,7 +1013,7 @@ public class AbfsClient implements Closeable {
     op.execute(tracingContext);
 
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
-      verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
+      verifyCheckSumForRead(buffer, path, op.getResult(), bufferOffset);
     }
 
     return op;
@@ -1451,11 +1452,13 @@ public class AbfsClient implements Closeable {
   /**
    * To verify the checksum information received from server for the data read
    * @param buffer stores the data received from server
+   * @param pathStr stores the path being read
    * @param result HTTP Operation Result
    * @param bufferOffset Position where data returned by server is saved in buffer
    * @throws AbfsRestOperationException
    */
-  private void verifyCheckSumForRead(final byte[] buffer, final AbfsHttpOperation result, final int bufferOffset)
+  private void verifyCheckSumForRead(final byte[] buffer, final String pathStr,
+      final AbfsHttpOperation result, final int bufferOffset)
       throws AbfsRestOperationException{
     // Number of bytes returned by server could be less than or equal to what
     // caller requests. In case it is less, extra bytes will be initialized to 0
@@ -1475,10 +1478,10 @@ public class AbfsClient implements Closeable {
       String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
       String md5HashActual = result.getResponseHeader(CONTENT_MD5);
       if (!md5HashComputed.equals(md5HashActual)) {
-        throw new InvalidChecksumException(null);
+        throw new InvalidChecksumException(new PathIOException(pathStr));
       }
     } catch (NoSuchAlgorithmException e) {
-      throw new InvalidChecksumException(e);
+      throw new InvalidChecksumException(new PathIOException(pathStr));
     }
   }
 

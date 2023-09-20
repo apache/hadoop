@@ -169,6 +169,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     getAbfsStore(fs).getAbfsConfiguration()
         .setReadSmallFilesCompletely(readSmallFilesCompletely);
+    getAbfsStore(fs).getAbfsConfiguration()
+        .setIsChecksumValidationEnabled(true);
     return fs;
   }
 
@@ -177,6 +179,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     getAbfsStore(fs).getAbfsConfiguration()
         .setOptimizeFooterRead(optimizeFooterRead);
+    getAbfsStore(fs).getAbfsConfiguration()
+        .setIsChecksumValidationEnabled(true);
     if (fileSize <= getAbfsStore(fs).getAbfsConfiguration()
         .getReadBufferSize()) {
       getAbfsStore(fs).getAbfsConfiguration()

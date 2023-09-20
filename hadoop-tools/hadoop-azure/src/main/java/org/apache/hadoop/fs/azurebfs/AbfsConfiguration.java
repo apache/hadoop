@@ -1159,7 +1159,8 @@ public class AbfsConfiguration{
     return isChecksumValidationEnabled;
   }
 
-  void setIsChecksumValidationEnabled(boolean isChecksumEnabled) {
+  @VisibleForTesting
+  public void setIsChecksumValidationEnabled(boolean isChecksumEnabled) {
     this.isChecksumValidationEnabled = isChecksumEnabled;
   }
 }

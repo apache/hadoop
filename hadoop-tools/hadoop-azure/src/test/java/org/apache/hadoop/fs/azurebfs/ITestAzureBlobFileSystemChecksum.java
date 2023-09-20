@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -68,7 +69,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testReadWithChecksumAtDifferentOffsets() throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(4* ONE_MB, 4 * ONE_MB, true);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, true);
     AbfsClient client = fs.getAbfsStore().getClient();
     Path path = path("testPath");
     fs.create(path);
@@ -123,7 +124,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
         4 * ONE_MB, 4 * ONE_MB, readAheadEnabled);
     final int datasize = 16 * ONE_MB + 1000;
 
-    Path testPath = new Path("a/b.txt");
+    Path testPath = path("testPath");
     byte[] bytesUploaded = generateRandomBytes(datasize);
     FSDataOutputStream out = fs.create(testPath);
     out.write(bytesUploaded);
@@ -152,7 +153,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
         8 * ONE_MB, ONE_MB, readAheadEnabled);
     final int datasize = 16 * ONE_MB + 1000;
 
-    Path testPath = new Path("a/b.txt");
+    Path testPath = path("testPath");
     byte[] bytesUploaded = generateRandomBytes(datasize);
     FSDataOutputStream out = fs.create(testPath);
     out.write(bytesUploaded);
@@ -175,9 +176,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   private AzureBlobFileSystem getConfiguredFileSystem(final int writeBuffer,
       final int readBuffer, final boolean readAheadEnabled) throws Exception {
-    AzureBlobFileSystem fs1 = getFileSystem();
-    Configuration conf = fs1.getConf();
-    AzureBlobFileSystem fs =  getFileSystem(conf);
+    Configuration conf = getRawConfiguration();
+    AzureBlobFileSystem fs =  (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
     abfsConf.setIsChecksumValidationEnabled(true);
     abfsConf.setWriteBufferSize(writeBuffer);
