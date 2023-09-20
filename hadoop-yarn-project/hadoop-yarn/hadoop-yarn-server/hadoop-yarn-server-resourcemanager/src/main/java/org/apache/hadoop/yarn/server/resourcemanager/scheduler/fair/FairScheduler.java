@@ -56,11 +56,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -76,7 +78,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils.MaxResourceValidationResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -474,7 +478,7 @@ public class FairScheduler extends
    */
   protected void addApplication(ApplicationId applicationId,
       String queueName, String user, boolean isAppRecovering,
-      ApplicationPlacementContext placementContext) {
+      ApplicationPlacementContext placementContext, Priority priority) {
     // If the  placement was rejected the placementContext will be null.
     // We ignore placement rules on recovery.
     if (!isAppRecovering && placementContext == null) {
@@ -565,7 +569,7 @@ public class FairScheduler extends
           && rmApp.getApplicationSubmissionContext().getUnmanagedAM();
 
       SchedulerApplication<FSAppAttempt> application =
-          new SchedulerApplication<>(queue, user, unmanagedAM);
+          new SchedulerApplication<>(queue, user, priority, unmanagedAM);
       applications.put(applicationId, application);
 
       queue.getMetrics().submitApp(user, unmanagedAM);
@@ -611,7 +615,7 @@ public class FairScheduler extends
       FSLeafQueue queue = (FSLeafQueue) application.getQueue();
 
       FSAppAttempt attempt = new FSAppAttempt(this, applicationAttemptId, user,
-          queue, new ActiveUsersManager(getRootQueueMetrics()), rmContext);
+          queue, new ActiveUsersManager(getRootQueueMetrics()), rmContext, application.getPriority());
       if (transferStateFromPreviousAttempt) {
         attempt.transferStateFromPreviousAttempt(
             application.getCurrentAppAttempt());
@@ -1263,7 +1267,8 @@ public class FairScheduler extends
         addApplication(appAddedEvent.getApplicationId(),
             queueName, appAddedEvent.getUser(),
             appAddedEvent.getIsAppRecovering(),
-            appAddedEvent.getPlacementContext());
+            appAddedEvent.getPlacementContext(),
+            appAddedEvent.getApplicatonPriority());
       }
       break;
     case APP_REMOVED:
@@ -2043,8 +2048,46 @@ public class FairScheduler extends
       ApplicationId applicationId, SettableFuture<Object> future,
       UserGroupInformation user)
       throws YarnException {
-    throw new YarnException(
-        "Update application priority is not supported in Fair Scheduler");
+    writeLock.lock();
+    try {
+      SchedulerApplication<FSAppAttempt> application = applications
+          .get(applicationId);
+      Priority appPriority = application.getPriority();
+      if (application == null) {
+        throw new YarnException("Application '" + applicationId
+            + "' is not present, hence could not change priority.");
+      }
+
+      RMApp rmApp = rmContext.getRMApps().get(applicationId);
+      //TODO:
+      // max priority check
+      // acl check
+      if (appPriority.equals(newPriority)) {
+        future.set(null);
+        return newPriority;
+      }
+
+      // Update new priority in Submission Context to update to StateStore.
+      rmApp.getApplicationSubmissionContext().setPriority(newPriority);
+
+      // Update to state store
+      ApplicationStateData appState = ApplicationStateData.newInstance(
+          rmApp.getSubmitTime(), rmApp.getStartTime(),
+          rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
+          rmApp.getRealUser(), rmApp.getCallerContext());
+      appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
+      appState.setLaunchTime(rmApp.getLaunchTime());
+      rmContext.getStateStore().updateApplicationStateSynchronously(appState,
+          false, future);
+      application.setPriority(newPriority);
+
+      LOG.info("Priority '" + newPriority + "' is updated in queue :"
+          + rmApp.getQueue() + " for application: " + applicationId
+          + " for the user: " + rmApp.getUser());
+      return newPriority;
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   public boolean isNoTerminalRuleCheck() {

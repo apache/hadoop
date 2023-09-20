@@ -77,7 +77,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       = new DefaultResourceCalculator();
 
   private final long startTime;
-  private final Priority appPriority;
+  private volatile Priority appPriority;
   private Resource demand = Resources.createResource(0);
   private final FairScheduler scheduler;
   private Resource fairShare = Resources.createResource(0, 0);
@@ -119,14 +119,20 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   public FSAppAttempt(FairScheduler scheduler,
       ApplicationAttemptId applicationAttemptId, String user, FSLeafQueue queue,
       ActiveUsersManager activeUsersManager, RMContext rmContext) {
-    super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
+    this(scheduler,applicationAttemptId, user, queue, activeUsersManager, rmContext, Priority.newInstance(1));
+  }
 
+  public FSAppAttempt(FairScheduler scheduler,
+      ApplicationAttemptId applicationAttemptId, String user, FSLeafQueue queue,
+      ActiveUsersManager activeUsersManager, RMContext rmContext, Priority priority) {
+    super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
     this.scheduler = scheduler;
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
-    this.appPriority = Priority.newInstance(1);
+    setPriority(priority);
     this.enableAMPreemption = scheduler.getConf()
-            .getAMPreemptionEnabled(getQueue().getQueueName());
+        .getAMPreemptionEnabled(getQueue().getQueueName());
+
   }
 
   /**
@@ -1348,6 +1354,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public void setFairShare(Resource fairShare) {
     this.fairShare = fairShare;
+  }
+
+  public void setPriority(Priority appPriority) {
+    this.appPriority = appPriority;
   }
 
   @Override
