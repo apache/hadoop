@@ -614,7 +614,10 @@ function shadedclient_rebuild
 
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
-      export PATH="${PATH};${HADOOP_HOME}\bin"
+      WIN_HADOOP_HOME=$(cygpath -w -a "${HADOOP_HOME}")
+      echo "WIN_HADOOP_HOME = ${WIN_HADOOP_HOME}"
+      export PATH="${PATH};${WIN_HADOOP_HOME}\bin"
+      echo "PATH = ${PATH}"
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
