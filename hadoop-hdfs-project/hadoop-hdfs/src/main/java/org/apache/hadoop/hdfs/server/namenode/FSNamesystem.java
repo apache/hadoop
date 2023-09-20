@@ -96,6 +96,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -6132,17 +6133,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String path;
     final Block block;
     private final int replication;
+    private final String ecPolicy;
     
-    CorruptFileBlockInfo(String p, Block b, int r) {
+    CorruptFileBlockInfo(String p, Block b, int r, String ec) {
       path = p;
       block = b;
       replication = r;
+      ecPolicy = ec;
     }
     
     @Override
     public String toString() {
       return block.getBlockName() + "\t" +
-          (replication == -1 ? "EC" : replication) + "\t" + path;
+          (replication == -1 ? ecPolicy : replication) + "\t" + path;
     }
   }
   /**
@@ -6198,15 +6201,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (inode != null) {
           String src = inode.getFullPathName();
           if (isParentEntry(src, path)) {
-            int repl = 0;
+            int repl = -1;
+            String ecPolicyName = null;
             if (inode.isFile()) {
               if (inode.asFile().isStriped()) {
-                repl = -1;
+                ErasureCodingPolicy ecPolicy =
+                    ErasureCodingPolicyManager.getInstance()
+                        .getByID(inode.asFile().getErasureCodingPolicyID());
+                if (ecPolicy != null) {
+                  ecPolicyName = ecPolicy.getName();
+                }
               } else {
                 repl = inode.asFile().getFileReplication();
               }
             }
-            corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl));
+            corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl, ecPolicyName));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
               break;
