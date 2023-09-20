@@ -29,10 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 
 /**
  * Test For Verifying Checksum Related Operations
@@ -49,15 +52,75 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     testWriteReadWithChecksumInternal(false);
   }
 
+  @Test
+  public void testAppendWithChecksumAtDifferentOffsets() throws Exception {
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, true);
+    AbfsClient client = fs.getAbfsStore().getClient();
+    Path path = path("testPath");
+    fs.create(path);
+    byte[] data= generateRandomBytes(16 * ONE_MB);
+
+    appendWithOffsetHelper(client, path, data, fs, 0);
+    appendWithOffsetHelper(client, path, data, fs, 1 * ONE_MB);
+    appendWithOffsetHelper(client, path, data, fs, 4 * ONE_MB);
+    appendWithOffsetHelper(client, path, data, fs, 8 * ONE_MB);
+  }
+
+  @Test
+  public void testReadWithChecksumAtDifferentOffsets() throws Exception {
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4* ONE_MB, 4 * ONE_MB, true);
+    AbfsClient client = fs.getAbfsStore().getClient();
+    Path path = path("testPath");
+    fs.create(path);
+
+    byte[] data = generateRandomBytes(16 * ONE_MB);
+    FSDataOutputStream out = fs.create(path);
+    out.write(data);
+    out.hflush();
+    out.close();
+
+    readWithOffsetAndPositionHelper(client, path, data, fs, 0, 0);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 4 * ONE_MB, 0);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 4 * ONE_MB, 1 * ONE_MB);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 8 * ONE_MB, 2 * ONE_MB);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 15 * ONE_MB, 3 * ONE_MB);
+  }
+
+  @Test
+  public void testWriteReadWithChecksumAndOptions() throws Exception {
+    testWriteReadWithChecksumAndOptionsInternal(true);
+    testWriteReadWithChecksumAndOptionsInternal(false);
+  }
+
+  private void readWithOffsetAndPositionHelper(AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int position,
+      final int offset) throws Exception {
+
+    byte[] readBuffer = new byte[
+        fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize()];
+    final int readLength = readBuffer.length - offset;
+    client.read(path.toUri().getPath(), position, readBuffer, offset,
+        readLength, "*", null, getTestTracingContext(fs, false));
+
+    byte[] actual = Arrays.copyOfRange(readBuffer, offset, offset + readLength);
+    byte[] expected = Arrays.copyOfRange(data, position, readLength + position);
+    Assertions.assertThat(actual)
+        .describedAs("")
+        .containsExactly(expected);
+  }
+
+  private void appendWithOffsetHelper(AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int offset) throws Exception {
+    AppendRequestParameters reqParams = new AppendRequestParameters(
+        0, offset, data.length - offset, APPEND_MODE, false, null, true);
+    client.append(
+        path.toUri().getPath(), data, reqParams, null, getTestTracingContext(fs, false));
+  }
+
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
       throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-    // Enable checksum validations for Read and Write Requests
-    conf.setIsChecksumValidationEnabled(true);
-    conf.setWriteBufferSize(4 * ONE_MB);
-    conf.setReadBufferSize(4 * ONE_MB);
-    conf.setReadAheadEnabled(readAheadEnabled);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(
+        4 * ONE_MB, 4 * ONE_MB, readAheadEnabled);
     final int datasize = 16 * ONE_MB + 1000;
 
     Path testPath = new Path("a/b.txt");
@@ -83,21 +146,10 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     in.read(bytesRead, ONE_MB, datasize - 2 * ONE_MB);
   }
 
-  @Test
-  public void testWriteReadWithChecksumAndOptions() throws Exception {
-    testWriteReadWithChecksumAndOptionsInternal(true);
-    testWriteReadWithChecksumAndOptionsInternal(false);
-  }
-
   private void testWriteReadWithChecksumAndOptionsInternal(
       final boolean readAheadEnabled) throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-    // Enable checksum validations for Read and Write Requests
-    conf.setIsChecksumValidationEnabled(true);
-    conf.setWriteBufferSize(8 * ONE_MB);
-    conf.setReadBufferSize(ONE_MB);
-    conf.setReadAheadEnabled(readAheadEnabled);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(
+        8 * ONE_MB, ONE_MB, readAheadEnabled);
     final int datasize = 16 * ONE_MB + 1000;
 
     Path testPath = new Path("a/b.txt");
@@ -119,6 +171,19 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     Assertions.assertThat(Arrays.copyOfRange(bytesRead, 1, 4 * ONE_MB))
         .describedAs("Bytes read with checksum enabled are not as expected")
         .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, 4 * ONE_MB));
+  }
+
+  private AzureBlobFileSystem getConfiguredFileSystem(final int writeBuffer,
+      final int readBuffer, final boolean readAheadEnabled) throws Exception {
+    AzureBlobFileSystem fs1 = getFileSystem();
+    Configuration conf = fs1.getConf();
+    AzureBlobFileSystem fs =  getFileSystem(conf);
+    AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
+    abfsConf.setIsChecksumValidationEnabled(true);
+    abfsConf.setWriteBufferSize(writeBuffer);
+    abfsConf.setReadBufferSize(readBuffer);
+    abfsConf.setReadAheadEnabled(readAheadEnabled);
+    return fs;
   }
 
   public static byte[] generateRandomBytes(int numBytes) {

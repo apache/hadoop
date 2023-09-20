@@ -1437,9 +1437,10 @@ public class AbfsClient implements Closeable {
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final AppendRequestParameters reqParams, final byte[] buffer) {
     try {
-      MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-      byte[] md5Bytes = md5Digest.digest(
-          Arrays.copyOfRange(buffer, reqParams.getoffset(), reqParams.getLength()));
+      MessageDigest md5Digest = MessageDigest.getInstance(MD5);
+      byte[] dataToBeWritten = new byte[reqParams.getLength()];
+      System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0, reqParams.getLength());
+      byte[] md5Bytes = md5Digest.digest(dataToBeWritten);
       String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
     } catch (NoSuchAlgorithmException e) {
@@ -1448,7 +1449,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * T verify the checksum information received from server for the data read
+   * To verify the checksum information received from server for the data read
    * @param buffer stores the data received from server
    * @param result HTTP Operation Result
    * @param bufferOffset Position where data returned by server is saved in buffer
