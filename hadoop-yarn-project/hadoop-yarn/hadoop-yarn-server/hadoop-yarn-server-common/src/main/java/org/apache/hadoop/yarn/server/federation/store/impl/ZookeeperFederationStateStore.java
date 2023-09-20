@@ -895,13 +895,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       AppNodeSplitInfo alternatePathInfo = getAlternatePath(applicationId.toString());
       if (alternatePathInfo != null) {
         nodeUpdatePath = alternatePathInfo.path;
-      } else {
-        // No alternate path exists. Create path as per configured split index.
-        if (appIdNodeSplitIndex != 0) {
+      } else if (appIdNodeSplitIndex != 0) {
+          // No alternate path exists. Create path as per configured split index.
           String rootNode = getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
-          if (!exists(rootNode)) {
-            zkManager.create(rootNode);
-          }
+        if (!exists(rootNode)) {
+          zkManager.create(rootNode);
         }
       }
     }
