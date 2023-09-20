@@ -271,6 +271,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     MembershipState quorumEntry = getNamenodeRegistration(
         report.getNameserviceId(), report.getNamenodeId());
     assertNotNull(quorumEntry);
+    // The name node status should be active
     assertEquals(FederationNamenodeServiceState.ACTIVE, quorumEntry.getState());
   }
 
