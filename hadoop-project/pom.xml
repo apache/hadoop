@@ -135,7 +135,7 @@
     <hikari.version>2.4.12</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp3.version>4.11.0</okhttp3.version>
+    <okhttp3.version>4.10.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom.version>1.1</jdom.version>
     <jna.version>5.2.0</jna.version>
