@@ -761,7 +761,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     });
 
     if (apps.getApps().isEmpty()) {
-      return null;
+      return apps;
     }
 
     // Merge all the application reports got from all the available YARN RMs

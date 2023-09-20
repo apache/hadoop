@@ -39,4 +39,8 @@
     <name>yarn.resourcemanager.resource-profiles.source-file</name>
     <value>profiles/sample-profiles-1.json</value>
   </property>
+  <property>
+    <name>hadoop.http.authentication.type</name>
+    <value>simple</value>
+  </property>
 </configuration>

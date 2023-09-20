@@ -64,6 +64,7 @@ public class TestYarnFederationWithFairScheduler {
     FederationClusterInfo federationClusterInfo =
         TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS, RM_WEB_SERVICE_PATH,
         FederationClusterInfo.class, null, null);
+    Thread.sleep(2000000);
     List<ClusterInfo> clusterInfos = federationClusterInfo.getList();
     assertNotNull(clusterInfos);
     assertEquals(2, clusterInfos.size());

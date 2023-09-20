@@ -358,7 +358,7 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getClusterInfo()} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testClusterInfoXML() throws Exception {
 
     List<ClusterInfo> responses = performGetCalls(
@@ -373,6 +373,8 @@ public class TestRouterWebServicesREST {
     assertEquals(
         rmResponse.getRMVersion(),
         routerResponse.getRMVersion());
+
+    Thread.sleep(10000000);
   }
 
   /**

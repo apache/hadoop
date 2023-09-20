@@ -93,10 +93,8 @@ public class TestFederationRegistryClient {
     ApplicationId appId2 = ApplicationId.newInstance(0, 1);
     String scId0 = "subcluster0";
 
-    this.registryClient.writeAMRMTokenForUAM(appId1, scId0,
-        new Token<AMRMTokenIdentifier>());
-    this.registryClient.writeAMRMTokenForUAM(appId2, scId0,
-        new Token<AMRMTokenIdentifier>());
+    this.registryClient.writeAMRMTokenForUAM(appId1, scId0, new Token<>());
+    this.registryClient.writeAMRMTokenForUAM(appId2, scId0, new Token<>());
     Assert.assertEquals(2, this.registryClient.getAllApplications().size());
 
     // Create a new client instance
