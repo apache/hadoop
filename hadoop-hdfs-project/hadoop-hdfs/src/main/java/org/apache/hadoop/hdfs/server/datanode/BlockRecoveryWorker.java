@@ -142,20 +142,16 @@ public class BlockRecoveryWorker {
                 ReplicaState.RWR.getValue()) {
               syncList.add(new BlockRecord(id, proxyDN, info));
             } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Block recovery: Ignored replica with invalid " +
-                    "original state: {} from DataNode: {}", info, id);
-              }
+              LOG.debug("Block recovery: Ignored replica with invalid " +
+                  "original state: {} from DataNode: {}", info, id);
             }
           } else {
-            if (LOG.isDebugEnabled()) {
-              if (info == null) {
-                LOG.debug("Block recovery: DataNode: {} does not have " +
-                    "replica for block: {}", id, block);
-              } else {
-                LOG.debug("Block recovery: Ignored replica with invalid "
-                    + "generation stamp or length: {} from DataNode: {}", info, id);
-              }
+            if (info == null) {
+              LOG.debug("Block recovery: DataNode: {} does not have " +
+                  "replica for block: {}", id, block);
+            } else {
+              LOG.debug("Block recovery: Ignored replica with invalid "
+                  + "generation stamp or length: {} from DataNode: {}", info, id);
             }
           }
         } catch (RecoveryInProgressException ripE) {
@@ -204,11 +200,9 @@ public class BlockRecoveryWorker {
       // or their replicas have 0 length.
       // The block can be deleted.
       if (syncList.isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("syncBlock for block " + block + ", all datanodes don't " +
-              "have the block or their replicas have 0 length. The block can " +
-              "be deleted.");
-        }
+        LOG.debug("syncBlock for block {}, all datanodes don't " +
+            "have the block or their replicas have 0 length. The block can " +
+            "be deleted.", block);
         nn.commitBlockSynchronization(block, recoveryId, 0,
             true, true, DatanodeID.EMPTY_ARRAY, null);
         return;
@@ -247,12 +241,9 @@ public class BlockRecoveryWorker {
                   r.rInfo.getNumBytes() == finalizedLength) {
             participatingList.add(r);
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("syncBlock replicaInfo: block=" + block +
-                ", from datanode " + r.id + ", receivedState=" + rState.name() +
-                ", receivedLength=" + r.rInfo.getNumBytes() +
-                ", bestState=FINALIZED, finalizedLength=" + finalizedLength);
-          }
+          LOG.debug("syncBlock replicaInfo: block={}, from datanode {}, receivedState={}, " +
+              "receivedLength={}, bestState=FINALIZED, finalizedLength={}",
+              block, r.id, rState.name(), r.rInfo.getNumBytes(), finalizedLength);
         }
         newBlock.setNumBytes(finalizedLength);
         break;
@@ -265,12 +256,9 @@ public class BlockRecoveryWorker {
             minLength = Math.min(minLength, r.rInfo.getNumBytes());
             participatingList.add(r);
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("syncBlock replicaInfo: block=" + block +
-                ", from datanode " + r.id + ", receivedState=" + rState.name() +
-                ", receivedLength=" + r.rInfo.getNumBytes() + ", bestState=" +
-                bestState.name());
-          }
+          LOG.debug("syncBlock replicaInfo: block={}, from datanode {}, receivedState={}, " +
+              "receivedLength={}, bestState={}", block, r.id, rState.name(),
+              r.rInfo.getNumBytes(), bestState.name());
         }
         // recover() guarantees syncList will have at least one replica with RWR
         // or better state.
@@ -323,11 +311,8 @@ public class BlockRecoveryWorker {
         storages[i] = r.storageID;
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Datanode triggering commitBlockSynchronization, block=" +
-            block + ", newGs=" + newBlock.getGenerationStamp() +
-            ", newLength=" + newBlock.getNumBytes());
-      }
+      LOG.debug("Datanode triggering commitBlockSynchronization, block={}, newGs={}, " +
+          "newLength={}", block, newBlock.getGenerationStamp(), newBlock.getNumBytes());
 
       nn.commitBlockSynchronization(block,
           newBlock.getGenerationStamp(), newBlock.getNumBytes(), true, false,
@@ -427,21 +412,17 @@ public class BlockRecoveryWorker {
               // TODO: better usage of redundant replicas
               syncBlocks.put(blockId, new BlockRecord(id, proxyDN, info));
             } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Block recovery: Ignored replica with invalid " +
-                    "original state: {} from DataNode: {} by block: {}", info, id, block);
-              }
+              LOG.debug("Block recovery: Ignored replica with invalid " +
+                  "original state: {} from DataNode: {} by block: {}", info, id, block);
             }
           } else {
-            if (LOG.isDebugEnabled()) {
-              if (info == null) {
-                LOG.debug("Block recovery: DataNode: {} does not have " +
-                    "replica for block: (block={}, internalBlk={})", id, block, internalBlk);
-              } else {
-                LOG.debug("Block recovery: Ignored replica with invalid "
-                    + "generation stamp or length: {} from DataNode: {} by block: {}",
-                    info, id, block);
-              }
+            if (info == null) {
+              LOG.debug("Block recovery: DataNode: {} does not have " +
+                  "replica for block: (block={}, internalBlk={})", id, block, internalBlk);
+            } else {
+              LOG.debug("Block recovery: Ignored replica with invalid "
+                  + "generation stamp or length: {} from DataNode: {} by block: {}",
+                  info, id, block);
             }
           }
         } catch (RecoveryInProgressException ripE) {
@@ -458,10 +439,8 @@ public class BlockRecoveryWorker {
       checkLocations(syncBlocks.size());
 
       final long safeLength = getSafeLength(syncBlocks);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Recovering block {}, length={}, safeLength={}, syncList={}", block,
-            block.getNumBytes(), safeLength, syncBlocks);
-      }
+      LOG.debug("Recovering block {}, length={}, safeLength={}, syncList={}", block,
+          block.getNumBytes(), safeLength, syncBlocks);
 
       // If some internal blocks reach the safe length, convert them to RUR
       List<BlockRecord> rurList = new ArrayList<>(locs.length);
@@ -566,12 +545,9 @@ public class BlockRecoveryWorker {
     ExtendedBlock block = rb.getBlock();
     DatanodeInfo[] targets = rb.getLocations();
 
-    LOG.info("BlockRecoveryWorker: " + who + " calls recoverBlock(" + block
-        + ", targets=[" + Joiner.on(", ").join(targets) + "]"
-        + ", newGenerationStamp=" + rb.getNewGenerationStamp()
-        + ", newBlock=" + rb.getNewBlock()
-        + ", isStriped=" + rb.isStriped()
-        + ")");
+    LOG.info("BlockRecoveryWorker: {} calls recoverBlock({}, targets=[{}], newGenerationStamp={}"
+        + ", newBlock={}, isStriped={})", who, block, Joiner.on(", ").join(targets),
+        rb.getNewGenerationStamp(), rb.getNewBlock(), rb.isStriped());
   }
 
   /**
