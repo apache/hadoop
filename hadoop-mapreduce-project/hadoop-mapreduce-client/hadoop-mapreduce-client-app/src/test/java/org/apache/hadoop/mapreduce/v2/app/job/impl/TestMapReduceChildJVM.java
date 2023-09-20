@@ -58,20 +58,20 @@ public class TestMapReduceChildJVM {
     app.verifyCompleted();
 
     Assert.assertEquals(
-      "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
-      " -Djava.net.preferIPv4Stack=true" +
-      " -Dhadoop.metrics.log.level=WARN " +
-      "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
-      " -Dlog4j.configuration=container-log4j.properties" +
-      " -Dyarn.app.container.log.dir=<LOG_DIR>" +
-      " -Dyarn.app.container.log.filesize=0" +
-      " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
-      " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
-      " 54321" +
-      " attempt_0_0000_m_000000_0" +
-      " 0" +
-      " 1><LOG_DIR>/stdout" +
-      " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
+        "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
+        " -Djava.net.preferIPv4Stack=true" +
+        " -Dhadoop.metrics.log.level=WARN " +
+        "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+        " -Dlog4j.configuration=container-log4j.properties" +
+        " -Dyarn.app.container.log.dir=<LOG_DIR>" +
+        " -Dyarn.app.container.log.filesize=10485760" +
+        " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
+        " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
+        " 54321" +
+        " attempt_0_0000_m_000000_0" +
+        " 0" +
+        " 1><LOG_DIR>/stdout" +
+        " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
     
     Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
       app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
@@ -127,7 +127,7 @@ public class TestMapReduceChildJVM {
             "  -Xmx820m <ADD_OPENS> -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
             " -Dlog4j.configuration=container-log4j.properties" +
             " -Dyarn.app.container.log.dir=<LOG_DIR>" +
-            " -Dyarn.app.container.log.filesize=0" +
+            " -Dyarn.app.container.log.filesize=10485760" +
             " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
             " -Dyarn.app.mapreduce.shuffle.logger=INFO," + appenderName +
             " -Dyarn.app.mapreduce.shuffle.logfile=syslog.shuffle" +
@@ -163,20 +163,20 @@ public class TestMapReduceChildJVM {
     app.verifyCompleted();
 
     Assert.assertEquals(
-      "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
-      " -Djava.net.preferIPv4Stack=true" +
-      " -Dhadoop.metrics.log.level=WARN " +
-      "  -Xmx820m <ADD_OPENS> -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
-      " -Dlog4j.configuration=" + testLogPropertieFile +
-      " -Dyarn.app.container.log.dir=<LOG_DIR>" +
-      " -Dyarn.app.container.log.filesize=0" +
-      " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
-      " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
-      " 54321" +
-      " attempt_0_0000_m_000000_0" +
-      " 0" +
-      " 1><LOG_DIR>/stdout" +
-      " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
+        "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
+        " -Djava.net.preferIPv4Stack=true" +
+        " -Dhadoop.metrics.log.level=WARN " +
+        "  -Xmx820m <ADD_OPENS> -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+        " -Dlog4j.configuration=" + testLogPropertieFile +
+        " -Dyarn.app.container.log.dir=<LOG_DIR>" +
+        " -Dyarn.app.container.log.filesize=10485760" +
+        " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
+        " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
+        " 54321" +
+        " attempt_0_0000_m_000000_0" +
+        " 0" +
+        " 1><LOG_DIR>/stdout" +
+        " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
   }
 
   @Test
