@@ -1138,6 +1138,50 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   * {@inheritDoc}
+   *
+   * This implements a more efficient method for skip. It calls lazy seek
+   * which will either make a new get request or do a default skip.
+   * If lazy seek fails, try doing a default skip.
+   *
+   * @param n Number of bytes to be skipped
+   * @return Number of bytes skipped
+   * @throws IOException on any problem
+   */
+  @Override
+  @Retries.OnceTranslated
+  public long skip(final long n) throws IOException {
+
+    if (n <= 0) {
+      return 0;
+    }
+
+    checkNotClosed();
+    streamStatistics.skipOperationStarted();
+
+    // target pos should be less than EOF
+    long targetPos = Math.min(contentLength, getPos() + n);
+    long bytesToSkip = targetPos - getPos();
+    long skipped;
+
+    try {
+      lazySeek(targetPos, 1);
+      skipped = bytesToSkip;
+      nextReadPos += skipped;
+    } catch (EOFException e) {
+      LOG.debug("Lazy seek failed, attempting default skip", e);
+
+      skipped = wrappedStream.skip(n);
+      if (skipped > 0) {
+        pos += skipped;
+        nextReadPos += skipped;
+      }
+    }
+
+    return skipped;
+  }
+
+  /**
    * Access the input stream statistics.
    * This is for internal testing and may be removed without warning.
    * @return the statistics for this input stream

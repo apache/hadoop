@@ -207,6 +207,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void skipOperationStarted() {
+
+    }
+
+    @Override
     public void close() {
 
     }
@@ -362,6 +367,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public long getInputPolicy() {
+      return 0;
+    }
+
+    @Override
+    public long getSkipOperations() {
       return 0;
     }
 

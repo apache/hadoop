@@ -455,6 +455,13 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
       = "stream_read_block_acquire_read";
 
+  /**
+   * Count of skip() operations in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_SKIP_OPERATIONS
+          = "stream_skip_operations";
+
   private StreamStatisticNames() {
   }
 

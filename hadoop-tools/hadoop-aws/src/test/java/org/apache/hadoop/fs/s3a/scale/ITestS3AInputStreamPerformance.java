@@ -488,6 +488,61 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   }
 
   @Test
+  public void testSkip() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+
+    byte[] skipDataset = dataset(256, 0, 64);
+    Path baseDir = methodPath();
+    Path dataFile = new Path(baseDir, "skip_data.txt");
+    int readahead = 32;
+
+
+    writeDataset(fs, dataFile, skipDataset, skipDataset.length, 1024,
+        false);
+
+    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead, 256);
+
+    in.seek(10);
+    assertEquals("current byte read", 10, in.read());
+
+    // Skip within read ahead range, will not make a new get request
+    assertEquals("bytes skipped", 9, in.skip(9));
+    assertEquals("current byte read", 20, in.read());
+    assertEquals("current position after read", 21, in.getPos());
+
+    // Skip outside read ahead range, should make a new get request.
+    // New position will be 71, and expected value will be 71 % 64 = 7
+    assertEquals("bytes skipped", 50, in.skip(50));
+    assertEquals("current byte read", 7, in.read());
+    assertEquals("current position after read", 72, in.getPos());
+
+    //Skip outside EOF, should only skip till EOF
+    assertEquals("bytes skipped", 256 - 72, in.skip(200));
+    assertEquals("current byte read", -1, in.read());
+    assertEquals("current position after read", 256, in.getPos());
+
+    IOStatistics ioStatistics = streamStatistics.getIOStatistics();
+
+    verifyStatisticCounterValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_SKIP_OPERATIONS,
+        3);
+
+    // Opened once during in.seek() and twice during in.skip()
+    verifyStatisticCounterValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_OPENED,
+        3
+    );
+
+    verifyStatisticCounterValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
+        9
+    );
+  }
+
+  @Test
   public void testRandomIONormalPolicy() throws Throwable {
     skipIfClientSideEncryption();
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;
