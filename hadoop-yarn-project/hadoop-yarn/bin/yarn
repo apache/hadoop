@@ -110,6 +110,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     globalpolicygenerator)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator'
+      # Backwards compatibility
+      if [[ -n "${YARN_GLOBALPOLICYGENERATOR_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${YARN_GLOBALPOLICYGENERATOR_HEAPSIZE}"
+      fi
     ;;
     jar)
       HADOOP_CLASSNAME=org.apache.hadoop.util.RunJar
