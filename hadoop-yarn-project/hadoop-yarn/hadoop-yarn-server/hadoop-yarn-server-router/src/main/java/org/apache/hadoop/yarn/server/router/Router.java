@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -33,10 +35,13 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -54,6 +59,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
+import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,6 +111,8 @@ public class Router extends CompositeService {
 
   private static final String METRICS_NAME = "Router";
 
+  private static final String UI2_WEBAPP_NAME = "/ui2";
+
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
 
@@ -120,6 +128,7 @@ public class Router extends CompositeService {
   @Override
   protected void serviceInit(Configuration config) throws Exception {
     this.conf = config;
+    UserGroupInformation.setConfiguration(this.conf);
     // ClientRM Proxy
     clientRMProxyService = createClientRMProxyService();
     addService(clientRMProxyService);
@@ -224,7 +233,50 @@ public class Router extends CompositeService {
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
     }
-    webApp = builder.start(new RouterWebApp(this));
+    webApp = builder.start(new RouterWebApp(this), getUIWebAppContext());
+  }
+
+  private WebAppContext getUIWebAppContext() {
+    WebAppContext uiWebAppContext = null;
+    boolean isWebUI2Enabled = conf.getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE);
+
+    if(isWebUI2Enabled) {
+      String onDiskPath = conf.get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(UI2_WEBAPP_NAME);
+
+      if (null == onDiskPath) {
+        String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
+        URL url = getClass().getClassLoader().getResource(war);
+        if (null == url) {
+          onDiskPath = getWebAppsPath("ui2");
+        } else {
+          onDiskPath = url.getFile();
+        }
+      }
+
+      if (onDiskPath == null || onDiskPath.isEmpty()) {
+        LOG.error("No war file or webapps found for yarn federation!");
+      } else {
+        if (onDiskPath.endsWith(".war")) {
+          uiWebAppContext.setWar(onDiskPath);
+          LOG.info("Using war file at: {}.", onDiskPath);
+        } else {
+          uiWebAppContext.setResourceBase(onDiskPath);
+          LOG.info("Using webapps at: {}.", onDiskPath);
+        }
+      }
+    }
+    return uiWebAppContext;
+  }
+
+  private String getWebAppsPath(String appName) {
+    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
+    if (url == null) {
+      return "";
+    }
+    return url.toString();
   }
 
   public static String getProxyHostAndPort(Configuration conf) {
@@ -245,18 +297,29 @@ public class Router extends CompositeService {
     StringUtils.startupShutdownMessage(Router.class, argv, LOG);
     Router router = new Router();
     try {
-
-      // Remove the old hook if we are rebooting.
-      if (null != routerShutdownHook) {
-        ShutdownHookManager.get().removeShutdownHook(routerShutdownHook);
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
+      if (argv.length > 1) {
+        if (argv[0].equals("-format-state-store")) {
+          // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
+          System.err.println("format-state-store is not yet supported.");
+        } else if (argv[0].equals("-remove-application-from-state-store") && argv.length == 2) {
+          // TODO: YARN-11547. [Federation]
+          //  Router Supports Remove individual application records from FederationStateStore.
+          System.err.println("remove-application-from-state-store is not yet supported.");
+        } else {
+          printUsage(System.err);
+        }
+      } else {
+        // Remove the old hook if we are rebooting.
+        if (null != routerShutdownHook) {
+          ShutdownHookManager.get().removeShutdownHook(routerShutdownHook);
+        }
+        routerShutdownHook = new CompositeServiceShutdownHook(router);
+        ShutdownHookManager.get().addShutdownHook(routerShutdownHook, SHUTDOWN_HOOK_PRIORITY);
+        router.init(conf);
+        router.start();
       }
-
-      routerShutdownHook = new CompositeServiceShutdownHook(router);
-      ShutdownHookManager.get().addShutdownHook(routerShutdownHook,
-          SHUTDOWN_HOOK_PRIORITY);
-
-      router.init(conf);
-      router.start();
     } catch (Throwable t) {
       LOG.error("Error starting Router", t);
       System.exit(-1);
@@ -297,5 +360,10 @@ public class Router extends CompositeService {
   @VisibleForTesting
   public FedAppReportFetcher getFetcher() {
     return fetcher;
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]");
   }
 }

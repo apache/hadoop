@@ -101,6 +101,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
@@ -1093,6 +1095,14 @@ public class AdminService extends CompositeService implements
     throw new YarnException("It is not allowed to call the RM's " +
         " batchSaveFederationQueuePolicies. " +
         " Please call Router's batchSaveFederationQueuePolicies to set Policies.");
+  }
+
+  @Override
+  public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    throw new YarnException("It is not allowed to call the RM's " +
+        " listFederationQueuePolicies. " +
+        " Please call Router's listFederationQueuePolicies to list Policies.");
   }
 
   private void validateAttributesExists(

@@ -61,7 +61,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -435,16 +435,21 @@ public final class S3ATestUtils {
    * @param clazz the expected exception class
    * @param ex the exception caught
    * @return the exception, if it is of the expected class
-   * @throws Exception the exception passed in.
+   * @throws AssertionError if the exception is {@code null}.
+   * @throws Exception the exception passed in if it is of a different type
    */
   public static <E extends Throwable> E verifyExceptionClass(Class<E> clazz,
       Exception ex)
       throws Exception {
+    Assertions.assertThat(ex)
+        .describedAs("Exception expected of class %s", clazz)
+        .isNotNull();
     if (!(ex.getClass().equals(clazz))) {
       throw ex;
     }
     return (E)ex;
   }
+
 
   /**
    * Turn off FS Caching: use if a filesystem with different options from
@@ -612,8 +617,7 @@ public final class S3ATestUtils {
    * @return a set of credentials
    * @throws IOException on a failure
    */
-  @SuppressWarnings("deprecation")
-  public static AWSCredentialsProvider buildAwsCredentialsProvider(
+  public static AwsCredentialsProvider buildAwsCredentialsProvider(
       final Configuration conf)
       throws IOException {
     assumeSessionTestsEnabled(conf);
@@ -668,13 +672,14 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
+          conf,
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
               ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT),
           duration,
-          new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT));
+          new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT),
+           bucket);
     sc.validate("requested session credentials: ",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     return sc;

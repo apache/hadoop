@@ -62,6 +62,12 @@ public interface HdfsServerConstants {
   int NAMENODE_LAYOUT_VERSION
       = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
   /**
+  * Current minimum compatible version for NameNode
+  * Please see {@link NameNodeLayoutVersion.Feature} on adding new layout version.
+  */
+  int MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION
+      = NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION;
+  /**
    * Path components that are reserved in HDFS.
    * <p>
    * .reserved is only reserved under root ("/").

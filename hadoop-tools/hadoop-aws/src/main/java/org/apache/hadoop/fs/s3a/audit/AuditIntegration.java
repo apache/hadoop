@@ -23,7 +23,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.HandlerContextAware;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +34,11 @@ import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManagerS3A;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
+
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.s3a.audit.impl.S3AInternalAuditConstants.AUDIT_SPAN_HANDLER_CONTEXT;
+import static org.apache.hadoop.fs.s3a.audit.impl.S3AInternalAuditConstants.AUDIT_SPAN_EXECUTION_ATTRIBUTE;
 
 /**
  * Support for integrating auditing within the S3A code.
@@ -123,25 +124,24 @@ public final class AuditIntegration {
   }
 
   /**
-   * Get the span from a handler context.
-   * @param request request
-   * @param <T> type of request.
+   * Get the span from the execution attributes.
+   * @param executionAttributes the execution attributes
    * @return the span callbacks or null
    */
-  public static <T extends HandlerContextAware> AWSAuditEventCallbacks
-      retrieveAttachedSpan(final T request) {
-    return request.getHandlerContext(AUDIT_SPAN_HANDLER_CONTEXT);
+  public static AuditSpanS3A
+      retrieveAttachedSpan(final ExecutionAttributes executionAttributes) {
+    return executionAttributes.getAttribute(AUDIT_SPAN_EXECUTION_ATTRIBUTE);
   }
 
   /**
-   * Attach a span to a handler context.
-   * @param request request
+   * Attach a span to the execution attributes.
+   * @param executionAttributes the execution attributes
    * @param span span to attach
-   * @param <T> type of request.
    */
-  public static <T extends HandlerContextAware> void attachSpanToRequest(
-      final T request, final AWSAuditEventCallbacks span) {
-    request.addHandlerContext(AUDIT_SPAN_HANDLER_CONTEXT, span);
+  public static void attachSpanToRequest(
+      final ExecutionAttributes executionAttributes,
+      final AuditSpanS3A span) {
+    executionAttributes.putAttribute(AUDIT_SPAN_EXECUTION_ATTRIBUTE, span);
   }
 
   /**
@@ -160,4 +160,30 @@ public final class AuditIntegration {
     return (AccessDeniedException)new AccessDeniedException(path, null,
         exception.toString()).initCause(exception);
   }
+
+  /**
+   * Translate an exception if it or its inner exception is an
+   * {@link AuditFailureException}.
+   * If this condition is not met, null is returned.
+   * @param path path of operation.
+   * @param exception exception
+   * @return a translated exception or null.
+   */
+  public static IOException maybeTranslateAuditException(String path,
+      Exception exception) {
+    if (exception instanceof AuditFailureException) {
+      return translateAuditException(path, (AuditFailureException) exception);
+    } else if (exception.getCause() instanceof AuditFailureException) {
+      return translateAuditException(path,
+          (AuditFailureException) exception.getCause());
+    } else {
+      return null;
+    }
+  }
+
+  public static boolean containsAuditException(Exception exception) {
+    return exception instanceof AuditFailureException
+        || exception.getCause() instanceof AuditFailureException;
+  }
+
 }

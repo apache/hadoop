@@ -219,6 +219,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>lz4-java</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

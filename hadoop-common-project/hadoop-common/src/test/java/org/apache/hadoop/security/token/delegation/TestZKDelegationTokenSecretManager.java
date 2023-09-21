@@ -106,10 +106,22 @@ public class TestZKDelegationTokenSecretManager {
   @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeOperations() throws Exception {
+      testMultiNodeOperationsImpl(false);
+  }
+
+  @Test
+  public void testMultiNodeOperationsWithZeroRetry() throws Exception {
+      testMultiNodeOperationsImpl(true);
+  }
+
+  public void testMultiNodeOperationsImpl(boolean setZeroRetry) throws Exception {
     for (int i = 0; i < TEST_RETRIES; i++) {
       DelegationTokenManager tm1, tm2 = null;
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
+      if (setZeroRetry) {
+          conf.setInt(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_NUM_RETRIES, 0);
+      }
       tm1 = new DelegationTokenManager(conf, new Text("bla"));
       tm1.init();
       tm2 = new DelegationTokenManager(conf, new Text("bla"));

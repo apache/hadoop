@@ -141,7 +141,7 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationSuccesses;
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
-  @Metric("Number of Slow RPC calls")
+  @Metric("Number of slow RPC calls")
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
   MutableCounterLong rpcRequeueCalls;

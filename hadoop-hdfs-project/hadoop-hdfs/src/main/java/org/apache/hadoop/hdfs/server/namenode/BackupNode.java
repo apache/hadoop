@@ -435,7 +435,7 @@ public class BackupNode extends NameNode {
   }
 
   @Override
-  protected HAState createHAState(StartupOption startOpt) {
+  protected HAState createHAState(Configuration conf) {
     return new BackupState();
   }
 

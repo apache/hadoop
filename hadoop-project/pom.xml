@@ -116,7 +116,7 @@
     <commons-cli.version>1.5.0</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
-    <commons-compress.version>1.21</commons-compress.version>
+    <commons-compress.version>1.24.0</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
@@ -131,10 +131,8 @@
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp3.version>4.10.0</okhttp3.version>
-    <okio.version>3.4.0</okio.version>
-    <kotlin-stdlib.verion>1.6.20</kotlin-stdlib.verion>
-    <kotlin-stdlib-common.version>1.6.20</kotlin-stdlib-common.version>
+    <okhttp3.version>4.11.0</okhttp3.version>
+    <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
@@ -184,6 +182,8 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.499</aws-java-sdk.version>
     <hsqldb.version>2.7.1</hsqldb.version>
+    <aws-java-sdk-v2.version>2.20.128</aws-java-sdk-v2.version>
+    <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
@@ -220,59 +220,21 @@
     <dependencies>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>okhttp</artifactId>
-        <version>${okhttp3.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-common</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.squareup.okio</groupId>
-            <artifactId>okio-jvm</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okio</groupId>
-        <artifactId>okio-jvm</artifactId>
-        <version>${okio.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-stdlib</artifactId>
-        <version>${kotlin-stdlib.verion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-stdlib-common</artifactId>
-        <version>${kotlin-stdlib-common.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
         <artifactId>mockwebserver</artifactId>
         <version>${okhttp3.version}</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>
-            <groupId>com.squareup.okio</groupId>
-            <artifactId>okio-jvm</artifactId>
-          </exclusion>
-          <exclusion>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib-jdk8</artifactId>
+        <version>${kotlin-stdlib.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>jdiff</groupId>
@@ -947,6 +909,10 @@
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
             <artifactId>jackson-jaxrs-json-provider</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.codehaus.jettison</groupId>
+            <artifactId>jettison</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1128,14 +1094,30 @@
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-bundle</artifactId>
+        <artifactId>aws-java-sdk-core</artifactId>
         <version>${aws-java-sdk.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>io.netty</groupId>
+            <groupId>*</groupId>
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bundle</artifactId>
+        <version>${aws-java-sdk-v2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>*</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.eventstream</groupId>
+        <artifactId>eventstream</artifactId>
+        <version>${aws.eventstream.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
