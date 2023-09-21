@@ -38,8 +38,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRuntimeException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -91,7 +91,8 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
-
+  public static final String MD5_ERROR = "The MD5 value specified in the request "
+      + "did not match with the MD5 value calculated by the server.";
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2019-12-12";
@@ -193,7 +194,7 @@ public class AbfsClient implements Closeable {
       final MessageDigest digester = MessageDigest.getInstance("SHA-256");
       return digester.digest(key.getBytes(StandardCharsets.UTF_8));
     } catch (NoSuchAlgorithmException e) {
-      throw new IOException(e);
+      throw new AbfsRuntimeException(e);
     }
   }
 
@@ -806,6 +807,11 @@ public class AbfsClient implements Closeable {
       if (!op.hasResult()) {
         throw e;
       }
+
+      if (isMd5ChecksumError(e)) {
+        throw new AbfsInvalidChecksumException(e);
+      }
+
       if (reqParams.isAppendBlob()
           && appendSuccessCheckOp(op, path,
           (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
@@ -867,6 +873,12 @@ public class AbfsClient implements Closeable {
   private boolean checkUserError(int responseStatusCode) {
     return (responseStatusCode >= HttpURLConnection.HTTP_BAD_REQUEST
         && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
+  }
+
+  private boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
+    return ((AbfsRestOperationException) e).getStatusCode()
+        == HttpURLConnection.HTTP_BAD_REQUEST
+        && ((AbfsRestOperationException) e).getErrorMessage().contains(MD5_ERROR);
   }
 
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
@@ -1016,7 +1028,7 @@ public class AbfsClient implements Closeable {
 
     // Verify the MD5 hash returned by server holds valid on the data received.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
-      verifyCheckSumForRead(buffer, path, op.getResult(), bufferOffset);
+      verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
     }
 
     return op;
@@ -1455,22 +1467,21 @@ public class AbfsClient implements Closeable {
       byte[] md5Bytes = md5Digest.digest(dataToBeWritten);
       String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
-    } catch (NoSuchAlgorithmException e) {
-      throw new AbfsInvalidChecksumException(e);
+    } catch (NoSuchAlgorithmException ex) {
+      throw new AbfsRuntimeException(ex);
     }
   }
 
   /**
    * To verify the checksum information received from server for the data read
    * @param buffer stores the data received from server
-   * @param pathStr stores the path being read
    * @param result HTTP Operation Result
    * @param bufferOffset Position where data returned by server is saved in buffer
    * @throws AbfsRestOperationException
    */
-  private void verifyCheckSumForRead(final byte[] buffer, final String pathStr,
+  private void verifyCheckSumForRead(final byte[] buffer,
       final AbfsHttpOperation result, final int bufferOffset)
-      throws AbfsRestOperationException{
+      throws AbfsRestOperationException {
     // Number of bytes returned by server could be less than or equal to what
     // caller requests. In case it is less, extra bytes will be initialized to 0
     // Server returned MD5 Hash will be computed on what server returned.
@@ -1494,10 +1505,10 @@ public class AbfsClient implements Closeable {
       String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
       String md5HashActual = result.getResponseHeader(CONTENT_MD5);
       if (!md5HashComputed.equals(md5HashActual)) {
-        throw new AbfsInvalidChecksumException(new PathIOException(pathStr));
+        throw new AbfsInvalidChecksumException(result.getRequestId());
       }
-    } catch (NoSuchAlgorithmException e) {
-      throw new AbfsInvalidChecksumException(e);
+    } catch (NoSuchAlgorithmException ex) {
+      throw new AbfsRuntimeException(ex, result.getRequestId());
     }
   }
 
@@ -1505,7 +1516,7 @@ public class AbfsClient implements Closeable {
    * Conditions check for allowing checksum support for read operation.
    * As per the azure documentation following conditions should be met before
    * Sending MD5 Hash in request headers.
-   * {@link https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read}
+   * {@link <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read"></a>}
    * 1. Range header should be present as one of the request headers
    * 2. buffer length should not exceed 4MB.
    * @param requestHeaders
@@ -1522,7 +1533,7 @@ public class AbfsClient implements Closeable {
   /**
    * Conditions check for allowing checksum support for write operation.
    * Server will support this if client sends the MD% Hash as a request header.
-   * {@link https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update}
+   * {@link <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update"></a>}
    * @return
    */
   private boolean isChecksumValidationEnabled() {

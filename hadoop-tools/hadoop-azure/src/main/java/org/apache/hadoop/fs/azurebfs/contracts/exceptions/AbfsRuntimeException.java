@@ -28,11 +28,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AbfsInvalidChecksumException extends AbfsRestOperationException {
+public class AbfsRuntimeException extends AbfsRestOperationException {
 
-  private static final String ERROR_MESSAGE = "Checksum Validation Failed, MD5 Mismatch Error";
+  private static final String ERROR_MESSAGE = "Runtime Exception Occurred In ABFS Driver";
 
-  public AbfsInvalidChecksumException(final Exception innerException) {
+  public AbfsRuntimeException(final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),
@@ -42,11 +42,13 @@ public class AbfsInvalidChecksumException extends AbfsRestOperationException {
         innerException);
   }
 
-  public AbfsInvalidChecksumException(final String activityId) {
+  public AbfsRuntimeException(final Exception innerException, final String activityId) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-        ERROR_MESSAGE + ", rId: " + activityId,
+        innerException != null
+            ? innerException.toString() + ", rId: " + activityId
+            : ERROR_MESSAGE + ", rId: " + activityId,
         null);
   }
 }
