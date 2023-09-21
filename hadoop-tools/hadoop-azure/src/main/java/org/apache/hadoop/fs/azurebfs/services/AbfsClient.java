@@ -29,7 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -765,6 +764,7 @@ public class AbfsClient implements Closeable {
       requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
     }
 
+    // Add MD5 Hash of request content as request header if feature is enabled
     if (isChecksumValidationEnabled()) {
       addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
     }
@@ -991,6 +991,8 @@ public class AbfsClient implements Closeable {
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+
+    // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
     }
@@ -1012,6 +1014,7 @@ public class AbfsClient implements Closeable {
             bufferLength, sasTokenForReuse);
     op.execute(tracingContext);
 
+    // Verify the MD5 hash returned by server holds valid on the data received.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
       verifyCheckSumForRead(buffer, path, op.getResult(), bufferOffset);
     }
@@ -1430,13 +1433,14 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Add MD5 hash as checksum request header to the append request
+   * Add MD5 hash as request header to the append request
    * @param requestHeaders
    * @param reqParams
    * @param buffer
    */
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
-      final AppendRequestParameters reqParams, final byte[] buffer) {
+      final AppendRequestParameters reqParams, final byte[] buffer)
+      throws AbfsRestOperationException {
     try {
       MessageDigest md5Digest = MessageDigest.getInstance(MD5);
       byte[] dataToBeWritten = new byte[reqParams.getLength()];
@@ -1445,7 +1449,7 @@ public class AbfsClient implements Closeable {
       String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
     } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
+      throw new InvalidChecksumException(e);
     }
   }
 
@@ -1481,15 +1485,15 @@ public class AbfsClient implements Closeable {
         throw new InvalidChecksumException(new PathIOException(pathStr));
       }
     } catch (NoSuchAlgorithmException e) {
-      throw new InvalidChecksumException(new PathIOException(pathStr));
+      throw new InvalidChecksumException(e);
     }
   }
 
   /**
-   * Conditions check for allowing checksum support for read operation
+   * Conditions check for allowing checksum support for read operation.
    * As per the azure documentation following conditions should be met before
-   * sending MD5 hash as checksum header.
-   * https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
+   * Sending MD5 Hash in request headers.
+   * {@link https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read}
    * 1. Range header should be present as one of the request headers
    * 2. buffer length should not exceed 4MB.
    * @param requestHeaders
@@ -1503,6 +1507,12 @@ public class AbfsClient implements Closeable {
         requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB;
   }
 
+  /**
+   * Conditions check for allowing checksum support for write operation.
+   * Server will support this if client sends the MD% Hash as a request header.
+   * {@link https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update}
+   * @return
+   */
   private boolean isChecksumValidationEnabled() {
     return getAbfsConfiguration().getIsChecksumValidationEnabled();
   }

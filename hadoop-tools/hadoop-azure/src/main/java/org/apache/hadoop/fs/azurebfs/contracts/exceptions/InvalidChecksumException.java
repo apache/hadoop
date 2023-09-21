@@ -32,8 +32,7 @@ public class InvalidChecksumException extends AbfsRestOperationException {
 
   private static final String ERROR_MESSAGE = "Checksum Validation For Read Operation Failed";
 
-  public InvalidChecksumException(
-      final Exception innerException) {
+  public InvalidChecksumException(final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),

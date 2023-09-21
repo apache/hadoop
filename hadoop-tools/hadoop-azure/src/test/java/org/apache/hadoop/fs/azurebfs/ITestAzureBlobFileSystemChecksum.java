@@ -93,39 +93,13 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     testWriteReadWithChecksumAndOptionsInternal(false);
   }
 
-  private void readWithOffsetAndPositionHelper(AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int position,
-      final int offset) throws Exception {
-
-    byte[] readBuffer = new byte[
-        fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize()];
-    final int readLength = readBuffer.length - offset;
-    client.read(path.toUri().getPath(), position, readBuffer, offset,
-        readLength, "*", null, getTestTracingContext(fs, false));
-
-    byte[] actual = Arrays.copyOfRange(readBuffer, offset, offset + readLength);
-    byte[] expected = Arrays.copyOfRange(data, position, readLength + position);
-    Assertions.assertThat(actual)
-        .describedAs("")
-        .containsExactly(expected);
-  }
-
-  private void appendWithOffsetHelper(AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int offset) throws Exception {
-    AppendRequestParameters reqParams = new AppendRequestParameters(
-        0, offset, data.length - offset, APPEND_MODE, false, null, true);
-    client.append(
-        path.toUri().getPath(), data, reqParams, null, getTestTracingContext(fs, false));
-  }
-
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
       throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(
-        4 * ONE_MB, 4 * ONE_MB, readAheadEnabled);
-    final int datasize = 16 * ONE_MB + 1000;
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, readAheadEnabled);
+    final int dataSize = 16 * ONE_MB + 1000;
 
     Path testPath = path("testPath");
-    byte[] bytesUploaded = generateRandomBytes(datasize);
+    byte[] bytesUploaded = generateRandomBytes(dataSize);
     FSDataOutputStream out = fs.create(testPath);
     out.write(bytesUploaded);
     out.hflush();
@@ -133,28 +107,70 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
     FSDataInputStream in = fs.open(testPath);
     byte[] bytesRead = new byte[bytesUploaded.length];
-    in.read(bytesRead, 0, datasize);
+    in.read(bytesRead, 0, dataSize);
 
     // Verify that the data read is same as data written
     Assertions.assertThat(bytesRead)
         .describedAs("Bytes read with checksum enabled are not as expected")
         .containsExactly(bytesUploaded);
+  }
 
-    // Verify that reading from random position works
-    in = fs.open(testPath);
-    bytesRead = new byte[datasize];
-    in.seek(ONE_MB);
-    in.read(bytesRead, ONE_MB, datasize - 2 * ONE_MB);
+  /**
+   * Verify that the checksum computed on client side matches with the one
+   * computed at server side. If not, request will fail with 400 Bad request
+   * @param client
+   * @param path
+   * @param data
+   * @param fs
+   * @param offset
+   * @throws Exception
+   */
+  private void appendWithOffsetHelper(AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int offset) throws Exception {
+    AppendRequestParameters reqParams = new AppendRequestParameters(
+        0, offset, data.length - offset, APPEND_MODE, false, null, true);
+    client.append(path.toUri().getPath(), data, reqParams, null,
+        getTestTracingContext(fs, false));
+  }
+
+  /**
+   * Verify that the checksum returned by server is same as computed on client
+   * side even when read from different positions and stored at different offsets
+   * If not server request will pass but client.read() will fail with
+   * {@link org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidChecksumException}
+   * @param client
+   * @param path
+   * @param data
+   * @param fs
+   * @param position
+   * @param offset
+   * @throws Exception
+   */
+  private void readWithOffsetAndPositionHelper(AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int position,
+      final int offset) throws Exception {
+
+    int bufferLength = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
+    byte[] readBuffer = new byte[bufferLength];
+    final int readLength = bufferLength - offset;
+
+    client.read(path.toUri().getPath(), position, readBuffer, offset, readLength,
+        "*", null, getTestTracingContext(fs, false));
+
+    byte[] actual = Arrays.copyOfRange(readBuffer, offset, offset + readLength);
+    byte[] expected = Arrays.copyOfRange(data, position, readLength + position);
+    Assertions.assertThat(actual)
+        .describedAs("Data read should be same as Data Written")
+        .containsExactly(expected);
   }
 
   private void testWriteReadWithChecksumAndOptionsInternal(
       final boolean readAheadEnabled) throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(
-        8 * ONE_MB, ONE_MB, readAheadEnabled);
-    final int datasize = 16 * ONE_MB + 1000;
+    AzureBlobFileSystem fs = getConfiguredFileSystem(8 * ONE_MB, ONE_MB, readAheadEnabled);
+    final int dataSize = 16 * ONE_MB + 1000;
 
     Path testPath = path("testPath");
-    byte[] bytesUploaded = generateRandomBytes(datasize);
+    byte[] bytesUploaded = generateRandomBytes(dataSize);
     FSDataOutputStream out = fs.create(testPath);
     out.write(bytesUploaded);
     out.hflush();
@@ -165,7 +181,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     FSDataInputStream in = fs.openFileWithOptions(testPath,
         new OpenFileParameters().withOptions(cpm1)
             .withMandatoryKeys(new HashSet<>())).get();
-    byte[] bytesRead = new byte[datasize];
+    byte[] bytesRead = new byte[dataSize];
+
     in.read(1, bytesRead, 1, 4 * ONE_MB);
 
     // Verify that the data read is same as data written
