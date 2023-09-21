@@ -28,11 +28,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class InvalidChecksumException extends AbfsRestOperationException {
+public class AbfsInvalidChecksumException extends AbfsRestOperationException {
 
   private static final String ERROR_MESSAGE = "Checksum Validation For Read Operation Failed";
 
-  public InvalidChecksumException(final Exception innerException) {
+  public AbfsInvalidChecksumException(final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),

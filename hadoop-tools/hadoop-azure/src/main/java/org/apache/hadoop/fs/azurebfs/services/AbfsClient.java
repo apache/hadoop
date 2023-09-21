@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -1444,12 +1444,19 @@ public class AbfsClient implements Closeable {
     try {
       MessageDigest md5Digest = MessageDigest.getInstance(MD5);
       byte[] dataToBeWritten = new byte[reqParams.getLength()];
-      System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0, reqParams.getLength());
+
+      if (reqParams.getoffset() == 0 && reqParams.getLength() == buffer.length) {
+        dataToBeWritten = buffer;
+      } else {
+        System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0,
+            reqParams.getLength());
+      }
+
       byte[] md5Bytes = md5Digest.digest(dataToBeWritten);
       String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
     } catch (NoSuchAlgorithmException e) {
-      throw new InvalidChecksumException(e);
+      throw new AbfsInvalidChecksumException(e);
     }
   }
 
@@ -1474,7 +1481,12 @@ public class AbfsClient implements Closeable {
       return;
     }
     byte[] dataRead = new byte[numberOfBytesRead];
-    System.arraycopy(buffer, bufferOffset, dataRead, 0, numberOfBytesRead);
+
+    if (bufferOffset == 0 && numberOfBytesRead == buffer.length) {
+      dataRead = buffer;
+    } else {
+      System.arraycopy(buffer, bufferOffset, dataRead, 0, numberOfBytesRead);
+    }
 
     try {
       MessageDigest md5Digest = MessageDigest.getInstance(MD5);
@@ -1482,10 +1494,10 @@ public class AbfsClient implements Closeable {
       String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
       String md5HashActual = result.getResponseHeader(CONTENT_MD5);
       if (!md5HashComputed.equals(md5HashActual)) {
-        throw new InvalidChecksumException(new PathIOException(pathStr));
+        throw new AbfsInvalidChecksumException(new PathIOException(pathStr));
       }
     } catch (NoSuchAlgorithmException e) {
-      throw new InvalidChecksumException(e);
+      throw new AbfsInvalidChecksumException(e);
     }
   }
 

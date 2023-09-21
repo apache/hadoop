@@ -59,12 +59,12 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AbfsClient client = fs.getAbfsStore().getClient();
     Path path = path("testPath");
     fs.create(path);
-    byte[] data= generateRandomBytes(16 * ONE_MB);
+    byte[] data= generateRandomBytes(4 * ONE_MB);
 
     appendWithOffsetHelper(client, path, data, fs, 0);
     appendWithOffsetHelper(client, path, data, fs, 1 * ONE_MB);
-    appendWithOffsetHelper(client, path, data, fs, 4 * ONE_MB);
-    appendWithOffsetHelper(client, path, data, fs, 8 * ONE_MB);
+    appendWithOffsetHelper(client, path, data, fs, 2 * ONE_MB);
+    appendWithOffsetHelper(client, path, data, fs, 4 * ONE_MB - 1);
   }
 
   @Test
@@ -84,7 +84,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     readWithOffsetAndPositionHelper(client, path, data, fs, 4 * ONE_MB, 0);
     readWithOffsetAndPositionHelper(client, path, data, fs, 4 * ONE_MB, 1 * ONE_MB);
     readWithOffsetAndPositionHelper(client, path, data, fs, 8 * ONE_MB, 2 * ONE_MB);
-    readWithOffsetAndPositionHelper(client, path, data, fs, 15 * ONE_MB, 3 * ONE_MB);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 15 * ONE_MB, 4 * ONE_MB - 1);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * Verify that the checksum returned by server is same as computed on client
    * side even when read from different positions and stored at different offsets
    * If not server request will pass but client.read() will fail with
-   * {@link org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidChecksumException}
+   * {@link org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException}
    * @param client
    * @param path
    * @param data
