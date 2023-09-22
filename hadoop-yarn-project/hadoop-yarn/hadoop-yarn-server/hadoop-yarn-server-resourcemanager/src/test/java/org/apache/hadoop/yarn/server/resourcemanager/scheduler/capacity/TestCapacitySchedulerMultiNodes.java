@@ -491,7 +491,8 @@ public class TestCapacitySchedulerMultiNodes {
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
     newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default", 1.0f);
-    newConf.set(CapacitySchedulerConfiguration.PREFER_ALLOCATE_ON_NODES_WITHOUT_RESERVED_CONTAINERS, "true");
+    newConf.set(CapacitySchedulerConfiguration.PREFER_ALLOCATE_ON_NODES_WITHOUT_RESERVED_CONTAINERS,
+        "true");
     MockRM rm1 = new MockRM(newConf);
 
     rm1.start();
@@ -529,7 +530,8 @@ public class TestCapacitySchedulerMultiNodes {
 
 
     // Check containers of app1 and app2.
-    Set<RMNode> reservedContainers = checkReservedContainers(cs, rm1.getRMContext().getRMNodes(), 1);
+    Set<RMNode> reservedContainers = checkReservedContainers(cs,
+        rm1.getRMContext().getRMNodes(), 1);
     Assert.assertEquals(1, reservedContainers.size());
     RMNode nodeWithReservedContainer = reservedContainers.iterator().next();
     LOG.debug("Reserved container on: {}", nodeWithReservedContainer);
@@ -545,11 +547,14 @@ public class TestCapacitySchedulerMultiNodes {
     Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
 
-    //Make sure to have available headroom on the child queue, see: RegularContainerAllocator#checkHeadroom,
-    //that can make RegularContainerAllocator.preCheckForNodeCandidateSet to return ContainerAllocation.QUEUE_SKIPPED
+    //Make sure to have available headroom on the child queue,
+    // see: RegularContainerAllocator#checkHeadroom,
+    //that can make RegularContainerAllocator.preCheckForNodeCandidateSet to return
+    // ContainerAllocation.QUEUE_SKIPPED
     MockNM nm3 = rm1.registerNode("127.0.0.3:1235", 3 * GB);
-    
-    //Allocate a container for app2, we expect this to be allocated on nm2 as nm1 has a reservation for another app
+
+    //Allocate a container for app2, we expect this to be allocated on nm2 as
+    // nm1 has a reservation for another app
     am2.allocate("*", 4 * GB, 1, new ArrayList<>());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
@@ -558,7 +563,8 @@ public class TestCapacitySchedulerMultiNodes {
     rm1.close();
   }
 
-  private static void moveReservation(CapacityScheduler cs, MockRM rm1, MockNM nm1, MockNM nm2, MockAM am1) {
+  private static void moveReservation(CapacityScheduler cs,
+      MockRM rm1, MockNM nm1, MockNM nm2, MockAM am1) {
     RMNode sourceNode = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
     RMNode targetNode = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     SchedulerApplicationAttempt firstSchedulerAppAttempt =
@@ -566,7 +572,8 @@ public class TestCapacitySchedulerMultiNodes {
     FiCaSchedulerApp app = (FiCaSchedulerApp)firstSchedulerAppAttempt;
     RMContainer reservedContainer = cs.getNode(sourceNode.getNodeID()).getReservedContainer();
     LOG.debug("Moving reservation");
-    app.moveReservation(reservedContainer, cs.getNode(sourceNode.getNodeID()), cs.getNode(targetNode.getNodeID()));
+    app.moveReservation(reservedContainer,
+        cs.getNode(sourceNode.getNodeID()), cs.getNode(targetNode.getNodeID()));
   }
 
   private static Set<RMNode> checkReservedContainers(CapacityScheduler cs,

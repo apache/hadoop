@@ -918,7 +918,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     if (scheduler instanceof CapacityScheduler) {
       CapacityScheduler cs = (CapacityScheduler) scheduler;
       CapacitySchedulerConfiguration csConf = cs.getConfiguration();
-      preferAllocateOnNodesWithoutReservedContainer = csConf.getPreferAllocateOnNodesWithoutReservedContainer();
+      preferAllocateOnNodesWithoutReservedContainer =
+          csConf.getPreferAllocateOnNodesWithoutReservedContainer();
     }
     return preferAllocateOnNodesWithoutReservedContainer;
   }
