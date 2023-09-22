@@ -860,7 +860,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Do not schedule if there are any reservations to fulfill on the node
       if (iter.hasNext() &&
           node.getReservedContainer() != null &&
-          isPreferAllocateOnNodesWithoutReservedContainer()) {
+          isSkipAllocateOnNodesWithReservedContainer()) {
         LOG.debug("Skipping scheduling on node {} since it has already been"
                 + " reserved by {}", node.getNodeID(),
             node.getReservedContainer().getContainerId());
@@ -912,16 +912,16 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     return result;
   }
 
-  private boolean isPreferAllocateOnNodesWithoutReservedContainer() {
+  private boolean isSkipAllocateOnNodesWithReservedContainer() {
     ResourceScheduler scheduler = rmContext.getScheduler();
-    boolean preferAllocateOnNodesWithoutReservedContainer = false;
+    boolean skipAllocateOnNodesWithReservedContainer = false;
     if (scheduler instanceof CapacityScheduler) {
       CapacityScheduler cs = (CapacityScheduler) scheduler;
       CapacitySchedulerConfiguration csConf = cs.getConfiguration();
-      preferAllocateOnNodesWithoutReservedContainer =
-          csConf.getPreferAllocateOnNodesWithoutReservedContainer();
+      skipAllocateOnNodesWithReservedContainer =
+          csConf.getSkipAllocateOnNodesWithReservedContainer();
     }
-    return preferAllocateOnNodesWithoutReservedContainer;
+    return skipAllocateOnNodesWithReservedContainer;
   }
 
   @Override
