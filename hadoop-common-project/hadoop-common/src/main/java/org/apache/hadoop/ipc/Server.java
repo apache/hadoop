@@ -2940,7 +2940,7 @@ public abstract class Server {
             try {
               stateId = alignmentContext.receiveRequestState(header, getMaxIdleTime());
             } catch (RetriableException re) {
-              rpcMetrics.incrRcRejectedByObserverCalls();
+              rpcMetrics.incrRpcCallsRejectedByObserver();
               throw re;
             }
             call.setClientStateId(stateId);

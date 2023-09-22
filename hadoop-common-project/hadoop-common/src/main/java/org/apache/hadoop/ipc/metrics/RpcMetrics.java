@@ -148,7 +148,7 @@ public class RpcMetrics {
   @Metric("Number of successful RPC calls")
   MutableCounterLong rpcCallSuccesses;
   @Metric("Number of observer namenode rejected RPC calls")
-  MutableCounterLong rpcRejectedByObserverCalls;
+  MutableCounterLong rpcCallsRejectedByObserver;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -368,8 +368,8 @@ public class RpcMetrics {
   /**
    * Increments the Observer NameNode rejected RPC Calls Counter.
    */
-  public void incrRcRejectedByObserverCalls() {
-    rpcRejectedByObserverCalls.incr();
+  public void incrRpcCallsRejectedByObserver() {
+    rpcCallsRejectedByObserver.incr();
   }
 
   /**
@@ -426,8 +426,8 @@ public class RpcMetrics {
    * @return long
    */
   @VisibleForTesting
-  public long getRpcRejectedByObserverCalls() {
-    return rpcRejectedByObserverCalls.value();
+  public long getRpcCallsRejectedByObserver() {
+    return rpcCallsRejectedByObserver.value();
   }
 
   public MutableRate getDeferredRpcProcessingTime() {

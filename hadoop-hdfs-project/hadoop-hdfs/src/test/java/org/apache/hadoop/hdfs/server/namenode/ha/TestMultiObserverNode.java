@@ -152,11 +152,11 @@ public class TestMultiObserverNode {
     RPC.Server clientRpcServer2 = ((NameNodeRpcServer)dfsCluster
         .getNameNodeRpc(2)).getClientRpcServer();
     RpcMetrics rpcMetrics2 = clientRpcServer2.getRpcMetrics();
-    assertEquals(0, rpcMetrics2.getRpcRejectedByObserverCalls());
+    assertEquals(0, rpcMetrics2.getRpcCallsRejectedByObserver());
     RPC.Server clientRpcServer3 = ((NameNodeRpcServer)dfsCluster
         .getNameNodeRpc(3)).getClientRpcServer();
     RpcMetrics rpcMetrics3 = clientRpcServer3.getRpcMetrics();
-    assertEquals(0, rpcMetrics3.getRpcRejectedByObserverCalls());
+    assertEquals(0, rpcMetrics3.getRpcCallsRejectedByObserver());
 
     dfsCluster.rollEditLogAndTail(0);
     dfs.getFileStatus(testPath);
@@ -169,9 +169,9 @@ public class TestMultiObserverNode {
     assertSentTo(0);
     HATestUtil.setACStateId(dfs, realStateId);
 
-    // Validate rpcRejectedByObserverCalls metric.
-    assertEquals(1, rpcMetrics2.getRpcRejectedByObserverCalls());
-    assertEquals(1, rpcMetrics3.getRpcRejectedByObserverCalls());
+    // Validate rpcCallsRejectedByObserver metric.
+    assertEquals(1, rpcMetrics2.getRpcCallsRejectedByObserver());
+    assertEquals(1, rpcMetrics3.getRpcCallsRejectedByObserver());
   }
 
   private void assertSentTo(int... nnIndices) throws IOException {
