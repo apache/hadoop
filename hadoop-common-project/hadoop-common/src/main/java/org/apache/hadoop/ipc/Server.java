@@ -2937,17 +2937,18 @@ public abstract class Server {
           if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
             call.markCallCoordinated(true);
             long stateId;
-            stateId = alignmentContext.receiveRequestState(
-                header, getMaxIdleTime());
+            try {
+              stateId = alignmentContext.receiveRequestState(header, getMaxIdleTime());
+            } catch (RetriableException re) {
+              rpcMetrics.incrRcRejectedByObserverCalls();
+              throw re;
+            }
             call.setClientStateId(stateId);
             if (header.hasRouterFederatedState()) {
               call.setFederatedNamespaceState(header.getRouterFederatedState());
             }
           }
         } catch (IOException ioe) {
-          if (ioe instanceof RetriableException) {
-            rpcMetrics.incrRcRejectedByObserverCalls();
-          }
           throw new RpcServerException("Processing RPC request caught ", ioe);
         }
       }
