@@ -2569,7 +2569,7 @@ public class DataNode extends ReconfigurableBase
     if (this.threadGroup != null) {
       int sleepMs = 2;
       while (true) {
-        // When shutting down for restart, wait 2.5 seconds before forcing
+        // When shutting down for restart, wait 1 second before forcing
         // termination of receiver threads.
         if (!this.shutdownForUpgrade ||
             (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
