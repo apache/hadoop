@@ -157,6 +157,11 @@ public interface S3ClientFactory {
     private long multiPartThreshold;
 
     /**
+     * Multipart upload enabled.
+     */
+    private boolean multipartCopy = true;
+
+    /**
      * Executor that the transfer manager will use to execute background tasks.
      */
     private Executor transferManagerExecutor;
@@ -398,6 +403,25 @@ public interface S3ClientFactory {
      */
     public Region getRegion() {
       return region;
+    }
+
+    /**
+     * Set the multipart flag..
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMultipartCopyEnabled(final boolean value) {
+      this.multipartCopy = value;
+      return this;
+    }
+
+    /**
+     * Get the multipart flag.
+     * @return multipart flag
+     */
+    public boolean isMultipartCopy() {
+      return multipartCopy;
     }
   }
 }

@@ -235,6 +235,26 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 |`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
 |`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
+- yarn.federation.policy-manager-params
+
+  To configure the `yarn.federation.policy-manager-params` parameter, which represents the weight policy for the default queue,
+  and where the relevant information will be parsed as `WeightedPolicyInfo`.
+
+  We can use the following JSON format for configuration:
+
+  ```xml
+      <property>
+         <name>yarn.federation.policy-manager-params</name>
+         <value>{"routerPolicyWeights":{"entry":[{"key":{"id":"SC-2"},"value":"0.3"},{"key":{"id":"SC-1"},"value":"0.7"}]},"amrmPolicyWeights":{"entry":[{"key":{"id":"SC-2"},"value":"0.4"},{"key":{"id":"SC-1"},"value":"0.6"}]},"headroomAlpha":"1.0"}</value>
+      </property>
+  ```
+
+  This JSON configuration allows you to define the weight policy for default queue, where:
+
+  - The `routerPolicyWeights` section specifies the weightings for router policies. For instance, with a weight of `0.3` assigned to `SC-2` and `0.7` assigned to `SC-1`, this configuration will allocate `30%` of submitted application requests to `SC-2` and `70%` to `SC-1`.
+  - The `amrmPolicyWeights` represents the allocation ratios for Application Master when request containers from different subclusters' RM. For instance, when an AM requests containers, it will request `40%` of the containers from `SC-2` and `60%` of the containers from `SC-1`.
+  - The `headroomAlpha` used by policies that balance weight-based and load-based considerations in their decisions. For policies that use this parameter, values close to 1 indicate that most of the decision should be based on currently observed headroom from various sub-clusters, values close to zero, indicate that the decision should be mostly based on weights and practically ignore current load.
+
 How to configure the policy-manager
 --------------------
 

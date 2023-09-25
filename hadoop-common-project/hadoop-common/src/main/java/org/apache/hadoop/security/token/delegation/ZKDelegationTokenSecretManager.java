@@ -110,8 +110,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final int ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT = 10000;
   public static final String ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT = "zkdtsm";
-  // by default it is still incrementing seq number by 1 each time
-  public static final int ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT = 1;
+  // By default, increase seq number by 100 each time to reduce overflow
+  // speed of znode dataVersion which is 32-integer now.
+  public static final int ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT = 100;
 
   private static final Logger LOG = LoggerFactory
       .getLogger(ZKDelegationTokenSecretManager.class);
