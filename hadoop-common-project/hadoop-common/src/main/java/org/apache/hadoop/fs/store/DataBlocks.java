@@ -329,7 +329,7 @@ public final class DataBlocks {
    */
   public static abstract class DataBlock implements Closeable {
 
-    enum DestState {Writing, Upload, Closed}
+    public enum DestState {Writing, Upload, Closed}
 
     private volatile DestState state = Writing;
     private final long index;
@@ -375,7 +375,7 @@ public final class DataBlocks {
      *
      * @return the current state.
      */
-    final DestState getState() {
+    public final DestState getState() {
       return state;
     }
 
