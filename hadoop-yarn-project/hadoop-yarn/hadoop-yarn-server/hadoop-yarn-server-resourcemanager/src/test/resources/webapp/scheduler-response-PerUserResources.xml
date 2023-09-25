@@ -5,6 +5,17 @@
     <maxCapacity>100.0</maxCapacity>
     <weight>-1.0</weight>
     <normalizedWeight>0.0</normalizedWeight>
+    <queueCapacityVectorInfo>
+      <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+      <capacityVectorEntries>
+        <resourceName>memory-mb</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+      <capacityVectorEntries>
+        <resourceName>vcores</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+    </queueCapacityVectorInfo>
     <queueName>root</queueName>
     <queuePath>root</queuePath>
     <maxParallelApps>2147483647</maxParallelApps>
@@ -57,6 +68,17 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=12.5%,vcores=12.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
             <capacity>12.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>50.0</maxCapacity>
@@ -774,6 +796,17 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=50.0%,vcores=50.0%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
             <capacity>50.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
@@ -1491,6 +1524,17 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=37.5%,vcores=37.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
             <capacity>37.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
@@ -1936,6 +1980,17 @@
     <capacities>
       <queueCapacitiesByPartition>
         <partitionName/>
+        <queueCapacityVectorInfo>
+          <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+          <capacityVectorEntries>
+            <resourceName>memory-mb</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+          <capacityVectorEntries>
+            <resourceName>vcores</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+        </queueCapacityVectorInfo>
         <capacity>100.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
