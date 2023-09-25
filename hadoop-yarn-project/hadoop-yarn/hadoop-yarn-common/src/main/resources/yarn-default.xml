@@ -742,6 +742,12 @@
   </property>
 
   <property>
+    <description>Enable SSL/TLS encryption for the ZooKeeper communication.</description>
+    <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
