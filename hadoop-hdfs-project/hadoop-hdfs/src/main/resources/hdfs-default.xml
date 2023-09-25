@@ -5164,6 +5164,18 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit</name>
+    <value>100</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 100, inclusive. if the comparable datanodes usage both beyond
+      ${dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit},
+      dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance will be disable.
+    </description>
+  </property>
+
 <property>
   <name>
     dfs.namenode.available-space-block-placement-policy.balance-local-node

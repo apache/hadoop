@@ -22,6 +22,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
 
 import java.util.Collection;
 import java.util.EnumMap;
@@ -51,6 +53,9 @@ public class AvailableSpaceBlockPlacementPolicy extends
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
   private int balancedSpaceTolerance =
           DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+
+  private int balancedSpaceToleranceLimit =
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
   private boolean optimizeLocal;
 
   @Override
@@ -70,6 +75,11 @@ public class AvailableSpaceBlockPlacementPolicy extends
         conf.getInt(
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
+
+    balancedSpaceToleranceLimit =
+            conf.getInt(
+                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY,
+                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT);
 
     optimizeLocal = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
@@ -201,8 +211,12 @@ public class AvailableSpaceBlockPlacementPolicy extends
    */
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b, boolean isBalanceLocal) {
+
+    boolean toleranceLimit = Math.min(a.getDfsUsedPercent(), b.getDfsUsedPercent())
+            >= balancedSpaceToleranceLimit ;
     if (a.equals(b)
-        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < balancedSpaceTolerance || ((
+        || (!toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
+            < balancedSpaceTolerance) || ((
         isBalanceLocal && a.getDfsUsedPercent() < 50))) {
       return 0;
     }
