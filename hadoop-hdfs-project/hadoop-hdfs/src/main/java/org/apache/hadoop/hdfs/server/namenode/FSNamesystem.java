@@ -6131,15 +6131,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static class CorruptFileBlockInfo {
     final String path;
     final Block block;
+    private final int replication;
+    private final String ecPolicy;
     
-    public CorruptFileBlockInfo(String p, Block b) {
+    CorruptFileBlockInfo(String p, Block b, int r, String ec) {
       path = p;
       block = b;
+      replication = r;
+      ecPolicy = ec;
     }
     
     @Override
     public String toString() {
-      return block.getBlockName() + "\t" + path;
+      return block.getBlockName() + "\t" +
+          (replication == -1 ? ecPolicy : replication) + "\t" + path;
     }
   }
   /**
@@ -6195,7 +6200,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (inode != null) {
           String src = inode.getFullPathName();
           if (isParentEntry(src, path)) {
-            corruptFiles.add(new CorruptFileBlockInfo(src, blk));
+            int repl = -1;
+            String ecPolicyName = null;
+            if (inode.isFile()) {
+              if (inode.asFile().isStriped()) {
+                ErasureCodingPolicy ecPolicy =
+                    ErasureCodingPolicyManager.getInstance()
+                        .getByID(inode.asFile().getErasureCodingPolicyID());
+                if (ecPolicy != null) {
+                  ecPolicyName = ecPolicy.getName();
+                }
+              } else {
+                repl = inode.asFile().getFileReplication();
+              }
+            }
+            corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl, ecPolicyName));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
               break;
