@@ -154,6 +154,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
 
+  public static final String SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS = PREFIX
+      + "skip-allocate-on-nodes-with-reserved-containers";
+
+  @Private
+  public static final boolean DEFAULT_SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS = false;
+
   @Private
   public static final String MAXIMUM_ALLOCATION = "maximum-allocation";
 
@@ -936,6 +942,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public boolean getReservationContinueLook() {
     return getBoolean(RESERVE_CONT_LOOK_ALL_NODES,
         DEFAULT_RESERVE_CONT_LOOK_ALL_NODES);
+  }
+
+  public boolean getSkipAllocateOnNodesWithReservedContainer() {
+    return getBoolean(SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS,
+        DEFAULT_SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS);
   }
 
   private static String getAclKey(QueueACL acl) {
