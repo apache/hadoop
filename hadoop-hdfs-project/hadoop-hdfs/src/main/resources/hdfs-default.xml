@@ -2446,6 +2446,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement.min-blocks-for.write</name>
+  <value>1</value>
+  <description>
+    Setting the minimum number of blocks for write operations is used to calculate the space required
+    for write operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max.slowpeer.collect.nodes</name>
   <value>5</value>
   <description>

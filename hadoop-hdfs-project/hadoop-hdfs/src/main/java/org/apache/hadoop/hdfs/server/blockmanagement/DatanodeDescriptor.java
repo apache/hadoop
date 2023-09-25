@@ -812,11 +812,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    *
    * @param t requested storage type
    * @param blockSize requested block size
+   * @param minBlocksForWrite requested the minimum number of blocks
    */
   public DatanodeStorageInfo chooseStorage4Block(StorageType t,
-      long blockSize) {
-    final long requiredSize =
-        blockSize * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE;
+      long blockSize, int minBlocksForWrite) {
+    final long requiredSize = blockSize * minBlocksForWrite;
     final long scheduledSize = blockSize * getBlocksScheduled(t);
     long remaining = 0;
     DatanodeStorageInfo storage = null;
