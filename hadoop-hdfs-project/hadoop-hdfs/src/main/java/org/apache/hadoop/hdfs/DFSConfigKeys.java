@@ -1242,7 +1242,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       5;
   public static final String
           DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY =
-          "dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance";
+          "dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit";
   public static final int
           DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT =
           100;
