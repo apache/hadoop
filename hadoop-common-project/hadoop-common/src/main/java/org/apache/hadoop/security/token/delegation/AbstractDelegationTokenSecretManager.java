@@ -81,7 +81,12 @@ extends AbstractDelegationTokenIdentifier>
       = DelegationTokenSecretManagerMetrics.create();
 
   private String formatTokenId(TokenIdent id) {
-    return "(" + id + ")";
+    try {
+      return "(" + id + ")";
+    } catch (Exception e) {
+      LOG.warn("Exception in formatTokenId", e);
+    }
+    return "( SequenceNumber=" + id.getSequenceNumber() + " )";
   }
 
   /** 

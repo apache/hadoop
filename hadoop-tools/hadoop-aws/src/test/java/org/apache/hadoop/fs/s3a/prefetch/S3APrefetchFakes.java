@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -308,7 +309,7 @@ public final class S3APrefetchFakes {
 
     public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
       super(new EmptyS3AStatisticsContext().newInputStreamStatistics(),
-          Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT);
+          Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT, null);
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -381,7 +382,7 @@ public final class S3APrefetchFakes {
     }
 
     @Override
-    protected BlockCache createCache(int maxBlocksCount) {
+    protected BlockCache createCache(int maxBlocksCount, DurationTrackerFactory trackerFactory) {
       final int readDelayMs = 50;
       final int writeDelayMs = 200;
       return new FakeS3FilePerBlockCache(readDelayMs, writeDelayMs);

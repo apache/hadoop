@@ -148,6 +148,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
   public static final String OFFSET_PARAM = "offset";
   public static final String LENGTH_PARAM = "length";
+  public static final String ALLUSERS_PARAM = "allusers";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -287,6 +288,7 @@ public class HttpFSFileSystem extends FileSystem
     GETSTATUS(HTTP_GET),
     GETECPOLICIES(HTTP_GET),
     GETECCODECS(HTTP_GET),
+    GETTRASHROOTS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1796,6 +1798,22 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.getErasureCodeCodecs(json);
+  }
+
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETTRASHROOTS.toString());
+    params.put(ALLUSERS_PARAM, Boolean.toString(allUsers));
+    Path path = new Path(getUri().toString(), "/");
+    try {
+      HttpURLConnection conn = getConnection(Operation.GETTRASHROOTS.getMethod(),
+          params, path, true);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+      return JsonUtilClient.getTrashRoots(json);
+    } catch (IOException e) {
+      return super.getTrashRoots(allUsers);
+    }
   }
 
   @VisibleForTesting

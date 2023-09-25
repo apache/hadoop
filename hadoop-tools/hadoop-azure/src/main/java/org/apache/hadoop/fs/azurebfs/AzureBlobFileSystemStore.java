@@ -707,7 +707,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
-            .withBlockFactory(blockFactory)
+            .withBlockFactory(getBlockFactory())
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .withClient(client)
             .withPosition(position)
@@ -1938,6 +1938,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   void setClient(AbfsClient client) {
     this.client = client;
+  }
+
+  @VisibleForTesting
+  DataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
   }
 
   @VisibleForTesting

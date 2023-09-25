@@ -107,4 +107,5 @@ public class ActivityDiagnosticConstant {
   public final static String
       NODE_CAN_NOT_FIND_CONTAINER_TO_BE_UNRESERVED_WHEN_NEEDED =
       "Node can't find a container to be unreserved when needed";
+  public static final String NODE_HAS_BEEN_RESERVED = "Node has been reserved";
 }

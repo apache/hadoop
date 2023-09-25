@@ -441,6 +441,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean isMultipartUploadEnabled = DEFAULT_MULTIPART_UPLOAD_ENABLED;
 
   /**
+   * Should file copy operations use the S3 transfer manager?
+   * True unless multipart upload is disabled.
+   */
+  private boolean isMultipartCopyEnabled;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -576,6 +582,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
+      // multipart copy and upload are the same; this just makes it explicit
+      this.isMultipartCopyEnabled = isMultipartUploadEnabled;
+
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -982,6 +991,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withExecutionInterceptors(auditManager.createExecutionInterceptors())
         .withMinimumPartSize(partSize)
+        .withMultipartCopyEnabled(isMultipartCopyEnabled)
         .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(region);
@@ -1467,6 +1477,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public AWSCredentialProviderList shareCredentials(final String purpose) {
       LOG.debug("Sharing credentials for: {}", purpose);
       return credentials.share();
+    }
+
+    @Override
+    public boolean isMultipartCopyEnabled() {
+      return S3AFileSystem.this.isMultipartUploadEnabled;
     }
   }
 
@@ -3654,7 +3669,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
    * Parent elements are scanned to see if any are a file,
-   * <i>except under __magic</i> paths.
+   * <i>except under "MAGIC PATH"</i> paths.
    * There the FS assumes that the destination directory creation
    * did that scan and that paths in job/task attempts are all
    * "well formed"
@@ -4436,37 +4451,56 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           e);
     }
 
-    return readInvoker.retry(
-        action, srcKey,
-        true,
-        () -> {
-          CopyObjectRequest.Builder copyObjectRequestBuilder =
-              getRequestFactory().newCopyObjectRequestBuilder(srcKey, dstKey, srcom);
-          changeTracker.maybeApplyConstraint(copyObjectRequestBuilder);
-          incrementStatistic(OBJECT_COPY_REQUESTS);
+    CopyObjectRequest.Builder copyObjectRequestBuilder =
+        getRequestFactory().newCopyObjectRequestBuilder(srcKey, dstKey, srcom);
+    changeTracker.maybeApplyConstraint(copyObjectRequestBuilder);
+    CopyObjectResponse response;
 
-          Copy copy = transferManager.copy(
-              CopyRequest.builder()
-                  .copyObjectRequest(copyObjectRequestBuilder.build())
-                  .build());
+    // transfer manager is skipped if disabled or the file is too small to worry about
+    final boolean useTransferManager = isMultipartCopyEnabled && size >= multiPartThreshold;
+    if (useTransferManager) {
+      // use transfer manager
+      response = readInvoker.retry(
+          action, srcKey,
+          true,
+          () -> {
+            incrementStatistic(OBJECT_COPY_REQUESTS);
 
-          try {
-            CompletedCopy completedCopy = copy.completionFuture().join();
-            CopyObjectResponse result = completedCopy.response();
-            changeTracker.processResponse(result);
-            incrementWriteOperations();
-            instrumentation.filesCopied(1, size);
-            return result;
-          } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof SdkException) {
-              SdkException awsException = (SdkException)cause;
-              changeTracker.processException(awsException, "copy");
-              throw awsException;
+            Copy copy = transferManager.copy(
+                CopyRequest.builder()
+                    .copyObjectRequest(copyObjectRequestBuilder.build())
+                    .build());
+
+            try {
+              CompletedCopy completedCopy = copy.completionFuture().join();
+              return completedCopy.response();
+            } catch (CompletionException e) {
+              Throwable cause = e.getCause();
+              if (cause instanceof SdkException) {
+                SdkException awsException = (SdkException)cause;
+                changeTracker.processException(awsException, "copy");
+                throw awsException;
+              }
+              throw extractException(action, srcKey, e);
             }
-            throw extractException(action, srcKey, e);
-          }
-        });
+          });
+    } else {
+      // single part copy bypasses transfer manager
+      // note, this helps with some mock testing, e.g. HBoss. as there is less to mock.
+      response = readInvoker.retry(
+          action, srcKey,
+          true,
+          () -> {
+            LOG.debug("copyFile: single part copy {} -> {} of size {}", srcKey, dstKey, size);
+            incrementStatistic(OBJECT_COPY_REQUESTS);
+            return s3Client.copyObject(copyObjectRequestBuilder.build());
+          });
+    }
+
+    changeTracker.processResponse(response);
+    incrementWriteOperations();
+    instrumentation.filesCopied(1, size);
+    return response;
   }
 
   /**
@@ -4735,7 +4769,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Predicate: is a path under a magic commit path?
-   * True if magic commit is enabled and the path is under __magic,
+   * True if magic commit is enabled and the path is under "MAGIC PATH",
    * irrespective of file type.
    * @param path path to examine
    * @return true if the path is in a magic dir and the FS has magic writes enabled.
