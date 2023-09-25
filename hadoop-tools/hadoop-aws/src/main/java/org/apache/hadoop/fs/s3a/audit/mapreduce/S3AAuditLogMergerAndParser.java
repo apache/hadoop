@@ -83,13 +83,15 @@ public class S3AAuditLogMergerAndParser {
       return auditLogMap;
     }
     final Matcher matcher = LOG_ENTRY_PATTERN.matcher(singleAuditLog);
-    boolean patternMatching = matcher.matches();
-    if (patternMatching) {
+    boolean patternMatched = matcher.matches();
+    if (patternMatched) {
       for (String key : AWS_LOG_REGEXP_GROUPS) {
         try {
           final String value = matcher.group(key);
           auditLogMap.put(key, value);
         } catch (IllegalStateException e) {
+          LOG.debug("Skipping key :{} due to no matching with the audit log "
+              + "pattern :", key);
           LOG.debug(String.valueOf(e));
         }
       }

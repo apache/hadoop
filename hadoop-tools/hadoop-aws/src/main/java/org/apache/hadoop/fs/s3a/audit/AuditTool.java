@@ -76,8 +76,9 @@ public class AuditTool extends Configured implements Tool, Closeable {
   private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
 
   private static final String USAGE =
-      "bin/hadoop " + "Class" + " DestinationPath" + " SourcePath" + "\n" +
-          "bin/hadoop " + AUDIT_TOOL + " s3a://BUCKET" + " s3a://BUCKET" + "\n";
+      "bin/hadoop " + AUDIT_TOOL +
+          " s3a://<bucket_name>/<destination_dir_path>/" +
+          " s3a://<bucket_name>/<audit_logs_dir_path>/" + "\n";
 
   private PrintWriter out;
 
@@ -109,49 +110,54 @@ public class AuditTool extends Configured implements Tool, Closeable {
    */
   @Override
   public int run(String[] args) throws Exception {
+    preConditionArgsSizeCheck(args);
     List<String> paths = Arrays.asList(args);
-    if(paths.size() == 2) {
-      // Path of audit log files
-      Path logsPath = new Path(paths.get(1));
-      // Path of destination directory
-      Path destPath = new Path(paths.get(0));
 
-      // Setting the file system
-      URI fsURI = new URI(logsPath.toString());
-      FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
+    // Path of audit log files
+    Path logsPath = new Path(paths.get(1));
+    // Path of destination directory
+    Path destPath = new Path(paths.get(0));
 
-      FileStatus fileStatus = fileSystem.getFileStatus(logsPath);
-      if (fileStatus.isFile()) {
-        errorln("Expecting a directory, but " + logsPath.getName() + " is a"
-            + " file which was passed as an argument");
-        throw invalidArgs(
-            "Expecting a directory, but " + logsPath.getName() + " is a"
-                + " file which was passed as an argument");
-      }
-      FileStatus fileStatus1 = fileSystem.getFileStatus(destPath);
-      if (fileStatus1.isFile()) {
-        errorln("Expecting a directory, but " + destPath.getName() + " is a"
-            + " file which was passed as an argument");
-        throw invalidArgs(
-            "Expecting a directory, but " + destPath.getName() + " is a"
-                + " file which was passed as an argument");
-      }
+    // Setting the file system
+    URI fsURI = new URI(logsPath.toString());
+    FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
 
-      // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
-      // audit log files and converting into avro file
-      boolean mergeAndParseResult =
-          s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
-              fileSystem, logsPath, destPath);
-      if (!mergeAndParseResult) {
-        return FAILURE;
-      }
-    } else {
+    FileStatus logsFileStatus = fileSystem.getFileStatus(logsPath);
+    if (logsFileStatus.isFile()) {
+      errorln("Expecting a directory, but " + logsPath.getName() + " is a"
+          + " file which was passed as an argument");
+      throw invalidArgs(
+          "Expecting a directory, but " + logsPath.getName() + " is a"
+              + " file which was passed as an argument");
+    }
+    FileStatus destinationFileStatus = fileSystem.getFileStatus(destPath);
+    if (destinationFileStatus.isFile()) {
+      errorln("Expecting a directory, but " + destPath.getName() + " is a"
+          + " file which was passed as an argument");
+      throw invalidArgs(
+          "Expecting a directory, but " + destPath.getName() + " is a"
+              + " file which was passed as an argument");
+    }
+
+    // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
+    // audit log files and converting into avro file
+    boolean mergeAndParseResult =
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
+            fileSystem, logsPath, destPath);
+    if (!mergeAndParseResult) {
+      return FAILURE;
+    }
+
+    return SUCCESS;
+  }
+
+  private void preConditionArgsSizeCheck(String[] args) {
+    if (args.length != 2) {
       errorln(getUsage());
       throw invalidArgs("Invalid number of arguments, please specify audit "
           + "log files directory as 1st argument and destination directory "
           + "as 2nd argument");
     }
-    return SUCCESS;
   }
 
   protected static void errorln(String x) {
@@ -184,24 +190,6 @@ public class AuditTool extends Configured implements Tool, Closeable {
       final Object... args) {
     return new ExitUtil.ExitException(exitCode,
         String.format(format, args));
-  }
-
-  /**
-   * Convert a path to a URI, catching any {@code URISyntaxException}
-   * and converting to an invalid args exception.
-   *
-   * @param s3Path path to convert to a URI
-   * @return a URI of the path
-   * @throws ExitUtil.ExitException INVALID_ARGUMENT if the URI is invalid
-   */
-  protected static URI toUri(String s3Path) {
-    URI uri;
-    try {
-      uri = new URI(s3Path);
-    } catch (URISyntaxException e) {
-      throw invalidArgs("Not a valid fileystem path: %s", s3Path);
-    }
-    return uri;
   }
 
   /**
@@ -248,10 +236,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
     try {
       ExitUtil.terminate(exec(new Configuration(), argv));
     } catch (ExitUtil.ExitException e) {
-      LOG.error(e.toString());
+      LOG.error("Exception while Terminating the command ran :{}",
+          e.toString());
       System.exit(e.status);
     } catch (Exception e) {
-      LOG.error(e.toString(), e);
+      LOG.error("Exception while Terminating the command ran :{}",
+          e.toString(), e);
       ExitUtil.halt(-1, e);
     }
   }
