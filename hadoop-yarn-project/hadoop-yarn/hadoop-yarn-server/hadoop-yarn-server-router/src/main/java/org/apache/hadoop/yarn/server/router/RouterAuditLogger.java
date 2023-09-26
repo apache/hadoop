@@ -50,6 +50,7 @@ public final class RouterAuditLogger {
     public static final String FORCE_KILL_APP = "Force Kill App";
     public static final String GET_APP_REPORT = "Get Application Report";
     public static final String TARGET_CLIENT_RM_SERVICE = "RouterClientRMService";
+    public static final String TARGET_WEB_SERVICE = "RouterWebServices";
     public static final String UNKNOWN = "UNKNOWN";
     public static final String GET_APPLICATIONS = "Get Applications";
     public static final String GET_CLUSTERMETRICS = "Get ClusterMetrics";

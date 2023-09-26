@@ -120,6 +120,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
@@ -151,6 +152,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade.getRandomActiveSubCluster;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.*;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
@@ -360,9 +362,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     } catch (FederationPolicyException e) {
       // If a FederationPolicyException is thrown, the service is unavailable.
       routerMetrics.incrAppsFailedCreated();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
     } catch (Exception e) {
       routerMetrics.incrAppsFailedCreated();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e.getLocalizedMessage()).build();
     }
 
@@ -370,6 +376,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String errMsg = "Fail to create a new application.";
     LOG.error(errMsg);
     routerMetrics.incrAppsFailedCreated();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_APP, UNKNOWN,
+        TARGET_WEB_SERVICE, errMsg);
     return Response.status(Status.INTERNAL_SERVER_ERROR).entity(errMsg).build();
   }
 
