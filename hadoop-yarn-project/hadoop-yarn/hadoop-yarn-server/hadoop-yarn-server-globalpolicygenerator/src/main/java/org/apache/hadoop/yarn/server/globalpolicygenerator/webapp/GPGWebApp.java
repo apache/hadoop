@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 /**
  * The GPG webapp.
  */
-public class GPGWebApp extends WebApp{
+public class GPGWebApp extends WebApp {
   private GlobalPolicyGenerator gpg;
 
   public GPGWebApp(GlobalPolicyGenerator gpg) {
@@ -41,5 +41,6 @@ public class GPGWebApp extends WebApp{
       bind(GlobalPolicyGenerator.class).toInstance(gpg);
     }
     route("/", GPGController.class, "overview");
+    route("/policies", GPGController.class, "policies");
   }
 }

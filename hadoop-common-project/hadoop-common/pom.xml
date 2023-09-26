@@ -173,6 +173,10 @@
           <groupId>com.fasterxml.jackson.jaxrs</groupId>
           <artifactId>jackson-jaxrs-json-provider</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -390,8 +394,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.squareup.okio</groupId>
-      <artifactId>okio-jvm</artifactId>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib-jdk8</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

@@ -258,7 +258,7 @@ public class FSImage implements Closeable {
     if (startOpt == StartupOption.METADATAVERSION) {
       System.out.println("HDFS Image Version: " + layoutVersion);
       System.out.println("Software format version: " +
-        HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+          storage.getServiceLayoutVersion());
       return false;
     }
 
@@ -269,11 +269,11 @@ public class FSImage implements Closeable {
         && startOpt != StartupOption.UPGRADEONLY
         && !RollingUpgradeStartupOption.STARTED.matches(startOpt)
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
-        && layoutVersion != HdfsServerConstants.NAMENODE_LAYOUT_VERSION) {
+        && layoutVersion != storage.getServiceLayoutVersion()) {
       throw new IOException(
           "\nFile system image contains an old layout version " 
           + storage.getLayoutVersion() + ".\nAn upgrade to version "
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + " is required.\n"
+          + storage.getServiceLayoutVersion() + " is required.\n"
           + "Please restart NameNode with the \""
           + RollingUpgradeStartupOption.STARTED.getOptionString()
           + "\" option if a rolling upgrade is already started;"
@@ -462,7 +462,7 @@ public class FSImage implements Closeable {
     long oldCTime = storage.getCTime();
     storage.cTime = now();  // generate new cTime for the state
     int oldLV = storage.getLayoutVersion();
-    storage.layoutVersion = HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+    storage.layoutVersion = storage.getServiceLayoutVersion();
     
     List<StorageDirectory> errorSDs =
       Collections.synchronizedList(new ArrayList<StorageDirectory>());
@@ -523,11 +523,11 @@ public class FSImage implements Closeable {
     boolean canRollback = false;
     FSImage prevState = new FSImage(conf);
     try {
-      prevState.getStorage().layoutVersion = HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
+      prevState.getStorage().layoutVersion = storage.getServiceLayoutVersion();
       for (Iterator<StorageDirectory> it = storage.dirIterator(false); it.hasNext();) {
         StorageDirectory sd = it.next();
         if (!NNUpgradeUtil.canRollBack(sd, storage, prevState.getStorage(),
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION)) {
+            storage.getServiceLayoutVersion())) {
           continue;
         }
         LOG.info("Can perform rollback for " + sd);
@@ -538,7 +538,7 @@ public class FSImage implements Closeable {
         // If HA is enabled, check if the shared log can be rolled back as well.
         editLog.initJournalsForWrite();
         boolean canRollBackSharedEditLog = editLog.canRollBackSharedLog(
-            prevState.getStorage(), HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+            prevState.getStorage(), storage.getServiceLayoutVersion());
         if (canRollBackSharedEditLog) {
           LOG.info("Can perform rollback for shared edit log.");
           canRollback = true;

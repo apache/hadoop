@@ -1844,6 +1844,63 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
   }
 
+  @Test
+  public void testDebuggingInformationOnError() throws IOException {
+    File shellFile = null;
+    File tempFile = null;
+    Configuration conf = new YarnConfiguration();
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      tempFile = Shell.appendScriptExtension(tmpDir, "temp");
+      String testCommand = Shell.WINDOWS ? "@echo \"hello\"" : "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(testCommand);
+      writer.close();
+      Map<Path, List<String>> resources = new HashMap<>();
+      Map<String, String> env = new HashMap<>();
+      List<String> commands = new ArrayList<>();
+      if (Shell.WINDOWS) {
+        commands.add("cmd");
+        commands.add("/c");
+        commands.add("\"" + shellFile.getAbsolutePath() + "\"");
+      } else {
+        commands.add("/bin/sh \\\"" + shellFile.getAbsolutePath() + "\\\"");
+      }
+      conf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO, false);
+      conf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR, true);
+      FileOutputStream fos = new FileOutputStream(tempFile);
+      ContainerExecutor exec = new DefaultContainerExecutor();
+      exec.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
+      exec.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), "user",
+          tempFile.getName(), nmVars);
+      fos.flush();
+      fos.close();
+      FileUtil.setExecutable(tempFile, true);
+      Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
+          new String[]{tempFile.getAbsolutePath()}, tmpDir);
+      shexc.execute();
+      assertThat(shexc.getExitCode()).isZero();
+      File directorInfo =
+          new File(localLogDir, ContainerExecutor.DIRECTORY_CONTENTS);
+      File scriptCopy = new File(localLogDir, tempFile.getName());
+      Assert.assertFalse("Directory info file missing",
+          directorInfo.exists());
+      Assert.assertFalse("Copy of launch script missing",
+          scriptCopy.exists());
+    } finally {
+      // cleanup
+      if (shellFile != null && shellFile.exists()) {
+        shellFile.delete();
+      }
+      if (tempFile != null && tempFile.exists()) {
+        tempFile.delete();
+      }
+    }
+  }
+
   /**
    * Test container launch fault.
    * @throws Exception

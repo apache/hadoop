@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 /**
  * GPGUtils contains utility functions for the GPG.
@@ -58,11 +59,12 @@ public final class GPGUtils {
    * @param webAddr WebAddress.
    * @param path url path.
    * @param returnType return type.
+   * @param selectParam query parameters.
    * @param conf configuration.
    * @return response entity.
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
-      Configuration conf) {
+      Configuration conf, String selectParam) {
     Client client = Client.create();
     T obj;
 
@@ -72,6 +74,11 @@ public final class GPGUtils {
     String scheme = YarnConfiguration.useHttps(conf) ? HTTPS_PREFIX : HTTP_PREFIX;
     String webAddress = scheme + socketAddress.getHostName() + ":" + socketAddress.getPort();
     WebResource webResource = client.resource(webAddress);
+
+    if (selectParam != null) {
+      webResource = webResource.queryParam(RMWSConsts.DESELECTS, selectParam);
+    }
+
     ClientResponse response = null;
     try {
       response = webResource.path(RM_WEB_SERVICE_PATH).path(path)
@@ -90,6 +97,21 @@ public final class GPGUtils {
       }
       client.destroy();
     }
+  }
+
+  /**
+   * Performs an invocation of the remote RMWebService.
+   *
+   * @param <T> Generic T.
+   * @param webAddr WebAddress.
+   * @param path url path.
+   * @param returnType return type.
+   * @param config configuration.
+   * @return response entity.
+   */
+  public static <T> T invokeRMWebService(String webAddr,
+      String path, final Class<T> returnType, Configuration config) {
+    return invokeRMWebService(webAddr, path, returnType, config, null);
   }
 
   /**

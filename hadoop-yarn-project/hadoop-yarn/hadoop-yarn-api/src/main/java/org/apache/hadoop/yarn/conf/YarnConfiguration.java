@@ -150,7 +150,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_CONTAINER_DEBUG_INFO =
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info-on-error.enabled";
+
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = true;
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR = false;
 
   ////////////////////////////////
   // IPC Configs
@@ -4431,6 +4435,31 @@ public class YarnConfiguration extends Configuration {
   /** The Kerberos principal hostname for the yarn gpg.*/
   public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
       "kerberos.principal.hostname";
+
+  // The application cleaner class to use
+  public static final String GPG_APPCLEANER_CLASS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.class";
+  public static final String DEFAULT_GPG_APPCLEANER_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator"
+          + ".applicationcleaner.DefaultApplicationCleaner";
+
+  // The interval at which the application cleaner runs, -1 means disabled
+  public static final String GPG_APPCLEANER_INTERVAL_MS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.interval-ms";
+  public static final long DEFAULT_GPG_APPCLEANER_INTERVAL_MS = TimeUnit.SECONDS.toMillis(-1);
+
+  /**
+   * Specifications on how (many times) to contact Router for apps. We need to
+   * do this because Router might return partial application list because some
+   * sub-cluster RM is not responsive (e.g. failing over).
+   *
+   * Should have three values separated by comma: minimal success retries,
+   * maximum total retry, retry interval (ms).
+   */
+  public static final String GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      FEDERATION_GPG_PREFIX + "application.cleaner.contact.router.spec";
+  public static final String DEFAULT_GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      "3,10,600000";
 
   public static final String FEDERATION_GPG_POLICY_PREFIX =
       FEDERATION_GPG_PREFIX + "policy.generator.";

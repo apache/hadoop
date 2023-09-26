@@ -112,8 +112,8 @@ import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
- * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
- * while translating from the parameter types used in ClientProtocol to the
+ * This class forwards RouterAdminProtocol calls as RPC calls to the RouterAdmin server
+ * while translating from the parameter types used in RouterAdminProtocol to the
  * new PB types.
  */
 @InterfaceAudience.Private

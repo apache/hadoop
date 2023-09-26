@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -44,6 +46,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.ApplicationCleaner;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.PolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner.SubClusterCleaner;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.GPGWebApp;
@@ -82,6 +85,7 @@ public class GlobalPolicyGenerator extends CompositeService {
   // Scheduler service that runs tasks periodically
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
+  private ApplicationCleaner applicationCleaner;
   private PolicyGenerator policyGenerator;
   private String webAppAddress;
   private JvmPauseMonitor pauseMonitor;
@@ -123,6 +127,12 @@ public class GlobalPolicyGenerator extends CompositeService {
         conf.getInt(YarnConfiguration.GPG_SCHEDULED_EXECUTOR_THREADS,
             YarnConfiguration.DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS));
     this.subClusterCleaner = new SubClusterCleaner(conf, this.gpgContext);
+
+    this.applicationCleaner = FederationStateStoreFacade.createInstance(conf,
+        YarnConfiguration.GPG_APPCLEANER_CLASS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_CLASS, ApplicationCleaner.class);
+    this.applicationCleaner.init(conf, this.gpgContext);
+
     this.policyGenerator = new PolicyGenerator(conf, this.gpgContext);
 
     this.webAppAddress = WebAppUtils.getGPGWebAppURLWithoutScheme(conf);
@@ -147,7 +157,7 @@ public class GlobalPolicyGenerator extends CompositeService {
 
     super.serviceStart();
 
-    // Scheduler SubClusterCleaner service
+    // Schedule SubClusterCleaner service
     Configuration config = getConfig();
     long scCleanerIntervalMs = config.getTimeDuration(
         YarnConfiguration.GPG_SUBCLUSTER_CLEANER_INTERVAL_MS,
@@ -157,6 +167,18 @@ public class GlobalPolicyGenerator extends CompositeService {
           0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);
       LOG.info("Scheduled sub-cluster cleaner with interval: {}",
           DurationFormatUtils.formatDurationISO(scCleanerIntervalMs));
+    }
+
+    // Schedule ApplicationCleaner service
+    long appCleanerIntervalMs = config.getTimeDuration(
+        YarnConfiguration.GPG_APPCLEANER_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_INTERVAL_MS, TimeUnit.MILLISECONDS);
+
+    if (appCleanerIntervalMs > 0) {
+      this.scheduledExecutorService.scheduleAtFixedRate(this.applicationCleaner,
+          0, appCleanerIntervalMs, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled application cleaner with interval: {}",
+          DurationFormatUtils.formatDurationISO(appCleanerIntervalMs));
     }
 
     // Schedule PolicyGenerator
@@ -292,7 +314,19 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   public static void main(String[] argv) {
     try {
-      startGPG(argv, new YarnConfiguration());
+      YarnConfiguration conf = new YarnConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
+      if (argv.length > 1) {
+        if (argv[0].equals("-format-policy-store")) {
+          // TODO: YARN-11561. [Federation] GPG Supports Format PolicyStateStore.
+          System.err.println("format-policy-store is not yet supported.");
+        } else {
+          printUsage(System.err);
+        }
+      } else {
+        startGPG(argv, conf);
+      }
     } catch (Throwable t) {
       LOG.error("Error starting global policy generator", t);
       System.exit(-1);
@@ -306,5 +340,9 @@ public class GlobalPolicyGenerator extends CompositeService {
   @VisibleForTesting
   public WebApp getWebApp() {
     return webApp;
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: yarn gpg [-format-policy-store]");
   }
 }

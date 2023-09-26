@@ -1657,6 +1657,21 @@
   </property>
 
   <property>
+    <description>Generate additional logs about container launches,
+      if container returned with non-zero exit code.
+      Currently, this creates a copy of the launch script and lists the
+      directory contents of the container work dir. When listing directory
+      contents, we follow symlinks to a max-depth of 5(including symlinks
+      which point to outside the container work dir) which may lead to a
+      slowness in launching containers.
+      If yarn.nodemanager.log-container-debug-info.enabled is true,
+      it does not have effect on the behavior.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info-on-error.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Amount of physical memory, in MB, that can be allocated 
     for containers. If set to -1 and
     yarn.nodemanager.resource.detect-hardware-capabilities is true, it is
@@ -5539,11 +5554,27 @@
   </property>
 
   <property>
+    <description>
+      The Application Cleaner implementation class for GPG to use.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
+  </property>
+
+  <property>
     <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
       requires the CORS filter initializer to be added to the filter initializers
       list in core-site.xml.</description>
     <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the application cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
+    <value>-1s</value>
   </property>
 
   <property>
@@ -5554,6 +5585,18 @@
     </description>
     <name>yarn.federation.gpg.webapp.address</name>
     <value>0.0.0.0:8069</value>
+  </property>
+
+  <property>
+    <description>
+      Specifications on how (many times) to contact Router for apps. We need to
+      do this because Router might return partial application list because some
+      sub-cluster RM is not responsive (e.g. failing over).
+      Should have three values separated by comma: minimal success retries,
+      maximum total retry, retry interval (ms).
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
+    <value>3,10,600000</value>
   </property>
 
   <property>
