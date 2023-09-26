@@ -725,6 +725,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     put(versionNode, data, isUpdate);
   }
 
+  @Override
+  public void deleteStore() throws Exception {
+    zkManager.delete(baseZNode);
+  }
+
   /**
    * Get the subcluster for an application.
    *
