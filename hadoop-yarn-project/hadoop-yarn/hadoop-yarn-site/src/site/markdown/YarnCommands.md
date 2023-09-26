@@ -26,10 +26,10 @@ Usage: `yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [SUB_COMMAND] [COMMAND_OP
 
 YARN has an option parsing framework that employs parsing generic options as well as running classes.
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| SHELL\_OPTIONS | The common set of shell options. These are documented on the [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Shell_Options) page. |
-| GENERIC\_OPTIONS | The common set of options supported by multiple commands. See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options) for more information. |
+| COMMAND\_OPTIONS | Description                                                                                                                                                                                               |
+|:-----------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SHELL\_OPTIONS   | The common set of shell options. These are documented on the [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Shell_Options) page.                                           |
+| GENERIC\_OPTIONS | The common set of options supported by multiple commands. See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options) for more information.             |
 | COMMAND\_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands). |
 
 User Commands
@@ -42,32 +42,32 @@ Commands useful for users of a Hadoop cluster.
 Usage: `yarn application [options] `
 Usage: `yarn app [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -appId \<ApplicationId\> | Specify Application Id to be operated |
-| -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
-| -appTags \<Tags\> | Works with -list to filter applications based on input comma-separated list of application tags. |
-| -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
-| -changeQueue \<Queue Name\> | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality. |
-| -component \<Component Name\> \<Count\> | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3. |
-| -components \<Components\> | Works with -upgrade option to trigger the upgrade of specified components of the application. Multiple components should be separated by commas. |
-| -decommission \<Application Name\> | Decommissions component instances for an application / long-running service. Requires -instances option. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -help | Displays help for all commands. |
-| -instances \<Component Instances\> | Works with -upgrade option to trigger the upgrade of specified component instances of the application. Also works with -decommission option to decommission specified component instances. Multiple instances should be separated by commas. |
-| -kill \<Application ID\> | Kills the application. Set of applications can be provided separated with space |
-| -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -list | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag. |
-| -movetoqueue \<Application ID\> | Moves the application to a different queue. Deprecated command. Use 'changeQueue' instead. |
-| -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
-| -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.|
-| -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
-| -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
-| -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
+| COMMAND\_OPTIONS                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|:---------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -appId \<ApplicationId\>                     | Specify Application Id to be operated                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -appStates \<States\>                        | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED                                                                                                                                                                                                                                                |
+| -appTags \<Tags\>                            | Works with -list to filter applications based on input comma-separated list of application tags.                                                                                                                                                                                                                                                                                                                                                                                          |
+| -appTypes \<Types\>                          | Works with -list to filter applications based on input comma-separated list of application types.                                                                                                                                                                                                                                                                                                                                                                                         |
+| -changeQueue \<Queue Name\>                  | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality.                                                                                                                                                                                                                                                                                                      |
+| -component \<Component Name\> \<Count\>      | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3.                                                                                                                                                                                                                                                                                                     |
+| -components \<Components\>                   | Works with -upgrade option to trigger the upgrade of specified components of the application. Multiple components should be separated by commas.                                                                                                                                                                                                                                                                                                                                          |
+| -decommission \<Application Name\>           | Decommissions component instances for an application / long-running service. Requires -instances option. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                                                                                                          |
+| -destroy \<Application Name\>                | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                                                                                                                          |
+| -enableFastLaunch                            | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                                                                                                                                                   |
+| -flex \<Application Name or ID\>             | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -help                                        | Displays help for all commands.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -instances \<Component Instances\>           | Works with -upgrade option to trigger the upgrade of specified component instances of the application. Also works with -decommission option to decommission specified component instances. Multiple instances should be separated by commas.                                                                                                                                                                                                                                              |
+| -kill \<Application ID\>                     | Kills the application. Set of applications can be provided separated with space                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -launch \<Application Name\> \<File Name\>   | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                    |
+| -list                                        | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag.                                                                                                                                                                                                                                                        |
+| -movetoqueue \<Application ID\>              | Moves the application to a different queue. Deprecated command. Use 'changeQueue' instead.                                                                                                                                                                                                                                                                                                                                                                                                |
+| -queue \<Queue Name\>                        | Works with the movetoqueue command to specify which queue to move an application to.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -save \<Application Name\> \<File Name\>     | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                                                                  |
+| -start \<Application Name\>                  | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                                                                                                                                                                            |
+| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                         |
+| -stop \<Application Name or ID\>             | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.                                                                 |
+| -updateLifetime \<Timeout\>                  | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds.                                                                                                                                                                                                                                                                                                                                                                 |
+| -updatePriority \<Priority\>                 | Update priority of an application. ApplicationId can be passed using 'appId' option.                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 Prints application(s) report/kill application/manage long running application
 
@@ -75,11 +75,11 @@ Prints application(s) report/kill application/manage long running application
 
 Usage: `yarn applicationattempt [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -help | Help |
-| -list \<ApplicationId\> | Lists applications attempts for the given application. |
-| -status \<Application Attempt Id\> | Prints the status of the application attempt. |
+| COMMAND\_OPTIONS                   | Description                                            |
+|:-----------------------------------|:-------------------------------------------------------|
+| -help                              | Help                                                   |
+| -list \<ApplicationId\>            | Lists applications attempts for the given application. |
+| -status \<Application Attempt Id\> | Prints the status of the application attempt.          |
 
 prints applicationattempt(s) report
 
@@ -87,11 +87,11 @@ prints applicationattempt(s) report
 
 Usage: `yarn classpath [--glob |--jar <path> |-h |--help]`
 
-| COMMAND\_OPTION | Description |
-|:---- |:---- |
-| `--glob` | expand wildcards |
-| `--jar` *path* | write classpath as manifest in jar named *path* |
-| `-h`, `--help` | print help |
+| COMMAND\_OPTION | Description                                     |
+|:----------------|:------------------------------------------------|
+| `--glob`        | expand wildcards                                |
+| `--jar` *path*  | write classpath as manifest in jar named *path* |
+| `-h`, `--help`  | print help                                      |
 
 Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
@@ -99,11 +99,11 @@ Prints the class path needed to get the Hadoop jar and the required libraries. I
 
 Usage: `yarn container [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -help | Help |
+| COMMAND\_OPTIONS                 | Description                                   |
+|:---------------------------------|:----------------------------------------------|
+| -help                            | Help                                          |
 | -list \<Application Attempt Id\> | Lists containers for the application attempt. |
-| -status \<ContainerId\> | Prints the status of the container. |
+| -status \<ContainerId\>          | Prints the status of the container.           |
 
 prints container(s) report
 
@@ -117,25 +117,25 @@ Runs a jar file. Users can bundle their YARN code in a jar file and execute it u
 
 Usage: `yarn logs -applicationId <application ID> [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -am \<AM Containers\> | Prints the AM Container logs, specify comma-separated value to get logs for related AM Container |
-| -applicationId \<application ID\> | Specifies an application id |
-| -appOwner \<AppOwner\> | AppOwner (assumed to be current user if not specified) |
-| -containerId \<ContainerId\> | ContainerId (must be specified if node address is specified) |
-| -client_max_retries \<Max Retries\> | Max number of retry for a client to get the container logs for the running applications |
-| -client_retry_interval_ms \<Retry Interval\> | Retry Interval (work with client_max_retries) |
-| -clusterId \<Cluster ID\> | ClusterId |
-| -help | Help |
-| -list_nodes | Show the list of nodes that successfully aggregated logs (can only be used with finished applications) |
-| -log_files \<Log File Name\> | View a specific log type |
-| -log_files_pattern \<Log File Pattern\> | Get matched log files by using java regex |
-| -nodeAddress \<NodeAddress\> | NodeAddress in the format nodename:port (must be specified if container id is specified) |
-| -out \<Local Directory\> | Download logs to specified local folder |
-| -show_application_log_info | List all container IDs (combine this with --nodeAddress to get containerIds for all the containers on the specific NodeManager) |
-| -show_container_log_info | Show the container log metadata |
-| -size \<size\> | Prints the log file's first 'n' bytes or the last 'n' bytes (use negative values as bytes to read from the end) |
-| -size_limit_mb \<Size Limit\> | Limit the size(in megabytes) of the total logs which could be fetched (specify -1 to ignore the size limit) |
+| COMMAND\_OPTIONS                             | Description                                                                                                                     |
+|:---------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------|
+| -am \<AM Containers\>                        | Prints the AM Container logs, specify comma-separated value to get logs for related AM Container                                |
+| -applicationId \<application ID\>            | Specifies an application id                                                                                                     |
+| -appOwner \<AppOwner\>                       | AppOwner (assumed to be current user if not specified)                                                                          |
+| -containerId \<ContainerId\>                 | ContainerId (must be specified if node address is specified)                                                                    |
+| -client_max_retries \<Max Retries\>          | Max number of retry for a client to get the container logs for the running applications                                         |
+| -client_retry_interval_ms \<Retry Interval\> | Retry Interval (work with client_max_retries)                                                                                   |
+| -clusterId \<Cluster ID\>                    | ClusterId                                                                                                                       |
+| -help                                        | Help                                                                                                                            |
+| -list_nodes                                  | Show the list of nodes that successfully aggregated logs (can only be used with finished applications)                          |
+| -log_files \<Log File Name\>                 | View a specific log type                                                                                                        |
+| -log_files_pattern \<Log File Pattern\>      | Get matched log files by using java regex                                                                                       |
+| -nodeAddress \<NodeAddress\>                 | NodeAddress in the format nodename:port (must be specified if container id is specified)                                        |
+| -out \<Local Directory\>                     | Download logs to specified local folder                                                                                         |
+| -show_application_log_info                   | List all container IDs (combine this with --nodeAddress to get containerIds for all the containers on the specific NodeManager) |
+| -show_container_log_info                     | Show the container log metadata                                                                                                 |
+| -size \<size\>                               | Prints the log file's first 'n' bytes or the last 'n' bytes (use negative values as bytes to read from the end)                 |
+| -size_limit_mb \<Size Limit\>                | Limit the size(in megabytes) of the total logs which could be fetched (specify -1 to ignore the size limit)                     |
 
 Dump the container logs
 
@@ -143,12 +143,12 @@ Dump the container logs
 
 Usage: `yarn node [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -all | Works with -list to list all nodes. |
-| -list | Lists all running nodes. Supports optional use of -states to filter nodes based on node state, and -all to list all nodes. |
-| -states \<States\> | Works with -list to filter nodes based on input comma-separated list of node states. |
-| -status \<NodeId\> | Prints the status report of the node. |
+| COMMAND\_OPTIONS   | Description                                                                                                                |
+|:-------------------|:---------------------------------------------------------------------------------------------------------------------------|
+| -all               | Works with -list to list all nodes.                                                                                        |
+| -list              | Lists all running nodes. Supports optional use of -states to filter nodes based on node state, and -all to list all nodes. |
+| -states \<States\> | Works with -list to filter nodes based on input comma-separated list of node states.                                       |
+| -status \<NodeId\> | Prints the status report of the node.                                                                                      |
 
 Prints node report(s)
 
@@ -156,9 +156,9 @@ Prints node report(s)
 
 Usage: `yarn queue [options] `
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -help | Help |
+| COMMAND\_OPTIONS      | Description                     |
+|:----------------------|:--------------------------------|
+| -help                 | Help                            |
 | -status \<QueueName\> | Prints the status of the queue. |
 
 Prints queue information
@@ -201,11 +201,11 @@ Start the web proxy server
 
 Usage: `yarn resourcemanager [-format-state-store]`
 
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
-| -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
-| -format-conf-store | Formats the YarnConfigurationStore. This will clear the persisted scheduler configuration under YarnConfigurationStore. This should be run only when the ResourceManager is not running. |
+| COMMAND\_OPTIONS                                                                                                                                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -format-state-store                                                                                                                                               | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -remove-application-from-state-store \<appId\>                                                                                                                    | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -format-conf-store                                                                                                                                                | Formats the YarnConfigurationStore. This will clear the persisted scheduler configuration under YarnConfigurationStore. This should be run only when the ResourceManager is not running.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | -convert-fs-configuration [-y&#124;yarnsiteconfig] [-f&#124;fsconfig] [-r&#124;rulesconfig] [-o&#124;output-directory] [-p&#124;print] [-c&#124;cluster-resource] | WARNING: This feature is experimental and not intended for production use! Development is still in progress so the converter should not be considered complete! <br/> Converts the specified Fair Scheduler configuration to Capacity Scheduler configuration. Requires two mandatory input files. First, the yarn-site.xml with the following format: [-y&#124;yarnsiteconfig [\<Path to the yarn-site.xml file\>]. Secondly, the fair-scheduler.xml with the following format: [-f&#124;fsconfig [\<Path to the fair-scheduler.xml file\>]. This config is not mandatory if there is a reference in yarn-site.xml to the fair-scheduler.xml with the property 'yarn.scheduler.fair.allocation.file'. If both are defined, the -f option has precedence. The output directory of the config files should be specified as well, with: \[-o&#124;output-directory\ \<directory\>]. An optional rules config file could be also specified with the following format: [-r&#124;rulesconfig \<Path to the conversion rules file\>]. The rule config file's format is a property file. There's an additional \[-p&#124;print\] parameter, which is optional. If defined, the configuration will be emitted to the console instead. In its normal operation, the output files (yarn-site.xml and capacity-scheduler.xml) of this command is generated to the specified output directory. The cluster resource parameter (\[-c&#124;cluster-resource\] \<resource\>\]) needs to be specified if any queue has a maxResources setting with value as percentage. The format of the resource string is the same as in fair-scheduler.xml.) ] |
 
 Start the ResourceManager

@@ -170,10 +170,10 @@ In ```mapred-site.xml``` add
 
 # Default configuration
 
-| Property | Default value |
-| --- |-----|
-|yarn.nodemanager.numa-awareness.enabled|false|
-|yarn.nodemanager.numa-awareness.read-topology|false|
+| Property                                      | Default value |
+|-----------------------------------------------|---------------|
+| yarn.nodemanager.numa-awareness.enabled       | false         |
+| yarn.nodemanager.numa-awareness.read-topology | false         |
 
 # Enable numa balancing at OS Level (Optional)
 

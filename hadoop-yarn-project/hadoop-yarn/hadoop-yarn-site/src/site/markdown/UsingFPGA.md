@@ -41,8 +41,8 @@ Add following properties
 For `Capacity Scheduler`, `DominantResourceCalculator` MUST be configured to enable FPGA scheduling/isolation.
 Use following property to configure `DominantResourceCalculator` (In `capacity-scheduler.xml`):
 
-| Property | Default value |
-| --- | --- |
+| Property                                    | Default value                                                   |
+|---------------------------------------------|-----------------------------------------------------------------|
 | yarn.scheduler.capacity.resource-calculator | org.apache.hadoop.yarn.util.resource.DominantResourceCalculator |
 
 
@@ -64,9 +64,9 @@ By default, YARN will automatically detect and config FPGAs when above config is
 
 **1) Allowed FPGA Devices**
 
-| Property | Default value |
-| --- | --- |
-| yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices | auto |
+| Property                                                    | Default value |
+|-------------------------------------------------------------|---------------|
+| yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices | auto          |
 
   Specify FPGA devices which can be managed by YARN NodeManager, split by comma
   Number of FPGA devices will be reported to RM to make scheduling decisions.
@@ -80,17 +80,17 @@ By default, YARN will automatically detect and config FPGAs when above config is
 
 **2) Executable to discover FPGAs**
 
-| Property | Default value |
-| --- | --- |
-| yarn.nodemanager.resource-plugins.fpga.path-to-discovery-executables | |
+| Property                                                             | Default value |
+|----------------------------------------------------------------------|---------------|
+| yarn.nodemanager.resource-plugins.fpga.path-to-discovery-executables |               |
 
   When yarn.nodemanager.resource.fpga.allowed-fpga-devices=auto specified, YARN NodeManager needs to run FPGA discovery binary (now only support IntelFpgaOpenclPlugin) to get FPGA information.
   When value is empty (default), YARN NodeManager will try to locate discovery executable from vendor plugin's preference. For instance, the "IntelFpgaOpenclPlugin" will try to find "aocl" in directory got from environment "ALTERAOCLSDKROOT"
 
 **3) FPGA plugin to use**
 
-| Property | Default value |
-| --- | --- |
+| Property                                                   | Default value                                                                                        |
+|------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | yarn.nodemanager.resource-plugins.fpga.vendor-plugin.class | org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin |
 
   For now, only Intel OpenCL SDK for FPGA is supported. The IP program(.aocx file) running on FPGA should be written with OpenCL based on Intel platform.
@@ -98,9 +98,9 @@ By default, YARN will automatically detect and config FPGAs when above config is
 **4) CGroups mount**
 FPGA isolation uses CGroup [devices controller](https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt) to do per-FPGA device isolation. Following configs should be added to `yarn-site.xml` to automatically mount CGroup sub devices, otherwise admin has to manually create devices subfolder in order to use this feature.
 
-| Property | Default value |
-| --- | --- |
-| yarn.nodemanager.linux-container-executor.cgroups.mount | true |
+| Property                                                | Default value |
+|---------------------------------------------------------|---------------|
+| yarn.nodemanager.linux-container-executor.cgroups.mount | true          |
 
 For more details of YARN CGroups configurations, please refer to [Using CGroups with YARN](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html)
 

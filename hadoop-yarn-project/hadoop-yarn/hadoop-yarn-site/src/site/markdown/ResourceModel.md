@@ -39,23 +39,23 @@ The following configuration properties are supported. See below for details.
 
 `yarn-site.xml`
 
-| Configuration Property | Description |
-|:---- |:---- |
+| Configuration Property                           | Description                                                                  |
+|:-------------------------------------------------|:-----------------------------------------------------------------------------|
 | `yarn.resourcemanager.resource-profiles.enabled` | Indicates whether resource profiles support is enabled. Defaults to `false`. |
 
 `resource-types.xml`
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.resource-types` | Comma-separated list of additional resources. May not include `memory`, `memory-mb`, or `vcores` |
-| `yarn.resource-types.<resource>.units` | Default unit for the specified resource type |
-| `yarn.resource-types.<resource>.minimum-allocation` | The minimum request for the specified resource type |
-| `yarn.resource-types.<resource>.maximum-allocation` | The maximum request for the specified resource type |
+| Configuration Property                              | Description                                                                                      |
+|:----------------------------------------------------|:-------------------------------------------------------------------------------------------------|
+| `yarn.resource-types`                               | Comma-separated list of additional resources. May not include `memory`, `memory-mb`, or `vcores` |
+| `yarn.resource-types.<resource>.units`              | Default unit for the specified resource type                                                     |
+| `yarn.resource-types.<resource>.minimum-allocation` | The minimum request for the specified resource type                                              |
+| `yarn.resource-types.<resource>.maximum-allocation` | The maximum request for the specified resource type                                              |
 
 `node-resources.xml`
 
-| Configuration Property | Description |
-|:---- |:---- |
+| Configuration Property                      | Description                                                         |
+|:--------------------------------------------|:--------------------------------------------------------------------|
 | `yarn.nodemanager.resource-type.<resource>` | The count of the specified resource available from the node manager |
 
 Please note that the `resource-types.xml` and `node-resources.xml` files
@@ -107,30 +107,30 @@ The following are examples of invalid resource names:
 For each new resource type defined an optional unit property can be added to
 set the default unit for the resource type. Valid values are:
 
-|Unit Name | Meaning |
-|:---- |:---- |
-| p | pico |
-| n | nano |
-| u | micro |
-| m | milli |
-| | default, i.e. no unit |
-| k | kilo |
-| M | mega |
-| G | giga |
-| T | tera |
-| P | peta |
-| Ki | binary kilo, i.e. 1024 |
-| Mi | binary mega, i.e. 1024^2 |
-| Gi | binary giga, i.e. 1024^3 |
-| Ti | binary tera, i.e. 1024^4 |
-| Pi | binary peta, i.e. 1024^5 |
+| Unit Name | Meaning                  |
+|:----------|:-------------------------|
+| p         | pico                     |
+| n         | nano                     |
+| u         | micro                    |
+| m         | milli                    |
+|           | default, i.e. no unit    |
+| k         | kilo                     |
+| M         | mega                     |
+| G         | giga                     |
+| T         | tera                     |
+| P         | peta                     |
+| Ki        | binary kilo, i.e. 1024   |
+| Mi        | binary mega, i.e. 1024^2 |
+| Gi        | binary giga, i.e. 1024^3 |
+| Ti        | binary tera, i.e. 1024^4 |
+| Pi        | binary peta, i.e. 1024^5 |
 
 The property must be named `yarn.resource-types.<resource>.units`. Each defined
 resource may also have optional minimum and maximum properties. The properties
 must be named `yarn.resource-types.<resource>.minimum-allocation` and
 `yarn.resource-types.<resource>.maximum-allocation`.
 
-The `yarn.resource-types` property and any unit, mimimum, or maximum properties
+The `yarn.resource-types` property and any unit, minimum, or maximum properties
 may be defined in either the usual `yarn-site.xml` file or in a file named
 `resource-types.xml`. For example, the following could appear in either file:
 
@@ -164,7 +164,7 @@ Each node manager independently defines the resources that are available from
 that node. The resource definition is done through setting a property for each
 available resource. The property must be named
 `yarn.nodemanager.resource-type.<resource>` and may be placed in the usual
-`yarn-site.xml` file or in a file named `node­resources.xml`. The value of the
+`yarn-site.xml` file or in a file named `noderesources.xml`. The value of the
 property should be the amount of that resource offered by the node. For
 example:
 
@@ -196,26 +196,26 @@ set the resources requested.
 
 The properties for setting resource requests in MapReduce are:
 
-| Property | Description |
-|:---- |:---- |
-| `yarn.app.mapreduce.am.resource.mb` | Sets the memory requested for the application master container to the value in MB. No longer preferred. Use `yarn.app.mapreduce.am.resource.memory-mb` instead. Defaults to 1536. |
-| `yarn.app.mapreduce.am.resource.memory` | Sets the memory requested for the application master container to the value in MB. No longer preferred. Use `yarn.app.mapreduce.am.resource.memory-mb` instead. Defaults to 1536. |
-| `yarn.app.mapreduce.am.resource.memory-mb` | Sets the memory requested for the application master container to the value in MB. Defaults to 1536. |
-| `yarn.app.mapreduce.am.resource.cpu-vcores` | Sets the CPU requested for the application master container to the value. No longer preferred. Use `yarn.app.mapreduce.am.resource.vcores` instead. Defaults to 1. |
-| `yarn.app.mapreduce.am.resource.vcores` | Sets the CPU requested for the application master container to the value. Defaults to 1. |
+| Property                                    | Description                                                                                                                                                                                           |
+|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.app.mapreduce.am.resource.mb`         | Sets the memory requested for the application master container to the value in MB. No longer preferred. Use `yarn.app.mapreduce.am.resource.memory-mb` instead. Defaults to 1536.                     |
+| `yarn.app.mapreduce.am.resource.memory`     | Sets the memory requested for the application master container to the value in MB. No longer preferred. Use `yarn.app.mapreduce.am.resource.memory-mb` instead. Defaults to 1536.                     |
+| `yarn.app.mapreduce.am.resource.memory-mb`  | Sets the memory requested for the application master container to the value in MB. Defaults to 1536.                                                                                                  |
+| `yarn.app.mapreduce.am.resource.cpu-vcores` | Sets the CPU requested for the application master container to the value. No longer preferred. Use `yarn.app.mapreduce.am.resource.vcores` instead. Defaults to 1.                                    |
+| `yarn.app.mapreduce.am.resource.vcores`     | Sets the CPU requested for the application master container to the value. Defaults to 1.                                                                                                              |
 | `yarn.app.mapreduce.am.resource.<resource>` | Sets the quantity requested of `<resource>` for the application master container to the value. If no unit is specified, the default unit for the resource is assumed. See the section on units above. |
-| `mapreduce.map.memory.mb` | Sets the memory requested for the all map task containers to the value in MB. No longer preferred. Use `mapreduce.map.resource.memory-mb` instead. Defaults to 1024. |
-| `mapreduce.map.resource.memory` | Sets the memory requested for the all map task containers to the value in MB. No longer preferred. Use `mapreduce.map.resource.memory-mb` instead. Defaults to 1024. |
-| `mapreduce.map.resource.memory-mb` | Sets the memory requested for the all map task containers to the value in MB. Defaults to 1024. |
-| `mapreduce.map.cpu.vcores` | Sets the CPU requested for the all map task containers to the value. No longer preferred. Use `mapreduce.map.resource.vcores` instead. Defaults to 1. |
-| `mapreduce.map.resource.vcores` | Sets the CPU requested for the all map task containers to the value. Defaults to 1. |
-| `mapreduce.map.resource.<resource>` | Sets the quantity requested of `<resource>` for the all map task containers to the value. If no unit is specified, the default unit for the resource is assumed. See the section on units above. |
-| `mapreduce.reduce.memory.mb` | Sets the memory requested for the all reduce task containers to the value in MB. No longer preferred. Use `mapreduce.reduce.resource.memory-mb` instead. Defaults to 1024. |
-| `mapreduce.reduce.resource.memory` | Sets the memory requested for the all reduce task containers to the value in MB. No longer preferred. Use `mapreduce.reduce.resource.memory-mb` instead. Defaults to 1024. |
-| `mapreduce.reduce.resource.memory-mb` | Sets the memory requested for the all reduce task containers to the value in MB. Defaults to 1024. |
-| `mapreduce.reduce.cpu.vcores` | Sets the CPU requested for the all reduce task containers to the value. No longer preferred. Use `mapreduce.reduce.resource.vcores` instead. Defaults to 1. |
-| `mapreduce.reduce.resource.vcores` | Sets the CPU requested for the all reduce task containers to the value. Defaults to 1. |
-| `mapreduce.reduce.resource.<resource>` | Sets the quantity requested of `<resource>` for the all reduce task containers to the value. If no unit is specified, the default unit for the resource is assumed. See the section on units above. |
+| `mapreduce.map.memory.mb`                   | Sets the memory requested for the all map task containers to the value in MB. No longer preferred. Use `mapreduce.map.resource.memory-mb` instead. Defaults to 1024.                                  |
+| `mapreduce.map.resource.memory`             | Sets the memory requested for the all map task containers to the value in MB. No longer preferred. Use `mapreduce.map.resource.memory-mb` instead. Defaults to 1024.                                  |
+| `mapreduce.map.resource.memory-mb`          | Sets the memory requested for the all map task containers to the value in MB. Defaults to 1024.                                                                                                       |
+| `mapreduce.map.cpu.vcores`                  | Sets the CPU requested for the all map task containers to the value. No longer preferred. Use `mapreduce.map.resource.vcores` instead. Defaults to 1.                                                 |
+| `mapreduce.map.resource.vcores`             | Sets the CPU requested for the all map task containers to the value. Defaults to 1.                                                                                                                   |
+| `mapreduce.map.resource.<resource>`         | Sets the quantity requested of `<resource>` for the all map task containers to the value. If no unit is specified, the default unit for the resource is assumed. See the section on units above.      |
+| `mapreduce.reduce.memory.mb`                | Sets the memory requested for the all reduce task containers to the value in MB. No longer preferred. Use `mapreduce.reduce.resource.memory-mb` instead. Defaults to 1024.                            |
+| `mapreduce.reduce.resource.memory`          | Sets the memory requested for the all reduce task containers to the value in MB. No longer preferred. Use `mapreduce.reduce.resource.memory-mb` instead. Defaults to 1024.                            |
+| `mapreduce.reduce.resource.memory-mb`       | Sets the memory requested for the all reduce task containers to the value in MB. Defaults to 1024.                                                                                                    |
+| `mapreduce.reduce.cpu.vcores`               | Sets the CPU requested for the all reduce task containers to the value. No longer preferred. Use `mapreduce.reduce.resource.vcores` instead. Defaults to 1.                                           |
+| `mapreduce.reduce.resource.vcores`          | Sets the CPU requested for the all reduce task containers to the value. Defaults to 1.                                                                                                                |
+| `mapreduce.reduce.resource.<resource>`      | Sets the quantity requested of `<resource>` for the all reduce task containers to the value. If no unit is specified, the default unit for the resource is assumed. See the section on units above.   |
 
 Note that these resource requests may be modified by YARN to meet the configured
 minimum and maximum resource values or to be a multiple of the configured

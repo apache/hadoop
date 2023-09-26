@@ -272,19 +272,19 @@ The format of the file is the standard Java properties file format, for example
 
 The following properties are required to enable runC support:
 
-|Configuration Name | Description |
-|:---- |:---- |
+| Configuration Name                                | Description                                                                                                                       |
+|:--------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.nodemanager.linux-container-executor.group` | The Unix group of the NodeManager. It should match the yarn.nodemanager.linux-container-executor.group in the yarn-site.xml file. |
 
 The container-executor.cfg must contain a section to determine the capabilities that containers
 are allowed. It contains the following properties:
 
-|Configuration Name | Description |
-|:---- |:---- |
-| `module.enabled` | Must be "true" or "false" to enable or disable launching runC containers respectively. Default value is 0. |
-| `runc.binary` | The binary used to launch runC containers. /usr/bin/runc by default. |
-| `runc.run-root` | The directory where all runtime mounts and overlay mounts will be placed. |
-| `runc.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
+| Configuration Name       | Description                                                                                                                             |
+|:-------------------------|:----------------------------------------------------------------------------------------------------------------------------------------|
+| `module.enabled`         | Must be "true" or "false" to enable or disable launching runC containers respectively. Default value is 0.                              |
+| `runc.binary`            | The binary used to launch runC containers. /usr/bin/runc by default.                                                                    |
+| `runc.run-root`          | The directory where all runtime mounts and overlay mounts will be placed.                                                               |
+| `runc.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted.  |
 | `runc.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
 
 Please note that if you wish to run runC containers that require access to the YARN local directories, you must add them to the runc.allowed.rw-mounts list.
@@ -293,13 +293,13 @@ In addition, containers are not permitted to mount any parent of the container-e
 
 The following properties are optional:
 
-|Configuration Name | Description |
-|:---- |:---- |
-| `min.user.id` | The minimum UID that is allowed to launch applications. The default is no minimum |
-| `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
-| `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
-| `feature.tc.enabled` | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed. |
-| `feature.yarn.sysfs.enabled` | Must be "true" or "false". See YARN sysfs support for detail. The default setting is disabled. |
+| Configuration Name           | Description                                                                                                                                                                                                                           |
+|:-----------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `min.user.id`                | The minimum UID that is allowed to launch applications. The default is no minimum                                                                                                                                                     |
+| `banned.users`               | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin.                                                                                            |
+| `allowed.system.users`       | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
+| `feature.tc.enabled`         | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed.                                                                                                    |
+| `feature.yarn.sysfs.enabled` | Must be "true" or "false". See YARN sysfs support for detail. The default setting is disabled.                                                                                                                                        |
 
 Part of a container-executor.cfg which allows runC containers to be launched is below:
 

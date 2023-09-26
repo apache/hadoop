@@ -51,25 +51,25 @@ Both of the following URI's give you the cluster information.
 
 ### Elements of the *nodeInfo* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| id | long | The NodeManager id |
-| nodeHostName | string | The host name of the NodeManager |
-| totalPmemAllocatedContainersMB | long | The amount of physical memory allocated for use by containers in MB |
-| totalVmemAllocatedContainersMB | long | The amount of virtual memory allocated for use by containers in MB |
-| totalVCoresAllocatedContainers | long | The number of virtual cores allocated for use by containers |
-| vmemCheckEnabled | boolean | Whether virtual memory checking is enabled for preemption |
-| pmemCheckEnabled | boolean | Whether physical memory checking is enabled for preemption |
-| lastNodeUpdateTime | long | The last timestamp at which the health report was received (in ms since epoch) |
-| nmStartupTime | long | The timestamp at which the node was started (in ms since epoch) |
-| healthReport | string | The diagnostic health report of the node |
-| nodeHealthy | boolean | true/false indicator of if the node is healthy |
-| nodeManagerVersion | string | Version of the NodeManager |
-| nodeManagerBuildVersion | string | NodeManager build string with build version, user, and checksum |
-| nodeManagerVersionBuiltOn | string | Timestamp when NodeManager was built(in ms since epoch) |
-| hadoopVersion | string | Version of hadoop common |
-| hadoopBuildVersion | string | Hadoop common build string with build version, user, and checksum |
-| hadoopVersionBuiltOn | string | Timestamp when hadoop common was built(in ms since epoch) |
+| Properties                     | Data Type | Description                                                                    |
+|:-------------------------------|:----------|:-------------------------------------------------------------------------------|
+| id                             | long      | The NodeManager id                                                             |
+| nodeHostName                   | string    | The host name of the NodeManager                                               |
+| totalPmemAllocatedContainersMB | long      | The amount of physical memory allocated for use by containers in MB            |
+| totalVmemAllocatedContainersMB | long      | The amount of virtual memory allocated for use by containers in MB             |
+| totalVCoresAllocatedContainers | long      | The number of virtual cores allocated for use by containers                    |
+| vmemCheckEnabled               | boolean   | Whether virtual memory checking is enabled for preemption                      |
+| pmemCheckEnabled               | boolean   | Whether physical memory checking is enabled for preemption                     |
+| lastNodeUpdateTime             | long      | The last timestamp at which the health report was received (in ms since epoch) |
+| nmStartupTime                  | long      | The timestamp at which the node was started (in ms since epoch)                |
+| healthReport                   | string    | The diagnostic health report of the node                                       |
+| nodeHealthy                    | boolean   | true/false indicator of if the node is healthy                                 |
+| nodeManagerVersion             | string    | Version of the NodeManager                                                     |
+| nodeManagerBuildVersion        | string    | NodeManager build string with build version, user, and checksum                |
+| nodeManagerVersionBuiltOn      | string    | Timestamp when NodeManager was built(in ms since epoch)                        |
+| hadoopVersion                  | string    | Version of hadoop common                                                       |
+| hadoopBuildVersion             | string    | Hadoop common build string with build version, user, and checksum              |
+| hadoopVersionBuiltOn           | string    | Timestamp when hadoop common was built(in ms since epoch)                      |
 
 ### Response Examples
 
@@ -176,9 +176,9 @@ Multiple parameters can be specified.
 
 When you make a request for the list of applications, the information will be returned as a collection of app objects. See also [Application API](#Application_API) for syntax of the app object.
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| app | array of app objects(JSON)/zero or more app objects(XML) | A collection of application objects |
+| Properties | Data Type                                                | Description                         |
+|:-----------|:---------------------------------------------------------|:------------------------------------|
+| app        | array of app objects(JSON)/zero or more app objects(XML) | A collection of application objects |
 
 ### Response Examples
 
@@ -275,11 +275,11 @@ Use the following URI to obtain an app Object, for a application identified by t
 
 ### Elements of the *app* (Application) object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| id | string | The application id |
-| user | string | The user who started the application |
-| state | string | The state of the application - valid states are: NEW, INITING, RUNNING, FINISHING\_CONTAINERS\_WAIT, APPLICATION\_RESOURCES\_CLEANINGUP, FINISHED |
+| Properties   | Data Type                                                  | Description                                                                                                                                                  |
+|:-------------|:-----------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| id           | string                                                     | The application id                                                                                                                                           |
+| user         | string                                                     | The user who started the application                                                                                                                         |
+| state        | string                                                     | The state of the application - valid states are: NEW, INITING, RUNNING, FINISHING\_CONTAINERS\_WAIT, APPLICATION\_RESOURCES\_CLEANINGUP, FINISHED            |
 | containerids | array of containerids(JSON)/zero or more containerids(XML) | The list of containerids currently being used by the application on this node. If not present then no containers are currently running for this application. |
 
 ### Response Examples
@@ -361,8 +361,8 @@ With the containers API, you can obtain a collection of resources, each of which
 
 When you make a request for the list of containers, the information will be returned as collection of container objects. See also [Container API](#Container_API) for syntax of the container object.
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
+| Properties | Data Type                                                            | Description                       |
+|:-----------|:---------------------------------------------------------------------|:----------------------------------|
 | containers | array of container objects(JSON)/zero or more container objects(XML) | A collection of container objects |
 
 ### Response Examples
@@ -498,19 +498,19 @@ Use the following URI to obtain a Container Object, from a container identified 
 
 ### Elements of the *container* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| id | string | The container id |
-| state | string | State of the container - valid states are: NEW, LOCALIZING, LOCALIZATION\_FAILED, LOCALIZED, RUNNING, EXITED\_WITH\_SUCCESS, EXITED\_WITH\_FAILURE, KILLING, CONTAINER\_CLEANEDUP\_AFTER\_KILL, CONTAINER\_RESOURCES\_CLEANINGUP, DONE |
-| nodeId | string | The id of the node the container is on |
-| containerLogsLink | string | The http link to the container logs |
-| user | string | The user name of the user which started the container |
-| exitCode | int | Exit code of the container |
-| diagnostics | string | A diagnostic message for failed containers |
-| totalMemoryNeededMB | long | Total amout of memory needed by the container (in MB) |
-| totalVCoresNeeded | long | Total number of virtual cores needed by the container |
-| executionType | string | Container type of GUARANTEED or OPPORTUNISTIC |
-| containerLogFiles | array of strings | Container log file names |
+| Properties          | Data Type        | Description                                                                                                                                                                                                                            |
+|:--------------------|:-----------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| id                  | string           | The container id                                                                                                                                                                                                                       |
+| state               | string           | State of the container - valid states are: NEW, LOCALIZING, LOCALIZATION\_FAILED, LOCALIZED, RUNNING, EXITED\_WITH\_SUCCESS, EXITED\_WITH\_FAILURE, KILLING, CONTAINER\_CLEANEDUP\_AFTER\_KILL, CONTAINER\_RESOURCES\_CLEANINGUP, DONE |
+| nodeId              | string           | The id of the node the container is on                                                                                                                                                                                                 |
+| containerLogsLink   | string           | The http link to the container logs                                                                                                                                                                                                    |
+| user                | string           | The user name of the user which started the container                                                                                                                                                                                  |
+| exitCode            | int              | Exit code of the container                                                                                                                                                                                                             |
+| diagnostics         | string           | A diagnostic message for failed containers                                                                                                                                                                                             |
+| totalMemoryNeededMB | long             | Total amout of memory needed by the container (in MB)                                                                                                                                                                                  |
+| totalVCoresNeeded   | long             | Total number of virtual cores needed by the container                                                                                                                                                                                  |
+| executionType       | string           | Container type of GUARANTEED or OPPORTUNISTIC                                                                                                                                                                                          |
+| containerLogFiles   | array of strings | Container log file names                                                                                                                                                                                                               |
 
 ### Response Examples
 
@@ -610,9 +610,9 @@ A YARN admin can use a PUT operation to update the auxiliary services running on
 
 When you make a request for the list of auxiliary services, the information will be returned as collection of service information objects.
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| services | array of service information objects(JSON)/zero or more service information objects (XML) | A collection of service information objects |
+| Properties | Data Type                                                                                 | Description                                 |
+|:-----------|:------------------------------------------------------------------------------------------|:--------------------------------------------|
+| services   | array of service information objects(JSON)/zero or more service information objects (XML) | A collection of service information objects |
 
 ### GET Response Examples
 
@@ -705,41 +705,41 @@ Use the following URI to obtain resources on the NodeManager
 
 The response to this request if any GPU device is present on the NodeManager.
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| gpuDeviceInformation | GpuDeviceInformation | Contains all GPU Device Information in the system |
-| totalGpuDevices | List of GpuDevice objects | Contains the representations of GPU devices |
-| assignedGpuDevices | List of AssignedGpuDevice objects | In addition to GpuDevice, AssignedGpuDevice includes container ID |
+| Properties           | Data Type                         | Description                                                       |
+|:---------------------|:----------------------------------|:------------------------------------------------------------------|
+| gpuDeviceInformation | GpuDeviceInformation              | Contains all GPU Device Information in the system                 |
+| totalGpuDevices      | List of GpuDevice objects         | Contains the representations of GPU devices                       |
+| assignedGpuDevices   | List of AssignedGpuDevice objects | In addition to GpuDevice, AssignedGpuDevice includes container ID |
 
 ### Elements of the *GpuDeviceInformation* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| gpus | List of PerGpuDeviceInformation objects | Information objects about specific GPU devices |
-| driverVersion | String | ... |
+| Properties    | Data Type                               | Description                                    |
+|:--------------|:----------------------------------------|:-----------------------------------------------|
+| gpus          | List of PerGpuDeviceInformation objects | Information objects about specific GPU devices |
+| driverVersion | String                                  | ...                                            |
 
 ### Elements of the *PerGpuDeviceInformation* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| productName | String | Name of the GPU device |
-| uuid | String | Universally unique identifier of the GPU device |
-| minorNumber | int | Secondary identifier of the GPU device |
+| Properties  | Data Type | Description                                     |
+|:------------|:----------|:------------------------------------------------|
+| productName | String    | Name of the GPU device                          |
+| uuid        | String    | Universally unique identifier of the GPU device |
+| minorNumber | int       | Secondary identifier of the GPU device          |
 
 ### Elements of the *GpuDevice* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| index | int | Main identifier of the GPU device |
-| minorNumber | int | Secondary identifier of the GPU device |
+| Properties  | Data Type | Description                            |
+|:------------|:----------|:---------------------------------------|
+| index       | int       | Main identifier of the GPU device      |
+| minorNumber | int       | Secondary identifier of the GPU device |
 
 ### Elements of the *AssignedGpuDevice* object
 
-| Properties | Data Type | Description |
-|:---- |:---- |:---- |
-| index | int | Main identifier of the GPU device |
-| minorNumber | int | Secondary identifier of the GPU device |
-| containerId | String | Identifier of the container |
+| Properties  | Data Type | Description                            |
+|:------------|:----------|:---------------------------------------|
+| index       | int       | Main identifier of the GPU device      |
+| minorNumber | int       | Secondary identifier of the GPU device |
+| containerId | String    | Identifier of the container            |
 
 ### GET Response Examples
 

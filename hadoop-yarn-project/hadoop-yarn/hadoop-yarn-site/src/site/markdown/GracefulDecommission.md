@@ -112,7 +112,7 @@ host3
 
 Note: In the future more file formats are planned with timeout support. Follow the [YARN-5536](https://issues.apache.org/jira/browse/YARN-5536) if you are interested. 
 
-Important to mention, that the timeout is not persited. In case of a RM restart/failover the node will be immediatelly decommission. (Follow the [YARN-5464](https://issues.apache.org/jira/browse/YARN-5464) for changes in this behavior).
+Important to mention, that the timeout is not persisted. In case of a RM restart/failover the node will be immediately decommission. (Follow the [YARN-5464](https://issues.apache.org/jira/browse/YARN-5464) for changes in this behavior).
 
 ### Client or server side timeout
 
@@ -128,7 +128,7 @@ Resources will be dynamically and periodically updated on DECOMMISSIONING RMNode
 
 **DecommissioningNodeWatcher** is the YARN component that tracks DECOMMISSIONING nodes
 status automatically and asynchronously after client/admin made the graceful decommission
-request. NM periodically send RM heart beat with it latest container status.
+request. NM periodically send RM heart beat with it the latest container status.
 DecommissioningNodeWatcher tracks heartbeat updates on all DECOMMISSIONING nodes to decide when,
 after all running containers on the node have completed, will be transitioned into DECOMMISSIONED state
 after which NodeManager will be told to shutdown.
@@ -160,9 +160,9 @@ Following are the sub-status of a decommissioning node:
 Configuration
 --------
 
-| Property                                 | Value                                    |
-| ---------------------------------------- | ---------------------------------------- |
-| yarn.resourcemanager.nodemanager-graceful-decommission-timeout-secs | Timeout in seconds for YARN node graceful decommission. This is the maximal time to wait for running containers and applications to complete before transition a DECOMMISSIONING node into DECOMMISSIONED. The default value is 3600 seconds. Negative value (like -1) is handled as infinite timeout. |
-| yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs | Period in seconds of the poll timer task inside DecommissioningNodesWatcher to identify and take care of DECOMMISSIONING nodes missing regular heart beat. The default value is 20 seconds. |
-| yarn.resourcemanager.nodes.exclude-path  | Path to file with nodes to exclude.      |
-| yarn.resourcemanager.nodes.include-path  | Path to file with nodes to include.      |
+| Property                                                              | Value                                                                                                                                                                                                                                                                                                  |
+|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| yarn.resourcemanager.nodemanager-graceful-decommission-timeout-secs   | Timeout in seconds for YARN node graceful decommission. This is the maximal time to wait for running containers and applications to complete before transition a DECOMMISSIONING node into DECOMMISSIONED. The default value is 3600 seconds. Negative value (like -1) is handled as infinite timeout. |
+| yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs | Period in seconds of the poll timer task inside DecommissioningNodesWatcher to identify and take care of DECOMMISSIONING nodes missing regular heart beat. The default value is 20 seconds.                                                                                                            |
+| yarn.resourcemanager.nodes.exclude-path                               | Path to file with nodes to exclude.                                                                                                                                                                                                                                                                    |
+| yarn.resourcemanager.nodes.include-path                               | Path to file with nodes to include.                                                                                                                                                                                                                                                                    |

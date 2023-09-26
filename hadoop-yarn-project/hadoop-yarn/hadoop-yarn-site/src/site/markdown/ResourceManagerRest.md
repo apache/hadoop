@@ -51,20 +51,20 @@ Both of the following URI's give you the cluster information.
 
 ### Elements of the *clusterInfo* object
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| id | long | The cluster id |
-| startedOn | long | The time the cluster started (in ms since epoch) |
-| state | string | The ResourceManager state - valid values are: NOTINITED, INITED, STARTED, STOPPED |
-| haState | string | The ResourceManager HA state - valid values are: INITIALIZING, ACTIVE, STANDBY, STOPPED |
-| rmStateStoreName | string | Fully qualified name of class that implements the storage of ResourceManager state |
-| resourceManagerVersion | string | Version of the ResourceManager |
-| resourceManagerBuildVersion | string | ResourceManager build string with build version, user, and checksum |
-| resourceManagerVersionBuiltOn | string | Timestamp when ResourceManager was built (in ms since epoch) |
-| hadoopVersion | string | Version of hadoop common |
-| hadoopBuildVersion | string | Hadoop common build string with build version, user, and checksum |
-| hadoopVersionBuiltOn | string | Timestamp when hadoop common was built(in ms since epoch) |
-| haZooKeeperConnectionState | string | State of ZooKeeper connection of the high availability service |
+| Item                          | Data Type | Description                                                                             |
+|:------------------------------|:----------|:----------------------------------------------------------------------------------------|
+| id                            | long      | The cluster id                                                                          |
+| startedOn                     | long      | The time the cluster started (in ms since epoch)                                        |
+| state                         | string    | The ResourceManager state - valid values are: NOTINITED, INITED, STARTED, STOPPED       |
+| haState                       | string    | The ResourceManager HA state - valid values are: INITIALIZING, ACTIVE, STANDBY, STOPPED |
+| rmStateStoreName              | string    | Fully qualified name of class that implements the storage of ResourceManager state      |
+| resourceManagerVersion        | string    | Version of the ResourceManager                                                          |
+| resourceManagerBuildVersion   | string    | ResourceManager build string with build version, user, and checksum                     |
+| resourceManagerVersionBuiltOn | string    | Timestamp when ResourceManager was built (in ms since epoch)                            |
+| hadoopVersion                 | string    | Version of hadoop common                                                                |
+| hadoopBuildVersion            | string    | Hadoop common build string with build version, user, and checksum                       |
+| hadoopVersionBuiltOn          | string    | Timestamp when hadoop common was built(in ms since epoch)                               |
+| haZooKeeperConnectionState    | string    | State of ZooKeeper connection of the high availability service                          |
 
 ### Response Examples
 
@@ -155,33 +155,33 @@ The cluster metrics resource provides some overall metrics about the cluster. Mo
 
 ### Elements of the *clusterMetrics* object
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| appsSubmitted | int | The number of applications submitted |
-| appsCompleted | int | The number of applications completed |
-| appsPending | int | The number of applications pending |
-| appsRunning | int | The number of applications running |
-| appsFailed | int | The number of applications failed |
-| appsKilled | int | The number of applications killed |
-| reservedMB | long | The amount of memory reserved in MB |
-| availableMB | long | The amount of memory available in MB |
-| allocatedMB | long | The amount of memory allocated in MB |
-| totalMB | long | The amount of total memory in MB |
-| reservedVirtualCores | long | The number of reserved virtual cores |
-| availableVirtualCores | long | The number of available virtual cores |
-| allocatedVirtualCores | long | The number of allocated virtual cores |
-| totalVirtualCores | long | The total number of virtual cores |
-| containersAllocated | int | The number of containers allocated |
-| containersReserved | int | The number of containers reserved |
-| containersPending | int | The number of containers pending |
-| totalNodes | int | The total number of nodes |
-| activeNodes | int | The number of active nodes |
-| lostNodes | int | The number of lost nodes |
-| unhealthyNodes | int | The number of unhealthy nodes |
-| decommissioningNodes | int | The number of nodes being decommissioned |
-| decommissionedNodes | int | The number of nodes decommissioned |
-| rebootedNodes | int | The number of nodes rebooted |
-| shutdownNodes | int | The number of nodes shut down |
+| Item                  | Data Type | Description                              |
+|:----------------------|:----------|:-----------------------------------------|
+| appsSubmitted         | int       | The number of applications submitted     |
+| appsCompleted         | int       | The number of applications completed     |
+| appsPending           | int       | The number of applications pending       |
+| appsRunning           | int       | The number of applications running       |
+| appsFailed            | int       | The number of applications failed        |
+| appsKilled            | int       | The number of applications killed        |
+| reservedMB            | long      | The amount of memory reserved in MB      |
+| availableMB           | long      | The amount of memory available in MB     |
+| allocatedMB           | long      | The amount of memory allocated in MB     |
+| totalMB               | long      | The amount of total memory in MB         |
+| reservedVirtualCores  | long      | The number of reserved virtual cores     |
+| availableVirtualCores | long      | The number of available virtual cores    |
+| allocatedVirtualCores | long      | The number of allocated virtual cores    |
+| totalVirtualCores     | long      | The total number of virtual cores        |
+| containersAllocated   | int       | The number of containers allocated       |
+| containersReserved    | int       | The number of containers reserved        |
+| containersPending     | int       | The number of containers pending         |
+| totalNodes            | int       | The total number of nodes                |
+| activeNodes           | int       | The number of active nodes               |
+| lostNodes             | int       | The number of lost nodes                 |
+| unhealthyNodes        | int       | The number of unhealthy nodes            |
+| decommissioningNodes  | int       | The number of nodes being decommissioned |
+| decommissionedNodes   | int       | The number of nodes decommissioned       |
+| rebootedNodes         | int       | The number of nodes rebooted             |
+| shutdownNodes         | int       | The number of nodes shut down            |
 
 ### Response Examples
 
@@ -303,85 +303,85 @@ The capacity scheduler supports hierarchical queues. This one request will print
 
 ### Elements of the *schedulerInfo* object
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| type | string | Scheduler type - capacityScheduler |
-| capacity | float | Configured queue capacity in percentage relative to its parent queue |
-| usedCapacity | float | Used queue capacity in percentage |
-| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
-| queueName | string | Name of the queue |
-| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources |
-| health | A single health object | The health metrics of capacity scheduler. This metrics existed since 2.8.0, but the output was not well formatted. Hence users can not make use of this field cleanly, this is optimized from 3.2.0 onwards. |
+| Item         | Data Type                                             | Description                                                                                                                                                                                                  |
+|:-------------|:------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| type         | string                                                | Scheduler type - capacityScheduler                                                                                                                                                                           |
+| capacity     | float                                                 | Configured queue capacity in percentage relative to its parent queue                                                                                                                                         |
+| usedCapacity | float                                                 | Used queue capacity in percentage                                                                                                                                                                            |
+| maxCapacity  | float                                                 | Configured maximum queue capacity in percentage relative to its parent queue                                                                                                                                 |
+| queueName    | string                                                | Name of the queue                                                                                                                                                                                            |
+| queues       | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources                                                                                                                                                                              |
+| health       | A single health object                                | The health metrics of capacity scheduler. This metrics existed since 2.8.0, but the output was not well formatted. Hence users can not make use of this field cleanly, this is optimized from 3.2.0 onwards. |
 
 ### Elements of the queues object for a Parent queue
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| capacity | float | Configured queue capacity in percentage relative to its parent queue |
-| usedCapacity | float | Used queue capacity in percentage |
-| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
-| absoluteCapacity | float | Absolute capacity percentage this queue can use of entire cluster |
-| absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster |
-| absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
-| numApplications | int | The number of applications currently in the queue |
-| maxParallelApps | int | Maximum number of applications that can run at the same time |
-| usedResources | string | A string describing the current resources used by the queue |
-| queueName | string | The name of the queue |
-| state | string of QueueState | The state of the queue |
-| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no sub-queues. |
-| resourcesUsed | A single resource object | The total amount of resources used by this queue |
+| Item                 | Data Type                                             | Description                                                                    |
+|:---------------------|:------------------------------------------------------|:-------------------------------------------------------------------------------|
+| capacity             | float                                                 | Configured queue capacity in percentage relative to its parent queue           |
+| usedCapacity         | float                                                 | Used queue capacity in percentage                                              |
+| maxCapacity          | float                                                 | Configured maximum queue capacity in percentage relative to its parent queue   |
+| absoluteCapacity     | float                                                 | Absolute capacity percentage this queue can use of entire cluster              |
+| absoluteMaxCapacity  | float                                                 | Absolute maximum capacity percentage this queue can use of the entire cluster  |
+| absoluteUsedCapacity | float                                                 | Absolute used capacity percentage this queue is using of the entire cluster    |
+| numApplications      | int                                                   | The number of applications currently in the queue                              |
+| maxParallelApps      | int                                                   | Maximum number of applications that can run at the same time                   |
+| usedResources        | string                                                | A string describing the current resources used by the queue                    |
+| queueName            | string                                                | The name of the queue                                                          |
+| state                | string of QueueState                                  | The state of the queue                                                         |
+| queues               | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no sub-queues. |
+| resourcesUsed        | A single resource object                              | The total amount of resources used by this queue                               |
 
 ### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'queues' plus the following:
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| type | String | type of the queue - capacitySchedulerLeafQueueInfo |
-| numActiveApplications | int | The number of active applications in this queue |
-| numPendingApplications | int | The number of pending applications in this queue |
-| numContainers | int | The number of containers being used |
-| allocatedContainers | int | The number of allocated containers in this queue |
-| reservedContainers | int | The number of reserved containers in this queue |
-| pendingContainers | int | The number of pending containers in this queue |
-| maxApplications | int | The maximum number of applications this queue can have |
-| maxApplicationsPerUser | int | The maximum number of applications per user this queue can have |
-| maxActiveApplications | int | The maximum number of active applications this queue can have |
-| maxActiveApplicationsPerUser | int | The maximum number of active applications per user this queue can have |
-| userLimit | int | The minimum user limit percent set in the configuration |
-| userLimitFactor | float | The user limit factor set in the configuration |
-| users | array of users(JSON)/zero or more user objects(XML) | A collection of user objects containing resources used |
+| Item                         | Data Type                                           | Description                                                            |
+|:-----------------------------|:----------------------------------------------------|:-----------------------------------------------------------------------|
+| type                         | String                                              | type of the queue - capacitySchedulerLeafQueueInfo                     |
+| numActiveApplications        | int                                                 | The number of active applications in this queue                        |
+| numPendingApplications       | int                                                 | The number of pending applications in this queue                       |
+| numContainers                | int                                                 | The number of containers being used                                    |
+| allocatedContainers          | int                                                 | The number of allocated containers in this queue                       |
+| reservedContainers           | int                                                 | The number of reserved containers in this queue                        |
+| pendingContainers            | int                                                 | The number of pending containers in this queue                         |
+| maxApplications              | int                                                 | The maximum number of applications this queue can have                 |
+| maxApplicationsPerUser       | int                                                 | The maximum number of applications per user this queue can have        |
+| maxActiveApplications        | int                                                 | The maximum number of active applications this queue can have          |
+| maxActiveApplicationsPerUser | int                                                 | The maximum number of active applications per user this queue can have |
+| userLimit                    | int                                                 | The minimum user limit percent set in the configuration                |
+| userLimitFactor              | float                                               | The user limit factor set in the configuration                         |
+| users                        | array of users(JSON)/zero or more user objects(XML) | A collection of user objects containing resources used                 |
 
 ### Elements of the user object for users:
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| username | String | The username of the user using the resources |
-| resourcesUsed | A single resource object | The amount of resources used by the user in this queue |
-| numActiveApplications | int | The number of active applications for this user in this queue |
-| numPendingApplications | int | The number of pending applications for this user in this queue |
+| Item                   | Data Type                | Description                                                    |
+|:-----------------------|:-------------------------|:---------------------------------------------------------------|
+| username               | String                   | The username of the user using the resources                   |
+| resourcesUsed          | A single resource object | The amount of resources used by the user in this queue         |
+| numActiveApplications  | int                      | The number of active applications for this user in this queue  |
+| numPendingApplications | int                      | The number of pending applications for this user in this queue |
 
 ### Elements of the resource object for resourcesUsed in user and queues:
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| memory | int | The amount of memory used (in MB) |
-| vCores | int | The number of virtual cores |
+| Item   | Data Type | Description                       |
+|:-------|:----------|:----------------------------------|
+| memory | int       | The amount of memory used (in MB) |
+| vCores | int       | The number of virtual cores       |
 
 ### Elements of the health object in schedulerInfo:
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| lastrun | long | The time in which application started (in ms since epoch) |
-| operationsInfo | array of operations(JSON)/operation objects(XML) | A collection of operation objects |
-| lastRunDetails | array of lastRunDetails(JSON)/lastRunDetail objects(XML) | A collection of lastRunDetail objects |
+| Item           | Data Type                                                | Description                                               |
+|:---------------|:---------------------------------------------------------|:----------------------------------------------------------|
+| lastrun        | long                                                     | The time in which application started (in ms since epoch) |
+| operationsInfo | array of operations(JSON)/operation objects(XML)         | A collection of operation objects                         |
+| lastRunDetails | array of lastRunDetails(JSON)/lastRunDetail objects(XML) | A collection of lastRunDetail objects                     |
 
 ### Elements of the operation object in health:
 
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| operation | string | The type of operation |
-| nodeId | string | The id of the node to which the operation relates |
-| containerId | string | The id of the container to which the operation relates |
-| queue | string | The name of the queue to which the operation relates |
+| Item        | Data Type | Description                                            |
+|:------------|:----------|:-------------------------------------------------------|
+| operation   | string    | The type of operation                                  |
+| nodeId      | string    | The id of the node to which the operation relates      |
+| containerId | string    | The id of the container to which the operation relates |
+| queue       | string    | The name of the queue to which the operation relates   |
 
 ### Elements of the lastRunDetail object in health:
 

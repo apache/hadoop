@@ -31,9 +31,9 @@ The (active) Resource Manager:
 1. Finds space in a cluster to deploy the core of the application,
 the Application Master (AM).
 
-1. Requests that the NM on that node allocate a container and start the AM in it.
+2. Requests that the NM on that node allocate a container and start the AM in it.
 
-1. Communicates with the AM, so that the AM can request new containers and
+3. Communicates with the AM, so that the AM can request new containers and
 manipulate/release current ones, and to provide notifications about allocated
 and running containers.
 
@@ -44,9 +44,9 @@ is done using the delegation tokens attached to the container launch context. (F
 resources, using other credentials such as object store login details in cluster configuration
 files)
 
-1. Start the application as the user.
+2. Start the application as the user.
 
-1. Monitor the application and report failure to the RM.
+3. Monitor the application and report failure to the RM.
 
 To execute code in the cluster, a YARN application must:
 
@@ -60,14 +60,14 @@ detailing what is to be launched. This includes:
     * Any security credentials needed by the application to interact
     with any Hadoop cluster services and applications.
 
-1. Have an Application Master which, when launched, registers with
+2. Have an Application Master which, when launched, registers with
 the YARN RM and listens for events. Any AM which wishes to execute work in
 other containers must request them off the RM, and, when allocated, create
 a `ContainerLaunchContext` containing the command to execute, the
 environment to execute the command, binaries to localize and all relevant
 security credentials.
 
-1. Even with the NM handling the localization process, the AM must itself
+3. Even with the NM handling the localization process, the AM must itself
 be able to retrieve the security credentials supplied at launch time so
 that it itself may work with HDFS and any other services, and to pass some or
 all of these credentials down to the launched containers.
@@ -80,10 +80,10 @@ this means the user launching the application. It is the client-side part
 of the YARN application which must do this:
 
 1. Log in via `UserGroupInformation`.
-1. Identify all tokens which must be acquired.
-1. Request these tokens from the specific Hadoop services.
-1. Marshall all tokens into a byte buffer.
-1. Add them to the `ContainerLaunchContext` within the `ApplicationSubmissionContext`.
+2. Identify all tokens which must be acquired.
+3. Request these tokens from the specific Hadoop services.
+4. Marshall all tokens into a byte buffer.
+5. Add them to the `ContainerLaunchContext` within the `ApplicationSubmissionContext`.
 
 Which tokens are required? Normally, at least a token to access HDFS.
 
@@ -117,17 +117,17 @@ This means you have a relative similar workflow across secure and insecure clust
 1. During AM startup, log in to Kerberos.
 A call to `UserGroupInformation.isSecurityEnabled()` will trigger this operation.
 
-1. Enumerate the current user's credentials, through a call of
+2. Enumerate the current user's credentials, through a call of
 `UserGroupInformation.getCurrentUser().getCredentials()`.
 
-1. Filter out the AMRM token, resulting in a new set of credentials. In an
+3. Filter out the AMRM token, resulting in a new set of credentials. In an
 insecure cluster, the list of credentials will now be empty; in a secure cluster
 they will contain
 
-1. Set the credentials of all containers to be launched to this (possibly empty)
+4. Set the credentials of all containers to be launched to this (possibly empty)
 list of credentials.
 
-1. If the filtered list of tokens to renew, is non-empty start up a thread
+5. If the filtered list of tokens to renew, is non-empty start up a thread
 to renew them.
 
 ### Token Renewal
@@ -148,7 +148,7 @@ Here are the different strategies
 renewal is not needed. For applications whose life can always be measured
 in minutes or tens of minutes, this is a viable strategy.
 
-1. Start a background thread/Executor to renew the tokens at a regular interval.
+2. Start a background thread/Executor to renew the tokens at a regular interval.
 This what most YARN applications do.
 
 ## Other Aspects of YARN Security
@@ -173,10 +173,10 @@ for the node managers, if needed.
 More precisely
 
 1. The token passed by the RM to the NM for localization is refreshed/updated as needed.
-1. Tokens in the app launch context for use by the application are *not* refreshed.
+2. Tokens in the app launch context for use by the application are *not* refreshed.
 That is, if it has an out of date HDFS token —that token is not renewed. This
 also holds for tokens for Hive, HBase, etc.
-1. Therefore, to survive AM restart after token expiry, your AM has to get the
+3. Therefore, to survive AM restart after token expiry, your AM has to get the
 NMs to localize the keytab or make no HDFS accesses until (somehow) a new token has been passed to them from a client.
 
 This is primarily an issue for long-lived services (see below).
@@ -294,8 +294,8 @@ A keytab is provided for the application's use on every node.
 This is done by:
 
 1. Installing it in every cluster node's local filesystem.
-1. Providing the path to this in a configuration option.
-1. The application loading the credentials via
+2. Providing the path to this in a configuration option.
+3. The application loading the credentials via
   `UserGroupInformation.loginUserFromKeytab()`.
 
 The keytab must be in a secure directory path, where
@@ -309,23 +309,23 @@ This is effectively how all static Hadoop applications get their security creden
 
 1. A keytab is uploaded to HDFS.
 
-1. When launching the AM, the keytab is listed as a resource to localize to
+2. When launching the AM, the keytab is listed as a resource to localize to
 the AM's container.
 
-1. The Application Master is configured with the relative path to the keytab,
+3. The Application Master is configured with the relative path to the keytab,
 and logs in with `UserGroupInformation.loginUserFromKeytab()`.
 
-1. When the AM launches the container, it lists the HDFS path to the keytab
+4. When the AM launches the container, it lists the HDFS path to the keytab
 as a resource to localize.
 
-1. It adds the HDFS delegation token to the container launch context, so
+5. It adds the HDFS delegation token to the container launch context, so
 that the keytab and other application files can be localized.
 
-1. Launched containers must themselves log in via
+6. Launched containers must themselves log in via
   `UserGroupInformation.loginUserFromKeytab()`. UGI handles the login, and
   schedules a background thread to relogin the user periodically.
 
-1. Token creation is handled automatically in the Hadoop IPC and REST APIs,
+7. Token creation is handled automatically in the Hadoop IPC and REST APIs,
 the containers stay logged in via kerberos for their entire duration.
 
 This avoids the administration task of installing keytabs for specific services
@@ -346,28 +346,28 @@ This is the strategy implemented by Apache Slider (incubating).
 
 1. A keytab is uploaded to HDFS by the client.
 
-1. When launching the AM, the keytab is listed as a resource to localize to
+2. When launching the AM, the keytab is listed as a resource to localize to
 the AM's container.
 
-1. The Application Master is configured with the relative path to the keytab,
+3. The Application Master is configured with the relative path to the keytab,
 and logs in with `UserGroupInformation.loginUserFromKeytab()`. The UGI
 codepath will still automatically load the file references by
 `$HADOOP_TOKEN_FILE_LOCATION`, which is how the AMRM token is picked up.
 
-1. When the AM launches a container, it acquires all the delegation tokens
+4. When the AM launches a container, it acquires all the delegation tokens
 needed by that container, and adds them to the container's container launch context.
 
-1. Launched containers must load the delegation tokens from `$HADOOP_TOKEN_FILE_LOCATION`,
+5. Launched containers must load the delegation tokens from `$HADOOP_TOKEN_FILE_LOCATION`,
 and use them (including renewals) until they can no longer be renewed.
 
-1. The AM must implement an IPC interface which permits containers to request
+6. The AM must implement an IPC interface which permits containers to request
 a new set of delegation tokens; this interface must itself use authentication
 and ideally wire encryption.
 
-1. Before a delegation token is due to expire, the processes running in the containers
+7. Before a delegation token is due to expire, the processes running in the containers
 must request new tokens from the Application Master over the IPC channel.
 
-1. When the containers need the new tokens, the AM, logged in with a keytab,
+8. When the containers need the new tokens, the AM, logged in with a keytab,
  asks the various cluster services for new tokens.
 
 (Note there is an alternative direction for refresh operations: from AM
@@ -425,7 +425,7 @@ on cluster nodes which do not run end user code (i.e. not running YARN
 NodeManagers, and hence not schedule YARN containers; nor support logins by end
 users).
 
-1. The HTTP requests between RM proxy and the Yarn Application are not currently
+2. The HTTP requests between RM proxy and the Yarn Application are not currently
 encrypted. That is: HTTPS is not supported.
 
 #### Option 2: HTTPS Mutual Authentication
@@ -458,11 +458,11 @@ the RM proxy) provide a trusted Certificate, or it will fail the connection.
 This ensures that only the RM Proxy, which the client authenticated against, can
 access it.
 
-| `yarn.resourcemanager.application-https.policy` | Behavior |
-|:---- |:---- |
-| `NONE` | The RM will do nothing special.|
-| `LENIENT` | The RM will generate and provide a keystore and truststore to the AM, which it is free to use for HTTPS in its tracking URL web server.  The RM proxy will still allow HTTP connections to AMs that opt not to use HTTPS.|
-| `STRICT` | this is the same as LENIENT, except that the RM proxy will  only allow HTTPS connections to AMs; HTTP connections will be blocked and result in a warning page to the user.|
+| `yarn.resourcemanager.application-https.policy` | Behavior                                                                                                                                                                                                                  |
+|:------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `NONE`                                          | The RM will do nothing special.                                                                                                                                                                                           |
+| `LENIENT`                                       | The RM will generate and provide a keystore and truststore to the AM, which it is free to use for HTTPS in its tracking URL web server.  The RM proxy will still allow HTTP connections to AMs that opt not to use HTTPS. |
+| `STRICT`                                        | this is the same as LENIENT, except that the RM proxy will  only allow HTTPS connections to AMs; HTTP connections will be blocked and result in a warning page to the user.                                               |
 
 The default value is `OFF`.
 

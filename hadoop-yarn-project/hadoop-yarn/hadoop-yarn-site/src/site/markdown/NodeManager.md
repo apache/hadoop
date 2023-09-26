@@ -34,13 +34,13 @@ The NodeManager runs services to determine the health of the node it is executin
 
 The following configuration parameters can be used to modify the disk checks:
 
-| Configuration Name | Allowed Values | Description |
-|:---- |:---- |:---- |
-| `yarn.nodemanager.disk-health-checker.enable` | true, false | Enable or disable the disk health checker service |
-| `yarn.nodemanager.disk-health-checker.interval-ms` | Positive integer | The interval, in milliseconds, at which the disk checker should run; the default value is 2 minutes |
-| `yarn.nodemanager.disk-health-checker.min-healthy-disks` | Float between 0-1 | The minimum fraction of disks that must pass the check for the NodeManager to mark the node as healthy; the default is 0.25 |
-| `yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage` | Float between 0-100 | The maximum percentage of disk space that may be utilized before a disk is marked as unhealthy by the disk checker service. This check is run for every disk used by the NodeManager. The default value is 90 i.e. 90% of the disk can be used. |
-| `yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb` | Integer | The minimum amount of free space that must be available on the disk for the disk checker service to mark the disk as healthy. This check is run for every disk used by the NodeManager. The default value is 0 i.e. the entire disk can be used. |
+| Configuration Name                                                              | Allowed Values      | Description                                                                                                                                                                                                                                      |
+|:--------------------------------------------------------------------------------|:--------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.disk-health-checker.enable`                                   | true, false         | Enable or disable the disk health checker service                                                                                                                                                                                                |
+| `yarn.nodemanager.disk-health-checker.interval-ms`                              | Positive integer    | The interval, in milliseconds, at which the disk checker should run; the default value is 2 minutes                                                                                                                                              |
+| `yarn.nodemanager.disk-health-checker.min-healthy-disks`                        | Float between 0-1   | The minimum fraction of disks that must pass the check for the NodeManager to mark the node as healthy; the default is 0.25                                                                                                                      |
+| `yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage` | Float between 0-100 | The maximum percentage of disk space that may be utilized before a disk is marked as unhealthy by the disk checker service. This check is run for every disk used by the NodeManager. The default value is 90 i.e. 90% of the disk can be used.  |
+| `yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb`               | Integer             | The minimum amount of free space that must be available on the disk for the disk checker service to mark the disk as healthy. This check is run for every disk used by the NodeManager. The default value is 0 i.e. the entire disk can be used. |
 
 ### External Health Script
 
@@ -54,20 +54,20 @@ Users may specify their own health checker scripts that will be invoked by the h
 
 Users can specify up to 4 scripts to run individually with the `yarn.nodemanager.health-checker.scripts` configuration. Also these options can be configured for all scripts (global configurations):
 
-| Configuration Name | Allowed Values | Description |
-|:---- |:---- |:---- |
-|`yarn.nodemanager.health-checker.script`| String | The keywords for the health checker scripts separated by a comma. The default is "script". |
+| Configuration Name                            | Allowed Values   | Description                                                                                           |
+|:----------------------------------------------|:-----------------|:------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.health-checker.script`      | String           | The keywords for the health checker scripts separated by a comma. The default is "script".            |
 | `yarn.nodemanager.health-checker.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs; the default value is 10 minutes. |
-| `yarn.nodemanager.health-checker.timeout-ms` | Positive integer | The timeout for the health script that's executed; the default value is 20 minutes. |
+| `yarn.nodemanager.health-checker.timeout-ms`  | Positive integer | The timeout for the health script that's executed; the default value is 20 minutes.                   |
 
 The following options can be set for every health checker script. The %s symbol is substituted with each keyword provided in `yarn.nodemanager.health-checker.script`.
 
-| Configuration Name | Allowed Values | Description |
-|:---- |:---- |:---- |
-| `yarn.nodemanager.health-checker.%s.path` | String | Absolute path to the health check script to be run. Mandatory argument for each script. |
-| `yarn.nodemanager.health-checker.%s.opts` | String | Arguments to be passed to the script when the script is executed. Mandatory argument for each script. |
-| `yarn.nodemanager.health-checker.%s.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs.  |
-| `yarn.nodemanager.health-checker.%s.timeout-ms` | Positive integer | The timeout for the health script that's executed. |
+| Configuration Name                               | Allowed Values   | Description                                                                                           |
+|:-------------------------------------------------|:-----------------|:------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.health-checker.%s.path`        | String           | Absolute path to the health check script to be run. Mandatory argument for each script.               |
+| `yarn.nodemanager.health-checker.%s.opts`        | String           | Arguments to be passed to the script when the script is executed. Mandatory argument for each script. |
+| `yarn.nodemanager.health-checker.%s.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs.                                  |
+| `yarn.nodemanager.health-checker.%s.timeout-ms`  | Positive integer | The timeout for the health script that's executed.                                                    |
 
 The interval and timeout options are not required to be specified. In that case the global configurations will be used.
 
@@ -82,26 +82,26 @@ This document gives an overview of NodeManager (NM) restart, a feature that enab
 
 Step 1. To enable NM Restart functionality, set the following property in **conf/yarn-site.xml** to *true*.
 
-| Property | Value |
-|:---- |:---- |
+| Property                            | Value                                   |
+|:------------------------------------|:----------------------------------------|
 | `yarn.nodemanager.recovery.enabled` | `true`, (default value is set to false) |
 
 Step 2.  Configure a path to the local file-system directory where the NodeManager can save its run state.
 
-| Property | Description |
-|:---- |:---- |
+| Property                        | Description                                                                                                                                                         |
+|:--------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.nodemanager.recovery.dir` | The local filesystem directory in which the node manager will store state when recovery is enabled. The default value is set to `$hadoop.tmp.dir/yarn-nm-recovery`. |
 
 Step 3: Enable NM supervision under recovery to prevent running containers from getting cleaned up when NM exits.
 
-| Property | Description |
-|:---- |:---- |
+| Property                               | Description                                                                                                                                                                                        |
+|:---------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.nodemanager.recovery.supervised` | If enabled, NodeManager running will not try to cleanup containers as it exits with the assumption it will be immediately be restarted and recover containers The default value is set to 'false'. |
 
 Step 4.  Configure a valid RPC address for the NodeManager.
 
-| Property | Description |
-|:---- |:---- |
+| Property                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|:---------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.nodemanager.address` | Ephemeral ports (port 0, which is default) cannot be used for the NodeManager's RPC server specified via yarn.nodemanager.address as it can make NM use different ports before and after a restart. This will break any previously running clients that were communicating with the NM before restart. Explicitly setting yarn.nodemanager.address to an address with specific port number (for e.g 0.0.0.0:45454) is a precondition for enabling NM restart. |
 
 Step 5.  Auxiliary services.
@@ -169,11 +169,11 @@ This section describes the configuration variables for aux-service classpath iso
 
 The following settings need to be set in *yarn-site.xml*.
 
-|Configuration Name | Description |
-|:---- |:---- |
-| `yarn.nodemanager.aux-services.%s.classpath` | Provide local directory which includes the related jar file as well as all the dependencies’ jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all jars under the dep directory. |
-| `yarn.nodemanager.aux-services.%s.remote-classpath` | Provide remote absolute or relative path to jar file(We also support zip, tar.gz, tgz, tar and gz files as well). For the same aux-service class, we can only specify one of the configurations: yarn.nodemanager.aux-services.%s.classpath or yarn.nodemanager.aux-services.%s.remote-classpath. The YarnRuntimeException will be thrown. Please also make sure that the owner of the jar file must be the same as the NodeManager user and the permbits should satisfy (permbits & 0022)==0 (such as 600, it's not writable by group or other).|
-| `yarn.nodemanager.aux-services.%s.system-classes` | Normally, we do not need to set this configuration. The class would be loaded from customized classpath if it does not belongs to system-classes. For example, by default, the package org.apache.hadoop is in the system-classes, if your class CustomAuxService is in the package org.apache.hadoop, it would not be loaded from customized classpath. To solve this, either we could change the package for CustomAuxService, or configure our own system-classes which exclude org.apache.hadoop. |
+| Configuration Name                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|:----------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.aux-services.%s.classpath`        | Provide local directory which includes the related jar file as well as all the dependencies’ jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all jars under the dep directory.                                                                                                                                                                                                                                                                                                                                |
+| `yarn.nodemanager.aux-services.%s.remote-classpath` | Provide remote absolute or relative path to jar file(We also support zip, tar.gz, tgz, tar and gz files as well). For the same aux-service class, we can only specify one of the configurations: yarn.nodemanager.aux-services.%s.classpath or yarn.nodemanager.aux-services.%s.remote-classpath. The YarnRuntimeException will be thrown. Please also make sure that the owner of the jar file must be the same as the NodeManager user and the permbits should satisfy (permbits & 0022)==0 (such as 600, it's not writable by group or other). |
+| `yarn.nodemanager.aux-services.%s.system-classes`   | Normally, we do not need to set this configuration. The class would be loaded from customized classpath if it does not belongs to system-classes. For example, by default, the package org.apache.hadoop is in the system-classes, if your class CustomAuxService is in the package org.apache.hadoop, it would not be loaded from customized classpath. To solve this, either we could change the package for CustomAuxService, or configure our own system-classes which exclude org.apache.hadoop.                                             |
 
 ### Configuration Examples
 
@@ -213,12 +213,12 @@ This allows a cluster admin to configure a cluster such that a task attempt will
 
 The following parameters can be used to configure the container log dir sizes.
 
-| Configuration Name | Allowed Values | Description |
-|:---- |:---- |:---- |
-| `yarn.nodemanager.container-log-monitor.enable` | true, false | Flag to enable the container log monitor which enforces container log directory size limits. Default is false. |
-| `yarn.nodemanager.container-log-monitor.interval-ms` | Positive integer | How often to check the usage of a container's log directories in milliseconds. Default is 60000 ms. |
-| `yarn.nodemanager.container-log-monitor.dir-size-limit-bytes` | Long | The disk space limit, in bytes, for a single container log directory. Default is 1000000000. |
-| `yarn.nodemanager.container-log-monitor.total-size-limit-bytes` | Long | The disk space limit, in bytes, for all of a container's logs. The default is 10000000000. |
+| Configuration Name                                              | Allowed Values   | Description                                                                                                    |
+|:----------------------------------------------------------------|:-----------------|:---------------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.container-log-monitor.enable`                 | true, false      | Flag to enable the container log monitor which enforces container log directory size limits. Default is false. |
+| `yarn.nodemanager.container-log-monitor.interval-ms`            | Positive integer | How often to check the usage of a container's log directories in milliseconds. Default is 60000 ms.            |
+| `yarn.nodemanager.container-log-monitor.dir-size-limit-bytes`   | Long             | The disk space limit, in bytes, for a single container log directory. Default is 1000000000.                   |
+| `yarn.nodemanager.container-log-monitor.total-size-limit-bytes` | Long             | The disk space limit, in bytes, for all of a container's logs. The default is 10000000000.                     |
 
 Scale Heart-beat Interval Based on CPU Utilization
 -------------------------------------------------
@@ -229,11 +229,11 @@ This allows a cluster admin to configure a cluster to allow the heart-beat betwe
 
 The following parameters can be used to configure the heart-beat interval and whether and how it scales.
 
-| Configuration Name | Allowed Values | Description |
-|:---- |:---- |:---- |
-| `yarn.resourcemanager.nodemanagers.heartbeat-interval-ms` | Long | Specifies the default heart-beat interval in milliseconds for every NodeManager in the cluster. Default is 1000 ms. |
-| `yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable` | true, false | Enables heart-beat interval scaling.  If true, The NodeManager heart-beat interval will scale based on the difference between the CPU utilization on the node and the cluster-wide average CPU utilization. Default is false. |
-| `yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms` | Positive Long | If heart-beat interval scaling is enabled, this is the minimum heart-beat interval in milliseconds. Default is 1000 ms. |
-| `yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms` | Positive Long | If heart-beat interval scaling is enabled, this is the maximum heart-beat interval in milliseconds. Default is 1000 ms. |
-| `yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor` | Positive Float | If heart-beat interval scaling is enabled, this controls the degree of adjustment when speeding up heartbeat intervals. At 1.0, 20% less than the average cluster-wide CPU utilization will result in a 20% decrease in the heartbeat interval. Default is 1.0. |
+| Configuration Name                                                     | Allowed Values | Description                                                                                                                                                                                                                                                         |
+|:-----------------------------------------------------------------------|:---------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-ms`              | Long           | Specifies the default heart-beat interval in milliseconds for every NodeManager in the cluster. Default is 1000 ms.                                                                                                                                                 |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable`  | true, false    | Enables heart-beat interval scaling.  If true, The NodeManager heart-beat interval will scale based on the difference between the CPU utilization on the node and the cluster-wide average CPU utilization. Default is false.                                       |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms`          | Positive Long  | If heart-beat interval scaling is enabled, this is the minimum heart-beat interval in milliseconds. Default is 1000 ms.                                                                                                                                             |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms`          | Positive Long  | If heart-beat interval scaling is enabled, this is the maximum heart-beat interval in milliseconds. Default is 1000 ms.                                                                                                                                             |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor`  | Positive Float | If heart-beat interval scaling is enabled, this controls the degree of adjustment when speeding up heartbeat intervals. At 1.0, 20% less than the average cluster-wide CPU utilization will result in a 20% decrease in the heartbeat interval. Default is 1.0.     |
 | `yarn.resourcemanager.nodemanagers.heartbeat-interval-slowdown-factor` | Positive Float | If heart-beat interval scaling is enabled, this controls the degree of adjustment when slowing down heartbeat intervals. At 1.0, 20% greater than the average cluster-wide CPU utilization will result in a 20% increase in the heartbeat interval. Default is 1.0. |
