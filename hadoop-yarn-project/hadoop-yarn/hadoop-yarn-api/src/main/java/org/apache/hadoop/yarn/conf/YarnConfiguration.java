@@ -2230,7 +2230,7 @@ public class YarnConfiguration extends Configuration {
 
   /*
    * Flag to indicate whether JDK17's required add-exports flags should be added to
-   * container localizers regardless of the user specified java opts.
+   * container localizers regardless of the user specified JAVA_OPTS.
    */
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
       NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
