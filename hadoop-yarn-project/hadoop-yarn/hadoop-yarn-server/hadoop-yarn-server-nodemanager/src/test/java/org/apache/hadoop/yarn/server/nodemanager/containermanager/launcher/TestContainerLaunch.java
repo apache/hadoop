@@ -585,6 +585,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
         "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
     String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ? additionalJdk17PlusOptions : "";
+
     if (Shell.WINDOWS) {
       Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
           + "%HADOOP_HOME%/share/hadoop/common/lib/*;"
