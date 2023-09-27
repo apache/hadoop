@@ -1217,7 +1217,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // Step3. Returns the Queue Policies result.
     return QueryFederationQueuePoliciesResponse.newInstance(
-            totalSize, totalPage, currentPage, pageSize, subFederationQueueWeights);
+        totalSize, totalPage, currentPage, pageSize, subFederationQueueWeights);
   }
 
   /**
