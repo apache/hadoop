@@ -232,6 +232,7 @@ public class GlobalPolicyGenerator extends CompositeService {
   protected void serviceStop() throws Exception {
     if (this.registry != null) {
       this.registry.stop();
+      this.registry = null;
     }
 
     try {
