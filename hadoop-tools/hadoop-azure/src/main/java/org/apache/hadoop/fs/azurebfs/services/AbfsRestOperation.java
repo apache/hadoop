@@ -83,7 +83,7 @@ public class AbfsRestOperation {
   private String failureReason;
 
   /**
-   * This variable stores the tracing context used for last Rest Server Call
+   * This variable stores the tracing context used for last Rest Operation
    */
   private TracingContext lastUsedTracingContext;
 
@@ -422,8 +422,8 @@ public class AbfsRestOperation {
    * Creates a new Tracing context before entering the retry loop of a rest operation
    * This will ensure all rest operations have unique
    * tracing context that will be used for all the retries
-   * @param tracingContext
-   * @return tracingContext
+   * @param tracingContext original tracingContext
+   * @return tracingContext new tracingContext object created from original one.
    */
   @VisibleForTesting
   public TracingContext createNewTracingContext(final TracingContext tracingContext) {
@@ -432,7 +432,7 @@ public class AbfsRestOperation {
 
   /**
    * Returns the tracing contest used for last rest operation made
-   * @return
+   * @return tracingContext lasUserTracingContext
    */
   @VisibleForTesting
   public final TracingContext getLastTracingContext() {

@@ -60,7 +60,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -71,6 +70,7 @@ import static org.mockito.Mockito.when;
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
+  private static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -117,7 +117,6 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListPathTracingContext() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final String TEST_CONTINUATION_TOKEN = "continuation";
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
     final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
     final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
@@ -167,7 +166,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that there were 2 paginated ListPath calls were made.
     Mockito.verify(spiedClient, times(1)).listPath(
-        "/",false,
+        "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
         null, spiedTracingContext);
     Mockito.verify(spiedClient, times(1)).listPath(

@@ -41,6 +41,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 
+/**
+ * Utility class to help defining mock behavior on AbfsClient and AbfsRestOperation
+ * objects which are protected inside services package.
+ */
 public final class AbfsClientTestUtil {
 
   private AbfsClientTestUtil() {
