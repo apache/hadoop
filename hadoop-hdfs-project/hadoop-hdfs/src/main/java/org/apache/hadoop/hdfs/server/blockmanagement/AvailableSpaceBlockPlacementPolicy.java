@@ -55,7 +55,7 @@ public class AvailableSpaceBlockPlacementPolicy extends
           DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 
   private int balancedSpaceToleranceLimit =
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
   private boolean optimizeLocal;
 
   @Override
@@ -77,9 +77,9 @@ public class AvailableSpaceBlockPlacementPolicy extends
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
 
     balancedSpaceToleranceLimit =
-            conf.getInt(
-                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY,
-                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT);
+      conf.getInt(
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY,
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT);
 
     optimizeLocal = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
@@ -213,7 +213,7 @@ public class AvailableSpaceBlockPlacementPolicy extends
       final DatanodeDescriptor b, boolean isBalanceLocal) {
 
     boolean toleranceLimit = Math.min(a.getDfsUsedPercent(), b.getDfsUsedPercent())
-            >= balancedSpaceToleranceLimit ;
+            >= balancedSpaceToleranceLimit;
     if (a.equals(b)
         || (!toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
             < balancedSpaceTolerance) || ((
