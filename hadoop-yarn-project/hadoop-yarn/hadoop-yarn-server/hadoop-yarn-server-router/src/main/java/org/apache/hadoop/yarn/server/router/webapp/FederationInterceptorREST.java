@@ -408,6 +408,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+        ApplicationId applicationId = ApplicationId.fromString(response.getEntity().toString());
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
+            TARGET_WEB_SERVICE, applicationId, subClusterId);
         return response;
       }
     } catch (Exception e) {
@@ -498,6 +501,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrAppsFailedSubmitted();
       String errMsg = "Missing ApplicationSubmissionContextInfo or "
           + "applicationSubmissionContext information.";
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_WEB_SERVICE, errMsg);
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
 
