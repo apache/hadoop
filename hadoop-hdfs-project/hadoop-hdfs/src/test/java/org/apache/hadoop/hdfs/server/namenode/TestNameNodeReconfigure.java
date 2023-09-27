@@ -667,7 +667,7 @@ public class TestNameNodeReconfigure {
         LambdaTestUtils.intercept(ReconfigurationException.class,
             () -> nameNode.reconfigurePropertyImpl(key, "-20"));
     assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
-    assertEquals(key+" = '-20' is invalid. It should be a "
+    assertEquals(key + " = '-20' is invalid. It should be a "
         +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
 
     // Ensure none of the values were updated from the defaults
@@ -677,7 +677,7 @@ public class TestNameNodeReconfigure {
     reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
         () -> nameNode.reconfigurePropertyImpl(key, "0"));
     assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
-    assertEquals(key+" = '0' is invalid. It should be a "
+    assertEquals(key + " = '0' is invalid. It should be a "
         +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
 
     // Ensure none of the values were updated from the defaults
