@@ -228,9 +228,19 @@
         <exclusions>
           <exclusion>
             <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-common</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib-common</artifactId>
+        <version>${kotlin-stdlib.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jetbrains.kotlin</groupId>
