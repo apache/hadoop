@@ -462,10 +462,8 @@ public abstract class LogAggregationFileController {
     } else {
       final FsLogPathKey key = new FsLogPathKey(remoteFS.getClass(), qualified);
       FileSystem finalRemoteFS = remoteFS;
-      FS_CHMOD_CACHE.computeIfAbsent(key, k -> {
-        fsSupportsChmod = checkFsSupportsChmod(finalRemoteFS, remoteRootLogDir, qualified);
-        return fsSupportsChmod;
-      });
+      fsSupportsChmod = FS_CHMOD_CACHE.computeIfAbsent(key,
+          k -> checkFsSupportsChmod(finalRemoteFS, remoteRootLogDir, qualified));
     }
   }
 
