@@ -5686,7 +5686,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public void setMinBlocksForWrite(int minBlocksForWrite) {
     ensurePositiveInt(minBlocksForWrite,
-        DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY);
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY);
     placementPolicies.getPolicy(CONTIGUOUS).setMinBlocksForWrite(minBlocksForWrite);
     placementPolicies.getPolicy(STRIPED).setMinBlocksForWrite(minBlocksForWrite);
   }

@@ -2681,7 +2681,7 @@ public class NameNode extends ReconfigurableBase implements
     try {
       int newSetting = adjustNewVal(
           DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT, newValue);
-      this.namesystem.getBlockManager().setMinBlocksForWrite(newSetting);
+      namesystem.getBlockManager().setMinBlocksForWrite(newSetting);
       return String.valueOf(newSetting);
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newValue, getConf().get(property), e);
