@@ -91,8 +91,6 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
-  public static final String MD5_ERROR = "The MD5 value specified in the request "
-      + "did not match with the MD5 value calculated by the server.";
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2019-12-12";
@@ -875,10 +873,15 @@ public class AbfsClient implements Closeable {
         && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
   }
 
-  private boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
+  /**
+   * To check if the failure exception returned by server is due to MD5 Mismatch
+   * @param e Exception returned by AbfsRestOperation
+   * @return boolean whether exception is due to MD5Mismatch or not
+   */
+  protected boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
     return ((AbfsRestOperationException) e).getStatusCode()
         == HttpURLConnection.HTTP_BAD_REQUEST
-        && ((AbfsRestOperationException) e).getErrorMessage().contains(MD5_ERROR);
+        && e.getMessage().contains(MD5_ERROR_SERVER_MESSAGE);
   }
 
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
@@ -1453,23 +1456,17 @@ public class AbfsClient implements Closeable {
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final AppendRequestParameters reqParams, final byte[] buffer)
       throws AbfsRestOperationException {
-    try {
-      MessageDigest md5Digest = MessageDigest.getInstance(MD5);
-      byte[] dataToBeWritten = new byte[reqParams.getLength()];
+    byte[] dataToBeWritten = new byte[reqParams.getLength()];
 
-      if (reqParams.getoffset() == 0 && reqParams.getLength() == buffer.length) {
-        dataToBeWritten = buffer;
-      } else {
-        System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0,
-            reqParams.getLength());
-      }
-
-      byte[] md5Bytes = md5Digest.digest(dataToBeWritten);
-      String md5Hash = Base64.getEncoder().encodeToString(md5Bytes);
-      requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
-    } catch (NoSuchAlgorithmException ex) {
-      throw new AbfsRuntimeException(ex);
+    if (reqParams.getoffset() == 0 && reqParams.getLength() == buffer.length) {
+      dataToBeWritten = buffer;
+    } else {
+      System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0,
+          reqParams.getLength());
     }
+
+    String md5Hash = computeMD5Hash(dataToBeWritten);
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
   }
 
   /**
@@ -1499,16 +1496,10 @@ public class AbfsClient implements Closeable {
       System.arraycopy(buffer, bufferOffset, dataRead, 0, numberOfBytesRead);
     }
 
-    try {
-      MessageDigest md5Digest = MessageDigest.getInstance(MD5);
-      byte[] md5Bytes = md5Digest.digest(dataRead);
-      String md5HashComputed = Base64.getEncoder().encodeToString(md5Bytes);
-      String md5HashActual = result.getResponseHeader(CONTENT_MD5);
-      if (!md5HashComputed.equals(md5HashActual)) {
-        throw new AbfsInvalidChecksumException(result.getRequestId());
-      }
-    } catch (NoSuchAlgorithmException ex) {
-      throw new AbfsRuntimeException(ex, result.getRequestId());
+    String md5HashComputed = computeMD5Hash(dataRead);
+    String md5HashActual = result.getResponseHeader(CONTENT_MD5);
+    if (!md5HashComputed.equals(md5HashActual)) {
+      throw new AbfsInvalidChecksumException(result.getRequestId());
     }
   }
 
@@ -1538,6 +1529,24 @@ public class AbfsClient implements Closeable {
    */
   private boolean isChecksumValidationEnabled() {
     return getAbfsConfiguration().getIsChecksumValidationEnabled();
+  }
+
+  /**
+   * Ensures single object creation for md5Digest per client and computes
+   * MD5Hash using that object.
+   * @param data of which hash is calculated
+   * @return MD5 Hash of the data
+   * @throws AbfsRestOperationException
+   */
+  @VisibleForTesting
+  public String computeMD5Hash(final byte[] data) throws AbfsRestOperationException {
+    try {
+      MessageDigest md5Digest = MessageDigest.getInstance(MD5);
+      byte[] md5Bytes = md5Digest.digest(data);
+      return Base64.getEncoder().encodeToString(md5Bytes);
+    } catch (NoSuchAlgorithmException ex) {
+      throw new AbfsRuntimeException(ex);
+    }
   }
 
   @VisibleForTesting

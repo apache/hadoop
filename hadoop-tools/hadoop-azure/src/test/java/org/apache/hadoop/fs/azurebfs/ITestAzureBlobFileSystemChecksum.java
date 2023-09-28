@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -33,13 +32,17 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MD5_ERROR_SERVER_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Test For Verifying Checksum Related Operations
@@ -74,8 +77,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   public void testReadWithChecksumAtDifferentOffsets() throws Exception {
     AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, true);
     AbfsClient client = fs.getAbfsStore().getClient();
+    fs.getAbfsStore().setClient(client);
     Path path = path("testPath");
-    fs.create(path);
 
     byte[] data = generateRandomBytes(16 * ONE_MB);
     FSDataOutputStream out = fs.create(path);
@@ -94,6 +97,44 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   public void testWriteReadWithChecksumAndOptions() throws Exception {
     testWriteReadWithChecksumAndOptionsInternal(true);
     testWriteReadWithChecksumAndOptionsInternal(false);
+  }
+
+  @Test
+  public void testAbfsInvalidChecksumExceptionInAppend() throws Exception {
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, true);
+    AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
+    fs.getAbfsStore().setClient(spiedClient);
+    Path path = path("testPath");
+    fs.create(path);
+    byte[] data= generateRandomBytes(4 * ONE_MB);
+    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes());
+    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any());
+    AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
+      appendWithOffsetHelper(spiedClient, path, data, fs, 0);
+    });
+
+    Assertions.assertThat(ex.getErrorMessage()).contains(
+        MD5_ERROR_SERVER_MESSAGE);
+  }
+
+  @Test
+  public void testAbfsInvalidChecksumExceptionInRead() throws Exception {
+    AzureBlobFileSystem fs = getConfiguredFileSystem(4 * ONE_MB, 4 * ONE_MB, true);
+    AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
+    fs.getAbfsStore().setClient(spiedClient);
+    Path path = path("testPath");
+    byte[] data = generateRandomBytes(3 * ONE_MB);
+    FSDataOutputStream out = fs.create(path);
+    out.write(data);
+    out.hflush();
+    out.close();
+
+    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes());
+    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any());
+
+    intercept(AbfsInvalidChecksumException.class, () -> {
+      readWithOffsetAndPositionHelper(spiedClient, path, data, fs, 0, 0);
+    });
   }
 
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)

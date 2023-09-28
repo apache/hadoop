@@ -132,5 +132,9 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
+  // In case of MD5Mismatch error in append calls following error message will
+  // be sent by server with status-code 400
+  public static final String MD5_ERROR_SERVER_MESSAGE = "Md5Mismatch";
+
   private AbfsHttpConstants() {}
 }
