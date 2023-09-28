@@ -2232,6 +2232,14 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
+  /*
+   * Flag to indicate whether JDK17's required add-exports flags should be added to
+   * container localizers regardless of the user specified JAVA_OPTS.
+   */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
+  public static final boolean NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT = true;
+
   /** The log level of container localizer process. */
   public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
       NM_PREFIX + "container-localizer.log.level";

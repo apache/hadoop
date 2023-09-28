@@ -1485,6 +1485,17 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
+    <value>true</value>
+    <description>Since on JDK17 it is no longer possible to use the reflection API to
+      access public fields and methods, add-exports flags should be added to container
+      localizers regardless of the user specified JAVA_OPTS. Setting this to true will
+      add the flags to the container localizer on nodes with JDK17 or higher.
+      Defaults to true, but the setting has no effect on nodes using JDK16 and before.
+    </description>
+  </property>
+
+  <property>
     <description>
       The log level for container localizer while it is an independent process.
     </description>

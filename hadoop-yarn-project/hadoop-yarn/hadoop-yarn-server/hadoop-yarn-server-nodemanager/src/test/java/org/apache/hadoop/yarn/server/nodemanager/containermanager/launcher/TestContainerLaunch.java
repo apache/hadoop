@@ -580,8 +580,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     String res = ContainerLaunch.expandEnvironment(input, logPath);
 
-    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ?
-        "--add-opens=java.base/java.lang=ALL-UNNAMED" : "";
+    String additionalJdk17PlusOptions =
+        "--add-opens=java.base/java.lang=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
+    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ? additionalJdk17PlusOptions : "";
+
     if (Shell.WINDOWS) {
       Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
           + "%HADOOP_HOME%/share/hadoop/common/lib/*;"
