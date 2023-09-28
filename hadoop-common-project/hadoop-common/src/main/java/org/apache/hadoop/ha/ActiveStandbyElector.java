@@ -29,8 +29,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -47,6 +50,8 @@ import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.naming.ConfigurationException;
 
 /**
  * 
@@ -170,6 +175,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private final int zkSessionTimeout;
   private final List<ACL> zkAcl;
   private final List<ZKAuthInfo> zkAuthInfo;
+  private boolean sslEnabled;
   private byte[] appData;
   private final String zkLockFilePath;
   private final String zkBreadCrumbPath;
@@ -218,10 +224,10 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
-      int maxRetryNum) throws IOException, HadoopIllegalArgumentException,
+      int maxRetryNum, boolean sslEnabled) throws IOException, HadoopIllegalArgumentException,
       KeeperException {
     this(zookeeperHostPorts, zookeeperSessionTimeout, parentZnodeName, acl,
-      authInfo, app, maxRetryNum, true);
+      authInfo, app, maxRetryNum, true, sslEnabled);
   }
 
   /**
@@ -264,7 +270,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
-      int maxRetryNum, boolean failFast) throws IOException,
+      int maxRetryNum, boolean failFast, boolean sslEnabled) throws IOException,
       HadoopIllegalArgumentException, KeeperException {
     if (app == null || acl == null || parentZnodeName == null
         || zookeeperHostPorts == null || zookeeperSessionTimeout <= 0) {
@@ -279,6 +285,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     zkLockFilePath = znodeWorkingDir + "/" + LOCK_FILENAME;
     zkBreadCrumbPath = znodeWorkingDir + "/" + BREADCRUMB_FILENAME;
     this.maxRetryNum = maxRetryNum;
+    this.sslEnabled = sslEnabled;
 
     // establish the ZK Connection for future API calls
     if (failFast) {
@@ -740,6 +747,17 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * @throws IOException raised on errors performing I/O.
    */
   protected ZooKeeper createZooKeeper() throws IOException {
+    ZKClientConfig zkClientConfig = new ZKClientConfig();
+    SecurityUtil.TruststoreKeystore truststoreKeystore
+        = new SecurityUtil.TruststoreKeystore(new Configuration());
+    if (sslEnabled) {
+      try {
+        SecurityUtil.setSslConfiguration(zkClientConfig, truststoreKeystore);
+      } catch (ConfigurationException ce) {
+        throw ce;
+      }
+      return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher, zkClientConfig);
+    }
     return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher);
   }
 
