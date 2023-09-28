@@ -107,14 +107,16 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     Path path = path("testPath");
     fs.create(path);
     byte[] data= generateRandomBytes(4 * ONE_MB);
-    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes());
-    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any());
+    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes(), 0, 11);
+    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
+        any(Integer.class), any(Integer.class));
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
       appendWithOffsetHelper(spiedClient, path, data, fs, 0);
     });
 
-    Assertions.assertThat(ex.getErrorMessage()).contains(
-        MD5_ERROR_SERVER_MESSAGE);
+    Assertions.assertThat(ex.getErrorMessage())
+        .describedAs("Exception Message should contain MD5Mismatch")
+        .contains(MD5_ERROR_SERVER_MESSAGE);
   }
 
   @Test
@@ -129,8 +131,9 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     out.hflush();
     out.close();
 
-    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes());
-    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any());
+    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes(), 0, 11);
+    Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
+        any(Integer.class), any(Integer.class));
 
     intercept(AbfsInvalidChecksumException.class, () -> {
       readWithOffsetAndPositionHelper(spiedClient, path, data, fs, 0, 0);

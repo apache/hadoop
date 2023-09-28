@@ -1456,16 +1456,8 @@ public class AbfsClient implements Closeable {
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final AppendRequestParameters reqParams, final byte[] buffer)
       throws AbfsRestOperationException {
-    byte[] dataToBeWritten = new byte[reqParams.getLength()];
-
-    if (reqParams.getoffset() == 0 && reqParams.getLength() == buffer.length) {
-      dataToBeWritten = buffer;
-    } else {
-      System.arraycopy(buffer, reqParams.getoffset(), dataToBeWritten, 0,
-          reqParams.getLength());
-    }
-
-    String md5Hash = computeMD5Hash(dataToBeWritten);
+    String md5Hash = computeMD5Hash(buffer, reqParams.getoffset(),
+        reqParams.getLength());
     requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
   }
 
@@ -1488,15 +1480,8 @@ public class AbfsClient implements Closeable {
     if (numberOfBytesRead == 0) {
       return;
     }
-    byte[] dataRead = new byte[numberOfBytesRead];
-
-    if (bufferOffset == 0 && numberOfBytesRead == buffer.length) {
-      dataRead = buffer;
-    } else {
-      System.arraycopy(buffer, bufferOffset, dataRead, 0, numberOfBytesRead);
-    }
-
-    String md5HashComputed = computeMD5Hash(dataRead);
+    String md5HashComputed = computeMD5Hash(buffer, bufferOffset,
+        numberOfBytesRead);
     String md5HashActual = result.getResponseHeader(CONTENT_MD5);
     if (!md5HashComputed.equals(md5HashActual)) {
       throw new AbfsInvalidChecksumException(result.getRequestId());
@@ -1532,17 +1517,20 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Ensures single object creation for md5Digest per client and computes
-   * MD5Hash using that object.
-   * @param data of which hash is calculated
-   * @return MD5 Hash of the data
+   * Compute MD5Hash of the given byte array starting from given offset up to given length
+   * @param data byte array from which data is fetched to compute MD5 Hash
+   * @param off offset in the array from where actual data starts
+   * @param len length of the data to be used to compute MD5Hash
+   * @return MD5 Hash of the data as String
    * @throws AbfsRestOperationException
    */
   @VisibleForTesting
-  public String computeMD5Hash(final byte[] data) throws AbfsRestOperationException {
+  public String computeMD5Hash(final byte[] data, final int off, final int len)
+      throws AbfsRestOperationException {
     try {
       MessageDigest md5Digest = MessageDigest.getInstance(MD5);
-      byte[] md5Bytes = md5Digest.digest(data);
+      md5Digest.update(data, off, len);
+      byte[] md5Bytes = md5Digest.digest();
       return Base64.getEncoder().encodeToString(md5Bytes);
     } catch (NoSuchAlgorithmException ex) {
       throw new AbfsRuntimeException(ex);
