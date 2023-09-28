@@ -1171,7 +1171,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         policiesConfigurations.entrySet()) {
       String queue = entry.getKey();
       SubClusterPolicyConfiguration policyConf = entry.getValue();
-      if(policyConf == null) {
+      if (policyConf == null) {
         continue;
       }
       FederationQueueWeight federationQueueWeight = parseFederationQueueWeight(queue, policyConf);
