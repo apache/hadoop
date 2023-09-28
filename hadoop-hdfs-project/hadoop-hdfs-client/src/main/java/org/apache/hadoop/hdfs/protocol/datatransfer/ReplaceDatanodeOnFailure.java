@@ -42,7 +42,7 @@ public class ReplaceDatanodeOnFailure {
     public boolean satisfy(final short replication,
         final DatanodeInfo[] existings, final int n, final boolean isAppend,
         final boolean isHflushed) {
-      return replication >= 3 &&
+      return replication >= 2 &&
           (n <= (replication / 2) || isAppend || isHflushed);
     }
   };
