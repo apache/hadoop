@@ -147,6 +147,7 @@ public abstract class ZKFailoverController {
   protected abstract InetSocketAddress getRpcAddressToBindTo();
   protected abstract PolicyProvider getPolicyProvider();
   protected abstract List<HAServiceTarget> getAllOtherNodes();
+  protected abstract boolean isSSLEnabled();
 
   /**
    * Return the name of a znode inside the configured parent znode in which
@@ -374,7 +375,7 @@ public abstract class ZKFailoverController {
         CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
     elector = new ActiveStandbyElector(zkQuorum,
         zkTimeout, getParentZnode(), zkAcls, zkAuths,
-        new ElectorCallbacks(), maxRetryNum);
+        new ElectorCallbacks(), maxRetryNum, isSSLEnabled());
   }
   
   private String getParentZnode() {
