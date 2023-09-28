@@ -1449,9 +1449,10 @@ public class AbfsClient implements Closeable {
 
   /**
    * Add MD5 hash as request header to the append request
-   * @param requestHeaders
-   * @param reqParams
-   * @param buffer
+   * @param requestHeaders to be updated with checksum header
+   * @param reqParams for getting offset and length
+   * @param buffer for getting input data for MD5 computation
+   * @throws AbfsRestOperationException if Md5 computation fails
    */
   private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final AppendRequestParameters reqParams, final byte[] buffer)
@@ -1466,7 +1467,7 @@ public class AbfsClient implements Closeable {
    * @param buffer stores the data received from server
    * @param result HTTP Operation Result
    * @param bufferOffset Position where data returned by server is saved in buffer
-   * @throws AbfsRestOperationException
+   * @throws AbfsRestOperationException if Md5Mismatch
    */
   private void verifyCheckSumForRead(final byte[] buffer,
       final AbfsHttpOperation result, final int bufferOffset)
@@ -1476,7 +1477,7 @@ public class AbfsClient implements Closeable {
     // Server returned MD5 Hash will be computed on what server returned.
     // We need to get exact data that server returned and compute its md5 hash
     // Computed hash should be equal to what server returned
-    int numberOfBytesRead = (int)result.getBytesReceived();
+    int numberOfBytesRead = (int) result.getBytesReceived();
     if (numberOfBytesRead == 0) {
       return;
     }
@@ -1495,15 +1496,15 @@ public class AbfsClient implements Closeable {
    * {@link <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read"></a>}
    * 1. Range header should be present as one of the request headers
    * 2. buffer length should not exceed 4MB.
-   * @param requestHeaders
-   * @param rangeHeader
-   * @param bufferLength
+   * @param requestHeaders to be checked for range header
+   * @param rangeHeader must be present
+   * @param bufferLength must be less than 4MB
    * @return true if all conditions are met
    */
   private boolean isChecksumValidationEnabled(List<AbfsHttpHeader> requestHeaders,
       final AbfsHttpHeader rangeHeader, final int bufferLength) {
-    return getAbfsConfiguration().getIsChecksumValidationEnabled() &&
-        requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB;
+    return getAbfsConfiguration().getIsChecksumValidationEnabled()
+        && requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB;
   }
 
   /**
@@ -1522,7 +1523,7 @@ public class AbfsClient implements Closeable {
    * @param off offset in the array from where actual data starts
    * @param len length of the data to be used to compute MD5Hash
    * @return MD5 Hash of the data as String
-   * @throws AbfsRestOperationException
+   * @throws AbfsRestOperationException if computation fails
    */
   @VisibleForTesting
   public String computeMD5Hash(final byte[] data, final int off, final int len)
