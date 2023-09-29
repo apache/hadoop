@@ -94,11 +94,14 @@ public class NodeLabelsBlock extends RouterBlock {
   }
 
   private NodeLabelsInfo getYarnFederationNodeLabelsInfo(boolean isEnabled) {
+    Configuration config = this.router.getConfig();
+    String webAddress;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
-      return getSubClusterNodeLabelsByWebAddress(webAddress);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(config);
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
     }
-    return null;
+    return getSubClusterNodeLabelsByWebAddress(webAddress);
   }
 
   private NodeLabelsInfo getSubClusterNodeLabelsByWebAddress(String webAddress) {

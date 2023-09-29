@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.sun.jersey.api.client.Client;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -62,17 +63,35 @@ public abstract class RouterBlock extends HtmlBlock {
    */
   protected ClusterMetricsInfo getRouterClusterMetricsInfo() {
     boolean isEnabled = isYarnFederationEnabled();
+    String webAppAddress;
     if(isEnabled) {
-      String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
-      Client client = RouterWebServiceUtil.createJerseyClient(conf);
-      ClusterMetricsInfo metrics = RouterWebServiceUtil
-          .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-          conf, client);
-      client.destroy();
-      return metrics;
+      webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
+    } else {
+      webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(conf);
     }
-    return null;
+    return getClusterMetricsInfo(webAppAddress);
+  }
+
+  /**
+   * Get RouterClusterMetrics Info.
+   *
+   * @param webAppAddress
+   * @return ClusterMetricsInfo.
+   */
+  protected ClusterMetricsInfo getClusterMetricsInfo(String webAppAddress) {
+    // If webAppAddress is empty, we will return NULL.
+    if (StringUtils.isBlank(webAppAddress)) {
+      return null;
+    }
+
+    // We will get ClusterMetricsInfo By webAppAddress.
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
+    ClusterMetricsInfo metrics = RouterWebServiceUtil
+        .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+        conf, client);
+    client.destroy();
+    return metrics;
   }
 
   /**

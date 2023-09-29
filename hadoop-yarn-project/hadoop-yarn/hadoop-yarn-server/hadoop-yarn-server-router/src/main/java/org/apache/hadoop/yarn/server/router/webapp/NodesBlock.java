@@ -80,11 +80,14 @@ public class NodesBlock extends RouterBlock {
   }
 
   private NodesInfo getYarnFederationNodesInfo(boolean isEnabled) {
+    Configuration config = this.router.getConfig();
+    String webAddress;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
-      return getSubClusterNodesInfoByWebAddress(webAddress);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
     }
-    return null;
+    return getSubClusterNodesInfoByWebAddress(webAddress);
   }
 
   private NodesInfo getSubClusterNodesInfo(String subCluster) {

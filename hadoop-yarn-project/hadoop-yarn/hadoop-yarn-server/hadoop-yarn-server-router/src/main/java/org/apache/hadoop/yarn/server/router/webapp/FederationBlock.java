@@ -67,7 +67,7 @@ class FederationBlock extends RouterBlock {
    * @param capability metric json obtained from RM.
    * @return ClusterMetricsInfo Object
    */
-  private ClusterMetricsInfo getClusterMetricsInfo(String capability) {
+  protected ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     try {
       if (capability != null && !capability.isEmpty()) {
         JSONJAXBContext jc = new JSONJAXBContext(
