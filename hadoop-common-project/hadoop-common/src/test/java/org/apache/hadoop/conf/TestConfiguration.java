@@ -45,6 +45,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import static java.util.concurrent.TimeUnit.*;
 
@@ -64,6 +67,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.concurrent.AtomicInitializer;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -2552,5 +2556,29 @@ public class TestConfiguration {
     confClone.get("firstParse");
     // Thread 1
     config.get("secondParse");
+  }
+
+  @Test
+  public void testReloadingCanBeDisabled() {
+    try {
+
+      AtomicInteger reloadCount = new AtomicInteger(0);
+      Configuration config = new Configuration() {
+        @Override
+        public synchronized void reloadConfiguration() {
+          reloadCount.incrementAndGet();
+        }
+      };
+      assertThat(reloadCount.get(), is(0));
+      Configuration.reloadExistingConfigurations();
+      assertThat(reloadCount.get(), is(1));
+      Configuration.setConfigurationRegistryEnabled(false);
+      assertThat(reloadCount.get(), is(1));
+      Configuration.reloadExistingConfigurations();
+      assertThat(reloadCount.get(), is(1));
+
+    } finally {
+      Configuration.setConfigurationRegistryEnabled(true);
+    }
   }
 }
