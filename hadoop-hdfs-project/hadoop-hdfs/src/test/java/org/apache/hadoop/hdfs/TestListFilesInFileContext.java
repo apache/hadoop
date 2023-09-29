@@ -29,14 +29,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,9 +43,6 @@ import org.junit.Test;
  * This class tests the FileStatus API.
  */
 public class TestListFilesInFileContext {
-  {
-    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
-  }
 
   static final long seed = 0xDEADBEEFL;
 

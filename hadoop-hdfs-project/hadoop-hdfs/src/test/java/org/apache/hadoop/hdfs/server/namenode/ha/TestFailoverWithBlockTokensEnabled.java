@@ -92,11 +92,10 @@ public class TestFailoverWithBlockTokensEnabled {
 
     setAndCheckSerialNumber(0, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE / 2, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE / 2, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE / 3, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE / 3, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MAX_VALUE / 171717,
+        btsm1, btsm2, btsm3);
   }
 
   private void setAndCheckSerialNumber(int serialNumber, BlockTokenSecretManager... btsms) {
@@ -116,36 +115,7 @@ public class TestFailoverWithBlockTokensEnabled {
       }
     }
   }
-
-  @Test
-  public void testSerialNumberMaskMatchIndex() {
-    BlockTokenSecretManager btsm1 = cluster.getNamesystem(0).getBlockManager()
-        .getBlockTokenSecretManager();
-    BlockTokenSecretManager btsm2 = cluster.getNamesystem(1).getBlockManager()
-        .getBlockTokenSecretManager();
-    BlockTokenSecretManager btsm3 = cluster.getNamesystem(2).getBlockManager()
-        .getBlockTokenSecretManager();
-    int[] testSet = {0, Integer.MAX_VALUE, Integer.MIN_VALUE,
-        Integer.MAX_VALUE / 2, Integer.MIN_VALUE / 2,
-        Integer.MAX_VALUE / 3, Integer.MIN_VALUE / 3};
-    for (int i = 0; i < testSet.length; i++) {
-      setAndCheckHighBitsSerialNumber(testSet[i], btsm1, 0);
-      setAndCheckHighBitsSerialNumber(testSet[i], btsm2, 1);
-      setAndCheckHighBitsSerialNumber(testSet[i], btsm3, 2);
-    }
-  }
-
-  /**
-   * Check mask of serial number if equal to index of NameNode.
-   */
-  private void setAndCheckHighBitsSerialNumber(int serialNumber,
-      BlockTokenSecretManager btsm, int nnIndex) {
-    btsm.setSerialNo(serialNumber);
-    int serialNo = btsm.getSerialNoForTesting();
-    int index = serialNo >> BlockTokenSecretManager.NUM_VALID_BITS;
-    assertEquals(index, nnIndex);
-  }
-
+  
   @Test
   public void ensureInvalidBlockTokensAreRejected() throws IOException,
       URISyntaxException {

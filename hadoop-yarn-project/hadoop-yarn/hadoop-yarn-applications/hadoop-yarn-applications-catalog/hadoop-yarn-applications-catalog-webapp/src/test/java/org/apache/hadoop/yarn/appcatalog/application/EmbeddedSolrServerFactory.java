@@ -22,7 +22,6 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.request.CoreAdminRequest;
 import org.apache.solr.core.NodeConfig;
-import org.apache.solr.core.SolrResourceLoader;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,12 +81,10 @@ public final class EmbeddedSolrServerFactory {
       solrHomeDir.mkdirs();
     }
 
-    final SolrResourceLoader loader = new SolrResourceLoader(
-        solrHomeDir.toPath());
     final Path configSetPath = Paths.get(configSetHome).toAbsolutePath();
 
     final NodeConfig config = new NodeConfig.NodeConfigBuilder(
-        "embeddedSolrServerNode", loader)
+        "embeddedSolrServerNode", solrHomeDir.toPath())
             .setConfigSetBaseDirectory(configSetPath.toString()).build();
 
     final EmbeddedSolrServer embeddedSolrServer = new EmbeddedSolrServer(config,

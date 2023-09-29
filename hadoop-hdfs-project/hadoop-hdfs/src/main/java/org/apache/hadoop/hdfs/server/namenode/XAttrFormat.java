@@ -25,8 +25,8 @@ import java.util.List;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.XAttrHelper;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 /**
@@ -72,7 +72,7 @@ public enum XAttrFormat implements LongBitFormat.Enum {
     return SerialNumberManager.XATTR.getString(nid);
   }
 
-  static int toInt(XAttr a) {
+  public static int toInt(XAttr a) {
     int nid = SerialNumberManager.XATTR.getSerialNumber(a.getName());
     int nsOrd = a.getNameSpace().ordinal();
     long value = NS.BITS.combine(nsOrd & NS_MASK, 0L);

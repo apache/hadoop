@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -449,7 +449,7 @@ public class AdminStatesBaseTest {
         refreshNodes(conf);
   }
 
-  static private DatanodeDescriptor getDatanodeDesriptor(
+  static DatanodeDescriptor getDatanodeDesriptor(
       final FSNamesystem ns, final String datanodeUuid) {
     return ns.getBlockManager().getDatanodeManager().getDatanode(datanodeUuid);
   }

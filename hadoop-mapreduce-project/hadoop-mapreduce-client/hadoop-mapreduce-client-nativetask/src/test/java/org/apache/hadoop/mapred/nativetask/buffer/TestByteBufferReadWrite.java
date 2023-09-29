@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.mapred.nativetask.buffer;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
-import com.google.common.base.Charsets;
-import com.google.common.primitives.Shorts;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.mockito.Mockito;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 public class TestByteBufferReadWrite {
   @Test
@@ -55,24 +57,25 @@ public class TestByteBufferReadWrite {
     input.rewind(0, length);
     ByteBufferDataReader reader = new ByteBufferDataReader(input);
     
-    Assert.assertEquals(1, reader.read());
+    assertThat(reader.read()).isOne();
     byte[] two = new byte[2];
     reader.read(two);
-    Assert.assertTrue(two[0] == two[1] && two[0] == 2);
+    assertThat(two[0]).isEqualTo(two[1]);
+    assertThat(two[0]).isEqualTo((byte) 2);
     
     
-    Assert.assertEquals(true, reader.readBoolean());
-    Assert.assertEquals(4, reader.readByte());
-    Assert.assertEquals(5, reader.readShort());
-    Assert.assertEquals(6, reader.readChar());
-    Assert.assertEquals(7, reader.readInt());
-    Assert.assertEquals(8, reader.readLong());
-    Assert.assertTrue(reader.readFloat() - 9 < 0.0001);
-    Assert.assertTrue(reader.readDouble() - 10 < 0.0001);
+    assertThat(reader.readBoolean()).isTrue();
+    assertThat(reader.readByte()).isEqualTo((byte) 4);
+    assertThat(reader.readShort()).isEqualTo((short) 5);
+    assertThat(reader.readChar()).isEqualTo((char) 6);
+    assertThat(reader.readInt()).isEqualTo(7);
+    assertThat(reader.readLong()).isEqualTo(8);
+    assertThat(reader.readFloat()).isEqualTo(9f, offset(0.0001f));
+    assertThat(reader.readDouble()).isEqualTo(10, offset(0.0001));
     
     byte[] goodboy = new byte["goodboy".length()];
     reader.read(goodboy);
-    Assert.assertEquals("goodboy", toString(goodboy));
+    assertThat(toString(goodboy)).isEqualTo("goodboy");
     
     char[] hello = new char["hello".length()];
     for (int i = 0; i < hello.length; i++) {
@@ -80,11 +83,9 @@ public class TestByteBufferReadWrite {
     }
     
     String helloString = new String(hello);
-    Assert.assertEquals("hello", helloString);
-    
-    Assert.assertEquals("native task", reader.readUTF());
-    
-    Assert.assertEquals(0, input.remaining());
+    assertThat(helloString).isEqualTo("hello");
+    assertThat(reader.readUTF()).isEqualTo("native task");
+    assertThat(input.remaining()).isZero();
   }
 
   /**
@@ -103,11 +104,11 @@ public class TestByteBufferReadWrite {
     InputBuffer input = new InputBuffer(buff);
     input.rewind(0, buff.length);
     ByteBufferDataReader reader = new ByteBufferDataReader(input);
-    Assert.assertEquals(catFace, reader.readUTF());
+    assertThat(reader.readUTF()).isEqualTo(catFace);
 
     // Check that the standard Java one can read it too
     String fromJava = new java.io.DataInputStream(new ByteArrayInputStream(buff)).readUTF();
-    Assert.assertEquals(catFace, fromJava);
+    assertThat(fromJava).isEqualTo(catFace);
   }
 
   @Test
@@ -115,13 +116,13 @@ public class TestByteBufferReadWrite {
     byte[] buff = new byte[10];
     MockDataTarget target = new MockDataTarget(buff);
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
-    Assert.assertEquals(false, writer.hasUnFlushedData()); 
+    assertThat(writer.hasUnFlushedData()).isFalse();
     
     writer.write(1);
     writer.write(new byte[] {2, 2}, 0, 2);
-    Assert.assertEquals(true, writer.hasUnFlushedData()); 
+    assertThat(writer.hasUnFlushedData()).isTrue();
     
-    Assert.assertEquals(true, writer.shortOfSpace(100));
+    assertThat(writer.shortOfSpace(100)).isTrue();
   }
 
 
@@ -131,12 +132,12 @@ public class TestByteBufferReadWrite {
     MockDataTarget target = Mockito.spy(new MockDataTarget(buff));
 
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
-    Assert.assertEquals(false, writer.hasUnFlushedData()); 
+    assertThat(writer.hasUnFlushedData()).isFalse();
     
     writer.write(1);
     writer.write(new byte[100]);
 
-    Assert.assertEquals(true, writer.hasUnFlushedData()); 
+    assertThat(writer.hasUnFlushedData()).isTrue();
     writer.close();
     Mockito.verify(target, Mockito.times(11)).sendData();
     Mockito.verify(target).finishSendData();

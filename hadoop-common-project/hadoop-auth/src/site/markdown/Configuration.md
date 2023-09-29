@@ -24,7 +24,7 @@ This filter must be configured in front of all the web application resources tha
 
 The Hadoop Auth and dependent JAR files must be in the web application classpath (commonly the `WEB-INF/lib` directory).
 
-Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the SLF4J API dependency but it does not define the dependency on a concrete logging implementation, this must be addded explicitly to the web application. For example, if the web applicationan uses Log4j, the SLF4J-LOG4J12 and LOG4J jar files must be part part of the web application classpath as well as the Log4j configuration file.
+Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the SLF4J API dependency but it does not define the dependency on a concrete logging implementation, this must be addded explicitly to the web application. For example, if the web applicationan uses Log4j, the SLF4J-LOG4J12 and LOG4J jar files must be part of the web application classpath as well as the Log4j configuration file.
 
 ### Common Configuration parameters
 

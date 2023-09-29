@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.select;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -29,8 +30,6 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.impl.FutureIOSupport;
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -44,6 +43,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 
@@ -203,13 +203,13 @@ public class ITestS3SelectMRJob extends AbstractS3SelectTest {
   private String readStringFromFile(Path path) throws IOException {
     int bytesLen = (int)fs.getFileStatus(path).getLen();
     byte[] buffer = new byte[bytesLen];
-    return FutureIOSupport.awaitFuture(
+    return FutureIO.awaitFuture(
         fs.openFile(path).build().thenApply(in -> {
           try {
             IOUtils.readFully(in, buffer, 0, bytesLen);
             return new String(buffer);
           } catch (IOException ex) {
-            throw new WrappedIOException(ex);
+            throw new UncheckedIOException(ex);
           }
         }));
   }

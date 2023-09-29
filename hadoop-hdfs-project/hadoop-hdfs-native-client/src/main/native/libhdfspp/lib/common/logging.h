@@ -19,9 +19,9 @@
 #ifndef LIB_COMMON_LOGGING_H_
 #define LIB_COMMON_LOGGING_H_
 
-#include <asio/ip/tcp.hpp>
-
 #include "hdfspp/log.h"
+
+#include <boost/asio/ip/tcp.hpp>
 
 #include <sstream>
 #include <mutex>
@@ -193,7 +193,7 @@ class LogMessage {
   LogMessage& operator<<(void *);
 
   //asio types
-  LogMessage& operator<<(const ::asio::ip::tcp::endpoint& endpoint);
+  LogMessage& operator<<(const boost::asio::ip::tcp::endpoint& endpoint);
 
   //thread and mutex types
   LogMessage& operator<<(const std::thread::id& tid);

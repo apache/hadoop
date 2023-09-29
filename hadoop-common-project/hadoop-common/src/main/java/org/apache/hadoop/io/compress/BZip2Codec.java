@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
@@ -99,7 +100,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param out        the location for the final output stream
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -116,7 +117,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
@@ -154,7 +155,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -171,7 +172,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
@@ -236,7 +237,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
   */
   @Override
   public String getDefaultExtension() {
-    return ".bz2";
+    return CodecConstants.BZIP2_CODEC_EXTENSION;
   }
 
   private static class BZip2CompressionOutputStream extends
@@ -255,10 +256,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
     private void writeStreamHeader() throws IOException {
       if (super.out != null) {
-        // The compressed bzip2 stream should start with the
-        // identifying characters BZ. Caller of CBZip2OutputStream
-        // i.e. this class must write these characters.
-        out.write(HEADER.getBytes(StandardCharsets.UTF_8));
+        writeHeader(out);
       }
     }
 
@@ -337,6 +335,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     private boolean isSubHeaderStripped = false;
     private READ_MODE readMode = READ_MODE.CONTINUOUS;
     private long startingPos = 0L;
+    private boolean didInitialRead;
 
     // Following state machine handles different states of compressed stream
     // position
@@ -482,24 +481,42 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     */
 
     public int read(byte[] b, int off, int len) throws IOException {
+      if (b == null) {
+        throw new NullPointerException();
+      }
+      if (off < 0 || len < 0 || len > b.length - off) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (len == 0) {
+        return 0;
+      }
       if (needsReset) {
         internalReset();
       }
-
-      int result = 0;
-      result = this.input.read(b, off, len);
+      // When startingPos > 0, the stream should be initialized at the end of
+      // one block (which would correspond to be the start of another block).
+      // Thus, the initial read would technically be reading one byte passed a
+      // BZip2 end of block marker. To be consistent, we should also be
+      // updating the position to be one byte after the end of an block on the
+      // initial read.
+      boolean initializedAtEndOfBlock =
+          !didInitialRead && startingPos > 0 && readMode == READ_MODE.BYBLOCK;
+      int result = initializedAtEndOfBlock
+          ? BZip2Constants.END_OF_BLOCK
+          : this.input.read(b, off, len);
       if (result == BZip2Constants.END_OF_BLOCK) {
         this.posSM = POS_ADVERTISEMENT_STATE_MACHINE.ADVERTISE;
       }
 
       if (this.posSM == POS_ADVERTISEMENT_STATE_MACHINE.ADVERTISE) {
-        result = this.input.read(b, off, off + 1);
+        result = this.input.read(b, off, 1);
         // This is the precise time to update compressed stream position
         // to the client of this code.
         this.updatePos(true);
         this.posSM = POS_ADVERTISEMENT_STATE_MACHINE.HOLD;
       }
 
+      didInitialRead = true;
       return result;
 
     }
@@ -515,6 +532,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         needsReset = false;
         BufferedInputStream bufferedIn = readStreamHeader();
         input = new CBZip2InputStream(bufferedIn, this.readMode);
+        didInitialRead = false;
       }
     }    
     
@@ -547,4 +565,11 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
   }// end of BZip2CompressionInputStream
 
+  @VisibleForTesting
+  public static void writeHeader(OutputStream out) throws IOException {
+    // The compressed bzip2 stream should start with the
+    // identifying characters BZ. Caller of CBZip2OutputStream
+    // i.e. this class must write these characters.
+    out.write(HEADER.getBytes(StandardCharsets.UTF_8));
+  }
 }

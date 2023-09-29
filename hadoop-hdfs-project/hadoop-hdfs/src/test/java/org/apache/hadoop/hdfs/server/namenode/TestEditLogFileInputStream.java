@@ -28,11 +28,12 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.FileOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumMap;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -160,4 +161,25 @@ public class TestEditLogFileInputStream {
     }
     elis.close();
   }
+
+  /**
+   * Regression test for HDFS-14557 which verifies that an edit log filled
+   * with only "-1" bytes is moved aside and does not prevent the Journal
+   * node from starting.
+   */
+  @Test(timeout=60000)
+  public void testScanEditThatFailedDuringPreAllocate() throws Exception {
+    Configuration conf = new Configuration();
+    File editLog = new File(GenericTestUtils.getTempPath("testCorruptEditLog"));
+    FileOutputStream os = new FileOutputStream(editLog);
+    for (int i=0; i<1024; i++) {
+      os.write(-1);
+    }
+    os.close();
+    FSEditLogLoader.EditLogValidation val =
+        EditLogFileInputStream.scanEditLog(editLog, 1234, false);
+    assertEquals(true, val.hasCorruptHeader());
+    assertEquals(HdfsServerConstants.INVALID_TXID, val.getEndTxId());
+  }
+
 }

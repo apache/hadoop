@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
@@ -37,6 +38,8 @@ public final class HdfsConstants {
 
   public static final byte MEMORY_STORAGE_POLICY_ID = 15;
   public static final String MEMORY_STORAGE_POLICY_NAME = "LAZY_PERSIST";
+  public static final byte ALLNVDIMM_STORAGE_POLICY_ID = 14;
+  public static final String ALLNVDIMM_STORAGE_POLICY_NAME = "ALL_NVDIMM";
   public static final byte ALLSSD_STORAGE_POLICY_ID = 12;
   public static final String ALLSSD_STORAGE_POLICY_NAME = "ALL_SSD";
   public static final byte ONESSD_STORAGE_POLICY_ID = 10;
@@ -50,6 +53,55 @@ public final class HdfsConstants {
   public static final byte PROVIDED_STORAGE_POLICY_ID = 1;
   public static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
 
+  /**
+   * This enum wraps above Storage Policy ID and name.
+   * Recommend to use this enum instead of above static variables.
+   * For example,
+   * StoragePolicy.HOT.value() is equal to HOT_STORAGE_POLICY_ID
+   * StoragePolicy.HOT.name() is equal to HOT_STORAGE_POLICY_NAME
+   */
+  public enum StoragePolicy{
+    PROVIDED(PROVIDED_STORAGE_POLICY_ID),
+    COLD(COLD_STORAGE_POLICY_ID),
+    WARM(WARM_STORAGE_POLICY_ID),
+    HOT(HOT_STORAGE_POLICY_ID),
+    ONE_SSD(ONESSD_STORAGE_POLICY_ID),
+    ALL_SSD(ALLSSD_STORAGE_POLICY_ID),
+    ALL_NVDIMM(ALLNVDIMM_STORAGE_POLICY_ID),
+    LAZY_PERSIST(MEMORY_STORAGE_POLICY_ID);
+
+    private byte value;
+    StoragePolicy(byte value) {
+      this.value = value;
+    }
+
+    public static StoragePolicy valueOf(int value) {
+      switch (value) {
+      case 1:
+        return PROVIDED;
+      case 2:
+        return COLD;
+      case 5:
+        return WARM;
+      case 7:
+        return HOT;
+      case 10:
+        return ONE_SSD;
+      case 12:
+        return ALL_SSD;
+      case 14:
+        return ALL_NVDIMM;
+      case 15:
+        return LAZY_PERSIST;
+      default:
+        return null;
+      }
+    }
+
+    public byte value() {
+      return this.value;
+    }
+  }
 
   public static final int DEFAULT_DATA_SOCKET_SIZE = 0;
 
@@ -59,6 +111,8 @@ public final class HdfsConstants {
   public static final String DOT_SNAPSHOT_DIR = ".snapshot";
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR
           = Path.SEPARATOR + DOT_SNAPSHOT_DIR;
+  public static final String DOT_SNAPSHOT_DIR_SEPARATOR =
+      DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public final static String DOT_RESERVED_STRING = ".reserved";
@@ -110,23 +164,12 @@ public final class HdfsConstants {
    * period, no other client can write to the file. The writing client can
    * periodically renew the lease. When the file is closed, the lease is
    * revoked. The lease duration is bound by this soft limit and a
-   * {@link HdfsConstants#LEASE_HARDLIMIT_PERIOD hard limit}. Until the
+   * {@link HdfsClientConfigKeys#DFS_LEASE_HARDLIMIT_KEY }. Until the
    * soft limit expires, the writer has sole write access to the file. If the
    * soft limit expires and the client fails to close the file or renew the
    * lease, another client can preempt the lease.
    */
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
-  /**
-   * For a HDFS client to write to a file, a lease is granted; During the lease
-   * period, no other client can write to the file. The writing client can
-   * periodically renew the lease. When the file is closed, the lease is
-   * revoked. The lease duration is bound by a
-   * {@link HdfsConstants#LEASE_SOFTLIMIT_PERIOD soft limit} and this hard
-   * limit. If after the hard limit expires and the client has failed to renew
-   * the lease, HDFS assumes that the client has quit and will automatically
-   * close the file on behalf of the writer, and recover the lease.
-   */
-  public static final long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
 
   // SafeMode actions
   public enum SafeModeAction {

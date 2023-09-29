@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Clock;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -416,7 +416,8 @@ public class DefaultSpeculator extends AbstractService implements
           if (estimatedRunTime == data.getEstimatedRunTime()
               && progress == data.getProgress()) {
             // Previous stats are same as same stats
-            if (data.notHeartbeatedInAWhile(now)) {
+            if (data.notHeartbeatedInAWhile(now)
+                || estimator.hasStagnatedProgress(runningTaskAttemptID, now)) {
               // Stats have stagnated for a while, simulate heart-beat.
               TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
               taskAttemptStatus.id = runningTaskAttemptID;

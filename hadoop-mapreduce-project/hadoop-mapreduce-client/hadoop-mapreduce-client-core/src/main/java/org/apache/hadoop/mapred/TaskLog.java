@@ -56,7 +56,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * A simple logger to handle the task-specific user logs.
@@ -256,17 +256,6 @@ public class TaskLog {
   throws IOException {
     System.out.flush();
     System.err.flush();
-    Enumeration<Logger> allLoggers = LogManager.getCurrentLoggers();
-    while (allLoggers.hasMoreElements()) {
-      Logger l = allLoggers.nextElement();
-      Enumeration<Appender> allAppenders = l.getAllAppenders();
-      while (allAppenders.hasMoreElements()) {
-        Appender a = allAppenders.nextElement();
-        if (a instanceof TaskLogAppender) {
-          ((TaskLogAppender)a).flush();
-        }
-      }
-    }
     if (currentTaskid != taskid) {
       currentTaskid = taskid;
       resetPrevLengths(logLocation);

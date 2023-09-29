@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
-import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -66,7 +65,6 @@ public class DirectoryStagingCommitter extends StagingCommitter {
 
   @Override
   public void setupJob(JobContext context) throws IOException {
-    super.setupJob(context);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     ConflictResolution conflictResolution = getConflictResolutionMode(
@@ -91,23 +89,28 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       }
     } catch (FileNotFoundException ignored) {
       // there is no destination path, hence, no conflict.
-      // make the parent directory, which also triggers a recursive directory
-      // creation operation
-      fs.mkdirs(outputPath);
     }
+    // make the parent directory, which also triggers a recursive directory
+    // creation operation
+    super.setupJob(context);
   }
 
   /**
    * Pre-commit actions for a job.
    * Here: look at the conflict resolution mode and choose
    * an action based on the current policy.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending pending commits
    * @throws IOException any failure
    */
   @Override
-  protected void preCommitJob(JobContext context,
-      List<SinglePendingCommit> pending) throws IOException {
+  public void preCommitJob(
+      final CommitContext commitContext,
+      final ActiveCommit pending) throws IOException {
+
+    final JobContext context = commitContext.getJobContext();
+    // see if the files can be loaded.
+    super.preCommitJob(commitContext, pending);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     Configuration fsConf = fs.getConf();

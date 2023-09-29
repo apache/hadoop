@@ -26,13 +26,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -123,6 +122,11 @@ public abstract class FilterFs extends AbstractFileSystem {
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileStatus(f);
+  }
+
+  @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    myFs.msync();
   }
 
   @Override
@@ -440,10 +444,19 @@ public abstract class FilterFs extends AbstractFileSystem {
   @Override
   public CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path path,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    return myFs.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
+      final OpenFileParameters parameters) throws IOException {
+    return myFs.openFileWithOptions(path, parameters);
   }
 
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    return myFs.hasPathCapability(path, capability);
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return myFs.createMultipartUploader(basePath);
+  }
 }

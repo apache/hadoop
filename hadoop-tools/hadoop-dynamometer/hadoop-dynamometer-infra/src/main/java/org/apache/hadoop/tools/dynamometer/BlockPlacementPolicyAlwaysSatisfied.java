@@ -42,6 +42,11 @@ public class BlockPlacementPolicyAlwaysSatisfied
     public String getErrorDescription() {
       return null;
     }
+
+    @Override
+    public int getAdditionalReplicasRequired() {
+      return 0;
+    }
   }
 
   @Override

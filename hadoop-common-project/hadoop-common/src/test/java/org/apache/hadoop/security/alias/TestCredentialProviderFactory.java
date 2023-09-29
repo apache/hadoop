@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class TestCredentialProviderFactory {
@@ -245,6 +246,18 @@ public class TestCredentialProviderFactory {
     checkPermissionRetention(conf, ourUrl, path);
   }
 
+  @Test
+  public void testLocalBCFKSProvider() {
+    Configuration conf = new Configuration();
+    final Path ksPath = new Path(tmpDir.toString(), "test.bcfks");
+    final String ourUrl = LocalBouncyCastleFipsKeyStoreProvider.SCHEME_NAME +
+        "://file" + ksPath.toUri();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+    Exception exception = assertThrows(IOException.class,
+        () -> CredentialProviderFactory.getProviders(conf));
+    assertEquals("Can't create keystore", exception.getMessage());
+  }
+
   public void checkPermissionRetention(Configuration conf, String ourUrl,
       Path path) throws Exception {
     CredentialProvider provider = CredentialProviderFactory.getProviders(conf).get(0);
@@ -271,4 +284,3 @@ public class TestCredentialProviderFactory {
         "keystore.", "rwxrwxrwx", s.getPermission().toString());
   }
 }
-

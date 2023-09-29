@@ -22,16 +22,16 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.codec.binary.Base64;
 
-import com.google.protobuf.GeneratedMessage;
-import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
-import com.google.protobuf.MessageOrBuilder;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
+import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message.Builder;
+import org.apache.hadoop.thirdparty.protobuf.MessageOrBuilder;
 
 /**
  * Helper class for setting/getting data elements in an object backed by a
  * protobuf implementation.
  */
-public class FederationProtocolPBTranslator<P extends GeneratedMessage,
+public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
     B extends Builder, T extends MessageOrBuilder> {
 
   /** Optional proto byte stream used to create this object. */
@@ -50,7 +50,8 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessage,
    * stream.
    *
    * @param p The existing proto object to use to initialize the translator.
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException If the given proto message is not instance of the class of
+   * the proto handler this translator holds.
    */
   @SuppressWarnings("unchecked")
   public void setProto(Message p) {
@@ -92,7 +93,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessage,
 
   /**
    * Get the serialized proto object. If the translator was created from a byte
-   * stream, returns the intitial byte stream. Otherwise creates a new byte
+   * stream, returns the initial byte stream. Otherwise, creates a new byte
    * stream from the cached builder.
    *
    * @return Protobuf message object
@@ -133,8 +134,9 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessage,
 
   /**
    * Read instance from base64 data.
-   * @param base64String
-   * @throws IOException
+   *
+   * @param base64String String containing Base64 data.
+   * @throws IOException If the protobuf message build fails.
    */
   @SuppressWarnings("unchecked")
   public void readInstance(String base64String) throws IOException {

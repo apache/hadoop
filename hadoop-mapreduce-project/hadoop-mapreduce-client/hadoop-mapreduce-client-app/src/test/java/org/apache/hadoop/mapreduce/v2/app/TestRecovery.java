@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -39,6 +40,7 @@ import java.util.Map;
 
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.Assert;
 
@@ -104,6 +106,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
@@ -113,14 +117,23 @@ import org.slf4j.LoggerFactory;
 public class TestRecovery {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRecovery.class);
-  private static Path outputDir = new Path(new File("target", 
-      TestRecovery.class.getName()).getAbsolutePath() + 
-      Path.SEPARATOR + "out");
+
+  private static File testRootDir;
+  private static Path outputDir;
   private static String partFile = "part-r-00000";
   private Text key1 = new Text("key1");
   private Text key2 = new Text("key2");
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    // setup the test root directory
+    testRootDir =
+        GenericTestUtils.setupTestRootDir(
+            TestRecovery.class);
+    outputDir = new Path(testRootDir.getAbsolutePath(), "out");
+  }
 
   /**
    * AM with 2 maps and 1 reduce. For 1st map, one attempt fails, one attempt
@@ -599,14 +612,13 @@ public class TestRecovery {
     MRApp app = new MRAppWithHistory(1, 1, false, this.getClass().getName(),
         true, ++runCount) {
     };
-    Configuration conf = new Configuration();
+    Configuration conf =
+        MRJobConfUtil.initEncryptedIntermediateConfigsForTesting(null);
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean("mapred.mapper.new-api", true);
     conf.setBoolean("mapred.reducer.new-api", true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
-    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
-
     // run the MR job at the first attempt
     Job jobAttempt1 = app.submit(conf);
     app.waitForState(jobAttempt1, JobState.RUNNING);
@@ -2075,7 +2087,7 @@ public class TestRecovery {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = slurp(expectedFile);
-    Assert.assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
   }
 
   public static String slurp(File f) throws IOException {

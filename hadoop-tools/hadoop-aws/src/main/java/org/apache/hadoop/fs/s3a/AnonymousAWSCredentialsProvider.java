@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AnonymousAWSCredentials;
-import com.amazonaws.auth.AWSCredentials;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -34,19 +35,18 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Please note that users may reference this class name from configuration
  * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
  * would be a backward-incompatible change.
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class AnonymousAWSCredentialsProvider implements AWSCredentialsProvider {
+public class AnonymousAWSCredentialsProvider implements AwsCredentialsProvider {
 
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider";
 
-  public AWSCredentials getCredentials() {
-    return new AnonymousAWSCredentials();
+  public AwsCredentials resolveCredentials() {
+    return AnonymousCredentialsProvider.create().resolveCredentials();
   }
-
-  public void refresh() {}
 
   @Override
   public String toString() {

@@ -26,9 +26,7 @@ import static org.junit.Assume.assumeTrue;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
@@ -58,6 +56,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -74,6 +73,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -81,6 +82,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
@@ -202,23 +208,15 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private class FairTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
-      try {
-        PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
-        out.println("<?xml version=\"1.0\"?>");
-        out.println("<allocations>");
-        out.println("<queue name=\"root\">");
-        out.println("  <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  <queue name=\"default\">");
-        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  </queue>");
-        out.println("  <queue name=\"test\">");
-        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
-        out.println("  </queue>");
-        out.println("</queue>");
-        out.println("</allocations>");
-        out.close();
-      } catch(IOException e) {
-      }
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("root")
+              .aclAdministerApps("someuser ")
+              .subQueue(new AllocationFileQueue.Builder("default")
+                  .aclAdministerApps("someuser ").build())
+              .subQueue(new AllocationFileQueue.Builder("test")
+                  .aclAdministerApps("someuser ").build())
+              .build())
+          .writeToFile(FS_ALLOC_FILE);
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
       conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }
@@ -339,7 +337,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String[] mediaTypes =
         { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
     for (String mediaType : mediaTypes) {
-      RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+              .withAppName("")
+              .withUser(webserviceUserName)
+              .build();
+      RMApp app = MockRMAppSubmitter.submit(rm, data);
       amNodeManager.nodeHeartbeat(true);
       ClientResponse response =
           this
@@ -366,7 +369,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String diagnostic = "message1";
     for (String mediaType : mediaTypes) {
       for (MediaType contentType : contentTypes) {
-        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        MockRMAppSubmissionData data =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser(webserviceUserName)
+                .build();
+        RMApp app = MockRMAppSubmitter.submit(rm, data);
         amNodeManager.nodeHeartbeat(true);
 
         AppState targetState =
@@ -457,7 +465,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     for (String mediaType : mediaTypes) {
       for (MediaType contentType : contentTypes) {
         for (String targetStateString : targetStates) {
-          RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+          MockRMAppSubmissionData data =
+              MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                  .withAppName("")
+                  .withUser(webserviceUserName)
+                  .build();
+          RMApp app = MockRMAppSubmitter.submit(rm, data);
           amNodeManager.nodeHeartbeat(true);
           ClientResponse response;
           AppState targetState = new AppState(targetStateString);
@@ -520,7 +533,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -564,7 +577,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String[] mediaTypes =
         { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
     for (String mediaType : mediaTypes) {
-      RMApp app = rm.submitApp(CONTAINER_MB, "test", "someuser");
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+              .withAppName("test")
+              .withUser("someuser")
+              .build();
+      RMApp app = MockRMAppSubmitter.submit(rm, data);
       amNodeManager.nodeHeartbeat(true);
       ClientResponse response =
           this
@@ -716,7 +734,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
 
   protected String validateGetNewApplicationXMLResponse(String response)
       throws ParserConfigurationException, IOException, SAXException {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(response));
@@ -1036,14 +1054,19 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String[] contentTypes =
         { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
     for (String contentType : contentTypes) {
-      RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+              .withAppName("")
+              .withUser(webserviceUserName)
+              .build();
+      RMApp app = MockRMAppSubmitter.submit(rm, data);
       amNodeManager.nodeHeartbeat(true);
       ClientResponse response =
           this
             .constructWebResource("apps", app.getApplicationId().toString(),
               "queue").accept(contentType).get(ClientResponse.class);
       assertResponseStatusCode(Status.OK, response.getStatusInfo());
-      String expectedQueue = "default";
+      String expectedQueue = "root.default";
       if(!isCapacityScheduler) {
         expectedQueue = "root." + webserviceUserName;
       }
@@ -1090,7 +1113,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         { MediaType.APPLICATION_JSON_TYPE, MediaType.APPLICATION_XML_TYPE };
     for (String mediaType : mediaTypes) {
       for (MediaType contentType : contentTypes) {
-        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        MockRMAppSubmissionData data1 =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser(webserviceUserName)
+                .build();
+        RMApp app = MockRMAppSubmitter.submit(rm, data1);
         amNodeManager.nodeHeartbeat(true);
         int modifiedPriority = 8;
         AppPriority priority = new AppPriority(modifiedPriority);
@@ -1130,7 +1158,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         }
 
         // check unauthorized
-        app = rm.submitApp(CONTAINER_MB, "", "someuser");
+        MockRMAppSubmissionData data =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser("someuser")
+                .build();
+        app = MockRMAppSubmitter.submit(rm, data);
         amNodeManager.nodeHeartbeat(true);
         response = this
             .constructWebResource("apps", app.getApplicationId().toString(),
@@ -1171,7 +1204,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         { MediaType.APPLICATION_JSON_TYPE, MediaType.APPLICATION_XML_TYPE };
     for (String mediaType : mediaTypes) {
       for (MediaType contentType : contentTypes) {
-        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        MockRMAppSubmissionData data1 =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser(webserviceUserName)
+                .build();
+        RMApp app = MockRMAppSubmitter.submit(rm, data1);
         amNodeManager.nodeHeartbeat(true);
         AppQueue targetQueue = new AppQueue("test");
         Object entity;
@@ -1192,10 +1230,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
           continue;
         }
         assertResponseStatusCode(Status.OK, response.getStatusInfo());
-        String expectedQueue = "test";
-        if(!isCapacityScheduler) {
-          expectedQueue = "root.test";
-        }
+        String expectedQueue = "root.test";
         if (mediaType.contains(MediaType.APPLICATION_JSON)) {
           verifyAppQueueJson(response, expectedQueue);
         } else {
@@ -1204,7 +1239,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         Assert.assertEquals(expectedQueue, app.getQueue());
 
         // check unauthorized
-        app = rm.submitApp(CONTAINER_MB, "", "someuser");
+        MockRMAppSubmissionData data =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser("someuser")
+                .build();
+        app = MockRMAppSubmitter.submit(rm, data);
         amNodeManager.nodeHeartbeat(true);
         response =
             this
@@ -1213,7 +1253,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               .put(ClientResponse.class);
         assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
         if(isCapacityScheduler) {
-          Assert.assertEquals("default", app.getQueue());
+          Assert.assertEquals("root.default", app.getQueue());
         }
         else {
           Assert.assertEquals("root.someuser", app.getQueue());
@@ -1257,7 +1297,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1287,7 +1327,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1312,7 +1352,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     for (String mediaType : mediaTypes) {
       for (MediaType contentType : contentTypes) {
         // application submitted without timeout
-        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        MockRMAppSubmissionData data =
+            MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+                .withAppName("")
+                .withUser(webserviceUserName)
+                .build();
+        RMApp app = MockRMAppSubmitter.submit(rm, data);
 
         ClientResponse response =
             this.constructWebResource("apps", app.getApplicationId().toString(),
@@ -1419,7 +1464,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));

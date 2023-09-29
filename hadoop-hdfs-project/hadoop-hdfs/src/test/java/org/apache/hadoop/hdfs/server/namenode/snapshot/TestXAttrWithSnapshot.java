@@ -28,14 +28,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
@@ -79,7 +79,7 @@ public class TestXAttrWithSnapshot {
 
   @AfterClass
   public static void shutdown() throws Exception {
-    IOUtils.cleanup(null, hdfs);
+    IOUtils.cleanupWithLogger(null, hdfs);
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -138,6 +138,31 @@ public class TestXAttrWithSnapshot {
     hdfs.removeXAttr(path, name2);
     xattrs = hdfs.getXAttrs(path);
     assertEquals(xattrs.size(), 0);
+  }
+
+  @Test
+  public void testXattrWithSnapshotAndNNRestart() throws Exception {
+    // Init
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    hdfs.setXAttr(path, name1, value1);
+    hdfs.allowSnapshot(path);
+    hdfs.createSnapshot(path, snapshotName);
+    SnapshotDiffReport report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    hdfs.setSafeMode(SafeModeAction.ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
+    cluster.restartNameNode(true);
+    report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
   }
 
   /**

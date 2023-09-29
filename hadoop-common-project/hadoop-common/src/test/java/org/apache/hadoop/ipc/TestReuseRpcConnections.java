@@ -26,7 +26,6 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.TestConnectionRetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.apache.hadoop.ipc.TestRpcBase.TestRpcService;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -129,7 +128,7 @@ public class TestReuseRpcConnections extends TestRpcBase {
     try {
       proxy1 = getClient(addr, newConf, retryPolicy1);
       proxy1.ping(null, newEmptyRequest());
-      client = ProtobufRpcEngine.getClient(newConf);
+      client = ProtobufRpcEngine2.getClient(newConf);
       final Set<ConnectionId> conns = client.getConnectionIds();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
 

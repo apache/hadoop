@@ -34,7 +34,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import com.google.common.net.HttpHeaders;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream.InputStreamAndFileLength;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;

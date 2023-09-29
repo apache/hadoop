@@ -32,8 +32,7 @@ class ReplicationWork extends BlockReconstructionWork {
     assert getSrcNodes().length == 1 :
         "There should be exactly 1 source node that have been selected";
     getSrcNodes()[0].incrementPendingReplicationWithoutTargets();
-    BlockManager.LOG
-        .debug("Creating a ReplicationWork to reconstruct " + block);
+    LOG.debug("Creating a ReplicationWork to reconstruct " + block);
   }
 
   @Override
@@ -43,10 +42,18 @@ class ReplicationWork extends BlockReconstructionWork {
     assert getSrcNodes().length > 0
         : "At least 1 source node should have been selected";
     try {
-      DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
-          getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
-          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+      DatanodeStorageInfo[] chosenTargets = null;
+      // HDFS-14720 If the block is deleted, the block size will become
+      // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
+      // to send for replication or reconstruction
+      if (!getBlock().isDeleted()) {
+        chosenTargets = blockplacement.chooseTarget(getSrcPath(),
+            getAdditionalReplRequired(), getSrcNodes()[0],
+            getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+            storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+      } else {
+        LOG.warn("ReplicationWork could not need choose targets for {}", getBlock());
+      }
       setTargets(chosenTargets);
     } finally {
       getSrcNodes()[0].decrementPendingReplicationWithoutTargets();

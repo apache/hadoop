@@ -23,12 +23,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocolPB;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -76,7 +75,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptRepor
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerReportRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersRequestProto;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class ApplicationHistoryProtocolPBClientImpl implements
     ApplicationHistoryProtocol, Closeable {
@@ -86,7 +85,7 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   public ApplicationHistoryProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ApplicationHistoryProtocolPB.class,
-      ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy =
         RPC.getProxy(ApplicationHistoryProtocolPB.class, clientVersion, addr,
           conf);

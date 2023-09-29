@@ -57,8 +57,8 @@ import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -102,11 +102,11 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize)
+      minBlockSize, long timeInterval)
       throws IOException {
     GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
         .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
-        .setMinBlockSize(minBlockSize).build();
+        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval).build();
     try {
       return PBHelper.convert(rpcProxy.getBlocks(NULL_CONTROLLER, req)
           .getBlocks());

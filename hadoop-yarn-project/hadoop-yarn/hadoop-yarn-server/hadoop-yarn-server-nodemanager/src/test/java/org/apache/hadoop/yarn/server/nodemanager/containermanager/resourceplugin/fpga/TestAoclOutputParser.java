@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin.InnerShellExecutor;
 import org.junit.Test;
 

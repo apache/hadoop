@@ -58,8 +58,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * Implementation for protobuf service that forwards requests
@@ -89,7 +89,7 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     BlocksWithLocations blocks;
     try {
       blocks = impl.getBlocks(dnInfo, request.getSize(),
-          request.getMinBlockSize());
+          request.getMinBlockSize(), request.getTimeInterval());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

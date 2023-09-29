@@ -79,7 +79,7 @@ class ReadRecordFactory extends RecordFactory {
 
   @Override
   public void close() throws IOException {
-    IOUtils.cleanup(null, src);
+    IOUtils.cleanupWithLogger(null, src);
     factory.close();
   }
 }

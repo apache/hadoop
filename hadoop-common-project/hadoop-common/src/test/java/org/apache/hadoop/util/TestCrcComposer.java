@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Before;
@@ -35,7 +36,7 @@ import static org.junit.Assert.*;
  */
 public class TestCrcComposer {
   @Rule
-  public Timeout globalTimeout = new Timeout(10000);
+  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   private Random rand = new Random(1234);
 

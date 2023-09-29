@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.security;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRpcBase;
@@ -151,7 +151,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
     // Set RPC engine to protobuf RPC engine
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 5);
 
@@ -181,7 +181,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group1");
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 5);
 
@@ -215,7 +215,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group1");
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 5);
 
@@ -251,7 +251,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     conf.setStrings(DefaultImpersonationProvider.getTestProvider().
         getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME), "group1");
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 2);
 
@@ -286,7 +286,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     final Configuration conf = new Configuration();
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 2);
 
@@ -322,7 +322,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group3");
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 2);
     
@@ -363,7 +363,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
     final Server server = setupTestServer(conf, 5, sm);
 
@@ -411,7 +411,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, newConf);
     // Set RPC engine to protobuf RPC engine
     RPC.setProtocolEngine(newConf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(newConf);
     final Server server = setupTestServer(newConf, 5, sm);
 

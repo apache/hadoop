@@ -39,9 +39,9 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -59,8 +59,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -84,8 +86,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
-  private static MockRM rm;
   private static String sunSecurityKrb5RcacheValue;
+  private MockRM rm;
 
   String delegationTokenHeader;
 
@@ -107,7 +109,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       System.setProperty(SUN_SECURITY_KRB5_RCACHE_KEY, "none");
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
-      setupAndStartRM();
+
     } catch (Exception e) {
       assertTrue("Couldn't create MiniKDC", false);
     }
@@ -118,14 +120,23 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
     }
-    if (rm != null) {
-      rm.stop();
-    }
     if (sunSecurityKrb5RcacheValue == null) {
       System.clearProperty(SUN_SECURITY_KRB5_RCACHE_KEY);
     } else {
       System.setProperty(SUN_SECURITY_KRB5_RCACHE_KEY,
           sunSecurityKrb5RcacheValue);
+    }
+  }
+
+  @Before
+  public void before() throws Exception {
+    setupAndStartRM();
+  }
+
+  @After
+  public void after() {
+    if (rm != null) {
+      rm.stop();
     }
   }
 
@@ -139,7 +150,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     this.delegationTokenHeader = header;
   }
 
-  private static void setupAndStartRM() throws Exception {
+  private void setupAndStartRM() throws Exception {
     Configuration rmconf = new Configuration();
     rmconf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -356,8 +367,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             }
           }
         } finally {
-          IOUtils.closeQuietly(reader);
-          IOUtils.closeQuietly(response);
+          IOUtils.closeStream(reader);
+          IOUtils.closeStream(response);
         }
         Assert.assertEquals("client2", owner);
         Token<RMDelegationTokenIdentifier> realToken = new Token<RMDelegationTokenIdentifier>();
@@ -420,10 +431,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
-        BufferedReader reader = null;
-        try {
-          reader = new BufferedReader(new InputStreamReader(response, "UTF8"));
-          for (String line; (line = reader.readLine()) != null;) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+            response, "UTF8"))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
             JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
               reader.close();
@@ -433,8 +444,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             }
           }
         } finally {
-          IOUtils.closeQuietly(reader);
-          IOUtils.closeQuietly(response);
+          IOUtils.closeStream(response);
         }
         return ret;
       }

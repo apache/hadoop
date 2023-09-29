@@ -52,7 +52,7 @@ import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 /**
  * Startup and checkpoint tests
  * 
@@ -294,7 +294,6 @@ public class TestStorageRestore {
       restore = fsi.getStorage().getRestoreFailedStorage();
       assertTrue("After check call restore is " + restore, restore);
       String commandOutput = cmdResult.getCommandOutput();
-      commandOutput.trim();
       assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));
       
 

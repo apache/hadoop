@@ -59,7 +59,9 @@ public class PrivilegedOperation {
     ADD_NUMA_PARAMS(""), // no CLI switch supported yet.
     REMOVE_DOCKER_CONTAINER("--remove-docker-container"),
     INSPECT_DOCKER_CONTAINER("--inspect-docker-container"),
-    SYNC_YARN_SYSFS("");
+    SYNC_YARN_SYSFS(""),
+    RUN_RUNC_CONTAINER("--run-runc-container"),
+    REAP_RUNC_LAYER_MOUNTS("--reap-runc-layer-mounts");
 
     private final String option;
 
@@ -133,7 +135,7 @@ public class PrivilegedOperation {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null || !(other instanceof PrivilegedOperation)) {
+    if (!(other instanceof PrivilegedOperation)) {
       return false;
     }
 

@@ -65,6 +65,8 @@ public interface DNSToSwitchMapping {
    *
    * If there is a cache on these nodes, this method will clear it, so that 
    * future accesses will see updated data.
+   *
+   * @param names input names.
    */
   public void reloadCachedMappings(List<String> names);
 }

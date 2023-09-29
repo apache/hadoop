@@ -53,6 +53,10 @@
 # variable is REQUIRED on ALL platforms except OS X!
 # export JAVA_HOME=
 
+# The language environment in which Hadoop runs. Use the English
+# environment to ensure that logs are printed as expected.
+export LANG=en_US.UTF-8
+
 # Location of Hadoop.  By default, Hadoop will attempt to determine
 # this location based upon its execution path.
 # export HADOOP_HOME=
@@ -389,15 +393,6 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # export HDFS_DFSROUTER_OPTS=""
-
-###
-# Ozone Manager specific parameters
-###
-# Specify the JVM options to be used when starting the Ozone Manager.
-# These options will be appended to the options specified as HADOOP_OPTS
-# and therefore may override any similar flags set in HADOOP_OPTS
-#
-# export HDFS_OM_OPTS=""
 
 ###
 # HDFS StorageContainerManager specific parameters

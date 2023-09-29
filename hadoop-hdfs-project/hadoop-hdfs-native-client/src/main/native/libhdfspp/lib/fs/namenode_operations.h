@@ -18,14 +18,18 @@
 #ifndef LIBHDFSPP_LIB_FS_NAMENODEOPERATIONS_H_
 #define LIBHDFSPP_LIB_FS_NAMENODEOPERATIONS_H_
 
+#include "ClientNamenodeProtocol.pb.h"
+
 #include "rpc/rpc_engine.h"
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
 #include "hdfspp/content_summary.h"
 #include "common/namenode_info.h"
-#include "ClientNamenodeProtocol.pb.h"
-#include "ClientNamenodeProtocol.hrpc.inl"
 
+#include <memory>
+#include <string>
+
+#include "ClientNamenodeProtocol.hrpc.inl"
 
 namespace hdfs {
 
@@ -43,7 +47,7 @@ class NameNodeOperations {
 public:
   MEMCHECKED_CLASS(NameNodeOperations)
   NameNodeOperations(std::shared_ptr<IoService> io_service, const Options &options,
-            const std::string &client_name, const std::string &user_name,
+            const std::shared_ptr<std::string> &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :
   io_service_(io_service),
   engine_(std::make_shared<RpcEngine>(io_service, options, client_name, user_name, protocol_name, protocol_version)),

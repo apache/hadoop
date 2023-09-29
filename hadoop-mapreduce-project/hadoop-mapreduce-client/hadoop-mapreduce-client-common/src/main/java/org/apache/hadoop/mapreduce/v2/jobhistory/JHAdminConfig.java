@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig;
 
 /**
@@ -254,6 +253,13 @@ public class JHAdminConfig {
       "webapp.xfs-filter.";
   public static final String MR_HISTORY_XFS_OPTIONS = MR_HISTORY_XFS_PREFIX +
       "xframe-options";
+
+  /**
+   * CORS settings.
+   */
+  public static final String MR_HISTORY_ENABLE_CORS_FILTER = MR_HISTORY_PREFIX +
+      "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_MR_HISTORY_ENABLE_CORS_FILTER = false;
 
   /**
    * Settings for .jhist file format.

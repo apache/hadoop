@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.Interns;
@@ -70,10 +69,11 @@ public class DataNodeMetricHelper {
         " of blocks cached"), beanClass.getNumBlocksCached())
       .addGauge(Interns.info("NumBlocksFailedToCache", "Datanode number of " +
         "blocks failed to cache"), beanClass.getNumBlocksFailedToCache())
-      .addGauge(Interns.info("NumBlocksFailedToUnCache", "Datanode number of" +
+        .addGauge(Interns.info("NumBlocksFailedToUnCache", "Datanode number of" +
           " blocks failed in cache eviction"),
-        beanClass.getNumBlocksFailedToUncache());
-
+        beanClass.getNumBlocksFailedToUncache())
+        .addGauge(Interns.info("LastDirectoryScannerFinishTime",
+        "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime());
   }
 
 }

@@ -21,7 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DAT
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -61,11 +61,11 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a client.  There are
@@ -227,7 +227,7 @@ public class SaslDataTransferClient {
       throws IOException {
     boolean localTrusted = trustedChannelResolver.isTrusted();
     boolean remoteTrusted = trustedChannelResolver.isTrusted(addr);
-    LOG.info("SASL encryption trust check: localHostTrusted = {}, "
+    LOG.debug("SASL encryption trust check: localHostTrusted = {}, "
         + "remoteHostTrusted = {}", localTrusted, remoteTrusted);
     if (!localTrusted || !remoteTrusted) {
       // The encryption key factory only returns a key if encryption is enabled.
@@ -548,14 +548,19 @@ public class SaslDataTransferClient {
           DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
       if (requestedQopContainsPrivacy(saslProps)) {
         // Negotiate cipher suites if configured.  Currently, the only supported
-        // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
-        // values for future expansion.
+        // cipher suite is AES/CTR/NoPadding or SM4/CTR/Nopadding,
+        // but the protocol allows multiple values for future expansion.
         if (cipherSuites != null && !cipherSuites.isEmpty()) {
-          if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+          CipherOption option = null;
+          if (cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
+          } else if (cipherSuites.equals(
+              CipherSuite.SM4_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.SM4_CTR_NOPADDING);
+          } else {
             throw new IOException(String.format("Invalid cipher suite, %s=%s",
                 DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
           }
-          CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
           cipherOptions = Lists.newArrayListWithCapacity(1);
           cipherOptions.add(option);
         }
@@ -583,11 +588,11 @@ public class SaslDataTransferClient {
               // the client accepts some cipher suites, but the server does not.
               LOG.debug("Client accepts cipher suites {}, "
                       + "but server {} does not accept any of them",
-                  cipherSuites, addr.toString());
+                  cipherSuites, addr);
             }
           } else {
             LOG.debug("Client using cipher suite {} with server {}",
-                cipherOption.getCipherSuite().getName(), addr.toString());
+                cipherOption.getCipherSuite().getName(), addr);
           }
         }
       }
@@ -598,7 +603,20 @@ public class SaslDataTransferClient {
           conf, cipherOption, underlyingOut, underlyingIn, false) :
           sasl.createStreamPair(out, in);
     } catch (IOException ioe) {
-      sendGenericSaslErrorMessage(out, ioe.getMessage());
+      String message = ioe.getMessage();
+      try {
+        sendGenericSaslErrorMessage(out, message);
+      } catch (Exception e) {
+        // If ioe is caused by error response from server, server will close peer connection.
+        // So sendGenericSaslErrorMessage might cause IOException due to "Broken pipe".
+        // We suppress IOException from sendGenericSaslErrorMessage
+        // and always throw `ioe` as top level.
+        // `ioe` can be InvalidEncryptionKeyException or InvalidBlockTokenException
+        // that indicates refresh key or token and are important for caller.
+        LOG.debug("Failed to send generic sasl error to server {} (message: {}), "
+                + "suppress exception", addr, message, e);
+        ioe.addSuppressed(e);
+      }
       throw ioe;
     }
   }

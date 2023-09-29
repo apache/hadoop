@@ -28,6 +28,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETFILESTATUS(false, HttpURLConnection.HTTP_OK),
     LISTSTATUS(false, HttpURLConnection.HTTP_OK),
     GETCONTENTSUMMARY(false, HttpURLConnection.HTTP_OK),
+    GETQUOTAUSAGE(false, HttpURLConnection.HTTP_OK),
     GETFILECHECKSUM(true, HttpURLConnection.HTTP_OK),
 
     GETHOMEDIRECTORY(false, HttpURLConnection.HTTP_OK),
@@ -61,7 +62,15 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     LISTSTATUS_BATCH(false, HttpURLConnection.HTTP_OK),
     GETSERVERDEFAULTS(false, HttpURLConnection.HTTP_OK),
     GETSNAPSHOTDIFF(false, HttpURLConnection.HTTP_OK),
-    GETSNAPSHOTTABLEDIRECTORYLIST(false, HttpURLConnection.HTTP_OK);
+    GETSNAPSHOTDIFFLISTING(false, HttpURLConnection.HTTP_OK),
+    GETSNAPSHOTTABLEDIRECTORYLIST(false, HttpURLConnection.HTTP_OK),
+    GETLINKTARGET(false, HttpURLConnection.HTTP_OK),
+    GETFILELINKSTATUS(false, HttpURLConnection.HTTP_OK),
+    GETSTATUS(false, HttpURLConnection.HTTP_OK),
+    GETECPOLICIES(false, HttpURLConnection.HTTP_OK),
+    GETECCODECS(false, HttpURLConnection.HTTP_OK),
+    GETTRASHROOTS(false, HttpURLConnection.HTTP_OK),
+    GETSNAPSHOTLIST(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;
     final int expectedHttpResponseCode;

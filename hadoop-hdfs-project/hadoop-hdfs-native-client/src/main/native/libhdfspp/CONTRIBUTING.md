@@ -42,14 +42,12 @@ also be followed as well as portability requirements.
 Automated Formatting
 --------------------
 
-Prior to submitting a patch for code review use llvm's formatting tool, clang-format, on the .h, .c, and .cc files included in the patch.  Use the -style=google switch when doing so.
+Prior to submitting a patch for code review use LLVM's formatting tool, clang-format, on the .h, .c, and .cc files included in the patch.  Use the -style=google switch when doing so.
 
-Example presubmission usage:
+Example pre-submission usage:
 
 ``` shell
-cat my_source_file.cc | clang-format -style=goole > temp_file.cc
-#optionally diff the source and temp file to get an idea what changed
-mv temp_file.cc my_source_file.cc
+$ clang-format -i -style=google temp_file.cc
 ```
 
 * note: On some linux distributions clang-format already exists in repositories but don't show up without an appended version number.  On Ubuntu you'll find it with:
@@ -126,7 +124,7 @@ Please make sure you write code that is portable.
 * Don't write code that could force a non-aligned word access.
     * This causes performance issues on most architectures and isn't supported at all on some.
     * Generally the compiler will prevent this unless you are doing clever things with pointers e.g. abusing placement new or reinterpreting a pointer into a pointer to a wider type.
-* If a type needs to be a a specific width make sure to specify it.
+* If a type needs to be a specific width make sure to specify it.
     * `int32_t my_32_bit_wide_int`
 * Avoid using compiler dependent pragmas or attributes.
     * If there is a justified and unavoidable reason for using these you must document why. See examples below.

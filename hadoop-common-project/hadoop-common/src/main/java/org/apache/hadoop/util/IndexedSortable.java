@@ -31,11 +31,18 @@ public interface IndexedSortable {
   /**
    * Compare items at the given addresses consistent with the semantics of
    * {@link java.util.Comparator#compare(Object, Object)}.
+   *
+   * @param i(int).
+   * @param j(int).
+   * @return compare result.
    */
   int compare(int i, int j);
 
   /**
    * Swap items at the given addresses.
+   *
+   * @param i i(int).
+   * @param j j(int).
    */
   void swap(int i, int j);
 }

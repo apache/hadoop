@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -68,7 +69,7 @@ public class TestTaskReport {
     report.setCounters(altCounters);
     // Verify real counters has priority over raw
     Counters counters = report.getCounters();
-    assertNotEquals(null, counters);
+    assertThat(counters).isNotNull();
     assertNotEquals(rCounters, altCounters);
     assertEquals(counters, altCounters);
   }
@@ -78,8 +79,8 @@ public class TestTaskReport {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Verify properties initialized to null
-    assertEquals(null, report.getCounters());
-    assertEquals(null, report.getRawCounters());
+    assertThat(report.getCounters()).isNull();
+    assertThat(report.getRawCounters()).isNull();
   }
 
   @Test
@@ -89,8 +90,8 @@ public class TestTaskReport {
     // Set raw counters to null
     report.setRawCounters(null);
     // Verify properties still null
-    assertEquals(null, report.getCounters());
-    assertEquals(null, report.getRawCounters());
+    assertThat(report.getCounters()).isNull();
+    assertThat(report.getRawCounters()).isNull();
 
   }
 
@@ -101,8 +102,8 @@ public class TestTaskReport {
     // Set raw counters to null
     report.setCounters(null);
     // Verify properties still null
-    assertEquals(null, report.getCounters());
-    assertEquals(null, report.getRawCounters());
+    assertThat(report.getCounters()).isNull();
+    assertThat(report.getRawCounters()).isNull();
   }
 
   @Test
@@ -117,8 +118,8 @@ public class TestTaskReport {
     assertNotEquals(null, counters);
     // Clear counters to null and then verify
     report.setCounters(null);
-    assertEquals(null, report.getCounters());
-    assertEquals(null, report.getRawCounters());
+    assertThat(report.getCounters()).isNull();
+    assertThat(report.getRawCounters()).isNull();
   }
 
   @Test
@@ -133,7 +134,7 @@ public class TestTaskReport {
     assertNotEquals(null, counters);
     // Clear counters to null and then verify
     report.setRawCounters(null);
-    assertEquals(null, report.getCounters());
-    assertEquals(null, report.getRawCounters());
+    assertThat(report.getCounters()).isNull();
+    assertThat(report.getRawCounters()).isNull();
   }
 }

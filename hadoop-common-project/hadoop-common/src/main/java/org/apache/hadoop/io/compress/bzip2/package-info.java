@@ -15,6 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Implementation of compression/decompression for the BZip2
+ * compression algorithm.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.io.compress.bzip2;

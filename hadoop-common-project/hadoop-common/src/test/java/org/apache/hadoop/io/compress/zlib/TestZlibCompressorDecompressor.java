@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.zip.DeflaterOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.compress.CompressDecompressTester;
 import org.apache.hadoop.io.compress.Compressor;
@@ -42,7 +41,7 @@ import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Before;
 import org.junit.Test;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestZlibCompressorDecompressor {
 

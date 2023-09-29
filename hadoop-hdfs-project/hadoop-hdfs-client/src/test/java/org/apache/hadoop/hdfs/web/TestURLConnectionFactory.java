@@ -27,13 +27,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import static org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
 import org.slf4j.LoggerFactory;
 
 public final class TestURLConnectionFactory {
@@ -99,7 +100,7 @@ public final class TestURLConnectionFactory {
     Thread reloaderThread = null;
     for (Thread thread : threads) {
       if ((thread.getName() != null)
-          && (thread.getName().contains("Truststore reloader thread"))) {
+          && (thread.getName().contains(SSL_MONITORING_THREAD_NAME))) {
         reloaderThread = thread;
       }
     }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.records;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,7 +41,7 @@ public class QueryResult<T extends BaseRecord> {
    * @return List of records.
    */
   public List<T> getRecords() {
-    return Collections.unmodifiableList(this.records);
+    return this.records;
   }
 
   /**

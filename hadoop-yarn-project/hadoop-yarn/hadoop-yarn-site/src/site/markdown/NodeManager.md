@@ -42,19 +42,34 @@ The following configuration parameters can be used to modify the disk checks:
 | `yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage` | Float between 0-100 | The maximum percentage of disk space that may be utilized before a disk is marked as unhealthy by the disk checker service. This check is run for every disk used by the NodeManager. The default value is 90 i.e. 90% of the disk can be used. |
 | `yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb` | Integer | The minimum amount of free space that must be available on the disk for the disk checker service to mark the disk as healthy. This check is run for every disk used by the NodeManager. The default value is 0 i.e. the entire disk can be used. |
 
-###External Health Script
+### External Health Script
 
-Users may specify their own health checker script that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script exits with a non-zero exit code, times out or results in an exception being thrown, the node is marked as unhealthy. Please note that if the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy. Please note that speifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
+Users may specify their own health checker scripts that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script times out, results in an exception being thrown or outputs a line which begins with the string ERROR, the node is marked as unhealthy. Please note that:
 
-The following configuration parameters can be used to set the health script:
+  * Exit code other than 0 is **not** considered to be a failure because it might have been caused by a syntax error. Therefore the node will **not** be marked as unhealthy.
+
+  * If the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy.
+
+  * Specifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
+
+Users can specify up to 4 scripts to run individually with the `yarn.nodemanager.health-checker.scripts` configuration. Also these options can be configured for all scripts (global configurations):
 
 | Configuration Name | Allowed Values | Description |
 |:---- |:---- |:---- |
-| `yarn.nodemanager.health-checker.interval-ms` | Postive integer | The interval, in milliseconds, at which health checker service runs; the default value is 10 minutes. |
-| `yarn.nodemanager.health-checker.script.timeout-ms` | Postive integer | The timeout for the health script that's executed; the default value is 20 minutes. |
-| `yarn.nodemanager.health-checker.script.path` | String | Absolute path to the health check script to be run. |
-| `yarn.nodemanager.health-checker.script.opts` | String | Arguments to be passed to the script when the script is executed. |
+|`yarn.nodemanager.health-checker.script`| String | The keywords for the health checker scripts separated by a comma. The default is "script". |
+| `yarn.nodemanager.health-checker.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs; the default value is 10 minutes. |
+| `yarn.nodemanager.health-checker.timeout-ms` | Positive integer | The timeout for the health script that's executed; the default value is 20 minutes. |
 
+The following options can be set for every health checker script. The %s symbol is substituted with each keyword provided in `yarn.nodemanager.health-checker.script`.
+
+| Configuration Name | Allowed Values | Description |
+|:---- |:---- |:---- |
+| `yarn.nodemanager.health-checker.%s.path` | String | Absolute path to the health check script to be run. Mandatory argument for each script. |
+| `yarn.nodemanager.health-checker.%s.opts` | String | Arguments to be passed to the script when the script is executed. Mandatory argument for each script. |
+| `yarn.nodemanager.health-checker.%s.interval-ms` | Positive integer | The interval, in milliseconds, at which health checker service runs.  |
+| `yarn.nodemanager.health-checker.%s.timeout-ms` | Positive integer | The timeout for the health script that's executed. |
+
+The interval and timeout options are not required to be specified. In that case the global configurations will be used.
 
 NodeManager Restart
 -------------------
@@ -188,3 +203,37 @@ The following settings need to be set in *yarn-site.xml*.
 		<name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
 		<value>org.apache.hadoop.mapred.ShuffleHandler</value>
 	</property>
+
+Prevent Container Logs From Getting Too Big
+-------------------------------------------
+
+This allows a cluster admin to configure a cluster such that a task attempt will be killed if any container log exceeds a configured size. This helps prevent logs from filling disks and also prevent the need to aggregate enormous logs.
+
+### Configuration
+
+The following parameters can be used to configure the container log dir sizes.
+
+| Configuration Name | Allowed Values | Description |
+|:---- |:---- |:---- |
+| `yarn.nodemanager.container-log-monitor.enable` | true, false | Flag to enable the container log monitor which enforces container log directory size limits. Default is false. |
+| `yarn.nodemanager.container-log-monitor.interval-ms` | Positive integer | How often to check the usage of a container's log directories in milliseconds. Default is 60000 ms. |
+| `yarn.nodemanager.container-log-monitor.dir-size-limit-bytes` | Long | The disk space limit, in bytes, for a single container log directory. Default is 1000000000. |
+| `yarn.nodemanager.container-log-monitor.total-size-limit-bytes` | Long | The disk space limit, in bytes, for all of a container's logs. The default is 10000000000. |
+
+Scale Heart-beat Interval Based on CPU Utilization
+-------------------------------------------------
+
+This allows a cluster admin to configure a cluster to allow the heart-beat between the Resource Manager and each NodeManager to be scaled based on the CPU utilization of the node compared to the overall CPU utilization of the cluster. 
+
+### Configuration
+
+The following parameters can be used to configure the heart-beat interval and whether and how it scales.
+
+| Configuration Name | Allowed Values | Description |
+|:---- |:---- |:---- |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-ms` | Long | Specifies the default heart-beat interval in milliseconds for every NodeManager in the cluster. Default is 1000 ms. |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable` | true, false | Enables heart-beat interval scaling.  If true, The NodeManager heart-beat interval will scale based on the difference between the CPU utilization on the node and the cluster-wide average CPU utilization. Default is false. |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms` | Positive Long | If heart-beat interval scaling is enabled, this is the minimum heart-beat interval in milliseconds. Default is 1000 ms. |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms` | Positive Long | If heart-beat interval scaling is enabled, this is the maximum heart-beat interval in milliseconds. Default is 1000 ms. |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor` | Positive Float | If heart-beat interval scaling is enabled, this controls the degree of adjustment when speeding up heartbeat intervals. At 1.0, 20% less than the average cluster-wide CPU utilization will result in a 20% decrease in the heartbeat interval. Default is 1.0. |
+| `yarn.resourcemanager.nodemanagers.heartbeat-interval-slowdown-factor` | Positive Float | If heart-beat interval scaling is enabled, this controls the degree of adjustment when slowing down heartbeat intervals. At 1.0, 20% greater than the average cluster-wide CPU utilization will result in a 20% increase in the heartbeat interval. Default is 1.0. |

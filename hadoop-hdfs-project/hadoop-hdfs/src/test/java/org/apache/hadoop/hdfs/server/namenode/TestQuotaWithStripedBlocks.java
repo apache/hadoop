@@ -140,7 +140,7 @@ public class TestQuotaWithStripedBlocks {
       Assert.assertEquals(cellSize * groupSize,
           actualDiskUsed);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 }

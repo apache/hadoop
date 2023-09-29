@@ -18,21 +18,30 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonClientException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Exception which Hadoop's AWSCredentialsProvider implementations should
  * throw when there is a problem with the credential setup. This
- * is a subclass of {@link AmazonClientException} which sets
- * {@link #isRetryable()} to false, so as to fail fast.
+ * is a subclass of {@link SdkClientException} which sets
+ * {@link #retryable()} to false, so as to fail fast.
+ * This is used in credential providers and elsewhere.
+ * When passed through {@code S3AUtils.translateException()} it
+ * is mapped to an AccessDeniedException.
  */
-public class CredentialInitializationException extends AmazonClientException {
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public class CredentialInitializationException extends SdkClientException {
+
   public CredentialInitializationException(String message, Throwable t) {
-    super(message, t);
+    super(builder().message(message).cause(t));
   }
 
   public CredentialInitializationException(String message) {
-    super(message);
+    super(builder().message(message));
   }
 
   /**
@@ -40,7 +49,7 @@ public class CredentialInitializationException extends AmazonClientException {
    * @return false, always.
    */
   @Override
-  public boolean isRetryable() {
+  public boolean retryable() {
     return false;
   }
 }

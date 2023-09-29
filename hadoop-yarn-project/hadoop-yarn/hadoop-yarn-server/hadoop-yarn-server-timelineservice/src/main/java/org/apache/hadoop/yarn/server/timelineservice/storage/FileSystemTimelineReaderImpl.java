@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +93,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private static final String STORAGE_DIR_ROOT = "timeline_service_data";
 
   private final CSVFormat csvFormat =
-      CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
+      CSVFormat.Builder.create().setHeader("APP", "USER", "FLOW", "FLOWRUN").build();
 
   public FileSystemTimelineReaderImpl() {
     super(FileSystemTimelineReaderImpl.class.getName());
@@ -164,7 +164,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private String getFlowRunPath(String userId, String clusterId,
       String flowName, Long flowRunId, String appId) throws IOException {
     if (userId != null && flowName != null && flowRunId != null) {
-      return userId + File.separator + flowName + File.separator + flowRunId;
+      return userId + File.separator + flowName + File.separator + "*" + File.separator + flowRunId;
     }
     if (clusterId == null || appId == null) {
       throw new IOException("Unable to get flow info");
@@ -186,7 +186,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           continue;
         }
         return record.get(1).trim() + File.separator + record.get(2).trim() +
-            File.separator + record.get(3).trim();
+            File.separator + "*" + File.separator + record.get(3).trim();
       }
       parser.close();
     }
@@ -286,6 +286,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             }
           }
         );
+    dir = getNormalPath(dir);
     if (dir != null) {
       RemoteIterator<LocatedFileStatus> fileStatuses = fs.listFiles(dir,
               false);
@@ -394,9 +395,11 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());
     Path entityTypePath = new Path(appIdPath, context.getEntityType());
-    Path entityFilePath = new Path(entityTypePath,
-            context.getEntityId() + TIMELINE_SERVICE_STORAGE_EXTENSION);
-
+    Path entityFilePath = getNormalPath(new Path(entityTypePath,
+        context.getEntityId() + TIMELINE_SERVICE_STORAGE_EXTENSION));
+    if (entityFilePath == null) {
+      return null;
+    }
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
                  fs.open(entityFilePath), Charset.forName("UTF-8")))) {
@@ -410,6 +413,14 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
   }
 
+  private Path getNormalPath(Path globPath) throws IOException {
+    FileStatus[] status = fs.globStatus(globPath);
+    if (status == null || status.length < 1) {
+      LOG.info("{} do not exist.", globPath);
+      return null;
+    }
+    return status[0].getPath();
+  }
   @Override
   public Set<TimelineEntity> getEntities(TimelineReaderContext context,
       TimelineEntityFilters filters, TimelineDataToRetrieve dataToRetrieve)
@@ -432,10 +443,14 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     String flowRunPathStr = getFlowRunPath(context.getUserId(),
         context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
         context.getAppId());
+    if (context.getUserId() == null) {
+      context.setUserId(new Path(flowRunPathStr).getParent().getParent().getParent().
+          getName());
+    }
     Path clusterIdPath = new Path(entitiesPath, context.getClusterId());
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());
-    FileStatus[] fileStatuses = fs.listStatus(appIdPath);
+    FileStatus[] fileStatuses = fs.listStatus(getNormalPath(appIdPath));
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
         result.add(fileStatus.getPath().getName());
@@ -450,7 +465,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       fs.exists(rootPath);
     } catch (IOException e) {
       return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
           e.getMessage()
           );
     }

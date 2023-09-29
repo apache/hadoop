@@ -36,12 +36,15 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /**
  * Test symbolic links in Hdfs.
@@ -49,8 +52,11 @@ import org.junit.Test;
 abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
 
   {
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.TRACE);
   }
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestSymlinkHdfs.class);
 
   protected static MiniDFSCluster cluster;
   protected static WebHdfsFileSystem webhdfs;
@@ -99,6 +105,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     if (cluster != null) {
       cluster.shutdown();
     }
+    IOUtils.cleanupWithLogger(LOG, webhdfs);
   }
 
   @Test(timeout=10000)

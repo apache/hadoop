@@ -25,15 +25,16 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import javax.servlet.ServletContext;
@@ -56,6 +57,11 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +69,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
@@ -71,19 +76,25 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -109,11 +120,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -129,6 +140,7 @@ public class NamenodeWebHdfsMethods {
   private String scheme;
   private Principal userPrincipal;
   private String remoteAddr;
+  private int remotePort;
 
   private @Context ServletContext context;
   private @Context HttpServletResponse response;
@@ -143,6 +155,7 @@ public class NamenodeWebHdfsMethods {
     // get the remote address, if coming in via a trusted proxy server then
     // the address with be that of the proxied client
     remoteAddr = JspHelper.getRemoteAddr(request);
+    remotePort = JspHelper.getRemotePort(request);
     supportEZ =
         Boolean.valueOf(request.getHeader(WebHdfsFileSystem.EZ_HEADER));
   }
@@ -221,6 +234,10 @@ public class NamenodeWebHdfsMethods {
         return getRemoteAddr();
       }
       @Override
+      public int getRemotePort() {
+        return getRemotePortFromJSPHelper();
+      }
+      @Override
       public InetAddress getHostInetAddress() {
         try {
           return InetAddress.getByName(getHostAddress());
@@ -249,6 +266,10 @@ public class NamenodeWebHdfsMethods {
 
   protected String getRemoteAddr() {
     return remoteAddr;
+  }
+
+  protected int getRemotePortFromJSPHelper() {
+    return remotePort;
   }
 
   protected void queueExternalCall(ExternalCall call)
@@ -387,6 +408,9 @@ public class NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+    if (!DFSUtil.isValidName(path)) {
+      throw new InvalidPathException(path);
+    }
     final DatanodeInfo dn;
     final NamenodeProtocols np = getRPCServer(namenode);
     HdfsFileStatus status = null;
@@ -509,14 +533,24 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
           .DEFAULT) final StoragePolicyParam policyName,
       @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam
-              .DEFAULT) final ECPolicyParam ecpolicy
-      ) throws IOException, InterruptedException {
+              .DEFAULT) final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+      final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+      final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME)
+      @DefaultValue(StorageTypeParam.DEFAULT)
+      final StorageTypeParam storageType
+  ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
-        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy);
+        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
   }
 
   /** Validate all required params. */
@@ -598,15 +632,23 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
           .DEFAULT) final StoragePolicyParam policyName,
       @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam.DEFAULT)
-      final ECPolicyParam ecpolicy
+          final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+          final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+          final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
+          final StorageTypeParam storageType
       ) throws IOException, InterruptedException {
-
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         delegationTokenArgument, aclPermission, xattrName, xattrValue,
         xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes,
-        createFlagParam, noredirect, policyName);
+        createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -618,7 +660,8 @@ public class NamenodeWebHdfsMethods {
               renameOptions, createParent, delegationTokenArgument,
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect, policyName, ecpolicy);
+              createFlagParam, noredirect, policyName, ecpolicy,
+              namespaceQuota, storagespaceQuota, storageType);
       }
     });
   }
@@ -654,7 +697,10 @@ public class NamenodeWebHdfsMethods {
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName,
-      final ECPolicyParam ecpolicy
+      final ECPolicyParam ecpolicy,
+      final NameSpaceQuotaParam namespaceQuota,
+      final StorageSpaceQuotaParam storagespaceQuota,
+      final StorageTypeParam storageType
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final ClientProtocol cp = getRpcClientProtocol();
@@ -831,6 +877,17 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, ecpolicy);
       cp.setErasureCodingPolicy(fullpath, ecpolicy.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTA:
+      validateOpParams(op, namespaceQuota, storagespaceQuota);
+      cp.setQuota(fullpath, namespaceQuota.getValue(),
+          storagespaceQuota.getValue(), null);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTABYSTORAGETYPE:
+      validateOpParams(op, storagespaceQuota, storageType);
+      cp.setQuota(fullpath, HdfsConstants.QUOTA_DONT_SET,
+          storagespaceQuota.getValue(),
+          StorageType.parseStorageType(storageType.getValue()));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -1001,6 +1058,10 @@ public class NamenodeWebHdfsMethods {
           final SnapshotNameParam snapshotName,
       @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
           final OldSnapshotNameParam oldSnapshotName,
+      @QueryParam(SnapshotDiffStartPathParam.NAME) @DefaultValue(SnapshotDiffStartPathParam.DEFAULT)
+          final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      @QueryParam(SnapshotDiffIndexParam.NAME) @DefaultValue(SnapshotDiffIndexParam.DEFAULT)
+          final SnapshotDiffIndexParam snapshotDiffIndex,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -1008,12 +1069,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
-        fsAction, snapshotName, oldSnapshotName, tokenKind, tokenService,
-        noredirect, startAfter);
+        fsAction, snapshotName, oldSnapshotName,
+        snapshotDiffStartPath, snapshotDiffIndex,
+        tokenKind, tokenService,
+        noredirect, startAfter, allUsers);
   }
 
   /** Handle HTTP GET request. */
@@ -1052,6 +1117,10 @@ public class NamenodeWebHdfsMethods {
           final SnapshotNameParam snapshotName,
       @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
           final OldSnapshotNameParam oldSnapshotName,
+      @QueryParam(SnapshotDiffStartPathParam.NAME) @DefaultValue(SnapshotDiffStartPathParam.DEFAULT)
+          final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      @QueryParam(SnapshotDiffIndexParam.NAME) @DefaultValue(SnapshotDiffIndexParam.DEFAULT)
+          final SnapshotDiffIndexParam snapshotDiffIndex,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -1059,22 +1128,23 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-        String absolutePath = path.getAbsolutePath() == null ? null :
-            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
-        return get(ugi, delegation, username, doAsUser, absolutePath,
+        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
-            tokenKind, tokenService, noredirect, startAfter);
+            snapshotDiffStartPath, snapshotDiffIndex,
+            tokenKind, tokenService, noredirect, startAfter, allUsers);
       }
     });
   }
@@ -1103,10 +1173,13 @@ public class NamenodeWebHdfsMethods {
       final FsActionParam fsAction,
       final SnapshotNameParam snapshotName,
       final OldSnapshotNameParam oldSnapshotName,
+      final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      final SnapshotDiffIndexParam snapshotDiffIndex,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
@@ -1171,6 +1244,12 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(contentsummary);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETQUOTAUSAGE:
+    {
+      final QuotaUsage quotaUsage = cp.getQuotaUsage(fullpath);
+      final String js = JsonUtil.toJsonString(quotaUsage);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GETFILECHECKSUM:
     {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -1205,7 +1284,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi);
       final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1246,9 +1325,15 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().build();
     }
     case GETTRASHROOT: {
-      final String trashPath = getTrashRoot(fullpath, conf);
+      final String trashPath = getTrashRoot(conf, fullpath);
       final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
       return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETTRASHROOTS: {
+      Boolean value = allUsers.getValue();
+      final Collection<FileStatus> trashPaths = getTrashRoots(conf, value);
+      final String js = JsonUtil.toJsonString(trashPaths);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case LISTSTATUS_BATCH:
     {
@@ -1295,10 +1380,56 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(diffReport);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETSNAPSHOTDIFFLISTING: {
+      SnapshotDiffReportListing diffReport = cp.getSnapshotDiffReportListing(
+          fullpath, oldSnapshotName.getValue(), snapshotName.getValue(),
+          DFSUtilClient.string2Bytes(snapshotDiffStartPath.getValue()),
+          snapshotDiffIndex.getValue());
+      final String js = JsonUtil.toJsonString(diffReport);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GETSNAPSHOTTABLEDIRECTORYLIST: {
       SnapshottableDirectoryStatus[] snapshottableDirectoryList =
           cp.getSnapshottableDirListing();
       final String js = JsonUtil.toJsonString(snapshottableDirectoryList);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTLIST: {
+      SnapshotStatus[] snapshotList =
+          cp.getSnapshotListing(fullpath);
+      final String js = JsonUtil.toJsonString(snapshotList);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETLINKTARGET: {
+      String target = cp.getLinkTarget(fullpath);
+      final String js = JsonUtil.toJsonString("Path", target);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETFILELINKSTATUS: {
+      HdfsFileStatus status = cp.getFileLinkInfo(fullpath);
+      if (status == null) {
+        throw new FileNotFoundException("File does not exist: " + fullpath);
+      }
+      final String js = JsonUtil.toJsonString(status, true);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSTATUS: {
+      long[] states = cp.getStats();
+      FsStatus status = new FsStatus(
+          DFSClient.getStateAtIndex(states, 0),
+          DFSClient.getStateAtIndex(states, 1),
+          DFSClient.getStateAtIndex(states, 2));
+      final String js = JsonUtil.toJsonString(status);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECPOLICIES: {
+      ErasureCodingPolicyInfo[] ecPolicyInfos = cp.getErasureCodingPolicies();
+      final String js = JsonUtil.toJsonString(ecPolicyInfos);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECCODECS: {
+      Map<String, String> ecCodecs = cp.getErasureCodingCodecs();
+      final String js = JsonUtil.toJsonString("ErasureCodingCodecs", ecCodecs);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
@@ -1306,11 +1437,75 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
-  private static String getTrashRoot(String fullPath,
-      Configuration conf) throws IOException {
-    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
-    return fs.getTrashRoot(
-        new org.apache.hadoop.fs.Path(fullPath)).toUri().getPath();
+  /**
+   * Get the snapshot root of a given file or directory if it exists.
+   * e.g. if /snapdir1 is a snapshottable directory and path given is
+   * /snapdir1/path/to/file, this method would return /snapdir1
+   * @param pathStr String of path to a file or a directory.
+   * @return Not null if found in a snapshot root directory.
+   * @throws IOException
+   */
+  String getSnapshotRoot(String pathStr) throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList =
+        getRpcClientProtocol().getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return null;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (pathStr.startsWith(currDir)) {
+        return currDir;
+      }
+    }
+    return null;
+  }
+
+  private String getTrashRoot(Configuration conf, String fullPath)
+      throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String parentSrc = getParent(fullPath);
+    String ssTrashRoot = "";
+    boolean isSnapshotTrashRootEnabled = getRpcClientProtocol()
+        .getServerDefaults().getSnapshotTrashRootEnabled();
+    if (isSnapshotTrashRootEnabled) {
+      String ssRoot = getSnapshotRoot(fullPath);
+      if (ssRoot != null) {
+        ssTrashRoot = DFSUtilClient.getSnapshotTrashRoot(ssRoot, ugi);
+      }
+    }
+    EncryptionZone ez = getRpcClientProtocol().getEZForPath(
+        parentSrc != null ? parentSrc : fullPath);
+    String ezTrashRoot = "";
+    if (ez != null) {
+      ezTrashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
+    }
+    // Choose the longest path
+    if (ssTrashRoot.isEmpty() && ezTrashRoot.isEmpty()) {
+      return DFSUtilClient.getTrashRoot(conf, ugi);
+    } else {
+      return ssTrashRoot.length() > ezTrashRoot.length() ?
+          ssTrashRoot : ezTrashRoot;
+    }
+  }
+
+  /**
+   * Returns the parent of a path in the same way as Path#getParent.
+   * @return the parent of a path or null if at root
+   */
+  public String getParent(String path) {
+    int lastSlash = path.lastIndexOf('/');
+    int start = 0;
+    if ((path.length() == start) || // empty path
+        (lastSlash == start && path.length() == start + 1)) { // at root
+      return null;
+    }
+    String parent;
+    if (lastSlash == -1) {
+      parent = org.apache.hadoop.fs.Path.CUR_DIR;
+    } else {
+      parent = path.substring(0, lastSlash == start ? start + 1 : lastSlash);
+    }
+    return parent;
   }
 
   private static DirectoryListing getDirectoryListing(final ClientProtocol cp,
@@ -1375,6 +1570,13 @@ public class NamenodeWebHdfsMethods {
       }
     };
   }
+
+  private Collection<FileStatus> getTrashRoots(Configuration conf, boolean allUsers)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoots(allUsers);
+  }
+
 
   /** Handle HTTP DELETE request for the root. */
   @DELETE

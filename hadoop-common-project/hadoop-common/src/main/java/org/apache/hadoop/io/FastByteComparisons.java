@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.UnsignedBytes;
 
 /**
  * Utility code to do optimized byte-array comparison.

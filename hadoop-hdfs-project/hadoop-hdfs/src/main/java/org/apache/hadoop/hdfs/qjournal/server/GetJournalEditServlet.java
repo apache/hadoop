@@ -27,11 +27,11 @@ import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -64,7 +64,7 @@ import org.apache.hadoop.util.StringUtils;
  * </ul>
  */
 @InterfaceAudience.Private
-public class GetJournalEditServlet extends HttpServlet {
+public class GetJournalEditServlet extends DfsServlet {
 
   private static final long serialVersionUID = -4635891628211723009L;
   private static final Logger LOG =
@@ -77,17 +77,11 @@ public class GetJournalEditServlet extends HttpServlet {
 
   protected boolean isValidRequestor(HttpServletRequest request, Configuration conf)
       throws IOException {
-    String remotePrincipal = request.getUserPrincipal().getName();
-    String remoteShortName = request.getRemoteUser();
-    if (remotePrincipal == null) { // This really shouldn't happen...
-      LOG.warn("Received null remoteUser while authorizing access to " +
-          "GetJournalEditServlet");
-      return false;
-    }
+    UserGroupInformation ugi = getUGI(request, conf);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Validating request made by " + remotePrincipal +
-          " / " + remoteShortName + ". This user is: " +
+      LOG.debug("Validating request made by " + ugi.getUserName() +
+          " / " + ugi.getShortUserName() + ". This user is: " +
           UserGroupInformation.getLoginUser());
     }
 
@@ -115,9 +109,9 @@ public class GetJournalEditServlet extends HttpServlet {
     for (String v : validRequestors) {
       if (LOG.isDebugEnabled())
         LOG.debug("isValidRequestor is comparing to valid requestor: " + v);
-      if (v != null && v.equals(remotePrincipal)) {
+      if (v != null && v.equals(ugi.getUserName())) {
         if (LOG.isDebugEnabled())
-          LOG.debug("isValidRequestor is allowing: " + remotePrincipal);
+          LOG.debug("isValidRequestor is allowing: " + ugi.getUserName());
         return true;
       }
     }
@@ -125,16 +119,16 @@ public class GetJournalEditServlet extends HttpServlet {
     // Additionally, we compare the short name of the requestor to this JN's
     // username, because we want to allow requests from other JNs during
     // recovery, but we can't enumerate the full list of JNs.
-    if (remoteShortName.equals(
+    if (ugi.getShortUserName().equals(
           UserGroupInformation.getLoginUser().getShortUserName())) {
       if (LOG.isDebugEnabled())
         LOG.debug("isValidRequestor is allowing other JN principal: " +
-            remotePrincipal);
+            ugi.getUserName());
       return true;
     }
 
     if (LOG.isDebugEnabled())
-      LOG.debug("isValidRequestor is rejecting: " + remotePrincipal);
+      LOG.debug("isValidRequestor is rejecting: " + ugi.getUserName());
     return false;
   }
   

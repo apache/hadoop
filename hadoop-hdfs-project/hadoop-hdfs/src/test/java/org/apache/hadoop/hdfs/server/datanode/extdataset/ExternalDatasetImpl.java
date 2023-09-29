@@ -23,7 +23,10 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -225,6 +228,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
 
   @Override
   public void invalidate(String bpid, Block[] invalidBlks) throws IOException {
+  }
+
+  @Override
+  public void invalidateMissingBlock(String bpid, Block block) {
   }
 
   @Override
@@ -451,7 +458,29 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public AutoCloseableLock acquireDatasetLock() {
+  public DataNodeLockManager<AutoCloseDataSetLock> acquireDatasetLockManager() {
     return null;
   }
+
+  @Override
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+      throws IOException {
+    return Collections.EMPTY_SET;
+  }
+
+  @Override
+  public MountVolumeMap getMountVolumeMap() {
+    return null;
+  }
+
+  @Override
+  public List<FsVolumeImpl> getVolumeList() {
+    return null;
+  }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
 }

@@ -16,7 +16,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.slf4j.Logger;
@@ -33,6 +33,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetrics
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_PENDING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_RUNNING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_SUBMITTED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_COMPLETED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_FAILED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_KILLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_PENDING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_RUNNING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_SUBMITTED;
 
 final class AppMetricsChecker {
   private final static Logger LOG =
@@ -45,7 +51,13 @@ final class AppMetricsChecker {
         .gaugeInt(APPS_RUNNING, 0)
         .counter(APPS_COMPLETED, 0)
         .counter(APPS_FAILED, 0)
-        .counter(APPS_KILLED, 0);
+        .counter(APPS_KILLED, 0)
+        .counter(UNMANAGED_APPS_SUBMITTED, 0)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 0)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 0)
+        .counter(UNMANAGED_APPS_COMPLETED, 0)
+        .counter(UNMANAGED_APPS_FAILED, 0)
+        .counter(UNMANAGED_APPS_KILLED, 0);
 
   enum AppMetricsKey {
     APPS_SUBMITTED("AppsSubmitted"),
@@ -53,7 +65,13 @@ final class AppMetricsChecker {
     APPS_RUNNING("AppsRunning"),
     APPS_COMPLETED("AppsCompleted"),
     APPS_FAILED("AppsFailed"),
-    APPS_KILLED("AppsKilled");
+    APPS_KILLED("AppsKilled"),
+    UNMANAGED_APPS_SUBMITTED("UnmanagedAppsSubmitted"),
+    UNMANAGED_APPS_PENDING("UnmanagedAppsPending"),
+    UNMANAGED_APPS_RUNNING("UnmanagedAppsRunning"),
+    UNMANAGED_APPS_COMPLETED("UnmanagedAppsCompleted"),
+    UNMANAGED_APPS_FAILED("UnmanagedAppsFailed"),
+    UNMANAGED_APPS_KILLED("UnmanagedAppsKilled");
 
     private String value;
 

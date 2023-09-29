@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -138,7 +138,7 @@ public class TestRMWebAppFairScheduler {
         @Override
         public RMAppMetrics getRMAppMetrics() {
           return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0,
-              new HashMap<>(), new HashMap<>());
+              new HashMap<>(), new HashMap<>(), 0);
         }
         @Override
         public YarnApplicationState createApplicationState() {

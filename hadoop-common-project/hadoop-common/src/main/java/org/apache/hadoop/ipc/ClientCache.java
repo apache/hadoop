@@ -29,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 /* Cache a client using its socket factory as the hash key */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -91,6 +93,8 @@ public class ClientCache {
   /**
    * Stop a RPC client connection 
    * A RPC client is closed only when its reference count becomes zero.
+   *
+   * @param client input client.
    */
   public void stopClient(Client client) {
     if (Client.LOG.isDebugEnabled()) {
@@ -113,5 +117,11 @@ public class ClientCache {
       }
       client.stop();
     }
+  }
+
+  @VisibleForTesting
+  public void clearCache() {
+    clients.values().forEach(c -> c.stop());
+    clients.clear();
   }
 }

@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
   //wrapping file_raw into a unique pointer to guarantee deletion
   std::unique_ptr<hdfs::FileHandle> file(file_raw);
 
-  ssize_t total_bytes_read = 0;
   size_t last_bytes_read = 0;
 
   do{
@@ -71,7 +70,6 @@ int main(int argc, char *argv[]) {
     if(status.ok()) {
       //Writing file chunks to stdout
       fwrite(input_buffer, last_bytes_read, 1, stdout);
-      total_bytes_read += last_bytes_read;
     } else {
       if(status.is_invalid_offset()){
         //Reached the end of the file

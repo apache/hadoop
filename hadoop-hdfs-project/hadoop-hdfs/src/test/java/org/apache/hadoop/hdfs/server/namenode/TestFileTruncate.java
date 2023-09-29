@@ -33,6 +33,11 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -43,6 +48,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -52,7 +58,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -139,6 +144,8 @@ public class TestFileTruncate {
         writeContents(contents, fileLength, p);
 
         int newLength = fileLength - toTruncate;
+        assertTrue("DFS supports truncate",
+            fs.hasPathCapability(p, CommonPathCapabilities.FS_TRUNCATE));
         boolean isReady = fs.truncate(p, newLength);
         LOG.info("fileLength=" + fileLength + ", newLength=" + newLength
             + ", toTruncate=" + toTruncate + ", isReady=" + isReady);
@@ -172,6 +179,8 @@ public class TestFileTruncate {
 
     for(int n = data.length; n > 0; ) {
       final int newLength = ThreadLocalRandom.current().nextInt(n);
+      assertTrue("DFS supports truncate",
+          fs.hasPathCapability(p, CommonPathCapabilities.FS_TRUNCATE));
       final boolean isReady = fs.truncate(p, newLength);
       LOG.info("newLength=" + newLength + ", isReady=" + isReady);
       assertEquals("File must be closed for truncating at the block boundary",
@@ -205,6 +214,8 @@ public class TestFileTruncate {
     final int newLength = data.length - 1;
     assert newLength % BLOCK_SIZE != 0 :
         " newLength must not be multiple of BLOCK_SIZE";
+    assertTrue("DFS supports truncate",
+        fs.hasPathCapability(p, CommonPathCapabilities.FS_TRUNCATE));
     final boolean isReady = fs.truncate(p, newLength);
     LOG.info("newLength=" + newLength + ", isReady=" + isReady);
     assertEquals("File must be closed for truncating at the block boundary",
@@ -215,6 +226,70 @@ public class TestFileTruncate {
     }
     checkFullFile(p, newLength, data);
     assertBlockNotPresent(lastBlock);
+    fs.delete(dir, true);
+  }
+
+  /**
+   * Test truncate twice together on a file.
+   */
+  @Test(timeout=90000)
+  public void testTruncateTwiceTogether() throws Exception {
+
+    Path dir = new Path("/testTruncateTwiceTogether");
+    fs.mkdirs(dir);
+    final Path p = new Path(dir, "file");
+    final byte[] data = new byte[100 * BLOCK_SIZE];
+    ThreadLocalRandom.current().nextBytes(data);
+    writeContents(data, data.length, p);
+
+    DataNodeFaultInjector originInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+      @Override
+      public void delay() {
+        try {
+          // Bigger than soft lease period.
+          Thread.sleep(5000);
+        } catch (InterruptedException e) {
+          // Ignore
+        }
+      }
+    };
+    // Delay to recovery.
+    DataNodeFaultInjector.set(injector);
+
+    // Truncate by using different client name.
+    Thread t = new Thread(() -> {
+      String hdfsCacheDisableKey = "fs.hdfs.impl.disable.cache";
+      boolean originCacheDisable =
+          conf.getBoolean(hdfsCacheDisableKey, false);
+      try {
+        conf.setBoolean(hdfsCacheDisableKey, true);
+        FileSystem fs1 = FileSystem.get(conf);
+        fs1.truncate(p, data.length-1);
+        } catch (IOException e) {
+          // ignore
+        } finally{
+          conf.setBoolean(hdfsCacheDisableKey, originCacheDisable);
+        }
+      });
+    t.start();
+    t.join();
+    NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
+        .setLeasePeriod(LOW_SOFTLIMIT, LOW_HARDLIMIT);
+
+    LambdaTestUtils.intercept(RemoteException.class,
+        "/testTruncateTwiceTogether/file is being truncated",
+        () -> fs.truncate(p, data.length - 2));
+
+    // wait for block recovery
+    checkBlockRecovery(p);
+    assertFileLength(p, data.length - 1);
+
+    DataNodeFaultInjector.set(originInjector);
+    NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
+        .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
     fs.delete(dir, true);
   }
 
@@ -252,7 +327,8 @@ public class TestFileTruncate {
   }
 
   @Test
-  public void testSnapshotWithAppendTruncate() throws IOException {
+  public void testSnapshotWithAppendTruncate()
+      throws IOException, InterruptedException {
     testSnapshotWithAppendTruncate(0, 1, 2);
     testSnapshotWithAppendTruncate(0, 2, 1);
     testSnapshotWithAppendTruncate(1, 0, 2);
@@ -266,7 +342,8 @@ public class TestFileTruncate {
    * Delete snapshots in the specified order and verify that
    * remaining snapshots are still readable.
    */
-  void testSnapshotWithAppendTruncate(int ... deleteOrder) throws IOException {
+  void testSnapshotWithAppendTruncate(int... deleteOrder)
+      throws IOException, InterruptedException {
     FSDirectory fsDir = cluster.getNamesystem().getFSDirectory();
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
@@ -314,16 +391,16 @@ public class TestFileTruncate {
     // Truncate to block boundary
     int newLength = length[0] + BLOCK_SIZE / 2;
     boolean isReady = fs.truncate(src, newLength);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertTrue("Recovery is not expected.", isReady);
     assertFileLength(snapshotFiles[2], length[2]);
     assertFileLength(snapshotFiles[1], length[1]);
     assertFileLength(snapshotFiles[0], length[0]);
     assertBlockNotPresent(appendedBlk);
-
     // Diskspace consumed should be 16 bytes * 3. [blk 1,2,3 SS:4]
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(48L));
-
     // Truncate full block again
     newLength = length[0] - BLOCK_SIZE / 2;
     isReady = fs.truncate(src, newLength);
@@ -331,11 +408,9 @@ public class TestFileTruncate {
     assertFileLength(snapshotFiles[2], length[2]);
     assertFileLength(snapshotFiles[1], length[1]);
     assertFileLength(snapshotFiles[0], length[0]);
-
     // Diskspace consumed should be 16 bytes * 3. [blk 1,2 SS:3,4]
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(48L));
-
     // Truncate half of the last block
     newLength -= BLOCK_SIZE / 2;
     isReady = fs.truncate(src, newLength);
@@ -346,15 +421,12 @@ public class TestFileTruncate {
     assertFileLength(snapshotFiles[0], length[0]);
     Block replacedBlk = getLocatedBlocks(src).getLastLocatedBlock()
         .getBlock().getLocalBlock();
-
     // Diskspace consumed should be 16 bytes * 3. [blk 1,6 SS:2,3,4]
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(54L));
-
     snapshotDir = fs.createSnapshot(parent, ss[3]);
     snapshotFiles[3] = new Path(snapshotDir, truncateFile);
     length[3] = newLength;
-
     // Delete file. Should still be able to read snapshots
     int numINodes = fsDir.getInodeMapSize();
     isReady = fs.delete(src, false);
@@ -365,17 +437,15 @@ public class TestFileTruncate {
     assertFileLength(snapshotFiles[0], length[0]);
     assertEquals("Number of INodes should not change",
         numINodes, fsDir.getInodeMapSize());
-
     fs.deleteSnapshot(parent, ss[3]);
-
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertBlockExists(firstBlk);
     assertBlockExists(lastBlk);
     assertBlockNotPresent(replacedBlk);
-
     // Diskspace consumed should be 16 bytes * 3. [SS:1,2,3,4]
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(48L));
-
     // delete snapshots in the specified order
     fs.deleteSnapshot(parent, ss[deleteOrder[0]]);
     assertFileLength(snapshotFiles[deleteOrder[1]], length[deleteOrder[1]]);
@@ -384,12 +454,12 @@ public class TestFileTruncate {
     assertBlockExists(lastBlk);
     assertEquals("Number of INodes should not change",
         numINodes, fsDir.getInodeMapSize());
-
     // Diskspace consumed should be 16 bytes * 3. [SS:1,2,3,4]
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(48L));
-
     fs.deleteSnapshot(parent, ss[deleteOrder[1]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertBlockExists(firstBlk);
     contentSummary = fs.getContentSummary(parent);
@@ -403,11 +473,11 @@ public class TestFileTruncate {
     }
     assertEquals("Number of INodes should not change",
         numINodes, fsDir .getInodeMapSize());
-
     fs.deleteSnapshot(parent, ss[deleteOrder[2]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertBlockNotPresent(firstBlk);
     assertBlockNotPresent(lastBlk);
-
     // Diskspace consumed should be 0 bytes * 3. []
     contentSummary = fs.getContentSummary(parent);
     assertThat(contentSummary.getSpaceConsumed(), is(0L));
@@ -421,7 +491,8 @@ public class TestFileTruncate {
    * remaining snapshots are still readable.
    */
   @Test
-  public void testSnapshotWithTruncates() throws IOException {
+  public void testSnapshotWithTruncates()
+      throws IOException, InterruptedException {
     testSnapshotWithTruncates(0, 1, 2);
     testSnapshotWithTruncates(0, 2, 1);
     testSnapshotWithTruncates(1, 0, 2);
@@ -430,7 +501,8 @@ public class TestFileTruncate {
     testSnapshotWithTruncates(2, 1, 0);
   }
 
-  void testSnapshotWithTruncates(int ... deleteOrder) throws IOException {
+  void testSnapshotWithTruncates(int... deleteOrder)
+      throws IOException, InterruptedException {
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     fs.allowSnapshot(parent);
@@ -477,6 +549,8 @@ public class TestFileTruncate {
     assertThat(contentSummary.getSpaceConsumed(), is(42L));
 
     fs.deleteSnapshot(parent, ss[deleteOrder[0]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[1]], length[deleteOrder[1]]);
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertFileLength(src, length[2]);
@@ -494,6 +568,8 @@ public class TestFileTruncate {
     }
 
     fs.deleteSnapshot(parent, ss[deleteOrder[1]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertFileLength(src, length[2]);
     assertBlockExists(firstBlk);
@@ -514,6 +590,8 @@ public class TestFileTruncate {
     }
 
     fs.deleteSnapshot(parent, ss[deleteOrder[2]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(src, length[2]);
     assertBlockExists(firstBlk);
 
@@ -523,6 +601,8 @@ public class TestFileTruncate {
     assertThat(contentSummary.getLength(), is(6L));
 
     fs.delete(src, false);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     assertBlockNotPresent(firstBlk);
 
     // Diskspace consumed should be 0 bytes * 3. []
@@ -631,7 +711,7 @@ public class TestFileTruncate {
     {
       try {
         fs.truncate(p, 0);
-        fail("Truncate must fail since a trancate is already in pregress.");
+        fail("Truncate must fail since a truncate is already in progress.");
       } catch (IOException expected) {
         GenericTestUtils.assertExceptionContains(
             "Failed to TRUNCATE_FILE", expected);
@@ -659,7 +739,8 @@ public class TestFileTruncate {
 
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
         .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-            HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
 
     checkFullFile(p, newLength, contents);
     fs.delete(p, false);
@@ -873,9 +954,9 @@ public class TestFileTruncate {
   @Test
   public void testTruncateEditLogLoad() throws IOException {
     // purge previously accumulated edits
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     int startingFileSize = 2 * BLOCK_SIZE + BLOCK_SIZE / 2;
     int toTruncate = 1;
@@ -971,7 +1052,7 @@ public class TestFileTruncate {
     assertFileLength(snapshotFile, startingFileSize);
 
     // empty edits and restart
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
     cluster.restartNameNode(true);
     assertThat("Total block count should be unchanged from start-up",
@@ -1166,10 +1247,10 @@ public class TestFileTruncate {
     final DFSAdmin dfsadmin = new DFSAdmin(cluster.getConfiguration(0));
     DistributedFileSystem dfs = cluster.getFileSystem();
     //start rolling upgrade
-    dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    dfs.setSafeMode(SafeModeAction.ENTER);
     int status = dfsadmin.run(new String[]{"-rollingUpgrade", "prepare"});
     assertEquals("could not prepare for rolling upgrade", 0, status);
-    dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    dfs.setSafeMode(SafeModeAction.LEAVE);
 
     Path dir = new Path("/testTruncateWithRollingUpgrade");
     fs.mkdirs(dir);
@@ -1188,7 +1269,8 @@ public class TestFileTruncate {
         cluster.getNamesystem().getFSDirectory().getBlockManager()
             .getTotalBlocks());
     fs.delete(p, true);
-
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     assertEquals("block num should 0", 0,
         cluster.getNamesystem().getFSDirectory().getBlockManager()
             .getTotalBlocks());
@@ -1281,5 +1363,148 @@ public class TestFileTruncate {
       cluster.restartDataNode(dn, false, true);
       cluster.waitActive();
     }
+  }
+
+  /**
+   * QuotaUsage in Truncate with Snapshot.
+   */
+  @Test
+  public void testQuotaOnTruncateWithSnapshot() throws Exception {
+    Path root = new Path("/");
+    Path dirPath = new Path(root, "dir");
+    assertTrue(fs.mkdirs(dirPath));
+    Path filePath = new Path(dirPath, "file");
+    DFSTestUtil.createFile(fs, filePath, 10, (short) 3, 0);
+
+    // verify quotausage and content summary after creating snapshot
+    fs.allowSnapshot(dirPath);
+    fs.createSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // truncating the file size to 5bytes
+    boolean blockrecovery = fs.truncate(filePath, 5);
+    if (!blockrecovery) {
+      checkBlockRecovery(filePath, fs, 300, 100L);
+    }
+
+    // verify quotausage and content summary after truncating file which exists
+    // in snapshot
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // verify quotausage and content summary after deleting snapshot
+    // now the quota of the file shouldn't present in quotausage and content
+    // summary
+    fs.deleteSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+  }
+
+  /**
+   * Test concat on file which is a reference.
+   */
+  @Test
+  public void testConcatOnInodeRefernce() throws IOException {
+    String dir = "/testConcat";
+    Path trgDir = new Path(dir);
+    fs.mkdirs(new Path(dir), FsPermission.getDirDefault());
+
+    // Create a target file
+    Path trg = new Path(dir, "file");
+    DFSTestUtil.createFile(fs, trg, 512, (short) 2, 0);
+
+    String dir2 = "/dir2";
+    Path srcDir = new Path(dir2);
+    // create a source file
+    fs.mkdirs(srcDir);
+    fs.allowSnapshot(srcDir);
+    Path src = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(fs, src, 512, (short) 2, 0);
+
+    // make the file as an Inode reference and delete the reference
+    fs.createSnapshot(srcDir, "s1");
+    fs.rename(src, trgDir);
+    fs.deleteSnapshot(srcDir, "s1");
+    Path[] srcs = new Path[1];
+    srcs[0] = new Path(dir, "file1");
+    assertEquals(2, fs.getContentSummary(new Path(dir)).getFileCount());
+
+    // perform concat
+    fs.concat(trg, srcs);
+    assertEquals(1, fs.getContentSummary(new Path(dir)).getFileCount());
+  }
+
+  /**
+   * Test Quota space consumed with multiple snapshots.
+   */
+  @Test
+  public void testQuotaSpaceConsumedWithSnapshots() throws IOException {
+    Path root = new Path("/");
+    Path dir = new Path(root, "dir");
+    fs.mkdirs(dir);
+    fs.allowSnapshot(dir);
+
+    // create a file
+    Path file2 = new Path(dir, "file2");
+    DFSTestUtil.createFile(fs, file2, 30, (short) 1, 0);
+
+    // create a snapshot and truncate the file
+    fs.createSnapshot(dir, "s1");
+    boolean isReady = fs.truncate(file2, 20);
+    if (!isReady) {
+      checkBlockRecovery(file2);
+    }
+
+    // create one more snapshot and truncate the file which exists in previous
+    // snapshot
+    fs.createSnapshot(dir, "s2");
+    isReady = fs.truncate(file2, 10);
+    if (!isReady) {
+      checkBlockRecovery(file2);
+    }
+
+    // delete the snapshots and check quota space consumed usage
+    fs.deleteSnapshot(dir, "s1");
+    fs.deleteSnapshot(dir, "s2");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+    fs.delete(dir, true);
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+  }
+
+  /**
+   * Test truncate on a snapshotted file.
+   */
+  @Test
+  public void testTruncatewithRenameandSnapshot() throws Exception {
+    final Path dir = new Path("/dir");
+    fs.mkdirs(dir, new FsPermission((short) 0777));
+    final Path file = new Path(dir, "file");
+    final Path movedFile = new Path("/file");
+
+    // 1. create a file and snapshot for dir which is having a file
+    DFSTestUtil.createFile(fs, file, 10, (short) 3, 0);
+    fs.allowSnapshot(dir);
+    Path snapshotPath = fs.createSnapshot(dir, "s0");
+    assertTrue(fs.exists(snapshotPath));
+
+    // 2. move the file
+    fs.rename(file, new Path("/"));
+
+    // 3.truncate the moved file
+    final boolean isReady = fs.truncate(movedFile, 5);
+    if (!isReady) {
+      checkBlockRecovery(movedFile);
+    }
+    FileStatus fileStatus = fs.getFileStatus(movedFile);
+    assertEquals(5, fileStatus.getLen());
+
+    // 4. get block locations of file which is in snapshot
+    LocatedBlocks locations = fs.getClient().getNamenode()
+        .getBlockLocations("/dir/.snapshot/s0/file", 0, 10);
+    assertEquals(10, locations.get(0).getBlockSize());
   }
 }

@@ -18,7 +18,8 @@
 
 /**
  * Includes implementations of token secret managers.
- * Implementations should extend {@link AbstractDelegationTokenSecretManager}.
+ * Implementations should extend
+ * {@link org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

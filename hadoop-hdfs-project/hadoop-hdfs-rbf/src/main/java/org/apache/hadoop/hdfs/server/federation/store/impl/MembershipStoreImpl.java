@@ -185,7 +185,9 @@ public class MembershipStoreImpl
 
   @Override
   public boolean loadCache(boolean force) throws IOException {
-    super.loadCache(force);
+    if (!super.loadCache(force)) {
+      return false;
+    }
 
     // Update local cache atomically
     cacheWriteLock.lock();
@@ -213,12 +215,15 @@ public class MembershipStoreImpl
             nnRegistrations.put(nnId, nnRegistration);
           }
           nnRegistration.add(membership);
-          String bpId = membership.getBlockPoolId();
-          String cId = membership.getClusterId();
-          String nsId = membership.getNameserviceId();
-          FederationNamespaceInfo nsInfo =
-              new FederationNamespaceInfo(bpId, cId, nsId);
-          this.activeNamespaces.add(nsInfo);
+          if (membership.getState()
+              != FederationNamenodeServiceState.UNAVAILABLE) {
+            String bpId = membership.getBlockPoolId();
+            String cId = membership.getClusterId();
+            String nsId = membership.getNameserviceId();
+            FederationNamespaceInfo nsInfo =
+                new FederationNamespaceInfo(bpId, cId, nsId);
+            this.activeNamespaces.add(nsInfo);
+          }
         }
       }
 

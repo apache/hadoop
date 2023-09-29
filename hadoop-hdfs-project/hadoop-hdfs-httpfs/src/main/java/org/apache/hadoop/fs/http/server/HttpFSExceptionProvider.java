@@ -70,12 +70,16 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
       status = Response.Status.NOT_FOUND;
     } else if (throwable instanceof IOException) {
       status = Response.Status.INTERNAL_SERVER_ERROR;
+      logErrorFully(status, throwable);
     } else if (throwable instanceof UnsupportedOperationException) {
       status = Response.Status.BAD_REQUEST;
+      logErrorFully(status, throwable);
     } else if (throwable instanceof IllegalArgumentException) {
       status = Response.Status.BAD_REQUEST;
+      logErrorFully(status, throwable);
     } else {
       status = Response.Status.INTERNAL_SERVER_ERROR;
+      logErrorFully(status, throwable);
     }
     return createResponse(status, throwable);
   }
@@ -92,7 +96,10 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
     String path = MDC.get("path");
     String message = getOneLineMessage(throwable);
     AUDIT_LOG.warn("FAILED [{}:{}] response [{}] {}", new Object[]{method, path, status, message});
-    LOG.warn("[{}:{}] response [{}] {}", new Object[]{method, path, status, message}, throwable);
+    LOG.warn("[{}:{}] response [{}] {}", method, path, status, message, throwable);
   }
 
+  private void logErrorFully(Response.Status status, Throwable throwable) {
+    LOG.debug("Failed with {}", status, throwable);
+  }
 }

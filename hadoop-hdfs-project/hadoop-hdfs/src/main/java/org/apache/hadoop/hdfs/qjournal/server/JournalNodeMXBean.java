@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.List;
+
 /**
  * This is the JMX management interface for JournalNode information
  */
@@ -32,5 +34,43 @@ public interface JournalNodeMXBean {
    * 
    * @return A string presenting status for each journal
    */
-  public String getJournalsStatus();
+  String getJournalsStatus();
+
+  /**
+   * Get host and port of JournalNode.
+   *
+   * @return colon separated host and port.
+   */
+  String getHostAndPort();
+
+  /**
+   * Get list of the clusters of JournalNode's journals
+   * as one JournalNode may support multiple clusters.
+   *
+   * @return list of clusters.
+   */
+  List<String> getClusterIds();
+
+  /**
+   * Gets the version of Hadoop.
+   *
+   * @return the version of Hadoop.
+   */
+  String getVersion();
+
+  /**
+   * Get the start time of the JournalNode.
+   *
+   * @return the start time of the JournalNode.
+   */
+  long getJNStartedTimeInMillis();
+
+  /**
+   * Get the list of the storage infos of JournalNode's journals. Storage infos
+   * include layout version, namespace id, cluster id and creation time of the
+   * File system state.
+   *
+   * @return the list of storage infos associated with journals.
+   */
+  List<String> getStorageInfos();
 }

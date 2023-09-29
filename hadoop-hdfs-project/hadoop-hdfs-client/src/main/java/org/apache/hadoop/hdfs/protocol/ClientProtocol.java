@@ -698,6 +698,24 @@ public interface ClientProtocol {
       boolean needLocation) throws IOException;
 
   /**
+   * Get a partial listing of the input directories
+   *
+   * @param srcs the input directories
+   * @param startAfter the name to start listing after encoded in Java UTF8
+   * @param needLocation if the FileStatus should contain block locations
+   *
+   * @return a partial listing starting after startAfter. null if the input is
+   *   empty
+   * @throws IOException if an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  BatchedDirectoryListing getBatchedListing(
+      String[] srcs,
+      byte[] startAfter,
+      boolean needLocation) throws IOException;
+
+  /**
    * Get the list of snapshottable directories that are owned
    * by the current user. Return all the snapshottable directories if the
    * current user is a super user.
@@ -708,6 +726,18 @@ public interface ClientProtocol {
   @ReadOnly(isCoordinated = true)
   SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException;
+
+  /**
+   * Get listing of all the snapshots for a snapshottable directory.
+   *
+   * @return Information about all the snapshots for a snapshottable directory
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException;
+
 
   ///////////////////////////////////////
   // System issues and management
@@ -729,11 +759,19 @@ public interface ClientProtocol {
    * the last call to renewLease(), the NameNode assumes the
    * client has died.
    *
+   * @param namespaces The full Namespace list that the renewLease rpc
+   *                   should be forwarded by RBF.
+   *                   Tips: NN side, this value should be null.
+   *                         RBF side, if this value is null, this rpc will
+   *                         be forwarded to all available namespaces,
+   *                         else this rpc will be forwarded to
+   *                         the special namespaces.
+   *
    * @throws org.apache.hadoop.security.AccessControlException permission denied
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  void renewLease(String clientName) throws IOException;
+  void renewLease(String clientName, List<String> namespaces) throws IOException;
 
   /**
    * Start lease recovery.
@@ -1145,11 +1183,11 @@ public interface ClientProtocol {
    * Sets the modification and access time of the file to the specified time.
    * @param src The string representation of the path
    * @param mtime The number of milliseconds since Jan 1, 1970.
-   *              Setting mtime to -1 means that modification time should not
+   *              Setting negative mtime means that modification time should not
    *              be set by this call.
    * @param atime The number of milliseconds since Jan 1, 1970.
-   *              Setting atime to -1 means that access time should not be set
-   *              by this call.
+   *              Setting negative atime means that access time should not be
+   *              set by this call.
    *
    * @throws org.apache.hadoop.security.AccessControlException permission denied
    * @throws java.io.FileNotFoundException file <code>src</code> is not found
@@ -1744,6 +1782,18 @@ public interface ClientProtocol {
   void unsetErasureCodingPolicy(String src) throws IOException;
 
   /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  ECTopologyVerifierResult getECTopologyResultForPolicies(String... policyNames)
+      throws IOException;
+
+  /**
    * Get {@link QuotaUsage} rooted at the specified directory.
    *
    * Note: due to HDFS-6763, standby/observer doesn't keep up-to-date info
@@ -1826,4 +1876,16 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   void satisfyStoragePolicy(String path) throws IOException;
+
+  /**
+   * Get report on all of the slow Datanodes. Slow running datanodes are identified based on
+   * the Outlier detection algorithm, if slow peer tracking is enabled for the DFS cluster.
+   *
+   * @return Datanode report for slow running datanodes.
+   * @throws IOException If an I/O error occurs.
+   */
+  @Idempotent
+  @ReadOnly
+  DatanodeInfo[] getSlowDatanodeReport() throws IOException;
+
 }

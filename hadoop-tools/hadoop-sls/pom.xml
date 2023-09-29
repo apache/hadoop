@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-sls</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Scheduler Load Simulator</description>
   <name>Apache Hadoop Scheduler Load Simulator</name>
   <packaging>jar</packaging>
@@ -73,6 +73,11 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -108,10 +113,9 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
@@ -124,7 +128,6 @@
           <excludes>
             <exclude>src/main/data/2jobs2min-rumen-jh.json</exclude>
             <exclude>src/main/html/js/thirdparty/jquery.js</exclude>
-            <exclude>src/main/html/js/thirdparty/d3-LICENSE</exclude>
             <exclude>src/main/html/js/thirdparty/d3.v3.js</exclude>
             <exclude>src/main/html/simulate.html.template</exclude>
             <exclude>src/main/html/simulate.info.html.template</exclude>
@@ -140,6 +143,7 @@
             <exclude>src/test/resources/nodes-with-resources.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
             <exclude>src/test/resources/ongoing-invariants.txt</exclude>
+            <exclude>src/test/resources/sls_dag.json</exclude>
           </excludes>
         </configuration>
       </plugin>

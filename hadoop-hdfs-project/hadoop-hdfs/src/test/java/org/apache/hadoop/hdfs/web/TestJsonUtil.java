@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -45,14 +46,19 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.common.collect.Lists;
 
 public class TestJsonUtil {
 
@@ -104,6 +110,48 @@ public class TestJsonUtil {
     Assert.assertEquals(status.getErasureCodingPolicy(),
         s2.getErasureCodingPolicy());
     Assert.assertEquals(fstatus, fs2);
+  }
+
+  /**
+   * Verify isSymlink when symlink ie empty.
+   */
+  @Test
+  public void testHdfsFileStatus() throws Exception {
+    HdfsFileStatus hdfsFileStatus = new HdfsFileStatus.Builder()
+        .replication(1)
+        .blocksize(1024)
+        .perm(new FsPermission((short) 777))
+        .owner("owner")
+        .group("group")
+        .symlink(new byte[0])
+        .path(new byte[0])
+        .fileId(1010)
+        .isdir(true)
+        .build();
+
+    Assert.assertFalse(hdfsFileStatus.isSymlink());
+    LambdaTestUtils.intercept(IOException.class,
+        "Path " + hdfsFileStatus.getPath() + " is not a symbolic link",
+        () -> hdfsFileStatus.getSymlink());
+
+    String expectString = new StringBuilder()
+        .append("HdfsLocatedFileStatus")
+        .append("{")
+        .append("path=" + null)
+        .append("; isDirectory=" + true)
+        .append("; modification_time=" + 0)
+        .append("; access_time=" + 0)
+        .append("; owner=" + "owner")
+        .append("; group=" + "group")
+        .append("; permission=" + "r----x--t")
+        .append("; isSymlink=" + false)
+        .append("; hasAcl=" + false)
+        .append("; isEncrypted=" + false)
+        .append("; isErasureCoded=" + false)
+        .append("}")
+        .toString();
+
+    Assert.assertEquals(expectString, hdfsFileStatus.toString());
   }
 
   @Test
@@ -256,7 +304,40 @@ public class TestJsonUtil {
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
   }
-  
+
+  @Test
+  public void testToJsonFromContentSummary() {
+    String jsonString =
+        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":"
+            + "\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,"
+            + "\"quota\":44444,\"snapshotDirectoryCount\":1,"
+            + "\"snapshotFileCount\":2,\"snapshotLength\":10,"
+            + "\"snapshotSpaceConsumed\":30,\"spaceConsumed\":55555,"
+            + "\"spaceQuota\":66666,\"typeQuota\":{}}}";
+
+    long length = 11111;
+    long fileCount = 22222;
+    long directoryCount = 33333;
+    long quota = 44444;
+    long spaceConsumed = 55555;
+    long spaceQuota = 66666;
+    String ecPolicy = "RS-6-3-1024k";
+    long snapshotLength = 10;
+    long snapshotFileCount = 2;
+    long snapshotDirectoryCount = 1;
+    long snapshotSpaceConsumed = 30;
+
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length)
+        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
+        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota)
+        .erasureCodingPolicy(ecPolicy).snapshotLength(snapshotLength)
+        .snapshotFileCount(snapshotFileCount)
+        .snapshotDirectoryCount(snapshotDirectoryCount)
+        .snapshotSpaceConsumed(snapshotSpaceConsumed).build();
+
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
+  }
+
   @Test
   public void testToJsonFromXAttrs() throws IOException {
     String jsonString = 
@@ -309,6 +390,83 @@ public class TestJsonUtil {
     // Get xattr: user.a2
     byte[] value = JsonUtilClient.getXAttr(json, "user.a2");
     Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
+  }
+
+  @Test
+  public void testSnapshotDiffReportListingEmptyReport() throws IOException {
+    SnapshotDiffReportListing report = new SnapshotDiffReportListing();
+    String jsonString = JsonUtil.toJsonString(report);
+    Map<?, ?> json = READER.readValue(jsonString);
+    SnapshotDiffReportListing parsed =
+        JsonUtilClient.toSnapshotDiffReportListing(json);
+
+    assertEquals(report, parsed);
+  }
+
+  @Test
+  public void testSnapshotDiffReportListing() throws IOException {
+    List<DiffReportListingEntry> mlist = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> clist = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> dlist = new ChunkedArrayList<>();
+    clist.add(new DiffReportListingEntry(
+        1L, 2L, DFSUtilClient.string2Bytes("dir1/file2"), false, null));
+    clist.add(new DiffReportListingEntry(
+        1L, 3L, DFSUtilClient.string2Bytes("dir1/file3"), false, null));
+    dlist.add(new DiffReportListingEntry(
+        1L, 4L, DFSUtilClient.string2Bytes("dir1/file4"), false, null));
+    dlist.add(new DiffReportListingEntry(
+        1L, 5L,
+        DFSUtilClient.string2Bytes("dir1/file5"),
+        true,
+        DFSUtilClient.string2Bytes("dir1/file6")));
+
+    SnapshotDiffReportListing report =
+        new SnapshotDiffReportListing(
+            DFSUtilClient.string2Bytes("dir1/file2"), mlist, clist, dlist, 3, true);
+    String jsonString = JsonUtil.toJsonString(report);
+    Map<?, ?> json = READER.readValue(jsonString);
+    SnapshotDiffReportListing parsed =
+        JsonUtilClient.toSnapshotDiffReportListing(json);
+
+    assertEquals(report, parsed);
+  }
+
+  private void assertEquals(
+      SnapshotDiffReportListing expected, SnapshotDiffReportListing actual) {
+    Assert.assertEquals(expected.getLastIndex(), actual.getLastIndex());
+    Assert.assertEquals(expected.getIsFromEarlier(), actual.getIsFromEarlier());
+    assertEquals(expected.getModifyList(), actual.getModifyList());
+    assertEquals(expected.getCreateList(), actual.getCreateList());
+    assertEquals(expected.getDeleteList(), actual.getDeleteList());
+    Assert.assertArrayEquals(expected.getLastPath(), actual.getLastPath());
+  }
+
+  private void assertEquals(
+      List<DiffReportListingEntry> expected, List<DiffReportListingEntry> actual) {
+    Assert.assertEquals(expected.size(), actual.size());
+
+    for (int i = 0; i < expected.size(); i++) {
+      DiffReportListingEntry a = expected.get(i);
+      DiffReportListingEntry b = actual.get(i);
+
+      Assert.assertEquals(a.getFileId(), b.getFileId());
+      Assert.assertEquals(a.getDirId(), b.getDirId());
+      Assert.assertEquals(a.isReference(), b.isReference());
+      if (a.getSourcePath() != null) {
+        Assert.assertArrayEquals(
+            DFSUtilClient.byteArray2bytes(a.getSourcePath()),
+            DFSUtilClient.byteArray2bytes(b.getSourcePath()));
+      } else {
+        Assert.assertArrayEquals(a.getSourcePath(), b.getSourcePath());
+      }
+      if (a.getTargetPath() != null) {
+        Assert.assertArrayEquals(
+            DFSUtilClient.byteArray2bytes(a.getTargetPath()),
+            DFSUtilClient.byteArray2bytes(b.getTargetPath()));
+      } else {
+        Assert.assertArrayEquals(a.getTargetPath(), b.getTargetPath());
+      }
+    }
   }
 
   private void checkDecodeFailure(Map<String, Object> map) {

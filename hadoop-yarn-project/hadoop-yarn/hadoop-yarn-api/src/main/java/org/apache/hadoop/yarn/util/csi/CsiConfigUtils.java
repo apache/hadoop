@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.util.csi;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -53,10 +53,10 @@ public final class CsiConfigUtils {
    * Resolve the CSI adaptor address for a CSI driver from configuration.
    * Expected configuration property name is
    * yarn.nodemanager.csi-driver-adaptor.${driverName}.address.
-   * @param driverName
-   * @param conf
+   * @param driverName driver name.
+   * @param conf configuration.
    * @return adaptor service address
-   * @throws YarnException
+   * @throws YarnException exceptions from yarn servers.
    */
   public static InetSocketAddress getCsiAdaptorAddressForDriver(
       String driverName, Configuration conf) throws YarnException {

@@ -317,7 +317,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
 
     int v = 256;
     byte[] readBuffer = new byte[v];
-    assertEquals(v, instream.read(128, readBuffer, 0, v));
+    instream.readFully(128, readBuffer, 0, v);
     //have gone back
     assertEquals(40000, instream.getPos());
     //content is the same too
@@ -572,8 +572,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
 
     // now read the entire file in one go
     byte[] fullFile = new byte[TEST_FILE_LEN];
-    assertEquals(TEST_FILE_LEN,
-        instream.read(0, fullFile, 0, fullFile.length));
+    instream.readFully(0, fullFile, 0, fullFile.length);
     assertEquals(0, instream.getPos());
 
     // now read past the end of the file

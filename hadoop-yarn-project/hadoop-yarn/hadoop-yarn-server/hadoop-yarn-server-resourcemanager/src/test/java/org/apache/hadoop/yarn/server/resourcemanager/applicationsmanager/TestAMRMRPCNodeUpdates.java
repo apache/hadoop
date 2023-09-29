@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -90,6 +92,12 @@ public class TestAMRMRPCNodeUpdates {
     rm.drainEvents();
   }
 
+  private void syncNodeRecommissioning(MockNM nm) throws Exception {
+    rm.sendNodeEvent(nm, RMNodeEventType.RECOMMISSION);
+    rm.waitForState(nm.getNodeId(), NodeState.RUNNING);
+    rm.drainEvents();
+  }
+
   private AllocateResponse allocate(final ApplicationAttemptId attemptId,
       final AllocateRequest req) throws Exception {
     UserGroupInformation ugi =
@@ -112,7 +120,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     rm.drainEvents();
 
-    RMApp app1 = rm.submitApp(2000);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // Trigger the scheduling so the AM gets 'launched' on nm1
     nm1.nodeHeartbeat(true);
@@ -140,6 +148,53 @@ public class TestAMRMRPCNodeUpdates {
   }
 
   @Test
+  public void testAMRMRecommissioningNodes() throws Exception {
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
+    rm.drainEvents();
+
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
+
+    // Trigger the scheduling so the AM gets 'launched' on nm1
+    nm1.nodeHeartbeat(true);
+
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+
+    // register AM returns no unusable node
+    am1.registerAppAttempt();
+
+    // DECOMMISSION nm2
+    Integer decommissioningTimeout = 600;
+    syncNodeGracefulDecommission(nm2, decommissioningTimeout);
+
+    AllocateRequest allocateRequest1 =
+            AllocateRequest.newInstance(0, 0F, null, null, null);
+    AllocateResponse response1 =
+            allocate(attempt1.getAppAttemptId(), allocateRequest1);
+    List<NodeReport> updatedNodes = response1.getUpdatedNodes();
+    Assert.assertEquals(1, updatedNodes.size());
+    NodeReport nr = updatedNodes.iterator().next();
+    Assert.assertEquals(
+            decommissioningTimeout, nr.getDecommissioningTimeout());
+    Assert.assertEquals(
+            NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
+
+    // Wait for nm2 to RECOMMISSION
+    syncNodeRecommissioning(nm2);
+
+    AllocateRequest allocateRequest2 = AllocateRequest
+            .newInstance(response1.getResponseId(), 0F, null, null, null);
+    AllocateResponse response2 =
+            allocate(attempt1.getAppAttemptId(), allocateRequest2);
+    List<NodeReport> updatedNodes2 = response2.getUpdatedNodes();
+    Assert.assertEquals(1, updatedNodes2.size());
+    NodeReport nr2 = updatedNodes2.iterator().next();
+    Assert.assertEquals(
+            NodeUpdateType.NODE_USABLE, nr2.getNodeUpdateType());
+  }
+
+  @Test
   public void testAMRMUnusableNodes() throws Exception {
     
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
@@ -148,7 +203,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 10000);
     rm.drainEvents();
 
-    RMApp app1 = rm.submitApp(2000);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // Trigger the scheduling so the AM gets 'launched' on nm1
     nm1.nodeHeartbeat(true);
@@ -208,7 +263,7 @@ public class TestAMRMRPCNodeUpdates {
     Assert.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
         
     // registering another AM gives it the complete failed list
-    RMApp app2 = rm.submitApp(2000);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // Trigger nm2 heartbeat so that AM gets launched on it
     nm2.nodeHeartbeat(true);
     RMAppAttempt attempt2 = app2.getCurrentAppAttempt();

@@ -90,7 +90,8 @@ public class TestLease {
 
       // stub the renew method.
       doThrow(new RemoteException(InvalidToken.class.getName(),
-          "Your token is worthless")).when(spyNN).renewLease(anyString());
+          "Your token is worthless")).when(spyNN).renewLease(
+              anyString(), any());
 
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
@@ -111,9 +112,10 @@ public class TestLease {
         Assert.fail("Write failed.");
       }
 
+      long hardlimit = conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+          DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
       // make it look like the hard limit has been exceeded.
-      dfs.lastLeaseRenewal = Time.monotonicNow()
-      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
+      dfs.lastLeaseRenewal = Time.monotonicNow() - hardlimit - 1000;
       dfs.renewLease();
 
       // this should not work.
@@ -130,7 +132,7 @@ public class TestLease {
       Assert.assertTrue(originalRenewer.isEmpty());
 
       // unstub
-      doNothing().when(spyNN).renewLease(anyString());
+      doNothing().when(spyNN).renewLease(anyString(), any());
 
       // existing input streams should work
       try {

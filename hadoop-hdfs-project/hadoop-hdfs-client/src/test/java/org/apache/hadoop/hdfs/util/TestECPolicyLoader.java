@@ -52,12 +52,12 @@ public class TestECPolicyLoader {
     out.println("<layoutversion>1</layoutversion>");
     out.println("<schemas>");
     out.println("  <schema id=\"RSk12m4\">");
-    out.println("    <codec>RS</codec>");
+    out.println("    <codec>rs</codec>");
     out.println("    <k>12</k>");
     out.println("    <m>4</m>");
     out.println("  </schema>");
     out.println("  <schema id=\"RS-legacyk12m4\">");
-    out.println("    <codec>RS-legacy</codec>");
+    out.println("    <codec>rs-legacy</codec>");
     out.println("    <k>12</k>");
     out.println("    <m>4</m>");
     out.println("  </schema>");
@@ -87,7 +87,7 @@ public class TestECPolicyLoader {
     assertEquals(0, schema1.getExtraOptions().size());
     assertEquals(12, schema1.getNumDataUnits());
     assertEquals(4, schema1.getNumParityUnits());
-    assertEquals("RS", schema1.getCodecName());
+    assertEquals("rs", schema1.getCodecName());
 
     ErasureCodingPolicy policy2 = policies.get(1);
     ECSchema schema2 = policy2.getSchema();
@@ -95,7 +95,7 @@ public class TestECPolicyLoader {
     assertEquals(0, schema2.getExtraOptions().size());
     assertEquals(12, schema2.getNumDataUnits());
     assertEquals(4, schema2.getNumParityUnits());
-    assertEquals("RS-legacy", schema2.getCodecName());
+    assertEquals("rs-legacy", schema2.getCodecName());
   }
 
   /**

@@ -45,19 +45,33 @@ public class WritableName {
 
   private WritableName() {}                      // no public ctor
 
-  /** Set the name that a class should be known as to something other than the
-   * class name. */
+  /**
+   * Set the name that a class should be known as to something other than the
+   * class name.
+   *
+   * @param writableClass input writableClass.
+   * @param name input name.
+   */
   public static synchronized void setName(Class<?> writableClass, String name) {
     CLASS_TO_NAME.put(writableClass, name);
     NAME_TO_CLASS.put(name, writableClass);
   }
 
-  /** Add an alternate name for a class. */
+  /**
+   * Add an alternate name for a class.
+   * @param writableClass input writableClass.
+   * @param name input name.
+   */
   public static synchronized void addName(Class<?> writableClass, String name) {
     NAME_TO_CLASS.put(name, writableClass);
   }
 
-  /** Return the name for a class.  Default is {@link Class#getName()}. */
+  /**
+   * Return the name for a class.
+   * Default is {@link Class#getName()}.
+   * @param writableClass input writableClass.
+   * @return name for a class.
+   */
   public static synchronized String getName(Class<?> writableClass) {
     String name = CLASS_TO_NAME.get(writableClass);
     if (name != null)
@@ -65,12 +79,20 @@ public class WritableName {
     return writableClass.getName();
   }
 
-  /** Return the class for a name.  Default is {@link Class#forName(String)}.*/
+  /**
+   * Return the class for a name.
+   * Default is {@link Class#forName(String)}.
+   *
+   * @param name input name.
+   * @param conf input configuration.
+   * @return class for a name.
+   * @throws IOException raised on errors performing I/O.
+   */
   public static synchronized Class<?> getClass(String name, Configuration conf
                                             ) throws IOException {
     Class<?> writableClass = NAME_TO_CLASS.get(name);
     if (writableClass != null)
-      return writableClass.asSubclass(Writable.class);
+      return writableClass;
     try {
       return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {

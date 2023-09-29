@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -46,7 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -126,7 +127,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Test YarnRunner and make sure the client side plugin works
@@ -617,9 +618,9 @@ public class TestYARNRunner {
     ApplicationSubmissionContext appSubCtx =
         buildSubmitContext(yarnRunner, jobConf);
 
-    assertEquals(appSubCtx.getNodeLabelExpression(), "GPU");
-    assertEquals(appSubCtx.getAMContainerResourceRequests().get(0)
-        .getNodeLabelExpression(), "highMem");
+    assertThat(appSubCtx.getNodeLabelExpression()).isEqualTo("GPU");
+    assertThat(appSubCtx.getAMContainerResourceRequests().get(0)
+        .getNodeLabelExpression()).isEqualTo("highMem");
   }
 
   @Test

@@ -64,7 +64,13 @@ public class PathIOException extends IOException {
     this.path = path;
   }
 
-  protected PathIOException(String path, String error, Throwable cause) {
+  /**
+   * Use a subclass of PathIOException if possible.
+   * @param path for the exception
+   * @param error custom string to use an the error text
+   * @param cause cause of exception.
+   */
+  public PathIOException(String path, String error, Throwable cause) {
     super(error, cause);
     this.path = path;
   }

@@ -177,7 +177,7 @@ public class TestFailoverController {
     }
 
     // svc1 still thinks it's active, that's OK, it was fenced
-    assertEquals(1, AlwaysSucceedFencer.fenceCalled);
+    assertEquals(2, AlwaysSucceedFencer.fenceCalled);
     assertSame(svc1, AlwaysSucceedFencer.fencedSvc);
     assertEquals(HAServiceState.ACTIVE, svc1.state);
     assertEquals(HAServiceState.ACTIVE, svc2.state);
@@ -201,7 +201,7 @@ public class TestFailoverController {
     }
 
     assertEquals(1, AlwaysFailFencer.fenceCalled);
-    assertSame(svc1, AlwaysFailFencer.fencedSvc);
+    assertSame(svc2, AlwaysFailFencer.fencedSvc);
     assertEquals(HAServiceState.ACTIVE, svc1.state);
     assertEquals(HAServiceState.STANDBY, svc2.state);
   }
@@ -223,7 +223,7 @@ public class TestFailoverController {
     // If fencing was requested and it failed we don't try to make
     // svc2 active anyway, and we don't failback to svc1.
     assertEquals(1, AlwaysFailFencer.fenceCalled);
-    assertSame(svc1, AlwaysFailFencer.fencedSvc);
+    assertSame(svc2, AlwaysFailFencer.fencedSvc);
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(HAServiceState.STANDBY, svc2.state);
   }
@@ -344,7 +344,7 @@ public class TestFailoverController {
     // and we didn't force it, so we failed back to svc1 and fenced svc2.
     // Note svc2 still thinks it's active, that's OK, we fenced it.
     assertEquals(HAServiceState.ACTIVE, svc1.state);
-    assertEquals(1, AlwaysSucceedFencer.fenceCalled);
+    assertEquals(2, AlwaysSucceedFencer.fenceCalled);
     assertSame(svc2, AlwaysSucceedFencer.fencedSvc);
   }
 
@@ -373,7 +373,7 @@ public class TestFailoverController {
     // so we did not failback to svc1, ie it's still standby.
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(1, AlwaysFailFencer.fenceCalled);
-    assertSame(svc2, AlwaysFailFencer.fencedSvc);
+    assertSame(svc1, AlwaysFailFencer.fencedSvc);
   }
 
   @Test

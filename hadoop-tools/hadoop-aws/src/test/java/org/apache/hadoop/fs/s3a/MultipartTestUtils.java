@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.io.IOUtils;
+
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -54,7 +60,9 @@ public final class MultipartTestUtils {
   static void cleanupParts(S3AFileSystem fs, Set <IdKey> keySet) {
     boolean anyFailure = false;
     for (IdKey ik : keySet) {
-      try {
+      try (AuditSpan span =
+               fs.createSpan("multipart", ik.key, null)) {
+
         LOG.debug("aborting upload id {}", ik.getUploadId());
         fs.abortMultipartUpload(ik.getKey(), ik.getUploadId());
       } catch (Exception e) {
@@ -69,31 +77,40 @@ public final class MultipartTestUtils {
 
   public static IdKey createPartUpload(S3AFileSystem fs, String key, int len,
       int partNo) throws IOException {
-    WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
-    byte[] data = dataset(len, 'a', 'z');
-    InputStream in = new ByteArrayInputStream(data);
-    String uploadId = writeHelper.initiateMultiPartUpload(key);
-    UploadPartRequest req = writeHelper.newUploadPartRequest(key, uploadId,
-        partNo, len, in, null, 0L);
-    PartETag partEtag = fs.uploadPart(req).getPartETag();
-    LOG.debug("uploaded part etag {}, upid {}", partEtag.getETag(), uploadId);
-    return new IdKey(key, uploadId);
+    try (AuditSpan span = fs.createSpan("multipart", key, null)) {
+      WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
+      byte[] data = dataset(len, 'a', 'z');
+      InputStream in = new ByteArrayInputStream(data);
+      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
+      UploadPartRequest req = writeHelper.newUploadPartRequestBuilder(key, uploadId,
+          partNo, len).build();
+      RequestBody body = RequestBody.fromInputStream(in, len);
+      UploadPartResponse response = writeHelper.uploadPart(req, body, null);
+      LOG.debug("uploaded part etag {}, upid {}", response.eTag(), uploadId);
+      return new IdKey(key, uploadId);
+    }
   }
 
   /** Delete any uploads under given path (recursive).  Silent on failure. */
   public static void clearAnyUploads(S3AFileSystem fs, Path path) {
+    String key = fs.pathToKey(path);
+    AuditSpan span = null;
     try {
-      String key = fs.pathToKey(path);
       MultipartUtils.UploadIterator uploads = fs.listUploads(key);
+      span = fs.createSpan("multipart", path.toString(), null);
+      final WriteOperationHelper helper
+          = fs.getWriteOperationHelper();
       while (uploads.hasNext()) {
         MultipartUpload upload = uploads.next();
-        fs.getWriteOperationHelper().abortMultipartUpload(upload.getKey(),
-            upload.getUploadId(), LOG_EVENT);
-        LOG.debug("Cleaning up upload: {} {}", upload.getKey(),
-            truncatedUploadId(upload.getUploadId()));
+        LOG.debug("Cleaning up upload: {} {}", upload.key(),
+            truncatedUploadId(upload.uploadId()));
+        helper.abortMultipartUpload(upload.key(),
+            upload.uploadId(), true, LOG_EVENT);
       }
     } catch (IOException ioe) {
       LOG.info("Ignoring exception: ", ioe);
+    } finally {
+      IOUtils.closeStream(span);
     }
   }
 
@@ -104,8 +121,8 @@ public final class MultipartTestUtils {
     MultipartUtils.UploadIterator uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
-      Assert.fail("Found unexpected upload " + upload.getKey() + " " +
-          truncatedUploadId(upload.getUploadId()));
+      Assert.fail("Found unexpected upload " + upload.key() + " " +
+          truncatedUploadId(upload.uploadId()));
     }
   }
 
@@ -131,13 +148,15 @@ public final class MultipartTestUtils {
   public static List<String> listMultipartUploads(S3AFileSystem fs,
       String prefix) throws IOException {
 
-    return fs
-        .listMultipartUploads(prefix).stream()
-        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
-            upload.getKey(),
-            upload.getUploadId(),
-            S3ATestUtils.LISTING_FORMAT.format(upload.getInitiated())))
-        .collect(Collectors.toList());
+    try (AuditSpan span = fs.createSpan("multipart", prefix, null)) {
+      return fs
+          .listMultipartUploads(prefix).stream()
+          .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
+              upload.key(),
+              upload.uploadId(),
+              S3ATestUtils.LISTING_FORMAT.format(Date.from(upload.initiated()))))
+          .collect(Collectors.toList());
+    }
   }
 
 
@@ -146,7 +165,7 @@ public final class MultipartTestUtils {
   }
 
   /** Struct of object key, upload ID. */
-  static class IdKey {
+  public static class IdKey {
     private String key;
     private String uploadId;
 

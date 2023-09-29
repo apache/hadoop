@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * A FailoverProxyProvider implementation that uses the
@@ -76,7 +76,7 @@ public class FederationRMFailoverProxyProvider<T>
     String clusterId = configuration.get(YarnConfiguration.RM_CLUSTER_ID);
     Preconditions.checkNotNull(clusterId, "Missing RM ClusterId");
     this.subClusterId = SubClusterId.newInstance(clusterId);
-    this.facade = FederationStateStoreFacade.getInstance();
+    this.facade = FederationStateStoreFacade.getInstance(configuration);
     if (configuration instanceof YarnConfiguration) {
       this.conf = (YarnConfiguration) configuration;
     }

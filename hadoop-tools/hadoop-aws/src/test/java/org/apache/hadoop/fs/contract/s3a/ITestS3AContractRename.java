@@ -23,19 +23,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests covering rename.
@@ -45,22 +45,9 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
   public static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AContractRename.class);
 
-
   @Override
   protected int getTestTimeoutMillis() {
     return S3A_TEST_TIMEOUT;
-  }
-
-  /**
-   * Create a configuration, possibly patching in S3Guard options.
-   * @return a configuration
-   */
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    return conf;
   }
 
   @Override
@@ -69,16 +56,8 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
   }
 
   @Override
-  public void teardown() throws Exception {
-    describe("\nTeardown\n");
-    super.teardown();
-  }
-
-  @Override
   public void testRenameDirIntoExistingDir() throws Throwable {
-    describe("Verify renaming a dir into an existing dir puts the files"
-             +" from the source dir into the existing dir"
-             +" and leaves existing files alone");
+    describe("S3A rename into an existing directory returns false");
     FileSystem fs = getFileSystem();
     String sourceSubdir = "source";
     Path srcDir = path(sourceSubdir);
@@ -126,7 +105,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     S3ATestUtils.MetricDiff fileCopyBytes = new S3ATestUtils.MetricDiff(fs,
         Statistic.FILES_COPIED_BYTES);
 
-    fs.rename(src, dest);
+    rename(src, dest);
 
     describe("Rename has completed, examining data under " + base);
     fileCopyDiff.assertDiffEquals("Number of files copied", 1);
@@ -138,5 +117,10 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     describe("validating results");
     validateAncestorsMoved(src, dest, nestedFile);
 
+  }
+
+  @Override
+  public void testRenameFileUnderFileSubdir() throws Exception {
+    skip("Rename deep paths under files is allowed");
   }
 }

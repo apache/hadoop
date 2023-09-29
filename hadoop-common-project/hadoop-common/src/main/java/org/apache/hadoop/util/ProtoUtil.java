@@ -29,10 +29,11 @@ import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformation
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.tracing.TraceUtils;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 public abstract class ProtoUtil {
 
@@ -82,6 +83,10 @@ public abstract class ProtoUtil {
    * as the old connection context as was done for writable where
    * the effective and real users are set based on the auth method.
    *
+   * @param protocol protocol.
+   * @param ugi ugi.
+   * @param authMethod authMethod.
+   * @return IpcConnectionContextProto.
    */
   public static IpcConnectionContextProto makeIpcConnectionContext(
       final String protocol,
@@ -180,10 +185,10 @@ public abstract class ProtoUtil {
     // Add tracing info if we are currently tracing.
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
-      result.setTraceInfo(RPCTraceInfoProto.newBuilder()
-          .setTraceId(span.getSpanId().getHigh())
-          .setParentId(span.getSpanId().getLow())
-            .build());
+      RPCTraceInfoProto.Builder traceInfoProtoBuilder =
+          RPCTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.getContext()));
+      result.setTraceInfo(traceInfoProtoBuilder);
     }
 
     // Add caller context if it is not null

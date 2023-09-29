@@ -18,7 +18,9 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,18 +40,30 @@ public interface GroupMappingServiceProvider {
    * Returns EMPTY list in case of non-existing user
    * @param user User's name
    * @return group memberships of user
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public List<String> getGroups(String user) throws IOException;
   /**
    * Refresh the cache of groups and user mapping
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void cacheGroupsRefresh() throws IOException;
   /**
    * Caches the group user information
    * @param groups list of groups to add to cache
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void cacheGroupsAdd(List<String> groups) throws IOException;
+
+  /**
+   * Get all various group memberships of a given user.
+   * Returns EMPTY set in case of non-existing user
+   * @param user User's name
+   * @return set of group memberships of user
+   * @throws IOException raised on errors performing I/O.
+   */
+  default Set<String> getGroupsSet(String user) throws IOException {
+    //Override to form the set directly to avoid another conversion
+    return new LinkedHashSet<>(getGroups(user));
+  }
 }

@@ -46,7 +46,7 @@ public class TestRouterHDFSContractDelegationToken
 
   @BeforeClass
   public static void createCluster() throws Exception {
-    RouterHDFSContract.createCluster(false, 1, initSecurity());
+    RouterHDFSContract.createCluster(false, 1, true);
   }
 
   @AfterClass

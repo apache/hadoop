@@ -32,7 +32,7 @@ public class ITestS3AEncryptionSSES3 extends AbstractTestS3AEncryption {
     S3ATestUtils.disableFilesystemCaching(conf);
     //must specify encryption key as empty because SSE-S3 does not allow it,
     //nor can it be null.
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+    conf.set(Constants.S3_ENCRYPTION_KEY, "");
     return conf;
   }
 

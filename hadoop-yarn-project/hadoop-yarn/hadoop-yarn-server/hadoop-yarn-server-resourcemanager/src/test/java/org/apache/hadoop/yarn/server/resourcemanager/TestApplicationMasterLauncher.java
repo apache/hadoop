@@ -92,7 +92,7 @@ import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -230,7 +230,7 @@ public class TestApplicationMasterLauncher {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -289,7 +289,7 @@ public class TestApplicationMasterLauncher {
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -365,7 +365,7 @@ public class TestApplicationMasterLauncher {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -385,7 +385,7 @@ public class TestApplicationMasterLauncher {
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -453,12 +453,47 @@ public class TestApplicationMasterLauncher {
     testSetupTokens(true, conf);
   }
 
+  @Test
+  public void testAMMasterContainerHost() throws Exception {
+    //Test that masterContainer and its associated host are
+    //set before the AM is even launched.
+    MockRM rm = new MockRM();
+    rm.start();
+    String host = "127.0.0.1";
+    String port = "1234";
+    MockNM nm1 = rm.registerNode(host + ":" + port, 5120);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
+    // kick the scheduling
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override public Boolean get() {
+          return attempt.getMasterContainer() != null;
+        }
+      }, 10, 200 * 100);
+    } catch (TimeoutException e) {
+      fail("timed out while waiting for AM Launch to happen.");
+    }
+
+    Assert.assertEquals(
+        app.getCurrentAppAttempt().getMasterContainer().getNodeId().getHost(),
+        host);
+
+    //send kill before launch
+    rm.killApp(app.getApplicationId());
+    rm.waitForState(app.getApplicationId(), RMAppState.KILLED);
+
+    rm.stop();
+  }
+
   private void testSetupTokens(boolean https, YarnConfiguration conf)
       throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     /// kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();

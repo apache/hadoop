@@ -67,13 +67,14 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.slf4j.event.Level;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
 
 /**
  * Tests that exercise safemode in an HA cluster.
@@ -88,7 +89,7 @@ public class TestHASafeMode {
   private MiniDFSCluster cluster;
   
   static {
-    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
     GenericTestUtils.setLogLevel(FSImage.LOG, Level.TRACE);
   }
   
@@ -98,6 +99,7 @@ public class TestHASafeMode {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", false);
 
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -345,6 +347,8 @@ public class TestHASafeMode {
     // once it starts up
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     BlockManagerTestUtil.computeAllPendingWork(
         nn0.getNamesystem().getBlockManager());
     cluster.triggerHeartbeats();
@@ -384,6 +388,8 @@ public class TestHASafeMode {
     // ACKed when due to block removals.
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     BlockManagerTestUtil.computeAllPendingWork(
         nn0.getNamesystem().getBlockManager());
     
@@ -497,7 +503,15 @@ public class TestHASafeMode {
   private static void assertSafeMode(NameNode nn, int safe, int total,
     int numNodes, int nodeThresh) {
     String status = nn.getNamesystem().getSafemode();
-    if (safe == total) {
+    if (total == 0 && nodeThresh == 0) {
+      assertTrue("Bad safemode status: '" + status + "'",
+          status.isEmpty()
+              || status.startsWith("Safe mode is ON. The reported blocks 0 " +
+              "has reached the threshold 0.9990 of total blocks 0. The " +
+              "minimum number of live datanodes is not required. In safe " +
+              "mode extension. Safe mode will be turned off automatically " +
+              "in 0 seconds."));
+    } else if (safe == total) {
       if (nodeThresh == 0) {
         assertTrue("Bad safemode status: '" + status + "'",
             status.startsWith("Safe mode is ON. The reported blocks " + safe
@@ -838,18 +852,18 @@ public class TestHASafeMode {
           null);
       create.write(testData.getBytes());
       create.hflush();
-      long fileId = ((DFSOutputStream)create.
-          getWrappedStream()).getFileId();
+      String renewLeaseKey = ((DFSOutputStream)create.
+          getWrappedStream()).getUniqKey();
       FileStatus fileStatus = dfs.getFileStatus(filePath);
       DFSClient client = DFSClientAdapter.getClient(dfs);
       // add one dummy block at NN, but not write to DataNode
       ExtendedBlock previousBlock =
-          DFSClientAdapter.getPreviousBlock(client, fileId);
+          DFSClientAdapter.getPreviousBlock(client, renewLeaseKey);
       DFSClientAdapter.getNamenode(client).addBlock(
           pathString,
           client.getClientName(),
           new ExtendedBlock(previousBlock),
-          new DatanodeInfo[0],
+          DatanodeInfo.EMPTY_ARRAY,
           DFSClientAdapter.getFileId((DFSOutputStream) create
               .getWrappedStream()), null, null);
       cluster.restartNameNode(0, true);
@@ -901,6 +915,42 @@ public class TestHASafeMode {
     assertSafeMode(nn1, 3, 3, 3, 0);
   }
 
+  @Test
+  public void testNameNodeCreateSnapshotTrashRootOnHASetup() throws Exception {
+    DistributedFileSystem dfs = cluster.getFileSystem(0);
+    final Path testDir = new Path("/disallowss/test2/");
+    final Path file0path = new Path(testDir, "file-0");
+    dfs.create(file0path).close();
+    dfs.allowSnapshot(testDir);
+    // .Trash won't be created right now since snapshot trash is disabled
+    final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+    assertFalse(dfs.exists(trashRoot));
+    // Set dfs.namenode.snapshot.trashroot.enabled=true
+    cluster.getNameNode(0).getConf()
+        .setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    cluster.getNameNode(1).getConf()
+        .setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    restartActive();
+    cluster.transitionToActive(1);
+    dfs = cluster.getFileSystem(1);
+    // Make sure .Trash path does not exist yet as on NN1 trash root is not
+    // enabled
+    assertFalse(dfs.exists(trashRoot));
+    cluster.transitionToStandby(1);
+    cluster.transitionToActive(0);
+    dfs = cluster.getFileSystem(0);
+    // Check .Trash existence, should be created now
+    assertTrue(dfs.exists(trashRoot));
+    assertFalse(cluster.getNameNode(0).isInSafeMode());
+    restartStandby();
+    // Ensure Standby namenode is up and running
+    assertTrue(cluster.getNameNode(1).isStandbyState());
+    // Cleanup
+    dfs.delete(trashRoot, true);
+    dfs.disallowSnapshot(testDir);
+    dfs.delete(testDir, true);
+  }
+
   /**
    * Test transition to active when namenode in safemode.
    *
@@ -925,6 +975,28 @@ public class TestHASafeMode {
       LambdaTestUtils.intercept(ServiceFailedException.class,
           "NameNode still not leave safemode",
           () -> miniCluster.transitionToActive(0));
+    }
+  }
+
+  @Test
+  public void testTransitionToObserverWhenSafeMode() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(config,
+        new File(GenericTestUtils.getRandomizedTempPath()))
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(1)
+        .build()) {
+      miniCluster.waitActive();
+      miniCluster.transitionToStandby(0);
+      miniCluster.transitionToStandby(1);
+      NameNode namenode0 = miniCluster.getNameNode(0);
+      NameNode namenode1 = miniCluster.getNameNode(1);
+      NameNodeAdapter.enterSafeMode(namenode0, false);
+      NameNodeAdapter.enterSafeMode(namenode1, false);
+      LambdaTestUtils.intercept(ServiceFailedException.class,
+          "NameNode still not leave safemode",
+          () -> miniCluster.transitionToObserver(0));
     }
   }
 }

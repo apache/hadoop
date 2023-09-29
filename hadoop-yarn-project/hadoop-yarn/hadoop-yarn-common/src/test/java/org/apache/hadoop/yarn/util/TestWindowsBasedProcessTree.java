@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.util;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Assert;
-import org.junit.Test;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWindowsBasedProcessTree {
   private static final Logger LOG = LoggerFactory
@@ -42,12 +43,13 @@ public class TestWindowsBasedProcessTree {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(30000)
   @SuppressWarnings("deprecation")
-  public void tree() {
+  void tree() {
     assumeWindows();
-    assertTrue("WindowsBasedProcessTree should be available on Windows", 
-               WindowsBasedProcessTree.isAvailable());
+    assertTrue(WindowsBasedProcessTree.isAvailable(),
+        "WindowsBasedProcessTree should be available on Windows");
     ControlledClock testClock = new ControlledClock();
     long elapsedTimeBetweenUpdatesMsec = 0;
     testClock.setTime(elapsedTimeBetweenUpdatesMsec);
@@ -72,8 +74,7 @@ public class TestWindowsBasedProcessTree {
     assertTrue(pTree.getRssMemorySize(1) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 3000);
     assertTrue(pTree.getCpuUsagePercent() == 200);
-    Assert.assertEquals("Percent CPU time is not correct",
-        pTree.getCpuUsagePercent(), 200, 0.01);
+    assertEquals(pTree.getCpuUsagePercent(), 200, 0.01, "Percent CPU time is not correct");
 
     pTree.infoStr = "3524,1024,1024,1500\r\n2844,1024,1024,1500\r\n";
     elapsedTimeBetweenUpdatesMsec = 2000;
@@ -84,7 +85,6 @@ public class TestWindowsBasedProcessTree {
     assertTrue(pTree.getRssMemorySize() == 2048);
     assertTrue(pTree.getRssMemorySize(2) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 4000);
-    Assert.assertEquals("Percent CPU time is not correct",
-        pTree.getCpuUsagePercent(), 0, 0.01);
+    assertEquals(pTree.getCpuUsagePercent(), 0, 0.01, "Percent CPU time is not correct");
   }
 }

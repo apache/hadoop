@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.files;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -30,35 +31,46 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.PartETag;
-import com.google.common.base.Preconditions;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.validateCollectionClass;
 import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
 import static org.apache.hadoop.util.StringUtils.join;
 
 /**
- * This is the serialization format for uploads yet to be committerd.
- *
+ * This is the serialization format for uploads yet to be committed.
+ * <p>
  * It's marked as {@link Serializable} so that it can be passed in RPC
  * calls; for this to work it relies on the fact that java.io ArrayList
  * and LinkedList are serializable. If any other list type is used for etags,
  * it must also be serialized. Jackson expects lists, and it is used
  * to persist to disk.
- *
+ * </p>
+ * <p>
+ * The statistics published through the {@link IOStatisticsSource}
+ * interface are the static ones marshalled with the commit data;
+ * they may be empty.
+ * </p>
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SinglePendingCommit extends PersistentCommitData
+public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
     implements Iterable<String> {
 
   /**
@@ -113,6 +125,12 @@ public class SinglePendingCommit extends PersistentCommitData
    */
   private Map<String, String> extraData = new HashMap<>(0);
 
+  /**
+   * IOStatistics.
+   */
+  @JsonProperty("iostatistics")
+  private IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
+
   /** Destination file size. */
   private long length;
 
@@ -124,20 +142,45 @@ public class SinglePendingCommit extends PersistentCommitData
    * @return a serializer.
    */
   public static JsonSerialization<SinglePendingCommit> serializer() {
-    return new JsonSerialization<>(SinglePendingCommit.class, false, true);
+    return new JsonSerialization<>(SinglePendingCommit.class, false, false);
   }
 
   /**
    * Load an instance from a file, then validate it.
    * @param fs filesystem
    * @param path path
+   * @param status nullable status of file to load
+   * @param serDeser serializer; if null use the shared static one.
    * @return the loaded instance
    * @throws IOException IO failure
    * @throws ValidationFailure if the data is invalid
    */
-  public static SinglePendingCommit load(FileSystem fs, Path path)
+  public static SinglePendingCommit load(FileSystem fs,
+      Path path,
+      FileStatus status,
+      JsonSerialization<SinglePendingCommit> serDeser)
       throws IOException {
-    SinglePendingCommit instance = serializer().load(fs, path);
+    return load(fs, path, serDeser, null);
+  }
+
+  /**
+   * Load an instance from a file, then validate it.
+   * @param fs filesystem
+   * @param path path
+   * @param serDeser deserializer
+   * @param status status of file to load or null
+   * @return the loaded instance
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static SinglePendingCommit load(FileSystem fs,
+      Path path,
+      JsonSerialization<SinglePendingCommit> serDeser,
+      @Nullable FileStatus status)
+      throws IOException {
+    JsonSerialization<SinglePendingCommit> jsonSerialization =
+        serDeser != null ? serDeser : serializer();
+    SinglePendingCommit instance = jsonSerialization.load(fs, path, status);
     instance.filename = path.toString();
     instance.validate();
     return instance;
@@ -173,13 +216,13 @@ public class SinglePendingCommit extends PersistentCommitData
    * @param parts ordered list of etags.
    * @throws ValidationFailure if the data is invalid
    */
-  public void bindCommitData(List<PartETag> parts) throws ValidationFailure {
+  public void bindCommitData(List<CompletedPart> parts) throws ValidationFailure {
     etags = new ArrayList<>(parts.size());
     int counter = 1;
-    for (PartETag part : parts) {
-      verify(part.getPartNumber() == counter,
-          "Expected part number %s but got %s", counter, part.getPartNumber());
-      etags.add(part.getETag());
+    for (CompletedPart part : parts) {
+      verify(part.partNumber() == counter,
+          "Expected part number %s but got %s", counter, part.partNumber());
+      etags.add(part.eTag());
       counter++;
     }
   }
@@ -207,7 +250,7 @@ public class SinglePendingCommit extends PersistentCommitData
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "DelayedCompleteData{");
+        "SinglePendingCommit{");
     sb.append("version=").append(version);
     sb.append(", uri='").append(uri).append('\'');
     sb.append(", destination='").append(destinationKey).append('\'');
@@ -231,15 +274,16 @@ public class SinglePendingCommit extends PersistentCommitData
   }
 
   @Override
-  public byte[] toBytes() throws IOException {
+  public byte[] toBytes(JsonSerialization<SinglePendingCommit> serializer) throws IOException {
     validate();
-    return serializer().toBytes(this);
+    return serializer.toBytes(this);
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
-      throws IOException {
-    serializer().save(fs, path, this, overwrite);
+  public IOStatistics save(final FileSystem fs,
+      final Path path,
+      final JsonSerialization<SinglePendingCommit> serializer) throws IOException {
+    return saveFile(fs, path, this, serializer, true);
   }
 
   /**
@@ -419,6 +463,15 @@ public class SinglePendingCommit extends PersistentCommitData
   }
 
   /**
+   * Set/Update an extra data entry.
+   * @param key key
+   * @param value value
+   */
+  public void putExtraData(String key, String value) {
+    extraData.put(key, value);
+  }
+
+  /**
    * Destination file size.
    * @return size of destination object
    */
@@ -428,5 +481,14 @@ public class SinglePendingCommit extends PersistentCommitData
 
   public void setLength(long length) {
     this.length = length;
+  }
+
+  @Override
+  public IOStatisticsSnapshot getIOStatistics() {
+    return iostats;
+  }
+
+  public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
+    this.iostats = ioStatistics;
   }
 }

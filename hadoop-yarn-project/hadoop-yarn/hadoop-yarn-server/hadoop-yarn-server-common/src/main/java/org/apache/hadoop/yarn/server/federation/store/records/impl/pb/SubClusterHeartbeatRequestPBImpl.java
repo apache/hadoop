@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbea
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of {@link SubClusterHeartbeatRequest}.
@@ -122,8 +122,10 @@ public class SubClusterHeartbeatRequestPBImpl
     maybeInitBuilder();
     if (subClusterId == null) {
       builder.clearSubClusterId();
+      return;
     }
     this.subClusterId = subClusterId;
+    builder.setSubClusterId(convertToProtoFormat(subClusterId));
   }
 
   @Override

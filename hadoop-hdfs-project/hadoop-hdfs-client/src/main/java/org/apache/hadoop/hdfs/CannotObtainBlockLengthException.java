@@ -52,4 +52,16 @@ public class CannotObtainBlockLengthException extends IOException {
     super("Cannot obtain block length for " + locatedBlock);
   }
 
+  /**
+   * Constructs an {@code CannotObtainBlockLengthException} with the
+   * specified LocatedBlock and file that failed to obtain block length.
+   *
+   * @param locatedBlock
+   *        The LocatedBlock instance which block length can not be obtained
+   * @param src The file which include this block
+   */
+  public CannotObtainBlockLengthException(LocatedBlock locatedBlock,
+      String src) {
+    super("Cannot obtain block length for " + locatedBlock + " of " + src);
+  }
 }

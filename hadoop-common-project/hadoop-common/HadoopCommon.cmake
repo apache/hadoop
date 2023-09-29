@@ -193,7 +193,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
     # Solaris flags. 64-bit compilation is mandatory, and is checked earlier.
     hadoop_add_compiler_flags("-m64 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS")
-    set(CMAKE_CXX_FLAGS "-std=gnu++98 ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_STANDARD 98)
     hadoop_add_linker_flags("-m64")
 
     # CMAKE_SYSTEM_PROCESSOR is set to the output of 'uname -p', which on Solaris is
@@ -212,4 +212,4 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
 endif()
 
 # Set GNU99 as the C standard to use
-set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
+set(CMAKE_C_STANDARD 99)

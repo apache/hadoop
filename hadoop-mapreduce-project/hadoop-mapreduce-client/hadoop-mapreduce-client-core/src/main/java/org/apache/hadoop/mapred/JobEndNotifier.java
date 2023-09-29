@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +67,13 @@ public class JobEndNotifier {
 
   private static int httpNotification(String uri, int timeout)
       throws IOException, URISyntaxException {
-    DefaultHttpClient client = new DefaultHttpClient();
-    client.getParams()
-        .setIntParameter(CoreConnectionPNames.SO_TIMEOUT, timeout)
-        .setLongParameter(ClientPNames.CONN_MANAGER_TIMEOUT, (long) timeout);
+    HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+    httpClientBuilder.setDefaultRequestConfig(
+        RequestConfig.custom()
+        .setConnectionRequestTimeout(timeout)
+        .setSocketTimeout(timeout)
+        .build());
+    HttpClient client = httpClientBuilder.build();
     HttpGet httpGet = new HttpGet(new URI(uri));
     httpGet.setHeader("Accept", "*/*");
     return client.execute(httpGet).getStatusLine().getStatusCode();

@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 
 /**
- * Interface that can be used by the intercepter plugins to get the information
+ * Interface that can be used by the interceptor plugins to get the information
  * about one application.
  *
  */
@@ -67,7 +67,7 @@ public interface AMRMProxyApplicationContext {
    * Gets the NMContext object.
    * @return the NMContext.
    */
-  Context getNMCotext();
+  Context getNMContext();
 
   /**
    * Gets the credentials of this application.

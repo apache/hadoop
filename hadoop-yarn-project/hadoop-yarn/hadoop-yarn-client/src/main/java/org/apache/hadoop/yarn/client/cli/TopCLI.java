@@ -43,9 +43,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -339,9 +339,11 @@ public class TopCLI extends YarnCLI {
     int totalNodes;
     int runningNodes;
     int unhealthyNodes;
+    int decommissioningNodes;
     int decommissionedNodes;
     int lostNodes;
     int rebootedNodes;
+    int shutdownNodes;
   }
 
   private static class QueueMetrics {
@@ -444,6 +446,7 @@ public class TopCLI extends YarnCLI {
 
   public static void main(String[] args) throws Exception {
     TopCLI topImp = new TopCLI();
+    topImp.addShutdownHook();
     topImp.setSysOutPrintStream(System.out);
     topImp.setSysErrPrintStream(System.err);
     int res = ToolRunner.run(topImp, args);
@@ -492,7 +495,6 @@ public class TopCLI extends YarnCLI {
         rmStartTime = getRMStartTime();
       }
     }
-    clearScreen();
     return 0;
   }
 
@@ -696,6 +698,8 @@ public class TopCLI extends YarnCLI {
       return nodeInfo;
     }
 
+    nodeInfo.decommissioningNodes =
+        yarnClusterMetrics.getNumDecommissioningNodeManagers();
     nodeInfo.decommissionedNodes =
         yarnClusterMetrics.getNumDecommissionedNodeManagers();
     nodeInfo.totalNodes = yarnClusterMetrics.getNumNodeManagers();
@@ -703,6 +707,7 @@ public class TopCLI extends YarnCLI {
     nodeInfo.lostNodes = yarnClusterMetrics.getNumLostNodeManagers();
     nodeInfo.unhealthyNodes = yarnClusterMetrics.getNumUnhealthyNodeManagers();
     nodeInfo.rebootedNodes = yarnClusterMetrics.getNumRebootedNodeManagers();
+    nodeInfo.shutdownNodes = yarnClusterMetrics.getNumShutdownNodeManagers();
     return nodeInfo;
   }
 
@@ -880,11 +885,11 @@ public class TopCLI extends YarnCLI {
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
             "NodeManager(s)"
-                + ": %d total, %d active, %d unhealthy, %d decommissioned,"
-                + " %d lost, %d rebooted%n",
+                + ": %d total, %d active, %d unhealthy, %d decommissioning,"
+                + " %d decommissioned, %d lost, %d rebooted, %d shutdown%n",
             nodes.totalNodes, nodes.runningNodes, nodes.unhealthyNodes,
-            nodes.decommissionedNodes, nodes.lostNodes,
-            nodes.rebootedNodes), terminalWidth, true));
+            nodes.decommissioningNodes, nodes.decommissionedNodes, nodes.lostNodes,
+            nodes.rebootedNodes, nodes.shutdownNodes), terminalWidth, true));
 
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
@@ -1039,7 +1044,8 @@ public class TopCLI extends YarnCLI {
     }
   }
 
-  protected void showTopScreen() {
+  @VisibleForTesting
+  void showTopScreen() {
     List<ApplicationInformation> appsInfo = new ArrayList<>();
     List<ApplicationReport> apps;
     try {
@@ -1219,5 +1225,12 @@ public class TopCLI extends YarnCLI {
     p.waitFor();
     byte[] output = IOUtils.toByteArray(p.getInputStream());
     return new String(output, "ASCII");
+  }
+
+  private void addShutdownHook() {
+    //clear screen when the program exits
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      clearScreen();
+    }));
   }
 }

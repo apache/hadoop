@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

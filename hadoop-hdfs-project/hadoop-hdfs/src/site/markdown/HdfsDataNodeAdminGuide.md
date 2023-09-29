@@ -52,7 +52,7 @@ And datanode admin states include the followings:
 * `NORMAL` The node is in service.
 * `DECOMMISSIONED` The node has been decommissioned.
 * `DECOMMISSION_INPROGRESS` The node is being transitioned to DECOMMISSIONED state.
-* `IN_MAINTENANCE` The node in in maintenance state.
+* `IN_MAINTENANCE` The node is in maintenance state.
 * `ENTERING_MAINTENANCE` The node is being transitioned to maintenance state.
 
 
@@ -109,7 +109,7 @@ Here is the list of currently supported properties by HDFS.
 |`port`| Optional. the port number of the datanode |
 |`maintenanceExpireTimeInMS`| Optional. The epoch time in milliseconds until which the datanode will remain in maintenance state. The default value is forever. |
 
-In the following example, `host1` and `host2` need to in service. `host3` need to be in decommissioned state. `host4` need to be in in maintenance state.
+In the following example, `host1` and `host2` need to be in service. `host3` needs to be in decommissioned state. `host4` needs to be in maintenance state.
 
 dfs.hosts file
 ```json
@@ -147,6 +147,35 @@ dfs.namenode.decommission.interval
 dfs.namenode.decommission.blocks.per.interval
 dfs.namenode.decommission.max.concurrent.tracked.nodes
 ```
+
+
+Backing-off Decommission Monitor (experimental)
+------------
+
+The original decommissioning algorithm has issues when DataNodes having lots of
+blocks are decommissioned such as
+
+* Write lock in the NameNode could be held for a long time for queueing re-replication.
+* Re-replication work progresses node by node if there are multiple decommissioning DataNodes.
+
+[HDFS-14854](https://issues.apache.org/jira/browse/HDFS-14854) introduced
+new decommission monitor in order to mitigate those issues.
+This feature is currently marked as experimental and disabled by default.
+You can enable this by setting the value of
+`dfs.namenode.decommission.monitor.class` to
+`org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor`
+in hdfs-site.xml.
+
+The relevant configuration properties are listed in the table below.
+Please refer to [hdfs-default.xml](./hdfs-default.xml)
+for descriptions and default values.
+
+| Property |
+|:-------- |
+| `dfs.namenode.decommission.monitor.class` |
+| `dfs.namenode.decommission.backoff.monitor.pending.limit` |
+| `dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock` |
+
 
 Metrics
 -----------

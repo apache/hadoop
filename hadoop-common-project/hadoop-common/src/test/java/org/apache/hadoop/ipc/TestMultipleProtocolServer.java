@@ -45,7 +45,7 @@ public class TestMultipleProtocolServer extends TestRpcBase {
     // Set RPC engine to protobuf RPC engine
     Configuration conf2 = new Configuration();
     RPC.setProtocolEngine(conf2, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     TestRpcService client = RPC.getProxy(TestRpcService.class, 0, addr, conf2);
     TestProtoBufRpc.testProtoBufRpc(client);
   }

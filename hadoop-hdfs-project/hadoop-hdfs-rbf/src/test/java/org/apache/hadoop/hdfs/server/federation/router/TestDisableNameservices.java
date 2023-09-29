@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simul
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -50,7 +49,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -128,6 +126,7 @@ public class TestDisableNameservices {
     // Add a folder to each namespace
     NamenodeContext nn0 = cluster.getNamenode("ns0", null);
     nn0.getFileSystem().mkdirs(new Path("/dirns0/0"));
+    nn0.getFileSystem().mkdirs(new Path("/dir-ns"));
     NamenodeContext nn1 = cluster.getNamenode("ns1", null);
     nn1.getFileSystem().mkdirs(new Path("/dirns1/1"));
   }
@@ -160,16 +159,17 @@ public class TestDisableNameservices {
   public void testWithoutDisabling() throws IOException {
     // ns0 is slow and renewLease should take a long time
     long t0 = monotonicNow();
-    routerProtocol.renewLease("client0");
+    routerProtocol.renewLease("client0", null);
     long t = monotonicNow() - t0;
     assertTrue("It took too little: " + t + "ms",
         t > TimeUnit.SECONDS.toMillis(1));
     // Return the results from all subclusters even if slow
     FileSystem routerFs = routerContext.getFileSystem();
     FileStatus[] filesStatus = routerFs.listStatus(new Path("/"));
-    assertEquals(2, filesStatus.length);
-    assertEquals("dirns0", filesStatus[0].getPath().getName());
-    assertEquals("dirns1", filesStatus[1].getPath().getName());
+    assertEquals(3, filesStatus.length);
+    assertEquals("dir-ns", filesStatus[0].getPath().getName());
+    assertEquals("dirns0", filesStatus[1].getPath().getName());
+    assertEquals("dirns1", filesStatus[2].getPath().getName());
   }
 
   @Test
@@ -178,20 +178,17 @@ public class TestDisableNameservices {
 
     // renewLease should be fast as we are skipping ns0
     long t0 = monotonicNow();
-    routerProtocol.renewLease("client0");
+    routerProtocol.renewLease("client0", null);
     long t = monotonicNow() - t0;
     assertTrue("It took too long: " + t + "ms",
         t < TimeUnit.SECONDS.toMillis(1));
     // We should not report anything from ns0
     FileSystem routerFs = routerContext.getFileSystem();
-    FileStatus[] filesStatus = null;
-    try {
-      routerFs.listStatus(new Path("/"));
-      fail("The listStatus call should fail.");
-    } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "No remote locations available", ioe);
-    }
+
+    FileStatus[] filesStatus = routerFs.listStatus(new Path("/"));
+    assertEquals(2, filesStatus.length);
+    assertEquals("dirns0", filesStatus[0].getPath().getName());
+    assertEquals("dirns1", filesStatus[1].getPath().getName());
 
     filesStatus = routerFs.listStatus(new Path("/dirns1"));
     assertEquals(1, filesStatus.length);

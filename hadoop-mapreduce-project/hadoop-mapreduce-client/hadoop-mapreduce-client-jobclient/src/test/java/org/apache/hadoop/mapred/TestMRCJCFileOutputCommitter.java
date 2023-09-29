@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -112,7 +113,7 @@ public class TestMRCJCFileOutputCommitter {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = UtilsForTests.slurp(expectedFile);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
   }
 
   @Test

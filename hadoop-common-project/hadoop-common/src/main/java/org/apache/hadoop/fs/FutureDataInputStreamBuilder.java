@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * options accordingly, for example:
  *
  * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
+ * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
  *
  */
@@ -47,4 +48,16 @@ public interface FutureDataInputStreamBuilder
   CompletableFuture<FSDataInputStream> build()
       throws IllegalArgumentException, UnsupportedOperationException,
       IOException;
+
+  /**
+   * A FileStatus may be provided to the open request.
+   * It is up to the implementation whether to use this or not.
+   * @param status status: may be null
+   * @return the builder.
+   */
+  default FutureDataInputStreamBuilder withFileStatus(
+      @Nullable FileStatus status) {
+    return this;
+  }
+
 }

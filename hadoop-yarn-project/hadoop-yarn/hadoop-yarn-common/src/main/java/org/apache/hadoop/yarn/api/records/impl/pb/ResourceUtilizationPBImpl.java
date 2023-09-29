@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceUtilizationProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceUtilizationProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 
+import java.util.Map;
+
 @Private
 @Unstable
 public class ResourceUtilizationPBImpl extends ResourceUtilization {
@@ -69,7 +71,7 @@ public class ResourceUtilizationPBImpl extends ResourceUtilization {
   @Override
   public int getVirtualMemory() {
     ResourceUtilizationProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getVmem());
+    return p.getVmem();
   }
 
   @Override
@@ -91,12 +93,39 @@ public class ResourceUtilizationPBImpl extends ResourceUtilization {
   }
 
   @Override
+  public float getCustomResource(String resourceName) {
+    return getCustomResources().get(resourceName);
+  }
+
+  @Override
+  public Map<String, Float> getCustomResources() {
+    ResourceUtilizationProtoOrBuilder p = viaProto ? proto : builder;
+    return ProtoUtils.
+        convertStringFloatMapProtoListToMap(p.
+            getCustomResourcesList());
+  }
+
+  @Override
+  public void setCustomResources(Map<String, Float> customResources) {
+    if (customResources != null) {
+      maybeInitBuilder();
+      builder.addAllCustomResources(ProtoUtils.
+          convertMapToStringFloatMapProtoList(customResources));
+    }
+  }
+
+  @Override
   public int compareTo(ResourceUtilization other) {
     int diff = this.getPhysicalMemory() - other.getPhysicalMemory();
     if (diff == 0) {
       diff = this.getVirtualMemory() - other.getVirtualMemory();
       if (diff == 0) {
         diff = Float.compare(this.getCPU(), other.getCPU());
+        if (diff == 0) {
+          diff = this.getCustomResources().size() -
+              other.getCustomResources().size();
+          // todo how to compare custom resource in same size
+        }
       }
     }
     return diff;

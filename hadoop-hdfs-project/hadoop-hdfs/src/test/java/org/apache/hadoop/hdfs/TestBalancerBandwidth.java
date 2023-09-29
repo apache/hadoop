@@ -26,13 +26,14 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
 /**
@@ -102,6 +103,13 @@ public class TestBalancerBandwidth {
       runGetBalancerBandwidthCmd(admin, args, newBandwidth);
       args = new String[] { "-getBalancerBandwidth", dn2Address };
       runGetBalancerBandwidthCmd(admin, args, newBandwidth);
+
+      // test maximum bandwidth allowed
+      assertEquals(0, ToolRunner.run(admin,
+          new String[] {"-setBalancerBandwidth", "1t"}));
+
+      assertEquals(-1, ToolRunner.run(admin,
+          new String[] {"-setBalancerBandwidth", "1e"}));
     }
   }
 

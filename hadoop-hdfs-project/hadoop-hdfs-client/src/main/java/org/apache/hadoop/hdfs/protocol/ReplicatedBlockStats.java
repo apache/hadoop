@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Collection;
+
 /**
  * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
  * in the filesystem.
@@ -110,5 +112,45 @@ public final class ReplicatedBlockStats {
     }
     statsBuilder.append("]");
     return statsBuilder.toString();
+  }
+
+  /**
+   * Merge the multiple ReplicatedBlockStats.
+   * @param stats Collection of stats to merge.
+   * @return A new ReplicatedBlockStats merging all the input ones
+   */
+  public static ReplicatedBlockStats merge(
+      Collection<ReplicatedBlockStats> stats) {
+    long lowRedundancyBlocks = 0;
+    long corruptBlocks = 0;
+    long missingBlocks = 0;
+    long missingReplicationOneBlocks = 0;
+    long bytesInFutureBlocks = 0;
+    long pendingDeletionBlocks = 0;
+    long highestPriorityLowRedundancyBlocks = 0;
+    boolean hasHighestPriorityLowRedundancyBlocks = false;
+
+    // long's range is large enough that we don't need to consider overflow
+    for (ReplicatedBlockStats stat : stats) {
+      lowRedundancyBlocks += stat.getLowRedundancyBlocks();
+      corruptBlocks += stat.getCorruptBlocks();
+      missingBlocks += stat.getMissingReplicaBlocks();
+      missingReplicationOneBlocks += stat.getMissingReplicationOneBlocks();
+      bytesInFutureBlocks += stat.getBytesInFutureBlocks();
+      pendingDeletionBlocks += stat.getPendingDeletionBlocks();
+      if (stat.hasHighestPriorityLowRedundancyBlocks()) {
+        hasHighestPriorityLowRedundancyBlocks = true;
+        highestPriorityLowRedundancyBlocks +=
+            stat.getHighestPriorityLowRedundancyBlocks();
+      }
+    }
+    if (hasHighestPriorityLowRedundancyBlocks) {
+      return new ReplicatedBlockStats(lowRedundancyBlocks, corruptBlocks,
+          missingBlocks, missingReplicationOneBlocks, bytesInFutureBlocks,
+          pendingDeletionBlocks, highestPriorityLowRedundancyBlocks);
+    }
+    return new ReplicatedBlockStats(lowRedundancyBlocks, corruptBlocks,
+        missingBlocks, missingReplicationOneBlocks, bytesInFutureBlocks,
+        pendingDeletionBlocks);
   }
 }

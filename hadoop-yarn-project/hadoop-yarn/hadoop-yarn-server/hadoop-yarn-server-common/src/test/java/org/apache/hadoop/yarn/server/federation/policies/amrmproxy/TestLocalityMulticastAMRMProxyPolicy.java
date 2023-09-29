@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,6 +32,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -79,9 +78,9 @@ public class TestLocalityMulticastAMRMProxyPolicy
       SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // sub-cluster 3 is not active
       if (i != 3) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
+        SubClusterInfo sci = SubClusterInfo.newInstance(
+            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+            System.currentTimeMillis(), "something");
         getActiveSubclusters().put(sc.toId(), sci);
       }
 
@@ -330,11 +329,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
    * use as the default for when nodes or racks are unknown.
    */
   private void addHomeSubClusterAsActive() {
-    SubClusterInfo sci = mock(SubClusterInfo.class);
-    when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-    when(sci.getSubClusterId()).thenReturn(getHomeSubCluster());
-    getActiveSubclusters().put(getHomeSubCluster(), sci);
-    SubClusterIdInfo sc = new SubClusterIdInfo(getHomeSubCluster().getId());
+
+    SubClusterId homeSubCluster = getHomeSubCluster();
+    SubClusterInfo sci = SubClusterInfo.newInstance(
+        homeSubCluster, "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+        System.currentTimeMillis(), "something");
+
+    getActiveSubclusters().put(homeSubCluster, sci);
+    SubClusterIdInfo sc = new SubClusterIdInfo(homeSubCluster.getId());
 
     getPolicyInfo().getRouterPolicyWeights().put(sc, 0.1f);
     getPolicyInfo().getAMRMPolicyWeights().put(sc, 0.1f);
@@ -815,8 +817,103 @@ public class TestLocalityMulticastAMRMProxyPolicy
       // The randomly selected sub-cluster should at least be active
       Assert.assertTrue(activeClusters.containsKey(originalResult));
 
-      // Alwasy use home sub-cluster so that unit test is deterministic
+      // Always use home sub-cluster so that unit test is deterministic
       return getHomeSubCluster();
     }
+  }
+
+  /**
+   * Test the rerouting behavior when some subclusters are loaded. Make sure
+   * that the AMRMProxy rerouting decisions attempt to redirect requests
+   * to the least loaded subcluster when load thresholds are exceeded
+   */
+  @Test
+  public void testLoadBasedSubClusterReroute() throws YarnException {
+    int pendingThreshold = 1000;
+
+    LocalityMulticastAMRMProxyPolicy policy = (LocalityMulticastAMRMProxyPolicy) getPolicy();
+    initializePolicy();
+
+    SubClusterId sc0 = SubClusterId.newInstance("0");
+    SubClusterId sc1 = SubClusterId.newInstance("1");
+    SubClusterId sc2 = SubClusterId.newInstance("2");
+    SubClusterId sc3 = SubClusterId.newInstance("3");
+    SubClusterId sc4 = SubClusterId.newInstance("4");
+
+    Set<SubClusterId> scList = new HashSet<>();
+    scList.add(sc0);
+    scList.add(sc1);
+    scList.add(sc2);
+    scList.add(sc3);
+    scList.add(sc4);
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc0,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc1,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is 2 times the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc2,
+        getAllocateResponseWithEnhancedHeadroom(2 * pendingThreshold, 0));
+
+    // This cluster is at the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc3,
+        getAllocateResponseWithEnhancedHeadroom(pendingThreshold, 0));
+
+    // This cluster has zero pending.
+    policy.notifyOfResponse(sc4, getAllocateResponseWithEnhancedHeadroom(0, 0));
+
+    // sc2, sc3 and sc4 should just return the original subcluster.
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc2, pendingThreshold, scList), sc2);
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc3, pendingThreshold, scList), sc3);
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc4, pendingThreshold, scList), sc4);
+
+    // sc0 and sc1 must select from sc0/sc1/sc2/sc3/sc4 according to weights
+    // 1/4, 1/4, 1/2, 1, 2. Let's run tons of random of samples, and verify that
+    // the proportion approximately holds.
+    Map<SubClusterId, Integer> counts = new HashMap<>();
+    counts.put(sc0, 0);
+    counts.put(sc1, 0);
+    counts.put(sc2, 0);
+    counts.put(sc3, 0);
+    counts.put(sc4, 0);
+
+    int n = 100000;
+    for (int i = 0; i < n; i++) {
+      SubClusterId selectedId = policy.routeNodeRequestIfNeeded(sc0, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      selectedId = policy.routeNodeRequestIfNeeded(sc1, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      // Also try a new SCId that's not active and enabled. Should be rerouted
+      // to sc0-4 with the same distribution as above
+      selectedId = policy.routeNodeRequestIfNeeded(SubClusterId.newInstance("10"),
+          pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+    }
+
+    // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2R
+    Assert.assertEquals((double) counts.get(sc0) / n / 3, 1 / 16.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc1) / n / 3, 1 / 16.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc2) / n / 3, 1 / 8.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc3) / n / 3, 1 / 4.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc4) / n / 3, 1 / 2.0, 0.01);
+
+    // Everything should be routed to these five active and enabled SCs
+    Assert.assertEquals(5, counts.size());
+  }
+
+  private AllocateResponse getAllocateResponseWithEnhancedHeadroom(int pending, int activeCores) {
+    return AllocateResponse.newInstance(0, null, null,
+        Collections.emptyList(), Resource.newInstance(0, 0), null, 10, null,
+        Collections.emptyList(), null, null, null,
+        EnhancedHeadroom.newInstance(pending, activeCores));
   }
 }

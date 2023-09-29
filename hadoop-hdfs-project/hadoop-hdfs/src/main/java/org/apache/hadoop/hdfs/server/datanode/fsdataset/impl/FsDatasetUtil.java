@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +35,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -45,7 +47,6 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.shaded.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 
 /** Utility methods. */
 @InterfaceAudience.Private
@@ -98,7 +99,8 @@ public class FsDatasetUtil {
     });
 
     if (matches == null || matches.length == 0) {
-      throw new IOException("Meta file not found, blockFile=" + blockFile);
+      throw new FileNotFoundException(
+          "Meta file not found, blockFile=" + blockFile);
     }
     if (matches.length > 1) {
       throw new IOException("Found more than one meta files: " 
@@ -117,7 +119,7 @@ public class FsDatasetUtil {
       }
       return raf.getFD();
     } catch(IOException ioe) {
-      IOUtils.cleanup(null, raf);
+      IOUtils.cleanupWithLogger(null, raf);
       throw ioe;
     }
   }

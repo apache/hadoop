@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -51,7 +51,7 @@ public final class SlowPeerReports {
    * meaningful and must be avoided.
    */
   @Nonnull
-  private final Map<String, Double> slowPeers;
+  private final Map<String, OutlierMetrics> slowPeers;
 
   /**
    * An object representing a SlowPeerReports with no entries. Should
@@ -61,19 +61,19 @@ public final class SlowPeerReports {
   public static final SlowPeerReports EMPTY_REPORT =
       new SlowPeerReports(ImmutableMap.of());
 
-  private SlowPeerReports(Map<String, Double> slowPeers) {
+  private SlowPeerReports(Map<String, OutlierMetrics> slowPeers) {
     this.slowPeers = slowPeers;
   }
 
   public static SlowPeerReports create(
-      @Nullable Map<String, Double> slowPeers) {
+      @Nullable Map<String, OutlierMetrics> slowPeers) {
     if (slowPeers == null || slowPeers.isEmpty()) {
       return EMPTY_REPORT;
     }
     return new SlowPeerReports(slowPeers);
   }
 
-  public Map<String, Double> getSlowPeers() {
+  public Map<String, OutlierMetrics> getSlowPeers() {
     return slowPeers;
   }
 

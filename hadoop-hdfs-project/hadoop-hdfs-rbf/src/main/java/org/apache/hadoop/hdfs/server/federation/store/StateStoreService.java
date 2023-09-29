@@ -53,7 +53,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A service to initialize a
@@ -64,6 +64,12 @@ import com.google.common.annotations.VisibleForTesting;
  * <li>File {@link
  * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl
  * StateStoreFileImpl}
+ * <li>FileSystem {@link
+ * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl
+ * StateStoreFileSystemImpl}
+ * <li>MySQL {@link
+ * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl
+ * StateStoreMySQLImpl}
  * <li>ZooKeeper {@link
  * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl
  * StateStoreZooKeeperImpl}
@@ -160,13 +166,25 @@ public class StateStoreService extends CompositeService {
     this.addService(monitorService);
 
     // Set expirations intervals for each record
-    MembershipState.setExpirationMs(conf.getLong(
+    MembershipState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT));
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
+    MembershipState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS,
+        RBFConfigKeys
+            .FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
 
     RouterState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS,
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
+    RouterState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS,
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     // Cache update service
@@ -245,6 +263,7 @@ public class StateStoreService extends CompositeService {
    * Get the record store in this State Store for a given interface.
    *
    * @param recordStoreClass Class of the record store.
+   * @param <T> The type of the record store.
    * @return Registered record store or null if not found.
    */
   public <T extends RecordStore<?>> T getRegisteredRecordStore(
@@ -258,6 +277,17 @@ public class StateStoreService extends CompositeService {
       }
     }
     return null;
+  }
+
+  /**
+   * Get the list of all RecordStores.
+   *
+   * @param <T> The type of the record stores that are returned.
+   * @return a list of each RecordStore.
+   */
+  @SuppressWarnings("unchecked")
+  public <T extends RecordStore<? extends BaseRecord>> List<T> getRecordStores() {
+    return new ArrayList<>((Collection<T>) recordStores.values());
   }
 
   /**
@@ -319,7 +349,7 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
-   * Fetch a unique identifier for this state store instance. Typically it is
+   * Fetch a unique identifier for this state store instance. Typically, it is
    * the address of the router.
    *
    * @return Unique identifier for this store.
@@ -411,7 +441,7 @@ public class StateStoreService extends CompositeService {
     }
     if (success) {
       // Uses local time, not driver time.
-      this.cacheLastUpdateTime = Time.now();
+      this.cacheLastUpdateTime = Time.monotonicNow();
     }
   }
 

@@ -61,7 +61,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,6 +212,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
   public void testWebAppProxyInStandAloneMode() throws YarnException,
       InterruptedException, IOException {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
+
     WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
     try {
       conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
@@ -294,10 +296,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     redirectURL = getRedirectURL(rm2Url + "/metrics");
     assertEquals(redirectURL,rm1Url + "/metrics");
 
-    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
-    assertEquals(rm1Url + "/jmx?param1=value1+x&param2=y", redirectURL);
 
-    // standby RM links /conf, /stacks, /logLevel, /static, /logs,
+    // standby RM links /conf, /stacks, /logLevel, /static, /logs, /jmx, /prom
     // /cluster/cluster as well as webService
     // /ws/v1/cluster/info should not be redirected to active RM
     redirectURL = getRedirectURL(rm2Url + "/cluster/cluster");
@@ -316,6 +316,12 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertNull(redirectURL);
 
     redirectURL = getRedirectURL(rm2Url + "/logs");
+    assertNull(redirectURL);
+
+    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
+    assertNull(redirectURL);
+
+    redirectURL = getRedirectURL(rm2Url + "/prom");
     assertNull(redirectURL);
 
     redirectURL = getRedirectURL(rm2Url + "/ws/v1/cluster/info");

@@ -20,9 +20,9 @@ package org.apache.hadoop.ipc;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -72,6 +72,7 @@ public class RefreshRegistry {
   /**
    * Remove the registered object for a given identity.
    * @param identifier the resource to unregister
+   * @param handler input handler.
    * @return the true if removed
    */
   public synchronized boolean unregister(String identifier, RefreshHandler handler) {

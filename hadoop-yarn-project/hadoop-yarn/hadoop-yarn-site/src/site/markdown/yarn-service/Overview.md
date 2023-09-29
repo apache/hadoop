@@ -24,7 +24,7 @@ lifecycle management such as stop/start/delete the service, flexing service comp
 The yarn-service framework primarily includes below components:
 
 * A core framework (ApplicationMaster) running on YARN to serve as a container orchestrator, being responsible for all service lifecycle managements.
-* A restful API-server to for users to interact with YARN to deploy/manage their services via a simple JSON spec.
+* A restful API-server for users to interact with YARN to deploy/manage their services via a simple JSON spec.
 * A DNS server backed by YARN service registry to enable discovering services on YARN by the standard DNS lookup.
 
 ## Why should I try YARN Service framework?

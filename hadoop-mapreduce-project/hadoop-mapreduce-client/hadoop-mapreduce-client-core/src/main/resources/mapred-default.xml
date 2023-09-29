@@ -287,6 +287,13 @@
 </property>
 
 <property>
+  <name>mapreduce.task.ping-for-liveliness-check.enabled</name>
+  <value>false</value>
+  <description>Whether to consider ping from tasks in liveliness check.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
@@ -833,11 +840,8 @@
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
-    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -845,12 +849,8 @@
   <name>yarn.app.mapreduce.am.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for the ApplicationMaster logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for the ApplicationMaster when both
-    yarn.app.mapreduce.am.container.log.limit.kb and
-    yarn.app.mapreduce.am.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -1267,6 +1267,29 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.pathcache.max-weight</name>
+  <value>10485760</value>
+  <description>The maximum total weight of entries the cache may contain.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.expire-after-access-minutes</name>
+  <value>5</value>
+  <description>The length of time after an entry is last accessed that it
+    should be automatically removed.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.concurrency-level</name>
+  <value>16</value>
+  <description>Uses the concurrency level to create a fixed number of hashtable
+    segments, each governed by its own write lock.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
   <value>org.apache.hadoop.mapreduce.task.reduce.Shuffle</value>
   <description>
@@ -1389,6 +1412,23 @@
     end notification. Cluster administrators can set this to limit how long
     after end of a job, the Application Master waits before exiting. Must be
     marked as final to prevent users from overriding this.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.custom-notifier-class</name>
+  <description>A class to be invoked in order to send a notification after the
+               job has completed (success/failure). The class must implement
+               org.apache.hadoop.mapreduce.CustomJobEndNotifier. A notification
+               url still has to be set which will be passed to the notifyOnce
+               method of your implementation along with the Job's configuration.
+               If this is set instead of using a simple HttpURLConnection we'll
+               create a new instance of this class. For now this still only works
+               with HTTP/HTTPS URLs, but by implementing this class you can choose
+               how you want to make the notification itself. For example you can
+               choose to use a custom HTTP library, or do a delegation token
+               authentication, maybe set a custom SSL context on the connection, etc.
+               The class needs to have a no-arg constructor.
   </description>
 </property>
 
@@ -1613,14 +1653,18 @@
   <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the AM - before reconnecting
-    to the RM to fetch Application Status.</description>
+    to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
   <value>3</value>
   <description>The number of client retries on socket timeouts to the AM - before
-    reconnecting to the RM to fetch Application Status.</description>
+    reconnecting to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries.on.timeouts to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
@@ -1675,7 +1719,7 @@
   must specify the appropriate classpath for that archive, and the name of
   the archive must be present in the classpath.
   If mapreduce.app-submission.cross-platform is false, platform-specific
-  environment vairable expansion syntax would be used to construct the default
+  environment variable expansion syntax would be used to construct the default
   CLASSPATH entries.
   For Linux:
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
@@ -1758,6 +1802,18 @@
    <name>mapreduce.jvm.system-properties-to-log</name>
    <value>os.name,os.version,java.home,java.runtime.version,java.vendor,java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name</value>
    <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
+</property>
+
+<property>
+  <name>mapreduce.jvm.add-opens-as-default</name>
+  <value>true</value>
+  <description>Since on JDK17 it's no longer possible to use the reflection API to
+    access non-public fields and methods add-opens flags should be added to MR AM
+    and map/reduce containers regardless of the user specified java opts. Setting
+    this to true will add the flags to the container launch commands on nodes with
+    JDK17 or higher. Defaults to true, but the setting has no effect on nodes using
+    JDK16 and before.
+  </description>
 </property>
 
 <!-- jobhistory properties -->
@@ -2188,6 +2244,25 @@
     The committer factory to use when writing data to S3A filesystems.
     If mapreduce.outputcommitter.factory.class is set, it will
     override this property.
+  </description>
+</property>
+
+<!-- use manifest committer for abfs URLs -->
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+  <description>
+    The default committer factory for ABFS is the manifest committer with
+    abfs-specific recovery.
+  </description>
+</property>
+
+<!-- use manifest committer for gs URLs -->
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.gs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for google cloud storage is the manifest committer.
   </description>
 </property>
 

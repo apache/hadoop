@@ -47,12 +47,14 @@ function hadoop_usage
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
+  hadoop_add_subcommand "fsImageValidation" admin "run FsImageValidation to check an fsimage"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
   hadoop_add_subcommand "groups" client "get the groups which users belong to"
   hadoop_add_subcommand "haadmin" admin "run a DFS HA admin client"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
   hadoop_add_subcommand "journalnode" daemon "run the DFS journalnode"
   hadoop_add_subcommand "lsSnapshottableDir" client "list all snapshottable dirs owned by the current user"
+  hadoop_add_subcommand "lsSnapshot" client "list all snapshots for a snapshottable directory"
   hadoop_add_subcommand "mover" daemon "run a utility to move block replicas across storage types"
   hadoop_add_subcommand "namenode" daemon "run the DFS namenode"
   hadoop_add_subcommand "nfs3" daemon "run an NFS version 3 gateway"
@@ -110,6 +112,7 @@ function hdfscmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
     ;;
     dfsrouter)
+      hadoop_add_to_classpath_tools hadoop-federation-balance
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
     ;;
@@ -143,6 +146,9 @@ function hdfscmd_case
     fsck)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck
     ;;
+    fsImageValidation)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.namenode.FsImageValidation
+    ;;
     getconf)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.GetConf
     ;;
@@ -161,6 +167,9 @@ function hdfscmd_case
     ;;
     lsSnapshottableDir)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+    ;;
+    lsSnapshot)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshot
     ;;
     mover)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

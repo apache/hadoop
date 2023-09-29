@@ -91,6 +91,7 @@ public class TestViewFsDefaultValue {
     fileSystemTestHelper.createFile(fHdfs, testFileName);
     fileSystemTestHelper.createFile(fHdfs, NOT_IN_MOUNTPOINT_FILENAME);
     Configuration conf = ViewFileSystemTestSetup.createConfig();
+    conf.setInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT + 1);
     ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() +
       "/tmp"));
     vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);

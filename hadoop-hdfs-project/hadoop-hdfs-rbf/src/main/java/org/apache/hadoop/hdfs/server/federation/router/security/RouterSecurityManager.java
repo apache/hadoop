@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.federation.router.security;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.io.Text;
@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.lang.reflect.Constructor;
 
 /**
  * Manager to hold underlying delegation token secret manager implementations.
@@ -52,13 +51,16 @@ public class RouterSecurityManager {
   private AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
       dtSecretManager = null;
 
-  public RouterSecurityManager(Configuration conf) {
+  public RouterSecurityManager(Configuration conf) throws IOException {
     AuthenticationMethod authMethodConfigured =
         SecurityUtil.getAuthenticationMethod(conf);
     AuthenticationMethod authMethodToInit =
         AuthenticationMethod.KERBEROS;
     if (authMethodConfigured.equals(authMethodToInit)) {
-      this.dtSecretManager = newSecretManager(conf);
+      this.dtSecretManager = FederationUtil.newSecretManager(conf);
+      if (this.dtSecretManager == null || !this.dtSecretManager.isRunning()) {
+        throw new IOException("Failed to create SecretManager");
+      }
     }
   }
 
@@ -66,37 +68,6 @@ public class RouterSecurityManager {
   public RouterSecurityManager(AbstractDelegationTokenSecretManager
       <DelegationTokenIdentifier> dtSecretManager) {
     this.dtSecretManager = dtSecretManager;
-  }
-
-  /**
-   * Creates an instance of a SecretManager from the configuration.
-   *
-   * @param conf Configuration that defines the secret manager class.
-   * @return New secret manager.
-   */
-  public static AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
-      newSecretManager(Configuration conf) {
-    Class<? extends AbstractDelegationTokenSecretManager> clazz =
-        conf.getClass(
-        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
-        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT,
-        AbstractDelegationTokenSecretManager.class);
-    AbstractDelegationTokenSecretManager secretManager;
-    try {
-      Constructor constructor = clazz.getConstructor(Configuration.class);
-      secretManager = (AbstractDelegationTokenSecretManager)
-          constructor.newInstance(conf);
-      LOG.info("Delegation token secret manager object instantiated");
-    } catch (ReflectiveOperationException e) {
-      LOG.error("Could not instantiate: {}", clazz.getSimpleName(),
-          e.getCause());
-      return null;
-    } catch (RuntimeException e) {
-      LOG.error("RuntimeException to instantiate: {}",
-          clazz.getSimpleName(), e);
-      return null;
-    }
-    return secretManager;
   }
 
   public AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
@@ -249,6 +220,12 @@ public class RouterSecurityManager {
   /**
    * A utility method for creating credentials.
    * Used by web hdfs to return url encoded token.
+   *
+   * @param router the router object.
+   * @param ugi object with username and group information for the given user.
+   * @param renewer the renewer for the token.
+   * @return the credentials object for tokens.
+   * @throws IOException if error occurs while obtaining the credentials.
    */
   public static Credentials createCredentials(
       final Router router, final UserGroupInformation ugi,
@@ -268,6 +245,10 @@ public class RouterSecurityManager {
   /**
    * Delegation token verification.
    * Used by web hdfs to verify url encoded token.
+   *
+   * @param identifier the delegation token identifier.
+   * @param password the password in the token.
+   * @throws SecretManager.InvalidToken if password doesn't match.
    */
   public void verifyToken(DelegationTokenIdentifier identifier,
       byte[] password) throws SecretManager.InvalidToken {

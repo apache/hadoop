@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -181,7 +182,8 @@ public class TestJoinTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertThat(dTuple).withFailMessage("Failed to write/read tuple")
+        .isEqualTo(sTuple);
     assertEquals("All tuple data has not been read from the stream", 
       -1, in.read());
   }
@@ -200,7 +202,8 @@ public class TestJoinTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertThat(dTuple).withFailMessage("Failed to write/read tuple")
+            .isEqualTo(sTuple);
     assertEquals("All tuple data has not been read from the stream", 
       -1, in.read());
   }
@@ -225,7 +228,8 @@ public class TestJoinTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertThat(dTuple).withFailMessage("Failed to write/read tuple")
+        .isEqualTo(sTuple);
     assertEquals("All tuple data has not been read from the stream", 
       -1, in.read());
   }

@@ -23,8 +23,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,9 +72,9 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @InterfaceAudience.Private
 public final class FSImageFormatPBINode {
@@ -89,6 +95,8 @@ public final class FSImageFormatPBINode {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FSImageFormatPBINode.class);
+
+  private static final int DIRECTORY_ENTRY_BATCH_SIZE = 1000;
 
   // the loader must decode all fields referencing serial number based fields
   // via to<Item> methods with the string table.
@@ -198,10 +206,62 @@ public final class FSImageFormatPBINode {
     private final FSNamesystem fsn;
     private final FSImageFormatProtobuf.Loader parent;
 
+    // Update blocks map by single thread asynchronously
+    private ExecutorService blocksMapUpdateExecutor;
+    // update name cache by single thread asynchronously.
+    private ExecutorService nameCacheUpdateExecutor;
+
     Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.dir = fsn.dir;
       this.parent = parent;
+      // Note: these executors must be SingleThreadExecutor, as they
+      // are used to modify structures which are not thread safe.
+      blocksMapUpdateExecutor = Executors.newSingleThreadExecutor();
+      nameCacheUpdateExecutor = Executors.newSingleThreadExecutor();
+    }
+
+    void loadINodeDirectorySectionInParallel(ExecutorService service,
+        ArrayList<FileSummary.Section> sections, String compressionCodec)
+        throws IOException {
+      LOG.info("Loading the INodeDirectory section in parallel with {} sub-" +
+              "sections", sections.size());
+      CountDownLatch latch = new CountDownLatch(sections.size());
+      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
+      for (FileSummary.Section s : sections) {
+        service.submit(() -> {
+          InputStream ins = null;
+          try {
+            ins = parent.getInputStreamForSection(s,
+                compressionCodec);
+            loadINodeDirectorySection(ins);
+          } catch (Exception e) {
+            LOG.error("An exception occurred loading INodeDirectories in parallel", e);
+            exceptions.add(new IOException(e));
+          } finally {
+            latch.countDown();
+            try {
+              if (ins != null) {
+                ins.close();
+              }
+            } catch (IOException ioe) {
+              LOG.warn("Failed to close the input stream, ignoring", ioe);
+            }
+          }
+        });
+      }
+      try {
+        latch.await();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted waiting for countdown latch", e);
+        throw new IOException(e);
+      }
+      if (exceptions.size() != 0) {
+        LOG.error("{} exceptions occurred loading INodeDirectories",
+            exceptions.size());
+        throw exceptions.get(0);
+      }
+      LOG.info("Completed loading all INodeDirectory sub-sections");
     }
 
     void loadINodeDirectorySection(InputStream in) throws IOException {
@@ -217,33 +277,194 @@ public final class FSImageFormatPBINode {
         INodeDirectory p = dir.getInode(e.getParent()).asDirectory();
         for (long id : e.getChildrenList()) {
           INode child = dir.getInode(id);
-          addToParent(p, child);
+          if (!addToParent(p, child)) {
+            LOG.warn("Failed to add the inode {} to the directory {}",
+                child.getId(), p.getId());
+          }
         }
+
         for (int refId : e.getRefChildrenList()) {
           INodeReference ref = refList.get(refId);
-          addToParent(p, ref);
+          if (!addToParent(p, ref)) {
+            LOG.warn("Failed to add the inode reference {} to the directory {}",
+                ref.getId(), p.getId());
+          }
+        }
+      }
+    }
+
+    private void fillUpInodeList(ArrayList<INode> inodeList, INode inode) {
+      if (inode.isFile()) {
+        inodeList.add(inode);
+      }
+      if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
+        addToCacheAndBlockMap(inodeList);
+        inodeList.clear();
+      }
+    }
+
+    private void addToCacheAndBlockMap(final ArrayList<INode> inodeList) {
+      final ArrayList<INode> inodes = new ArrayList<>(inodeList);
+      nameCacheUpdateExecutor.submit(
+          new Runnable() {
+            @Override
+            public void run() {
+              addToCacheInternal(inodes);
+            }
+          });
+      blocksMapUpdateExecutor.submit(
+          new Runnable() {
+            @Override
+            public void run() {
+              updateBlockMapInternal(inodes);
+            }
+          });
+    }
+
+    // update name cache with non-thread safe
+    private void addToCacheInternal(ArrayList<INode> inodeList) {
+      for (INode i : inodeList) {
+        dir.cacheName(i);
+      }
+    }
+
+     // update blocks map with non-thread safe
+    private void updateBlockMapInternal(ArrayList<INode> inodeList) {
+      for (INode i : inodeList) {
+        updateBlocksMap(i.asFile(), fsn.getBlockManager());
+      }
+    }
+
+    void waitBlocksMapAndNameCacheUpdateFinished() throws IOException {
+      long start = System.currentTimeMillis();
+      waitExecutorTerminated(blocksMapUpdateExecutor);
+      waitExecutorTerminated(nameCacheUpdateExecutor);
+      LOG.info("Completed update blocks map and name cache, total waiting "
+          + "duration {}ms.", (System.currentTimeMillis() - start));
+    }
+
+    private void waitExecutorTerminated(ExecutorService executorService)
+        throws IOException {
+      executorService.shutdown();
+      long start = System.currentTimeMillis();
+      while (!executorService.isTerminated()) {
+        try {
+          executorService.awaitTermination(1, TimeUnit.SECONDS);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Waiting to executor service terminated duration {}ms.",
+                (System.currentTimeMillis() - start));
+          }
+        } catch (InterruptedException e) {
+          LOG.error("Interrupted waiting for executor terminated.", e);
+          throw new IOException(e);
         }
       }
     }
 
     void loadINodeSection(InputStream in, StartupProgress prog,
         Step currentStep) throws IOException {
+      loadINodeSectionHeader(in, prog, currentStep);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      int totalLoaded = loadINodesInSection(in, counter);
+      LOG.info("Successfully loaded {} inodes", totalLoaded);
+    }
+
+    private int loadINodesInSection(InputStream in, Counter counter)
+        throws IOException {
+      // As the input stream is a LimitInputStream, the reading will stop when
+      // EOF is encountered at the end of the stream.
+      int cntr = 0;
+      ArrayList<INode> inodeList = new ArrayList<>();
+      while (true) {
+        INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
+        if (p == null) {
+          break;
+        }
+        if (p.getId() == INodeId.ROOT_INODE_ID) {
+          synchronized(this) {
+            loadRootINode(p);
+          }
+        } else {
+          INode n = loadINode(p);
+          synchronized(this) {
+            dir.addToInodeMap(n);
+          }
+          fillUpInodeList(inodeList, n);
+        }
+        cntr++;
+        if (counter != null) {
+          counter.increment();
+        }
+      }
+      if (inodeList.size() > 0){
+        addToCacheAndBlockMap(inodeList);
+      }
+      return cntr;
+    }
+
+
+    private long loadINodeSectionHeader(InputStream in, StartupProgress prog,
+        Step currentStep) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
       fsn.dir.resetLastInodeId(s.getLastInodeId());
       long numInodes = s.getNumInodes();
       LOG.info("Loading " + numInodes + " INodes.");
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
-      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
-      for (int i = 0; i < numInodes; ++i) {
-        INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
-        if (p.getId() == INodeId.ROOT_INODE_ID) {
-          loadRootINode(p);
-        } else {
-          INode n = loadINode(p);
-          dir.addToInodeMap(n);
+      return numInodes;
+    }
+
+    void loadINodeSectionInParallel(ExecutorService service,
+        ArrayList<FileSummary.Section> sections,
+        String compressionCodec, StartupProgress prog,
+        Step currentStep) throws IOException {
+      LOG.info("Loading the INode section in parallel with {} sub-sections",
+          sections.size());
+      long expectedInodes = 0;
+      CountDownLatch latch = new CountDownLatch(sections.size());
+      AtomicInteger totalLoaded = new AtomicInteger(0);
+      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
+
+      for (int i=0; i < sections.size(); i++) {
+        FileSummary.Section s = sections.get(i);
+        InputStream ins = parent.getInputStreamForSection(s, compressionCodec);
+        if (i == 0) {
+          // The first inode section has a header which must be processed first
+          expectedInodes = loadINodeSectionHeader(ins, prog, currentStep);
         }
-        counter.increment();
+        service.submit(() -> {
+          try {
+            totalLoaded.addAndGet(loadINodesInSection(ins, null));
+            prog.setCount(Phase.LOADING_FSIMAGE, currentStep,
+                totalLoaded.get());
+          } catch (Exception e) {
+            LOG.error("An exception occurred loading INodes in parallel", e);
+            exceptions.add(new IOException(e));
+          } finally {
+            latch.countDown();
+            try {
+              ins.close();
+            } catch (IOException ioe) {
+              LOG.warn("Failed to close the input stream, ignoring", ioe);
+            }
+          }
+        });
       }
+      try {
+        latch.await();
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted waiting for countdown latch");
+      }
+      if (exceptions.size() != 0) {
+        LOG.error("{} exceptions occurred loading INodes", exceptions.size());
+        throw exceptions.get(0);
+      }
+      if (totalLoaded.get() != expectedInodes) {
+        throw new IOException("Expected to load "+expectedInodes+" in " +
+            "parallel, but loaded "+totalLoaded.get()+". The image may " +
+            "be corrupt.");
+      }
+      LOG.info("Completed loading all INode sections. Loaded {} inodes.",
+          totalLoaded.get());
     }
 
     /**
@@ -261,22 +482,18 @@ public final class FSImageFormatPBINode {
       }
     }
 
-    private void addToParent(INodeDirectory parent, INode child) {
-      if (parent == dir.rootDir && FSDirectory.isReservedName(child)) {
+    private boolean addToParent(INodeDirectory parentDir, INode child) {
+      if (parentDir == dir.rootDir && FSDirectory.isReservedName(child)) {
         throw new HadoopIllegalArgumentException("File name \""
             + child.getLocalName() + "\" is reserved. Please "
             + " change the name of the existing file or directory to another "
             + "name before upgrading to this release.");
       }
       // NOTE: This does not update space counts for parents
-      if (!parent.addChild(child)) {
-        return;
+      if (!parentDir.addChildAtLoading(child)) {
+        return false;
       }
-      dir.cacheName(child);
-
-      if (child.isFile()) {
-        updateBlocksMap(child.asFile(), fsn.getBlockManager());
-      }
+      return true;
     }
 
     private INode loadINode(INodeSection.INode n) {
@@ -527,6 +744,7 @@ public final class FSImageFormatPBINode {
       final ArrayList<INodeReference> refList = parent.getSaverContext()
           .getRefList();
       int i = 0;
+      int outputInodes = 0;
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
         if (!n.isDirectory()) {
@@ -551,11 +769,14 @@ public final class FSImageFormatPBINode {
               ++numImageErrors;
             }
             if (!inode.isReference()) {
+              // Serialization must ensure that children are in order, related
+              // to HDFS-13693
               b.addChildren(inode.getId());
             } else {
               refList.add(inode.asReference());
               b.addRefChildren(refList.size() - 1);
             }
+            outputInodes++;
           }
           INodeDirectorySection.DirEntry e = b.build();
           e.writeDelimitedTo(out);
@@ -565,9 +786,15 @@ public final class FSImageFormatPBINode {
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
+        if (outputInodes >= parent.getInodesPerSubSection()) {
+          outputInodes = 0;
+          parent.commitSubSection(summary,
+              FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
+        }
       }
-      parent.commitSection(summary,
-          FSImageFormatProtobuf.SectionName.INODE_DIR);
+      parent.commitSectionAndSubSection(summary,
+          FSImageFormatProtobuf.SectionName.INODE_DIR,
+          FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
     }
 
     void serializeINodeSection(OutputStream out) throws IOException {
@@ -587,8 +814,14 @@ public final class FSImageFormatPBINode {
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
+        if (i % parent.getInodesPerSubSection() == 0) {
+          parent.commitSubSection(summary,
+              FSImageFormatProtobuf.SectionName.INODE_SUB);
+        }
       }
-      parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
+      parent.commitSectionAndSubSection(summary,
+          FSImageFormatProtobuf.SectionName.INODE,
+          FSImageFormatProtobuf.SectionName.INODE_SUB);
     }
 
     void serializeFilesUCSection(OutputStream out) throws IOException {

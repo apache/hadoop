@@ -22,13 +22,13 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
  * Params constants for the AM webapp and the history webapp.
  */
 public interface AMParams {
-  static final String RM_WEB = "rm.web";
-  static final String APP_ID = "app.id";
-  static final String JOB_ID = "job.id";
-  static final String TASK_ID = "task.id";
-  static final String TASK_TYPE = "task.type";
-  static final String TASK_STATE = "task.state";
-  static final String ATTEMPT_STATE = "attempt.state";
-  static final String COUNTER_GROUP = "counter.group";
-  static final String COUNTER_NAME = "counter.name";
+  String RM_WEB = "rm.web";
+  String APP_ID = "app.id";
+  String JOB_ID = "job.id";
+  String TASK_ID = "task.id";
+  String TASK_TYPE = "task.type";
+  String TASK_STATE = "task.state";
+  String ATTEMPT_STATE = "attempt.state";
+  String COUNTER_GROUP = "counter.group";
+  String COUNTER_NAME = "counter.name";
 }

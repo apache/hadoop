@@ -39,11 +39,11 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * The hotornot.com of unit tests: makes sure that the standby not only
@@ -57,7 +57,7 @@ public class TestStandbyIsHot {
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
 
   static {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   @Test(timeout=60000)

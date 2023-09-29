@@ -24,12 +24,12 @@ import static org.mockito.Mockito.when;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ClientId;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRPC.TestImpl;
@@ -220,7 +220,7 @@ public class TestNMAuditLogger {
   @Test  
   public void testNMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
-    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine2.class);
 
     // Create server side implementation
     MyTestRPCServer serverImpl = new MyTestRPCServer();

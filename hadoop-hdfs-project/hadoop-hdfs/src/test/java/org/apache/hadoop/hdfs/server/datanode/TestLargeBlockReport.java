@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
@@ -35,11 +36,11 @@ import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
-import org.apache.log4j.Level;
 
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * Tests that very large block reports can pass through the RPC server and
@@ -57,7 +58,6 @@ public class TestLargeBlockReport {
   private DatanodeStorage dnStorage;
   private final long reportId = 1;
   private final long fullBrLeaseId = 0;
-  private final boolean sorted = true;
 
   @BeforeClass
   public static void init() {
@@ -74,13 +74,16 @@ public class TestLargeBlockReport {
 
   @Test
   public void testBlockReportExceedsLengthLimit() throws Exception {
+    //protobuf's default limit increased to 2GB from protobuf 3.x onwards.
+    //So there will not be any exception thrown from protobuf.
+    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT / 2);
     initCluster();
     // Create a large enough report that we expect it will go beyond the RPC
     // server's length validation, and also protobuf length validation.
     StorageBlockReport[] reports = createReports(6000000);
     try {
       nnProxy.blockReport(bpRegistration, bpId, reports,
-          new BlockReportContext(1, 0, reportId, fullBrLeaseId, sorted));
+          new BlockReportContext(1, 0, reportId, fullBrLeaseId));
       fail("Should have failed because of the too long RPC data length");
     } catch (Exception e) {
       // Expected.  We can't reliably assert anything about the exception type
@@ -91,11 +94,11 @@ public class TestLargeBlockReport {
 
   @Test
   public void testBlockReportSucceedsWithLargerLengthLimit() throws Exception {
-    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, 128 * 1024 * 1024); // 128 MB
+    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT * 2);
     initCluster();
     StorageBlockReport[] reports = createReports(6000000);
     nnProxy.blockReport(bpRegistration, bpId, reports,
-        new BlockReportContext(1, 0, reportId, fullBrLeaseId, sorted));
+        new BlockReportContext(1, 0, reportId, fullBrLeaseId));
   }
 
   /**

@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-distcp</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Copy</description>
   <name>Apache Hadoop Distributed Copy</name>
   <packaging>jar</packaging>
@@ -85,6 +85,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.ow2.asm</groupId>
+          <artifactId>asm-commons</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -101,6 +107,11 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -123,31 +134,20 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>always</forkMode>
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <includes>
             <include>**/Test*.java</include>
           </includes>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
-          <systemProperties>
-            <property>
-              <name>test.build.data</name>
-              <value>${basedir}/target/test/data</value>
-            </property>
-            <property>
-              <name>hadoop.log.dir</name>
-              <value>target/test/logs</value>
-            </property>
-            <property>
-              <name>org.apache.commons.logging.Log</name>
-              <value>org.apache.commons.logging.impl.SimpleLog</value>
-            </property>
-            <property>
-              <name>org.apache.commons.logging.simplelog.defaultlog</name>
-              <value>warn</value>
-            </property>
-          </systemProperties>
+          <systemPropertyVariables>
+            <test.build.data>${basedir}/target/test/data</test.build.data>
+            <hadoop.log.dir>target/test/logs</hadoop.log.dir>
+            <org.apache.commons.logging.Log>org.apache.commons.logging.impl.SimpleLog</org.apache.commons.logging.Log>
+            <org.apache.commons.logging.simplelog.defaultlog>warn</org.apache.commons.logging.simplelog.defaultlog>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

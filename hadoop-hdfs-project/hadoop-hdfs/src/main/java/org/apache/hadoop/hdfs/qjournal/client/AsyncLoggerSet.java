@@ -34,12 +34,12 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Wrapper around a set of Loggers, taking care of fanning out
@@ -87,7 +87,7 @@ class AsyncLoggerSet {
   
   /**
    * @return the epoch number for this writer. This may only be called after
-   * a successful call to {@link #createNewUniqueEpoch(NamespaceInfo)}.
+   * a successful call to {@link QuorumJournalManager#createNewUniqueEpoch()}.
    */
   long getEpoch() {
     Preconditions.checkState(myEpoch != INVALID_EPOCH,

@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApp
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of
@@ -127,6 +127,19 @@ public class GetApplicationHomeSubClusterRequestPBImpl
       return;
     }
     this.applicationId = applicationId;
+    builder.setApplicationId(convertToProtoFormat(applicationId));
+  }
+
+  @Override
+  public boolean getContainsAppSubmissionContext() {
+    GetApplicationHomeSubClusterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getContainsAppSubmissionContext();
+  }
+
+  @Override
+  public void setContainsAppSubmissionContext(boolean containsAppSubmissionContext) {
+    maybeInitBuilder();
+    builder.setContainsAppSubmissionContext(containsAppSubmissionContext);
   }
 
   private ApplicationId convertFromProtoFormat(ApplicationIdProto appId) {

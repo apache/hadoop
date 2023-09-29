@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_XML;
@@ -72,12 +72,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -131,8 +132,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -141,6 +141,10 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource.Builder;
 
 import net.jcip.annotations.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * This test validate E2E the correctness of the RouterWebServices. It starts
@@ -154,6 +158,8 @@ public class TestRouterWebServicesREST {
   /** The number of concurrent submissions for multi-thread test. */
   private static final int NUM_THREADS_TESTS = 100;
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterWebServicesREST.class);
 
   private static String userName = "test";
 
@@ -170,30 +176,27 @@ public class TestRouterWebServicesREST {
   /**
    * Wait until the webservice is up and running.
    */
-  private static void waitWebAppRunning(
+  public static void waitWebAppRunning(
       final String address, final String path) {
     try {
       final Client clientToRouter = Client.create();
       final WebResource toRouter = clientToRouter
           .resource(address)
           .path(path);
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            ClientResponse response = toRouter
-                .accept(APPLICATION_JSON)
-                .get(ClientResponse.class);
-            if (response.getStatus() == SC_OK) {
-              // process is up and running
-              return true;
-            }
-          } catch (ClientHandlerException e) {
-            // process is not up and running
+      GenericTestUtils.waitFor(() -> {
+        try {
+          ClientResponse response = toRouter
+              .accept(APPLICATION_JSON)
+              .get(ClientResponse.class);
+          if (response.getStatus() == SC_OK) {
+            // process is up and running
+            return true;
           }
-          return false;
+        } catch (ClientHandlerException e) {
+          // process is not up and running
         }
-      }, 1000, 10 * 1000);
+        return false;
+      }, 1000, 20 * 1000);
     } catch (Exception e) {
       fail("Web app not running");
     }
@@ -203,17 +206,27 @@ public class TestRouterWebServicesREST {
   public static void setUp() throws Exception {
     conf = new YarnConfiguration();
 
+    File baseDir = GenericTestUtils.getTestDir("processes");
+    baseDir.mkdirs();
+    String baseName = TestRouterWebServicesREST.class.getSimpleName();
+
+    File rmOutput = new File(baseDir, baseName + "-rm.log");
+    rmOutput.createNewFile();
     List<String> addClasspath = new LinkedList<>();
     addClasspath.add("../hadoop-yarn-server-timelineservice/target/classes");
-    rm = new JavaProcess(ResourceManager.class, addClasspath);
+    rm = new JavaProcess(ResourceManager.class, addClasspath, rmOutput);
     rmAddress = getRMWebAppURLWithScheme(conf);
     waitWebAppRunning(rmAddress, RM_WEB_SERVICE_PATH);
 
-    router = new JavaProcess(Router.class);
+    File routerOutput = new File(baseDir, baseName + "-router.log");
+    routerOutput.createNewFile();
+    router = new JavaProcess(Router.class, routerOutput);
     routerAddress = getRouterWebAppURLWithScheme(conf);
     waitWebAppRunning(routerAddress, RM_WEB_SERVICE_PATH);
 
-    nm = new JavaProcess(NodeManager.class);
+    File nmOutput = new File(baseDir, baseName + "-nm.log");
+    nmOutput.createNewFile();
+    nm = new JavaProcess(NodeManager.class, nmOutput);
     nmAddress = "http://" + getNMWebAppURLWithoutScheme(conf);
     waitWebAppRunning(nmAddress, "/ws/v1/node");
   }
@@ -260,19 +273,16 @@ public class TestRouterWebServicesREST {
     }
 
     return UserGroupInformation.createRemoteUser(userName)
-        .doAs(new PrivilegedExceptionAction<List<T>>() {
-          @Override
-          public List<T> run() throws Exception {
-            ClientResponse response =
-                toRouterBuilder.get(ClientResponse.class);
-            ClientResponse response2 = toRMBuilder.get(ClientResponse.class);
-            assertEquals(SC_OK, response.getStatus());
-            assertEquals(SC_OK, response2.getStatus());
-            List<T> responses = new ArrayList<>();
-            responses.add(response.getEntity(returnType));
-            responses.add(response2.getEntity(returnType));
-            return responses;
-          }
+        .doAs((PrivilegedExceptionAction<List<T>>) () -> {
+          ClientResponse response =
+              toRouterBuilder.get(ClientResponse.class);
+          ClientResponse response2 = toRMBuilder.get(ClientResponse.class);
+          assertEquals(SC_OK, response.getStatus());
+          assertEquals(SC_OK, response2.getStatus());
+          List<T> responses = new ArrayList<>();
+          responses.add(response.getEntity(returnType));
+          responses.add(response2.getEntity(returnType));
+          return responses;
         });
   }
 
@@ -284,45 +294,42 @@ public class TestRouterWebServicesREST {
       final HTTPMethods method) throws IOException, InterruptedException {
 
     return UserGroupInformation.createRemoteUser(userName)
-        .doAs(new PrivilegedExceptionAction<ClientResponse>() {
-          @Override
-          public ClientResponse run() throws Exception {
-            Client clientToRouter = Client.create();
-            WebResource toRouter = clientToRouter
-                .resource(routerAddress)
-                .path(webAddress);
+        .doAs((PrivilegedExceptionAction<ClientResponse>) () -> {
+          Client clientToRouter = Client.create();
+          WebResource toRouter = clientToRouter
+              .resource(routerAddress)
+              .path(webAddress);
 
-            WebResource toRouterWR = toRouter;
-            if (queryKey != null && queryValue != null) {
-              toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
-            }
-
-            Builder builder = null;
-            if (context != null) {
-              builder = toRouterWR.entity(context, APPLICATION_JSON);
-              builder = builder.accept(APPLICATION_JSON);
-            } else {
-              builder = toRouter.accept(APPLICATION_JSON);
-            }
-
-            ClientResponse response = null;
-
-            switch (method) {
-            case DELETE:
-              response = builder.delete(ClientResponse.class);
-              break;
-            case POST:
-              response = builder.post(ClientResponse.class);
-              break;
-            case PUT:
-              response = builder.put(ClientResponse.class);
-              break;
-            default:
-              break;
-            }
-
-            return response;
+          WebResource toRouterWR = toRouter;
+          if (queryKey != null && queryValue != null) {
+            toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
           }
+
+          Builder builder;
+          if (context != null) {
+            builder = toRouterWR.entity(context, APPLICATION_JSON);
+            builder = builder.accept(APPLICATION_JSON);
+          } else {
+            builder = toRouter.accept(APPLICATION_JSON);
+          }
+
+          ClientResponse response = null;
+
+          switch (method) {
+          case DELETE:
+            response = builder.delete(ClientResponse.class);
+            break;
+          case POST:
+            response = builder.post(ClientResponse.class);
+            break;
+          case PUT:
+            response = builder.put(ClientResponse.class);
+            break;
+          default:
+            break;
+          }
+
+          return response;
         });
   }
 
@@ -412,7 +419,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodesEmptyXML() throws Exception {
@@ -433,7 +440,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodesXML() throws Exception {
@@ -454,7 +461,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNode()} inside Router.
+   * {@link RMWebServiceProtocol#getNode(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodeXML() throws Exception {
@@ -476,7 +483,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateNodeResources()} inside Router.
+   * {@link RMWebServiceProtocol#updateNodeResource} inside Router.
    */
   @Test
   public void testUpdateNodeResource() throws Exception {
@@ -517,7 +524,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getActivities()} inside Router.
+   * {@link RMWebServiceProtocol#getActivities(HttpServletRequest, String, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testActiviesXML() throws Exception {
@@ -535,7 +542,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppActivities()} inside Router.
+   * {@link RMWebServiceProtocol#getAppActivities} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppActivitiesXML() throws Exception {
@@ -555,7 +562,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppStatistics()} inside Router.
+   * {@link RMWebServiceProtocol#getAppStatistics} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppStatisticsXML() throws Exception {
@@ -579,7 +586,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#dumpSchedulerLogs()} inside Router.
+   * {@link RMWebServiceProtocol#dumpSchedulerLogs} inside Router.
    */
   @Test(timeout = 2000)
   public void testDumpSchedulerLogsXML() throws Exception {
@@ -589,7 +596,7 @@ public class TestRouterWebServicesREST {
         performCall(RM_WEB_SERVICE_PATH + SCHEDULER_LOGS,
             null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -602,7 +609,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#createNewApplication()} inside Router.
+   * {@link RMWebServiceProtocol#createNewApplication} inside Router.
    */
   @Test(timeout = 2000)
   public void testNewApplicationXML() throws Exception {
@@ -612,7 +619,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION, null,
         null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -626,7 +633,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#submitApplication()} inside Router.
+   * {@link RMWebServiceProtocol#submitApplication} inside Router.
    */
   @Test(timeout = 2000)
   public void testSubmitApplicationXML() throws Exception {
@@ -635,7 +642,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + APPS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ApplicationSubmissionContextInfo context =
@@ -652,7 +659,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getApps()} inside Router.
+   * {@link RMWebServiceProtocol#getApps} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppsXML() throws Exception {
@@ -675,7 +682,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getApp()} inside Router.
+   * {@link RMWebServiceProtocol#getApp} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppXML() throws Exception {
@@ -699,7 +706,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppAttempts()} inside Router.
+   * {@link RMWebServiceProtocol#getAppAttempts} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppAttemptXML() throws Exception {
@@ -723,7 +730,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppState()} inside Router.
+   * {@link RMWebServiceProtocol#getAppState} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppStateXML() throws Exception {
@@ -747,7 +754,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateAppState()} inside Router.
+   * {@link RMWebServiceProtocol#updateAppState} inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateAppStateXML() throws Exception {
@@ -760,7 +767,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         pathApp, null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppState appState = new AppState("KILLED");
@@ -775,7 +782,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppPriority()} inside Router.
+   * {@link RMWebServiceProtocol#getAppPriority} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppPriorityXML() throws Exception {
@@ -797,7 +804,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateApplicationPriority()} inside Router.
+   * {@link RMWebServiceProtocol#updateApplicationPriority(
+   *     AppPriority, HttpServletRequest, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateAppPriorityXML() throws Exception {
@@ -809,7 +817,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_APPID_PRIORITY, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppPriority appPriority = new AppPriority(1);
@@ -825,7 +833,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppQueue()} inside Router.
+   * {@link RMWebServiceProtocol#getAppQueue(HttpServletRequest, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppQueueXML() throws Exception {
@@ -847,7 +855,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateAppQueue()} inside Router.
+   * {@link RMWebServiceProtocol#updateAppQueue(AppQueue, HttpServletRequest, String)}
+   * inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateAppQueueXML() throws Exception {
@@ -859,7 +868,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_APPID_QUEUE, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppQueue appQueue = new AppQueue("default");
@@ -875,7 +884,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppTimeouts()} inside Router.
+   * {@link RMWebServiceProtocol#getAppTimeouts} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppTimeoutsXML() throws Exception {
@@ -899,7 +908,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getAppTimeout()} inside Router.
+   * {@link RMWebServiceProtocol#getAppTimeout} inside Router.
    */
   @Test(timeout = 2000)
   public void testAppTimeoutXML() throws Exception {
@@ -922,7 +931,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateApplicationTimeout()} inside Router.
+   * {@link RMWebServiceProtocol#updateApplicationTimeout}
+   * inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateAppTimeoutsXML() throws Exception {
@@ -934,7 +944,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_TIMEOUT, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with a bad request
     AppTimeoutInfo appTimeoutInfo = new AppTimeoutInfo();
@@ -950,7 +960,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#createNewReservation()} inside Router.
+   * {@link RMWebServiceProtocol#createNewReservation(HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNewReservationXML() throws Exception {
@@ -960,7 +970,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + RESERVATION_NEW,
         null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -974,7 +984,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#submitReservation()} inside Router.
+   * {@link RMWebServiceProtocol#submitReservation(
+   *     ReservationSubmissionRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testSubmitReservationXML() throws Exception {
@@ -984,7 +995,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + RESERVATION_SUBMIT, null,
         null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ReservationSubmissionRequestInfo context =
@@ -1002,7 +1013,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateReservation()} inside Router.
+   * {@link RMWebServiceProtocol#updateReservation(
+   *     ReservationUpdateRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateReservationXML() throws Exception {
@@ -1011,7 +1023,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + RESERVATION_UPDATE, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     String reservationId = getNewReservationId().getReservationId();
@@ -1028,7 +1040,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#deleteReservation()} inside Router.
+   * {@link RMWebServiceProtocol#deleteReservation(
+   *     ReservationDeleteRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testDeleteReservationXML() throws Exception {
@@ -1037,7 +1050,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + RESERVATION_DELETE, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     String reservationId = getNewReservationId().getReservationId();
@@ -1054,7 +1067,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNodeToLabels()} inside Router.
+   * {@link RMWebServiceProtocol#getNodeToLabels(HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetNodeToLabelsXML() throws Exception {
@@ -1076,7 +1089,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getClusterNodeLabels()} inside Router.
+   * {@link RMWebServiceProtocol#getClusterNodeLabels(HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetClusterNodeLabelsXML() throws Exception {
@@ -1098,7 +1111,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getLabelsOnNode()} inside Router.
+   * {@link RMWebServiceProtocol#getLabelsOnNode(HttpServletRequest, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetLabelsOnNodeXML() throws Exception {
@@ -1120,7 +1133,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getLabelsToNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String>)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetLabelsMappingEmptyXML() throws Exception {
@@ -1142,7 +1155,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getLabelsToNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String>)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetLabelsMappingXML() throws Exception {
@@ -1164,7 +1177,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#addToClusterNodeLabels()} inside Router.
+   * {@link RMWebServiceProtocol#addToClusterNodeLabels(
+   *     NodeLabelsInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testAddToClusterNodeLabelsXML() throws Exception {
@@ -1174,7 +1188,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + ADD_NODE_LABELS,
         null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
 
@@ -1192,17 +1206,17 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#removeFromCluserNodeLabels()} inside Router.
+   * {@link RMWebServiceProtocol#removeFromClusterNodeLabels} inside Router.
    */
   @Test(timeout = 2000)
-  public void testRemoveFromCluserNodeLabelsXML()
+  public void testRemoveFromClusterNodeLabelsXML()
       throws Exception {
 
     // Test with a wrong HTTP method
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + REMOVE_NODE_LABELS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();
@@ -1218,7 +1232,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#replaceLabelsOnNodes()} inside Router.
+   * {@link RMWebServiceProtocol#replaceLabelsOnNodes} inside Router.
    */
   @Test(timeout = 2000)
   public void testReplaceLabelsOnNodesXML() throws Exception {
@@ -1227,7 +1241,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + REPLACE_NODE_TO_LABELS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();
@@ -1245,7 +1259,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#replaceLabelsOnNode()} inside Router.
+   * {@link RMWebServiceProtocol#replaceLabelsOnNode} inside Router.
    */
   @Test(timeout = 2000)
   public void testReplaceLabelsOnNodeXML() throws Exception {
@@ -1256,7 +1270,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         pathNode, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();
@@ -1328,17 +1342,14 @@ public class TestRouterWebServicesREST {
     testAppsXML();
 
     // Wait at most 10 seconds until we see all the applications
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          // Check if we have the 2 apps we submitted
-          return getNumApps() == iniNumApps + 2;
-        } catch (Exception e) {
-          fail();
-        }
-        return false;
+    GenericTestUtils.waitFor(() -> {
+      try {
+        // Check if we have the 2 apps we submitted
+        return getNumApps() == iniNumApps + 2;
+      } catch (Exception e) {
+        fail();
       }
+      return false;
     }, 100, 10 * 1000);
 
     // Multithreaded getApps()
@@ -1350,12 +1361,9 @@ public class TestRouterWebServicesREST {
     try {
       // Submit a bunch of operations concurrently
       for (int i = 0; i < NUM_THREADS_TESTS; i++) {
-        svc.submit(new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            assertEquals(iniNumApps + 2, getNumApps());
-            return null;
-          }
+        svc.submit(() -> {
+          assertEquals(iniNumApps + 2, getNumApps());
+          return null;
         });
       }
     } finally {

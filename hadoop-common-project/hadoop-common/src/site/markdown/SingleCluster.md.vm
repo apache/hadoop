@@ -26,6 +26,17 @@ Purpose
 
 This document describes how to set up and configure a single-node Hadoop installation so that you can quickly perform simple operations using Hadoop MapReduce and the Hadoop Distributed File System (HDFS).
 
+
+*Important*: all production Hadoop clusters use Kerberos to authenticate callers
+and secure access to HDFS data as well as restriction access to computation
+services (YARN etc.). 
+
+These instructions do not cover integration with any Kerberos services,
+-everyone bringing up a production cluster should include connecting to their
+organisation's Kerberos infrastructure as a key part of the deployment.
+
+See [Security](./SecureMode.html) for details on how to secure a cluster.
+
 Prerequisites
 -------------
 
@@ -33,13 +44,11 @@ $H3 Supported Platforms
 
 * GNU/Linux is supported as a development and production platform. Hadoop has been demonstrated on GNU/Linux clusters with 2000 nodes.
 
-* Windows is also a supported platform but the followings steps are for Linux only. To set up Hadoop on Windows, see [wiki page](http://wiki.apache.org/hadoop/Hadoop2OnWindows).
-
 $H3 Required Software
 
 Required software for Linux include:
 
-1.  Java™ must be installed. Recommended Java versions are described at [HadoopJavaVersions](http://wiki.apache.org/hadoop/HadoopJavaVersions).
+1.  Java™ must be installed. Recommended Java versions are described at [HadoopJavaVersions](https://cwiki.apache.org/confluence/display/HADOOP/Hadoop+Java+Versions).
 
 2.  ssh must be installed and sshd must be running to use the Hadoop scripts that manage remote Hadoop daemons if the optional start and stop scripts are to be used. Additionally, it is recommmended that pdsh also be installed for better ssh resource management.
 
@@ -130,7 +139,7 @@ If you cannot ssh to localhost without a passphrase, execute the following comma
 
 $H3 Execution
 
-The following instructions are to run a MapReduce job locally. If you want to execute a job on YARN, see [YARN on Single Node](#YARN_on_Single_Node).
+The following instructions are to run a MapReduce job locally. If you want to execute a job on YARN, see [YARN on Single Node](#YARN_on_a_Single_Node).
 
 1.  Format the filesystem:
 
@@ -148,8 +157,7 @@ The following instructions are to run a MapReduce job locally. If you want to ex
 
 4.  Make the HDFS directories required to execute MapReduce jobs:
 
-          $ bin/hdfs dfs -mkdir /user
-          $ bin/hdfs dfs -mkdir /user/<username>
+          $ bin/hdfs dfs -mkdir -p /user/<username>
 
 5.  Copy the input files into the distributed filesystem:
 
@@ -206,7 +214,7 @@ The following instructions assume that 1. ~ 4. steps of [the above instructions]
             </property>
             <property>
                 <name>yarn.nodemanager.env-whitelist</name>
-                <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME</value>
+                <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ,HADOOP_MAPRED_HOME</value>
             </property>
         </configuration>
 

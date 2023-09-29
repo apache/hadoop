@@ -34,15 +34,17 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 public class BlockManagerTestUtil {
+
+  static final long SLEEP_TIME = 1000;
+
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
-    blockManager.maxReplicationStreams = limit;
+    blockManager.setMaxReplicationStreams(limit, false);
   }
 
   /** @return the datanode descriptor for the given the given storageID. */
@@ -81,7 +83,8 @@ public class BlockManagerTestUtil {
 
   /**
    * @return a tuple of the replica state (number racks, number live
-   * replicas, and number needed replicas) for the given block.
+   * replicas, number needed replicas and number of UpgradeDomains) for the
+   * given block.
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) {
     final BlockManager bm = namesystem.getBlockManager();
@@ -90,7 +93,8 @@ public class BlockManagerTestUtil {
       final BlockInfo storedBlock = bm.getStoredBlock(b);
       return new int[]{getNumberOfRacks(bm, b),
           bm.countNodes(storedBlock).liveReplicas(),
-          bm.neededReconstruction.contains(storedBlock) ? 1 : 0};
+          bm.neededReconstruction.contains(storedBlock) ? 1 : 0,
+          getNumberOfDomains(bm, b)};
     } finally {
       namesystem.readUnlock();
     }
@@ -121,10 +125,27 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @return redundancy monitor thread instance from block manager.
+   * @return the number of UpgradeDomains over which a given block is replicated
+   * decommissioning/decommissioned nodes are not counted. corrupt replicas
+   * are also ignored.
    */
-  public static Daemon getRedundancyThread(final BlockManager blockManager) {
-    return blockManager.getRedundancyThread();
+  private static int getNumberOfDomains(final BlockManager blockManager,
+                                        final Block b) {
+    final Set<String> domSet = new HashSet<String>(0);
+    final Collection<DatanodeDescriptor> corruptNodes =
+        getCorruptReplicas(blockManager).getNodes(b);
+    for(DatanodeStorageInfo storage : blockManager.blocksMap.getStorages(b)) {
+      final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
+      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
+        if ((corruptNodes == null) || !corruptNodes.contains(cur)) {
+          String domain = cur.getUpgradeDomain();
+          if (domain != null && !domSet.contains(domain)) {
+            domSet.add(domain);
+          }
+        }
+      }
+    }
+    return domSet.size();
   }
 
   /**
@@ -142,6 +163,14 @@ public class BlockManagerTestUtil {
     }
   }
 
+  /**
+   * Wakeup the timer thread of PendingReconstructionBlocks.
+   */
+  public static void wakeupPendingReconstructionTimerThread(
+      final BlockManager blockManager) {
+    blockManager.pendingReconstruction.getTimerThread().interrupt();
+  }
+
   public static HeartbeatManager getHeartbeatManager(
       final BlockManager blockManager) {
     return blockManager.getDatanodeManager().getHeartbeatManager();
@@ -152,7 +181,20 @@ public class BlockManagerTestUtil {
    */
   public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
     return blockManager.corruptReplicas;
-    
+
+  }
+
+  /**
+   * Wait for the processing of the marked deleted block to complete.
+   */
+  public static void waitForMarkedDeleteQueueIsEmpty(
+      BlockManager blockManager) throws InterruptedException {
+    while (true) {
+      if (blockManager.getMarkedDeleteQueue().isEmpty()) {
+        return;
+      }
+      Thread.sleep(SLEEP_TIME);
+    }
   }
 
   /**
@@ -342,6 +384,16 @@ public class BlockManagerTestUtil {
   }
 
   /**
+   * Have BlockManager check isNodeHealthyForDecommissionOrMaintenance for a given datanode.
+   * @param blockManager the BlockManager to check against
+   * @param dn the datanode to check
+   */
+  public static boolean isNodeHealthyForDecommissionOrMaintenance(BlockManager blockManager,
+      DatanodeDescriptor dn) {
+    return blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+  }
+
+  /**
    * add block to the replicateBlocks queue of the Datanode
    */
   public static void addBlockToBeReplicated(DatanodeDescriptor node,
@@ -367,5 +419,21 @@ public class BlockManagerTestUtil {
       final DatanodeManager dnm =
           nn.getNamesystem().getBlockManager().getDatanodeManager();
       return !dnm.getNetworkTopology().contains(dnm.getDatanode(dnUuid));
+  }
+
+  /**
+   * Remove storage from block.
+   */
+  public static void removeStorage(BlockInfo block,
+      DatanodeStorageInfo storage) {
+    block.removeStorage(storage);
+  }
+
+  /**
+   * Add storage to block.
+   */
+  public static void addStorage(BlockInfo block, DatanodeStorageInfo storage,
+      Block reportedBlock) {
+    block.addStorage(storage, reportedBlock);
   }
 }

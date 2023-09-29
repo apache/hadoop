@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 
@@ -208,7 +208,9 @@ public class TestMRApp {
   @Test
   public void testUpdatedNodes() throws Exception {
     int runCount = 0;
-    Dispatcher disp = Mockito.spy(new AsyncDispatcher());
+    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    dispatcher.init(new Configuration());
+    Dispatcher disp = Mockito.spy(dispatcher);
     MRApp app = new MRAppWithHistory(2, 2, false, this.getClass().getName(),
         true, ++runCount, disp);
     Configuration conf = new Configuration();

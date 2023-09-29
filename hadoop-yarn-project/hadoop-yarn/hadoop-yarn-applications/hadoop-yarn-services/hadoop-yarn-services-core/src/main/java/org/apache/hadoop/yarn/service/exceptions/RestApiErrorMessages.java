@@ -127,4 +127,5 @@ public interface RestApiErrorMessages {
       " not contain a hostname.";
   String ERROR_KERBEROS_PRINCIPAL_MISSING = "Kerberos principal or keytab is" +
       " missing.";
+  String ERROR_JVM_OPTS = "Invalid character in yarn.service.am.java.opts.";
 }

@@ -22,7 +22,7 @@
 #include "common/libhdfs_events_impl.h"
 #include "common/namenode_info.h"
 
-#include <asio/ip/tcp.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <memory>
 #include <mutex>
@@ -52,13 +52,13 @@ class HANamenodeTracker {
   // currently being used.  Swap internal state and set out to other node.
   // Note: This will always mutate internal state.  Use IsCurrentActive/Standby to
   // get info without changing state
-  bool GetFailoverAndUpdate(const std::vector<::asio::ip::tcp::endpoint>& current_endpoints,
+  bool GetFailoverAndUpdate(const std::vector<boost::asio::ip::tcp::endpoint>& current_endpoints,
                             ResolvedNamenodeInfo& out);
 
  private:
   // See if endpoint ep is part of the list of endpoints for the active or standby NN
-  bool IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &ep) const;
-  bool IsCurrentStandby_locked(const ::asio::ip::tcp::endpoint &ep) const;
+  bool IsCurrentActive_locked(const boost::asio::ip::tcp::endpoint &ep) const;
+  bool IsCurrentStandby_locked(const boost::asio::ip::tcp::endpoint &ep) const;
 
   // If HA should be enabled, according to our options and runtime info like # nodes provided
   bool enabled_;

@@ -28,8 +28,16 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import javax.ws.rs.core.MediaType;
 
 /**
  * This class contains several utility function which could be used in different
@@ -42,6 +50,26 @@ public final class LogToolUtils {
 
   public static final String CONTAINER_ON_NODE_PATTERN =
       "Container: %s on %s";
+
+  /**
+   * Formats the header of an aggregated log file.
+   */
+  private static byte[] formatContainerLogHeader(String containerId,
+      String nodeId, ContainerLogAggregationType logType, String fileName,
+      String lastModifiedTime, long fileLength) {
+    StringBuilder sb = new StringBuilder();
+    String containerStr = String.format(
+        LogToolUtils.CONTAINER_ON_NODE_PATTERN,
+        containerId, nodeId);
+    sb.append(containerStr + "\n")
+        .append("LogAggregationType: " + logType + "\n")
+        .append(StringUtils.repeat("=", containerStr.length()) + "\n")
+        .append("LogType:" + fileName + "\n")
+        .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
+        .append("LogLength:" + fileLength + "\n")
+        .append("LogContents:\n");
+    return sb.toString().getBytes(Charset.forName("UTF-8"));
+  }
 
   /**
    * Output container log.
@@ -84,22 +112,10 @@ public final class LogToolUtils {
         : (int) pendingRead;
     int len = fis.read(buf, 0, toRead);
     boolean keepGoing = (len != -1 && curRead < totalBytesToRead);
-    if (keepGoing) {
-      StringBuilder sb = new StringBuilder();
-      String containerStr = String.format(
-          LogToolUtils.CONTAINER_ON_NODE_PATTERN,
-          containerId, nodeId);
-      sb.append(containerStr + "\n")
-          .append("LogAggregationType: " + logType + "\n")
-          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
-          .append("LogType:" + fileName + "\n")
-          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
-          .append("LogLength:" + Long.toString(fileLength) + "\n")
-          .append("LogContents:\n");
-      byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
-      os.write(b, 0, b.length);
-    }
+
+    byte[] b = formatContainerLogHeader(containerId, nodeId, logType, fileName,
+        lastModifiedTime, fileLength);
+    os.write(b, 0, b.length);
     while (keepGoing) {
       os.write(buf, 0, len);
       curRead += len;
@@ -132,22 +148,12 @@ public final class LogToolUtils {
       }
     }
 
+    // output log summary
+    byte[] b = formatContainerLogHeader(containerId, nodeId, logType, fileName,
+        lastModifiedTime, fileLength);
+    os.write(b, 0, b.length);
+
     if (totalBytesToRead > 0) {
-      // output log summary
-      StringBuilder sb = new StringBuilder();
-      String containerStr = String.format(
-          LogToolUtils.CONTAINER_ON_NODE_PATTERN,
-          containerId, nodeId);
-      sb.append(containerStr + "\n")
-          .append("LogAggregationType: " + logType + "\n")
-          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
-          .append("LogType:" + fileName + "\n")
-          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
-          .append("LogLength:" + Long.toString(fileLength) + "\n")
-          .append("LogContents:\n");
-      byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
-      os.write(b, 0, b.length);
       // output log content
       FileChannel inputChannel = fis.getChannel();
       WritableByteChannel outputChannel = Channels.newChannel(os);
@@ -183,5 +189,27 @@ public final class LogToolUtils {
       out = new PrintStream(containerLogPath.toString(), "UTF-8");
     }
     return out;
+  }
+
+  /**
+   * Redirect the {@link ContainerLogsRequest} to the NodeManager's
+   * NMWebServices.
+   *
+   * @param conf Configuration object
+   * @param webServiceClient client
+   * @param request the request for container logs
+   * @param logFile name of the log file
+   * @return response from NMWebServices
+   */
+  public static ClientResponse getResponseFromNMWebService(Configuration conf,
+      Client webServiceClient, ContainerLogsRequest request, String logFile) {
+    WebResource webResource =
+        webServiceClient.resource(WebAppUtils.getHttpSchemePrefix(conf)
+            + request.getNodeHttpAddress());
+    return webResource.path("ws").path("v1").path("node")
+        .path("containers").path(request.getContainerId()).path("logs")
+        .path(logFile)
+        .queryParam("size", Long.toString(request.getBytes()))
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
   }
 }

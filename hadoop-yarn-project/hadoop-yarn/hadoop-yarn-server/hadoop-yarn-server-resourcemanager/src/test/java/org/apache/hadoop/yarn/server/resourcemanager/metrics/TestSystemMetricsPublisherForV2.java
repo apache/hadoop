@@ -422,7 +422,7 @@ public class TestSystemMetricsPublisherForV2 {
         .put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceSecondsMap,
-            new HashMap<>()));
+            new HashMap<>(), 0));
     when(app.getApplicationTags()).thenReturn(Collections.<String>emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);

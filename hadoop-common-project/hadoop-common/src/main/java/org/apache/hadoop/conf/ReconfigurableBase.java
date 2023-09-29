@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.conf;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.slf4j.Logger;
@@ -79,6 +79,7 @@ public abstract class ReconfigurableBase
   /**
    * Construct a ReconfigurableBase with the {@link Configuration}
    * conf.
+   * @param conf configuration.
    */
   public ReconfigurableBase(Configuration conf) {
     super((conf == null) ? new Configuration() : conf);
@@ -91,6 +92,7 @@ public abstract class ReconfigurableBase
 
   /**
    * Create a new configuration.
+   * @return configuration.
    */
   protected abstract Configuration getNewConf();
 
@@ -162,6 +164,7 @@ public abstract class ReconfigurableBase
 
   /**
    * Start a reconfiguration task to reload configuration in background.
+   * @throws IOException raised on errors performing I/O.
    */
   public void startReconfigurationTask() throws IOException {
     synchronized (reconfigLock) {

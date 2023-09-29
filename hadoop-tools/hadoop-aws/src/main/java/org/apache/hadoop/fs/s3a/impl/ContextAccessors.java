@@ -20,9 +20,12 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 /**
  * An interface to implement for providing accessors to
@@ -67,8 +70,31 @@ public interface ContextAccessors {
    * Get the region of a bucket. This may be via an S3 API call if not
    * already cached.
    * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
    * @throws IOException on any failure.
    */
   @Retries.RetryTranslated
   String getBucketLocation() throws IOException;
+
+  /**
+   * Qualify a path.
+   *
+   * @param path path to qualify/normalize
+   * @return possibly new path.
+   */
+  Path makeQualified(Path path);
+
+  /**
+   * Return the active audit span.
+   * This is thread local -it MUST be picked up and passed into workers.
+   * Collect and cache the value during construction.
+   * @return active audit span.
+   */
+  AuditSpan getActiveAuditSpan();
+
+  /**
+   * Get the request factory.
+   * @return the factory for requests.
+   */
+  RequestFactory getRequestFactory();
 }

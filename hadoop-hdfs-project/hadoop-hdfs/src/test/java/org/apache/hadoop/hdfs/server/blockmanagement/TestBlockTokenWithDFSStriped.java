@@ -136,7 +136,7 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     LocatedBlock[] internalBlocks = StripedBlockUtil.parseStripedBlockGroup
         (lsb, cellSize, dataBlocks, parityBlocks);
     for (LocatedBlock internalBlock : internalBlocks) {
-      if(super.isBlockTokenExpired(internalBlock)){
+      if(internalBlock != null && super.isBlockTokenExpired(internalBlock)) {
         return true;
       }
     }

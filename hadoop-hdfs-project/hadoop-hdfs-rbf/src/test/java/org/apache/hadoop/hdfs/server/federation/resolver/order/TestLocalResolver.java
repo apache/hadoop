@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegist
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
@@ -78,12 +77,8 @@ public class TestLocalResolver {
     StringBuilder sb = new StringBuilder("clientX");
     LocalResolver localResolver = new LocalResolver(conf, router);
     LocalResolver spyLocalResolver = spy(localResolver);
-    doAnswer(new Answer<String>() {
-      @Override
-      public String answer(InvocationOnMock invocation) throws Throwable {
-        return sb.toString();
-      }
-    }).when(spyLocalResolver).getClientAddr();
+    doAnswer((Answer<String>) invocation -> sb.toString()
+        ).when(spyLocalResolver).getClientAddr();
 
     // Add the mocks to the resolver
     MultipleDestinationMountTableResolver resolver =
@@ -127,7 +122,7 @@ public class TestLocalResolver {
   private MembershipState newMembershipState(String addr, String nsId) {
     return MembershipState.newInstance(
         "routerId", nsId, "nn0", "cluster0", "blockPool0",
-        addr + ":8001", addr + ":8002", addr + ":8003", addr + ":8004",
+        addr + ":8001", addr + ":8002", addr + ":8003", "http", addr + ":8004",
         FederationNamenodeServiceState.ACTIVE, false);
   }
 

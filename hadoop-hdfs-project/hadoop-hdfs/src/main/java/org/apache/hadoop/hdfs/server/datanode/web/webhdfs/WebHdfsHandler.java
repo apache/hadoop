@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -58,22 +58,21 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCEPT;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.LOCATION;
-import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
-import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_MAX_AGE;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderNames.LOCATION;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpMethod.POST;
@@ -123,12 +122,12 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void channelRead0(final ChannelHandlerContext ctx,
                            final HttpRequest req) throws Exception {
-    Preconditions.checkArgument(req.getUri().startsWith(WEBHDFS_PREFIX));
-    QueryStringDecoder queryString = new QueryStringDecoder(req.getUri());
+    Preconditions.checkArgument(req.uri().startsWith(WEBHDFS_PREFIX));
+    QueryStringDecoder queryString = new QueryStringDecoder(req.uri());
     params = new ParameterParser(queryString, conf);
     DataNodeUGIProvider ugiProvider = new DataNodeUGIProvider(params);
     ugi = ugiProvider.ugi();
-    path = URLDecoder.decode(params.path(), "UTF-8");
+    path = params.path();
 
     injectToken();
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -145,7 +144,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
             LOG.warn("Error retrieving hostname: ", e);
             host = "unknown";
           }
-          REQLOG.info(host + " " + req.getMethod() + " "  + req.getUri() + " " +
+          REQLOG.info(host + " " + req.method() + " "  + req.uri() + " " +
               getResponseCode());
         }
         return null;
@@ -155,13 +154,13 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   int getResponseCode() {
     return (resp == null) ? INTERNAL_SERVER_ERROR.code() :
-        resp.getStatus().code();
+        resp.status().code();
   }
 
   public void handle(ChannelHandlerContext ctx, HttpRequest req)
     throws IOException, URISyntaxException {
     String op = params.op();
-    HttpMethod method = req.getMethod();
+    HttpMethod method = req.method();
     if (PutOpParam.Op.CREATE.name().equalsIgnoreCase(op)
       && method == PUT) {
       onCreate(ctx);
@@ -336,8 +335,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   }
 
   private void injectToken() throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Token<DelegationTokenIdentifier> token = params.delegationToken();
+    Token<DelegationTokenIdentifier> token = params.delegationToken();
+    if (UserGroupInformation.isSecurityEnabled() && token != null) {
       token.setKind(HDFS_DELEGATION_KIND);
       ugi.addToken(token);
     }

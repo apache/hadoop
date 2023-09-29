@@ -58,7 +58,7 @@ Features
 `yarn rmadmin -refreshNodes [-g [timeout in seconds] -client|server]` notifies NodesListManager to detect and handle include and exclude hosts changes. NodesListManager loads excluded hosts from the exclude file as specified through the `yarn.resourcemanager.nodes.exclude-path` configuration in yarn-site.xml. (Note:  It is unnecessary to restart RM in case of changing the exclude-path 
 as this config will be read again for every `refreshNodes` command)
 
-The format of the file could be plain text or XML depending the extension of the file. Only the XML format supports per node timout for graceful decommissioning.
+The format of the file could be plain text or XML depending the extension of the file. Only the XML format supports per node timeout for graceful decommissioning.
 
 NodesListManager inspects and compares status of RMNodes in resource manager and the exclude list, and apply necessary actions based on following rules:
 
@@ -83,7 +83,7 @@ In case of server side timeout:
 2. Use the timeout in `yarn rmadmin -refreshNodes -g [timeout in seconds] -server|client` if specified;
 3. Use the default timeout specified through *"yarn.resourcemanager.nodemanager-graceful-decommission-timeout-secs"* configuration.
 
-In case of client side timout (see bellow):
+In case of client side timeout (see bellow):
 
 1. Only the command line parameter defined by the `-g` flag will be used. 
 

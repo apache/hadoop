@@ -32,14 +32,14 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
@@ -50,13 +50,13 @@ import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.core.TraceScope;
+import org.apache.hadoop.tracing.TraceScope;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_SEQUENTIAL;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 
 /**
@@ -101,7 +101,7 @@ import org.slf4j.Logger;
  */
 class BlockSender implements java.io.Closeable {
   static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger CLIENT_TRACE_LOG = DataNode.CLIENT_TRACE_LOG;
   private static final boolean is32Bit = 
       System.getProperty("sun.arch.data.model").equals("32");
   /**
@@ -183,6 +183,8 @@ class BlockSender implements java.io.Closeable {
   // would risk sending too much unnecessary data. 512 (1 disk sector)
   // is likely to result in minimal extra IO.
   private static final long CHUNK_SIZE = 512;
+
+  private static final String EIO_ERROR = "Input/output error";
   /**
    * Constructor
    * 
@@ -253,7 +255,8 @@ class BlockSender implements java.io.Closeable {
       // the append write.
       ChunkChecksum chunkChecksum = null;
       final long replicaVisibleLength;
-      try(AutoCloseableLock lock = datanode.data.acquireDatasetLock()) {
+      try (AutoCloseableLock lock = datanode.getDataSetLockManager().readLock(
+          LockLevel.BLOCK_POOl, block.getBlockPoolId())) {
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();
       }
@@ -324,13 +327,22 @@ class BlockSender implements java.io.Closeable {
             // storage.  The header is important for determining the checksum
             // type later when lazy persistence copies the block to non-transient
             // storage and computes the checksum.
+            int expectedHeaderSize = BlockMetadataHeader.getHeaderSize();
             if (!replica.isOnTransientStorage() &&
-                metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
+                metaIn.getLength() >= expectedHeaderSize) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, IO_FILE_BUFFER_SIZE));
-  
+
               csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
               keepMetaInOpen = true;
+            } else if (!replica.isOnTransientStorage() &&
+                metaIn.getLength() < expectedHeaderSize) {
+              LOG.warn("The meta file length {} is less than the expected " +
+                  "header length {}, indicating the meta file is corrupt",
+                  metaIn.getLength(), expectedHeaderSize);
+              throw new CorruptMetaHeaderException("The meta file length "+
+                  metaIn.getLength()+" is less than the expected length "+
+                  expectedHeaderSize);
             }
           } else {
             LOG.warn("Could not find metadata file for " + block);
@@ -338,11 +350,8 @@ class BlockSender implements java.io.Closeable {
         } catch (FileNotFoundException e) {
           if ((e.getMessage() != null) && !(e.getMessage()
               .contains("Too many open files"))) {
-            // The replica is on its volume map but not on disk
-            datanode
-                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
-            datanode.data.invalidate(block.getBlockPoolId(),
-                new Block[] {block.getLocalBlock()});
+            datanode.data.invalidateMissingBlock(block.getBlockPoolId(),
+                block.getLocalBlock());
           }
           throw e;
         } finally {
@@ -420,9 +429,10 @@ class BlockSender implements java.io.Closeable {
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
     } catch (IOException ioe) {
+      IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
-      org.apache.commons.io.IOUtils.closeQuietly(blockIn);
-      org.apache.commons.io.IOUtils.closeQuietly(checksumIn);
+      IOUtils.closeStream(blockIn);
+      IOUtils.closeStream(checksumIn);
       throw ioe;
     }
   }
@@ -576,7 +586,14 @@ class BlockSender implements java.io.Closeable {
     
     int dataOff = checksumOff + checksumDataLen;
     if (!transferTo) { // normal transfer
-      ris.readDataFully(buf, dataOff, dataLen);
+      try {
+        ris.readDataFully(buf, dataOff, dataLen);
+      } catch (IOException ioe) {
+        if (ioe.getMessage().startsWith(EIO_ERROR)) {
+          throw new DiskFileCorruptException("A disk IO error occurred", ioe);
+        }
+        throw ioe;
+      }
 
       if (verifyChecksum) {
         verifyChecksum(buf, dataOff, dataLen, numChunks, checksumOff);
@@ -612,6 +629,7 @@ class BlockSender implements java.io.Closeable {
          * 
          * Reporting of this case is done in DataXceiver#run
          */
+        LOG.warn("Sending packets timed out.", e);
       } else {
         /* Exception while writing to the client. Connection closure from
          * the other end is mostly the case and we do not care much about
@@ -623,11 +641,25 @@ class BlockSender implements java.io.Closeable {
          * It was done here because the NIO throws an IOException for EPIPE.
          */
         String ioem = e.getMessage();
-        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-          LOG.error("BlockSender.sendChunks() exception: ", e);
-          datanode.getBlockScanner().markSuspectBlock(
-              ris.getVolumeRef().getVolume().getStorageID(),
-              block);
+        if (ioem != null) {
+          /*
+           * If we got an EIO when reading files or transferTo the client
+           * socket, it's very likely caused by bad disk track or other file
+           * corruptions.
+           */
+          if (ioem.startsWith(EIO_ERROR)) {
+            throw new DiskFileCorruptException("A disk IO error occurred", e);
+          }
+          String causeMessage = e.getCause() != null ? e.getCause().getMessage() : "";
+          causeMessage = causeMessage != null ? causeMessage : "";
+          if (!ioem.startsWith("Broken pipe")
+              && !ioem.startsWith("Connection reset")
+              && !causeMessage.startsWith("Broken pipe")
+              && !causeMessage.startsWith("Connection reset")) {
+            LOG.error("BlockSender.sendChunks() exception: ", e);
+            datanode.getBlockScanner().markSuspectBlock(
+                ris.getVolumeRef().getVolume().getStorageID(), block);
+          }
         }
       }
       throw ioeToSocketException(e);
@@ -722,8 +754,8 @@ class BlockSender implements java.io.Closeable {
    */
   long sendBlock(DataOutputStream out, OutputStream baseStream, 
                  DataTransferThrottler throttler) throws IOException {
-    final TraceScope scope = datanode.getTracer().
-        newScope("sendBlock_" + block.getBlockId());
+    final TraceScope scope = FsTracer.get(null)
+        .newScope("sendBlock_" + block.getBlockId());
     try {
       return doSendBlock(out, baseStream, throttler);
     } finally {
@@ -751,7 +783,7 @@ class BlockSender implements java.io.Closeable {
     // Trigger readahead of beginning of file if configured.
     manageOsCache();
 
-    final long startTime = ClientTraceLog.isDebugEnabled() ? System.nanoTime() : 0;
+    final long startTime = CLIENT_TRACE_LOG.isDebugEnabled() ? System.nanoTime() : 0;
     try {
       int maxChunksPerPacket;
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
@@ -798,9 +830,9 @@ class BlockSender implements java.io.Closeable {
         sentEntireByteRange = true;
       }
     } finally {
-      if ((clientTraceFmt != null) && ClientTraceLog.isDebugEnabled()) {
+      if ((clientTraceFmt != null) && CLIENT_TRACE_LOG.isDebugEnabled()) {
         final long endTime = System.nanoTime();
-        ClientTraceLog.debug(String.format(clientTraceFmt, totalRead,
+        CLIENT_TRACE_LOG.debug(String.format(clientTraceFmt, totalRead,
             initialOffset, endTime - startTime));
       }
       close();

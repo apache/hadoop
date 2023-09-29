@@ -77,7 +77,7 @@ public class TestFederationRMFailoverProxyProvider {
 
     stateStore = spy(new MemoryFederationStateStore());
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);
     verify(stateStore, times(0))
         .getSubClusters(any(GetSubClustersInfoRequest.class));
   }
@@ -107,7 +107,8 @@ public class TestFederationRMFailoverProxyProvider {
     conf.setBoolean(YarnConfiguration.FEDERATION_FLUSH_CACHE_FOR_RM_ADDR,
         facadeFlushCache);
 
-    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.FEDERATION_FAILOVER_ENABLED, true);
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
     conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
@@ -179,7 +180,7 @@ public class TestFederationRMFailoverProxyProvider {
           .getSubClusters(any(GetSubClustersInfoRequest.class));
 
       // Force flush cache, so that it will pick up the new RM address
-      FederationStateStoreFacade.getInstance().getSubCluster(subClusterId,
+      FederationStateStoreFacade.getInstance(conf).getSubCluster(subClusterId,
           true);
     }
 

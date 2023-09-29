@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -201,7 +201,7 @@ public class OpportunisticContainerContext {
   }
 
   @VisibleForTesting
-  OpportunisticSchedulerMetrics getOppSchedulerMetrics() {
+  public OpportunisticSchedulerMetrics getOppSchedulerMetrics() {
     return OpportunisticSchedulerMetrics.getMetrics();
   }
 }

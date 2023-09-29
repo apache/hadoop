@@ -26,10 +26,14 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -649,8 +653,9 @@ public class TestSequenceFile {
   @Test
   public void testRecursiveSeqFileCreate() throws IOException {
     FileSystem fs = FileSystem.getLocal(conf);
-    Path name = new Path(new Path(GenericTestUtils.getTempPath(
-        "recursiveCreateDir")), "file");
+    Path parentDir = new Path(GenericTestUtils.getTempPath(
+            "recursiveCreateDir"));
+    Path name = new Path(parentDir, "file");
     boolean createParent = false;
 
     try {
@@ -662,11 +667,16 @@ public class TestSequenceFile {
       // Expected
     }
 
-    createParent = true;
-    SequenceFile.createWriter(fs, conf, name, RandomDatum.class,
-        RandomDatum.class, 512, (short) 1, 4096, createParent,
-        CompressionType.NONE, null, new Metadata());
-    // should succeed, fails if exception thrown
+    try {
+      createParent = true;
+      SequenceFile.createWriter(fs, conf, name, RandomDatum.class,
+          RandomDatum.class, 512, (short) 1, 4096, createParent,
+          CompressionType.NONE, null, new Metadata());
+      // should succeed, fails if exception thrown
+    } finally {
+      fs.deleteOnExit(parentDir);
+      fs.close();
+    }
   }
 
   @Test
@@ -721,6 +731,147 @@ public class TestSequenceFile {
       assertTrue(e.getMessage().startsWith(
         "Could not find a deserializer for the Key class: '" +
             RandomDatum.class.getName() + "'."));
+    }
+  }
+
+  @Test
+  public void testSequenceFileWriter() throws Exception {
+    Configuration conf = new Configuration();
+    // This test only works with Raw File System and not Local File System
+    FileSystem fs = FileSystem.getLocal(conf).getRaw();
+    Path p = new Path(GenericTestUtils
+      .getTempPath("testSequenceFileWriter.seq"));
+    try(SequenceFile.Writer writer = SequenceFile.createWriter(
+            fs, conf, p, LongWritable.class, Text.class)) {
+      Assertions.assertThat(writer.hasCapability
+        (StreamCapabilities.HSYNC)).isEqualTo(true);
+      Assertions.assertThat(writer.hasCapability(
+        StreamCapabilities.HFLUSH)).isEqualTo(true);
+      LongWritable key = new LongWritable();
+      key.set(1);
+      Text value = new Text();
+      value.set("somevalue");
+      writer.append(key, value);
+      writer.flush();
+      writer.hflush();
+      writer.hsync();
+      Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
+    }
+  }
+
+  @Test
+  public void testSerializationUsingWritableNameAlias() throws IOException {
+    Configuration config = new Configuration();
+    config.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, SimpleSerializer.class.getName());
+    Path path = new Path(System.getProperty("test.build.data", "."),
+        "SerializationUsingWritableNameAlias");
+
+    // write with the original serializable class
+    SequenceFile.Writer writer = SequenceFile.createWriter(
+        config,
+        SequenceFile.Writer.file(path),
+        SequenceFile.Writer.keyClass(SimpleSerializable.class),
+        SequenceFile.Writer.valueClass(SimpleSerializable.class));
+
+    int max = 10;
+    try {
+      SimpleSerializable val = new SimpleSerializable();
+      val.setId(-1);
+      for (int i = 0; i < max; i++) {
+        SimpleSerializable key = new SimpleSerializable();
+        key.setId(i);
+        writer.append(key, val);
+      }
+    } finally {
+      writer.close();
+    }
+
+    // override name so it gets forced to the new serializable
+    WritableName.setName(AnotherSimpleSerializable.class, SimpleSerializable.class.getName());
+
+    // read and expect our new serializable, and all the correct values read
+    SequenceFile.Reader reader = new SequenceFile.Reader(
+        config,
+        SequenceFile.Reader.file(path));
+
+    AnotherSimpleSerializable key = new AnotherSimpleSerializable();
+    int count = 0;
+    while (true) {
+      key = (AnotherSimpleSerializable) reader.next(key);
+      if (key == null) {
+        // make sure we exhausted all the ints we wrote
+        assertEquals(count, max);
+        break;
+      }
+      assertEquals(count++, key.getId());
+    }
+  }
+
+  public static class SimpleSerializable implements Serializable {
+
+    private int id;
+
+    public int getId() {
+      return id;
+    }
+
+    public void setId(int id) {
+      this.id = id;
+    }
+  }
+
+  public static class AnotherSimpleSerializable extends SimpleSerializable {
+  }
+
+  public static class SimpleSerializer implements Serialization<SimpleSerializable> {
+
+    @Override
+    public boolean accept(Class<?> c) {
+      return SimpleSerializable.class.isAssignableFrom(c);
+    }
+
+    @Override
+    public Serializer<SimpleSerializable> getSerializer(Class<SimpleSerializable> c) {
+      return new Serializer<SimpleSerializable>() {
+        private DataOutputStream out;
+        @Override
+        public void open(OutputStream out) throws IOException {
+          this.out = new DataOutputStream(out);
+        }
+
+        @Override
+        public void serialize(SimpleSerializable simpleSerializable) throws IOException {
+          out.writeInt(simpleSerializable.getId());
+        }
+
+        @Override
+        public void close() throws IOException {
+          out.close();
+        }
+      };
+    }
+
+    @Override
+    public Deserializer<SimpleSerializable> getDeserializer(Class<SimpleSerializable> c) {
+      return new Deserializer<SimpleSerializable>() {
+        private DataInputStream dis;
+        @Override
+        public void open(InputStream in) throws IOException {
+          dis = new DataInputStream(in);
+        }
+
+        @Override
+        public SimpleSerializable deserialize(SimpleSerializable simpleSerializable)
+            throws IOException {
+          simpleSerializable.setId(dis.readInt());
+          return simpleSerializable;
+        }
+
+        @Override
+        public void close() throws IOException {
+          dis.close();
+        }
+      };
     }
   }
 

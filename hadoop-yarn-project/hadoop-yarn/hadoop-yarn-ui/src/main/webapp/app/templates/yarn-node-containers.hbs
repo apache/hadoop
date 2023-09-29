@@ -36,12 +36,12 @@
           {{#if model.containers}}
             {{#each model.containers as |container|}}
                 <tr>
-                  <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container.containerId}}">{{container.containerId}}</a></td>
+                  <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{encodedNodeAddr}}/{{container.containerId}}">{{container.containerId}}</a></td>
                   <td><span class={{container.containerStateStyle}}>{{container.state}}</span></td>
                   <td>{{container.user}}</td>
                   <td>
                     {{log-files-comma nodeId=model.nodeInfo.id
-                        nodeAddr=model.nodeInfo.addr
+                        nodeAddr=encodedNodeAddr
                         containerId=container.containerId
                         logFiles=container.containerLogFiles}}
                   </td>

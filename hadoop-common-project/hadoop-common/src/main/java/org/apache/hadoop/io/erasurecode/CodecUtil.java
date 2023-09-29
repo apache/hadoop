@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.codec.ErasureCodec;
@@ -78,11 +78,17 @@ public final class CodecUtil {
   public static final String IO_ERASURECODE_CODEC_XOR_RAWCODERS_KEY =
       IO_ERASURECODE_CODEC + "xor.rawcoders";
 
+  public static final String IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY =
+      IO_ERASURECODE_CODEC + "native.enabled";
+
+  public static final boolean IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT = true;
+
   private CodecUtil() { }
 
   /**
    * Create encoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure encoder
    */
   public static ErasureEncoder createEncoder(Configuration conf,
@@ -100,6 +106,7 @@ public final class CodecUtil {
   /**
    * Create decoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure decoder
    */
   public static ErasureDecoder createDecoder(Configuration conf,
@@ -168,8 +175,14 @@ public final class CodecUtil {
 
   private static RawErasureEncoder createRawEncoderWithFallback(
       Configuration conf, String codecName, ErasureCoderOptions coderOptions) {
+    boolean nativeEncoderEnabled = conf.getBoolean(IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] rawCoderNames = getRawCoderNames(conf, codecName);
     for (String rawCoderName : rawCoderNames) {
+      if (!nativeEncoderEnabled && rawCoderName.contains("native")) {
+        LOG.debug("Disable the encoder with ISA-L.");
+        continue;
+      }
       try {
         if (rawCoderName != null) {
           RawErasureCoderFactory fact = createRawCoderFactory(
@@ -190,8 +203,14 @@ public final class CodecUtil {
 
   private static RawErasureDecoder createRawDecoderWithFallback(
       Configuration conf, String codecName, ErasureCoderOptions coderOptions) {
+    boolean nativeDecoderEnabled = conf.getBoolean(IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] coders = getRawCoderNames(conf, codecName);
     for (String rawCoderName : coders) {
+      if (!nativeDecoderEnabled && rawCoderName.contains("native")) {
+        LOG.debug("Disable the decoder with ISA-L.");
+        continue;
+      }
       try {
         if (rawCoderName != null) {
           RawErasureCoderFactory fact = createRawCoderFactory(

@@ -22,7 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 import java.util.List;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDevice;
 
 /**
  * Interface for an FPGA device discovery strategy.

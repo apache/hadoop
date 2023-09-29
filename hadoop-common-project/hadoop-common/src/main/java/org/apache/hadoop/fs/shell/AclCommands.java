@@ -22,8 +22,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.google.common.collect.Lists;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,6 +33,7 @@ import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.ScopedAclEntries;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Acl related operations
@@ -173,7 +172,11 @@ class AclCommands extends FsCommand {
         + "  -x :Remove specified ACL entries. Other ACL entries are retained.\n"
         + "  --set :Fully replace the ACL, discarding all existing entries."
         + " The <acl_spec> must include entries for user, group, and others"
-        + " for compatibility with permission bits.\n"
+        + " for compatibility with permission bits. If the ACL spec contains"
+        + " only access entries, then the existing default entries are retained"
+        + ". If the ACL spec contains only default entries, then the existing"
+        + " access entries are retained. If the ACL spec contains both access"
+        + " and default entries, then both are replaced.\n"
         + "  <acl_spec>: Comma separated list of ACL entries.\n"
         + "  <path>: File or directory to modify.\n";
 

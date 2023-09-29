@@ -34,6 +34,17 @@ export default Ember.Mixin.create({
     });
   },
 
+  fetchAppInfoFromRM(appId, store) {
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      store.find('yarn-app', appId).then(function(rmApp) {
+        resolve(rmApp);
+      }, function() {
+          console.error('Error:', 'Application not found in RM for appId: ' + appId);
+          reject(null);
+      });
+    });
+  },
+
   fetchAttemptInfoFromRMorATS(attemptId, store) {
     return new Ember.RSVP.Promise(function(resolve, reject) {
       store.findRecord('yarn-app-attempt', attemptId, {reload: true}).then(function(rmAttempt) {
@@ -61,6 +72,17 @@ export default Ember.Mixin.create({
           reject(null);
         });
       });
+    });
+  },
+
+  fetchAttemptListFromRM(appId, store) {
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      store.query('yarn-app-attempt', {appId: appId}).then(function(rmAttempts) {
+        resolve(rmAttempts);
+      }, function() {
+          console.error('Error:', 'Application attempts not found in RM for appId: ' + appId);
+          reject(null);
+        });
     });
   }
 });

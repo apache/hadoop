@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
@@ -98,7 +99,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
@@ -200,7 +201,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // Update configured resources via plugins.
     updateConfiguredResourcesViaPlugins(totalResource);
 
-    LOG.info("Nodemanager resources is set to: " + totalResource);
+    LOG.info("Nodemanager resources is set to: {}.", totalResource);
 
     metrics.addResource(totalResource);
 
@@ -246,9 +247,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.debug("{} :{}", YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS,
         durationToTrackStoppedContainers);
     super.serviceInit(conf);
-    LOG.info("Initialized nodemanager with :" +
-        " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
-        " virtual-cores=" + virtualCores);
+    LOG.info("Initialized nodemanager with : physical-memory={} virtual-memory={} " +
+        "virtual-cores={}.", memoryMb, virtualMemoryMb, virtualCores);
 
     this.logAggregationEnabled =
         conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
@@ -263,7 +263,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     // NodeManager is the last service to start, so NodeId is available.
     this.nodeId = this.context.getNodeId();
-    LOG.info("Node ID assigned is : " + this.nodeId);
+    LOG.info("Node ID assigned is : {}.", this.nodeId);
     this.httpPort = this.context.getHttpPort();
     this.nodeManagerVersionId = YarnVersionInfo.getVersion();
     try {
@@ -311,10 +311,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     request.setNodeId(this.nodeId);
     try {
       resourceTracker.unRegisterNodeManager(request);
-      LOG.info("Successfully Unregistered the Node " + this.nodeId
-          + " with ResourceManager.");
+      LOG.info("Successfully Unregistered the Node {} with ResourceManager.", this.nodeId);
     } catch (Exception e) {
-      LOG.warn("Unregistration of the Node " + this.nodeId + " failed.", e);
+      LOG.warn("Unregistration of the Node {} failed.", this.nodeId, e);
     }
   }
 
@@ -391,23 +390,24 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // during RM recovery
     synchronized (this.context) {
       List<NMContainerStatus> containerReports = getNMContainerStatuses();
+      NodeStatus nodeStatus = getNodeStatus(0);
       RegisterNodeManagerRequest request =
           RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
               nodeManagerVersionId, containerReports, getRunningApplications(),
-              nodeLabels, physicalResource, nodeAttributes);
+              nodeLabels, physicalResource, nodeAttributes, nodeStatus);
 
-      if (containerReports != null) {
-        LOG.info("Registering with RM using containers :" + containerReports);
+      if (containerReports != null && !containerReports.isEmpty()) {
+        LOG.info("Registering with RM using containers.size : {}." + containerReports.size());
       }
       if (logAggregationEnabled) {
         // pull log aggregation status for application running in this NM
         List<LogAggregationReport> logAggregationReports =
             context.getNMLogAggregationStatusTracker()
                 .pullCachedLogAggregationReports();
-        LOG.debug("The cache log aggregation status size:{}",
-            logAggregationReports.size());
         if (logAggregationReports != null
             && !logAggregationReports.isEmpty()) {
+          LOG.debug("The cache log aggregation status size:{}",
+              logAggregationReports.size());
           request.setLogAggregationReportsForApps(logAggregationReports);
         }
       }
@@ -622,8 +622,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
 
     containerStatuses.addAll(pendingCompletedContainers.values());
-    LOG.debug("Sending out {} container statuses: {}",
-        containerStatuses.size(), containerStatuses);
+    if (!containerStatuses.isEmpty()) {
+      LOG.debug("Sending out {} container statuses: {}",
+          containerStatuses.size(), containerStatuses);
+    }
 
     return containerStatuses;
   }
@@ -637,6 +639,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         runningApplications.add(appEntry.getKey());
       }
     }
+    LOG.info("Running Applications Size : {}.", runningApplications.size());
     return runningApplications;
   }
 
@@ -662,8 +665,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         addCompletedContainer(containerId);
       }
     }
-    LOG.info("Sending out " + containerStatuses.size()
-      + " NM container statuses: " + containerStatuses);
+    if (!containerStatuses.isEmpty()) {
+      LOG.info("Sending out {} container NM container statuses: {}.",
+          containerStatuses.size(), containerStatuses);
+    }
     return containerStatuses;
   }
 
@@ -697,7 +702,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   @Private
   public void removeOrTrackCompletedContainersFromContext(
-      List<ContainerId> containerIds) throws IOException {
+      List<ContainerId> containerIds) {
     Set<ContainerId> removedContainers = new HashSet<ContainerId>();
 
     pendingContainersToRemove.addAll(containerIds);
@@ -714,13 +719,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         removedContainers.add(containerId);
         iter.remove();
       }
+      pendingCompletedContainers.remove(containerId);
     }
 
     if (!removedContainers.isEmpty()) {
-      LOG.info("Removed completed containers from NM context: "
-          + removedContainers);
+      LOG.info("Removed completed containers from NM context: {}.", removedContainers);
     }
-    pendingCompletedContainers.clear();
   }
 
   private void trackAppsForKeepAlive(List<ApplicationId> appIds) {
@@ -775,17 +779,20 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       while (i.hasNext()) {
         Entry<ContainerId, Long> mapEntry = i.next();
         ContainerId cid = mapEntry.getKey();
-        if (mapEntry.getValue() < currentTime) {
-          if (!context.getContainers().containsKey(cid)) {
+        if (mapEntry.getValue() >= currentTime) {
+          break;
+        }
+        if (!context.getContainers().containsKey(cid)) {
+          ApplicationId appId =
+              cid.getApplicationAttemptId().getApplicationId();
+          if (isApplicationStopped(appId)) {
             i.remove();
             try {
               context.getNMStateStore().removeContainer(cid);
             } catch (IOException e) {
-              LOG.error("Unable to remove container " + cid + " in store", e);
+              LOG.error("Unable to remove container {} in store.", cid, e);
             }
           }
-        } else {
-          break;
         }
       }
     }
@@ -811,7 +818,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     if (LOG.isDebugEnabled()) {
       for (Map.Entry<ApplicationId, Credentials> entry : map.entrySet()) {
-        LOG.debug("Retrieved credentials form RM for {}: {}",
+        LOG.debug("Retrieved credentials from RM for {}: {}",
             entry.getKey(), entry.getValue().getAllTokens());
       }
     }
@@ -830,18 +837,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     if (response.getNodeAction() == NodeAction.SHUTDOWN) {
       LOG.warn("Received SHUTDOWN signal from Resourcemanager as part of"
           + " heartbeat, hence shutting down.");
-      LOG.warn("Message from ResourceManager: "
-          + response.getDiagnosticsMessage());
+      LOG.warn("Message from ResourceManager: {}.", response.getDiagnosticsMessage());
       context.setDecommissioned(true);
       dispatcher.getEventHandler().handle(
           new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
       return true;
     }
     if (response.getNodeAction() == NodeAction.RESYNC) {
-      LOG.warn("Node is out of sync with ResourceManager,"
-          + " hence resyncing.");
-      LOG.warn("Message from ResourceManager: "
-          + response.getDiagnosticsMessage());
+      LOG.warn("Node is out of sync with ResourceManager, hence resyncing.");
+      LOG.warn("Message from ResourceManager: {}.", response.getDiagnosticsMessage());
       // Invalidate the RMIdentifier while resync
       NodeStatusUpdaterImpl.this.rmIdentifier =
           ResourceManagerConstants.RM_INVALID_IDENTIFIER;
@@ -1086,8 +1090,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       try {
         NodeLabelUtil.validateNodeAttributes(nodeAttributes);
       } catch (IOException e) {
-        LOG.error(
-            "Invalid node attribute(s) from Provider : " + e.getMessage());
+        LOG.error("Invalid node attribute(s) from Provider : {}.", e.getMessage());
         throw e;
       }
     }
@@ -1127,9 +1130,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           // case where updated node attributes from NodeAttributesProvider
           // is sent to RM and RM rejected the attributes
-          LOG.error("NM node attributes {" + getPreviousValue()
-              + "} were not accepted by RM and message from RM : " + response
-              .getDiagnosticsMessage());
+          LOG.error("NM node attributes [{}] were not accepted by RM and message from RM : {}.",
+              getPreviousValue(), response.getDiagnosticsMessage());
         }
       }
     }
@@ -1253,7 +1255,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         }
       }
       if (hasInvalidLabel) {
-        LOG.error("Invalid Node Label(s) from Provider : " + errorMsg);
+        LOG.error("Invalid Node Label(s) from Provider : {}.", errorMsg);
         throw new IOException(errorMsg.toString());
       }
     }
@@ -1278,10 +1280,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
-          LOG.error(
-              "NM node labels {" + StringUtils.join(",", getPreviousValue())
-                  + "} were not accepted by RM and message from RM : "
-                  + response.getDiagnosticsMessage());
+          LOG.error("NM node labels [{}] were not accepted by RM and message from RM : {}.",
+              StringUtils.join(",", getPreviousValue()), response.getDiagnosticsMessage());
         }
       }
     }
@@ -1292,6 +1292,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     @SuppressWarnings("unchecked")
     public void run() {
       int lastHeartbeatID = 0;
+      boolean missedHearbeat = false;
       while (!isStopped) {
         // Send heartbeat
         try {
@@ -1344,6 +1345,20 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // Only remove the cleanedup containers that are acked
             removeOrTrackCompletedContainersFromContext(response
                 .getContainersToBeRemovedFromNM());
+
+            // If the last heartbeat was missed, it is possible that the
+            // RM saw this one as a duplicate and did not process it.
+            // If so, we can fail to notify the RM of these completed containers
+            // on the next heartbeat if we clear pendingCompletedContainers.
+            // If it wasn't a duplicate, the only impact is we might notify
+            // the RM twice, which it can handle.
+            if (!missedHearbeat) {
+              pendingCompletedContainers.clear();
+            } else {
+              LOG.info("skipped clearing pending completed containers due to " +
+                  "missed heartbeat");
+              missedHearbeat = false;
+            }
 
             logAggregationReportForAppsTempList.clear();
             lastHeartbeatID = response.getResponseId();
@@ -1402,6 +1417,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           if (newResource != null) {
             updateNMResource(newResource);
             LOG.debug("Node's resource is updated to {}", newResource);
+            if (!totalResource.equals(newResource)) {
+              LOG.info("Node's resource is updated to {}", newResource);
+            }
           }
           if (timelineServiceV2Enabled) {
             updateTimelineCollectorData(response);
@@ -1421,6 +1439,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           // TODO Better error handling. Thread can die with the rest of the
           // NM still running.
           LOG.error("Caught exception in status-updater", e);
+          missedHearbeat = true;
         } finally {
           synchronized (heartbeatMonitor) {
             nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?

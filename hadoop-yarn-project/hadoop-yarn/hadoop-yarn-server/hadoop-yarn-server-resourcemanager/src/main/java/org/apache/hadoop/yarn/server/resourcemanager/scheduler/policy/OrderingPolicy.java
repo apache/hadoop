@@ -45,10 +45,11 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
   /**
    * Return an iterator over the collection of {@link SchedulableEntity}
    * objects which orders them for container assignment.
+   * @param sel the {@link IteratorSelector} to filter with
    * @return an iterator over the collection of {@link SchedulableEntity}
    * objects
    */
-  public Iterator<S> getAssignmentIterator();
+  Iterator<S> getAssignmentIterator(IteratorSelector sel);
 
   /**
    * Return an iterator over the collection of {@link SchedulableEntity}
@@ -127,5 +128,11 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
    * @return configuration and status information
    */
   public String getInfo();
+
+  /**
+   * Return configuration name (which will be used to set ordering policy).
+   * @return configuration name
+   */
+  String getConfigName();
 
 }

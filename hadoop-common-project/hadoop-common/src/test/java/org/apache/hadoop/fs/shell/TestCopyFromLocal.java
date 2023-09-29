@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.Assert;
-
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.ThreadPoolExecutor;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
 
 import static org.junit.Assert.assertEquals;
 
@@ -47,6 +49,9 @@ public class TestCopyFromLocal {
   private static FileSystem fs;
   private static Path testDir;
   private static Configuration conf;
+
+  private Path dir = null;
+  private int numFiles = 0;
 
   public static int initialize(Path dir) throws Exception {
     fs.mkdirs(dir);
@@ -66,7 +71,7 @@ public class TestCopyFromLocal {
         Path subFile = new Path(subDirPath, "file" + fileCount);
         fs.createNewFile(subFile);
         FSDataOutputStream output = fs.create(subFile, true);
-        for(int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 100; ++i) {
           output.writeInt(i);
           output.writeChar('\n');
         }
@@ -96,48 +101,36 @@ public class TestCopyFromLocal {
     fs.close();
   }
 
+  @Before
+  public void initDirectory() throws Exception {
+    dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
+    numFiles = initialize(dir);
+  }
+
+
   private void run(CommandWithDestination cmd, String... args) {
     cmd.setConf(conf);
     assertEquals(0, cmd.run(args));
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocal() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    TestCopyFromLocal.initialize(dir);
+  public void testCopyFromLocal() {
     run(new TestMultiThreadedCopy(1, 0),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreads() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    int numFiles = TestCopyFromLocal.initialize(dir);
-    int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    int randThreads = RandomUtils.nextInt(0, maxThreads - 1) + 1;
-    String numThreads = Integer.toString(randThreads);
-    run(new TestMultiThreadedCopy(randThreads,
-        randThreads == 1 ? 0 : numFiles), "-t", numThreads,
+  public void testCopyFromLocalWithThreads(){
+    int threads = Runtime.getRuntime().availableProcessors() * 2 + 1;
+    run(new TestMultiThreadedCopy(threads, numFiles),
+        "-t", Integer.toString(threads),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreadWrong() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    int numFiles = TestCopyFromLocal.initialize(dir);
-    int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    String numThreads = Integer.toString(maxThreads * 2);
-    run(new TestMultiThreadedCopy(maxThreads, numFiles), "-t", numThreads,
-        new Path(dir, FROM_DIR_NAME).toString(),
-        new Path(dir, TO_DIR_NAME).toString());
-  }
-
-  @Test(timeout = 10000)
-  public void testCopyFromLocalWithZeroThreads() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    TestCopyFromLocal.initialize(dir);
+  public void testCopyFromLocalWithThreadWrong(){
     run(new TestMultiThreadedCopy(1, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
@@ -148,8 +141,7 @@ public class TestCopyFromLocal {
     private int expectedThreads;
     private int expectedCompletedTaskCount;
 
-    TestMultiThreadedCopy(int expectedThreads,
-                          int expectedCompletedTaskCount) {
+    TestMultiThreadedCopy(int expectedThreads, int expectedCompletedTaskCount) {
       this.expectedThreads = expectedThreads;
       this.expectedCompletedTaskCount = expectedCompletedTaskCount;
     }
@@ -158,17 +150,22 @@ public class TestCopyFromLocal {
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
       // Check if the correct number of threads are spawned
-      Assert.assertEquals(expectedThreads, getNumThreads());
+      Assert.assertEquals(expectedThreads, getThreadCount());
       super.processArguments(args);
-      // Once the copy is complete, check following
-      // 1) number of completed tasks are same as expected
-      // 2) There are no active tasks in the executor
-      // 3) Executor has shutdown correctly
-      ThreadPoolExecutor executor = getExecutor();
-      Assert.assertEquals(expectedCompletedTaskCount,
-          executor.getCompletedTaskCount());
-      Assert.assertEquals(0, executor.getActiveCount());
-      Assert.assertTrue(executor.isTerminated());
+
+      if (isMultiThreadNecessary(args)) {
+        // Once the copy is complete, check following
+        // 1) number of completed tasks are same as expected
+        // 2) There are no active tasks in the executor
+        // 3) Executor has shutdown correctly
+        ThreadPoolExecutor executor = getExecutor();
+        Assert.assertEquals(expectedCompletedTaskCount,
+            executor.getCompletedTaskCount());
+        Assert.assertEquals(0, executor.getActiveCount());
+        Assert.assertTrue(executor.isTerminated());
+      } else {
+        assert getExecutor() == null;
+      }
     }
   }
 }

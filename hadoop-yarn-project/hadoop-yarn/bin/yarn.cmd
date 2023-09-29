@@ -134,6 +134,10 @@ if "%1" == "--loglevel" (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-router\target\classes
   )
 
+  if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-globalpolicygenerator\target\classes (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-globalpolicygenerator\target\classes
+  )
+
   if exist %HADOOP_YARN_HOME%\build\test\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\build\test\classes
   )
@@ -155,7 +159,7 @@ if "%1" == "--loglevel" (
 
   set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
      application applicationattempt container node queue logs daemonlog historyserver ^
-     timelineserver timelinereader router classpath
+     timelineserver timelinereader router globalpolicygenerator classpath
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -220,7 +224,7 @@ goto :eof
 :resourcemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\rm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
   set YARN_OPTS=%YARN_OPTS% %YARN_RESOURCEMANAGER_OPTS%
   if defined YARN_RESOURCEMANAGER_HEAPSIZE (
@@ -251,7 +255,7 @@ goto :eof
 :timelinereader
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
   set YARN_OPTS=%YARN_OPTS% %YARN_TIMELINEREADER_OPTS%
   goto :eof
@@ -260,12 +264,29 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\router-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.router.Router
   set YARN_OPTS=%YARN_OPTS% %HADOOP_ROUTER_OPTS%
+  if defined YARN_ROUTER_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_ROUTER_HEAPSIZE%m
+  )
+  goto :eof
+
+:globalpolicygenerator
+  set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\globalpolicygenerator-config\log4j.properties
+  set CLASS=org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator
+  set YARN_OPTS=%YARN_OPTS% %YARN_GLOBALPOLICYGENERATOR_OPTS%
+  if defined YARN_GLOBALPOLICYGENERATOR_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_GLOBALPOLICYGENERATOR_HEAPSIZE%m
+  )
+  goto :eof
+
+:routeradmin
+  set CLASS=org.apache.hadoop.yarn.client.cli.RouterCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
 :nodemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\nm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.nodemanager.NodeManager
   set YARN_OPTS=%YARN_OPTS% -server %HADOOP_NODEMANAGER_OPTS%
   if defined YARN_NODEMANAGER_HEAPSIZE (
@@ -339,6 +360,8 @@ goto :eof
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
   @echo   router               run the Router daemon
+  @echo   globalpolicygenerator  run the Global Policy Generator
+  @echo   routeradmin          router admin tools
   @echo   timelineserver       run the timeline server
   @echo   timelinereader       run the timeline reader server
   @echo   rmadmin              admin tools

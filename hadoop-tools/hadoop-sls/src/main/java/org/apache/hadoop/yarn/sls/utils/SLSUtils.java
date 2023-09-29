@@ -23,6 +23,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -52,8 +57,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public class SLSUtils {
-  public final static String DEFAULT_JOB_TYPE = "mapreduce";
-
   private static final String LABEL_FORMAT_ERR_MSG =
       "Input format for adding node-labels is not correct, it should be "
           + "labelName1[(exclusive=true/false)],labelName2[] ..";
@@ -82,7 +85,7 @@ public class SLSUtils {
     JobTraceReader reader = new JobTraceReader(
             new Path(fin.getAbsolutePath()), conf);
     try {
-      LoggedJob job = null;
+      LoggedJob job;
       while ((job = reader.getNext()) != null) {
         for(LoggedTask mapTask : job.getMapTasks()) {
           // select the last attempt
@@ -120,7 +123,7 @@ public class SLSUtils {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
-        new InputStreamReader(new FileInputStream(jobTrace), "UTF-8");
+        new InputStreamReader(new FileInputStream(jobTrace), StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
@@ -167,7 +170,7 @@ public class SLSUtils {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
-        new InputStreamReader(new FileInputStream(nodeFile), "UTF-8");
+        new InputStreamReader(new FileInputStream(nodeFile), StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
@@ -218,5 +221,33 @@ public class SLSUtils {
           "/rack" + i % numRacks + "/node" + i));
     }
     return nodeSet;
+  }
+
+  /**
+   * Generates a node to rack mapping file based on node details.
+   * This file is then being used by TableMapping to resolve rack names.
+   * The format required by TableMapping is a two column text file
+   * where first column specifies node name
+   * and second column specifies rack name.
+   * @param nodeDetails Set of node details.
+   * @param filePath File path where to write table mapping.
+   * @throws IOException
+   */
+  public static void generateNodeTableMapping(Set<NodeDetails> nodeDetails,
+      String filePath) throws IOException {
+    List<String> entries = new ArrayList<>();
+    for (NodeDetails nodeDetail : nodeDetails) {
+      if (nodeDetail.getHostname().contains("/")) {
+        String hostname = nodeDetail.getHostname();
+        int lIndex = hostname.lastIndexOf("/");
+        String node = hostname.substring(lIndex + 1);
+        String rack = hostname.substring(0, lIndex);
+        entries.add(node + " " + rack);
+      }
+    }
+    Files.write(Paths.get(filePath),
+        entries,
+        StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE);
   }
 }

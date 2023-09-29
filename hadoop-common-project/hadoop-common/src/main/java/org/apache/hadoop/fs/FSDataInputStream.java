@@ -1,4 +1,4 @@
-/**
+/*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,9 +26,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.util.IdentityHashStore;
 
@@ -40,20 +46,20 @@ public class FSDataInputStream extends DataInputStream
     implements Seekable, PositionedReadable, 
       ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
       HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities,
-      ByteBufferPositionedReadable {
+      ByteBufferPositionedReadable, IOStatisticsSource {
   /**
    * Map ByteBuffers that we have handed out to readers to ByteBufferPool 
    * objects
    */
   private final IdentityHashStore<ByteBuffer, ByteBufferPool>
     extendedReadBuffers
-      = new IdentityHashStore<ByteBuffer, ByteBufferPool>(0);
+      = new IdentityHashStore<>(0);
 
   public FSDataInputStream(InputStream in) {
     super(in);
     if( !(in instanceof Seekable) || !(in instanceof PositionedReadable) ) {
-      throw new IllegalArgumentException(
-          "In is not an instance of Seekable or PositionedReadable");
+      throw new IllegalArgumentException(in.getClass().getCanonicalName() +
+          " is not an instance of Seekable or PositionedReadable");
     }
   }
   
@@ -138,7 +144,8 @@ public class FSDataInputStream extends DataInputStream
    *
    * @return the underlying input stream
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS"})
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public InputStream getWrappedStream() {
     return in;
   }
@@ -150,7 +157,7 @@ public class FSDataInputStream extends DataInputStream
     }
 
     throw new UnsupportedOperationException("Byte-buffer read unsupported " +
-            "by input stream");
+            "by " + in.getClass().getCanonicalName());
   }
 
   @Override
@@ -170,9 +177,8 @@ public class FSDataInputStream extends DataInputStream
     try {
       ((CanSetReadahead)in).setReadahead(readahead);
     } catch (ClassCastException e) {
-      throw new UnsupportedOperationException(
-          "this stream does not support setting the readahead " +
-          "caching strategy.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName() +
+          " does not support setting the readahead caching strategy.");
     }
   }
 
@@ -235,10 +241,7 @@ public class FSDataInputStream extends DataInputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    if (in instanceof StreamCapabilities) {
-      return ((StreamCapabilities) in).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(in, capability);
   }
 
   /**
@@ -256,6 +259,43 @@ public class FSDataInputStream extends DataInputStream
       return ((ByteBufferPositionedReadable) in).read(position, buf);
     }
     throw new UnsupportedOperationException("Byte-buffer pread unsupported " +
-        "by input stream");
+        "by " + in.getClass().getCanonicalName());
+  }
+
+  @Override
+  public void readFully(long position, ByteBuffer buf) throws IOException {
+    if (in instanceof ByteBufferPositionedReadable) {
+      ((ByteBufferPositionedReadable) in).readFully(position, buf);
+    } else {
+      throw new UnsupportedOperationException("Byte-buffer pread " +
+              "unsupported by " + in.getClass().getCanonicalName());
+    }
+  }
+
+  /**
+   * Get the IO Statistics of the nested stream, falling back to
+   * null if the stream does not implement the interface
+   * {@link IOStatisticsSource}.
+   * @return an IOStatistics instance or null
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return IOStatisticsSupport.retrieveIOStatistics(in);
+  }
+
+  @Override
+  public int minSeekForVectorReads() {
+    return ((PositionedReadable) in).minSeekForVectorReads();
+  }
+
+  @Override
+  public int maxReadSizeForVectorReads() {
+    return ((PositionedReadable) in).maxReadSizeForVectorReads();
+  }
+
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                           IntFunction<ByteBuffer> allocate) throws IOException {
+    ((PositionedReadable) in).readVectored(ranges, allocate);
   }
 }

@@ -30,8 +30,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,9 +46,9 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 
 /**
  * Manages client short-circuit memory segments on the DataNode.
@@ -322,7 +322,7 @@ public class ShortCircuitRegistry {
         shm = new RegisteredShm(clientName, shmId, fis, this);
       } finally {
         if (shm == null) {
-          IOUtils.closeQuietly(fis);
+          IOUtils.closeStream(fis);
         }
       }
       info = new NewShmInfo(shmId, fis);
@@ -392,7 +392,7 @@ public class ShortCircuitRegistry {
       if (!enabled) return;
       enabled = false;
     }
-    IOUtils.closeQuietly(watcher);
+    IOUtils.closeStream(watcher);
   }
 
   public static interface Visitor {
@@ -403,5 +403,10 @@ public class ShortCircuitRegistry {
   @VisibleForTesting
   public synchronized boolean visit(Visitor visitor) {
     return visitor.accept(segments, slots);
+  }
+
+  @VisibleForTesting
+  public int getShmNum() {
+    return segments.size();
   }
 }

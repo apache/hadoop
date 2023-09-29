@@ -33,6 +33,9 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -548,6 +551,39 @@ public class TestDataTransferProtocol {
         .CHECKSUM_OK), newAck.getHeaderFlag(0));
   }
 
+  @Test
+  public void testPipeLineAckCompatibilityWithSLOW() throws IOException {
+    DataTransferProtos.PipelineAckProto proto = DataTransferProtos
+        .PipelineAckProto.newBuilder()
+        .setSeqno(0)
+        .addReply(Status.CHECKSUM_OK)
+        .addFlag(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED,
+            Status.CHECKSUM_OK))
+        .build();
+
+    DataTransferProtos.PipelineAckProto newProto = DataTransferProtos
+        .PipelineAckProto.newBuilder()
+        .setSeqno(0)
+        .addReply(Status.CHECKSUM_OK)
+        .addFlag(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED,
+            Status.CHECKSUM_OK, PipelineAck.SLOW.SLOW))
+        .build();
+
+    ByteArrayOutputStream oldAckBytes = new ByteArrayOutputStream();
+    proto.writeDelimitedTo(oldAckBytes);
+    PipelineAck oldAck = new PipelineAck();
+    oldAck.readFields(new ByteArrayInputStream(oldAckBytes.toByteArray()));
+    assertEquals(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED, Status
+        .CHECKSUM_OK, PipelineAck.SLOW.DISABLED), oldAck.getHeaderFlag(0));
+
+    PipelineAck newAck = new PipelineAck();
+    ByteArrayOutputStream newAckBytes = new ByteArrayOutputStream();
+    newProto.writeDelimitedTo(newAckBytes);
+    newAck.readFields(new ByteArrayInputStream(newAckBytes.toByteArray()));
+    assertEquals(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED, Status
+        .CHECKSUM_OK, PipelineAck.SLOW.SLOW), newAck.getHeaderFlag(0));
+  }
+
   void writeBlock(String poolId, long blockId, DataChecksum checksum) throws IOException {
     writeBlock(new ExtendedBlock(poolId, blockId),
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, checksum);
@@ -561,5 +597,57 @@ public class TestDataTransferProtocol {
         0, block.getNumBytes(), block.getNumBytes(), newGS,
         checksum, CachingStrategy.newDefaultStrategy(), false, false,
         null, null, new String[0]);
+  }
+
+  @Test(timeout = 30000)
+  public void testReleaseVolumeRefIfExceptionThrown()
+      throws IOException, InterruptedException {
+    Path file = new Path("dataprotocol.dat");
+    int numDataNodes = 1;
+
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+        numDataNodes).build();
+    try {
+      cluster.waitActive();
+      datanode = cluster.getFileSystem().getDataNodeStats(
+          DatanodeReportType.LIVE)[0];
+      dnAddr = NetUtils.createSocketAddr(datanode.getXferAddr());
+      FileSystem fileSys = cluster.getFileSystem();
+
+      int fileLen = Math.min(
+          conf.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096), 4096);
+
+      DFSTestUtil.createFile(fileSys, file, fileLen, fileLen,
+          fileSys.getDefaultBlockSize(file),
+          fileSys.getDefaultReplication(file), 0L);
+
+      // Get the first blockid for the file.
+      final ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
+
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      ExtendedBlock blk = new ExtendedBlock(bpid, firstBlock.getLocalBlock());
+      sendBuf.reset();
+      recvBuf.reset();
+
+      // Delete the meta file to create a exception in BlockSender constructor.
+      DataNode dn = cluster.getDataNodes().get(0);
+      cluster.getMaterializedReplica(0, blk).deleteMeta();
+
+      FsVolumeImpl volume = (FsVolumeImpl) DataNodeTestUtils.getFSDataset(
+          dn).getVolume(blk);
+      int beforeCnt = volume.getReferenceCount();
+
+      sender.copyBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN);
+      sendRecvData("Copy a block.", false);
+      Thread.sleep(3000);
+
+      int afterCnt = volume.getReferenceCount();
+      assertEquals(beforeCnt, afterCnt);
+
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

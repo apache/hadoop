@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -115,7 +116,7 @@ public class TestTokenCache {
     // get token for fs3, should only add token for fs3
     TokenCache.obtainTokensForNamenodesInternal(fs3, creds, conf, renewer);
     Token<?> token3 = creds.getToken(new Text(fs3.getCanonicalServiceName()));
-    assertTrue(token3 != null);
+    assertThat(token3).isNotNull();
     checkToken(creds, newerToken1, token2, token3);
     
     // be paranoid, check one last time that nothing changes
@@ -129,7 +130,7 @@ public class TestTokenCache {
     assertEquals(tokens.length, creds.getAllTokens().size());
     for (Token<?> token : tokens) {
       Token<?> credsToken = creds.getToken(token.getService());
-      assertTrue(credsToken != null);
+      assertThat(credsToken).isNotNull();
       assertEquals(token, credsToken);
     }
   }

@@ -28,6 +28,12 @@ public interface RwLock {
   /** Release read lock. */
   public void readUnlock();
 
+  /**
+   * Release read lock with operation name.
+   * @param opName Option name.
+   */
+  public void readUnlock(String opName);
+
   /** Check if the current thread holds read lock. */
   public boolean hasReadLock();
 
@@ -39,6 +45,12 @@ public interface RwLock {
 
   /** Release write lock. */
   public void writeUnlock();
+
+  /**
+   * Release write lock with operation name.
+   * @param opName Option name.
+   */
+  public void writeUnlock(String opName);
 
   /** Check if the current thread holds write lock. */
   public boolean hasWriteLock();

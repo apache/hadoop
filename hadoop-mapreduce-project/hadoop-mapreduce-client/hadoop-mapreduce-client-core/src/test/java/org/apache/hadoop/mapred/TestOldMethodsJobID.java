@@ -27,6 +27,8 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.TaskCompletionEvent.Status;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 
 /**
@@ -44,14 +46,14 @@ public class TestOldMethodsJobID {
   public void testDepricatedMethods() throws IOException {
     JobID jid = new JobID();
     TaskID test = new TaskID(jid, true, 1);
-    assertEquals(test.getTaskType(), TaskType.MAP);
+    assertThat(test.getTaskType()).isEqualTo(TaskType.MAP);
     test = new TaskID(jid, false, 1);
-    assertEquals(test.getTaskType(), TaskType.REDUCE);
+    assertThat(test.getTaskType()).isEqualTo(TaskType.REDUCE);
 
     test = new TaskID("001", 1, false, 1);
-    assertEquals(test.getTaskType(), TaskType.REDUCE);
+    assertThat(test.getTaskType()).isEqualTo(TaskType.REDUCE);
     test = new TaskID("001", 1, true, 1);
-    assertEquals(test.getTaskType(), TaskType.MAP);
+    assertThat(test.getTaskType()).isEqualTo(TaskType.MAP);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 
     test.write(new DataOutputStream(out));
@@ -100,9 +102,9 @@ public class TestOldMethodsJobID {
     assertEquals(Status.OBSOLETE.toString(), testEl.getStatus().toString());
 
     testEl.setTaskRunTime(20);
-    assertEquals(testEl.getTaskRunTime(), 20);
+    assertThat(testEl.getTaskRunTime()).isEqualTo(20);
     testEl.setEventId(16);
-    assertEquals(testEl.getEventId(), 16);
+    assertThat(testEl.getEventId()).isEqualTo(16);
 
   }
 

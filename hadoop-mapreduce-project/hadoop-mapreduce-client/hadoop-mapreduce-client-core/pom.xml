@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-mapreduce-client-core</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce Core</name>
 
   <properties>
@@ -45,11 +45,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs</artifactId>
-      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.json</groupId>
+          <artifactId>json</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -65,6 +66,11 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -97,9 +103,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-	<configuration>
+        <configuration>
           <systemPropertyVariables>
             <log4j.configuration>file:///${project.basedir}/src/test/resources/log4j.properties</log4j.configuration>
+
+            <!-- project directory   (target/) on a maven build. -->
+            <project.build.directory>${project.build.directory}</project.build.directory>
+            <!-- this property is used in hadoop-azure with separate paths for parallel runs -->
+            <test.build.dir>${project.build.directory}</test.build.dir>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -125,10 +136,10 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/mapred-default.xml" todir="src/site/resources"/>
                 <copy file="../../../hadoop-common-project/hadoop-common/src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>

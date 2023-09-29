@@ -27,11 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
@@ -128,13 +128,11 @@ public class NMClientImpl extends NMClient {
         stopContainer(startedContainer.getContainerId(),
             startedContainer.getNodeId());
       } catch (YarnException e) {
-        LOG.error("Failed to stop Container " +
-            startedContainer.getContainerId() +
-            "when stopping NMClientImpl");
+        LOG.error("Failed to stop Container {} when stopping NMClientImpl",
+                startedContainer.getContainerId());
       } catch (IOException e) {
-        LOG.error("Failed to stop Container " +
-            startedContainer.getContainerId() +
-            "when stopping NMClientImpl");
+        LOG.error("Failed to stop Container {} when stopping NMClientImpl",
+                startedContainer.getContainerId());
       }
     }
   }

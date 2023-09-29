@@ -24,50 +24,26 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * The {@link ReservationsACLsManager} is used to check a specified user's
  * permissons to perform a reservation operation on the
- * {@link CapacityScheduler} and the {@link FairScheduler}.
  * {@link ReservationACL}s are used to specify reservation operations.
  */
-public class ReservationsACLsManager {
+@SuppressWarnings("checkstyle:visibilitymodifier")
+public abstract class ReservationsACLsManager {
   private boolean isReservationACLsEnable;
-  private Map<String, Map<ReservationACL, AccessControlList>> reservationAcls
-          = new HashMap<>();
+  Map<String, Map<ReservationACL, AccessControlList>> reservationAcls =
+      new HashMap<>();
 
-  public ReservationsACLsManager(ResourceScheduler scheduler,
-          Configuration conf) throws YarnException {
-    this.isReservationACLsEnable =
-            conf.getBoolean(YarnConfiguration.YARN_RESERVATION_ACL_ENABLE,
-                    YarnConfiguration.DEFAULT_YARN_RESERVATION_ACL_ENABLE) &&
-            conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
-                    YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
-    if (scheduler instanceof CapacityScheduler) {
-      CapacitySchedulerConfiguration csConf = new
-              CapacitySchedulerConfiguration(conf);
-
-      for (String planQueue : scheduler.getPlanQueues()) {
-        CSQueue queue = ((CapacityScheduler) scheduler).getQueue(planQueue);
-        reservationAcls.put(planQueue, csConf.getReservationAcls(queue
-                .getQueuePath()));
-      }
-    } else if (scheduler instanceof FairScheduler) {
-      AllocationConfiguration aConf = ((FairScheduler) scheduler)
-              .getAllocationConfiguration();
-      for (String planQueue : scheduler.getPlanQueues()) {
-        reservationAcls.put(planQueue, aConf.getReservationAcls(planQueue));
-      }
-    }
+  public ReservationsACLsManager(Configuration conf) throws YarnException {
+    this.isReservationACLsEnable = conf.getBoolean(
+        YarnConfiguration.YARN_RESERVATION_ACL_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_RESERVATION_ACL_ENABLE)
+        && conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
+            YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
   }
 
   public boolean checkAccess(UserGroupInformation callerUGI,
@@ -79,7 +55,7 @@ public class ReservationsACLsManager {
     if (this.reservationAcls.containsKey(queueName)) {
       Map<ReservationACL, AccessControlList> acls = this.reservationAcls.get(
               queueName);
-      if (acls.containsKey(acl)) {
+      if (acls != null && acls.containsKey(acl)) {
         return acls.get(acl).isUserAllowed(callerUGI);
       } else {
         // Give access if acl is undefined for queue.

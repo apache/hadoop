@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 /**
  * A 400 "Bad Request" exception was received.
@@ -36,7 +36,7 @@ public class AWSBadRequestException extends AWSServiceIOException {
    * @param cause the underlying cause
    */
   public AWSBadRequestException(String operation,
-      AmazonServiceException cause) {
+      AwsServiceException cause) {
     super(operation, cause);
   }
 }

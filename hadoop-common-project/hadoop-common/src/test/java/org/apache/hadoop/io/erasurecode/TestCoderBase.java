@@ -66,10 +66,6 @@ public abstract class TestCoderBase {
 
   protected boolean allowChangeInputs;
 
-  protected int getChunkSize() {
-    return chunkSize;
-  }
-
   protected void setChunkSize(int chunkSize) {
     this.chunkSize = chunkSize;
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
@@ -88,10 +84,6 @@ public abstract class TestCoderBase {
     } else {
       allocator = new SimpleBufferAllocator(usingDirectBuffer);
     }
-  }
-
-  protected boolean isAllowDump() {
-    return allowDump;
   }
 
   /**
@@ -526,5 +518,17 @@ public abstract class TestCoderBase {
     if (buffer.hasRemaining()) {
       buffer.position(buffer.position() + 1);
     }
+  }
+
+  /**
+   * Pollute some chunk.
+   * @param chunks
+   */
+  protected void polluteSomeChunk(ECChunk[] chunks) {
+    int idx = new Random().nextInt(chunks.length);
+    ByteBuffer buffer = chunks[idx].getBuffer();
+    buffer.mark();
+    buffer.put((byte) ((buffer.get(buffer.position()) + 1)));
+    buffer.reset();
   }
 }

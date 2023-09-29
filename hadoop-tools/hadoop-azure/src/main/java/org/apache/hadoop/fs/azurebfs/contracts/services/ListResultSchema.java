@@ -20,7 +20,8 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
 
 import java.util.List;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * The ListResultSchema model.
  */
 @InterfaceStability.Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ListResultSchema {
   /**
    * The paths property.

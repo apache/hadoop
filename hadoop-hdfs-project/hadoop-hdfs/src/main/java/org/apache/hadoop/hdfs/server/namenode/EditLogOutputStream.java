@@ -24,6 +24,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
  * A generic abstract class to support journaling of edits logs into 
@@ -35,10 +36,22 @@ public abstract class EditLogOutputStream implements Closeable {
   // these are statistics counters
   private long numSync;        // number of sync(s) to disk
   private long totalTimeSync;  // total time to sync
+  // The version of the current edit log
+  private int currentLogVersion;
 
   public EditLogOutputStream() throws IOException {
     numSync = totalTimeSync = 0;
   }
+
+  /**
+   * Get the last txId journalled in the stream.
+   * The txId is recorded when FSEditLogOp is written to the stream.
+   * The default implementation is dummy.
+   * JournalSet tracks the txId uniformly for all underlying streams.
+   */
+  public long getLastJournalledTxId() {
+    return HdfsServerConstants.INVALID_TXID;
+  };
 
   /**
    * Write edits log operation to the stream.
@@ -146,5 +159,19 @@ public abstract class EditLogOutputStream implements Closeable {
    */
   public String generateReport() {
     return toString();
+  }
+
+  /**
+   * @return The version of the current edit log
+   */
+  public int getCurrentLogVersion() {
+    return currentLogVersion;
+  }
+
+  /**
+   * @param logVersion The version of the current edit log
+   */
+  public void setCurrentLogVersion(int logVersion) {
+    this.currentLogVersion = logVersion;
   }
 }

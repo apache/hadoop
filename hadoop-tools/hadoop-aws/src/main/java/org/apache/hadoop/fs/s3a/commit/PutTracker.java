@@ -21,9 +21,10 @@ package org.apache.hadoop.fs.s3a.commit;
 import java.io.IOException;
 import java.util.List;
 
-import com.amazonaws.services.s3.model.PartETag;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
  * Multipart put tracker.
@@ -68,14 +69,16 @@ public class PutTracker {
    * @param uploadId Upload ID
    * @param parts list of parts
    * @param bytesWritten bytes written
+   * @param iostatistics nullable IO statistics
    * @return true if the commit is to be initiated immediately.
    * False implies the output stream does not need to worry about
    * what happens.
    * @throws IOException I/O problem or validation failure.
    */
   public boolean aboutToComplete(String uploadId,
-      List<PartETag> parts,
-      long bytesWritten)
+      List<CompletedPart> parts,
+      long bytesWritten,
+      final IOStatistics iostatistics)
       throws IOException {
     return true;
   }

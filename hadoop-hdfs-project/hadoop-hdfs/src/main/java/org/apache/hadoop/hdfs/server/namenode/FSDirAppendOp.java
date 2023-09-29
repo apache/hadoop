@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.RecoverLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion.Feature;
 import org.apache.hadoop.ipc.RetriableException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Helper class to perform append operation.
@@ -209,7 +209,7 @@ final class FSDirAppendOp {
       BlockInfo lastBlock = file.getLastBlock();
       if (lastBlock != null) {
         ExtendedBlock blk = new ExtendedBlock(fsn.getBlockPoolId(), lastBlock);
-        ret = new LocatedBlock(blk, new DatanodeInfo[0]);
+        ret = new LocatedBlock(blk, DatanodeInfo.EMPTY_ARRAY);
       }
     }
 

@@ -470,7 +470,7 @@ public class Folder extends Configured implements Tool {
         next = heap.poll();
       }
     } finally {
-      IOUtils.cleanup(null, reader);
+      IOUtils.cleanupWithLogger(null, reader);
       if (outGen != null) {
         outGen.close();
       }

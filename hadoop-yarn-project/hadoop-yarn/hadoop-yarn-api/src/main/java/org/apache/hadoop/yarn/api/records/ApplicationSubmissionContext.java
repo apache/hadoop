@@ -424,9 +424,9 @@ public abstract class ApplicationSubmissionContext {
 
   /**
    * Set tags for the application. A maximum of
-   * {@link YarnConfiguration#APPLICATION_MAX_TAGS} are allowed
+   * {@link YarnConfiguration#RM_APPLICATION_MAX_TAGS} are allowed
    * per application. Each tag can be at most
-   * {@link YarnConfiguration#APPLICATION_MAX_TAG_LENGTH}
+   * {@link YarnConfiguration#RM_APPLICATION_MAX_TAG_LENGTH}
    * characters, and can contain only ASCII characters.
    *
    * @param tags tags to set
@@ -516,7 +516,7 @@ public abstract class ApplicationSubmissionContext {
       List<ResourceRequest> requests);
 
   /**
-   * Get the attemptFailuresValidityInterval in milliseconds for the application
+   * Get the attemptFailuresValidityInterval in milliseconds for the application.
    *
    * @return the attemptFailuresValidityInterval
    */
@@ -525,8 +525,8 @@ public abstract class ApplicationSubmissionContext {
   public abstract long getAttemptFailuresValidityInterval();
 
   /**
-   * Set the attemptFailuresValidityInterval in milliseconds for the application
-   * @param attemptFailuresValidityInterval
+   * Set the attemptFailuresValidityInterval in milliseconds for the application.
+   * @param attemptFailuresValidityInterval attempt failures validity interval.
    */
   @Public
   @Stable

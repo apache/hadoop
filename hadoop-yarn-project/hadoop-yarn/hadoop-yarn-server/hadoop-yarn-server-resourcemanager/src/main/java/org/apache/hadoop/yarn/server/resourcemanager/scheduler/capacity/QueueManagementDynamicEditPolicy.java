@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -208,7 +207,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
               policyClazz.getClass().getName(), clock.getTime() - startTime);
           if (queueManagementChanges.size() > 0) {
             LOG.debug(" Updated queue management changes for parent queue" + " "
-                    + "{}: [{}]", parentQueue.getQueueName(),
+                    + "{}: [{}]", parentQueue.getQueuePath(),
                 queueManagementChanges.size() < 25 ?
                     queueManagementChanges.toString() :
                     queueManagementChanges.size());
@@ -218,7 +217,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
         LOG.error(
             "Could not compute child queue management updates for parent "
                 + "queue "
-                + parentQueue.getQueueName(), e);
+                + parentQueue.getQueuePath(), e);
       }
     } else{
       LOG.debug("Skipping queue management updates for parent queue {} "

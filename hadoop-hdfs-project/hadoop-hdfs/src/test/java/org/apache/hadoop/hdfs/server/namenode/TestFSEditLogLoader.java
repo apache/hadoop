@@ -73,8 +73,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Maps;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 @RunWith(Parameterized.class)
 public class TestFSEditLogLoader {
@@ -807,12 +807,13 @@ public class TestFSEditLogLoader {
   }
 
   @Test
-  public void setLoadFSEditLogThrottling() throws Exception {
+  public void testLoadFSEditLogThrottling() throws Exception {
     FSNamesystem namesystem = mock(FSNamesystem.class);
     namesystem.dir = mock(FSDirectory.class);
 
     FakeTimer timer = new FakeTimer();
     FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0, timer);
+    FSEditLogLoader.LOAD_EDITS_LOG_HELPER.reset();
 
     LogCapturer capture = LogCapturer.captureLogs(FSImage.LOG);
     loader.loadFSEdits(getFakeEditLogInputStream(1, 10), 1);

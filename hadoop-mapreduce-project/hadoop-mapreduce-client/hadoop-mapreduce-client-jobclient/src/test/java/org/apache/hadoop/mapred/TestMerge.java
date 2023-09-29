@@ -87,11 +87,11 @@ public class TestMerge {
       // Run the test.
       runMergeTest(new JobConf(mrCluster.getConfig()), fileSystem);
     } finally {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown();
-      }
       if (mrCluster != null) {
         mrCluster.stop();
+      }
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
       }
     }
   }

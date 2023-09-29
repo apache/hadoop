@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersResponseProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

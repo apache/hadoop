@@ -36,8 +36,8 @@ import com.aliyun.oss.model.GetObjectRequest;
 import com.aliyun.oss.model.InitiateMultipartUploadRequest;
 import com.aliyun.oss.model.InitiateMultipartUploadResult;
 import com.aliyun.oss.model.ListObjectsRequest;
+import com.aliyun.oss.model.ListObjectsV2Request;
 import com.aliyun.oss.model.ObjectMetadata;
-import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.PartETag;
 import com.aliyun.oss.model.PutObjectResult;
@@ -72,6 +72,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -90,6 +91,7 @@ public class AliyunOSSFileSystemStore {
   private long uploadPartSize;
   private int maxKeys;
   private String serverSideEncryptionAlgorithm;
+  private boolean useListV1;
 
   public void initialize(URI uri, Configuration conf, String user,
                          FileSystem.Statistics stat) throws IOException {
@@ -170,6 +172,12 @@ public class AliyunOSSFileSystemStore {
     }
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
+    int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
+    if (listVersion < 1 || listVersion > 2) {
+      LOG.warn("Configured fs.oss.list.version {} is invalid, forcing " +
+          "version 2", listVersion);
+    }
+    useListV1 = (listVersion == 1);
   }
 
   /**
@@ -196,31 +204,29 @@ public class AliyunOSSFileSystemStore {
 
     int retry = 10;
     int tries = 0;
-    List<String> deleteFailed = keysToDelete;
-    while(CollectionUtils.isNotEmpty(deleteFailed)) {
+    while (CollectionUtils.isNotEmpty(keysToDelete)) {
       DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName);
-      deleteRequest.setKeys(deleteFailed);
+      deleteRequest.setKeys(keysToDelete);
       // There are two modes to do batch delete:
-      // 1. detail mode: DeleteObjectsResult.getDeletedObjects returns objects
-      // which were deleted successfully.
-      // 2. simple mode: DeleteObjectsResult.getDeletedObjects returns objects
-      // which were deleted unsuccessfully.
-      // Here, we choose the simple mode to do batch delete.
-      deleteRequest.setQuiet(true);
+      // 1. verbose mode: A list of all deleted objects is returned.
+      // 2. quiet mode: No message body is returned.
+      // Here, we choose the verbose mode to do batch delete.
+      deleteRequest.setQuiet(false);
       DeleteObjectsResult result = ossClient.deleteObjects(deleteRequest);
       statistics.incrementWriteOps(1);
-      deleteFailed = result.getDeletedObjects();
+      final List<String> deletedObjects = result.getDeletedObjects();
+      keysToDelete = keysToDelete.stream().filter(item -> !deletedObjects.contains(item))
+          .collect(Collectors.toList());
       tries++;
       if (tries == retry) {
         break;
       }
     }
 
-    if (tries == retry && CollectionUtils.isNotEmpty(deleteFailed)) {
+    if (tries == retry && CollectionUtils.isNotEmpty(keysToDelete)) {
       // Most of time, it is impossible to try 10 times, expect the
       // Aliyun OSS service problems.
-      throw new IOException("Failed to delete Aliyun OSS objects for " +
-          tries + " times.");
+      throw new IOException("Failed to delete Aliyun OSS objects for " + tries + " times.");
     }
   }
 
@@ -231,14 +237,10 @@ public class AliyunOSSFileSystemStore {
    * @throws IOException if failed to delete directory.
    */
   public void deleteDirs(String key) throws IOException {
-    key = AliyunOSSUtils.maybeAddTrailingSlash(key);
-    ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
-    listRequest.setPrefix(key);
-    listRequest.setDelimiter(null);
-    listRequest.setMaxKeys(maxKeys);
-
+    OSSListRequest listRequest = createListObjectsRequest(key,
+        maxKeys, null, null, true);
     while (true) {
-      ObjectListing objects = ossClient.listObjects(listRequest);
+      OSSListResult objects = listObjects(listRequest);
       statistics.incrementReadOps(1);
       List<String> keysToDelete = new ArrayList<String>();
       for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
@@ -246,7 +248,12 @@ public class AliyunOSSFileSystemStore {
       }
       deleteObjects(keysToDelete);
       if (objects.isTruncated()) {
-        listRequest.setMarker(objects.getNextMarker());
+        if (objects.isV1()) {
+          listRequest.getV1().setMarker(objects.getV1().getNextMarker());
+        } else {
+          listRequest.getV2().setContinuationToken(
+              objects.getV2().getNextContinuationToken());
+        }
       } else {
         break;
       }
@@ -416,27 +423,99 @@ public class AliyunOSSFileSystemStore {
   }
 
   /**
+   * Upload an input stream as an OSS object, using single upload.
+   * @param key object key.
+   * @param in input stream to upload.
+   * @param size size of the input stream.
+   * @throws IOException if failed to upload object.
+   */
+  public void uploadObject(String key, InputStream in, long size)
+      throws IOException {
+    ObjectMetadata meta = new ObjectMetadata();
+    meta.setContentLength(size);
+
+    if (StringUtils.isNotEmpty(serverSideEncryptionAlgorithm)) {
+      meta.setServerSideEncryption(serverSideEncryptionAlgorithm);
+    }
+
+    PutObjectResult result = ossClient.putObject(bucketName, key, in, meta);
+    LOG.debug(result.getETag());
+    statistics.incrementWriteOps(1);
+  }
+
+  /**
    * list objects.
+   *
+   * @param listRequest list request.
+   * @return a list of matches.
+   */
+  public OSSListResult listObjects(OSSListRequest listRequest) {
+    OSSListResult listResult;
+    if (listRequest.isV1()) {
+      listResult = OSSListResult.v1(
+          ossClient.listObjects(listRequest.getV1()));
+    } else {
+      listResult = OSSListResult.v2(
+          ossClient.listObjectsV2(listRequest.getV2()));
+    }
+    statistics.incrementReadOps(1);
+    return listResult;
+  }
+
+  /**
+   * continue to list objects depends on previous list result.
+   *
+   * @param listRequest list request.
+   * @param preListResult previous list result.
+   * @return a list of matches.
+   */
+  public OSSListResult continueListObjects(OSSListRequest listRequest,
+      OSSListResult preListResult) {
+    OSSListResult listResult;
+    if (listRequest.isV1()) {
+      listRequest.getV1().setMarker(preListResult.getV1().getNextMarker());
+      listResult = OSSListResult.v1(
+          ossClient.listObjects(listRequest.getV1()));
+    } else {
+      listRequest.getV2().setContinuationToken(
+          preListResult.getV2().getNextContinuationToken());
+      listResult = OSSListResult.v2(
+          ossClient.listObjectsV2(listRequest.getV2()));
+    }
+    statistics.incrementReadOps(1);
+    return listResult;
+  }
+
+  /**
+   * create list objects request.
    *
    * @param prefix prefix.
    * @param maxListingLength max no. of entries
    * @param marker last key in any previous search.
+   * @param continuationToken list from a specific point.
    * @param recursive whether to list directory recursively.
    * @return a list of matches.
    */
-  public ObjectListing listObjects(String prefix, int maxListingLength,
-      String marker, boolean recursive) {
+  protected OSSListRequest createListObjectsRequest(String prefix,
+      int maxListingLength, String marker,
+      String continuationToken, boolean recursive) {
     String delimiter = recursive ? null : "/";
     prefix = AliyunOSSUtils.maybeAddTrailingSlash(prefix);
-    ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
-    listRequest.setPrefix(prefix);
-    listRequest.setDelimiter(delimiter);
-    listRequest.setMaxKeys(maxListingLength);
-    listRequest.setMarker(marker);
-
-    ObjectListing listing = ossClient.listObjects(listRequest);
-    statistics.incrementReadOps(1);
-    return listing;
+    if (useListV1) {
+      ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
+      listRequest.setPrefix(prefix);
+      listRequest.setDelimiter(delimiter);
+      listRequest.setMaxKeys(maxListingLength);
+      listRequest.setMarker(marker);
+      return OSSListRequest.v1(listRequest);
+    } else {
+      ListObjectsV2Request listV2Request = new ListObjectsV2Request(bucketName);
+      listV2Request.setPrefix(prefix);
+      listV2Request.setDelimiter(delimiter);
+      listV2Request.setMaxKeys(maxListingLength);
+      listV2Request.setContinuationToken(continuationToken);
+      return OSSListRequest.v2(listV2Request);
+    }
   }
 
   /**
@@ -478,21 +557,7 @@ public class AliyunOSSFileSystemStore {
    * @throws IOException if failed to clean up objects.
    */
   public void purge(String prefix) throws IOException {
-    String key;
-    try {
-      ObjectListing objects = listObjects(prefix, maxKeys, null, true);
-      for (OSSObjectSummary object : objects.getObjectSummaries()) {
-        key = object.getKey();
-        ossClient.deleteObject(bucketName, key);
-        statistics.incrementWriteOps(1);
-      }
-
-      for (String dir: objects.getCommonPrefixes()) {
-        deleteDirs(dir);
-      }
-    } catch (OSSException | ClientException e) {
-      LOG.error("Failed to purge " + prefix);
-    }
+    deleteDirs(prefix);
   }
 
   public RemoteIterator<LocatedFileStatus> singleStatusRemoteIterator(
@@ -520,12 +585,12 @@ public class AliyunOSSFileSystemStore {
 
   public RemoteIterator<LocatedFileStatus> createLocatedFileStatusIterator(
       final String prefix, final int maxListingLength, FileSystem fs,
-      PathFilter filter, FileStatusAcceptor acceptor, String delimiter) {
+      PathFilter filter, FileStatusAcceptor acceptor, boolean recursive) {
     return new RemoteIterator<LocatedFileStatus>() {
-      private String nextMarker = null;
       private boolean firstListing = true;
       private boolean meetEnd = false;
       private ListIterator<FileStatus> batchIterator;
+      private OSSListRequest listRequest = null;
 
       @Override
       public boolean hasNext() throws IOException {
@@ -550,15 +615,24 @@ public class AliyunOSSFileSystemStore {
       }
 
       private boolean requestNextBatch() {
+        while (!meetEnd) {
+          if (continueListStatus()) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      private boolean continueListStatus() {
         if (meetEnd) {
           return false;
         }
-        ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
-        listRequest.setPrefix(AliyunOSSUtils.maybeAddTrailingSlash(prefix));
-        listRequest.setMaxKeys(maxListingLength);
-        listRequest.setMarker(nextMarker);
-        listRequest.setDelimiter(delimiter);
-        ObjectListing listing = ossClient.listObjects(listRequest);
+        if (listRequest == null) {
+          listRequest = createListObjectsRequest(prefix,
+              maxListingLength, null, null, recursive);
+        }
+        OSSListResult listing = listObjects(listRequest);
         List<FileStatus> stats = new ArrayList<>(
             listing.getObjectSummaries().size() +
             listing.getCommonPrefixes().size());
@@ -584,7 +658,12 @@ public class AliyunOSSFileSystemStore {
 
         batchIterator = stats.listIterator();
         if (listing.isTruncated()) {
-          nextMarker = listing.getNextMarker();
+          if (listing.isV1()) {
+            listRequest.getV1().setMarker(listing.getV1().getNextMarker());
+          } else {
+            listRequest.getV2().setContinuationToken(
+                listing.getV2().getNextContinuationToken());
+          }
         } else {
           meetEnd = true;
         }
@@ -594,44 +673,58 @@ public class AliyunOSSFileSystemStore {
     };
   }
 
+  public PartETag uploadPart(OSSDataBlocks.BlockUploadData partData,
+      long size, String key, String uploadId, int idx) throws IOException {
+    if (partData.hasFile()) {
+      return uploadPart(partData.getFile(), key, uploadId, idx);
+    } else {
+      return uploadPart(partData.getUploadStream(), size, key, uploadId, idx);
+    }
+  }
+
   public PartETag uploadPart(File file, String key, String uploadId, int idx)
       throws IOException {
-    InputStream instream = null;
+    InputStream in = new FileInputStream(file);
+    try {
+      return uploadPart(in, file.length(), key, uploadId, idx);
+    } finally {
+      in.close();
+    }
+  }
+
+  public PartETag uploadPart(InputStream in, long size, String key,
+      String uploadId, int idx) throws IOException {
     Exception caught = null;
     int tries = 3;
     while (tries > 0) {
       try {
-        instream = new FileInputStream(file);
         UploadPartRequest uploadRequest = new UploadPartRequest();
         uploadRequest.setBucketName(bucketName);
         uploadRequest.setKey(key);
         uploadRequest.setUploadId(uploadId);
-        uploadRequest.setInputStream(instream);
-        uploadRequest.setPartSize(file.length());
+        uploadRequest.setInputStream(in);
+        uploadRequest.setPartSize(size);
         uploadRequest.setPartNumber(idx);
         UploadPartResult uploadResult = ossClient.uploadPart(uploadRequest);
         statistics.incrementWriteOps(1);
         return uploadResult.getPartETag();
       } catch (Exception e) {
-        LOG.debug("Failed to upload "+ file.getPath() +", " +
+        LOG.debug("Failed to upload " + key + ", part " + idx +
             "try again.", e);
         caught = e;
-      } finally {
-        if (instream != null) {
-          instream.close();
-          instream = null;
-        }
       }
       tries--;
     }
 
     assert (caught != null);
-    throw new IOException("Failed to upload " + file.getPath() +
+    throw new IOException("Failed to upload " + key + ", part " + idx +
         " for 3 times.", caught);
   }
 
   /**
    * Initiate multipart upload.
+   * @param key object key.
+   * @return upload id.
    */
   public String getUploadId(String key) {
     InitiateMultipartUploadRequest initiateMultipartUploadRequest =
@@ -643,6 +736,10 @@ public class AliyunOSSFileSystemStore {
 
   /**
    * Complete the specific multipart upload.
+   * @param key object key.
+   * @param uploadId upload id of this multipart upload.
+   * @param partETags part etags need to be completed.
+   * @return CompleteMultipartUploadResult.
    */
   public CompleteMultipartUploadResult completeMultipartUpload(String key,
       String uploadId, List<PartETag> partETags) {
@@ -655,6 +752,8 @@ public class AliyunOSSFileSystemStore {
 
   /**
    * Abort the specific multipart upload.
+   * @param key object key.
+   * @param uploadId upload id of this multipart upload.
    */
   public void abortMultipartUpload(String key, String uploadId) {
     AbortMultipartUploadRequest request = new AbortMultipartUploadRequest(

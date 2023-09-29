@@ -29,10 +29,10 @@ import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
-import static com.google.common.base.Preconditions.*;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import static org.apache.hadoop.util.Preconditions.*;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsFilter;

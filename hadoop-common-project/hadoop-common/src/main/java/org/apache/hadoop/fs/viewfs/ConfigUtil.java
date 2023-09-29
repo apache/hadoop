@@ -48,7 +48,7 @@ public class ConfigUtil {
   /**
    * Add a link to the config for the specified mount table
    * @param conf - add the link to this conf
-   * @param mountTableName
+   * @param mountTableName mountTable.
    * @param src - the src path name
    * @param target - the target URI link
    */
@@ -66,15 +66,15 @@ public class ConfigUtil {
    */
   public static void addLink(final Configuration conf, final String src,
       final URI target) {
-    addLink( conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, 
-        src, target);   
+    addLink(conf, getDefaultMountTableName(conf), src, target);
   }
 
   /**
    * Add a LinkMergeSlash to the config for the specified mount table.
-   * @param conf
-   * @param mountTableName
-   * @param target
+   *
+   * @param conf configuration.
+   * @param mountTableName mountTable.
+   * @param target target.
    */
   public static void addLinkMergeSlash(Configuration conf,
       final String mountTableName, final URI target) {
@@ -84,19 +84,20 @@ public class ConfigUtil {
 
   /**
    * Add a LinkMergeSlash to the config for the default mount table.
-   * @param conf
-   * @param target
+   *
+   * @param conf configuration.
+   * @param target targets.
    */
   public static void addLinkMergeSlash(Configuration conf, final URI target) {
-    addLinkMergeSlash(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
-        target);
+    addLinkMergeSlash(conf, getDefaultMountTableName(conf), target);
   }
 
   /**
    * Add a LinkFallback to the config for the specified mount table.
-   * @param conf
-   * @param mountTableName
-   * @param target
+   *
+   * @param conf configuration.
+   * @param mountTableName mountTable.
+   * @param target targets.
    */
   public static void addLinkFallback(Configuration conf,
       final String mountTableName, final URI target) {
@@ -106,19 +107,20 @@ public class ConfigUtil {
 
   /**
    * Add a LinkFallback to the config for the default mount table.
-   * @param conf
-   * @param target
+   *
+   * @param conf configuration.
+   * @param target targets.
    */
   public static void addLinkFallback(Configuration conf, final URI target) {
-    addLinkFallback(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
-        target);
+    addLinkFallback(conf, getDefaultMountTableName(conf), target);
   }
 
   /**
    * Add a LinkMerge to the config for the specified mount table.
-   * @param conf
-   * @param mountTableName
-   * @param targets
+   *
+   * @param conf configuration.
+   * @param mountTableName mountTable.
+   * @param targets targets.
    */
   public static void addLinkMerge(Configuration conf,
       final String mountTableName, final URI[] targets) {
@@ -128,20 +130,39 @@ public class ConfigUtil {
 
   /**
    * Add a LinkMerge to the config for the default mount table.
-   * @param conf
-   * @param targets
+   *
+   * @param conf configuration.
+   * @param targets targets array.
    */
   public static void addLinkMerge(Configuration conf, final URI[] targets) {
-    addLinkMerge(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, targets);
+    addLinkMerge(conf, getDefaultMountTableName(conf), targets);
   }
 
   /**
+   * Add nfly link to configuration for the given mount table.
    *
-   * @param conf
-   * @param mountTableName
-   * @param src
-   * @param settings
-   * @param targets
+   * @param conf configuration.
+   * @param mountTableName mount table.
+   * @param src src.
+   * @param settings settings.
+   * @param targets targets.
+   */
+  public static void addLinkNfly(Configuration conf, String mountTableName,
+      String src, String settings, final String targets) {
+    conf.set(
+        getConfigViewFsPrefix(mountTableName) + "."
+            + Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+        targets);
+  }
+
+  /**
+   * Add nfly link to configuration for the given mount table.
+   *
+   * @param conf configuration.
+   * @param mountTableName mount table.
+   * @param src src.
+   * @param settings settings.
+   * @param targets targets.
    */
   public static void addLinkNfly(Configuration conf, String mountTableName,
       String src, String settings, final URI ... targets) {
@@ -149,16 +170,35 @@ public class ConfigUtil {
     settings = settings == null
         ? "minReplication=2,repairOnRead=true"
         : settings;
-
-    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
-            Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+    addLinkNfly(conf, mountTableName, src, settings,
         StringUtils.uriToString(targets));
   }
 
   public static void addLinkNfly(final Configuration conf, final String src,
       final URI ... targets) {
-    addLinkNfly(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, src, null,
-        targets);
+    addLinkNfly(conf, getDefaultMountTableName(conf), src, null, targets);
+  }
+
+  /**
+   * Add a LinkRegex to the config for the specified mount table.
+   * @param conf - get mountable config from this conf
+   * @param mountTableName - the mountable name of the regex config item
+   * @param srcRegex - the src path regex expression that applies to this config
+   * @param targetStr - the string of target path
+   * @param interceptorSettings - the serialized interceptor string to be
+   *                            applied while resolving the mapping
+   */
+  public static void addLinkRegex(
+      Configuration conf, final String mountTableName, final String srcRegex,
+      final String targetStr, final String interceptorSettings) {
+    String prefix = getConfigViewFsPrefix(mountTableName) + "."
+        + Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
+    if ((interceptorSettings != null) && (!interceptorSettings.isEmpty())) {
+      prefix = prefix + interceptorSettings
+          + RegexMountPoint.SETTING_SRCREGEX_SEP;
+    }
+    String key = prefix + srcRegex;
+    conf.set(key, targetStr);
   }
 
   /**
@@ -168,14 +208,14 @@ public class ConfigUtil {
    */
   public static void setHomeDirConf(final Configuration conf,
       final String homedir) {
-    setHomeDirConf(  conf,
-        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,   homedir);
+    setHomeDirConf(conf, getDefaultMountTableName(conf), homedir);
   }
   
   /**
    * Add config variable for homedir the specified mount table
    * @param conf - add to this conf
    * @param homedir - the home dir path starting with slash
+   * @param mountTableName - the mount table.
    */
   public static void setHomeDirConf(final Configuration conf,
               final String mountTableName, final String homedir) {
@@ -193,7 +233,7 @@ public class ConfigUtil {
    * @return home dir value, null if variable is not in conf
    */
   public static String getHomeDirValue(final Configuration conf) {
-    return getHomeDirValue(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
+    return getHomeDirValue(conf, getDefaultMountTableName(conf));
   }
   
   /**
@@ -206,5 +246,37 @@ public class ConfigUtil {
       final String mountTableName) {
     return conf.get(getConfigViewFsPrefix(mountTableName) + "." +
         Constants.CONFIG_VIEWFS_HOMEDIR);
+  }
+
+  /**
+   * Get the name of the default mount table to use. If
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY} is specified,
+   * it's value is returned. Otherwise,
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE} is returned.
+   *
+   * @param conf Configuration to use.
+   * @return the name of the default mount table to use.
+   */
+  public static String getDefaultMountTableName(final Configuration conf) {
+    return conf.get(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
+  }
+
+  /**
+   * Check the bool config whether nested mount point is supported. Default: true
+   * @param conf - from this conf
+   * @return whether nested mount point is supported
+   */
+  public static boolean isNestedMountPointSupported(final Configuration conf) {
+    return conf.getBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, true);
+  }
+
+  /**
+   * Set the bool value isNestedMountPointSupported in config.
+   * @param conf - from this conf
+   * @param isNestedMountPointSupported - whether nested mount point is supported
+   */
+  public static void setIsNestedMountPointSupported(final Configuration conf, boolean isNestedMountPointSupported) {
+    conf.setBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, isNestedMountPointSupported);
   }
 }

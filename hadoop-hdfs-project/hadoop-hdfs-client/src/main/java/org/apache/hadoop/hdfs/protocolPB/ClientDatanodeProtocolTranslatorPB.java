@@ -68,7 +68,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -77,8 +77,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,7 +181,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int socketTimeout) throws IOException {
     RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     return RPC.getProxy(ClientDatanodeProtocolPB.class,
         RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), addr, ticket,
         conf, factory, socketTimeout);
@@ -324,10 +324,12 @@ public class ClientDatanodeProtocolTranslatorPB implements
   public void triggerBlockReport(BlockReportOptions options)
       throws IOException {
     try {
-      rpcProxy.triggerBlockReport(NULL_CONTROLLER,
-          TriggerBlockReportRequestProto.newBuilder().
-              setIncremental(options.isIncremental()).
-              build());
+      TriggerBlockReportRequestProto.Builder builder = TriggerBlockReportRequestProto.newBuilder().
+          setIncremental(options.isIncremental());
+      if (options.getNamenodeAddr() != null) {
+        builder.setNnAddress(NetUtils.getHostPortString(options.getNamenodeAddr()));
+      }
+      rpcProxy.triggerBlockReport(NULL_CONTROLLER, builder.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

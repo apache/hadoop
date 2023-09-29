@@ -19,6 +19,8 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
@@ -38,7 +40,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +72,8 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   private long emptierInterval;
 
+  private boolean cleanNonCheckpointUnderTrashRoot;
+
   public TrashPolicyDefault() { }
 
   private TrashPolicyDefault(FileSystem fs, Configuration conf)
@@ -90,6 +94,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
+    this.cleanNonCheckpointUnderTrashRoot = conf.getBoolean(
+        FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT);
    }
 
   @Override
@@ -101,6 +107,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
+    this.cleanNonCheckpointUnderTrashRoot = conf.getBoolean(
+        FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT);
     if (deletionInterval < 0) {
       LOG.warn("Invalid value {} for deletion interval,"
           + " deletion interaval can not be negative."
@@ -191,8 +199,8 @@ public class TrashPolicyDefault extends TrashPolicy {
         cause = e;
       }
     }
-    throw (IOException)
-      new IOException("Failed to move to trash: " + path).initCause(cause);
+    throw new IOException("Failed to move " + path + " to trash " + trashPath,
+        cause);
   }
 
   @SuppressWarnings("deprecation")
@@ -271,9 +279,9 @@ public class TrashPolicyDefault extends TrashPolicy {
     public void run() {
       if (emptierInterval == 0)
         return;                                   // trash disabled
-      long now = Time.now();
-      long end;
+      long now, end;
       while (true) {
+        now = Time.now();
         end = ceiling(now, emptierInterval);
         try {                                     // sleep for interval
           Thread.sleep(end - now);
@@ -374,8 +382,14 @@ public class TrashPolicyDefault extends TrashPolicy {
       try {
         time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
-        LOG.warn("Unexpected item in trash: "+dir+". Ignoring.");
-        continue;
+        if (cleanNonCheckpointUnderTrashRoot) {
+          fs.delete(path, true);
+          LOG.warn("Unexpected item in trash: " + dir + ". Deleting.");
+          continue;
+        } else {
+          LOG.warn("Unexpected item in trash: " + dir + ". Ignoring.");
+          continue;
+        }
       }
 
       if (((now - deletionInterval) > time) || deleteImmediately) {

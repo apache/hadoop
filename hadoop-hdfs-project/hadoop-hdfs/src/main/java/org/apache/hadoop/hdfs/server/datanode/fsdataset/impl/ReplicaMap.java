@@ -18,50 +18,49 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
+import org.apache.hadoop.hdfs.server.common.NoLockManager;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
-import org.apache.hadoop.hdfs.util.FoldedTreeSet;
-import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.LightWeightResizableGSet;
 
 /**
  * Maintains the replica map. 
  */
 class ReplicaMap {
   // Lock object to synchronize this instance.
-  private final AutoCloseableLock lock;
-  
-  // Map of block pool Id to a set of ReplicaInfo.
-  private final Map<String, FoldedTreeSet<ReplicaInfo>> map = new HashMap<>();
+  private DataNodeLockManager<AutoCloseDataSetLock> lockManager;
 
-  // Special comparator used to compare Long to Block ID in the TreeSet.
-  private static final Comparator<Object> LONG_AND_BLOCK_COMPARATOR
-      = new Comparator<Object>() {
+  // Map of block pool Id to another map of block Id to ReplicaInfo.
+  private final Map<String, LightWeightResizableGSet<Block, ReplicaInfo>> map =
+      new ConcurrentHashMap<>();
 
-        @Override
-        public int compare(Object o1, Object o2) {
-          long lookup = (long) o1;
-          long stored = ((Block) o2).getBlockId();
-          return lookup > stored ? 1 : lookup < stored ? -1 : 0;
-        }
-      };
-
-  ReplicaMap(AutoCloseableLock lock) {
-    if (lock == null) {
+  ReplicaMap(DataNodeLockManager<AutoCloseDataSetLock> manager) {
+    if (manager == null) {
       throw new HadoopIllegalArgumentException(
-          "Lock to synchronize on cannot be null");
+          "Object to synchronize on cannot be null");
     }
-    this.lock = lock;
+    this.lockManager = manager;
+  }
+
+  // Used for ut or temp replicaMap that no need to protected by lock.
+  ReplicaMap() {
+    this.lockManager = new NoLockManager();
   }
   
   String[] getBlockPoolList() {
-    try (AutoCloseableLock l = lock.acquire()) {
-      return map.keySet().toArray(new String[map.keySet().size()]);   
-    }
+    Set<String> bpset = map.keySet();
+    return bpset.toArray(new String[bpset.size()]);
   }
   
   private void checkBlockPool(String bpid) {
@@ -104,12 +103,9 @@ class ReplicaMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set == null) {
-        return null;
-      }
-      return set.get(blockId, LONG_AND_BLOCK_COMPARATOR);
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      return m != null ? m.get(new Block(blockId)) : null;
     }
   }
 
@@ -124,14 +120,14 @@ class ReplicaMap {
   ReplicaInfo add(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set == null) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
         // Add an entry for block pool if it does not exist already
-        set = new FoldedTreeSet<>();
-        map.put(bpid, set);
+        map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
+        m = map.get(bpid);
       }
-      return set.addOrReplace(replicaInfo);
+      return  m.put(replicaInfo);
     }
   }
 
@@ -142,19 +138,18 @@ class ReplicaMap {
   ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set == null) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
         // Add an entry for block pool if it does not exist already
-        set = new FoldedTreeSet<>();
-        map.put(bpid, set);
+        map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
+        m = map.get(bpid);
       }
-      ReplicaInfo oldReplicaInfo = set.get(replicaInfo.getBlockId(),
-          LONG_AND_BLOCK_COMPARATOR);
+      ReplicaInfo oldReplicaInfo = m.get(replicaInfo);
       if (oldReplicaInfo != null) {
         return oldReplicaInfo;
       } else {
-        set.addOrReplace(replicaInfo);
+        m.put(replicaInfo);
       }
       return replicaInfo;
     }
@@ -172,13 +167,28 @@ class ReplicaMap {
    * Merge all entries from the given replica map into the local replica map.
    */
   void mergeAll(ReplicaMap other) {
-    other.map.forEach(
-        (bp, replicaInfos) -> {
-          replicaInfos.forEach(
-              replicaInfo -> add(bp, replicaInfo)
-          );
+    Set<String> bplist = other.map.keySet();
+    for (String bp : bplist) {
+      checkBlockPool(bp);
+      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bp)) {
+        LightWeightResizableGSet<Block, ReplicaInfo> replicaInfos = other.map.get(bp);
+        LightWeightResizableGSet<Block, ReplicaInfo> curSet = map.get(bp);
+        HashSet<ReplicaInfo> replicaSet = new HashSet<>();
+        //Can't add to GSet while in another GSet iterator may cause endlessLoop
+        for (ReplicaInfo replicaInfo : replicaInfos) {
+          replicaSet.add(replicaInfo);
         }
-    );
+        if (curSet == null && !replicaSet.isEmpty()) {
+          // Add an entry for block pool if it does not exist already
+          curSet = new LightWeightResizableGSet<>();
+          map.put(bp, curSet);
+        }
+        for (ReplicaInfo replicaInfo : replicaSet) {
+          checkBlock(replicaInfo);
+          curSet.put(replicaInfo);
+        }
+      }
+    }
   }
   
   /**
@@ -192,14 +202,13 @@ class ReplicaMap {
   ReplicaInfo remove(String bpid, Block block) {
     checkBlockPool(bpid);
     checkBlock(block);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set != null) {
-        ReplicaInfo replicaInfo =
-            set.get(block.getBlockId(), LONG_AND_BLOCK_COMPARATOR);
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m != null) {
+        ReplicaInfo replicaInfo = m.get(block);
         if (replicaInfo != null &&
             block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
-          return set.removeAndGet(replicaInfo);
+          return m.remove(block);
         }
       }
     }
@@ -215,10 +224,10 @@ class ReplicaMap {
    */
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set != null) {
-        return set.removeAndGet(blockId, LONG_AND_BLOCK_COMPARATOR);
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m != null) {
+        return m.remove(new Block(blockId));
       }
     }
     return null;
@@ -230,50 +239,58 @@ class ReplicaMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      return set != null ? set.size() : 0;
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      return m != null ? m.size() : 0;
     }
   }
   
   /**
    * Get a collection of the replicas for given block pool
-   * This method is <b>not synchronized</b>. It needs to be synchronized
-   * externally using the lock, both for getting the replicas
-   * values from the map and iterating over it. Mutex can be accessed using
-   * {@link #getLock()} method.
-   * 
+   * This method is <b>not synchronized</b>. If you want to keep thread safe
+   * Use method {@link #replicas(String, Consumer<Iterator<ReplicaInfo>>)}.
+   *
    * @param bpid block pool id
    * @return a collection of the replicas belonging to the block pool
    */
   Collection<ReplicaInfo> replicas(String bpid) {
-    return map.get(bpid);
+    LightWeightResizableGSet<Block, ReplicaInfo> m = null;
+    m = map.get(bpid);
+    return m != null ? m.values() : null;
+  }
+
+  /**
+   * execute function for one block pool and protect by LockManager.
+   * This method is <b>synchronized</b>.
+   *
+   * @param bpid block pool id
+   */
+  void replicas(String bpid, Consumer<Iterator<ReplicaInfo>> consumer) {
+    LightWeightResizableGSet<Block, ReplicaInfo> m = null;
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+      m = map.get(bpid);
+      if (m !=null) {
+        m.getIterator(consumer);
+      }
+    }
   }
 
   void initBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
-      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
-      if (set == null) {
+    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
         // Add an entry for block pool if it does not exist already
-        set = new FoldedTreeSet<>();
-        map.put(bpid, set);
+        m = new LightWeightResizableGSet<Block, ReplicaInfo>();
+        map.put(bpid, m);
       }
     }
   }
   
   void cleanUpBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
       map.remove(bpid);
     }
-  }
-  
-  /**
-   * Get the lock object used for synchronizing ReplicasMap
-   * @return lock object
-   */
-  AutoCloseableLock getLock() {
-    return lock;
   }
 }

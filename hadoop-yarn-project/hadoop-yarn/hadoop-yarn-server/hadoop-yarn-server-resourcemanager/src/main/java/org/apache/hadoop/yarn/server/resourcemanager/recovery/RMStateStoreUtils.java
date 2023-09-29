@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -48,6 +48,7 @@ public class RMStateStoreUtils {
    * @param fsIn The {@link DataInputStream} containing RM Delegation Token data
    * @return An {@link RMDelegationTokenIdentifierData} containing the read in
    * RM Delegation Token
+   * @throws IOException an I/O exception has occurred.
    */
   public static RMDelegationTokenIdentifierData
       readRMDelegationTokenIdentifierData(DataInputStream fsIn)

@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -54,7 +55,7 @@ public class RumenToSLSConverter {
   private static Map<String, Set<String>> rackNodeMap =
           new TreeMap<String, Set<String>>();
 
-  public static void main(String args[]) throws Exception {
+  public static void main(String[] args) throws Exception {
     Options options = new Options();
     options.addOption("input", true, "input rumen json file");
     options.addOption("outputJobs", true, "output jobs file");
@@ -121,9 +122,10 @@ public class RumenToSLSConverter {
   private static void generateSLSLoadFile(String inputFile, String outputFile)
           throws IOException {
     try (Reader input =
-        new InputStreamReader(new FileInputStream(inputFile), "UTF-8")) {
+        new InputStreamReader(new FileInputStream(inputFile),
+            StandardCharsets.UTF_8)) {
       try (Writer output =
-          new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8")) {
+          new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
         Iterator<Map> i = mapper.readValues(
@@ -140,7 +142,7 @@ public class RumenToSLSConverter {
   private static void generateSLSNodeFile(String outputFile)
           throws IOException {
     try (Writer output =
-        new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8")) {
+        new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
       ObjectMapper mapper = new ObjectMapper();
       ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
       for (Map.Entry<String, Set<String>> entry : rackNodeMap.entrySet()) {
@@ -218,7 +220,7 @@ public class RumenToSLSConverter {
         task.put("container.priority", priority);
         task.put("container.type", taskType);
         array.add(task);
-        String rackHost[] = SLSUtils.getRackHostName(hostname);
+        String[] rackHost = SLSUtils.getRackHostName(hostname);
         if (rackNodeMap.containsKey(rackHost[0])) {
           rackNodeMap.get(rackHost[0]).add(rackHost[1]);
         } else {

@@ -37,6 +37,7 @@ public class HdfsConfiguration extends Configuration {
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-rbf-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
+    Configuration.addDefaultResource("hdfs-rbf-site.xml");
   }
 
   public HdfsConfiguration() {

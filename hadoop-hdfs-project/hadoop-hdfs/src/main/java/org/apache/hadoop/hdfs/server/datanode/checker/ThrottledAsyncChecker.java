@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Timer;
@@ -44,14 +44,14 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An implementation of {@link AsyncChecker} that skips checking recently
- * checked objects. It will enforce at least {@link minMsBetweenChecks}
+ * checked objects. It will enforce at least {@link #minMsBetweenChecks}
  * milliseconds between two successive checks of any one object.
  *
  * It is assumed that the total number of Checkable objects in the system
  * is small, (not more than a few dozen) since the checker uses O(Checkables)
  * storage and also potentially O(Checkables) threads.
  *
- * {@link minMsBetweenChecks} should be configured reasonably
+ * {@link #minMsBetweenChecks} should be configured reasonably
  * by the caller to avoid spinning up too many threads frequently.
  */
 @InterfaceAudience.Private
@@ -117,8 +117,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * will receive the same Future.
    */
   @Override
-  public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
-                                                K context) {
+  public synchronized Optional<ListenableFuture<V>> schedule(
+      Checkable<K, V> target, K context) {
     if (checksInProgress.containsKey(target)) {
       return Optional.empty();
     }
@@ -166,7 +166,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
       Checkable<K, V> target, ListenableFuture<V> lf) {
     Futures.addCallback(lf, new FutureCallback<V>() {
       @Override
-      public void onSuccess(@Nullable V result) {
+      public void onSuccess(V result) {
         synchronized (ThrottledAsyncChecker.this) {
           checksInProgress.remove(target);
           completedChecks.put(target, new LastCheckResult<>(

@@ -23,12 +23,12 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -236,9 +236,9 @@ public class TestErasureCodingPolicies {
         fs.getErasureCodingPolicy(disabledPolicy));
 
     // Also check loading disabled EC policies from fsimage
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNodes();
 
     Assert.assertEquals("Dir does not have policy set",
@@ -744,6 +744,15 @@ public class TestErasureCodingPolicies {
     ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
     AddErasureCodingPolicyResponse[] responses =
         fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+
+    // Test numDataUnits + numParityUnits > 16
+    toAddSchema = new ECSchema("rs", 14, 4);
+    newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024 * 1024);
+    policyArray = new ErasureCodingPolicy[]{newPolicy};
+    responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
     assertFalse(responses[0].isSucceed());
 

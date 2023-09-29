@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -127,7 +128,7 @@ public class TestAMRMClientOnRMRestart {
     rm1.start();
 
     // Submit the application
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
 
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
@@ -356,7 +357,7 @@ public class TestAMRMClientOnRMRestart {
     rm1.start();
 
     // Submit the application
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
 
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
@@ -433,7 +434,7 @@ public class TestAMRMClientOnRMRestart {
     rm1.start();
     Long startTime = System.currentTimeMillis();
     // Submit the application
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
 
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());

@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,5 +165,10 @@ public class DefaultResourceCalculator extends ResourceCalculator {
     } else {
       return ImmutableSet.of();
     }
+  }
+
+  @Override
+  public boolean isAllInvalidDivisor(Resource r) {
+    return isInvalidDivisor(r);
   }
 }

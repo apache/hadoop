@@ -171,7 +171,7 @@ public class TestApplicationMasterServiceInterceptor {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);

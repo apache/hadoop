@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.client;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,6 +41,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
@@ -48,9 +49,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test Spnego Client Login.
@@ -128,8 +129,9 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
+    startMiniKdc();
     keytabFile = new File(getWorkDir(), "keytab");
     getKdc().createPrincipal(keytabFile, clientPrincipal, server1Principal,
         server2Principal);
@@ -140,7 +142,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     props = new HashMap<String, String>();
     props.put(Sasl.QOP, QualityOfProtection.AUTHENTICATION.saslQop);
     server = new Server(8088);
-    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(10);
+    ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(20);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/app");
     server.setHandler(context);
@@ -152,6 +154,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     rmServers.add("localhost:8088");
     testConf.set("yarn.resourcemanager.webapp.address",
         "localhost:8088");
+    testConf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     asc = new ApiServiceClient() {
       @Override
       List<String> getRMHAWebAddresses(Configuration conf) {
@@ -161,13 +164,14 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     asc.serviceInit(testConf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     server.stop();
+    stopMiniKdc();
   }
 
   @Test
-  public void testHttpSpnegoChallenge() throws Exception {
+  void testHttpSpnegoChallenge() throws Exception {
     UserGroupInformation.loginUserFromKeytab(clientPrincipal, keytabFile
         .getCanonicalPath());
     String challenge = YarnClientUtils.generateToken("localhost");
@@ -175,7 +179,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
   }
 
   @Test
-  public void testAuthorizationHeader() throws Exception {
+  void testAuthorizationHeader() throws Exception {
     UserGroupInformation.loginUserFromKeytab(clientPrincipal, keytabFile
         .getCanonicalPath());
     String rmAddress = asc.getRMWebAddress();

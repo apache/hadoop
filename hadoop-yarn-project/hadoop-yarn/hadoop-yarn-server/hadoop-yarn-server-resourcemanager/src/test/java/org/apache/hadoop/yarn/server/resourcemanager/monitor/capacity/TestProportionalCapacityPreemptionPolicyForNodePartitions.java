@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,13 +91,13 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
 
     // 30 preempted from app1, 30 preempted from app4, and nothing preempted
     // from app2/app3
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
   }
 
@@ -146,9 +147,9 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // No preemption happens
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
   }
 
@@ -195,9 +196,9 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
 
     // 30 preempted from app1, 30 preempted from app4, and nothing preempted
     // from app2/app3
-    verify(mDisp, times(20)).handle(
+    verify(eventHandler, times(20)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
   }
 
@@ -247,16 +248,16 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // 4 from app1
-    verify(mDisp, times(4)).handle(
+    verify(eventHandler, times(4)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
     // 19 from app2-app5
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(5))));
   }
 
@@ -308,16 +309,16 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // 4 from app1
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
     // 19 from app2-app5
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, times(19)).handle(
+    verify(eventHandler, times(19)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
-    verify(mDisp, times(20)).handle(
+    verify(eventHandler, times(20)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
-    verify(mDisp, times(20)).handle(
+    verify(eventHandler, times(20)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(5))));
   }
 
@@ -370,11 +371,11 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // 10 preempted from app1, nothing preempted from app2-app3
-    verify(mDisp, times(10)).handle(
+    verify(eventHandler, times(10)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
   }
 
@@ -429,11 +430,11 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // 15 will be preempted app2/app3
-    verify(mDisp, times(15)).handle(
+    verify(eventHandler, times(15)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, times(15)).handle(
+    verify(eventHandler, times(15)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
   }
 
@@ -499,13 +500,13 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     policy.editSchedule();
 
     // 10 will be preempted from app1 (a1) /app4 (b2)
-    verify(mDisp, times(10)).handle(
+    verify(eventHandler, times(10)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(10)).handle(
+    verify(eventHandler, times(10)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
   }
 
@@ -559,9 +560,9 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(50)).handle(
+    verify(eventHandler, times(50)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
   }
 
@@ -610,13 +611,13 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
 
     // 30 preempted from app1, 30 preempted from app4, and nothing preempted
     // from app2/app3
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(30)).handle(
+    verify(eventHandler, times(30)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, never()).handle(
+    verify(eventHandler, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
   }
 
@@ -683,7 +684,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(7)).handle(
+    verify(eventHandler, times(7)).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
 
     riMap.remove(RESOURCE_1);

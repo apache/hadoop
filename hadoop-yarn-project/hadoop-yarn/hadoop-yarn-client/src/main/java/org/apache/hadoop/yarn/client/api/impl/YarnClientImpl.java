@@ -30,9 +30,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -40,6 +43,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
@@ -131,6 +135,8 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -142,7 +148,7 @@ import org.eclipse.jetty.websocket.api.WebSocketException;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,8 +316,20 @@ public class YarnClientImpl extends YarnClient {
 
     // Automatically add the timeline DT into the CLC
     // Only when the security and the timeline service are both enabled
-    if (isSecurityEnabled() && timelineV1ServiceEnabled) {
+    if (isSecurityEnabled() && timelineV1ServiceEnabled &&
+            getConfig().get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE)
+                    .equals(KerberosAuthenticationHandler.TYPE)) {
       addTimelineDelegationToken(appContext.getAMContainerSpec());
+    }
+
+    // Automatically add the DT for Log Aggregation path
+    // This is useful when a separate storage is used for log aggregation
+    try {
+      if (isSecurityEnabled()) {
+        addLogAggregationDelegationToken(appContext.getAMContainerSpec());
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to obtain delegation token for Log Aggregation Path", e);
     }
 
     //TODO: YARN-1763:Handle RM failovers during the submitApplication call.
@@ -335,7 +353,7 @@ public class YarnClientImpl extends YarnClient {
             throw new YarnException("Failed to submit " + applicationId + 
                 " to YARN : " + appReport.getDiagnostics());
           }
-          LOG.info("Submitted application " + applicationId);
+          LOG.info("Submitted application {}", applicationId);
           break;
         }
 
@@ -350,8 +368,9 @@ public class YarnClientImpl extends YarnClient {
         // is blocked here too long.
         if (++pollCount % 10 == 0) {
           LOG.info("Application submission is not finished, " +
-              "submitted application " + applicationId +
-              " is still in " + state);
+                          "submitted application {} is still in {}",
+                  applicationId,
+                  state);
         }
         try {
           Thread.sleep(submitPollIntervalMillis);
@@ -364,13 +383,53 @@ public class YarnClientImpl extends YarnClient {
       } catch (ApplicationNotFoundException ex) {
         // FailOver or RM restart happens before RMStateStore saves
         // ApplicationState
-        LOG.info("Re-submit application " + applicationId + "with the " +
-            "same ApplicationSubmissionContext");
+        LOG.info("Re-submit application {} with the" +
+                " same ApplicationSubmissionContext", applicationId);
         rmClient.submitApplication(request);
       }
     }
 
     return applicationId;
+  }
+
+  private void addLogAggregationDelegationToken(
+      ContainerLaunchContext clc) throws YarnException, IOException {
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    ByteBuffer tokens = clc.getTokens();
+    if (tokens != null) {
+      dibb.reset(tokens);
+      credentials.readTokenStorageStream(dibb);
+      tokens.rewind();
+    }
+
+    Configuration conf = getConfig();
+    String masterPrincipal = YarnClientUtils.getRmPrincipal(conf);
+    if (StringUtils.isEmpty(masterPrincipal)) {
+      throw new IOException(
+          "Can't get Master Kerberos principal for use as renewer");
+    }
+    LOG.debug("Delegation Token Renewer: {}", masterPrincipal);
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(conf);
+    LogAggregationFileController fileController =
+        factory.getFileControllerForWrite();
+    Path remoteRootLogDir = fileController.getRemoteRootLogDir();
+    FileSystem fs = remoteRootLogDir.getFileSystem(conf);
+
+    final org.apache.hadoop.security.token.Token<?>[] finalTokens =
+        fs.addDelegationTokens(masterPrincipal, credentials);
+    if (finalTokens != null) {
+      for (org.apache.hadoop.security.token.Token<?> token : finalTokens) {
+        LOG.info("Added delegation token for log aggregation path {}; {}", remoteRootLogDir, token);
+      }
+    }
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    clc.setTokens(tokens);
   }
 
   private void addTimelineDelegationToken(
@@ -426,8 +485,7 @@ public class YarnClientImpl extends YarnClient {
       return timelineClient.getDelegationToken(timelineDTRenewer);
     } catch (Exception e) {
       if (timelineServiceBestEffort) {
-        LOG.warn("Failed to get delegation token from the timeline server: "
-            + e.getMessage());
+        LOG.warn("Failed to get delegation token from the timeline server: {}", e.getMessage());
         return null;
       }
       throw new IOException(e);
@@ -468,7 +526,7 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public void failApplicationAttempt(ApplicationAttemptId attemptId)
       throws YarnException, IOException {
-    LOG.info("Failing application attempt " + attemptId);
+    LOG.info("Failing application attempt {}.", attemptId);
     FailApplicationAttemptRequest request =
         Records.newRecord(FailApplicationAttemptRequest.class);
     request.setApplicationAttemptId(attemptId);
@@ -501,7 +559,7 @@ public class YarnClientImpl extends YarnClient {
         KillApplicationResponse response =
             rmClient.forceKillApplication(request);
         if (response.getIsKillCompleted()) {
-          LOG.info("Killed application " + applicationId);
+          LOG.info("Killed application {}", applicationId);
           break;
         }
 
@@ -514,7 +572,7 @@ public class YarnClientImpl extends YarnClient {
 
         if (++pollCount % 10 == 0) {
           LOG.info(
-              "Waiting for application " + applicationId + " to be killed.");
+              "Waiting for application {} to be killed.", applicationId);
         }
         Thread.sleep(asyncApiPollIntervalMillis);
       }
@@ -1021,7 +1079,7 @@ public class YarnClientImpl extends YarnClient {
   public void signalToContainer(ContainerId containerId,
       SignalContainerCommand command)
           throws YarnException, IOException {
-    LOG.info("Signalling container " + containerId + " with command " + command);
+    LOG.info("Signalling container {} with command {}", containerId, command);
     SignalContainerRequest request =
         SignalContainerRequest.newInstance(containerId, command);
     rmClient.signalToContainer(request);
@@ -1127,9 +1185,9 @@ public class YarnClientImpl extends YarnClient {
         client.stop();
       }
     } catch (WebSocketException e) {
-      LOG.debug("Websocket exception: " + e.getMessage());
+      LOG.debug("Websocket exception: {}", e.getMessage());
     } catch (Throwable t) {
-      LOG.error("Fail to shell to container: " + t.getMessage());
+      LOG.error("Fail to shell to container: {}", t.getMessage());
     }
   }
 }

@@ -17,19 +17,40 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
-
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.fs.ChecksumException;
@@ -52,6 +73,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -64,29 +87,26 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
+
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
-import java.util.concurrent.TimeoutException;
-
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -119,6 +139,8 @@ public class TestDFSAdmin {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
         GenericTestUtils.getRandomizedTempPath());
+    conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 60);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     restartCluster();
 
     admin = new DFSAdmin(conf);
@@ -169,20 +191,20 @@ public class TestDFSAdmin {
   }
 
   private void getReconfigurableProperties(String nodeType, String address,
-      final List<String> outs, final List<String> errs) throws IOException {
+      final List<String> outs, final List<String> errs) throws IOException, InterruptedException {
     reconfigurationOutErrFormatter("getReconfigurableProperties", nodeType,
         address, outs, errs);
   }
 
   private void getReconfigurationStatus(String nodeType, String address,
-      final List<String> outs, final List<String> errs) throws IOException {
+      final List<String> outs, final List<String> errs) throws IOException, InterruptedException {
     reconfigurationOutErrFormatter("getReconfigurationStatus", nodeType,
         address, outs, errs);
   }
 
   private void reconfigurationOutErrFormatter(String methodName,
       String nodeType, String address, final List<String> outs,
-      final List<String> errs) throws IOException {
+      final List<String> errs) throws IOException, InterruptedException {
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream outStream = new PrintStream(bufOut);
     ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
@@ -195,9 +217,9 @@ public class TestDFSAdmin {
           outStream,
           errStream);
     } else if (methodName.equals("getReconfigurationStatus")) {
-      admin.getReconfigurationStatus(nodeType, address, outStream, errStream);
+      admin.getReconfigurationStatusUtil(nodeType, address, outStream, errStream);
     } else if (methodName.equals("startReconfiguration")) {
-      admin.startReconfiguration(nodeType, address, outStream, errStream);
+      admin.startReconfigurationUtil(nodeType, address, outStream, errStream);
     }
 
     scanIntoList(bufOut, outs);
@@ -243,6 +265,31 @@ public class TestDFSAdmin {
               containsString("Software version"),
               containsString("Config version"))));
     }
+  }
+
+  @Test(timeout = 30000)
+  public void testTriggerBlockReport() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final DataNode dn = cluster.getDataNodes().get(0);
+    final NameNode nn = cluster.getNameNode();
+
+    final String dnAddr = String.format(
+        "%s:%d",
+        dn.getXferAddress().getHostString(),
+        dn.getIpcPort());
+    final String nnAddr = nn.getHostAndPort();
+    resetStream();
+    final List<String> outs = Lists.newArrayList();
+    final int ret = ToolRunner.run(dfsAdmin,
+        new String[]{"-triggerBlockReport", dnAddr, "-incremental", "-namenode", nnAddr});
+    assertEquals(0, ret);
+
+    scanIntoList(out, outs);
+    assertEquals(1, outs.size());
+    assertThat(outs.get(0),
+        is(allOf(containsString("Triggering an incremental block report on "),
+            containsString(" to namenode "))));
   }
 
   @Test(timeout = 30000)
@@ -293,13 +340,13 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
-  public void testDataNodeGetReconfigurableProperties() throws IOException {
+  public void testDataNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final int port = datanode.getIpcPort();
     final String address = "localhost:" + port;
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(3, outs.size());
+    assertEquals(25, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -389,14 +436,26 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
-  public void testNameNodeGetReconfigurableProperties() throws IOException {
+  public void testNameNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final String address = namenode.getHostAndPort();
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(10, outs.size());
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(1));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(2));
+    assertEquals(22, outs.size());
+    assertTrue(outs.get(0).contains("Reconfigurable properties:"));
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
+    assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
+    assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(3));
+    assertEquals(DFS_DATANODE_MAX_NODES_TO_REPORT_KEY, outs.get(4));
+    assertEquals(DFS_DATANODE_PEER_STATS_ENABLED_KEY, outs.get(5));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(6));
+    assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(7));
+    assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(8));
+    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(9));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(10));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(11));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(12));
+    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(13));
     assertEquals(errs.size(), 0);
   }
 
@@ -410,7 +469,7 @@ public class TestDFSAdmin {
         errs.clear();
         try {
           getReconfigurationStatus(nodeType, address, outs, errs);
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
           LOG.error(String.format(
               "call getReconfigurationStatus on %s[%s] failed.", nodeType,
               address), e);
@@ -467,6 +526,52 @@ public class TestDFSAdmin {
           is(allOf(containsString("Rack:"), containsString("/d2/r1"))));
       assertThat(outs.get(9),
           is(allOf(containsString("Rack:"), containsString("/d2/r2"))));
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testPrintTopologyWithStatus() throws Exception {
+    redirectStream();
+    final Configuration dfsConf = new HdfsConfiguration();
+    final File baseDir = new File(
+            PathUtils.getTestDir(getClass()),
+            GenericTestUtils.getMethodName());
+    dfsConf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.getAbsolutePath());
+
+    final int numDn = 4;
+    final String[] racks = {
+        "/d1/r1", "/d1/r2",
+        "/d2/r1", "/d2/r2"};
+
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
+            .numDataNodes(numDn).racks(racks).build()) {
+      miniCluster.waitActive();
+      assertEquals(numDn, miniCluster.getDataNodes().size());
+
+      DatanodeManager dm = miniCluster.getNameNode().getNamesystem().
+          getBlockManager().getDatanodeManager();
+      DatanodeDescriptor maintenanceNode = dm.getDatanode(
+          miniCluster.getDataNodes().get(1).getDatanodeId());
+      maintenanceNode.setInMaintenance();
+      DatanodeDescriptor demissionNode = dm.getDatanode(
+          miniCluster.getDataNodes().get(2).getDatanodeId());
+      demissionNode.setDecommissioned();
+
+      final DFSAdmin dfsAdmin = new DFSAdmin(dfsConf);
+
+      resetStream();
+      final int ret = ToolRunner.run(dfsAdmin, new String[] {"-printTopology"});
+
+      /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
+      scanIntoList(out, outs);
+
+      /* verify results */
+      assertEquals(0, ret);
+      assertTrue(outs.get(1).contains(DatanodeInfo.AdminStates.NORMAL.toString()));
+      assertTrue(outs.get(4).contains(DatanodeInfo.AdminStates.IN_MAINTENANCE.toString()));
+      assertTrue(outs.get(7).contains(DatanodeInfo.AdminStates.DECOMMISSIONED.toString()));
+      assertTrue(outs.get(10).contains(DatanodeInfo.AdminStates.NORMAL.toString()));
     }
   }
 
@@ -690,6 +795,14 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client, 0L, 0L);
+
+      // verify report command for list all DN types
+      resetStream();
+      String[] reportWithArg = new String[DFSAdmin.DFS_REPORT_ARGS.length + 1];
+      reportWithArg[0] = "-report";
+      System.arraycopy(DFSAdmin.DFS_REPORT_ARGS, 0, reportWithArg, 1,
+          DFSAdmin.DFS_REPORT_ARGS.length);
+      assertEquals(0, ToolRunner.run(dfsAdmin, reportWithArg));
     }
   }
 
@@ -890,6 +1003,105 @@ public class TestDFSAdmin {
   }
 
   @Test
+  public void testAllowSnapshotWhenTrashExists() throws Exception {
+    final Path dirPath = new Path("/ssdir3");
+    final Path trashRoot = new Path(dirPath, ".Trash");
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    // Case 1: trash directory exists and permission matches
+    dfs.mkdirs(trashRoot);
+    dfs.setPermission(trashRoot, TRASH_PERMISSION);
+    // allowSnapshot should still succeed even when trash exists
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Clean up. disallowSnapshot should remove the empty trash
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+
+    // Case 2: trash directory exists and but permission doesn't match
+    dfs.mkdirs(trashRoot);
+    dfs.setPermission(trashRoot, new FsPermission((short)0755));
+    // allowSnapshot should fail here
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Correct trash permission and retry
+    dfs.setPermission(trashRoot, TRASH_PERMISSION);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Clean up
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+
+    // Case 3: trash directory path is taken by a file
+    dfs.create(trashRoot).close();
+    // allowSnapshot should fail here
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Remove the file and retry
+    dfs.delete(trashRoot, false);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Clean up
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+
+    // Cleanup
+    dfs.delete(dirPath, true);
+  }
+
+  @Test
+  public void testAllowDisallowSnapshot() throws Exception {
+    final Path dirPath = new Path("/ssdir1");
+    final Path trashRoot = new Path(dirPath, ".Trash");
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    dfs.mkdirs(dirPath);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+
+    // Verify .Trash creation after -allowSnapshot command
+    assertTrue(dfs.exists(trashRoot));
+    assertEquals(TRASH_PERMISSION,
+        dfs.getFileStatus(trashRoot).getPermission());
+
+    // Move a file to trash
+    final Path file1 = new Path(dirPath, "file1");
+    try (FSDataOutputStream s = dfs.create(file1)) {
+      s.write(0);
+    }
+    FsShell fsShell = new FsShell(dfs.getConf());
+    assertEquals(0, ToolRunner.run(fsShell,
+        new String[]{"-rm", file1.toString()}));
+
+    // User directory inside snapshottable directory trash should have 700
+    final String username =
+        UserGroupInformation.getLoginUser().getShortUserName();
+    final Path trashRootUserSubdir = new Path(trashRoot, username);
+    assertTrue(dfs.exists(trashRootUserSubdir));
+    final FsPermission trashUserdirPermission = new FsPermission(
+        FsAction.ALL, FsAction.NONE, FsAction.NONE, false);
+    assertEquals(trashUserdirPermission,
+        dfs.getFileStatus(trashRootUserSubdir).getPermission());
+
+    // disallowSnapshot should fail when .Trash is not empty
+    assertNotEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+
+    dfs.delete(trashRootUserSubdir, true);
+    // disallowSnapshot should succeed now that we have an empty .Trash
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+
+    // Cleanup
+    dfs.delete(dirPath, true);
+  }
+
+  @Test
   public void testSetBalancerBandwidth() throws Exception {
     redirectStream();
 
@@ -1019,5 +1231,54 @@ public class TestDFSAdmin {
         return 0;
       }
     });
+  }
+
+  @Test
+  public void testAllDatanodesReconfig()
+      throws IOException, InterruptedException, TimeoutException {
+    ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
+    cluster.getDataNodes().get(0).setReconfigurationUtil(reconfigurationUtil);
+    cluster.getDataNodes().get(1).setReconfigurationUtil(reconfigurationUtil);
+
+    List<ReconfigurationUtil.PropertyChange> changes = new ArrayList<>();
+    changes.add(new ReconfigurationUtil.PropertyChange(
+        DFS_DATANODE_PEER_STATS_ENABLED_KEY, "true",
+        datanode.getConf().get(DFS_DATANODE_PEER_STATS_ENABLED_KEY)));
+    when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
+        any(Configuration.class))).thenReturn(changes);
+
+    int result = admin.startReconfiguration("datanode", "livenodes");
+    Assertions.assertThat(result).isEqualTo(0);
+    final List<String> outsForStartReconf = new ArrayList<>();
+    final List<String> errsForStartReconf = new ArrayList<>();
+    reconfigurationOutErrFormatter("startReconfiguration", "datanode",
+        "livenodes", outsForStartReconf, errsForStartReconf);
+    String started = "Started reconfiguration task on node";
+    String starting =
+        "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
+    Assertions.assertThat(outsForStartReconf).hasSize(3);
+    Assertions.assertThat(errsForStartReconf).hasSize(0);
+    Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
+
+    Thread.sleep(1000);
+    final List<String> outs = new ArrayList<>();
+    final List<String> errs = new ArrayList<>();
+    awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
+    Assertions.assertThat(outs).hasSize(9);
+    Assertions.assertThat(errs).hasSize(0);
+    LOG.info("dfsadmin -status -livenodes output:");
+    outs.forEach(s -> LOG.info("{}", s));
+    Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
+
+    String success = "SUCCESS: Changed property dfs.datanode.peer.stats.enabled";
+    String from = "\tFrom: \"false\"";
+    String to = "\tTo: \"true\"";
+    String retrieval =
+        "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
+
+    Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
+    Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
   }
 }

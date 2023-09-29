@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef WIN32
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
 /* Shim structs and functions that delegate to libhdfspp and libhdfs. */
 struct hdfs_internal {
   libhdfs_hdfsFS libhdfsRep;
@@ -250,6 +254,65 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
   return ret;
 }
 
+hdfsOpenFileBuilder *hdfsOpenFileBuilderAlloc(hdfsFS fs,
+        const char *path) {
+  return libhdfs_hdfsOpenFileBuilderAlloc(fs->libhdfsRep, path);
+}
+
+hdfsOpenFileBuilder *hdfsOpenFileBuilderMust(
+        hdfsOpenFileBuilder *builder, const char *key,
+        const char *value) {
+  return libhdfs_hdfsOpenFileBuilderMust(builder, key, value);
+}
+
+hdfsOpenFileBuilder *hdfsOpenFileBuilderOpt(
+        hdfsOpenFileBuilder *builder, const char *key,
+        const char *value) {
+  return libhdfs_hdfsOpenFileBuilderOpt(builder, key, value);
+}
+
+hdfsOpenFileFuture *hdfsOpenFileBuilderBuild(
+        hdfsOpenFileBuilder *builder) {
+  return libhdfs_hdfsOpenFileBuilderBuild(builder);
+}
+
+void hdfsOpenFileBuilderFree(hdfsOpenFileBuilder *builder) {
+  libhdfs_hdfsOpenFileBuilderFree(builder);
+}
+
+hdfsFile hdfsOpenFileFutureGet(hdfsOpenFileFuture *future) {
+  hdfsFile ret = calloc(1, sizeof(struct hdfsFile_internal));
+  ret->libhdfsppRep = 0;
+  ret->libhdfsRep = libhdfs_hdfsOpenFileFutureGet(future);
+  if (!ret->libhdfsRep) {
+    free(ret);
+    ret = NULL;
+  }
+  return ret;
+}
+
+hdfsFile hdfsOpenFileFutureGetWithTimeout(hdfsOpenFileFuture *future,
+        int64_t timeout, javaConcurrentTimeUnit timeUnit) {
+  hdfsFile ret = calloc(1, sizeof(struct hdfsFile_internal));
+  ret->libhdfsppRep = 0;
+  ret->libhdfsRep = libhdfs_hdfsOpenFileFutureGetWithTimeout(future, timeout,
+                                                             timeUnit);
+  if (!ret->libhdfsRep) {
+    free(ret);
+    ret = NULL;
+  }
+  return ret;
+}
+
+int hdfsOpenFileFutureCancel(hdfsOpenFileFuture *future,
+        int mayInterruptIfRunning) {
+  return libhdfs_hdfsOpenFileFutureCancel(future, mayInterruptIfRunning);
+}
+
+void hdfsOpenFileFutureFree(hdfsOpenFileFuture *future) {
+  libhdfs_hdfsOpenFileFutureFree(future);
+}
+
 int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength) {
   return libhdfs_hdfsTruncateFile(fs->libhdfsRep, path, newlength);
 }
@@ -315,6 +378,12 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position,
         position, buffer, length);
   }
   return ret;
+}
+
+int hdfsPreadFully(hdfsFS fs, hdfsFile file, tOffset position,
+                void* buffer, tSize length) {
+  return libhdfs_hdfsPreadFully(fs->libhdfsRep, file->libhdfsRep, position,
+          buffer, length);
 }
 
 tSize hdfsWrite(hdfsFS fs, hdfsFile file, const void* buffer,

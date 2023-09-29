@@ -27,7 +27,10 @@ import java.util.List;
 @InterfaceStability.Unstable
 public interface InnerNode extends Node {
   interface Factory<N extends InnerNode> {
-    /** Construct an InnerNode from a path-like string */
+    /**
+     * @return Construct an InnerNode from a path-like string.
+     * @param path input path.
+     */
     N newInnerNode(String path);
   }
 
@@ -46,6 +49,9 @@ public interface InnerNode extends Node {
 
   /** @return its children */
   List<Node> getChildren();
+
+  /** @return the number of children this node has. */
+  int getNumOfChildren();
 
   /** @return the number of leave nodes. */
   int getNumOfLeaves();

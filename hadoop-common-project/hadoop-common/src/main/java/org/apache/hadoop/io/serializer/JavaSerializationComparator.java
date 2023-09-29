@@ -31,7 +31,7 @@ import org.apache.hadoop.io.RawComparator;
  * {@link Deserializer} to deserialize objects that are then compared via
  * their {@link Comparable} interfaces.
  * </p>
- * @param <T>
+ * @param <T> generic type.
  * @see JavaSerialization
  */
 @InterfaceAudience.Public

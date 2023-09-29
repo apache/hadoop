@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.junit.After;
 import org.junit.Test;
 
@@ -51,13 +51,13 @@ public class TestStagingPartitionedFileListing
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitter(outputPath,
+    return new PartitionedStagingCommitter(getOutputPath(),
         createTaskAttemptForJob());
   }
 
   @Override
   PartitionedStagingCommitter newTaskCommitter() throws IOException {
-    return new PartitionedStagingCommitter(outputPath, getTAC());
+    return new PartitionedStagingCommitter(getOutputPath(), getTAC());
   }
 
   private FileSystem attemptFS;

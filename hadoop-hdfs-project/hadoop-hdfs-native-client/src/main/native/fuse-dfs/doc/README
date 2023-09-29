@@ -88,6 +88,7 @@ rw
 -odebug (do not daemonize - aka -d in fuse speak)
 -obig_writes (use fuse big_writes option so as to allow better performance of writes on kernels >= 2.6.26)
 -initchecks - have fuse-dfs try to connect to hdfs to ensure all is ok upon startup. recommended to have this  on
+-omax_background=%d (maximum number of pending "background" requests - see fuse docs)
 The defaults are:
 
 entry,attribute_timeouts = 60 seconds

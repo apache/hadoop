@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
@@ -33,24 +34,16 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
  * Abstract class for dynamic auto created queues managed by an implementation
  * of AbstractManagedParentQueue
  */
-public class AbstractAutoCreatedLeafQueue extends LeafQueue {
-
-  protected AbstractManagedParentQueue parent;
-
-  public AbstractAutoCreatedLeafQueue(CapacitySchedulerContext cs,
-      String queueName, AbstractManagedParentQueue parent, CSQueue old)
-      throws IOException {
-    super(cs, queueName, parent, old);
-    this.parent = parent;
-  }
-
+public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractAutoCreatedLeafQueue.class);
 
-  public AbstractAutoCreatedLeafQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration leafQueueConfigs, String queueName,
-      AbstractManagedParentQueue parent, CSQueue old) throws IOException {
-    super(cs, leafQueueConfigs, queueName, parent, old);
+  protected AbstractManagedParentQueue parent;
+
+  public AbstractAutoCreatedLeafQueue(CapacitySchedulerQueueContext queueContext,
+      String queueName, AbstractManagedParentQueue parent, CSQueue old)
+      throws IOException {
+    super(queueContext, queueName, parent, old);
     this.parent = parent;
   }
 
@@ -60,20 +53,45 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
    *
    * @param entitlement the new entitlement for the queue (capacity,
    *                    maxCapacity, etc..)
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when setEntitlement fails.
    */
   public void setEntitlement(QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {
      setEntitlement(NO_LABEL, entitlement);
   }
 
+  @Override
+  protected Resource getMinimumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMinimumAbsoluteResource(queueContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
+  @Override
+  protected Resource getMaximumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMaximumAbsoluteResource(queueContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
+  @Override
+  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+      String label) {
+    return super.checkConfigTypeIsAbsoluteResource(queueContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
   /**
    * This methods to change capacity for a queue and adjusts its
-   * absoluteCapacity
+   * absoluteCapacity.
    *
+   * @param nodeLabel nodeLabel.
    * @param entitlement the new entitlement for the queue (capacity,
    *                    maxCapacity, etc..)
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when setEntitlement fails.
    */
   public void setEntitlement(String nodeLabel, QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {
@@ -86,26 +104,29 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
       }
       setCapacity(nodeLabel, capacity);
       setAbsoluteCapacity(nodeLabel,
-          getParent().getQueueCapacities().
+          this.getParent().getQueueCapacities().
               getAbsoluteCapacity(nodeLabel)
               * getQueueCapacities().getCapacity(nodeLabel));
       // note: we currently set maxCapacity to capacity
       // this might be revised later
       setMaxCapacity(nodeLabel, entitlement.getMaxCapacity());
+
+      setConfiguredMinCapacityVector(nodeLabel,
+          QueueCapacityVector.of(queueCapacities.getCapacity(nodeLabel) * 100,
+              QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+      setConfiguredMaxCapacityVector(nodeLabel,
+          QueueCapacityVector.of(queueCapacities.getMaximumCapacity(nodeLabel) * 100,
+              QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+
       LOG.debug("successfully changed to {} for queue {}", capacity, this
-            .getQueueName());
+            .getQueuePath());
 
       //update queue used capacity etc
       CSQueueUtils.updateQueueStatistics(resourceCalculator,
-          csContext.getClusterResource(),
+          queueContext.getClusterResource(),
           this, labelManager, nodeLabel);
     } finally {
       writeLock.unlock();
     }
-  }
-
-  protected void setupConfigurableCapacities(QueueCapacities queueCapacities) {
-    CSQueueUtils.updateAndCheckCapacitiesByLabel(getQueuePath(),
-        queueCapacities, parent == null ? null : parent.getQueueCapacities());
   }
 }

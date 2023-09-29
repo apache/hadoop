@@ -137,7 +137,8 @@ internal state stores:
 
 * The internal MapReduce state data will remain compatible across minor releases within the same major version to facilitate rolling upgrades while MapReduce workloads execute.
 * HDFS maintains metadata about the data stored in HDFS in a private, internal format that is versioned. In the event of an incompatible change, the store's version number will be incremented. When upgrading an existing cluster, the metadata store will automatically be upgraded if possible. After the metadata store has been upgraded, it is always possible to reverse the upgrade process.
-* The AWS S3A guard keeps a private, internal metadata store that is versioned. Incompatible changes will cause the version number to be incremented. If an upgrade requires reformatting the store, it will be indicated in the release notes.
+* The AWS S3A guard kept a private, internal metadata store.
+  Now that the feature has been removed, the store is obsolete and can be deleted.
 * The YARN resource manager keeps a private, internal state store of application and scheduler information that is versioned. Incompatible changes will cause the version number to be incremented. If an upgrade requires reformatting the store, it will be indicated in the release notes.
 * The YARN node manager keeps a private, internal state store of application information that is versioned. Incompatible changes will cause the version number to be incremented. If an upgrade requires reformatting the store, it will be indicated in the release notes.
 * The YARN federation service keeps a private, internal state store of application and cluster information that is versioned. Incompatible changes will cause the version number to be incremented. If an upgrade requires reformatting the store, it will be indicated in the release notes.

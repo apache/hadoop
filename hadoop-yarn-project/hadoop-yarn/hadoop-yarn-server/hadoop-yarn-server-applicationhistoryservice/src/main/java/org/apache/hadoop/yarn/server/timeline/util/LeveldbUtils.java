@@ -19,15 +19,29 @@
 package org.apache.hadoop.yarn.server.timeline.util;
 
 
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.util.Time;
 
+import java.io.File;
 import java.io.IOException;
+
+import org.fusesource.leveldbjni.JniDBFactory;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
 
 public class LeveldbUtils {
+
+  private static final String BACKUP_EXT = ".backup-";
+  private static final Logger LOG = LoggerFactory
+      .getLogger(LeveldbUtils.class);
 
   /** A string builder utility for building timeline server leveldb keys. */
   public static class KeyBuilder {
@@ -183,5 +197,23 @@ public class LeveldbUtils {
    */
   public static final FsPermission LEVELDB_DIR_UMASK = FsPermission
       .createImmutable((short) 0700);
+
+  public static DB loadOrRepairLevelDb(JniDBFactory factory, Path dbPath, Options options)
+      throws IOException {
+    DB db;
+    try{
+      db = factory.open(new File(dbPath.toString()), options);
+    } catch (IOException ioe){
+      File dbFile = new File(dbPath.toString());
+      File dbBackupPath = new File(
+          dbPath.toString() + BACKUP_EXT + Time.monotonicNow());
+      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
+          "up at "+ dbBackupPath, ioe);
+      FileUtils.copyDirectory(dbFile, dbBackupPath);
+      factory.repair(dbFile, options);
+      db = factory.open(dbFile, options);
+    }
+    return db;
+  }
 
 }

@@ -18,22 +18,27 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import org.xml.sax.XMLReader;
-
+import java.io.StringReader;
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.sax.SAXSource;
-import java.io.StringReader;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+
+import static org.apache.hadoop.util.XMLUtils.EXTERNAL_GENERAL_ENTITIES;
+import static org.apache.hadoop.util.XMLUtils.EXTERNAL_PARAMETER_ENTITIES;
+import static org.apache.hadoop.util.XMLUtils.LOAD_EXTERNAL_DECL;
+import static org.apache.hadoop.util.XMLUtils.VALIDATION;
 
 /**
  * Parse XML and get GPU device information
@@ -46,39 +51,40 @@ public class GpuDeviceInformationParser {
   public static final String GPU_SCRIPT_REFERENCE = "GPU device detection " +
       "script";
 
-  private Unmarshaller unmarshaller = null;
-  private XMLReader xmlReader = null;
+  private final Unmarshaller unmarshaller;
+  private final XMLReader xmlReader;
 
-  private void init()
-      throws SAXException, ParserConfigurationException, JAXBException {
+  public GpuDeviceInformationParser() throws YarnException {
+    try {
+      final SAXParserFactory parserFactory = initSaxParserFactory();
+      final JAXBContext jaxbContext = JAXBContext.newInstance(
+          GpuDeviceInformation.class);
+      this.xmlReader = parserFactory.newSAXParser().getXMLReader();
+      this.unmarshaller = jaxbContext.createUnmarshaller();
+    } catch (Exception e) {
+      String msg = "Exception while initializing parser for " +
+          GPU_SCRIPT_REFERENCE;
+      LOG.error(msg, e);
+      throw new YarnException(msg, e);
+    }
+  }
+
+  /**
+   * Disable external-dtd since by default nvidia-smi output contains
+   * &lt;!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v8.dtd"> in header.
+   */
+  private SAXParserFactory initSaxParserFactory() throws Exception {
     SAXParserFactory spf = SAXParserFactory.newInstance();
-    // Disable external-dtd since by default nvidia-smi output contains
-    // <!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v8.dtd"> in header
-    spf.setFeature(
-        "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-        false);
-    spf.setFeature("http://xml.org/sax/features/validation", false);
-
-    JAXBContext jaxbContext = JAXBContext.newInstance(
-        GpuDeviceInformation.class);
-
-    this.xmlReader = spf.newSAXParser().getXMLReader();
-    this.unmarshaller = jaxbContext.createUnmarshaller();
+    spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    spf.setFeature(LOAD_EXTERNAL_DECL, false);
+    spf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+    spf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+    spf.setFeature(VALIDATION, false);
+    return spf;
   }
 
   public synchronized GpuDeviceInformation parseXml(String xmlContent)
       throws YarnException {
-    if (unmarshaller == null) {
-      try {
-        init();
-      } catch (SAXException | ParserConfigurationException | JAXBException e) {
-        String msg = "Exception while initializing parser for " +
-            GPU_SCRIPT_REFERENCE;
-        LOG.error(msg, e);
-        throw new YarnException(e);
-      }
-    }
-
     InputSource inputSource = new InputSource(new StringReader(xmlContent));
     SAXSource source = new SAXSource(xmlReader, inputSource);
     try {

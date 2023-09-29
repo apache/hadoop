@@ -282,10 +282,10 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------> <----13-----> <------17------->
-        "    SSD_QUOTA     REM_SSD_QUOTA    DISK_QUOTA    REM_DISK_QUOTA " +
-        // <----13---> <-------17------>
-        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
+        // <----14----> <-------18-------> <-----14-----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA     DISK_QUOTA     REM_DISK_QUOTA " +
+        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
+        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -310,8 +310,8 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------>
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        // <----14----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -336,11 +336,12 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------>
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
-        "   DISK_QUOTA    REM_DISK_QUOTA " +
-        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
+        // <----14----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
+        "    DISK_QUOTA     REM_DISK_QUOTA " +
+        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA " +
         "PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
+        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -403,11 +404,30 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <------17------->
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
-        "   DISK_QUOTA    REM_DISK_QUOTA " +
+        // <----14----> <------18-------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
+        "    DISK_QUOTA     REM_DISK_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
+  public void processPathWithSnapshotHeader() throws Exception {
+    Path path = new Path("mockfs:/test");
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+    PrintStream out = mock(PrintStream.class);
+    Count count = new Count();
+    count.out = out;
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-s");
+    options.add("-v");
+    options.add("dummy");
+    count.processOptions(options);
+    String withSnapshotHeader = "   DIR_COUNT   FILE_COUNT       CONTENT_SIZE "
+        + "   SNAPSHOT_LENGTH      SNAPSHOT_FILE_COUNT      "
+        + " SNAPSHOT_DIR_COUNT      SNAPSHOT_SPACE_CONSUMED PATHNAME";
+    verify(out).println(withSnapshotHeader);
     verifyNoMoreInteractions(out);
   }
 
@@ -448,7 +468,8 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getUsage();
     String expected =
-        "-count [-q] [-h] [-v] [-t [<storage type>]] [-u] [-x] [-e] <path> ...";
+        "-count [-q] [-h] [-v] [-t [<storage type>]]"
+        + " [-u] [-x] [-e] [-s] <path> ...";
     assertEquals("Count.getUsage", expected, actual);
   }
 
@@ -475,12 +496,13 @@ public class TestCount {
         + "Otherwise, it displays the quota and usage for all the storage \n"
         + "types that support quota. The list of possible storage "
         + "types(case insensitive):\n"
-        + "ram_disk, ssd, disk and archive.\n"
+        + "ram_disk, ssd, disk, archive and nvdimm.\n"
         + "It can also pass the value '', 'all' or 'ALL' to specify all the "
         + "storage types.\n"
         + "The -u option shows the quota and \n"
         + "the usage against the quota without the detailed content summary."
-        + "The -e option shows the erasure coding policy.";
+        + "The -e option shows the erasure coding policy."
+        + "The -s option shows snapshot counts.";
 
     assertEquals("Count.getDescription", expected, actual);
   }

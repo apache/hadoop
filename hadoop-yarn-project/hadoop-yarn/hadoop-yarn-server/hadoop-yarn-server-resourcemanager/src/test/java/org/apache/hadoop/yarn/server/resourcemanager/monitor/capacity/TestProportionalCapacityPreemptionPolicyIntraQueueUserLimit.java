@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import java.io.IOException;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
@@ -33,7 +35,7 @@ import static org.mockito.Mockito.verify;
  */
 public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     extends
-      ProportionalCapacityPreemptionPolicyMockFramework {
+    ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
     super.setup();
@@ -83,7 +85,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -94,7 +96,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1.
-    verify(mDisp, times(30)).handle(argThat(
+    verify(eventHandler, times(30)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -138,7 +140,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -149,7 +151,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource. Since app1,2 are from same user, there wont be
     // any preemption.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -195,7 +197,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,50,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -206,7 +208,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource. Since app1,2 are from same user, there wont be
     // any preemption.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -251,7 +253,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(2,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -262,7 +264,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1 even though its priority is more than app2.
-    verify(mDisp, times(30)).handle(argThat(
+    verify(eventHandler, times(30)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -308,7 +310,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 90 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,30,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -323,7 +325,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app3 (compare to app1, app3 has low priority).
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -369,7 +371,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 90 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,30,false,20,user1);" + // app1 a
             "a\t" // app2 in a
@@ -384,16 +386,16 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app3 (compare to app1, app3 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -438,7 +440,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 60 0])"; // b
 
     String appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(3,1,n1,,30,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -451,7 +453,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -489,7 +491,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-b(=[40 100 35 20 0])"; // b
 
     String appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(3,1,n1,,20,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -508,10 +510,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(5))));
   }
@@ -555,7 +557,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,60,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -566,10 +568,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1.
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -626,10 +628,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -686,10 +688,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -746,10 +748,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -794,7 +796,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,20,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -806,10 +808,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // 3 resources (9GB) from app1. We will not preempt last container as it may
     // pull user's usage under its user-limit.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -854,7 +856,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,20,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -868,17 +870,17 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // 3 resources (9GB) from app1. We will not preempt last container as it may
     // pull user's usage under its user-limit.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
     // After first round, 3 containers were preempted from app1 and resource
     // distribution will be like below.
     appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,17,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -892,7 +894,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 has priority demand within same user 'user1'. However user1's used
     // is alredy under UL. Hence no preemption. We will still get 3 container
     // while asserting as it was aleady selected in earlier round.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -913,7 +915,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 1 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,65,false,0,user1);" +
             "a\t" // app2 in a
@@ -927,7 +929,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 is right at its user limit and app1 needs one resource. Should
     // preempt 1 container.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }

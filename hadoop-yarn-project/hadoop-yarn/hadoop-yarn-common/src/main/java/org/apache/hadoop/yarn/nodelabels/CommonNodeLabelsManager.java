@@ -58,8 +58,8 @@ import org.apache.hadoop.yarn.nodelabels.event.StoreNewClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Private
 public class CommonNodeLabelsManager extends AbstractService {
@@ -95,6 +95,8 @@ public class CommonNodeLabelsManager extends AbstractService {
       new ConcurrentHashMap<String, RMNodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
+  private ConcurrentMap<NodeId, Boolean> isNodeLabelFromHost =
+      new ConcurrentHashMap<NodeId, Boolean>();
 
   protected RMNodeLabel noNodeLabel;
 
@@ -335,10 +337,11 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
 
   /**
-   * Add multiple node labels to repository
+   * Add multiple node labels to repository.
    *
    * @param labels
    *          new node labels added
+   * @throws IOException io error occur.
    */
   @VisibleForTesting
   public void addToCluserNodeLabelsWithDefaultExclusivity(Set<String> labels)
@@ -392,9 +395,10 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
   
   /**
-   * add more labels to nodes
+   * add more labels to nodes.
    * 
    * @param addedLabelsToNode node {@literal ->} labels map
+   * @throws IOException io error occur.
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
@@ -464,7 +468,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    * 
    * @param labelsToRemove
    *          node labels to remove
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public void removeFromClusterNodeLabels(Collection<String> labelsToRemove)
       throws IOException {
@@ -559,6 +563,55 @@ public class CommonNodeLabelsManager extends AbstractService {
     addNodeToLabels(node, newLabels);
   }
 
+  private void addLabelsToNodeInHost(NodeId node, Set<String> labels)
+       throws IOException {
+    Host host = nodeCollections.get(node.getHost());
+    if (null == host) {
+      throw new IOException("Cannot add labels to a host that "
+              + "does not exist. Create the host before adding labels to it.");
+    }
+    Node nm = host.nms.get(node);
+    if (nm != null) {
+      Node newNm = nm.copy();
+      if (newNm.labels == null) {
+        newNm.labels =
+            Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+      }
+      newNm.labels.addAll(labels);
+      host.nms.put(node, newNm);
+    }
+  }
+
+  protected void removeLabelsFromNodeInHost(NodeId node, Set<String> labels)
+      throws IOException {
+    Host host = nodeCollections.get(node.getHost());
+    if (null == host) {
+      throw new IOException("Cannot remove labels from a host that "
+              + "does not exist. Create the host before adding labels to it.");
+    }
+    Node nm = host.nms.get(node);
+    if (nm != null) {
+      if (nm.labels == null) {
+        nm.labels = new HashSet<String>();
+      } else {
+        nm.labels.removeAll(labels);
+      }
+    }
+  }
+
+  private void replaceLabelsForNode(NodeId node, Set<String> oldLabels,
+      Set<String> newLabels) throws IOException {
+    if(oldLabels != null) {
+      removeLabelsFromNodeInHost(node, oldLabels);
+    }
+    addLabelsToNodeInHost(node, newLabels);
+  }
+
+  protected boolean isNodeLabelExplicit(NodeId nodeId) {
+    return !isNodeLabelFromHost.containsKey(nodeId) ||
+        isNodeLabelFromHost.get(nodeId);
+  }
+
   @SuppressWarnings("unchecked")
   protected void internalUpdateLabelsOnNodes(
       Map<NodeId, Set<String>> nodeToLabels, NodeLabelUpdateOperation op)
@@ -593,15 +646,19 @@ public class CommonNodeLabelsManager extends AbstractService {
               node.labels.addAll(labels);
             }
             addNodeToLabels(node.nodeId, labels);
+            isNodeLabelFromHost.put(node.nodeId, true);
           }
           break;
         case REPLACE:
           replaceNodeForLabels(nodeId, host.labels, labels);
+          replaceLabelsForNode(nodeId, host.labels, labels);
           host.labels.clear();
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
             replaceNodeForLabels(node.nodeId, node.labels, labels);
+            replaceLabelsForNode(node.nodeId, node.labels, labels);
             node.labels = null;
+            isNodeLabelFromHost.put(node.nodeId, true);
           }
           break;
         default:
@@ -621,15 +678,18 @@ public class CommonNodeLabelsManager extends AbstractService {
               nm.labels = new HashSet<String>();
             }
             nm.labels.addAll(labels);
+            isNodeLabelFromHost.put(nm.nodeId, false);
             break;
           case REPLACE:
             oldLabels = getLabelsByNode(nodeId);
             replaceNodeForLabels(nodeId, oldLabels, labels);
+            replaceLabelsForNode(nodeId, oldLabels, labels);
             if (nm.labels == null) { 
               nm.labels = new HashSet<String>();
             }
             nm.labels.clear();
             nm.labels.addAll(labels);
+            isNodeLabelFromHost.put(nm.nodeId, false);
             break;
           default:
             break;
@@ -649,7 +709,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     
     if (null != dispatcher && isCentralizedNodeLabelConfiguration) {
       // In case of DistributedNodeLabelConfiguration or
-      // DelegatedCentralizedNodeLabelConfiguration, no need to save the the
+      // DelegatedCentralizedNodeLabelConfiguration, no need to save the
       // NodeLabels Mapping to the back-end store, as on RM restart/failover
       // NodeLabels are collected from NM through Register/Heartbeat again
       // in case of DistributedNodeLabelConfiguration and collected from
@@ -669,9 +729,10 @@ public class CommonNodeLabelsManager extends AbstractService {
   
   /**
    * remove labels from nodes, labels being removed most be contained by these
-   * nodes
+   * nodes.
    * 
    * @param removeLabelsFromNode node {@literal ->} labels map
+   * @throws IOException io error occur.
    */
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
@@ -726,6 +787,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    * replace labels to nodes
    * 
    * @param replaceLabelsToNode node {@literal ->} labels map
+   * @throws IOException io error occur.
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {

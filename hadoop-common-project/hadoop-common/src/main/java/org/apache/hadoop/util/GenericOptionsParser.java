@@ -32,7 +32,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -57,8 +56,9 @@ import org.slf4j.LoggerFactory;
  * 
  * <h3 id="GenericOptions">Generic Options</h3>
  * 
- * <p>The supported generic options are:
- * <p><blockquote><pre>
+ * <p>The supported generic options are:</p>
+ * <blockquote>
+ * <pre>
  *     -conf &lt;configuration file&gt;     specify a configuration file
  *     -D &lt;property=value&gt;            use value for given property
  *     -fs &lt;local|namenode:port&gt;      specify a namenode
@@ -69,13 +69,15 @@ import org.slf4j.LoggerFactory;
  *                            jar files to include in the classpath.
  *     -archives &lt;comma separated list of archives&gt;    specify comma
  *             separated archives to be unarchived on the compute machines.
-
- * </pre></blockquote><p>
+ * </pre>
+ * </blockquote>
  * 
  * <p>The general command line syntax is:</p>
- * <p><pre><code>
+ * <pre>
+ * <code>
  * bin/hadoop command [genericOptions] [commandOptions]
- * </code></pre><p>
+ * </code>
+ * </pre>
  * 
  * <p>Generic command line arguments <strong>might</strong> modify 
  * <code>Configuration </code> objects, given to constructors.</p>
@@ -83,7 +85,9 @@ import org.slf4j.LoggerFactory;
  * <p>The functionality is implemented using Commons CLI.</p>
  *
  * <p>Examples:</p>
- * <p><blockquote><pre>
+ *
+ * <blockquote>
+ * <pre>
  * $ bin/hadoop dfs -fs darwin:8020 -ls /data
  * list /data directory in dfs with namenode darwin:8020
  * 
@@ -105,7 +109,9 @@ import org.slf4j.LoggerFactory;
  * $ bin/hadoop jar -libjars testlib.jar 
  * -archives test.tgz -files file.txt inputjar args
  * job submission with libjars, files and archives
- * </pre></blockquote><p>
+ * </pre>
+ * </blockquote>
+ *
  *
  * @see Tool
  * @see ToolRunner
@@ -124,7 +130,7 @@ public class GenericOptionsParser {
    * Create an options parser with the given options to parse the args.
    * @param opts the options
    * @param args the command line arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Options opts, String[] args) 
       throws IOException {
@@ -134,7 +140,7 @@ public class GenericOptionsParser {
   /**
    * Create an options parser to parse the args.
    * @param args the command line arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(String[] args) 
       throws IOException {
@@ -150,7 +156,7 @@ public class GenericOptionsParser {
    * 
    * @param conf the <code>Configuration</code> to modify.
    * @param args command-line arguments.
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Configuration conf, String[] args) 
       throws IOException {
@@ -167,7 +173,7 @@ public class GenericOptionsParser {
    * @param conf the configuration to modify  
    * @param options options built by the caller 
    * @param args User-specified arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Configuration conf,
       Options options, String[] args) throws IOException {
@@ -217,51 +223,51 @@ public class GenericOptionsParser {
   }
 
   /**
-   * Specify properties of each generic option.
-   * <i>Important</i>: as {@link OptionBuilder} is not thread safe, subclasses
-   * must synchronize use on {@code OptionBuilder.class}
+   * @return Specify properties of each generic option.
+   * <i>Important</i>: as {@link Option} is not thread safe, subclasses
+   * must synchronize use on {@code Option.class}
+   * @param opts input opts.
    */
   @SuppressWarnings("static-access")
   protected Options buildGeneralOptions(Options opts) {
-    synchronized (OptionBuilder.class) {
-      Option fs = OptionBuilder.withArgName("file:///|hdfs://namenode:port")
+    synchronized (Option.class) {
+      Option fs = Option.builder("fs").argName("file:///|hdfs://namenode:port")
           .hasArg()
-          .withDescription("specify default filesystem URL to use, "
+          .desc("specify default filesystem URL to use, "
           + "overrides 'fs.defaultFS' property from configurations.")
-          .create("fs");
-      Option jt = OptionBuilder.withArgName("local|resourcemanager:port")
+          .build();
+      Option jt = Option.builder("jt").argName("local|resourcemanager:port")
           .hasArg()
-          .withDescription("specify a ResourceManager")
-          .create("jt");
-      Option oconf = OptionBuilder.withArgName("configuration file")
+          .desc("specify a ResourceManager")
+          .build();
+      Option oconf =  Option.builder("conf").argName("configuration file")
           .hasArg()
-          .withDescription("specify an application configuration file")
-          .create("conf");
-      Option property = OptionBuilder.withArgName("property=value")
+          .desc("specify an application configuration file")
+          .build();
+      Option property = Option.builder("D").argName("property=value")
           .hasArg()
-          .withDescription("use value for given property")
-          .create('D');
-      Option libjars = OptionBuilder.withArgName("paths")
+          .desc("use value for given property")
+          .build();
+      Option libjars = Option.builder("libjars").argName("paths")
           .hasArg()
-          .withDescription(
-              "comma separated jar files to include in the classpath.")
-          .create("libjars");
-      Option files = OptionBuilder.withArgName("paths")
+          .desc("comma separated jar files to include in the classpath.")
+          .build();
+      Option files = Option.builder("files").argName("paths")
           .hasArg()
-          .withDescription("comma separated files to be copied to the " +
+          .desc("comma separated files to be copied to the " +
               "map reduce cluster")
-          .create("files");
-      Option archives = OptionBuilder.withArgName("paths")
+          .build();
+      Option archives = Option.builder("archives").argName("paths")
           .hasArg()
-          .withDescription("comma separated archives to be unarchived" +
+          .desc("comma separated archives to be unarchived" +
               " on the compute machines.")
-          .create("archives");
+          .build();
 
       // file with security tokens
-      Option tokensFile = OptionBuilder.withArgName("tokensFile")
+      Option tokensFile = Option.builder("tokenCacheFile").argName("tokensFile")
           .hasArg()
-          .withDescription("name of the file with the tokens")
-          .create("tokenCacheFile");
+          .desc("name of the file with the tokens")
+          .build();
 
 
       opts.addOption(fs);
@@ -359,9 +365,9 @@ public class GenericOptionsParser {
   
   /**
    * If libjars are set in the conf, parse the libjars.
-   * @param conf
+   * @param conf input Configuration.
    * @return libjar urls
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static URL[] getLibJars(Configuration conf) throws IOException {
     String jars = conf.get("tmpjars");

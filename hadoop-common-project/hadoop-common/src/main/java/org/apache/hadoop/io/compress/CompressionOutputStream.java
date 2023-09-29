@@ -23,13 +23,17 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 
 /**
  * A compression output stream.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class CompressionOutputStream extends OutputStream {
+public abstract class CompressionOutputStream extends OutputStream
+    implements IOStatisticsSource {
   /**
    * The output stream to be compressed. 
    */
@@ -44,7 +48,7 @@ public abstract class CompressionOutputStream extends OutputStream {
   /**
    * Create a compression output stream that writes
    * the compressed bytes to the given stream.
-   * @param out
+   * @param out out.
    */
   protected CompressionOutputStream(OutputStream out) {
     this.out = out;
@@ -85,13 +89,23 @@ public abstract class CompressionOutputStream extends OutputStream {
   /**
    * Finishes writing compressed data to the output stream 
    * without closing the underlying stream.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void finish() throws IOException;
   
   /**
    * Reset the compression to the initial state. 
    * Does not reset the underlying stream.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void resetState() throws IOException;
 
+  /**
+   * Return any IOStatistics provided by the underlying stream.
+   * @return IO stats from the inner stream.
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return IOStatisticsSupport.retrieveIOStatistics(out);
+  }
 }

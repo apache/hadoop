@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Encapsulates the docker images command and its command

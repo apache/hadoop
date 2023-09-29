@@ -57,10 +57,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -128,7 +130,7 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     return new AppsInfo();
   }
 
@@ -136,6 +138,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
     return new ActivitiesInfo();
+  }
+
+  @Override
+  public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
+       String groupBy, int activitiesCount) throws InterruptedException{
+    return new BulkActivitiesInfo();
   }
 
   @Override
@@ -178,6 +186,11 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    return new NodeLabelsInfo();
+  }
+
+  @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     return new LabelsToNodesInfo();
@@ -208,7 +221,7 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
     return Response.status(Status.OK).build();
   }
@@ -364,6 +377,18 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   @Override
   public Response signalToContainer(String containerId, String command,
       HttpServletRequest req) {
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException {
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
     return Response.status(Status.OK).build();
   }
 }

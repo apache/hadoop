@@ -131,7 +131,7 @@ public class LocatedBlocks {
   public int findBlock(long offset) {
     // create fake block of size 0 as a key
     LocatedBlock key = new LocatedBlock(
-        new ExtendedBlock(), new DatanodeInfo[0]);
+        new ExtendedBlock(), DatanodeInfo.EMPTY_ARRAY);
     key.setStartOffset(offset);
     key.getBlock().setNumBytes(1);
     Comparator<LocatedBlock> comp =

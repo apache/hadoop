@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSSessionCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -118,7 +118,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     EncryptionSecrets encryptionSecrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY);
     Token<AbstractS3ATokenIdentifier> dt
-        = delegationTokens.createDelegationToken(encryptionSecrets);
+        = delegationTokens.createDelegationToken(encryptionSecrets, null);
     final SessionTokenIdentifier origIdentifier
         = (SessionTokenIdentifier) dt.decodeIdentifier();
     assertEquals("kind in " + dt, getTokenKind(), dt.getKind());
@@ -173,7 +173,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY);
     Token<AbstractS3ATokenIdentifier> originalDT
-        = delegationTokens.createDelegationToken(secrets);
+        = delegationTokens.createDelegationToken(secrets, null);
     assertEquals("Token kind mismatch", getTokenKind(), originalDT.getKind());
 
     // decode to get the binding info
@@ -186,21 +186,25 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     final MarshalledCredentials creds;
     try(S3ADelegationTokens dt2 = instantiateDTSupport(getConfiguration())) {
       dt2.start();
+      // first creds are good
+      dt2.getCredentialProviders().resolveCredentials();
+
+      // reset to the original dt
 
       dt2.resetTokenBindingToDT(originalDT);
-      final AWSSessionCredentials awsSessionCreds
+      final AwsSessionCredentials awsSessionCreds
           = verifySessionCredentials(
-          dt2.getCredentialProviders().getCredentials());
+              dt2.getCredentialProviders().resolveCredentials());
       final MarshalledCredentials origCreds = fromAWSCredentials(
           awsSessionCreds);
 
       Token<AbstractS3ATokenIdentifier> boundDT =
-          dt2.getBoundOrNewDT(secrets);
+          dt2.getBoundOrNewDT(secrets, null);
       assertEquals("Delegation Tokens", originalDT, boundDT);
       // simulate marshall and transmission
       creds = roundTrip(origCreds, conf);
       SessionTokenIdentifier reissued
-          = (SessionTokenIdentifier) dt2.createDelegationToken(secrets)
+          = (SessionTokenIdentifier) dt2.createDelegationToken(secrets, null)
           .decodeIdentifier();
       reissued.validate();
       String userAgentField = dt2.getUserAgentField();
@@ -214,6 +218,31 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     verifyCredentialPropagation(fs, creds, new Configuration(conf));
   }
 
+  @Test
+  public void testCreateWithRenewer() throws Throwable {
+    describe("Create a Delegation Token, round trip then reuse");
+
+    final S3AFileSystem fs = getFileSystem();
+    final Configuration conf = fs.getConf();
+    final Text renewer = new Text("yarn");
+
+    assertNull("Current User has delegation token",
+        delegationTokens.selectTokenFromFSOwner());
+    EncryptionSecrets secrets = new EncryptionSecrets(
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+    Token<AbstractS3ATokenIdentifier> dt
+        = delegationTokens.createDelegationToken(secrets, renewer);
+    assertEquals("Token kind mismatch", getTokenKind(), dt.getKind());
+
+    // decode to get the binding info
+    SessionTokenIdentifier issued =
+        requireNonNull(
+            (SessionTokenIdentifier) dt.decodeIdentifier(),
+            () -> "no identifier in " + dt);
+    issued.validate();
+    assertEquals("Token renewer mismatch", renewer, issued.getRenewer());
+  }
+
   /**
    * This verifies that AWS Session credentials can be picked up and
    * returned in a DT.
@@ -224,7 +253,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
    * @return the retrieved DT. This is only for error reporting.
    * @throws IOException failure.
    */
-  @SuppressWarnings("OptionalGetWithoutIsPresent")
+  @SuppressWarnings({"OptionalGetWithoutIsPresent"})
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
       final MarshalledCredentials session,
@@ -234,16 +263,18 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     // clear any credential paths to ensure they don't get picked up and used
     // for authentication.
     unsetHadoopCredentialProviders(conf);
-    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER,
-        TemporaryAWSCredentialsProvider.NAME);
+    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER, TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
-      delegationTokens2.bindToFileSystem(fs.getCanonicalUri(), fs);
+      delegationTokens2.bindToFileSystem(
+          fs.getCanonicalUri(),
+          fs.createStoreContext(),
+          fs.createDelegationOperations());
       delegationTokens2.init(conf);
       delegationTokens2.start();
 
       final Token<AbstractS3ATokenIdentifier> newDT
-          = delegationTokens2.getBoundOrNewDT(new EncryptionSecrets());
+          = delegationTokens2.getBoundOrNewDT(new EncryptionSecrets(), null);
       delegationTokens2.resetTokenBindingToDT(newDT);
       final AbstractS3ATokenIdentifier boundId
           = delegationTokens2.getDecodedIdentifier().get();
@@ -251,7 +282,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
       LOG.info("Regenerated DT is {}", newDT);
       final MarshalledCredentials creds2 = fromAWSCredentials(
           verifySessionCredentials(
-              delegationTokens2.getCredentialProviders().getCredentials()));
+              delegationTokens2.getCredentialProviders().resolveCredentials()));
       assertEquals("Credentials", session, creds2);
       assertTrue("Origin in " + boundId,
           boundId.getOrigin()
@@ -260,12 +291,12 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     }
   }
 
-  private AWSSessionCredentials verifySessionCredentials(
-      final AWSCredentials creds) {
-    AWSSessionCredentials session = (AWSSessionCredentials) creds;
-    assertNotNull("access key", session.getAWSAccessKeyId());
-    assertNotNull("secret key", session.getAWSSecretKey());
-    assertNotNull("session token", session.getSessionToken());
+  private AwsSessionCredentials verifySessionCredentials(
+      final AwsCredentials creds) {
+    AwsSessionCredentials session = (AwsSessionCredentials) creds;
+    assertNotNull("access key", session.accessKeyId());
+    assertNotNull("secret key", session.secretAccessKey());
+    assertNotNull("session token", session.sessionToken());
     return session;
   }
 

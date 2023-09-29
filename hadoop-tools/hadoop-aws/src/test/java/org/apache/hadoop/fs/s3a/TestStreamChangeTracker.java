@@ -18,29 +18,29 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.transfer.model.CopyResult;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.CopyObjectResult;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.createPolicy;
 import static org.apache.hadoop.fs.s3a.impl.ChangeTracker.CHANGE_REPORTED_BY_S3;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -69,7 +69,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Source.VersionId,
         false);
     assertFalse("Tracker should not have applied contraints " + tracker,
-        tracker.maybeApplyConstraint(newGetObjectRequest()));
+        tracker.maybeApplyConstraint(newGetObjectRequestBuilder()));
     tracker.processResponse(
         newResponse(null, null),
         "", 0);
@@ -80,7 +80,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
   public void testVersionCheckingHandlingNoVersionsVersionRequired()
       throws Throwable {
     LOG.info("If an endpoint doesn't return versions but we are configured to"
-        + "require them");
+        + " require them");
     ChangeTracker tracker = newTracker(
         ChangeDetectionPolicy.Mode.Client,
         ChangeDetectionPolicy.Source.VersionId,
@@ -97,7 +97,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Source.ETag,
         false);
     assertFalse("Tracker should not have applied constraints " + tracker,
-        tracker.maybeApplyConstraint(newGetObjectRequest()));
+        tracker.maybeApplyConstraint(newGetObjectRequestBuilder()));
     tracker.processResponse(
         newResponse("e1", null),
         "", 0);
@@ -123,13 +123,13 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Source.VersionId,
         false);
     assertFalse("Tracker should not have applied constraints " + tracker,
-        tracker.maybeApplyConstraint(newGetObjectRequest()));
+        tracker.maybeApplyConstraint(newGetObjectRequestBuilder()));
     tracker.processResponse(
         newResponse(null, "rev1"),
         "", 0);
     assertTrackerMismatchCount(tracker, 0);
     assertRevisionId(tracker, "rev1");
-    GetObjectRequest request = newGetObjectRequest();
+    GetObjectRequest request = newGetObjectRequestBuilder().build();
     expectChangeException(tracker,
         newResponse(null, "rev2"), "change detected");
     // mismatch was noted (so gets to FS stats)
@@ -150,14 +150,14 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Source.VersionId,
         false);
     assertFalse("Tracker should not have applied contraints " + tracker,
-        tracker.maybeApplyConstraint(newGetObjectRequest()));
+        tracker.maybeApplyConstraint(newGetObjectRequestBuilder()));
     tracker.processResponse(
         newResponse(null, "rev1"),
         "", 0);
     assertTrackerMismatchCount(tracker, 0);
     assertRevisionId(tracker, "rev1");
-    GetObjectRequest request = newGetObjectRequest();
-    assertConstraintApplied(tracker, request);
+    GetObjectRequest.Builder builder = newGetObjectRequestBuilder();
+    assertConstraintApplied(tracker, builder);
     // now, the tracker expects a null response
     expectChangeException(tracker, null, CHANGE_REPORTED_BY_S3);
     assertTrackerMismatchCount(tracker, 1);
@@ -250,31 +250,33 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     // 412 is translated to RemoteFileChangedException
     // note: this scenario is never currently hit due to
     // https://github.com/aws/aws-sdk-java/issues/1644
-    AmazonServiceException awsException =
-        new AmazonServiceException("aws exception");
-    awsException.setStatusCode(ChangeTracker.SC_PRECONDITION_FAILED);
+    AwsServiceException awsException =
+        AwsServiceException.builder()
+            .message("aws exception")
+            .statusCode(SC_412_PRECONDITION_FAILED)
+            .build();
     expectChangeException(tracker, awsException, "copy",
         RemoteFileChangedException.PRECONDITIONS_FAILED);
 
     // processing another type of exception does nothing
-    tracker.processException(new SdkBaseException("foo"), "copy");
+    tracker.processException(SdkException.builder().message("foo").build(), "copy");
   }
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
-      final GetObjectRequest request) {
+      final GetObjectRequest.Builder builder) {
     assertTrue("Tracker should have applied contraints " + tracker,
-        tracker.maybeApplyConstraint(request));
+        tracker.maybeApplyConstraint(builder));
   }
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
-      final CopyObjectRequest request) throws PathIOException {
+      final CopyObjectRequest.Builder requestBuilder) throws PathIOException {
     assertTrue("Tracker should have applied contraints " + tracker,
-        tracker.maybeApplyConstraint(request));
+        tracker.maybeApplyConstraint(requestBuilder));
   }
 
   protected RemoteFileChangedException expectChangeException(
       final ChangeTracker tracker,
-      final S3Object response,
+      final GetObjectResponse response,
       final String message) throws Exception {
     return expectException(tracker, response, message,
         RemoteFileChangedException.class);
@@ -282,7 +284,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected RemoteFileChangedException expectChangeException(
       final ChangeTracker tracker,
-      final SdkBaseException exception,
+      final SdkException exception,
       final String operation,
       final String message) throws Exception {
     return expectException(tracker, exception, operation, message,
@@ -291,7 +293,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected PathIOException expectNoVersionAttributeException(
       final ChangeTracker tracker,
-      final S3Object response,
+      final GetObjectResponse response,
       final String message) throws Exception {
     return expectException(tracker, response, message,
         NoVersionAttributeException.class);
@@ -299,7 +301,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected PathIOException expectNoVersionAttributeException(
       final ChangeTracker tracker,
-      final CopyResult response,
+      final CopyObjectResponse response,
       final String message) throws Exception {
     return expectException(tracker, response, message,
         NoVersionAttributeException.class);
@@ -307,7 +309,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
-      final S3Object response,
+      final GetObjectResponse response,
       final String message,
       final Class<T> clazz) throws Exception {
     return intercept(
@@ -321,7 +323,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
-      final CopyResult response,
+      final CopyObjectResponse response,
       final String message,
       final Class<T> clazz) throws Exception {
     return intercept(
@@ -335,7 +337,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
-      final SdkBaseException exception,
+      final SdkException exception,
       final String operation,
       final String message,
       final Class<T> clazz) throws Exception {
@@ -359,7 +361,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
       final ChangeTracker tracker,
       final int expectedCount) {
     assertEquals("counter in tracker " + tracker,
-        expectedCount, tracker.getVersionMismatches().get());
+        expectedCount, tracker.getVersionMismatches());
   }
 
   /**
@@ -386,52 +388,40 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         source,
         requireVersion);
     ChangeTracker tracker = new ChangeTracker(URI, policy,
-        new AtomicLong(0), objectAttributes);
+        new CountingChangeTracker(), objectAttributes);
     if (objectAttributes.getVersionId() == null
         && objectAttributes.getETag() == null) {
       assertFalse("Tracker should not have applied constraints " + tracker,
-          tracker.maybeApplyConstraint(newGetObjectRequest()));
+          tracker.maybeApplyConstraint(newGetObjectRequestBuilder()));
     }
     return tracker;
   }
 
-  private GetObjectRequest newGetObjectRequest() {
-    return new GetObjectRequest(BUCKET, OBJECT);
+  private GetObjectRequest.Builder newGetObjectRequestBuilder() {
+    return GetObjectRequest.builder().bucket(BUCKET).key(OBJECT);
   }
 
-  private CopyObjectRequest newCopyObjectRequest() {
-    return new CopyObjectRequest(BUCKET, OBJECT, BUCKET, DEST_OBJECT);
+  private CopyObjectRequest.Builder newCopyObjectRequest() {
+    return CopyObjectRequest.builder().sourceBucket(BUCKET).sourceKey(OBJECT)
+        .destinationBucket(BUCKET).destinationKey(DEST_OBJECT);
   }
 
-  private CopyResult newCopyResult(String eTag, String versionId) {
-    CopyResult copyResult = new CopyResult();
-    copyResult.setSourceBucketName(BUCKET);
-    copyResult.setSourceKey(OBJECT);
-    copyResult.setDestinationBucketName(BUCKET);
-    copyResult.setDestinationKey(DEST_OBJECT);
-    copyResult.setETag(eTag);
-    copyResult.setVersionId(versionId);
-    return copyResult;
+  private CopyObjectResponse newCopyResult(String eTag, String versionId) {
+    CopyObjectResponse.Builder copyObjectResponseBuilder = CopyObjectResponse.builder();
+
+    return copyObjectResponseBuilder.versionId(versionId)
+        .copyObjectResult(CopyObjectResult.builder().eTag(eTag).build()).build();
   }
 
-  private S3Object newResponse(String etag, String versionId) {
-    ObjectMetadata md = new ObjectMetadata();
+  private GetObjectResponse newResponse(String etag, String versionId) {
+    GetObjectResponse.Builder builder = GetObjectResponse.builder();
     if (etag != null) {
-      md.setHeader(Headers.ETAG, etag);
+      builder.eTag(etag);
     }
     if (versionId != null) {
-      md.setHeader(Headers.S3_VERSION_ID, versionId);
+      builder.versionId(versionId);
     }
-    S3Object response = emptyResponse();
-    response.setObjectMetadata(md);
-    return response;
-  }
-
-  private S3Object emptyResponse() {
-    S3Object response = new S3Object();
-    response.setBucketName(BUCKET);
-    response.setKey(OBJECT);
-    return response;
+    return builder.build();
   }
 
   private S3ObjectAttributes objectAttributes(

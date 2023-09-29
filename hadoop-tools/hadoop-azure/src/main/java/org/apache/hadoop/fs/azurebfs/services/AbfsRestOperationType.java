@@ -39,5 +39,7 @@ public enum AbfsRestOperationType {
     Append,
     Flush,
     ReadFile,
-    DeletePath
+    DeletePath,
+    CheckAccess,
+    LeasePath,
 }

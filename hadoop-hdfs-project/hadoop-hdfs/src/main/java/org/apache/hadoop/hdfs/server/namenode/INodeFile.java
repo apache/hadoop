@@ -53,12 +53,13 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.io.erasurecode.ErasureCodeConstants.REPLICATION_POLICY_ID;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -282,12 +283,6 @@ public class INodeFile extends INodeWithAdditionalFields
     setBlocks(that.blocks);
   }
   
-  public INodeFile(INodeFile that, FileDiffList diffs) {
-    this(that);
-    Preconditions.checkArgument(!that.isWithSnapshot());
-    this.addSnapshotFeature(diffs);
-  }
-
   /** @return true unconditionally. */
   @Override
   public final boolean isFile() {
@@ -374,17 +369,27 @@ public class INodeFile extends INodeWithAdditionalFields
     if (state == BlockUCState.COMPLETE) {
       return null;
     }
-    if (b.isStriped() || i < blocks.length - numCommittedAllowed) {
+    if (i < blocks.length - numCommittedAllowed) {
       return b + " is " + state + " but not COMPLETE";
     }
     if (state != BlockUCState.COMMITTED) {
       return b + " is " + state + " but neither COMPLETE nor COMMITTED";
     }
-    final int numExpectedLocations
-        = b.getUnderConstructionFeature().getNumExpectedLocations();
-    if (numExpectedLocations <= minReplication) {
-      return b + " is " + state + " but numExpectedLocations = "
-          + numExpectedLocations + " <= minReplication = " + minReplication;
+
+    if (b.isStriped()) {
+      BlockInfoStriped blkStriped = (BlockInfoStriped) b;
+      if (b.getUnderConstructionFeature().getNumExpectedLocations()
+          != blkStriped.getRealTotalBlockNum()) {
+        return b + " is a striped block in " + state + " with less then "
+            + "required number of blocks.";
+      }
+    } else {
+      final int numExpectedLocations =
+          b.getUnderConstructionFeature().getNumExpectedLocations();
+      if (numExpectedLocations <= minReplication) {
+        return b + " is " + state + " but numExpectedLocations = "
+            + numExpectedLocations + " <= minReplication = " + minReplication;
+      }
     }
     return null;
   }
@@ -447,7 +452,16 @@ public class INodeFile extends INodeWithAdditionalFields
     this.addFeature(sf);
     return sf;
   }
-  
+
+  /** Used by FSImage. */
+  public INodeFile loadSnapshotFeature(FileDiffList diffs) {
+    final FileWithSnapshotFeature sf = addSnapshotFeature(diffs);
+    if (!isInCurrentState()) {
+      sf.deleteCurrentFile();
+    }
+    return this;
+  }
+
   /**
    * If feature list contains a {@link FileWithSnapshotFeature}, return it;
    * otherwise, return null.
@@ -744,6 +758,9 @@ public class INodeFile extends INodeWithAdditionalFields
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
       updateRemovedUnderConstructionFiles(reclaimContext);
+      if (sf.getDiffs().isEmpty()) {
+        this.removeFeature(sf);
+      }
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
@@ -870,8 +887,18 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addContent(Content.FILE, 1);
     final long fileLen = computeFileSize(snapshotId);
     counts.addContent(Content.LENGTH, fileLen);
-    counts.addContent(Content.DISKSPACE, storagespaceConsumed(null)
-        .getStorageSpace());
+
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf == null) {
+      counts.addContent(Content.DISKSPACE,
+          storagespaceConsumed(null).getStorageSpace());
+    } else if (isStriped()) {
+      counts.addContent(Content.DISKSPACE,
+          storagespaceConsumedStriped().getStorageSpace());
+    } else {
+      long diskSpaceQuota = getDiskSpaceQuota(counts, sf, snapshotId);
+      counts.addContent(Content.DISKSPACE, diskSpaceQuota);
+    }
 
     if (getStoragePolicyID() != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
       BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
@@ -885,6 +912,34 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
     return summary;
+  }
+
+  /**
+   * Compute disk space consumed by all the blocks in snapshots.
+   */
+  private long getDiskSpaceQuota(ContentCounts counts,
+      FileWithSnapshotFeature sf, int lastSnapshotId) {
+    FileDiffList fileDiffList = sf.getDiffs();
+    int last = fileDiffList.getLastSnapshotId();
+
+    if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
+        || last == Snapshot.CURRENT_STATE_ID) {
+      return storagespaceConsumed(null).getStorageSpace();
+    }
+
+    final long ssDeltaNoReplication;
+    short replication;
+
+    if (last < lastSnapshotId) {
+      ssDeltaNoReplication = computeFileSize(true, false);
+      replication = getFileReplication();
+    } else {
+      int sid = fileDiffList.getSnapshotById(lastSnapshotId);
+      ssDeltaNoReplication = computeFileSize(sid);
+      replication = getFileReplication(sid);
+    }
+
+    return ssDeltaNoReplication * replication;
   }
 
   /** The same as computeFileSize(null). */
@@ -1040,12 +1095,34 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final int snapshotId) {
-    super.dumpTreeRecursively(out, prefix, snapshotId);
+    dumpINodeFile(out, prefix, snapshotId);
+  }
+
+  public void dumpINodeFile(PrintWriter out, StringBuilder prefix,
+      final int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");
     out.print(blocks.length == 0 ? null: blocks[0]);
     out.println();
+
+    final FileWithSnapshotFeature snapshotFeature =
+        getFileWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      if (prefix.length() >= 2) {
+        prefix.setLength(prefix.length() - 2);
+        prefix.append("  ");
+      }
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
+    out.println();
+  }
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitFile(this, snapshot);
   }
 
   /**

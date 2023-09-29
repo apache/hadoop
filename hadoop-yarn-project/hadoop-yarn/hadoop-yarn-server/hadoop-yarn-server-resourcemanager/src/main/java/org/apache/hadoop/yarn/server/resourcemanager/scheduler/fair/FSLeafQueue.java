@@ -23,14 +23,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.TreeSet;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -43,8 +42,6 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsCustomResource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -355,9 +352,19 @@ public class FSLeafQueue extends FSQueue {
         continue;
       }
       assigned = sched.assignContainer(node);
-      if (!assigned.equals(none())) {
-        LOG.debug("Assigned container in queue:{} container:{}",
-            getName(), assigned);
+
+      boolean isContainerAssignedOrReserved = !assigned.equals(none());
+      boolean isContainerReserved =
+                assigned.equals(FairScheduler.CONTAINER_RESERVED);
+
+      // check if an assignment or a reservation was made.
+      if (isContainerAssignedOrReserved) {
+        // only log container assignment if there was an actual allocation,
+        // not a reservation.
+        if (!isContainerReserved && LOG.isDebugEnabled()) {
+          LOG.debug("Assigned container in queue:{} container:{}",
+              getName(), assigned);
+        }
         break;
       }
     }
@@ -476,6 +483,7 @@ public class FSLeafQueue extends FSQueue {
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
+   * @return active apps.
    */
   public int getNumActiveApps() {
     int numActiveApps = 0;
@@ -507,40 +515,22 @@ public class FSLeafQueue extends FSQueue {
   */
   private Resource computeMaxAMResource() {
     Resource maxResource = Resources.clone(getFairShare());
+    Resource maxShare = getMaxShare();
+
     if (maxResource.getMemorySize() == 0) {
       maxResource.setMemorySize(
           Math.min(scheduler.getRootQueueMetrics().getAvailableMB(),
-                   getMaxShare().getMemorySize()));
+                   maxShare.getMemorySize()));
     }
 
     if (maxResource.getVirtualCores() == 0) {
       maxResource.setVirtualCores(Math.min(
           scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
-          getMaxShare().getVirtualCores()));
+          maxShare.getVirtualCores()));
     }
 
-    QueueMetricsForCustomResources metricsForCustomResources =
-        scheduler.getRootQueueMetrics().getQueueMetricsForCustomResources();
-
-    if (metricsForCustomResources != null) {
-      QueueMetricsCustomResource availableResources =
-          metricsForCustomResources.getAvailable();
-
-      // We expect all custom resources contained in availableResources,
-      // so we will loop through all of them.
-      for (Map.Entry<String, Long> availableEntry : availableResources
-          .getValues().entrySet()) {
-        String resourceName = availableEntry.getKey();
-
-        // We only update the value if fairshare is 0 for that resource.
-        if (maxResource.getResourceValue(resourceName) == 0) {
-          Long availableValue = availableEntry.getValue();
-          long value = Math.min(availableValue,
-              getMaxShare().getResourceValue(resourceName));
-          maxResource.setResourceValue(resourceName, value);
-        }
-      }
-    }
+    scheduler.getRootQueueMetrics()
+        .fillInValuesFromAvailableResources(maxShare, maxResource);
 
     // Round up to allow AM to run when there is only one vcore on the cluster
     return Resources.multiplyAndRoundUp(maxResource, maxAMShare);

@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 
@@ -31,6 +38,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
  * This class does not attempt to bind to Azure.
  */
 public class AbstractAbfsTestWithTimeout extends Assert {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractAbfsTestWithTimeout.class);
+
   /**
    * The name of the current method.
    */
@@ -67,4 +77,53 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   protected int getTestTimeoutMillis() {
     return TEST_TIMEOUT;
   }
+
+  /**
+   * Describe a test in the logs.
+   *
+   * @param text text to print
+   * @param args arguments to format in the printing
+   */
+  protected void describe(String text, Object... args) {
+    LOG.info("\n\n{}: {}\n",
+        methodName.getMethodName(),
+        String.format(text, args));
+  }
+
+  /**
+   * Validate Contents written on a file in Abfs.
+   *
+   * @param fs                AzureBlobFileSystem
+   * @param path              Path of the file
+   * @param originalByteArray original byte array
+   * @return if content is validated true else, false
+   * @throws IOException
+   */
+  protected boolean validateContent(AzureBlobFileSystem fs, Path path,
+      byte[] originalByteArray)
+      throws IOException {
+    int pos = 0;
+    int lenOfOriginalByteArray = originalByteArray.length;
+
+    try (FSDataInputStream in = fs.open(path)) {
+      byte valueOfContentAtPos = (byte) in.read();
+
+      while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
+        if (originalByteArray[pos] != valueOfContentAtPos) {
+          assertEquals("Mismatch in content validation at position {}", pos,
+              originalByteArray[pos], valueOfContentAtPos);
+          return false;
+        }
+        valueOfContentAtPos = (byte) in.read();
+        pos++;
+      }
+      if (valueOfContentAtPos != -1) {
+        assertEquals("Expected end of file", -1, valueOfContentAtPos);
+        return false;
+      }
+      return true;
+    }
+
+  }
+
 }

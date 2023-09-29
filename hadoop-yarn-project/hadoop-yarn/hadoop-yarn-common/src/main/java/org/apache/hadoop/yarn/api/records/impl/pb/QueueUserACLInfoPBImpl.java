@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

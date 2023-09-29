@@ -21,7 +21,7 @@ package org.apache.hadoop.examples.dancing;
 import java.io.*;
 import java.util.*;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * This class uses the dancing links algorithm from Knuth to solve sudoku

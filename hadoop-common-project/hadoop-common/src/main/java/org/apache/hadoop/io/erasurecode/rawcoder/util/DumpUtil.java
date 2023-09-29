@@ -36,6 +36,10 @@ public final class DumpUtil {
   /**
    * Convert bytes into format like 0x02 02 00 80.
    * If limit is negative or too large, then all bytes will be converted.
+   *
+   * @param bytes bytes.
+   * @param limit limit.
+   * @return bytesToHex.
    */
   public static String bytesToHex(byte[] bytes, int limit) {
     if (limit <= 0 || limit > bytes.length) {
@@ -70,8 +74,8 @@ public final class DumpUtil {
 
   /**
    * Print data in hex format in an array of chunks.
-   * @param header
-   * @param chunks
+   * @param header header.
+   * @param chunks chunks.
    */
   public static void dumpChunks(String header, ECChunk[] chunks) {
     System.out.println();
@@ -84,7 +88,7 @@ public final class DumpUtil {
 
   /**
    * Print data in hex format in a chunk.
-   * @param chunk
+   * @param chunk chunk.
    */
   public static void dumpChunk(ECChunk chunk) {
     String str;

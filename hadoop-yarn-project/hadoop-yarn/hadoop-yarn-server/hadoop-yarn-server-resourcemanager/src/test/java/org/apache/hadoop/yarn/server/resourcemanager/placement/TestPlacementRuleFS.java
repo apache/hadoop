@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
@@ -31,7 +32,7 @@ import org.w3c.dom.Element;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -188,14 +189,12 @@ public class TestPlacementRuleFS {
 
   private Element createConf(String str) {
     // Create a simple rule element to use in the rule create
-    DocumentBuilderFactory docBuilderFactory =
-        DocumentBuilderFactory.newInstance();
-    docBuilderFactory.setIgnoringComments(true);
     Document doc = null;
     try {
+      DocumentBuilderFactory docBuilderFactory = XMLUtils.newSecureDocumentBuilderFactory();
+      docBuilderFactory.setIgnoringComments(true);
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-      doc = builder.parse(IOUtils.toInputStream(str,
-          Charset.defaultCharset()));
+      doc = builder.parse(IOUtils.toInputStream(str, StandardCharsets.UTF_8));
     } catch (Exception ex) {
       fail("Element creation failed, failing test");
     }

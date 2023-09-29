@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.apache.hadoop.util.Preconditions;
+import java.util.function.Supplier;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -30,16 +30,20 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockRecoveryWorker;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +75,7 @@ public class TestLeaseRecoveryStriped {
   private static final int bytesPerChecksum = 512;
 
   static {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(DFSStripedOutputStream.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(BlockRecoveryWorker.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.DEBUG);
@@ -92,8 +96,6 @@ public class TestLeaseRecoveryStriped {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 60000L);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     final int numDNs = dataBlocks + parityBlocks;
@@ -188,6 +190,80 @@ public class TestLeaseRecoveryStriped {
         Assert.fail(msg);
       }
     }
+  }
+
+  /**
+   * Test lease recovery for EC policy when one internal block located on
+   * stale datanode.
+   */
+  @Test
+  public void testLeaseRecoveryWithStaleDataNode() {
+    LOG.info("blockLengthsSuite: " +
+        Arrays.toString(blockLengthsSuite));
+    long staleInterval = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+
+    for (int i = 0; i < blockLengthsSuite.length; i++) {
+      BlockLengths blockLengths = blockLengthsSuite[i];
+      try {
+        writePartialBlocks(blockLengths.getBlockLengths());
+
+        // Get block info for the last block and mark corresponding datanode
+        // as stale.
+        LocatedBlock locatedblock =
+            TestInterDatanodeProtocol.getLastLocatedBlock(
+                dfs.dfs.getNamenode(), p.toString());
+        DatanodeInfo firstDataNode = locatedblock.getLocations()[0];
+        DatanodeDescriptor dnDes = cluster.getNameNode().getNamesystem()
+            .getBlockManager().getDatanodeManager()
+            .getDatanode(firstDataNode);
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(
+            cluster.getDataNode(dnDes.getIpcPort()), true);
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDes, -(staleInterval + 1));
+
+        long[] longArray = new long[blockLengths.getBlockLengths().length - 1];
+        for (int j = 0; j < longArray.length; ++j) {
+          longArray[j] = blockLengths.getBlockLengths()[j + 1];
+        }
+        int safeLength = (int) StripedBlockUtil.getSafeLength(ecPolicy,
+            longArray);
+        int checkDataLength = Math.min(testFileLength, safeLength);
+        recoverLease();
+        List<Long> oldGS = new ArrayList<>();
+        oldGS.add(1001L);
+        StripedFileTestUtil.checkData(dfs, p, checkDataLength,
+            new ArrayList<>(), oldGS, blockGroupSize);
+
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(
+            cluster.getDataNode(dnDes.getIpcPort()), false);
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDes, 0);
+
+      } catch (Throwable e) {
+        String msg = "failed testCase at i=" + i + ", blockLengths="
+            + blockLengths + "\n"
+            + StringUtils.stringifyException(e);
+        Assert.fail(msg);
+      }
+    }
+  }
+
+  @Test
+  public void testSafeLength() {
+    checkSafeLength(0, 0); // Length of: 0
+    checkSafeLength(1024 * 1024, 6291456L); // Length of: 1 MiB
+    checkSafeLength(64 * 1024 * 1024, 402653184L); // Length of: 64 MiB
+    checkSafeLength(189729792, 1132462080L); // Length of: 189729792
+    checkSafeLength(256 * 1024 * 1024, 1610612736L); // Length of: 256 MiB
+    checkSafeLength(517399040, 3101687808L); // Length of: 517399040
+    checkSafeLength(1024 * 1024 * 1024, 6442450944L); // Length of: 1 GiB
+  }
+
+  private void checkSafeLength(int blockLength, long expectedSafeLength) {
+    int[] blockLengths = new int[]{blockLength, blockLength, blockLength, blockLength,
+        blockLength, blockLength};
+    long safeLength = new BlockLengths(ecPolicy, blockLengths).getSafeLength();
+    Assert.assertEquals(expectedSafeLength, safeLength);
   }
 
   private void runTest(int[] blockLengths, long safeLength) throws Exception {

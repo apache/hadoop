@@ -28,6 +28,7 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -35,6 +36,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -51,8 +54,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
@@ -145,7 +147,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     amNodeManager.nodeHeartbeat(true);
-    RMApp killedApp = rm.submitApp(AM_CONTAINER_MB);
+    RMApp killedApp = MockRMAppSubmitter.submitWithMemory(AM_CONTAINER_MB, rm);
     rm.killApp(killedApp.getApplicationId());
     WebResource r = resource();
     ClientResponse response =
@@ -173,7 +175,15 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     nodeLabelManager.addLabelsToNode(
         ImmutableMap.of(NodeId.newInstance("h2", 1235), toSet("X")));
 
-    RMApp app1 = rm.submitApp(AM_CONTAINER_MB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(AM_CONTAINER_MB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     nm1.nodeHeartbeat(true);
 

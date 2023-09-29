@@ -217,4 +217,28 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.scheduler.capacity.workflow-priority-mappings</name>
+    <value></value>
+    <description>
+      A list of mappings that will be used to override application priority.
+      The syntax for this list is
+      [workflowId]:[full_queue_name]:[priority][,next mapping]*
+      where an application submitted (or mapped to) queue "full_queue_name"
+      and workflowId "workflowId" (as specified in application submission
+      context) will be given priority "priority".
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.workflow-priority-mappings-override.enable</name>
+    <value>false</value>
+    <description>
+      If a priority mapping is present, will it override the value specified
+      by the user? This can be used by administrators to give applications a
+      priority that is different than the one specified by the user.
+      The default is false.
+    </description>
+  </property>
+
 </configuration>

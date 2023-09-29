@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -171,8 +173,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-
-import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods
@@ -181,7 +190,7 @@ import com.google.common.base.Strings;
  * change the implementation with care.
  */
 public class MockResourceManagerFacade implements ApplicationClientProtocol,
-    ApplicationMasterProtocol, ResourceManagerAdministrationProtocol {
+    ApplicationMasterProtocol, ResourceManagerAdministrationProtocol, Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MockResourceManagerFacade.class);
@@ -953,5 +962,39 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     return null;
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    return null;
+  }
+
+  @VisibleForTesting
+  public HashMap<ApplicationId, List<ContainerId>> getApplicationContainerIdMap() {
+    return applicationContainerIdMap;
+  }
+
+  @Override
+  public void close() throws IOException {
+    LOG.info("MockResourceManagerFacade Close.");
   }
 }

@@ -435,7 +435,7 @@ The service is expected to return a response in JSON format:
 
 ### Delegation token support in WASB
 
-Delegation token support support can be enabled in WASB using the following configuration:
+Delegation token support can be enabled in WASB using the following configuration:
 
 ```xml
 <property>
@@ -507,7 +507,7 @@ The cache is maintained at a filesystem object level.
     </property>
 ```
 
-The maximum number of entries that that cache can hold can be customized using the following setting:
+The maximum number of entries that the cache can hold can be customized using the following setting:
 ```
     <property>
       <name>fs.azure.authorization.caching.maxentries</name>
@@ -544,6 +544,17 @@ The maximum number of entries that that cache can hold can be customized using t
       <value>true</value>
     </property>
 ```
+
+### Performance optimization configurations
+
+`fs.azure.block.blob.buffered.pread.disable`: By default the positional read API will do a
+seek and read on input stream. This read will fill the buffer cache in
+BlockBlobInputStream. If this configuration is true it will skip usage of buffer and do a
+lock free call for reading from blob. This optimization is very much helpful for HBase kind
+of short random read over a shared InputStream instance.
+Note: This is not a config which can be set at cluster level. It can be used as
+an option on FutureDataInputStreamBuilder.
+See FileSystem#openFile(Path path)
 
 ## Further Reading
 

@@ -18,24 +18,50 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nullable;
+
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 /**
  * Base class of operations in the store.
  * An operation is something which executes against the context to
  * perform a single function.
- * It is expected to have a limited lifespan.
  */
 public abstract class AbstractStoreOperation {
 
+  /**
+   * Store context.
+   */
   private final StoreContext storeContext;
 
   /**
-   * constructor.
+   * Audit Span.
+   */
+  private final AuditSpan auditSpan;
+
+  /**
+   * Constructor.
+   * Picks up the active audit span from the store context and
+   * stores it for later.
    * @param storeContext store context.
    */
-  protected AbstractStoreOperation(final StoreContext storeContext) {
-    this.storeContext = checkNotNull(storeContext);
+  protected AbstractStoreOperation(final @Nullable StoreContext storeContext) {
+    this(storeContext,
+        storeContext != null
+        ? storeContext.getActiveAuditSpan()
+        : null);
+  }
+
+  /**
+   * Constructor.
+   * @param storeContext store context.
+   * @param auditSpan active span
+   */
+  protected AbstractStoreOperation(
+      final @Nullable StoreContext storeContext,
+      final AuditSpan auditSpan) {
+    this.storeContext = storeContext;
+    this.auditSpan = auditSpan;
   }
 
   /**
@@ -46,4 +72,20 @@ public abstract class AbstractStoreOperation {
     return storeContext;
   }
 
+  /**
+   * Get the audit span this object was created with.
+   * @return the current span or null
+   */
+  public AuditSpan getAuditSpan() {
+    return auditSpan;
+  }
+
+  /**
+   * Activate the audit span.
+   */
+  public void activateAuditSpan() {
+    if (auditSpan != null) {
+      auditSpan.activate();
+    }
+  }
 }

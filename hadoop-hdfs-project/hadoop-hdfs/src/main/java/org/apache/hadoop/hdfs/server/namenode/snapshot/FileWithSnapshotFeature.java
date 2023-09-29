@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
@@ -119,9 +122,12 @@ public class FileWithSnapshotFeature implements INode.Feature {
   public void cleanFile(INode.ReclaimContext reclaimContext,
       final INodeFile file, final int snapshotId, int priorSnapshotId,
       byte storagePolicyId) {
+    final int snapshotToBeDeleted
+        = reclaimContext.getSnapshotIdToBeDeleted(snapshotId, file);
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
-      if (!isCurrentFileDeleted()) {
+      if (!isCurrentFileDeleted()
+          && snapshotToBeDeleted == Snapshot.CURRENT_STATE_ID) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
@@ -154,9 +160,21 @@ public class FileWithSnapshotFeature implements INode.Feature {
     QuotaCounts oldCounts;
     if (removed.snapshotINode != null) {
       oldCounts = new QuotaCounts.Builder().build();
-      BlockInfo[] blocks = file.getBlocks() == null ? new
-          BlockInfo[0] : file.getBlocks();
-      for (BlockInfo b: blocks) {
+      // collect all distinct blocks
+      Set<BlockInfo> allBlocks = new HashSet<BlockInfo>();
+      if (file.getBlocks() != null) {
+        allBlocks.addAll(Arrays.asList(file.getBlocks()));
+      }
+      if (removed.getBlocks() != null) {
+        allBlocks.addAll(Arrays.asList(removed.getBlocks()));
+      }
+      for (FileDiff diff : diffs) {
+        BlockInfo[] diffBlocks = diff.getBlocks();
+        if (diffBlocks != null) {
+          allBlocks.addAll(Arrays.asList(diffBlocks));
+        }
+      }
+      for (BlockInfo b: allBlocks) {
         short replication = b.getReplication();
         long blockSize = b.isComplete() ? b.getNumBytes() : file
             .getPreferredBlockSize();
@@ -224,5 +242,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
     else
       file.collectBlocksBeyondSnapshot(snapshotBlocks,
                                        reclaimContext.collectedBlocks());
+  }
+
+  @Override
+  public String toString() {
+    return "isCurrentFileDeleted? " + isCurrentFileDeleted + ", " + diffs;
   }
 }

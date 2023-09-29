@@ -91,8 +91,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
 

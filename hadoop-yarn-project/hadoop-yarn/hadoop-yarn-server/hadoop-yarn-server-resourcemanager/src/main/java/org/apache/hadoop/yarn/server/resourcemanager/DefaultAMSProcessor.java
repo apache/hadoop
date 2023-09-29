@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -36,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -53,8 +55,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
-        .InvalidResourceType;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -118,6 +119,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   private ResourceProfilesManager resourceProfilesManager;
   private boolean timelineServiceV2Enabled;
   private boolean nodelabelsEnabled;
+  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
@@ -128,6 +130,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         timelineServiceV2Enabled(rmContext.getYarnConfiguration());
     this.nodelabelsEnabled = YarnConfiguration
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -164,14 +168,13 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // and corresponding NM tokens.
     if (app.getApplicationSubmissionContext()
         .getKeepContainersAcrossApplicationAttempts()) {
+      // Clear the node set remembered by the secret manager. Necessary
+      // for UAM restart because we use the same attemptId.
+      rmContext.getNMTokenSecretManager().clearNodeSetForAttempt(applicationAttemptId);
       List<Container> transferredContainers = getScheduler()
           .getTransferredContainers(applicationAttemptId);
       if (!transferredContainers.isEmpty()) {
         response.setContainersFromPreviousAttempts(transferredContainers);
-        // Clear the node set remembered by the secret manager. Necessary
-        // for UAM restart because we use the same attemptId.
-        rmContext.getNMTokenSecretManager()
-            .clearNodeSetForAttempt(applicationAttemptId);
 
         List<NMToken> nmTokens = new ArrayList<NMToken>();
         for (Container container : transferredContainers) {
@@ -235,6 +238,10 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       if (null == req.getNodeLabelExpression()
           && ResourceRequest.ANY.equals(req.getResourceName())) {
         req.setNodeLabelExpression(asc.getNodeLabelExpression());
+      }
+      if (ResourceRequest.ANY.equals(req.getResourceName())) {
+        SchedulerUtils.enforcePartitionExclusivity(req,
+            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
       }
     }
 
@@ -326,11 +333,36 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         .pullJustFinishedContainers());
     response.setAvailableResources(allocation.getResourceLimit());
 
+    QueueMetrics queueMetrics =
+        this.rmContext.getScheduler().getRootQueueMetrics();
+    if (queueMetrics != null) {
+      int totalVirtualCores =
+          queueMetrics.getAllocatedVirtualCores() + queueMetrics
+              .getAvailableVirtualCores();
+      int pendingContainers = queueMetrics.getPendingContainers();
+      response.setEnhancedHeadroom(
+          EnhancedHeadroom.newInstance(pendingContainers, totalVirtualCores));
+    }
+
     addToContainerUpdates(response, allocation,
         ((AbstractYarnScheduler)getScheduler())
             .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
 
-    response.setNumClusterNodes(getScheduler().getNumClusterNodes());
+    String label="";
+    try {
+      label = rmContext.getScheduler()
+          .getQueueInfo(app.getQueue(), false, false)
+          .getDefaultNodeLabelExpression();
+    } catch (Exception e){
+      //Queue may not exist since it could be auto-created in case of
+      // dynamic queues
+    }
+
+    if (label == null || label.equals("")) {
+      response.setNumClusterNodes(getScheduler().getNumClusterNodes());
+    } else {
+      response.setNumClusterNodes(rmContext.getNodeLabelManager().getActiveNMCountPerLabel(label));
+    }
 
     // add collector address for this application
     if (timelineServiceV2Enabled) {
@@ -349,6 +381,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setContainersFromPreviousAttempts(
         allocation.getPreviousAttemptContainers());
+
+    response.setRejectedSchedulingRequests(allocation.getRejectedRequest());
+
   }
 
   private void handleInvalidResourceException(InvalidResourceRequestException e,
@@ -371,7 +406,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         RMNode rmNode = rmNodeEntry.getKey();
         SchedulerNodeReport schedulerNodeReport =
             getScheduler().getNodeReport(rmNode.getNodeID());
-        Resource used = BuilderUtils.newResource(0, 0);
+        Resource used = Resources.createResource(0);
         int numContainers = 0;
         if (schedulerNodeReport != null) {
           used = schedulerNodeReport.getUsedResource();

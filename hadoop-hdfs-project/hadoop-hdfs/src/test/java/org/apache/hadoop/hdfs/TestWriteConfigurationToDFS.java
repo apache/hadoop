@@ -54,7 +54,7 @@ public class TestWriteConfigurationToDFS {
       fs.close();
       fs = null;
     } finally {
-      IOUtils.cleanup(null, os, fs);
+      IOUtils.cleanupWithLogger(null, os, fs);
       cluster.shutdown();
     }
   }

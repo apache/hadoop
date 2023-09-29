@@ -31,6 +31,6 @@ public class UserIdentityProvider implements IdentityProvider {
       return null;
     }
 
-    return ugi.getUserName();
+    return ugi.getShortUserName();
   }
 }

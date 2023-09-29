@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -85,10 +86,10 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private final List<LightWeightLinkedSet<BlockInfo>> priorityQueues
       = new ArrayList<>(LEVEL);
 
-  /** The number of corrupt blocks with replication factor 1 */
 
   private final LongAdder lowRedundancyBlocks = new LongAdder();
   private final LongAdder corruptBlocks = new LongAdder();
+  /** The number of corrupt blocks with replication factor 1 */
   private final LongAdder corruptReplicationOneBlocks = new LongAdder();
   private final LongAdder lowRedundancyECBlockGroups = new LongAdder();
   private final LongAdder corruptECBlockGroups = new LongAdder();
@@ -116,6 +117,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     corruptReplicationOneBlocks.reset();
     lowRedundancyECBlockGroups.reset();
     corruptECBlockGroups.reset();
+    highestPriorityLowRedundancyReplicatedBlocks.reset();
+    highestPriorityLowRedundancyECBlocks.reset();
   }
 
   /** Return the total number of insufficient redundancy blocks. */
@@ -245,8 +248,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       // highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas * 3) < expectedReplicas) {
-      //can only afford one replica loss
-      //this is considered very insufficiently redundant blocks.
+      //there is less than a third as many blocks as requested;
+      //this is considered very under-replicated.
       return QUEUE_VERY_LOW_REDUNDANCY;
     } else {
       //add to the normal queue for insufficiently redundant blocks
@@ -366,11 +369,11 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    * @return true if the block was found and removed from one of the priority
    *         queues
    */
-  boolean remove(BlockInfo block, int priLevel) {
+  synchronized boolean remove(BlockInfo block, int priLevel) {
     return remove(block, priLevel, block.getReplication());
   }
 
-  boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
+  synchronized boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
     if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(
@@ -382,17 +385,18 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     } else {
       // Try to remove the block from all queues if the block was
       // not found in the queue for the given priority level.
+      boolean found = false;
       for (int i = 0; i < LEVEL; i++) {
         if (i != priLevel && priorityQueues.get(i).remove(block)) {
           NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
           decrementBlockStat(block, i, oldExpectedReplicas);
-          return true;
+          found = true;
         }
       }
+      return found;
     }
-    return false;
   }
 
   private void decrementBlockStat(BlockInfo blockInfo, int priLevel,
@@ -488,28 +492,63 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    */
   synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
       int blocksToProcess) {
+    return chooseLowRedundancyBlocks(blocksToProcess, false);
+  }
+
+  /**
+   * Get a list of block lists without sufficient redundancy. The index of
+   * block lists represents its replication priority. Iterates each block list
+   * in priority order beginning with the highest priority list. Iterators use
+   * a bookmark to resume where the previous iteration stopped. Returns when
+   * the block count is met or iteration reaches the end of the lowest priority
+   * list, in which case bookmarks for each block list are reset to the heads
+   * of their respective lists.
+   * If a block is deleted (has invalid bcId), it will be removed from the low
+   * redundancy queues.
+   *
+   * @param blocksToProcess - number of blocks to fetch from low redundancy
+   *          blocks.
+   * @param resetIterators - After gathering the list of blocks reset the
+   *           position of all queue iterators to the head of the queue so
+   *           subsequent calls will begin at the head of the queue
+   * @return Return a list of block lists to be replicated. The block list
+   *         index represents its redundancy priority.
+   */
+  synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
+      int blocksToProcess, boolean resetIterators) {
     final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
 
     int count = 0;
     int priority = 0;
+    HashSet<BlockInfo> toRemove = new HashSet<>();
     for (; count < blocksToProcess && priority < LEVEL; priority++) {
-      if (priority == QUEUE_WITH_CORRUPT_BLOCKS) {
-        // do not choose corrupted blocks.
-        continue;
-      }
-
       // Go through all blocks that need reconstructions with current priority.
       // Set the iterator to the first unprocessed block at this priority level
+      // We do not want to skip QUEUE_WITH_CORRUPT_BLOCKS because we still need
+      // to look for deleted blocks if any.
+      final boolean inCorruptLevel = (QUEUE_WITH_CORRUPT_BLOCKS == priority);
       final Iterator<BlockInfo> i = priorityQueues.get(priority).getBookmark();
       final List<BlockInfo> blocks = new LinkedList<>();
-      blocksToReconstruct.add(blocks);
-      // Loop through all remaining blocks in the list.
-      for(; count < blocksToProcess && i.hasNext(); count++) {
-        blocks.add(i.next());
+      if (!inCorruptLevel) {
+        blocksToReconstruct.add(blocks);
       }
+      for(; count < blocksToProcess && i.hasNext(); count++) {
+        BlockInfo block = i.next();
+        if (block.isDeleted()) {
+          toRemove.add(block);
+          continue;
+        }
+        if (!inCorruptLevel) {
+          blocks.add(block);
+        }
+      }
+      for (BlockInfo bInfo : toRemove) {
+        remove(bInfo, priority);
+      }
+      toRemove.clear();
     }
 
-    if (priority == LEVEL) {
+    if (priority == LEVEL || resetIterators) {
       // Reset all bookmarks because there were no recently added blocks.
       for (LightWeightLinkedSet<BlockInfo> q : priorityQueues) {
         q.resetBookmark();

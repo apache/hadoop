@@ -243,10 +243,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    */
   int getMaxAppAttempts();
 
-  boolean isLogAggregationEnabled();
-
-  boolean isLogAggregationFinished();
-
   /**
    * Returns the application type
    * @return the application type.
@@ -294,8 +290,10 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp();
 
   LogAggregationStatus getLogAggregationStatusForAppReport();
+
   /**
    * Return the node label expression of the AM container.
+   * @return the node label expression.
    */
   String getAmNodeLabelExpression();
 
@@ -329,4 +327,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return Map of envs related to application scheduling preferences.
    */
   Map<String, String> getApplicationSchedulingEnvs();
+
+  String getRealUser();
 }

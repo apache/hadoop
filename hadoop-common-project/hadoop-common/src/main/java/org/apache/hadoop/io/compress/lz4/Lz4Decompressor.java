@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4SafeDecompressor;
+
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,20 +46,7 @@ public class Lz4Decompressor implements Decompressor {
   private int userBufOff = 0, userBufLen = 0;
   private boolean finished;
 
-  static {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      // Initialize the native library
-      try {
-        initIDs();
-      } catch (Throwable t) {
-        // Ignore failure to load/initialize lz4
-        LOG.warn(t.toString());
-      }
-    } else {
-      LOG.error("Cannot load " + Lz4Compressor.class.getName() +
-          " without native hadoop library!");
-    }
-  }
+  private LZ4SafeDecompressor lz4Decompressor;
 
   /**
    * Creates a new compressor.
@@ -66,6 +55,15 @@ public class Lz4Decompressor implements Decompressor {
    */
   public Lz4Decompressor(int directBufferSize) {
     this.directBufferSize = directBufferSize;
+
+    try {
+      LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
+      lz4Decompressor = lz4Factory.safeDecompressor();
+    } catch (AssertionError t) {
+      throw new RuntimeException("lz4-java library is not available: " +
+              "Lz4Decompressor has not been loaded. You need to add " +
+              "lz4-java.jar to your CLASSPATH. " + t, t);
+    }
 
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
@@ -200,8 +198,8 @@ public class Lz4Decompressor implements Decompressor {
    * @param b   Buffer for the compressed data
    * @param off Start offset of the data
    * @param len Size of the buffer
-   * @return The actual number of bytes of compressed data.
-   * @throws IOException
+   * @return The actual number of bytes of uncompressed data.
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public synchronized int decompress(byte[] b, int off, int len)
@@ -228,7 +226,7 @@ public class Lz4Decompressor implements Decompressor {
       uncompressedDirectBuf.limit(directBufferSize);
 
       // Decompress data
-      n = decompressBytesDirect();
+      n = decompressDirectBuf();
       uncompressedDirectBuf.limit(n);
 
       if (userBufLen <= 0) {
@@ -272,7 +270,18 @@ public class Lz4Decompressor implements Decompressor {
     // do nothing
   }
 
-  private native static void initIDs();
-
-  private native int decompressBytesDirect();
+  private int decompressDirectBuf() {
+    if (compressedDirectBufLen == 0) {
+      return 0;
+    } else {
+      compressedDirectBuf.limit(compressedDirectBufLen).position(0);
+      lz4Decompressor.decompress((ByteBuffer) compressedDirectBuf,
+              (ByteBuffer) uncompressedDirectBuf);
+      compressedDirectBufLen = 0;
+      compressedDirectBuf.clear();
+      int size = uncompressedDirectBuf.position();
+      uncompressedDirectBuf.position(0);
+      return size;
+    }
+  }
 }

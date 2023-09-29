@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.util;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +92,7 @@ public final class ShutdownHookManager {
               return;
             }
             long started = System.currentTimeMillis();
-            int timeoutCount = executeShutdown();
+            int timeoutCount = MGR.executeShutdown();
             long ended = System.currentTimeMillis();
             LOG.debug(String.format(
                 "Completed shutdown in %.3f seconds; Timeouts: %d",
@@ -116,9 +116,9 @@ public final class ShutdownHookManager {
    */
   @InterfaceAudience.Private
   @VisibleForTesting
-  static int executeShutdown() {
+  int executeShutdown() {
     int timeouts = 0;
-    for (HookEntry entry: MGR.getShutdownHooksInOrder()) {
+    for (HookEntry entry: getShutdownHooksInOrder()) {
       Future<?> future = EXECUTOR.submit(entry.getHook());
       try {
         future.get(entry.getTimeout(), entry.getTimeUnit());
@@ -147,14 +147,14 @@ public final class ShutdownHookManager {
           shutdownTimeout,
           TIME_UNIT_DEFAULT)) {
         // timeout waiting for the
-        LOG.error("ShutdownHookManger shutdown forcefully after"
+        LOG.error("ShutdownHookManager shutdown forcefully after"
             + " {} seconds.", shutdownTimeout);
         EXECUTOR.shutdownNow();
       }
-      LOG.debug("ShutdownHookManger completed shutdown.");
+      LOG.debug("ShutdownHookManager completed shutdown.");
     } catch (InterruptedException ex) {
       // interrupted.
-      LOG.error("ShutdownHookManger interrupted while waiting for " +
+      LOG.error("ShutdownHookManager interrupted while waiting for " +
           "termination.", ex);
       EXECUTOR.shutdownNow();
       Thread.currentThread().interrupt();
@@ -249,12 +249,14 @@ public final class ShutdownHookManager {
   }
 
   private final Set<HookEntry> hooks =
-      Collections.synchronizedSet(new HashSet<HookEntry>());
+      Collections.synchronizedSet(new HashSet<>());
 
   private AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 
   //private to constructor to ensure singularity
-  private ShutdownHookManager() {
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  ShutdownHookManager() {
   }
 
   /**
@@ -267,8 +269,8 @@ public final class ShutdownHookManager {
   @VisibleForTesting
   List<HookEntry> getShutdownHooksInOrder() {
     List<HookEntry> list;
-    synchronized (MGR.hooks) {
-      list = new ArrayList<>(MGR.hooks);
+    synchronized (hooks) {
+      list = new ArrayList<>(hooks);
     }
     Collections.sort(list, new Comparator<HookEntry>() {
 
@@ -342,7 +344,9 @@ public final class ShutdownHookManager {
       throw new IllegalStateException("Shutdown in progress, cannot remove a " +
           "shutdownHook");
     }
-    return hooks.remove(new HookEntry(shutdownHook, 0));
+    // hooks are only == by runnable
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+      TIME_UNIT_DEFAULT));
   }
 
   /**
@@ -354,7 +358,8 @@ public final class ShutdownHookManager {
   @InterfaceAudience.Public
   @InterfaceStability.Stable
   public boolean hasShutdownHook(Runnable shutdownHook) {
-    return hooks.contains(new HookEntry(shutdownHook, 0));
+    return hooks.contains(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+      TIME_UNIT_DEFAULT));
   }
   
   /**

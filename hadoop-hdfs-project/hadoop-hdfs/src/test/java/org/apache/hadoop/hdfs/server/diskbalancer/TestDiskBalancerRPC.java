@@ -197,7 +197,7 @@ public class TestDiskBalancerRPC {
   }
 
   @Test
-  public void testgetDiskBalancerBandwidth() throws Exception {
+  public void testGetDiskBalancerBandwidth() throws Exception {
     RpcTestHelper rpcTestHelper = new RpcTestHelper().invoke();
     DataNode dataNode = rpcTestHelper.getDataNode();
     String planHash = rpcTestHelper.getPlanHash();
@@ -317,7 +317,7 @@ public class TestDiskBalancerRPC {
       plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort());
       planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
       planVersion = 1;
-      planHash = DigestUtils.shaHex(plan.toJson());
+      planHash = DigestUtils.sha1Hex(plan.toJson());
       return this;
     }
   }

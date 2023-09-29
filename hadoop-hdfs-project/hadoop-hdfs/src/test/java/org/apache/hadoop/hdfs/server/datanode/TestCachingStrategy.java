@@ -332,7 +332,7 @@ public class TestCachingStrategy {
       stats = tracker.getStats(fadvisedFileName);
       stats.assertNotDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
     } finally {
-      IOUtils.cleanup(null, fis);
+      IOUtils.cleanupWithLogger(null, fis);
       if (cluster != null) {
         cluster.shutdown();
       }

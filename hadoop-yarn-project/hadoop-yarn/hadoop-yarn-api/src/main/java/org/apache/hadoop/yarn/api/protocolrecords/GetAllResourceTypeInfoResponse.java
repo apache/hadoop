@@ -45,7 +45,7 @@ public abstract class GetAllResourceTypeInfoResponse {
     if (this == other) {
       return true;
     }
-    if (other == null || !(other instanceof GetAllResourceTypeInfoResponse)) {
+    if (!(other instanceof GetAllResourceTypeInfoResponse)) {
       return false;
     }
     return ((GetAllResourceTypeInfoResponse) other).getResourceTypeInfo()

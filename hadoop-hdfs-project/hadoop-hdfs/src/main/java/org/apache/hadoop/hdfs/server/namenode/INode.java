@@ -17,37 +17,39 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.List;
-import java.util.Map;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -76,7 +78,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Get the {@link PermissionStatus} */
-  abstract PermissionStatus getPermissionStatus(int snapshotId);
+  public abstract PermissionStatus getPermissionStatus(int snapshotId);
 
   /** The same as getPermissionStatus(null). */
   final PermissionStatus getPermissionStatus() {
@@ -224,6 +226,27 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return this;
   }
 
+  /** Is this inode in the current state? */
+  public boolean isInCurrentState() {
+    if (isRoot()) {
+      return true;
+    }
+    final INodeDirectory parentDir = getParent();
+    if (parentDir == null) {
+      return false; // this inode is only referenced in snapshots
+    }
+    if (!parentDir.isInCurrentState()) {
+      return false;
+    }
+    final INode child = parentDir.getChild(getLocalNameBytes(),
+            Snapshot.CURRENT_STATE_ID);
+    if (this == child) {
+      return true;
+    }
+    return child != null && child.isReference() &&
+        this.equals(child.asReference().getReferredINode());
+  }
+
   /** Is this inode in the latest snapshot? */
   public final boolean isInLatestSnapshot(final int latestSnapshotId) {
     if (latestSnapshotId == Snapshot.CURRENT_STATE_ID ||
@@ -315,6 +338,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public boolean isFile() {
     return false;
+  }
+
+  /**
+   * Check if this inode itself has a storage policy set.
+   */
+  public boolean isSetStoragePolicy() {
+    if (isSymlink()) {
+      return false;
+    }
+    return getLocalStoragePolicyID() != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
   }
 
   /** Cast this inode to an {@link INodeFile}.  */
@@ -588,6 +621,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return DFSUtil.bytes2String(path);
   }
 
+  public boolean isDeleted() {
+    INode pInode = this;
+    while (pInode != null && !pInode.isRoot()) {
+      pInode = pInode.getParent();
+    }
+    if (pInode == null) {
+      return true;
+    } else {
+      return !pInode.isRoot();
+    }
+  }
+
   public byte[][] getPathComponents() {
     int n = 0;
     for (INode inode = this; inode != null; inode = inode.getParent()) {
@@ -628,8 +673,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   @VisibleForTesting
+  public String getFullPathAndObjectString() {
+    return getFullPathName() + "(" + getId() + ", " + getObjectString() + ")";
+  }
+
+  @VisibleForTesting
   public String toDetailString() {
-    return toString() + "(" + getObjectString() + "), " + getParentString();
+    return toString() + "(" + getId() + ", " + getObjectString()
+        + ", " + getParentString() + ")";
   }
 
   /** @return the parent directory */
@@ -644,6 +695,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public INodeReference getParentReference() {
     return parent == null || !parent.isReference()? null: (INodeReference)parent;
+  }
+
+  /**
+   * @return true if this is a reference and the reference count is 1;
+   *         otherwise, return false.
+   */
+  public boolean isLastReference() {
+    final INodeReference ref = getParentReference();
+    if (!(ref instanceof WithCount)) {
+      return false;
+    }
+    return ((WithCount)ref).getReferenceCount() == 1;
   }
 
   /** Set parent directory */
@@ -781,7 +844,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return path != null && path.startsWith(Path.SEPARATOR);
   }
 
-  private static void checkAbsolutePath(final String path) {
+  static void checkAbsolutePath(final String path) {
     if (!isValidAbsolutePath(path)) {
       throw new AssertionError("Absolute path required, but got '"
           + path + "'");
@@ -798,7 +861,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     if (this == that) {
       return true;
     }
-    if (that == null || !(that instanceof INode)) {
+    if (!(that instanceof INode)) {
       return false;
     }
     return getId() == ((INode) that).getId();
@@ -809,7 +872,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     long id = getId();
     return (int)(id^(id>>>32));  
   }
-  
+
+  @VisibleForTesting
+  public final StringBuilder dumpParentINodes() {
+    final StringBuilder b = parent == null? new StringBuilder()
+        : parent.dumpParentINodes().append("\n  ");
+    return b.append(toDetailString());
+  }
+
   /**
    * Dump the subtree starting from this inode.
    * @return a text representation of the tree.
@@ -834,10 +904,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   @VisibleForTesting
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
+  }
+
+  public void dumpINode(PrintWriter out, StringBuilder prefix,
+      int snapshotId) {
     out.print(prefix);
     out.print(" ");
     final String name = getLocalName();
-    out.print(name.isEmpty()? "/": name);
+    out.print(name != null && name.isEmpty()? "/": name);
+    out.print(", isInCurrentState? ");
+    out.print(isInCurrentState());
     out.print("   (");
     out.print(getObjectString());
     out.print("), ");
@@ -940,16 +1017,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     /** Used to collect quota usage delta */
     private final QuotaDelta quotaDelta;
 
+    private Snapshot snapshotToBeDeleted = null;
+
     /**
      * @param bsps
- *          block storage policy suite to calculate intended storage type
- *          usage
+     *      block storage policy suite to calculate intended storage type
+     *      usage
      * @param collectedBlocks
-*          blocks collected from the descents for further block
-*          deletion/update will be added to the given map.
+     *     blocks collected from the descents for further block
+     *     deletion/update will be added to the given map.
      * @param removedINodes
-*          INodes collected from the descents for further cleaning up of
-     * @param removedUCFiles
+     *     INodes collected from the descents for further cleaning up of
+     * @param removedUCFiles INodes whose leases need to be released
      */
     public ReclaimContext(
         BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
@@ -959,6 +1038,36 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.removedINodes = removedINodes;
       this.removedUCFiles = removedUCFiles;
       this.quotaDelta = new QuotaDelta();
+    }
+
+    /**
+     * Set the snapshot to be deleted
+     * for {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT}.
+     *
+     * @param snapshot the snapshot to be deleted
+     */
+    public void setSnapshotToBeDeleted(Snapshot snapshot) {
+      this.snapshotToBeDeleted = Objects.requireNonNull(
+          snapshot, "snapshot == null");
+    }
+
+    /**
+     * For {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT},
+     * return the snapshot to be deleted.
+     * For other ops, return {@link Snapshot#CURRENT_STATE_ID}.
+     */
+    public int getSnapshotIdToBeDeleted() {
+      return Snapshot.getSnapshotId(snapshotToBeDeleted);
+    }
+
+    public int getSnapshotIdToBeDeleted(int snapshotId, INode inode) {
+      final int snapshotIdToBeDeleted = getSnapshotIdToBeDeleted();
+      if (snapshotId != snapshotIdToBeDeleted) {
+        LOG.warn("Snapshot changed: current = {}, original = {}, inode: {}",
+            Snapshot.getSnapshotString(snapshotId), snapshotToBeDeleted,
+            inode.toDetailString());
+      }
+      return snapshotIdToBeDeleted;
     }
 
     public BlockStoragePolicySuite storagePolicySuite() {
@@ -978,8 +1087,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * removedUCFiles but a new quotaDelta.
      */
     public ReclaimContext getCopy() {
-      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+      final ReclaimContext that = new ReclaimContext(
+          bsps, collectedBlocks, removedINodes,
           removedUCFiles);
+      that.snapshotToBeDeleted = this.snapshotToBeDeleted;
+      return that;
     }
   }
 
@@ -1070,6 +1182,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public void clear() {
       toDeleteList.clear();
     }
+  }
+
+  /** Accept a visitor to visit this {@link INode}. */
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    final Class<?> clazz = visitor != null? visitor.getClass()
+        : NamespaceVisitor.class;
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " does not support " + clazz.getSimpleName());
   }
 
   /** 

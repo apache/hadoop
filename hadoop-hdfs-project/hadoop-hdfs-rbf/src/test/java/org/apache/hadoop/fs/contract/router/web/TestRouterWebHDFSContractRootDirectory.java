@@ -71,4 +71,9 @@ public class TestRouterWebHDFSContractRootDirectory extends
   public void testRmEmptyRootDirRecursive() {
     // It doesn't apply because we still have the mount points here
   }
+
+  @Override
+  public void testSimpleRootListing() {
+    // It doesn't apply because DFSRouter dosn't support LISTSTATUS_BATCH.
+  }
 }

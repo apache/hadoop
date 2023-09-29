@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.ipc;
 
-import com.google.common.base.Joiner;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
@@ -66,7 +66,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     public int secondsToRun = 15;
     private int msgSize = 1024;
     public Class<? extends RpcEngine> rpcEngine =
-        ProtobufRpcEngine.class;
+        ProtobufRpcEngine2.class;
     
     private MyOptions(String args[]) {
       try {
@@ -88,59 +88,78 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       }
     }
 
-    @SuppressWarnings("static-access")
     private Options buildOptions() {
       Options opts = new Options();
       opts.addOption(
-        OptionBuilder.withLongOpt("serverThreads").hasArg(true)
-        .withArgName("numthreads")
-        .withDescription("number of server threads (handlers) to run (or 0 to not run server)")
-        .create("s"));
-      opts.addOption(
-        OptionBuilder.withLongOpt("serverReaderThreads").hasArg(true)
-        .withArgName("threads")
-        .withDescription("number of server reader threads to run")
-        .create("r"));
-
-      
-      opts.addOption(
-        OptionBuilder.withLongOpt("clientThreads").hasArg(true)
-        .withArgName("numthreads")
-        .withDescription("number of client threads to run (or 0 to not run client)")
-        .create("c"));
+          Option.builder("s")
+          .longOpt("serverThreads")
+          .hasArg(true)
+          .argName("numthreads")
+          .desc("number of server threads (handlers) to run (or 0 to not run server)")
+          .build());
 
       opts.addOption(
-        OptionBuilder.withLongOpt("messageSize").hasArg(true)
-        .withArgName("bytes")
-        .withDescription("size of call parameter in bytes")
-        .create("m"));
+          Option.builder("r")
+          .longOpt("serverReaderThreads")
+          .hasArg(true)
+          .argName("threads")
+          .desc("number of server reader threads to run")
+          .build());
 
       opts.addOption(
-          OptionBuilder.withLongOpt("time").hasArg(true)
-          .withArgName("seconds")
-          .withDescription("number of seconds to run clients for")
-          .create("t"));
+          Option.builder("c")
+          .longOpt("clientThreads")
+          .hasArg(true)
+          .argName("numthreads")
+          .desc("number of client threads to run (or 0 to not run client)")
+          .build());
+
       opts.addOption(
-          OptionBuilder.withLongOpt("port").hasArg(true)
-          .withArgName("port")
-          .withDescription("port to listen or connect on")
-          .create("p"));
+          Option.builder("m")
+          .longOpt("messageSize")
+          .hasArg(true)
+          .argName("bytes")
+          .desc("size of call parameter in bytes")
+          .build());
+
       opts.addOption(
-          OptionBuilder.withLongOpt("host").hasArg(true)
-          .withArgName("addr")
-          .withDescription("host to listen or connect on")
-          .create('h'));
+          Option.builder("t")
+          .longOpt("time")
+          .hasArg(true)
+          .argName("seconds")
+          .desc("number of seconds to run clients for")
+          .build());
+
+      opts.addOption(
+          Option.builder("p")
+          .longOpt("port")
+          .hasArg(true)
+          .argName("port")
+          .desc("port to listen or connect on")
+          .build());
+
+      opts.addOption(
+          Option.builder("h")
+          .longOpt("host")
+          .hasArg(true)
+          .argName("addr")
+          .desc("host to listen or connect on")
+          .build());
       
       opts.addOption(
-          OptionBuilder.withLongOpt("engine").hasArg(true)
-          .withArgName("protobuf")
-          .withDescription("engine to use")
-          .create('e'));
+          Option.builder("e")
+          .longOpt("engine")
+          .hasArg(true)
+          .argName("protobuf")
+          .desc("engine to use")
+          .build());
       
       opts.addOption(
-          OptionBuilder.withLongOpt("help").hasArg(false)
-          .withDescription("show this screen")
-          .create('?'));
+          Option.builder("?")
+          .longOpt("help")
+          .hasArg(false)
+          .desc("show this screen")
+          .build());
 
       return opts;
     }
@@ -181,7 +200,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       if (line.hasOption('e')) {
         String eng = line.getOptionValue('e');
         if ("protobuf".equals(eng)) {
-          rpcEngine = ProtobufRpcEngine.class;
+          rpcEngine = ProtobufRpcEngine2.class;
         } else {
           throw new ParseException("invalid engine: " + eng);
         }
@@ -224,7 +243,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     
     RPC.Server server;
     // Get RPC server for server side implementation
-    if (opts.rpcEngine == ProtobufRpcEngine.class) {
+    if (opts.rpcEngine == ProtobufRpcEngine2.class) {
       // Create server side implementation
       PBServerImpl serverImpl = new PBServerImpl();
       BlockingService service = TestProtobufRpcProto
@@ -289,7 +308,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
           long cpuNanosClient = getTotalCpuTime(ctx.getTestThreads());
           long cpuNanosServer = -1;
           if (server != null) {
-            cpuNanosServer = getTotalCpuTime(server.getHandlers());; 
+            cpuNanosServer = getTotalCpuTime(server.getHandlers());
           }
           System.out.println("====== Results ======");
           System.out.println("Options:\n" + opts);
@@ -378,7 +397,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
   private RpcServiceWrapper createRpcClient(MyOptions opts) throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(opts.host, opts.getPort());
     
-    if (opts.rpcEngine == ProtobufRpcEngine.class) {
+    if (opts.rpcEngine == ProtobufRpcEngine2.class) {
       final TestRpcService proxy = RPC.getProxy(TestRpcService.class, 0, addr, conf);
       return new RpcServiceWrapper() {
         @Override

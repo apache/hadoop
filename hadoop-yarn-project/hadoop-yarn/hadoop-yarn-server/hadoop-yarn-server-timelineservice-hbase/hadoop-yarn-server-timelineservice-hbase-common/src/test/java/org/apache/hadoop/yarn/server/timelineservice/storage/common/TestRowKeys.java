@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -26,14 +25,16 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -81,14 +82,14 @@ public class TestRowKeys {
     int sepLen = QUALIFIER_SEP_BYTES.length;
     for (int i = 0; i < sepLen; i++) {
       assertTrue(
-          "Row key prefix not encoded properly.",
           byteRowKeyPrefix[byteRowKeyPrefix.length - sepLen + i] ==
-              QUALIFIER_SEP_BYTES[i]);
+              QUALIFIER_SEP_BYTES[i],
+          "Row key prefix not encoded properly.");
     }
   }
 
   @Test
-  public void testApplicationRowKey() {
+  void testApplicationRowKey() {
     byte[] byteRowKey =
         new ApplicationRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID,
             APPLICATION_ID).getRowKey();
@@ -104,7 +105,7 @@ public class TestRowKeys {
             .getRowKeyPrefix();
     byte[][] splits =
         Separator.QUALIFIERS.split(byteRowKeyPrefix,
-            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[]{Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 Separator.VARIABLE_SIZE});
     assertEquals(5, splits.length);
@@ -118,9 +119,9 @@ public class TestRowKeys {
     byteRowKeyPrefix =
         new ApplicationRowKeyPrefix(CLUSTER, USER, FLOW_NAME).getRowKeyPrefix();
     splits =
-        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[] {
+        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[]{
             Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
-            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE });
+            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE});
     assertEquals(4, splits.length);
     assertEquals(0, splits[3].length);
     assertEquals(FLOW_NAME,
@@ -133,14 +134,14 @@ public class TestRowKeys {
    * corresponding rowkey.
    */
   @Test
-  public void testAppToFlowRowKey() {
+  void testAppToFlowRowKey() {
     byte[] byteRowKey = new AppToFlowRowKey(APPLICATION_ID).getRowKey();
     AppToFlowRowKey rowKey = AppToFlowRowKey.parseRowKey(byteRowKey);
     assertEquals(APPLICATION_ID, rowKey.getAppId());
   }
 
   @Test
-  public void testEntityRowKey() {
+  void testEntityRowKey() {
     TimelineEntity entity = new TimelineEntity();
     entity.setId("!ent!ity!!id!");
     entity.setType("entity!Type");
@@ -163,14 +164,14 @@ public class TestRowKeys {
     byte[] byteRowKeyPrefix =
         new EntityRowKeyPrefix(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID,
             APPLICATION_ID, entity.getType(), null, null)
-                .getRowKeyPrefix();
+            .getRowKeyPrefix();
     byte[][] splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
-            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[]{Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
-                Bytes.SIZEOF_LONG, Separator.VARIABLE_SIZE });
+                Bytes.SIZEOF_LONG, Separator.VARIABLE_SIZE});
     assertEquals(7, splits.length);
     assertEquals(APPLICATION_ID, new AppIdKeyConverter().decode(splits[4]));
     assertEquals(entity.getType(),
@@ -183,7 +184,7 @@ public class TestRowKeys {
     splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
-            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[]{Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE});
     assertEquals(6, splits.length);
@@ -194,7 +195,7 @@ public class TestRowKeys {
   }
 
   @Test
-  public void testFlowActivityRowKey() {
+  void testFlowActivityRowKey() {
     Long ts = 1459900830000L;
     Long dayTimestamp = HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
     byte[] byteRowKey =
@@ -208,8 +209,8 @@ public class TestRowKeys {
     byte[] byteRowKeyPrefix =
         new FlowActivityRowKeyPrefix(CLUSTER).getRowKeyPrefix();
     byte[][] splits =
-        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[] {
-            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE });
+        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[]{
+            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE});
     assertEquals(2, splits.length);
     assertEquals(0, splits[1].length);
     assertEquals(CLUSTER,
@@ -220,7 +221,7 @@ public class TestRowKeys {
         new FlowActivityRowKeyPrefix(CLUSTER, ts).getRowKeyPrefix();
     splits =
         Separator.QUALIFIERS.split(byteRowKeyPrefix,
-            new int[] {Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
+            new int[]{Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 Separator.VARIABLE_SIZE});
     assertEquals(3, splits.length);
     assertEquals(0, splits[2].length);
@@ -232,7 +233,7 @@ public class TestRowKeys {
   }
 
   @Test
-  public void testFlowRunRowKey() {
+  void testFlowRunRowKey() {
     byte[] byteRowKey =
         new FlowRunRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID).getRowKey();
     FlowRunRowKey rowKey = FlowRunRowKey.parseRowKey(byteRowKey);
@@ -244,9 +245,9 @@ public class TestRowKeys {
     byte[] byteRowKeyPrefix =
         new FlowRunRowKey(CLUSTER, USER, FLOW_NAME, null).getRowKey();
     byte[][] splits =
-        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[] {
+        Separator.QUALIFIERS.split(byteRowKeyPrefix, new int[]{
             Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
-            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE });
+            Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE});
     assertEquals(4, splits.length);
     assertEquals(0, splits[3].length);
     assertEquals(FLOW_NAME,
@@ -255,7 +256,7 @@ public class TestRowKeys {
   }
 
   @Test
-  public void testSubAppRowKey() {
+  void testSubAppRowKey() {
     TimelineEntity entity = new TimelineEntity();
     entity.setId("entity1");
     entity.setType("DAG");
@@ -275,7 +276,7 @@ public class TestRowKeys {
   }
 
   @Test
-  public void testDomainRowKey() {
+  void testDomainRowKey() {
     String clusterId = "cluster1@dc1";
     String domainId = "helloworld";
     byte[] byteRowKey =
@@ -291,7 +292,7 @@ public class TestRowKeys {
   }
 
   @Test
-  public void testDomainRowKeySpecialChars() {
+  void testDomainRowKeySpecialChars() {
     String clusterId = "cluster1!temp!dc1";
     String domainId = "hello=world";
     byte[] byteRowKey =

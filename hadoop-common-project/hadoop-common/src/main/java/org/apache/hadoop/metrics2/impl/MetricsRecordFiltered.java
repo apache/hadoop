@@ -21,7 +21,7 @@ package org.apache.hadoop.metrics2.impl;
 import java.util.Iterator;
 import java.util.Collection;
 
-import com.google.common.collect.AbstractIterator;
+import org.apache.hadoop.thirdparty.com.google.common.collect.AbstractIterator;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsFilter;

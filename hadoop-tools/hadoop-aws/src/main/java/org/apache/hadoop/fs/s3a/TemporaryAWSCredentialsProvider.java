@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-import com.amazonaws.auth.AWSCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import java.net.URI;
 
@@ -43,11 +43,11 @@ import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
  *
  * This credential provider must not fail in creation because that will
  * break a chain of credential providers.
+ *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TemporaryAWSCredentialsProvider extends
-    AbstractSessionCredentialsProvider {
+public class TemporaryAWSCredentialsProvider extends AbstractSessionCredentialsProvider {
 
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";
@@ -89,7 +89,7 @@ public class TemporaryAWSCredentialsProvider extends
    * @throws NoAwsCredentialsException the credentials are actually empty.
    */
   @Override
-  protected AWSCredentials createCredentials(Configuration config)
+  protected AwsCredentials createCredentials(Configuration config)
       throws IOException {
     MarshalledCredentials creds = MarshalledCredentialBinding.fromFileSystem(
         getUri(), config);

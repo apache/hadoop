@@ -96,7 +96,7 @@ public class LongValueMax implements ValueAggregator<String> {
    *         expected to be used by the a combiner.
    */
   public ArrayList<String> getCombinerOutput() {
-    ArrayList<String> retv = new ArrayList<String>(1);;
+    ArrayList<String> retv = new ArrayList<String>(1);
     retv.add("" + maxVal);
     return retv;
   }

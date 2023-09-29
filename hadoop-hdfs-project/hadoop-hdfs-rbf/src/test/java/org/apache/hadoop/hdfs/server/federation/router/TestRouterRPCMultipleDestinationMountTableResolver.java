@@ -20,11 +20,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,8 +36,11 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -43,6 +48,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -56,7 +63,10 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationReq
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -66,13 +76,14 @@ import org.junit.Test;
  * Tests router rpc with multiple destination mount table resolver.
  */
 public class TestRouterRPCMultipleDestinationMountTableResolver {
-  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1");
+  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
 
   private static StateStoreDFSCluster cluster;
   private static RouterContext routerContext;
   private static MountTableResolver resolver;
   private static DistributedFileSystem nnFs0;
   private static DistributedFileSystem nnFs1;
+  private static DistributedFileSystem nnFs2;
   private static DistributedFileSystem routerFs;
   private static RouterRpcServer rpcServer;
 
@@ -80,7 +91,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   public static void setUp() throws Exception {
 
     // Build and start a federated cluster
-    cluster = new StateStoreDFSCluster(false, 2,
+    cluster = new StateStoreDFSCluster(false, 3,
         MultipleDestinationMountTableResolver.class);
     Configuration routerConf =
         new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
@@ -101,6 +112,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         .getNamenode(cluster.getNameservices().get(0), null).getFileSystem();
     nnFs1 = (DistributedFileSystem) cluster
         .getNamenode(cluster.getNameservices().get(1), null).getFileSystem();
+    nnFs2 = (DistributedFileSystem) cluster
+        .getNamenode(cluster.getNameservices().get(2), null).getFileSystem();
     routerFs = (DistributedFileSystem) routerContext.getFileSystem();
     rpcServer =routerContext.getRouter().getRpcServer();
   }
@@ -410,6 +423,14 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   }
 
   @Test
+  public void testECMultipleDestinations() throws Exception {
+    setupOrderMountPath(DestinationOrder.HASH_ALL);
+    Path mountPath = new Path("/mount/dir");
+    routerFs.setErasureCodingPolicy(mountPath, "RS-6-3-1024k");
+    assertTrue(routerFs.getFileStatus(mountPath).isErasureCoded());
+  }
+
+  @Test
   public void testACLMultipleDestinations() throws Exception {
     setupOrderMountPath(DestinationOrder.HASH_ALL);
     Path mountPath = new Path("/mount/dir/dir");
@@ -484,6 +505,38 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     assertFalse(client.isMultiDestDirectory("/mount/dir"));
   }
 
+  /**
+   * Verifies the snapshot location returned after snapshot operations is in
+   * accordance to the mount path.
+   */
+  @Test
+  public void testSnapshotPathResolution() throws Exception {
+    // Create a mount entry with non isPathAll order, to call
+    // invokeSequential.
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/tmp_ns0");
+    destMap.put("ns1", "/tmp_ns1");
+    nnFs0.mkdirs(new Path("/tmp_ns0"));
+    nnFs1.mkdirs(new Path("/tmp_ns1"));
+    MountTable addEntry = MountTable.newInstance("/mountSnap", destMap);
+    addEntry.setDestOrder(DestinationOrder.HASH);
+    assertTrue(addMountTable(addEntry));
+    // Create the actual directory in the destination second in sequence of
+    // invokeSequential.
+    nnFs0.mkdirs(new Path("/tmp_ns0/snapDir"));
+    Path snapDir = new Path("/mountSnap/snapDir");
+    Path snapshotPath = new Path("/mountSnap/snapDir/.snapshot/snap");
+    routerFs.allowSnapshot(snapDir);
+    // Verify the snapshot path returned after createSnapshot is as per mount
+    // path.
+    Path snapshot = routerFs.createSnapshot(snapDir, "snap");
+    assertEquals(snapshotPath, snapshot);
+    // Verify the snapshot path returned as part of snapshotListing is as per
+    // mount path.
+    SnapshotStatus[] snapshots = routerFs.getSnapshotListing(snapDir);
+    assertEquals(snapshotPath, snapshots[0].getFullPath());
+  }
+
   @Test
   public void testRenameMultipleDestDirectories() throws Exception {
     // Test renaming directories using rename API.
@@ -499,6 +552,213 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     verifyRenameOnMultiDestDirectories(DestinationOrder.RANDOM, true);
     resetTestEnvironment();
     verifyRenameOnMultiDestDirectories(DestinationOrder.SPACE, true);
+  }
+
+  @Test
+  public void testClearQuota() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 100;
+    Path path = new Path("/router_test");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry = MountTable.newInstance("/router_test",
+        Collections.singletonMap("ns0", "/router_test"));
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+
+    //set quota and validate the quota
+    RouterAdmin admin = getRouterAdmin();
+    String[] argv = new String[] {"-setQuota", path.toString(), "-nsQuota",
+        String.valueOf(nsQuota), "-ssQuota", String.valueOf(ssQuota)};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    updateService.periodicInvoke();
+    resolver.loadCache(true);
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+
+    //clear quota and validate the quota
+    argv = new String[] {"-clrQuota", path.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    updateService.periodicInvoke();
+    resolver.loadCache(true);
+    //quota should be cleared
+    ContentSummary cs1 = routerFs.getContentSummary(path);
+    assertEquals(-1, cs1.getQuota());
+    assertEquals(-1, cs1.getSpaceQuota());
+  }
+
+  @Test
+  public void testContentSummaryWithMultipleDest() throws Exception {
+    MountTable addEntry;
+    long nsQuota = 5;
+    long ssQuota = 100;
+    Path path = new Path("/testContentSummaryWithMultipleDest");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testContentSummaryWithMultipleDest");
+    destMap.put("ns1", "/testContentSummaryWithMultipleDest");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    addEntry =
+        MountTable.newInstance("/testContentSummaryWithMultipleDest", destMap);
+    addEntry.setQuota(
+        new RouterQuotaUsage.Builder().quota(nsQuota).spaceQuota(ssQuota)
+            .build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+    ContentSummary ns0Cs = nnFs0.getContentSummary(path);
+    assertEquals(nsQuota, ns0Cs.getQuota());
+    assertEquals(ssQuota, ns0Cs.getSpaceQuota());
+    ContentSummary ns1Cs = nnFs1.getContentSummary(path);
+    assertEquals(nsQuota, ns1Cs.getQuota());
+    assertEquals(ssQuota, ns1Cs.getSpaceQuota());
+  }
+
+  @Test
+  public void testContentSummaryMultipleDestWithMaxValue()
+      throws Exception {
+    MountTable addEntry;
+    long nsQuota = Long.MAX_VALUE - 2;
+    long ssQuota = Long.MAX_VALUE - 2;
+    Path path = new Path("/testContentSummaryMultipleDestWithMaxValue");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testContentSummaryMultipleDestWithMaxValue");
+    destMap.put("ns1", "/testContentSummaryMultipleDestWithMaxValue");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    addEntry = MountTable
+        .newInstance("/testContentSummaryMultipleDestWithMaxValue", destMap);
+    addEntry.setQuota(
+        new RouterQuotaUsage.Builder().quota(nsQuota).spaceQuota(ssQuota)
+            .build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+  }
+
+  /**
+   * Test RouterRpcServer#invokeAtAvailableNs on mount point with multiple destinations
+   * and making a one of the destination's subcluster unavailable.
+   */
+  @Test
+  public void testInvokeAtAvailableNs() throws IOException {
+    // Create a mount point with multiple destinations.
+    Path path = new Path("/testInvokeAtAvailableNs");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testInvokeAtAvailableNs");
+    destMap.put("ns1", "/testInvokeAtAvailableNs");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance("/testInvokeAtAvailableNs", destMap);
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    addEntry.setFaultTolerant(true);
+    assertTrue(addMountTable(addEntry));
+
+    // Make one subcluster unavailable.
+    MiniDFSCluster dfsCluster = cluster.getCluster();
+    dfsCluster.shutdownNameNode(0);
+    dfsCluster.shutdownNameNode(1);
+    try {
+      // Verify that #invokeAtAvailableNs works by calling #getServerDefaults.
+      RemoteMethod method = new RemoteMethod("getServerDefaults");
+      FsServerDefaults serverDefaults =
+          rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      assertNotNull(serverDefaults);
+    } finally {
+      dfsCluster.restartNameNode(0);
+      dfsCluster.restartNameNode(1);
+    }
+  }
+
+  /**
+   * Test write on mount point with multiple destinations
+   * and making a one of the destination's subcluster unavailable.
+   */
+  @Test
+  public void testWriteWithUnavailableSubCluster() throws IOException {
+    //create a mount point with multiple destinations
+    Path path = new Path("/testWriteWithUnavailableSubCluster");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testWriteWithUnavailableSubCluster");
+    destMap.put("ns1", "/testWriteWithUnavailableSubCluster");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance("/testWriteWithUnavailableSubCluster", destMap);
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    addEntry.setFaultTolerant(true);
+    assertTrue(addMountTable(addEntry));
+
+    //make one subcluster unavailable and perform write on mount point
+    MiniDFSCluster dfsCluster = cluster.getCluster();
+    dfsCluster.shutdownNameNode(0);
+    FSDataOutputStream out = null;
+    Path filePath = new Path(path, "aa");
+    try {
+      out = routerFs.create(filePath);
+      out.write("hello".getBytes());
+      out.hflush();
+      assertTrue(routerFs.exists(filePath));
+    } finally {
+      IOUtils.closeStream(out);
+      dfsCluster.restartNameNode(0);
+    }
+  }
+
+  /**
+   *  Test rename a dir from src dir (mapped to both ns0 and ns1) to ns0.
+   */
+  @Test
+  public void testRenameWithMultiDestinations() throws Exception {
+    //create a mount point with multiple destinations
+    String srcDir = "/mount-source-dir";
+    Path path = new Path(srcDir);
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", srcDir);
+    destMap.put("ns1", srcDir);
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance(srcDir, destMap);
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    assertTrue(addMountTable(addEntry));
+
+    //create a mount point with a single destinations ns0
+    String targetDir = "/ns0_test";
+    nnFs0.mkdirs(new Path(targetDir));
+    MountTable addDstEntry = MountTable.newInstance(targetDir,
+        Collections.singletonMap("ns0", targetDir));
+    assertTrue(addMountTable(addDstEntry));
+
+    //mkdir sub dirs in srcDir  mapping ns0 & ns1
+    routerFs.mkdirs(new Path(srcDir + "/dir1"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_1"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_2"));
+    routerFs.mkdirs(new Path(targetDir));
+
+    //try to rename sub dir in srcDir (mapping to ns0 & ns1) to targetDir
+    // (mapping ns0)
+    LambdaTestUtils.intercept(IOException.class, "The number of" +
+            " remote locations for both source and target should be same.",
+        () -> {
+          routerFs.rename(new Path(srcDir + "/dir1/dir_1"),
+              new Path(targetDir));
+        });
   }
 
   /**
@@ -679,7 +939,18 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     if (nsId.equals("ns1")) {
       return nnFs1;
     }
+    if (nsId.equals("ns2")) {
+      return nnFs2;
+    }
     return null;
   }
 
+  private RouterAdmin getRouterAdmin() {
+    Router router = routerContext.getRouter();
+    Configuration configuration = routerContext.getConf();
+    InetSocketAddress routerSocket = router.getAdminServerAddress();
+    configuration.setSocketAddr(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        routerSocket);
+    return new RouterAdmin(configuration);
+  }
 }

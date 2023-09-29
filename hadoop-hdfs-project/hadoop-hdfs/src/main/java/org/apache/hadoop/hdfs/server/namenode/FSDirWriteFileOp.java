@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -251,7 +251,6 @@ class FSDirWriteFileOp {
     fsn.commitOrCompleteLastBlock(pendingFile, fileState.iip,
                                   ExtendedBlock.getLocalBlock(previous));
 
-    // allocate new block, record block locations in INode.
     final BlockType blockType = pendingFile.getBlockType();
     // allocate new block, record block locations in INode.
     Block newBlock = fsn.createNewBlock(blockType);
@@ -624,7 +623,7 @@ class FSDirWriteFileOp {
       //    timeout, or because of an HA failover. In that case, we know
       //    by the fact that the client is re-issuing the RPC that it
       //    never began to write to the old block. Hence it is safe to
-      //    to return the existing block.
+      //    return the existing block.
       // 3) This is an entirely bogus request/bug -- we should error out
       //    rather than potentially appending a new block with an empty
       //    one in the middle, etc
@@ -776,7 +775,7 @@ class FSDirWriteFileOp {
    * @param targets target datanodes where replicas of the new block is placed
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  private static void saveAllocatedBlock(FSNamesystem fsn, String src,
+  static void saveAllocatedBlock(FSNamesystem fsn, String src,
       INodesInPath inodesInPath, Block newBlock, DatanodeStorageInfo[] targets,
       BlockType blockType) throws IOException {
     assert fsn.hasWriteLock();

@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of {@link SubClusterRegisterRequest}.
@@ -118,8 +118,10 @@ public class SubClusterRegisterRequestPBImpl extends SubClusterRegisterRequest {
     maybeInitBuilder();
     if (subClusterInfo == null) {
       builder.clearSubClusterInfo();
+      return;
     }
     this.subClusterInfo = subClusterInfo;
+    builder.setSubClusterInfo(convertToProtoFormat(subClusterInfo));
   }
 
   private SubClusterInfo convertFromProtoFormat(

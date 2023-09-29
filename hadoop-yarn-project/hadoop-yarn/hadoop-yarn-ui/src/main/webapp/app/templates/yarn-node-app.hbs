@@ -50,7 +50,7 @@
         <tbody>
           {{#each model.nodeApp.containers as |container|}}
             <tr>
-              <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container}}">{{container}}</a></td>
+              <td><a href="#/yarn-node-container/{{model.nodeInfo.id}}/{{encodedNodeAddr}}/{{container}}">{{container}}</a></td>
             </tr>
           {{/each}}
        </tbody>

@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptFinishData;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class ApplicationAttemptFinishDataPBImpl extends
     ApplicationAttemptFinishData {

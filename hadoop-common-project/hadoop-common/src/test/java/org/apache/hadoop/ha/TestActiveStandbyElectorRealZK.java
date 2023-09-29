@@ -37,7 +37,7 @@ import org.junit.Test;
 import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.slf4j.event.Level;
 
 /**

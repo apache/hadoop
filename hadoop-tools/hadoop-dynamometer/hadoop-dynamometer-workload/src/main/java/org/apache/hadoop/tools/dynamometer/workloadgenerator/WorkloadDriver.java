@@ -26,15 +26,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -66,28 +63,28 @@ public class WorkloadDriver extends Configured implements Tool {
             + " argument to show help for a specific mapper class.");
     Options options = new Options();
     options.addOption(helpOption);
-    options.addOption(OptionBuilder.withArgName("NN URI").hasArg()
-        .withDescription("URI of the NameNode under test").isRequired()
-        .create(NN_URI));
+    options.addOption(Option.builder(NN_URI).argName("NN URI").hasArg()
+        .desc("URI of the NameNode under test").required()
+        .build());
     OptionGroup startTimeOptions = new OptionGroup();
-    startTimeOptions.addOption(OptionBuilder.withArgName("Start Timestamp")
-        .hasArg().withDescription("Mapper start UTC timestamp in ms")
-        .create(START_TIMESTAMP_MS));
+    startTimeOptions.addOption(Option.builder(START_TIMESTAMP_MS).argName("Start Timestamp")
+        .hasArg().desc("Mapper start UTC timestamp in ms")
+        .build());
     startTimeOptions
-        .addOption(OptionBuilder.withArgName("Start Time Offset").hasArg()
-            .withDescription("Mapper start time as an offset from current "
+        .addOption(Option.builder(START_TIME_OFFSET_DEFAULT).argName("Start Time Offset").hasArg()
+            .desc("Mapper start time as an offset from current "
                 + "time. Human-readable formats accepted, e.g. 10m (default "
                 + START_TIME_OFFSET_DEFAULT + ").")
-            .create(START_TIME_OFFSET));
+            .build());
     options.addOptionGroup(startTimeOptions);
-    Option mapperClassOption = OptionBuilder.withArgName("Mapper ClassName")
+    Option mapperClassOption = Option.builder(MAPPER_CLASS_NAME).argName("Mapper ClassName")
         .hasArg()
-        .withDescription("Class name of the mapper; must be a WorkloadMapper "
+        .desc("Class name of the mapper; must be a WorkloadMapper "
             + "subclass. Mappers supported currently: \n"
             + "1. AuditReplayMapper \n"
             + "2. CreateFileMapper \n"
             + "Fully specified class names are also supported.")
-        .isRequired().create(MAPPER_CLASS_NAME);
+        .required().build();
     options.addOption(mapperClassOption);
 
     Options helpOptions = new Options();
@@ -124,7 +121,7 @@ public class WorkloadDriver extends Configured implements Tool {
       startTimestampMs = tmpConf.getTimeDuration(tmpConfKey, 0,
           TimeUnit.MILLISECONDS) + System.currentTimeMillis();
     }
-    Class<? extends WorkloadMapper<?, ?>> mapperClass = getMapperClass(
+    Class<? extends WorkloadMapper<?, ?, ?, ?>> mapperClass = getMapperClass(
         cli.getOptionValue(MAPPER_CLASS_NAME));
     if (!mapperClass.newInstance().verifyConfigurations(getConf())) {
       System.err
@@ -140,8 +137,9 @@ public class WorkloadDriver extends Configured implements Tool {
   }
 
   public static Job getJobForSubmission(Configuration baseConf, String nnURI,
-      long startTimestampMs, Class<? extends WorkloadMapper<?, ?>> mapperClass)
-      throws IOException, InstantiationException, IllegalAccessException {
+      long startTimestampMs, Class<? extends WorkloadMapper<?, ?, ?, ?>>
+      mapperClass) throws IOException, InstantiationException,
+      IllegalAccessException {
     Configuration conf = new Configuration(baseConf);
     conf.set(NN_URI, nnURI);
     conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, false);
@@ -153,16 +151,9 @@ public class WorkloadDriver extends Configured implements Tool {
     conf.setLong(START_TIMESTAMP_MS, startTimestampMs);
 
     Job job = Job.getInstance(conf, "Dynamometer Workload Driver");
-    job.setOutputFormatClass(NullOutputFormat.class);
     job.setJarByClass(mapperClass);
     job.setMapperClass(mapperClass);
-    job.setInputFormatClass(mapperClass.newInstance().getInputFormat(conf));
-    job.setOutputFormatClass(NullOutputFormat.class);
-    job.setNumReduceTasks(0);
-    job.setMapOutputKeyClass(NullWritable.class);
-    job.setMapOutputValueClass(NullWritable.class);
-    job.setOutputKeyClass(NullWritable.class);
-    job.setOutputValueClass(NullWritable.class);
+    mapperClass.newInstance().configureJob(job);
 
     return job;
   }
@@ -175,23 +166,35 @@ public class WorkloadDriver extends Configured implements Tool {
   // The cast is actually checked via isAssignableFrom but the compiler doesn't
   // recognize this
   @SuppressWarnings("unchecked")
-  private Class<? extends WorkloadMapper<?, ?>> getMapperClass(String className)
-      throws ClassNotFoundException {
-    if (!className.contains(".")) {
-      className = WorkloadDriver.class.getPackage().getName() + "." + className;
+  private Class<? extends WorkloadMapper<?, ?, ?, ?>> getMapperClass(
+      String className) {
+    String[] potentialQualifiedClassNames = {
+        WorkloadDriver.class.getPackage().getName() + "." + className,
+        AuditReplayMapper.class.getPackage().getName() + "." + className,
+        className
+    };
+    for (String qualifiedClassName : potentialQualifiedClassNames) {
+      Class<?> mapperClass;
+      try {
+        mapperClass = getConf().getClassByName(qualifiedClassName);
+      } catch (ClassNotFoundException cnfe) {
+        continue;
+      }
+      if (!WorkloadMapper.class.isAssignableFrom(mapperClass)) {
+        throw new IllegalArgumentException(className + " is not a subclass of "
+            + WorkloadMapper.class.getCanonicalName());
+      }
+      return (Class<? extends WorkloadMapper<?, ?, ?, ?>>) mapperClass;
     }
-    Class<?> mapperClass = getConf().getClassByName(className);
-    if (!WorkloadMapper.class.isAssignableFrom(mapperClass)) {
-      throw new IllegalArgumentException(className + " is not a subclass of "
-          + WorkloadMapper.class.getCanonicalName());
-    }
-    return (Class<? extends WorkloadMapper<?, ?>>) mapperClass;
+    throw new IllegalArgumentException("Unable to find workload mapper class: "
+        + className);
   }
 
   private String getMapperUsageInfo(String mapperClassName)
       throws ClassNotFoundException, InstantiationException,
       IllegalAccessException {
-    WorkloadMapper<?, ?> mapper = getMapperClass(mapperClassName).newInstance();
+    WorkloadMapper<?, ?, ?, ?> mapper = getMapperClass(mapperClassName)
+        .newInstance();
     StringBuilder builder = new StringBuilder("Usage for ");
     builder.append(mapper.getClass().getSimpleName());
     builder.append(":\n");

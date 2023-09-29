@@ -1060,9 +1060,9 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 3 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file1
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file2
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file3</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file1
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file2
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file3</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1081,9 +1081,9 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 3 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file3
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file2
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file1</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file3
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file2
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/file1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1105,10 +1105,10 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 4 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*120( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data120bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*60( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data60bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*30( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data30bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*15( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data15bytes</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*120( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data120bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*60( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data60bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*30( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data30bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*15( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1130,10 +1130,10 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 4 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*15( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data15bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*30( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data30bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*60( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data60bytes
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*120( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data120bytes</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*15( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data15bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*30( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data30bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*60( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data60bytes
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*120( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1157,11 +1157,11 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 5 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fifth
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fourth
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/third
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/second
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/first</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fifth
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fourth
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/third
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/second
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/first</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1185,11 +1185,11 @@
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>Found 5 items
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/first
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/second
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/third
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fourth
--rw-r--r--( )*1( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fifth</expected-output>
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/first
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/second
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/third
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fourth
+-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir/fifth</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15788,7 +15788,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-report \[-live\] \[-dead\] \[-decommissioning\] \[-enteringmaintenance\] \[-inmaintenance\]:(.)*</expected-output>
+          <expected-output>^-report \[-live\] \[-dead\] \[-decommissioning\] \[-enteringmaintenance\] \[-inmaintenance\] \[-slownodes\]:(.)*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16108,10 +16108,6 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*- RAM_DISK( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
           <expected-output>^( |\t)*- DISK( )*</expected-output>
         </comparator>
         <comparator>
@@ -16121,6 +16117,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*- ARCHIVE( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- PROVIDED( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16723,19 +16723,19 @@
         <!-- miniDFS cluster started in CLITestHelper is set to match this output -->
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>^Rack: \/rack1\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>^Rack: \/rack1\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack2\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack2\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack3\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack3\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack4\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack4\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
       </comparators>
     </test>

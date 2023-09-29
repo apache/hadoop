@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -116,7 +118,12 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   public void testRunningAppsXml() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-    RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+            .withAppName("testwordcount")
+            .withUser("user1")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
@@ -147,7 +154,12 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   public void testRunningAppsJson() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-    RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(CONTAINER_MB, rm)
+            .withAppName("testwordcount")
+            .withUser("user1")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);

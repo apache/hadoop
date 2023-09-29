@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,11 +36,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -80,7 +81,7 @@ public class TestOfflineImageViewerForXAttr {
       hdfs.setXAttr(dir, "user.attr1", "value1".getBytes());
       hdfs.setXAttr(dir, "user.attr2", "value2".getBytes());
       // Write results to the fsimage file
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
 
       List<XAttr> attributes = new ArrayList<XAttr>();
@@ -125,7 +126,7 @@ public class TestOfflineImageViewerForXAttr {
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
 
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -150,7 +151,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -183,7 +184,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
       assertEquals(attr1JSon, content);
     }
   }
@@ -205,7 +206,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
       assertEquals(attr1JSon, content);
 
     }

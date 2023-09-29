@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.sls.web;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 
+import org.apache.hadoop.yarn.sls.utils.NodeUsageRanges;
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -49,10 +51,14 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public class SLSWebApp extends HttpServlet {
+  private static final Logger LOG = LoggerFactory.getLogger(SLSWebApp.class);
+
   private static final long serialVersionUID = 1905162041950251407L;
   private transient Server server;
   private transient SchedulerWrapper wrapper;
@@ -68,6 +74,7 @@ public class SLSWebApp extends HttpServlet {
   private transient Gauge allocatedVCoresGauge;
   private transient Gauge availableMemoryGauge;
   private transient Gauge availableVCoresGauge;
+  private transient Map<String, Gauge> perNodeUsageGaugeMap;
   private transient Histogram allocateTimecostHistogram;
   private transient Histogram commitSuccessTimecostHistogram;
   private transient Histogram commitFailureTimecostHistogram;
@@ -94,13 +101,13 @@ public class SLSWebApp extends HttpServlet {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
       simulateInfoTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.info.html.template"));
+          cl.getResourceAsStream("html/simulate.info.html.template"), StandardCharsets.UTF_8);
       simulateTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.html.template"));
+          cl.getResourceAsStream("html/simulate.html.template"), StandardCharsets.UTF_8);
       trackTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/track.html.template"));
+          cl.getResourceAsStream("html/track.html.template"), StandardCharsets.UTF_8);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.error("Caught exception while initializing templates", e);
     }
   }
 
@@ -117,6 +124,7 @@ public class SLSWebApp extends HttpServlet {
     handleOperTimecostHistogramMap = new HashMap<>();
     queueAllocatedMemoryCounterMap = new HashMap<>();
     queueAllocatedVCoresCounterMap = new HashMap<>();
+    perNodeUsageGaugeMap = new HashMap<>();
     schedulerMetrics = wrapper.getSchedulerMetrics();
     metrics = schedulerMetrics.getMetrics();
     port = metricsAddressPort;
@@ -165,7 +173,7 @@ public class SLSWebApp extends HttpServlet {
                 printJsonTrack(request, response);
               }
         } catch (Exception e) {
-          e.printStackTrace();
+          LOG.error("Caught exception while starting SLSWebApp", e);
         }
       }
     };
@@ -542,7 +550,37 @@ public class SLSWebApp extends HttpServlet {
       sb.append(",\"scheduler.handle-").append(e).append(".timecost\":")
               .append(handleOperTimecostMap.get(e));
     }
+    sb.append(generateNodeUsageMetrics("memory"));
+    sb.append(generateNodeUsageMetrics("vcores"));
     sb.append("}");
+    return sb.toString();
+  }
+
+  private String generateNodeUsageMetrics(String resourceType) {
+    StringBuilder sb = new StringBuilder();
+    Map<String, Integer> perNodeUsageMap = new HashMap<>();
+    for (NodeUsageRanges.Range range : NodeUsageRanges.getRanges()) {
+      String metricName = "nodes." + resourceType + "." + range.getKeyword();
+      if (!perNodeUsageGaugeMap.containsKey(metricName) &&
+          metrics.getGauges().containsKey(metricName)) {
+        perNodeUsageGaugeMap.put(metricName,
+            metrics.getGauges().get(metricName));
+      }
+
+      int perNodeUsageCount =
+          perNodeUsageGaugeMap.containsKey(metricName) ?
+              Integer.parseInt(
+                  perNodeUsageGaugeMap.get(metricName).getValue().toString()) : 0;
+
+      perNodeUsageMap.put(metricName, perNodeUsageCount);
+    }
+
+    // per node memory and vcores used
+    for (NodeUsageRanges.Range range : NodeUsageRanges.getRanges()) {
+      String metricName = "nodes." + resourceType + "." + range.getKeyword();
+      sb.append(",\"").append(metricName).append("\":")
+          .append(perNodeUsageMap.get(metricName));
+    }
     return sb.toString();
   }
 

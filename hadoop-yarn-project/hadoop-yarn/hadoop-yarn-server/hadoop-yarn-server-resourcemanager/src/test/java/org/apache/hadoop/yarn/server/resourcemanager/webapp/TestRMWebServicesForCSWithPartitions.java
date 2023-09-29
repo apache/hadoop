@@ -18,49 +18,71 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATION_STATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_DIAGNOSTIC;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.XMLUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String DEFAULT_PARTITION = "";
   private static final String CAPACITIES = "capacities";
@@ -77,44 +99,26 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String LABEL_LX = "Lx";
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
+  private static final String DOT = ".";
+  private static final double EPSILON = 1e-1f;
+
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
 
-  private static class WebServletModule extends ServletModule {
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      csConf = new CapacitySchedulerConfiguration();
-      setupQueueConfiguration(csConf);
-      conf = new YarnConfiguration(csConf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      rm = new MockRM(conf);
-      Set<NodeLabel> labels = new HashSet<NodeLabel>();
-      labels.add(NodeLabel.newInstance(LABEL_LX));
-      labels.add(NodeLabel.newInstance(LABEL_LY));
-      try {
-        RMNodeLabelsManager nodeLabelManager =
-            rm.getRMContext().getNodeLabelManager();
-        nodeLabelManager.addToCluserNodeLabels(labels);
-      } catch (Exception e) {
-        Assert.fail();
-      }
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
-  };
+  private final boolean legacyQueueMode;
 
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
   }
 
-  private static void setupQueueConfiguration(
+  private MockNM nm1;
+
+  private void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
+
+    config.setLegacyQueueModeEnabled(legacyQueueMode);
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
@@ -177,16 +181,57 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+
+    csConf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(csConf);
+    conf = new YarnConfiguration(csConf);
+    rm = createRM(conf);
+
+    Set<NodeLabel> labels = new HashSet<NodeLabel>();
+    labels.add(NodeLabel.newInstance(LABEL_LX));
+    labels.add(NodeLabel.newInstance(LABEL_LY));
+    try {
+      RMNodeLabelsManager nodeLabelManager =
+          rm.getRMContext().getNodeLabelManager();
+      nodeLabelManager.addToCluserNodeLabels(labels);
+    } catch (Exception e) {
+      Assert.fail();
+    }
+
+    rm.start();
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+
+    nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    nm1.registerNode();
+    nm2.registerNode();
+
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+        .of(NodeId.newInstance("127.0.0.2", 0), Sets.newHashSet(LABEL_LY)));
+
+    MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024,
+        rm.getResourceTrackerService());
+    nm3.registerNode();
+
+    // Default partition
+    MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024,
+        rm.getResourceTrackerService());
+    nm4.registerNode();
   }
 
-  public TestRMWebServicesForCSWithPartitions() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
+  @After
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+    }
+  }
+
+  public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
+    super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
@@ -234,12 +279,83 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     verifySchedulerInfoXML(dom);
+  }
+
+  @Test
+  public void testPartitionInSchedulerActivities() throws Exception {
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue(QUEUE_B)
+            .withAmLabel(LABEL_LX)
+            .build());
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+    am1.allocate(Arrays.asList(
+        ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
+            .resourceName("*").nodeLabelExpression(LABEL_LX)
+            .capability(Resources.createResource(2048)).numContainers(1)
+            .build()), null);
+
+    WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+        .path(RMWSConsts.SCHEDULER_ACTIVITIES);
+    ActivitiesTestUtils.requestWebResource(sr, null);
+
+    nm1.nodeHeartbeat(true);
+    Thread.sleep(1000);
+
+    JSONObject schedulerActivitiesJson =
+        ActivitiesTestUtils.requestWebResource(sr, null);
+
+    /*
+     * verify scheduler activities
+     */
+    verifyNumberOfAllocations(schedulerActivitiesJson, 1);
+    // verify queue Qb
+    Predicate<JSONObject> findQueueBPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
+    List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
+    assertEquals(1, queueBObj.size());
+    assertEquals(ActivityState.REJECTED.name(),
+        queueBObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM
+        + " from " + am1.getApplicationAttemptId().getApplicationId(),
+        queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+    // verify queue Qa
+    Predicate<JSONObject> findQueueAPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
+    List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
+    assertEquals(1, queueAObj.size());
+    assertEquals(ActivityState.REJECTED.name(),
+        queueAObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(
+        ActivityDiagnosticConstant.QUEUE_NOT_ABLE_TO_ACCESS_PARTITION,
+        queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+    // verify queue Qc
+    Predicate<JSONObject> findQueueCPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
+    List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
+    assertEquals(1, queueCObj.size());
+    assertEquals(ActivityState.SKIPPED.name(),
+        queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
+        queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
   }
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {
@@ -341,8 +457,6 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             Assert.fail("Unexpected partition" + partitionName);
           }
         }
-      } else if (queueChildElem.getTagName().equals("resources")) {
-        verifyResourceUsageInfoXML(queueChildElem);
       }
     }
     assertEquals("Node Labels are not matching", LABEL_LX,
@@ -444,20 +558,20 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) {
     assertEquals("capacity doesn't match", capacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteCapacity"),
-        1e-3f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteUsedCapacity"),
-        1e-3f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteMaxCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteMaxCapacity"),
-        1e-3f);
+        EPSILON);
   }
 
   private void verifySchedulerInfoJson(JSONObject json)
@@ -466,7 +580,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 25, info.length());
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
@@ -484,16 +598,12 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     for (int i = 0; i < queuesArray.length(); i++) {
       JSONObject queueJson = queuesArray.getJSONObject(i);
       String queue = queueJson.getString("queueName");
-
-      assertEquals("Partition resourceInfo is wrong", 1,
-          queueJson.getJSONObject("resources")
-              .getJSONArray(RESOURCE_USAGES_BY_PARTITION).length());
+      JSONArray resourceUsageByPartition = queueJson.getJSONObject("resources")
+          .getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       JSONObject resourcesJsonObject = queueJson.getJSONObject("resources");
       JSONArray partitionsResourcesArray =
-          resourcesJsonObject.getJSONArray("resourceUsagesByPartition");
-      assertEquals("incorrect number of elements", 1,
-          partitionsResourcesArray.length());
+          resourcesJsonObject.getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       capacitiesJsonObject = queueJson.getJSONObject(CAPACITIES);
       partitionsCapsArray =
@@ -510,6 +620,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyPartitionCapacityInfoJson(partitionInfo, 30, 0, 50, 30, 0, 50);
         assertEquals("incorrect number of elements", 7,
             partitionsResourcesArray.getJSONObject(0).length());
+        assertEquals("incorrect number of objects", 1,
+            resourceUsageByPartition.length());
         break;
       case QUEUE_B:
         assertEquals("Invalid default Label expression", LABEL_LX,
@@ -519,6 +631,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyAccesibleNodeLabels(queueJson, ImmutableSet.of(LABEL_LX));
         assertEquals("incorrect number of partitions", 2,
             partitionsCapsArray.length());
+        assertEquals("incorrect number of objects", 2,
+            resourceUsageByPartition.length());
         for (int j = 0; j < partitionsCapsArray.length(); j++) {
           partitionInfo = partitionsCapsArray.getJSONObject(j);
           partitionName = partitionInfo.getString("partitionName");
@@ -629,13 +743,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float maxCapacity, float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) throws JSONException {
     assertEquals("capacity doesn't match", capacity,
-        (float) partitionCapacityInfoJson.getDouble("capacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
-        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteUsedCapacity"),
         1e-3f);

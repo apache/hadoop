@@ -51,7 +51,7 @@ public class RollingUpgradeStatus {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof RollingUpgradeStatus)) {
+    } else if (!(obj instanceof RollingUpgradeStatus)) {
       return false;
     }
     final RollingUpgradeStatus that = (RollingUpgradeStatus) obj;

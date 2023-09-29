@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.assureRoot;
@@ -50,7 +50,8 @@ public class PrimaryGroupPlacementRule extends FSPlacementRule {
   @Override
   public boolean initialize(ResourceScheduler scheduler) throws IOException {
     super.initialize(scheduler);
-    groupProvider = new Groups(((FairScheduler)scheduler).getConfig());
+    groupProvider = Groups.
+        getUserToGroupsMappingService(((FairScheduler)scheduler).getConfig());
 
     return true;
   }
@@ -61,19 +62,19 @@ public class PrimaryGroupPlacementRule extends FSPlacementRule {
 
     // All users should have at least one group the primary group. If no groups
     // are returned then there is a real issue.
-    final List<String> groupList;
+    final Set<String> groupSet;
     try {
-      groupList = groupProvider.getGroups(user);
+      groupSet = groupProvider.getGroupsSet(user);
     } catch (IOException ioe) {
       throw new YarnException("Group resolution failed", ioe);
     }
-    if (groupList.isEmpty()) {
+    if (groupSet.isEmpty()) {
       LOG.error("Group placement rule failed: No groups returned for user {}",
           user);
       throw new YarnException("No groups returned for user " + user);
     }
 
-    String cleanGroup = cleanName(groupList.get(0));
+    String cleanGroup = cleanName(groupSet.iterator().next());
     String queueName;
     PlacementRule parentRule = getParentRule();
 

@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApp
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of
@@ -122,6 +122,7 @@ public class GetApplicationsHomeSubClusterResponsePBImpl
       return;
     }
     this.appsHomeSubCluster = appsHomeSubClusters;
+    addSubClustersInfoToProto();
   }
 
   private void initSubClustersInfoList() {
@@ -132,7 +133,7 @@ public class GetApplicationsHomeSubClusterResponsePBImpl
         viaProto ? proto : builder;
     List<ApplicationHomeSubClusterProto> subClusterInfosList =
         p.getAppSubclusterMapList();
-    appsHomeSubCluster = new ArrayList<ApplicationHomeSubCluster>();
+    appsHomeSubCluster = new ArrayList<>();
 
     for (ApplicationHomeSubClusterProto r : subClusterInfosList) {
       appsHomeSubCluster.add(convertFromProtoFormat(r));

@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * An implementation of the abstract class {@link EditLogOutputStream}, which
@@ -84,18 +84,23 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     doubleBuf = new EditsDoubleBuffer(size);
     RandomAccessFile rp;
     if (shouldSyncWritesAndSkipFsync) {
-      rp = new RandomAccessFile(name, "rws");
+      rp = new RandomAccessFile(name, "rwd");
     } else {
       rp = new RandomAccessFile(name, "rw");
     }
-    fp = new FileOutputStream(rp.getFD()); // open for append
+    try {
+      fp = new FileOutputStream(rp.getFD()); // open for append
+    } catch (IOException e) {
+      IOUtils.closeStream(rp);
+      throw e;
+    }
     fc = rp.getChannel();
     fc.position(fc.size());
   }
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    doubleBuf.writeOp(op);
+    doubleBuf.writeOp(op, getCurrentLogVersion());
   }
 
   /**
@@ -121,6 +126,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     writeHeader(layoutVersion, doubleBuf.getCurrentBuf());
     setReadyToFlush();
     flush();
+    setCurrentLogVersion(layoutVersion);
   }
 
   /**

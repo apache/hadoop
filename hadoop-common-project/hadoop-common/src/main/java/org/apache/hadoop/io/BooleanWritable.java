@@ -35,21 +35,24 @@ public class BooleanWritable implements WritableComparable<BooleanWritable> {
    */
   public BooleanWritable() {};
 
-  /** 
+  /**
+   * @param value value.
    */
   public BooleanWritable(boolean value) {
     set(value);
   }
 
   /** 
-   * Set the value of the BooleanWritable
+   * Set the value of the BooleanWritable.
+   * @param value value.
    */    
   public void set(boolean value) {
     this.value = value;
   }
 
   /**
-   * Returns the value of the BooleanWritable
+   * Returns the value of the BooleanWritable.
+   * @return the value of the BooleanWritable.
    */
   public boolean get() {
     return value;

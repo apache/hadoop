@@ -18,10 +18,10 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.tracing";
 option java_outer_classname = "TraceAdminPB";
 option java_generic_services = true;

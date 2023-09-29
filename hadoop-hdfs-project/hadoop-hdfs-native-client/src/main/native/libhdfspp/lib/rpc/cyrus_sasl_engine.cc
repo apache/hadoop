@@ -28,7 +28,7 @@
 
 #include "common/logging.h"
 
-#include       "sasl_engine.h"
+#include "sasl_engine.h"
 #include "cyrus_sasl_engine.h"
 
 namespace hdfs {

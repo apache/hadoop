@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class is responsible for uploading resources from the client to HDFS
@@ -59,6 +59,8 @@ import com.google.common.annotations.VisibleForTesting;
 class JobResourceUploader {
   protected static final Logger LOG =
       LoggerFactory.getLogger(JobResourceUploader.class);
+  private static final String ROOT_PATH = "/";
+
   private final boolean useWildcard;
   private final FileSystem jtFs;
   private SharedCacheClient scClient = null;
@@ -330,13 +332,12 @@ class JobResourceUploader {
           // separately.
           foundFragment = (newURI.getFragment() != null) && !fromSharedCache;
         }
-        DistributedCache.addFileToClassPath(new Path(newURI.getPath()), conf,
-            jtFs, false);
+        Job.addFileToClassPath(new Path(newURI.getPath()), conf, jtFs, false);
         if (fromSharedCache) {
           // We simply add this URI to the distributed cache. It will not come
           // from the staging directory (it is in the shared cache), so we
           // must add it to the cache regardless of the wildcard feature.
-          DistributedCache.addCacheFile(newURI, conf);
+          Job.addCacheFile(newURI, conf);
         } else {
           libjarURIs.add(newURI);
         }
@@ -350,10 +351,10 @@ class JobResourceUploader {
         // Add the whole directory to the cache using a wild card
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
-        DistributedCache.addCacheFile(libJarsDirWildcard.toUri(), conf);
+        Job.addCacheFile(libJarsDirWildcard.toUri(), conf);
       } else {
         for (URI uri : libjarURIs) {
-          DistributedCache.addCacheFile(uri, conf);
+          Job.addCacheFile(uri, conf);
         }
       }
     }
@@ -674,9 +675,30 @@ class JobResourceUploader {
     if (FileUtil.compareFs(remoteFs, jtFs)) {
       return originalPath;
     }
+
+    boolean root = false;
+    if (ROOT_PATH.equals(originalPath.toUri().getPath())) {
+      // "/" needs special treatment
+      root = true;
+    } else {
+      // If originalPath ends in a "/", then remove it so
+      // that originalPath.getName() does not return an empty string
+      String uriString = originalPath.toUri().toString();
+      if (uriString.endsWith("/")) {
+        try {
+          URI strippedURI =
+              new URI(uriString.substring(0, uriString.length() - 1));
+          originalPath = new Path(strippedURI);
+        } catch (URISyntaxException e) {
+          throw new IllegalArgumentException("Error processing URI", e);
+        }
+      }
+    }
+
     // this might have name collisions. copy will throw an exception
     // parse the original path to create new path
-    Path newPath = new Path(parentDir, originalPath.getName());
+    Path newPath = root ?
+        parentDir : new Path(parentDir, originalPath.getName());
     FileUtil.copy(remoteFs, originalPath, jtFs, newPath, false, conf);
     jtFs.setReplication(newPath, replication);
     jtFs.makeQualified(newPath);
@@ -761,9 +783,11 @@ class JobResourceUploader {
   void copyJar(Path originalJarPath, Path submitJarFile,
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
-    jtFs.setReplication(submitJarFile, replication);
+    // The operation of setReplication requires certain permissions
+    // so we need to make sure it has enough permissions
     jtFs.setPermission(submitJarFile, new FsPermission(
         JobSubmissionFiles.JOB_FILE_PERMISSION));
+    jtFs.setReplication(submitJarFile, replication);
   }
 
   private void addLog4jToDistributedCache(Job job, Path jobSubmitDir)
@@ -824,8 +848,8 @@ class JobResourceUploader {
       }
       Path tmp = new Path(tmpURI);
       Path newPath = copyRemoteFiles(fileDir, tmp, conf, replication);
-      DistributedCache.addFileToClassPath(new Path(newPath.toUri().getPath()),
-          conf);
+      Path path = new Path(newPath.toUri().getPath());
+      Job.addFileToClassPath(path, conf, path.getFileSystem(conf));
     }
   }
 

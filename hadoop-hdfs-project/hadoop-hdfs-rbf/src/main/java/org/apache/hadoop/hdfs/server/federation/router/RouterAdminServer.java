@@ -20,19 +20,27 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.server.federation.fairness.RefreshFairnessPolicyControllerHandler.HANDLER_IDENTIFIER;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
+import org.apache.hadoop.util.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
@@ -40,8 +48,10 @@ import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocol;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterPolicyProvider;
+import org.apache.hadoop.hdfs.server.federation.fairness.RefreshFairnessPolicyControllerHandler;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -72,29 +82,35 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RefreshRegistry;
 import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos;
+import org.apache.hadoop.ipc.proto.RefreshCallQueueProtocolProtos;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
- * This class is responsible for handling all of the Admin calls to the HDFS
+ * This class is responsible for handling all the Admin calls to the HDFS
  * router. It is created, started, and stopped by {@link Router}.
  */
 public class RouterAdminServer extends AbstractService
-    implements RouterAdminProtocol {
+    implements RouterAdminProtocol, RefreshCallQueueProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAdminServer.class);
@@ -119,6 +135,8 @@ public class RouterAdminServer extends AbstractService
   private static String superGroup;
   private static boolean isPermissionEnabled;
   private boolean iStateStoreCache;
+  private final long maxComponentLength;
+  private boolean mountTableCheckDestination;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -132,7 +150,7 @@ public class RouterAdminServer extends AbstractService
         RBFConfigKeys.DFS_ROUTER_ADMIN_HANDLER_COUNT_DEFAULT);
 
     RPC.setProtocolEngine(this.conf, RouterAdminProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     RouterAdminProtocolServerSideTranslatorPB routerAdminProtocolTranslator =
         new RouterAdminProtocolServerSideTranslatorPB(this);
@@ -173,6 +191,13 @@ public class RouterAdminServer extends AbstractService
     router.setAdminServerAddress(this.adminAddress);
     iStateStoreCache =
         router.getSubclusterResolver() instanceof StateStoreCache;
+    // The mount table destination path length limit keys.
+    this.maxComponentLength = (int) conf.getLongBytes(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT);
+    this.mountTableCheckDestination = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT);
 
     GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
         new GenericRefreshProtocolServerSideTranslatorPB(this);
@@ -180,8 +205,18 @@ public class RouterAdminServer extends AbstractService
         GenericRefreshProtocolProtos.GenericRefreshProtocolService.
         newReflectiveBlockingService(genericRefreshXlator);
 
+    RefreshCallQueueProtocolServerSideTranslatorPB refreshCallQueueXlator =
+        new RefreshCallQueueProtocolServerSideTranslatorPB(this);
+    BlockingService refreshCallQueueService =
+        RefreshCallQueueProtocolProtos.RefreshCallQueueProtocolService.
+        newReflectiveBlockingService(refreshCallQueueXlator);
+
     DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
         genericRefreshService, adminServer);
+    DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+        refreshCallQueueService, adminServer);
+
+    registerRefreshFairnessPolicyControllerHandler();
   }
 
   /**
@@ -238,6 +273,57 @@ public class RouterAdminServer extends AbstractService
     return this.adminAddress;
   }
 
+  void checkSuperuserPrivilege() throws AccessControlException {
+    RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+  }
+
+  /**
+   * Verify each component name of a destination path for fs limit.
+   *
+   * @param destPath destination path name of mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(String destPath)
+      throws PathComponentTooLongException {
+    if (maxComponentLength <= 0) {
+      return;
+    }
+    if (destPath == null) {
+      return;
+    }
+    String[] components = destPath.split(Path.SEPARATOR);
+    for (String component : components) {
+      int length = component.length();
+      if (length > maxComponentLength) {
+        PathComponentTooLongException e = new PathComponentTooLongException(
+            maxComponentLength, length, destPath, component);
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Verify each component name of every destination path of mount table
+   * for fs limit.
+   *
+   * @param mountTable mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(MountTable mountTable)
+      throws PathComponentTooLongException {
+    if (mountTable != null) {
+      List<RemoteLocation> dests = mountTable.getDestinations();
+      if (dests != null && !dests.isEmpty()) {
+        for (RemoteLocation dest : dests) {
+          verifyMaxComponentLength(dest.getDest());
+        }
+      }
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -261,22 +347,119 @@ public class RouterAdminServer extends AbstractService
   @Override
   public AddMountTableEntryResponse addMountTableEntry(
       AddMountTableEntryRequest request) throws IOException {
+    // Checks max component length limit.
+    MountTable mountTable = request.getEntry();
+    verifyMaxComponentLength(mountTable);
+    if (this.mountTableCheckDestination) {
+      verifyFileExistenceInDest(mountTable);
+    }
     return getMountTableStore().addMountTableEntry(request);
+  }
+
+  @Override
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    for (MountTable mountTable : mountTables) {
+      verifyMaxComponentLength(mountTable);
+    }
+    if (this.mountTableCheckDestination) {
+      for (MountTable mountTable : mountTables) {
+        verifyFileExistenceInDest(mountTable);
+      }
+    }
+    return getMountTableStore().addMountTableEntries(request);
   }
 
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-    UpdateMountTableEntryResponse response =
-        getMountTableStore().updateMountTableEntry(request);
-
-    MountTable mountTable = request.getEntry();
-    if (mountTable != null && router.isQuotaEnabled()) {
-      synchronizeQuota(mountTable.getSourcePath(),
-          mountTable.getQuota().getQuota(),
-          mountTable.getQuota().getSpaceQuota());
+    MountTable updateEntry = request.getEntry();
+    MountTable oldEntry = null;
+    // Checks max component length limit.
+    verifyMaxComponentLength(updateEntry);
+    if (this.mountTableCheckDestination) {
+      verifyFileExistenceInDest(updateEntry);
+    }
+    if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
+      MountTableResolver mResolver =
+          (MountTableResolver) this.router.getSubclusterResolver();
+      oldEntry = mResolver.getMountPoint(updateEntry.getSourcePath());
+    }
+    UpdateMountTableEntryResponse response = getMountTableStore()
+        .updateMountTableEntry(request);
+    try {
+      if (updateEntry != null && router.isQuotaEnabled()) {
+        // update quota.
+        if (isQuotaUpdated(request, oldEntry)) {
+          synchronizeQuota(updateEntry.getSourcePath(),
+              updateEntry.getQuota().getQuota(),
+              updateEntry.getQuota().getSpaceQuota(), null);
+        }
+        // update storage type quota.
+        RouterQuotaUsage newQuota = request.getEntry().getQuota();
+        boolean locationsChanged = oldEntry == null ||
+            !oldEntry.getDestinations().equals(updateEntry.getDestinations());
+        for (StorageType t : StorageType.values()) {
+          if (locationsChanged || oldEntry.getQuota().getTypeQuota(t)
+              != newQuota.getTypeQuota(t)) {
+            synchronizeQuota(updateEntry.getSourcePath(),
+                HdfsConstants.QUOTA_DONT_SET, newQuota.getTypeQuota(t), t);
+          }
+        }
+      }
+    } catch (Exception e) {
+      // Ignore exception, if any while reseting quota. Specifically to handle
+      // if the actual destination doesn't exist.
+      LOG.warn("Unable to reset quota at the destinations for {}: {}",
+          request.getEntry(), e.getMessage());
     }
     return response;
+  }
+
+  private void verifyFileExistenceInDest(MountTable mountTable) throws IOException {
+    List<String> nsIds = verifyFileInDestinations(mountTable);
+    if (!nsIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "File not found in downstream nameservices: " + StringUtils.join(",", nsIds));
+    }
+  }
+
+  /**
+   * Checks whether quota needs to be synchronized with namespace or not. Quota
+   * needs to be synchronized either if there is change in mount entry quota or
+   * there is change in remote destinations.
+   * @param request the update request.
+   * @param oldEntry the mount entry before getting updated.
+   * @return true if quota needs to be updated.
+   * @throws IOException
+   */
+  private boolean isQuotaUpdated(UpdateMountTableEntryRequest request,
+      MountTable oldEntry) throws IOException {
+    if (oldEntry != null) {
+      MountTable updateEntry = request.getEntry();
+      // If locations are changed, the new destinations need to be in sync with
+      // the mount quota.
+      if (!oldEntry.getDestinations().equals(updateEntry.getDestinations())) {
+        return true;
+      }
+      // Previous quota.
+      RouterQuotaUsage preQuota = oldEntry.getQuota();
+      long nsQuota = preQuota.getQuota();
+      long ssQuota = preQuota.getSpaceQuota();
+      // New quota
+      RouterQuotaUsage mountQuota = updateEntry.getQuota();
+      // If there is change in quota, the new quota needs to be synchronized.
+      if (nsQuota != mountQuota.getQuota()
+          || ssQuota != mountQuota.getSpaceQuota()) {
+        return true;
+      }
+      return false;
+    } else {
+      // If old entry is not available, sync quota always, since we can't
+      // conclude no change in quota.
+      return true;
+    }
   }
 
   /**
@@ -284,19 +467,35 @@ public class RouterAdminServer extends AbstractService
    * @param path Source path in given mount table.
    * @param nsQuota Name quota definition in given mount table.
    * @param ssQuota Space quota definition in given mount table.
+   * @param type Storage type of quota. Null if it's not a storage type quota.
    * @throws IOException
    */
-  private void synchronizeQuota(String path, long nsQuota, long ssQuota)
-      throws IOException {
-    if (router.isQuotaEnabled() &&
-        (nsQuota != HdfsConstants.QUOTA_DONT_SET
-        || ssQuota != HdfsConstants.QUOTA_DONT_SET)) {
-      HdfsFileStatus ret = this.router.getRpcServer().getFileInfo(path);
-      if (ret != null) {
-        this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
-            ssQuota, null);
+  private void synchronizeQuota(String path, long nsQuota, long ssQuota,
+      StorageType type) throws IOException {
+    if (isQuotaSyncRequired(nsQuota, ssQuota)) {
+      if (iStateStoreCache) {
+        ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
+      }
+      Quota routerQuota = this.router.getRpcServer().getQuotaModule();
+      routerQuota.setQuota(path, nsQuota, ssQuota, type, false);
+    }
+  }
+
+  /**
+   * Checks if quota needs to be synchronized or not.
+   * @param nsQuota namespace quota to be set.
+   * @param ssQuota space quota to be set.
+   * @return true if the quota needs to be synchronized.
+   */
+  private boolean isQuotaSyncRequired(long nsQuota, long ssQuota) {
+    // Check if quota is enabled for router or not.
+    if (router.isQuotaEnabled()) {
+      if ((nsQuota != HdfsConstants.QUOTA_DONT_SET
+          || ssQuota != HdfsConstants.QUOTA_DONT_SET)) {
+        return true;
       }
     }
+    return false;
   }
 
   @Override
@@ -305,7 +504,7 @@ public class RouterAdminServer extends AbstractService
     // clear sub-cluster's quota definition
     try {
       synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
-          HdfsConstants.QUOTA_RESET);
+          HdfsConstants.QUOTA_RESET, null);
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
       // if the actual destination doesn't exist.
@@ -324,6 +523,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnterSafeModeResponse enterSafeMode(EnterSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -344,6 +544,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public LeaveSafeModeResponse leaveSafeMode(LeaveSafeModeRequest request)
       throws IOException {
+    checkSuperuserPrivilege();
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
@@ -394,10 +595,31 @@ public class RouterAdminServer extends AbstractService
   @Override
   public GetDestinationResponse getDestination(
       GetDestinationRequest request) throws IOException {
+    RouterRpcServer rpcServer = this.router.getRpcServer();
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(request.getSrcPath(), false);
+    List<String> nsIds = getDestinationNameServices(request, locations);
+    if (nsIds.isEmpty() && !locations.isEmpty()) {
+      String nsId = locations.get(0).getNameserviceId();
+      nsIds.add(nsId);
+    }
+    return GetDestinationResponse.newInstance(nsIds);
+  }
+
+  /**
+   * Get destination nameservices where the file in request exists.
+   *
+   * @param request request with src info.
+   * @param locations remote locations to check against.
+   * @return list of nameservices where the dest file was found
+   * @throws IOException
+   */
+  private List<String> getDestinationNameServices(
+      GetDestinationRequest request, List<RemoteLocation> locations)
+      throws IOException {
     final String src = request.getSrcPath();
     final List<String> nsIds = new ArrayList<>();
     RouterRpcServer rpcServer = this.router.getRpcServer();
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, false);
     RouterRpcClient rpcClient = rpcServer.getRPCClient();
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
@@ -414,11 +636,35 @@ public class RouterAdminServer extends AbstractService
       LOG.error("Cannot get location for {}: {}",
           src, ioe.getMessage());
     }
-    if (nsIds.isEmpty() && !locations.isEmpty()) {
-      String nsId = locations.get(0).getNameserviceId();
-      nsIds.add(nsId);
+    return nsIds;
+  }
+
+  /**
+   * Verify the file exists in destination nameservices to avoid dangling
+   * mount points.
+   *
+   * @param entry the new mount points added, could be from add or update.
+   * @return destination nameservices where the file doesn't exist.
+   * @throws IOException unable to verify the file in destinations
+   */
+  public List<String> verifyFileInDestinations(MountTable entry)
+      throws IOException {
+    GetDestinationRequest request =
+        GetDestinationRequest.newInstance(entry.getSourcePath());
+    List<RemoteLocation> locations = entry.getDestinations();
+    List<String> nsId =
+        getDestinationNameServices(request, locations);
+
+    // get nameservices where no target file exists
+    Set<String> destNs = new HashSet<>(nsId);
+    List<String> nsWithoutFile = new ArrayList<>();
+    for (RemoteLocation location : locations) {
+      String ns = location.getNameserviceId();
+      if (!destNs.contains(ns)) {
+        nsWithoutFile.add(ns);
+      }
     }
-    return GetDestinationResponse.newInstance(nsIds);
+    return nsWithoutFile;
   }
 
   /**
@@ -440,11 +686,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     boolean success = false;
@@ -477,10 +719,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    RouterPermissionChecker pc = getPermissionChecker();
-    if (pc != null) {
-      pc.checkSuperuserPrivilege();
-    }
+    checkSuperuserPrivilege();
 
     String nsId = request.getNameServiceId();
     DisabledNameserviceStore store = getDisabledNameserviceStore();
@@ -551,5 +790,24 @@ public class RouterAdminServer extends AbstractService
   public Collection<RefreshResponse> refresh(String identifier, String[] args) {
     // Let the registry handle as needed
     return RefreshRegistry.defaultRegistry().dispatch(identifier, args);
+  }
+
+  @Override // RouterGenericManager
+  public boolean refreshSuperUserGroupsConfiguration() throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
+    return true;
+  }
+
+  @Override // RefreshCallQueueProtocol
+  public void refreshCallQueue() throws IOException {
+    LOG.info("Refreshing call queue.");
+
+    Configuration configuration = new Configuration();
+    router.getRpcServer().getServer().refreshCallQueue(configuration);
+  }
+
+  private void registerRefreshFairnessPolicyControllerHandler() {
+    RefreshRegistry.defaultRegistry()
+        .register(HANDLER_IDENTIFIER, new RefreshFairnessPolicyControllerHandler(router));
   }
 }

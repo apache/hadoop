@@ -21,8 +21,8 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interners;
 
 /**
  * Provides string interning utility methods. For weak interning,
@@ -74,6 +74,9 @@ public class StringInterner {
   /**
    * Interns all the strings in the given array in place,
    * returning the same array.
+   *
+   * @param strings strings.
+   * @return internStringsInArray.
    */
   public static String[] internStringsInArray(String[] strings) {
     for (int i = 0; i < strings.length; i++) {

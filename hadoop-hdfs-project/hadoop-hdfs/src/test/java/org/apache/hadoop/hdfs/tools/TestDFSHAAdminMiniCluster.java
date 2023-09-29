@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -43,9 +45,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**
  * Tests for HAAdmin command with {@link MiniDFSCluster} set up in HA mode.
@@ -70,6 +72,7 @@ public class TestDFSHAAdminMiniCluster {
   @Before
   public void setup() throws IOException {
     conf = new Configuration();
+    conf.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(0)
         .build();
@@ -161,7 +164,28 @@ public class TestDFSHAAdminMiniCluster {
     assertEquals(-1, runTool("-transitionToActive", "nn1"));
     assertFalse(nnode1.isActiveState());
   }
-  
+
+  /**
+   * Tests that a Namenode in safe mode should not be transfer to observer.
+   */
+  @Test
+  public void testObserverTransitionInSafeMode() throws Exception {
+    NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
+    DFSHAAdmin admin = new DFSHAAdmin();
+    admin.setConf(conf);
+    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    int result = admin.run(
+        new String[]{"-transitionToObserver", "-forcemanual", "nn1"});
+    assertEquals("State transition returned: " + result, -1, result);
+
+    NameNodeAdapter.leaveSafeMode(cluster.getNameNode(0));
+    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    int result1 = admin.run(
+        new String[]{"-transitionToObserver", "-forcemanual", "nn1"});
+    assertEquals("State transition returned: " + result1, 0, result1);
+    assertFalse(cluster.getNameNode(0).isInSafeMode());
+  }
+
   @Test
   public void testTryFailoverToSafeMode() throws Exception {
     conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, 
@@ -189,13 +213,13 @@ public class TestDFSHAAdminMiniCluster {
     tmpFile.deleteOnExit();
     if (Shell.WINDOWS) {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo %target_nameserviceid%.%target_namenodeid% " +
-              "%target_port% %dfs_ha_namenode_id% > " +
+          "shell(echo %source_nameserviceid%.%source_namenodeid% " +
+              "%source_port% %dfs_ha_namenode_id% > " +
               tmpFile.getAbsolutePath() + ")");
     } else {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo -n $target_nameserviceid.$target_namenodeid " +
-          "$target_port $dfs_ha_namenode_id > " +
+          "shell(echo -n $source_nameserviceid.$source_namenodeid " +
+          "$source_port $dfs_ha_namenode_id > " +
           tmpFile.getAbsolutePath() + ")");
     }
 

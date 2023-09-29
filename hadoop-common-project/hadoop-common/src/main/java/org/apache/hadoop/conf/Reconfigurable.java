@@ -33,6 +33,9 @@ public interface Reconfigurable extends Configurable {
    * (or null if it was not previously set). If newVal is null, set the property
    * to its default value;
    *
+   * @param property property name.
+   * @param newVal new value.
+   * @throws ReconfigurationException if there was an error applying newVal.
    * If the property cannot be changed, throw a 
    * {@link ReconfigurationException}.
    */
@@ -45,11 +48,14 @@ public interface Reconfigurable extends Configurable {
    * If isPropertyReconfigurable returns true for a property,
    * then changeConf should not throw an exception when changing
    * this property.
+   * @param property property name.
+   * @return true if property reconfigurable; false if not.
    */
   boolean isPropertyReconfigurable(String property);
 
   /**
    * Return all the properties that can be changed at run time.
+   * @return reconfigurable propertys.
    */
   Collection<String> getReconfigurableProperties();
 }

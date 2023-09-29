@@ -19,6 +19,8 @@
 #include "datanodeconnection.h"
 #include "common/util.h"
 
+#include <boost/asio/connect.hpp>
+
 namespace hdfs {
 
 DataNodeConnection::~DataNodeConnection(){}
@@ -29,7 +31,7 @@ DataNodeConnectionImpl::DataNodeConnectionImpl(std::shared_ptr<IoService> io_ser
                                                const hadoop::common::TokenProto *token,
                                                LibhdfsEvents *event_handlers) : event_handlers_(event_handlers)
 {
-  using namespace ::asio::ip;
+  using namespace boost::asio::ip;
 
   conn_.reset(new tcp::socket(io_service->GetRaw()));
   auto datanode_addr = dn_proto.id();
@@ -49,8 +51,8 @@ void DataNodeConnectionImpl::Connect(
   // Keep the DN from being freed until we're done
   mutex_guard state_lock(state_lock_);
   auto shared_this = shared_from_this();
-  asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(),
-          [shared_this, handler](const asio::error_code &ec, std::array<asio::ip::tcp::endpoint, 1>::iterator it) {
+  boost::asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(),
+          [shared_this, handler](const boost::system::error_code &ec, std::array<boost::asio::ip::tcp::endpoint, 1>::iterator it) {
             (void)it;
             handler(ToStatus(ec), shared_this); });
 }
@@ -69,7 +71,7 @@ void DataNodeConnectionImpl::Cancel() {
 }
 
 void DataNodeConnectionImpl::async_read_some(const MutableBuffer &buf,
-             std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler)
+             std::function<void (const boost::system::error_code & error, std::size_t bytes_transferred) > handler)
 {
   event_handlers_->call("DN_read_req", "", "", buf.end() - buf.begin());
 
@@ -78,7 +80,7 @@ void DataNodeConnectionImpl::async_read_some(const MutableBuffer &buf,
 }
 
 void DataNodeConnectionImpl::async_write_some(const ConstBuffer &buf,
-             std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler)
+             std::function<void (const boost::system::error_code & error, std::size_t bytes_transferred) > handler)
 {
   event_handlers_->call("DN_write_req", "", "", buf.end() - buf.begin());
 

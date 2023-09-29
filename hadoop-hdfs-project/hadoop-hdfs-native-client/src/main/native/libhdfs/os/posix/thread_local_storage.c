@@ -53,7 +53,7 @@ void hdfsThreadDestructor(void *v)
   char thr_name[MAXTHRID];
 
   /* Detach the current thread from the JVM */
-  if (env) {
+  if ((env != NULL) && (*env != NULL)) {
     ret = (*env)->GetJavaVM(env, &vm);
 
     if (ret != 0) {

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.junit.Assert;
 
 import org.slf4j.Logger;
@@ -43,8 +46,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -133,7 +136,9 @@ public class TestNMExpiry {
     String hostname1 = "localhost1";
     String hostname2 = "localhost2";
     String hostname3 = "localhost3";
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -141,6 +146,7 @@ public class TestNMExpiry {
     request1.setNodeId(nodeId1);
     request1.setHttpPort(0);
     request1.setResource(capability);
+    request1.setNodeStatus(mockNodeStatus);
     resourceTrackerService.registerNodeManager(request1);
 
     RegisterNodeManagerRequest request2 = recordFactory
@@ -149,6 +155,7 @@ public class TestNMExpiry {
     request2.setNodeId(nodeId2);
     request2.setHttpPort(0);
     request2.setResource(capability);
+    request2.setNodeStatus(mockNodeStatus);
     resourceTrackerService.registerNodeManager(request2);
     
     int waitCount = 0;

@@ -36,7 +36,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Scanner;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -57,6 +58,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -64,8 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
@@ -150,12 +151,12 @@ public class TestQuota {
     resetStream();
   }
 
-  private void runCommand(DFSAdmin admin, boolean expectError, String... args) 
+  static void runCommand(DFSAdmin admin, boolean expectError, String... args)
                          throws Exception {
     runCommand(admin, args, expectError);
   }
-  
-  private void runCommand(DFSAdmin admin, String args[], boolean expectEror)
+
+  static void runCommand(DFSAdmin admin, String[] args, boolean expectEror)
   throws Exception {
     int val = admin.run(args);
     if (expectEror) {
@@ -958,6 +959,44 @@ public class TestQuota {
         6 * fileSpace);
   }
 
+  @Test
+  public void testRenameInodeWithStorageType() throws IOException {
+    final int size = 64;
+    final short repl = 1;
+    final Path foo = new Path("/foo");
+    final Path bs1 = new Path(foo, "bs1");
+    final Path wow = new Path(bs1, "wow");
+    final Path bs2 = new Path(foo, "bs2");
+    final Path wow2 = new Path(bs2, "wow2");
+    final Path wow3 = new Path(bs2, "wow3");
+
+    dfs.mkdirs(bs1, FsPermission.getDirDefault());
+    dfs.mkdirs(bs2, FsPermission.getDirDefault());
+    dfs.setQuota(bs1, 1000, 434217728);
+    dfs.setQuota(bs2, 1000, 434217728);
+    // file wow3 without storage policy
+    DFSTestUtil.createFile(dfs, wow3, size, repl, 0);
+
+    dfs.setStoragePolicy(bs2, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
+
+    DFSTestUtil.createFile(dfs, wow, size, repl, 0);
+    DFSTestUtil.createFile(dfs, wow2, size, repl, 0);
+    assertTrue("Without storage policy, typeConsumed should be 0.",
+        dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD) == 0);
+    assertTrue("With storage policy, typeConsumed should not be 0.",
+        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) != 0);
+    // wow3 without storage policy , rename will not change typeConsumed
+    dfs.rename(wow3, bs1);
+    assertTrue("Rename src without storagePolicy, dst typeConsumed should not be changed.",
+        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) == 0);
+
+    long srcTypeQuota = dfs.getQuotaUsage(bs2).getTypeQuota(StorageType.SSD);
+    dfs.rename(bs2, bs1);
+    long dstTypeQuota = dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD);
+    assertTrue("Rename with storage policy, typeConsumed should not be 0.",
+        dstTypeQuota != srcTypeQuota);
+  }
+
   private static void checkContentSummary(final ContentSummary expected,
       final ContentSummary computed) {
     assertEquals(expected.toString(), computed.toString());
@@ -1579,6 +1618,44 @@ public class TestQuota {
   }
 
   @Test
+  public void testRename() throws Exception {
+    int fileLen = 1024;
+    short replication = 3;
+
+    final Path parent = new Path(PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(parent));
+
+    final Path srcDir = new Path(parent, "src-dir");
+    Path file = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0);
+    dfs.setStoragePolicy(srcDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
+
+    final Path dstDir = new Path(parent, "dst-dir");
+    assertTrue(dfs.mkdirs(dstDir));
+    dfs.setStoragePolicy(dstDir, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+
+    dfs.setQuota(srcDir, 100000, 100000);
+    dfs.setQuota(dstDir, 100000, 100000);
+
+    Path dstFile = new Path(dstDir, "file1");
+    // Test quota check of rename. Expect a QuotaExceedException.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, 10);
+    try {
+      dfs.rename(file, dstFile);
+      fail("Expect QuotaExceedException.");
+    } catch (QuotaExceededException qe) {
+    }
+
+    // Set enough quota, expect a successful rename.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, fileLen * replication);
+    dfs.rename(file, dstFile);
+    // Verify the storage type usage is properly updated on source and dst.
+    checkQuotaAndCount(dfs, srcDir);
+    checkQuotaAndCount(dfs, dstDir);
+  }
+
+  @Test
   public void testSpaceQuotaExceptionOnAppend() throws Exception {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
@@ -1647,5 +1724,16 @@ public class TestQuota {
       list.add(scanner.nextLine());
     }
     scanner.close();
+  }
+
+  // quota and count should match.
+  private void checkQuotaAndCount(DistributedFileSystem fs, Path path)
+      throws IOException {
+    QuotaUsage qu = fs.getQuotaUsage(path);
+    ContentSummary cs = fs.getContentSummary(path);
+    for (StorageType st : StorageType.values()) {
+      // it will fail here, because the quota and consume is not handled right.
+      assertEquals(qu.getTypeConsumed(st), cs.getTypeConsumed(st));
+    }
   }
 }

@@ -28,8 +28,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
+import org.apache.hadoop.util.Preconditions;
 
-import com.google.common.base.Preconditions;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * CryptoOutputStream encrypts data. It is not thread-safe. AES CTR mode is
@@ -48,7 +52,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CryptoOutputStream extends FilterOutputStream implements 
-    Syncable, CanSetDropBehind, StreamCapabilities {
+    Syncable, CanSetDropBehind, StreamCapabilities, IOStatisticsSource {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Encryptor encryptor;
@@ -142,7 +146,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
    * @param b the data.
    * @param off the start offset in the data.
    * @param len the number of bytes to write.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public synchronized void write(byte[] b, int off, int len) throws IOException {
@@ -237,12 +241,15 @@ public class CryptoOutputStream extends FilterOutputStream implements
       return;
     }
     try {
-      flush();
-      if (closeOutputStream) {
-        super.close();
-        codec.close();
+      try {
+        flush();
+      } finally {
+        if (closeOutputStream) {
+          super.close();
+          codec.close();
+        }
+        freeBuffers();
       }
-      freeBuffers();
     } finally {
       closed = true;
     }
@@ -308,9 +315,11 @@ public class CryptoOutputStream extends FilterOutputStream implements
 
   @Override
   public boolean hasCapability(String capability) {
-    if (out instanceof StreamCapabilities) {
-      return ((StreamCapabilities) out).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(out, capability);
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return retrieveIOStatistics(out);
   }
 }

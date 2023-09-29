@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
+syntax = "proto2";
 /**
  * These .proto interfaces are public and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 

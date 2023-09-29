@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -85,7 +85,7 @@ public class NMSimulator extends TaskRunner.Task {
     super.init(dispatchTime, dispatchTime + 1000000L * heartBeatInterval,
         heartBeatInterval);
     // create resource
-    String rackHostName[] = SLSUtils.getRackHostName(nodeIdStr);
+    String[] rackHostName = SLSUtils.getRackHostName(nodeIdStr);
     this.node = NodeInfo.newNodeInfo(rackHostName[0], rackHostName[1],
         Resources.clone(nodeResource));
     this.rm = pRm;
@@ -128,7 +128,7 @@ public class NMSimulator extends TaskRunner.Task {
   @Override
   public void middleStep() throws Exception {
     // we check the lifetime for each running containers
-    ContainerSimulator cs = null;
+    ContainerSimulator cs;
     synchronized(completedContainerList) {
       while ((cs = containerQueue.poll()) != null) {
         runningContainers.remove(cs.getId());
@@ -250,14 +250,15 @@ public class NMSimulator extends TaskRunner.Task {
   /**
    * launch a new container with the given life time
    */
-  public void addNewContainer(Container container, long lifeTimeMS) {
+  public void addNewContainer(Container container, long lifeTimeMS,
+      ApplicationId applicationId) {
     LOG.debug("NodeManager {} launches a new container ({}).",
         node.getNodeID(), container.getId());
     if (lifeTimeMS != -1) {
       // normal container
       ContainerSimulator cs = new ContainerSimulator(container.getId(),
               container.getResource(), lifeTimeMS + System.currentTimeMillis(),
-              lifeTimeMS);
+              lifeTimeMS, container.getAllocationRequestId());
       containerQueue.add(cs);
       runningContainers.put(cs.getId(), cs);
     } else {
@@ -267,6 +268,15 @@ public class NMSimulator extends TaskRunner.Task {
         amContainerList.add(container.getId());
       }
     }
+
+    // update runningApplications on the node
+    if (applicationId != null
+        && !getNode().getRunningApps().contains(applicationId)) {
+      getNode().getRunningApps().add(applicationId);
+    }
+    LOG.debug("Adding running app: {} on node: {}. " +
+            "Updated runningApps on this node are: {}",
+        applicationId, getNode().getNodeID(), getNode().getRunningApps());
   }
 
   /**
@@ -295,5 +305,14 @@ public class NMSimulator extends TaskRunner.Task {
   @VisibleForTesting
   List<ContainerId> getCompletedContainers() {
     return completedContainerList;
+  }
+
+  public void finishApplication(ApplicationId applicationId) {
+    if (getNode().getRunningApps().contains(applicationId)) {
+      getNode().getRunningApps().remove(applicationId);
+      LOG.debug("Removed running app: {} from node: {}. " +
+              "Updated runningApps on this node are: {}",
+          applicationId, getNode().getNodeID(), getNode().getRunningApps());
+    }
   }
 }

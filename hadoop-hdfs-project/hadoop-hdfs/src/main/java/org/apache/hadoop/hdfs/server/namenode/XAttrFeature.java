@@ -18,13 +18,14 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.XAttrHelper;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Feature for extended attributes.
@@ -82,6 +83,22 @@ public class XAttrFeature implements INode.Feature {
         return result;
       }
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    return getXAttrs().equals(((XAttrFeature) o).getXAttrs());
+  }
+
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(getXAttrs().toArray());
   }
 
   /**

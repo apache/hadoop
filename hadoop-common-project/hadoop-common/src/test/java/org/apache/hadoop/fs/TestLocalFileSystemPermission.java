@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +33,6 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
 
 /**
@@ -245,9 +244,9 @@ public class TestLocalFileSystemPermission {
       assertTrue(localfs.mkdirs(dir2));
       FsPermission finalPermission = localfs.getFileStatus(dir2)
           .getPermission();
-      assertThat("With umask 062 permission should not be 755 since the " +
-          "default permission is 777", new FsPermission("755"),
-          is(not(finalPermission)));
+      Assertions.assertThat(new FsPermission("755")).as(
+          "With umask 062 permission should not be 755 since the " +
+          "default permission is 777").isNotEqualTo(finalPermission);
       assertEquals(
           "With umask 062 we expect 715 since the default permission is 777",
           new FsPermission("715"), finalPermission);

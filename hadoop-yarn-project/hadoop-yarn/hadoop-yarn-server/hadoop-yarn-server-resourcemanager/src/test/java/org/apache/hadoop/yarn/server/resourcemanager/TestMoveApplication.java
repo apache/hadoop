@@ -124,7 +124,7 @@ public class TestMoveApplication {
       void testMoveSuccessful() throws Exception {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
-    RMApp app = rm1.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     ClientRMService clientRMService = rm1.getClientRMService();
     // FIFO scheduler does not support moves
     clientRMService

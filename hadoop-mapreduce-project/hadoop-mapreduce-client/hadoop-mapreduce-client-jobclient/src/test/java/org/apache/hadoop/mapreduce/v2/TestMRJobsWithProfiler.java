@@ -35,6 +35,7 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -42,6 +43,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.Assume.assumeFalse;
 
 public class TestMRJobsWithProfiler {
 
@@ -107,6 +110,8 @@ public class TestMRJobsWithProfiler {
 
   @Test (timeout = 150000)
   public void testDefaultProfiler() throws Exception {
+    assumeFalse("The hprof agent has been removed since Java 9. Skipping.",
+        Shell.isJavaVersionAtLeast(9));
     LOG.info("Starting testDefaultProfiler");
     testProfilerInternal(true);
   }
@@ -132,13 +137,21 @@ public class TestMRJobsWithProfiler {
     sleepConf.setProfileTaskRange(false, String.valueOf(PROFILED_TASK_ID));
 
     if (!useDefault) {
-      // use hprof for map to profile.out
-      sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
-          "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,"
-              + "file=%s");
+      if (Shell.isJavaVersionAtLeast(9)) {
+        // use JDK Flight Recorder
+        sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
+            "-XX:StartFlightRecording=dumponexit=true,filename=%s");
+        sleepConf.set(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS,
+            "-XX:StartFlightRecording=dumponexit=true,filename=%s");
+      } else {
+        // use hprof for map to profile.out
+        sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
+            "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,"
+                + "file=%s");
 
-      // use Xprof for reduce to stdout
-      sleepConf.set(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, "-Xprof");
+        // use Xprof for reduce to stdout
+        sleepConf.set(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, "-Xprof");
+      }
     }
 
     sleepJob.setConf(sleepConf);
@@ -210,6 +223,11 @@ public class TestMRJobsWithProfiler {
     }
 
     Assert.assertEquals(4, taLogDirs.size());  // all 4 attempts found
+
+    // Skip checking the contents because the JFR dumps binary files
+    if (Shell.isJavaVersionAtLeast(9)) {
+      return;
+    }
 
     for (Map.Entry<TaskAttemptID,Path> dirEntry : taLogDirs.entrySet()) {
       final TaskAttemptID tid = dirEntry.getKey();

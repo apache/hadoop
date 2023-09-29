@@ -19,19 +19,22 @@
 #include "filesystem.h"
 #include "common/continuation/asio.h"
 
-#include <asio/ip/tcp.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <functional>
 #include <limits>
 #include <future>
 #include <tuple>
 #include <iostream>
-#include <pwd.h>
 #include <utility>
+
+#ifndef WIN32
+#include <pwd.h>
+#endif
 
 #define FMT_THIS_ADDR "this=" << (void*)this
 
-using ::asio::ip::tcp;
+using boost::asio::ip::tcp;
 
 namespace hdfs {
 

@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerialize
 /**
  * Data schema for storing NN registration information in the
  * {@link org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * FederationStateStoreService}.
+ * StateStoreService}.
  */
 public abstract class MembershipState extends BaseRecord
     implements FederationNamenodeContext {
@@ -48,6 +48,8 @@ public abstract class MembershipState extends BaseRecord
   /** Expiration time in ms for this entry. */
   private static long expirationMs;
 
+  /** Deletion time in ms for this expired entry. */
+  private static long deletionMs;
 
   /** Comparator based on the name.*/
   public static final Comparator<MembershipState> NAME_COMPARATOR =
@@ -87,14 +89,16 @@ public abstract class MembershipState extends BaseRecord
    * @param rpcAddress RPC address.
    * @param serviceAddress Service RPC address.
    * @param lifelineAddress Lifeline RPC address.
-   * @param webAddress HTTP address.
+   * @param webScheme Scheme of Web Address, HTTP or HTTPS.
+   * @param webAddress HTTP(s) address.
    * @param state State of the federation.
    * @param safemode If the safe mode is enabled.
    * @return Membership instance.
    */
   public static MembershipState newInstance(String router, String nameservice,
       String namenode, String clusterId, String blockPoolId, String rpcAddress,
-      String serviceAddress, String lifelineAddress, String webAddress,
+      String serviceAddress, String lifelineAddress,
+      String webScheme, String webAddress,
       FederationNamenodeServiceState state, boolean safemode) {
 
     MembershipState record = MembershipState.newInstance();
@@ -109,6 +113,7 @@ public abstract class MembershipState extends BaseRecord
     record.setState(state);
     record.setClusterId(clusterId);
     record.setBlockPoolId(blockPoolId);
+    record.setWebScheme(webScheme);
     record.validate();
     return record;
   }
@@ -137,6 +142,8 @@ public abstract class MembershipState extends BaseRecord
 
   public abstract void setState(FederationNamenodeServiceState state);
 
+  public abstract void setWebScheme(String webScheme);
+
   public abstract String getNameserviceId();
 
   public abstract String getNamenodeId();
@@ -154,6 +161,8 @@ public abstract class MembershipState extends BaseRecord
   public abstract String getWebAddress();
 
   public abstract boolean getIsSafeMode();
+
+  public abstract String getWebScheme();
 
   public abstract FederationNamenodeServiceState getState();
 
@@ -329,5 +338,43 @@ public abstract class MembershipState extends BaseRecord
    */
   public static void setExpirationMs(long time) {
     MembershipState.expirationMs = time;
+  }
+
+  @Override
+  public boolean isExpired() {
+    return getState() == EXPIRED;
+  }
+
+  @Override
+  public long getDeletionMs() {
+    return MembershipState.deletionMs;
+  }
+
+  /**
+   * Set the deletion time for this class.
+   *
+   * @param time Deletion time in milliseconds.
+   */
+  public static void setDeletionMs(long time) {
+    MembershipState.deletionMs = time;
+  }
+
+  /**
+   * First use the comparator of the BaseRecord to compare the date modified.
+   * If they are equal, compare their primary keys to ensure that MembershipStates
+   * with the same date modified but reported by different routers will not be judged as equal.
+   *
+   * @param record the MembershipState object to be compared.
+   * @return a negative integer, zero, or a positive integer as this object
+   *         is less than, equal to, or greater than the specified object.
+   */
+  @Override
+  public int compareTo(BaseRecord record) {
+    int order = super.compareTo(record);
+    if (order == 0) {
+      MembershipState other = (MembershipState) record;
+      return this.getPrimaryKey().compareTo(other.getPrimaryKey());
+    }
+    return order;
   }
 }

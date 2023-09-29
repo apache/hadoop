@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,22 +34,29 @@ import java.util.List;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "Yarn"})
 @InterfaceStability.Unstable
 public interface DelegationTokenIssuer {
-
+  Logger TOKEN_LOG = LoggerFactory.getLogger(DelegationTokenIssuer.class);
   /**
    * The service name used as the alias for the  token in the credential
    * token map.  addDelegationTokens will use this to determine if
    * a token exists, and if not, add a new token with this alias.
+   * @return the token.
    */
   String getCanonicalServiceName();
 
   /**
    * Unconditionally get a new token with the optional renewer.  Returning
    * null indicates the service does not issue tokens.
+   * @param renewer renewer.
+   * @return the token.
+   * @throws IOException raised on errors performing I/O.
    */
   Token<?> getDelegationToken(String renewer) throws IOException;
 
   /**
    * Issuers may need tokens from additional services.
+   *
+   * @return delegation token issuer.
+   * @throws IOException raised on errors performing I/O.
    */
   default DelegationTokenIssuer[] getAdditionalTokenIssuers()
       throws IOException {
@@ -79,6 +88,12 @@ public interface DelegationTokenIssuer {
 
   /**
    * NEVER call this method directly.
+   *
+   * @param issuer issuer.
+   * @param renewer renewer.
+   * @param credentials cache in which to add new delegation tokens.
+   * @param tokens list of new delegation tokens.
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.Private
   static void collectDelegationTokens(
@@ -88,14 +103,27 @@ public interface DelegationTokenIssuer {
       final List<Token<?>> tokens) throws IOException {
     final String serviceName = issuer.getCanonicalServiceName();
     // Collect token of the this issuer and then of its embedded children
+    if (TOKEN_LOG.isDebugEnabled()) {
+      TOKEN_LOG.debug("Search token for service {} in credentials",
+          serviceName);
+    }
     if (serviceName != null) {
       final Text service = new Text(serviceName);
       Token<?> token = credentials.getToken(service);
       if (token == null) {
+        if (TOKEN_LOG.isDebugEnabled()) {
+          TOKEN_LOG.debug("Token for service {} not found in credentials," +
+              " try getDelegationToken.", serviceName);
+        }
         token = issuer.getDelegationToken(renewer);
         if (token != null) {
           tokens.add(token);
           credentials.addToken(service, token);
+        }
+      } else {
+        if (TOKEN_LOG.isDebugEnabled()) {
+          TOKEN_LOG.debug("Token for service {} found in credentials," +
+              "skip getDelegationToken.", serviceName);
         }
       }
     }

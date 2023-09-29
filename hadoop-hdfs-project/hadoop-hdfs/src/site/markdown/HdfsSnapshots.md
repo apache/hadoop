@@ -151,6 +151,22 @@ All snapshots of the directory must be deleted before disallowing snapshots.
 See also the corresponding Java API
 `void disallowSnapshot(Path path)` in `HdfsAdmin`.
 
+#### Provision SnapshotTrash
+
+Provision trash root in one or all snapshottable directories.
+
+* Command:
+
+        hdfs dfsadmin -provisionSnapshotTrash <path> [-all]
+
+* Arguments:
+
+  | --- | --- |
+  | path | The path of the snapshottable directory. |
+  | -all | Which is an optional argument, when it is set will provision trash root in all  snapshottable directories. |
+
+See also the corresponding Java API
+`void provisionSnapshotTrash(Path path)` in `HdfsAdmin`.
 
 ### User Operations
 
@@ -183,7 +199,7 @@ The snapshot path is returned in these methods.
 
 #### Delete Snapshots
 
-Delete a snapshot of from a snapshottable directory.
+Delete a snapshot from a snapshottable directory.
 This operation requires owner privilege of the snapshottable directory.
 
 * Command:
@@ -234,6 +250,23 @@ Get all the snapshottable directories where the current user has permission to t
 
 See also the corresponding Java API
 `SnapshottableDirectoryStatus[] getSnapshottableDirectoryListing()`
+in `DistributedFileSystem`.
+
+#### Get Snapshot Listing
+
+Get all the snapshots for a snapshottable directory.
+
+* Command:
+
+        hdfs lsSnapshot <snapshotRoot>
+
+* Arguments:
+
+    | --- | --- |
+    | path | The path of the snapshottable directory. |
+
+See also the corresponding Java API
+`SnapshotStatus[] getSnapshotListing()`
 in `DistributedFileSystem`.
 
 

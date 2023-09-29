@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +53,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLogDeleterState;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Log Handler which schedules deletion of log files based on the configured log
@@ -73,6 +71,8 @@ public class NonAggregatingLogHandler extends AbstractService implements
   private final LocalDirsHandlerService dirsHandler;
   private final NMStateStoreService stateStore;
   private long deleteDelaySeconds;
+  private boolean enableTriggerDeleteBySize;
+  private long deleteThreshold;
   private ScheduledThreadPoolExecutor sched;
 
   public NonAggregatingLogHandler(Dispatcher dispatcher,
@@ -92,6 +92,12 @@ public class NonAggregatingLogHandler extends AbstractService implements
     this.deleteDelaySeconds =
         conf.getLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS,
                 YarnConfiguration.DEFAULT_NM_LOG_RETAIN_SECONDS);
+    this.enableTriggerDeleteBySize =
+        conf.getBoolean(YarnConfiguration.NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED,
+        YarnConfiguration.DEFAULT_NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED);
+    this.deleteThreshold =
+        conf.getLongBytes(YarnConfiguration.NM_LOG_DELETE_THRESHOLD,
+        YarnConfiguration.DEFAULT_NM_LOG_DELETE_THRESHOLD);
     sched = createScheduledThreadPoolExecutor(conf);
     super.serviceInit(conf);
     recover();
@@ -167,13 +173,9 @@ public class NonAggregatingLogHandler extends AbstractService implements
         LogHandlerAppFinishedEvent appFinishedEvent =
             (LogHandlerAppFinishedEvent) event;
         ApplicationId appId = appFinishedEvent.getApplicationId();
-        // Schedule - so that logs are available on the UI till they're deleted.
-        LOG.info("Scheduling Log Deletion for application: "
-            + appId + ", with delay of "
-            + this.deleteDelaySeconds + " seconds");
         String user = appOwners.remove(appId);
         if (user == null) {
-          LOG.error("Unable to locate user for " + appId);
+          LOG.error("Unable to locate user for {}", appId);
           // send LOG_HANDLING_FAILED out
           NonAggregatingLogHandler.this.dispatcher.getEventHandler().handle(
               new ApplicationEvent(appId,
@@ -193,8 +195,20 @@ public class NonAggregatingLogHandler extends AbstractService implements
           LOG.error("Unable to record log deleter state", e);
         }
         try {
-          sched.schedule(logDeleter, this.deleteDelaySeconds,
-              TimeUnit.SECONDS);
+          boolean logDeleterStarted = false;
+          if (enableTriggerDeleteBySize) {
+            final long appLogSize = calculateSizeOfAppLogs(user, appId);
+            if (appLogSize >= deleteThreshold) {
+              LOG.info("Log Deletion for application: {}, with no delay, size={}", appId, appLogSize);
+              sched.schedule(logDeleter, 0, TimeUnit.SECONDS);
+              logDeleterStarted = true;
+            }
+          }
+          if (!logDeleterStarted) {
+            LOG.info("Scheduling Log Deletion for application: {}, with delay of {} seconds",
+                appId, this.deleteDelaySeconds);
+            sched.schedule(logDeleter, this.deleteDelaySeconds, TimeUnit.SECONDS);
+          }
         } catch (RejectedExecutionException e) {
           // Handling this event in local thread before starting threads
           // or after calling sched.shutdownNow().
@@ -202,7 +216,6 @@ public class NonAggregatingLogHandler extends AbstractService implements
         }
         break;
       default:
-        ; // Ignore
     }
   }
 
@@ -220,6 +233,24 @@ public class NonAggregatingLogHandler extends AbstractService implements
             YarnConfiguration.NM_LOG_DELETION_THREADS_COUNT,
             YarnConfiguration.DEFAULT_NM_LOG_DELETE_THREAD_COUNT), tf);
     return sched;
+  }
+
+  private long calculateSizeOfAppLogs(String user, ApplicationId applicationId) {
+    FileContext lfs = getLocalFileContext(getConfig());
+    long appLogsSize = 0L;
+    for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
+      Path logDir = new Path(rootLogDir, applicationId.toString());
+      try {
+        appLogsSize += lfs.getFileStatus(logDir).getLen();
+      } catch (UnsupportedFileSystemException ue) {
+        LOG.warn("Unsupported file system used for log dir {}", logDir, ue);
+        continue;
+      } catch (IOException ie) {
+        LOG.error("Unable to getFileStatus for {}", logDir, ie);
+        continue;
+      }
+    }
+    return appLogsSize;
   }
 
   class LogDeleterRunnable implements Runnable {

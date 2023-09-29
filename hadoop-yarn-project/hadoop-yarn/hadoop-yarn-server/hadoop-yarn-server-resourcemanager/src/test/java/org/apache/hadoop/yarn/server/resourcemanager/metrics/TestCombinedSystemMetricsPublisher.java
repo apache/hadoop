@@ -479,7 +479,7 @@ public class TestCombinedSystemMetricsPublisher {
     preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(rmApp.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceMap,
-            preemptedMap));
+            preemptedMap, 0));
     when(rmApp.getApplicationTags()).thenReturn(
         Collections.<String> emptySet());
     ApplicationSubmissionContext appSubmissionContext =

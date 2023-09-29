@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerSt
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerStatusPBImpl;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
     Closeable {
@@ -42,7 +42,8 @@ public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
   private LocalizationProtocolPB proxy;
   
   public LocalizationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, LocalizationProtocolPB.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, LocalizationProtocolPB.class,
+        ProtobufRpcEngine2.class);
     proxy = (LocalizationProtocolPB)RPC.getProxy(
         LocalizationProtocolPB.class, clientVersion, addr, conf);
   }

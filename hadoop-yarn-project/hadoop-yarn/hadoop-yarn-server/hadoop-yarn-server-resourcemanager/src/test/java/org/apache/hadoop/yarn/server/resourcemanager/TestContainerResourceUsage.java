@@ -78,7 +78,7 @@ public class TestContainerResourceUsage {
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
     nm.registerNode();
 
-    RMApp app0 = rm.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     RMAppMetrics rmAppMetrics = app0.getRMAppMetrics();
     Assert.assertTrue(
@@ -147,7 +147,7 @@ public class TestContainerResourceUsage {
         new MockNM("127.0.0.1:1234", 65536, rm0.getResourceTrackerService());
     nm.registerNode();
 
-    RMApp app0 = rm0.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm0);
 
     rm0.waitForState(app0.getApplicationId(), RMAppState.ACCEPTED);
     RMAppAttempt attempt0 = app0.getCurrentAppAttempt();
@@ -227,6 +227,8 @@ public class TestContainerResourceUsage {
         memorySeconds, metricsBefore.getMemorySeconds());
     Assert.assertEquals("Unexpected VcoreSeconds value",
         vcoreSeconds, metricsBefore.getVcoreSeconds());
+    Assert.assertEquals("Unexpected totalAllocatedContainers value",
+        NUM_CONTAINERS + 1, metricsBefore.getTotalAllocatedContainers());
 
     // create new RM to represent RM restart. Load up the state store.
     MockRM rm1 = new MockRM(conf, memStore);
@@ -240,6 +242,9 @@ public class TestContainerResourceUsage {
         metricsBefore.getVcoreSeconds(), metricsAfter.getVcoreSeconds());
     Assert.assertEquals("Memory seconds were not the same after RM Restart",
         metricsBefore.getMemorySeconds(), metricsAfter.getMemorySeconds());
+    Assert.assertEquals("TotalAllocatedContainers was not the same after " +
+        "RM Restart", metricsBefore.getTotalAllocatedContainers(),
+        metricsAfter.getTotalAllocatedContainers());
 
     rm0.stop();
     rm0.close();
@@ -262,10 +267,21 @@ public class TestContainerResourceUsage {
     MockRM rm = new MockRM(conf);
     rm.start();
 
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+        .withAppName("name")
+        .withUser("user")
+        .withAcls(new HashMap<ApplicationAccessType, String>())
+        .withUnmanagedAM(false)
+        .withQueue("default")
+        .withMaxAppAttempts(-1)
+        .withCredentials(null)
+        .withAppType("MAPREDUCE")
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(keepRunningContainers)
+        .build();
     RMApp app =
-        rm.submitApp(200, "name", "user",
-          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-          null, "MAPREDUCE", false, keepRunningContainers);
+        MockRMAppSubmitter.submit(rm, data);
     MockNM nm = 
         new MockNM("127.0.0.1:1234", 10240, rm.getResourceTrackerService());
     nm.registerNode();
@@ -332,7 +348,7 @@ public class TestContainerResourceUsage {
       // If keepRunningContainers is false, all live containers should now
       // be completed. Calculate the resource usage metrics for all of them.
       for (RMContainer c : rmContainers) {
-        waitforContainerCompletion(rm, nm, amContainerId, c);
+        MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
         AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
         memorySeconds += ru.getMemorySeconds();
         vcoreSeconds += ru.getVcoreSeconds();
@@ -384,7 +400,7 @@ public class TestContainerResourceUsage {
 
     // Calculate container usage metrics for second attempt.
     for (RMContainer c : rmContainers) {
-      waitforContainerCompletion(rm, nm, amContainerId, c);
+      MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
       AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
       memorySeconds += ru.getMemorySeconds();
       vcoreSeconds += ru.getVcoreSeconds();
@@ -399,20 +415,6 @@ public class TestContainerResourceUsage {
 
     rm.stop();
     return;
-  }
-
-  private void waitforContainerCompletion(MockRM rm, MockNM nm,
-      ContainerId amContainerId, RMContainer container) throws Exception {
-    ContainerId containerId = container.getContainerId();
-    if (null != rm.scheduler.getRMContainer(containerId)) {
-      if (containerId.equals(amContainerId)) {
-        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
-      } else {
-        rm.waitForState(nm, containerId, RMContainerState.KILLED);
-      }
-    } else {
-      rm.drainEvents();
-    }
   }
 
   private AggregateAppResourceUsage calculateContainerResourceMetrics(

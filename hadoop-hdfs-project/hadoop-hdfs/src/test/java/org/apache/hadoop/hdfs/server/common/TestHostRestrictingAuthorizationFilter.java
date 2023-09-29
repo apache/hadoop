@@ -243,6 +243,26 @@ public class TestHostRestrictingAuthorizationFilter {
     filter.destroy();
   }
 
+  /**
+   * A request that don't access WebHDFS API should pass through.
+   */
+  @Test
+  public void testNotWebhdfsAPIRequest() throws Exception {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getMethod()).thenReturn("GET");
+    Mockito.when(request.getRequestURI()).thenReturn("/conf");
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+    Filter filter = new HostRestrictingAuthorizationFilter();
+    HashMap<String, String> configs = new HashMap<String, String>() {};
+    configs.put(AuthenticationFilter.AUTH_TYPE, "simple");
+    FilterConfig fc = new DummyFilterConfig(configs);
+
+    filter.init(fc);
+    filter.doFilter(request, response, (servletRequest, servletResponse) -> {});
+    filter.destroy();
+  }
+
   private static class DummyFilterConfig implements FilterConfig {
     final Map<String, String> map;
 

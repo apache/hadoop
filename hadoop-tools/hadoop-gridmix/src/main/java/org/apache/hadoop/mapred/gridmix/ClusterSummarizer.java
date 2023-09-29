@@ -86,7 +86,7 @@ class ClusterSummarizer implements StatListener<ClusterStats> {
   
   void start(Configuration conf) {
     jobTrackerInfo = conf.get(JTConfig.JT_IPC_ADDRESS);
-    namenodeInfo = conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY);
+    namenodeInfo = conf.getTrimmed(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY);
   }
   
   // Getters

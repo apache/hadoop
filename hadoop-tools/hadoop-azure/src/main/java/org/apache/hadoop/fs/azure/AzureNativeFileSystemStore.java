@@ -29,6 +29,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.util.Calendar;
 import java.util.Date;
@@ -38,6 +40,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -62,7 +66,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RetryExponentialRetry;
@@ -178,6 +182,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   public static final String KEY_USE_LOCAL_SAS_KEY_MODE = "fs.azure.local.sas.key.mode";
 
+  /**
+   * Config to control case sensitive metadata key checks/retrieval. If this
+   * is false, blob metadata keys will be treated case insensitive.
+   */
+  private static final String KEY_BLOB_METADATA_KEY_CASE_SENSITIVE = "fs.azure.blob.metadata.key.case.sensitive";
   private static final String PERMISSION_METADATA_KEY = "hdi_permission";
   private static final String OLD_PERMISSION_METADATA_KEY = "asv_permission";
   private static final String IS_FOLDER_METADATA_KEY = "hdi_isfolder";
@@ -234,6 +243,16 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   public static final String KEY_ENABLE_FLAT_LISTING = "fs.azure.flatlist.enable";
 
   /**
+   * Optional config to enable a lock free pread which will bypass buffer in
+   * BlockBlobInputStream.
+   * This is not a config which can be set at cluster level. It can be used as
+   * an option on FutureDataInputStreamBuilder.
+   * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
+   */
+  public static final String FS_AZURE_BLOCK_BLOB_BUFFERED_PREAD_DISABLE =
+      "fs.azure.block.blob.buffered.pread.disable";
+
+  /**
    * The set of directories where we should apply atomic folder rename
    * synchronized with createNonRecursive.
    */
@@ -246,6 +265,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String AZURE_ROOT_CONTAINER = "$root";
 
   private static final int DEFAULT_CONCURRENT_WRITES = 8;
+
+  private static final Charset METADATA_ENCODING = StandardCharsets.UTF_8;
 
   // Concurrent reads reads of data written out of band are disable by default.
   //
@@ -261,9 +282,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   // Retry parameter defaults.
   //
 
-  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000; // 1s
+  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000; // 3s
   private static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000; // 30s
-  private static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000; // 1s
+  private static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000; // 3s
   private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
 
   private static final int DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL = 3  * 1000;
@@ -348,6 +369,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private String userAgentId;
 
   private String delegationToken;
+
+  private boolean metadataKeyCaseSensitive;
 
   /** The error message template when container is not accessible. */
   public static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
@@ -570,6 +593,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       LOG.warn("Unable to initialize HBase root as an atomic rename directory.");
     }
     LOG.debug("Atomic rename directories: {} ", setToString(atomicRenameDirs));
+    metadataKeyCaseSensitive = conf
+        .getBoolean(KEY_BLOB_METADATA_KEY_CASE_SENSITIVE, true);
+    if (!metadataKeyCaseSensitive) {
+      LOG.info("{} configured as false. Blob metadata will be treated case insensitive.",
+          KEY_BLOB_METADATA_KEY_CASE_SENSITIVE);
+    }
   }
 
   /**
@@ -1573,8 +1602,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * Opens a new input stream for the given blob (page or block blob)
    * to read its data.
    */
-  private InputStream openInputStream(CloudBlobWrapper blob)
-      throws StorageException, IOException {
+  private InputStream openInputStream(CloudBlobWrapper blob,
+      Optional<Configuration> options) throws StorageException, IOException {
     if (blob instanceof CloudBlockBlobWrapper) {
       LOG.debug("Using stream seek algorithm {}", inputStreamVersion);
       switch(inputStreamVersion) {
@@ -1582,9 +1611,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         return blob.openInputStream(getDownloadOptions(),
             getInstrumentedContext(isConcurrentOOBAppendAllowed()));
       case 2:
+        boolean bufferedPreadDisabled = options.map(c -> c
+            .getBoolean(FS_AZURE_BLOCK_BLOB_BUFFERED_PREAD_DISABLE, false))
+            .orElse(false);
         return new BlockBlobInputStream((CloudBlockBlobWrapper) blob,
             getDownloadOptions(),
-            getInstrumentedContext(isConcurrentOOBAppendAllowed()));
+            getInstrumentedContext(isConcurrentOOBAppendAllowed()),
+            bufferedPreadDisabled);
       default:
         throw new IOException("Unknown seek algorithm: " + inputStreamVersion);
       }
@@ -1614,15 +1647,24 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     blob.setMetadata(metadata);
   }
 
-  private static String getMetadataAttribute(CloudBlobWrapper blob,
+  private String getMetadataAttribute(HashMap<String, String> metadata,
       String... keyAlternatives) {
-    HashMap<String, String> metadata = blob.getMetadata();
     if (null == metadata) {
       return null;
     }
     for (String key : keyAlternatives) {
-      if (metadata.containsKey(key)) {
-        return metadata.get(key);
+      if (metadataKeyCaseSensitive) {
+        if (metadata.containsKey(key)) {
+          return metadata.get(key);
+        }
+      } else {
+        // See HADOOP-17643 for details on why this case insensitive metadata
+        // checks been added
+        for (Entry<String, String> entry : metadata.entrySet()) {
+          if (key.equalsIgnoreCase(entry.getKey())) {
+            return entry.getValue();
+          }
+        }
       }
     }
     return null;
@@ -1646,7 +1688,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private PermissionStatus getPermissionStatus(CloudBlobWrapper blob) {
-    String permissionMetadataValue = getMetadataAttribute(blob,
+    String permissionMetadataValue = getMetadataAttribute(blob.getMetadata(),
         PERMISSION_METADATA_KEY, OLD_PERMISSION_METADATA_KEY);
     if (permissionMetadataValue != null) {
       return PermissionStatusJsonSerializer.fromJSONString(
@@ -1662,17 +1704,30 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     removeMetadataAttribute(blob, OLD_IS_FOLDER_METADATA_KEY);
   }
 
-  private static void storeLinkAttribute(CloudBlobWrapper blob,
-      String linkTarget) throws UnsupportedEncodingException {
-    // We have to URL encode the link attribute as the link URI could
+  private static String encodeMetadataAttribute(String value) throws UnsupportedEncodingException {
+    // We have to URL encode the attribute as it could
     // have URI special characters which unless encoded will result
     // in 403 errors from the server. This is due to metadata properties
     // being sent in the HTTP header of the request which is in turn used
     // on the server side to authorize the request.
-    String encodedLinkTarget = null;
-    if (linkTarget != null) {
-      encodedLinkTarget = URLEncoder.encode(linkTarget, "UTF-8");
-    }
+    return value == null ? null : URLEncoder.encode(value, METADATA_ENCODING.name());
+  }
+
+  private static String decodeMetadataAttribute(String encoded) throws UnsupportedEncodingException {
+    return encoded == null ? null : URLDecoder.decode(encoded, METADATA_ENCODING.name());
+  }
+
+  private static String ensureValidAttributeName(String attribute) {
+    // Attribute names must be valid C# identifiers so we have to
+    // convert the namespace dots (e.g. "user.something") in the
+    // attribute names. Using underscores here to be consistent with
+    // the constant metadata keys defined earlier in the file
+    return attribute.replace('.', '_');
+  }
+
+  private static void storeLinkAttribute(CloudBlobWrapper blob,
+      String linkTarget) throws UnsupportedEncodingException {
+    String encodedLinkTarget = encodeMetadataAttribute(linkTarget);
     storeMetadataAttribute(blob,
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
         encodedLinkTarget);
@@ -1681,23 +1736,32 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         OLD_LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
   }
 
-  private static String getLinkAttributeValue(CloudBlobWrapper blob)
+  private String getLinkAttributeValue(CloudBlobWrapper blob)
       throws UnsupportedEncodingException {
-    String encodedLinkTarget = getMetadataAttribute(blob,
+    String encodedLinkTarget = getMetadataAttribute(blob.getMetadata(),
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
         OLD_LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
-    String linkTarget = null;
-    if (encodedLinkTarget != null) {
-      linkTarget = URLDecoder.decode(encodedLinkTarget, "UTF-8");
-    }
-    return linkTarget;
+    return decodeMetadataAttribute(encodedLinkTarget);
   }
 
-  private static boolean retrieveFolderAttribute(CloudBlobWrapper blob) {
+  private boolean retrieveFolderAttribute(CloudBlobWrapper blob) {
     HashMap<String, String> metadata = blob.getMetadata();
-    return null != metadata
-        && (metadata.containsKey(IS_FOLDER_METADATA_KEY) || metadata
-            .containsKey(OLD_IS_FOLDER_METADATA_KEY));
+    if (null != metadata) {
+      if (metadataKeyCaseSensitive) {
+        return metadata.containsKey(IS_FOLDER_METADATA_KEY)
+            || metadata.containsKey(OLD_IS_FOLDER_METADATA_KEY);
+      } else {
+        // See HADOOP-17643 for details on why this case insensitive metadata
+        // checks been added
+        for (String key : metadata.keySet()) {
+          if (key.equalsIgnoreCase(IS_FOLDER_METADATA_KEY)
+              || key.equalsIgnoreCase(OLD_IS_FOLDER_METADATA_KEY)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   private static void storeVersionAttribute(CloudBlobContainerWrapper container) {
@@ -1712,18 +1776,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     container.setMetadata(metadata);
   }
 
-  private static String retrieveVersionAttribute(
-      CloudBlobContainerWrapper container) {
-    HashMap<String, String> metadata = container.getMetadata();
-    if (metadata == null) {
-      return null;
-    } else if (metadata.containsKey(VERSION_METADATA_KEY)) {
-      return metadata.get(VERSION_METADATA_KEY);
-    } else if (metadata.containsKey(OLD_VERSION_METADATA_KEY)) {
-      return metadata.get(OLD_VERSION_METADATA_KEY);
-    } else {
-      return null;
-    }
+  private String retrieveVersionAttribute(CloudBlobContainerWrapper container) {
+    return getMetadataAttribute(container.getMetadata(), VERSION_METADATA_KEY,
+        OLD_VERSION_METADATA_KEY);
   }
 
   @Override
@@ -2212,6 +2267,37 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   @Override
+  public byte[] retrieveAttribute(String key, String attribute) throws IOException {
+    try {
+      checkContainer(ContainerAccessType.PureRead);
+      CloudBlobWrapper blob = getBlobReference(key);
+      blob.downloadAttributes(getInstrumentedContext());
+
+      String value = getMetadataAttribute(blob.getMetadata(),
+          ensureValidAttributeName(attribute));
+      value = decodeMetadataAttribute(value);
+      return value == null ? null : value.getBytes(METADATA_ENCODING);
+    } catch (Exception e) {
+      throw new AzureException(e);
+    }
+  }
+
+  @Override
+  public void storeAttribute(String key, String attribute, byte[] value) throws IOException {
+    try {
+      checkContainer(ContainerAccessType.ReadThenWrite);
+      CloudBlobWrapper blob = getBlobReference(key);
+      blob.downloadAttributes(getInstrumentedContext());
+
+      String encodedValue = encodeMetadataAttribute(new String(value, METADATA_ENCODING));
+      storeMetadataAttribute(blob, ensureValidAttributeName(attribute), encodedValue);
+      blob.uploadMetadata(getInstrumentedContext());
+    } catch (Exception e) {
+      throw new AzureException(e);
+    }
+  }
+
+  @Override
   public InputStream retrieve(String key) throws AzureException, IOException {
     return retrieve(key, 0);
   }
@@ -2219,6 +2305,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   @Override
   public InputStream retrieve(String key, long startByteOffset)
       throws AzureException, IOException {
+    return retrieve(key, startByteOffset, Optional.empty());
+  }
+
+  @Override
+  public InputStream retrieve(String key, long startByteOffset,
+      Optional<Configuration> options) throws AzureException, IOException {
       try {
         // Check if a session exists, if not create a session with the
         // Azure storage server.
@@ -2230,7 +2322,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         }
         checkContainer(ContainerAccessType.PureRead);
 
-        InputStream inputStream = openInputStream(getBlobReference(key));
+        InputStream inputStream = openInputStream(getBlobReference(key), options);
         if (startByteOffset > 0) {
           // Skip bytes and ignore return value. This is okay
           // because if you try to skip too far you will be positioned
@@ -2781,7 +2873,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         OutputStream opStream = null;
         try {
           if (srcBlob.getProperties().getBlobType() == BlobType.PAGE_BLOB){
-            ipStream = openInputStream(srcBlob);
+            ipStream = openInputStream(srcBlob, Optional.empty());
             opStream = openOutputStream(dstBlob);
             byte[] buffer = new byte[PageBlobFormatHelpers.PAGE_SIZE];
             int len;

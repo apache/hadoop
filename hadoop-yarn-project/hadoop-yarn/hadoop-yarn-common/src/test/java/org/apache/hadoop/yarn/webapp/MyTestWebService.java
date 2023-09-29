@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import com.google.inject.Singleton;
+
 import org.apache.hadoop.http.JettyUtils;
 
 @Singleton

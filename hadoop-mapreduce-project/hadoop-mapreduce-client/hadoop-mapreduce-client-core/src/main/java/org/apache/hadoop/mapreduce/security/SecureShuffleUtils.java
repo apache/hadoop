@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * 

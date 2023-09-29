@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -48,38 +53,40 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test cases for authentication via TimelineAuthenticationFilter while
  * publishing entities for ATSv1.
  */
-@RunWith(Parameterized.class)
 public class TestTimelineAuthenticationFilterForV1 {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTimelineAuthenticationFilterForV1.class);
 
   private static final String FOO_USER = "foo";
   private static final String BAR_USER = "bar";
   private static final String HTTP_USER = "HTTP";
+  private static final String PRINCIPAL = HTTP_USER + "/localhost";
 
   private static final File TEST_ROOT_DIR = new File(
       System.getProperty("test.build.dir", "target/test-dir"),
-          TestTimelineAuthenticationFilterForV1.class.getName() + "-root");
-  private static File httpSpnegoKeytabFile = new File(
+      TestTimelineAuthenticationFilterForV1.class.getName() + "-root");
+  private static final File httpSpnegoKeytabFile = new File(
       KerberosTestUtils.getKeytabFile());
-  private static String httpSpnegoPrincipal =
+  private static final String httpSpnegoPrincipal =
       KerberosTestUtils.getServerPrincipal();
   private static final String BASEDIR =
       System.getProperty("test.build.dir", "target/test-dir") + "/"
           + TestTimelineAuthenticationFilterForV1.class.getSimpleName();
 
-  @Parameterized.Parameters
   public static Collection<Object[]> withSsl() {
-    return Arrays.asList(new Object[][] {{false}, {true}});
+    return Arrays.asList(new Object[][]{{false}, {true}});
   }
 
   private static MiniKdc testMiniKDC;
@@ -89,29 +96,29 @@ public class TestTimelineAuthenticationFilterForV1 {
   private static Configuration conf;
   private static boolean withSsl;
 
-  public TestTimelineAuthenticationFilterForV1(boolean withSsl) {
-    TestTimelineAuthenticationFilterForV1.withSsl = withSsl;
+  public void initTestTimelineAuthenticationFilterForV1(boolean isSslEnabled) {
+    TestTimelineAuthenticationFilterForV1.withSsl = isSslEnabled;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
       testMiniKDC.start();
       testMiniKDC.createPrincipal(
-          httpSpnegoKeytabFile, HTTP_USER + "/localhost");
+          httpSpnegoKeytabFile, PRINCIPAL);
     } catch (Exception e) {
-      assertTrue("Couldn't setup MiniKDC", false);
+      LOG.error("Failed to setup MiniKDC", e);
+      fail("Couldn't setup MiniKDC");
     }
 
     try {
       testTimelineServer = new ApplicationHistoryServer();
       conf = new Configuration(false);
-      conf.setStrings(TimelineAuthenticationFilterInitializer.PREFIX + "type",
-          "kerberos");
-      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
+      conf.setStrings(TIMELINE_HTTP_AUTH_PREFIX + "type", "kerberos");
+      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
           KerberosAuthenticationHandler.PRINCIPAL, httpSpnegoPrincipal);
-      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
+      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
           KerberosAuthenticationHandler.KEYTAB,
           httpSpnegoKeytabFile.getAbsolutePath());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -149,8 +156,8 @@ public class TestTimelineAuthenticationFilterForV1 {
       testTimelineServer.init(conf);
       testTimelineServer.start();
     } catch (Exception e) {
-      e.printStackTrace();
-      assertTrue("Couldn't setup TimelineServer", false);
+      LOG.error("Failed to setup TimelineServer", e);
+      fail("Couldn't setup TimelineServer");
     }
   }
 
@@ -161,7 +168,7 @@ public class TestTimelineAuthenticationFilterForV1 {
     return client;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -178,9 +185,11 @@ public class TestTimelineAuthenticationFilterForV1 {
     }
   }
 
-  @Test
-  public void testPutTimelineEntities() throws Exception {
-    KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
+  @MethodSource("withSsl")
+  @ParameterizedTest
+  void testPutTimelineEntities(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
+    KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         TimelineClient client = createTimelineClientForUGI();
@@ -190,19 +199,26 @@ public class TestTimelineAuthenticationFilterForV1 {
         entityToStore.setEntityId("entity1");
         entityToStore.setStartTime(0L);
         TimelinePutResponse putResponse = client.putEntities(entityToStore);
-        Assert.assertEquals(0, putResponse.getErrors().size());
+        if (putResponse.getErrors().size() > 0) {
+          LOG.error("putResponse errors: {}", putResponse.getErrors());
+        }
+        assertTrue(putResponse.getErrors().isEmpty(),
+            "There were some errors in the putResponse");
         TimelineEntity entityToRead =
             testTimelineServer.getTimelineStore().getEntity("entity1",
                 TestTimelineAuthenticationFilterForV1.class.getName(), null);
-        Assert.assertNotNull(entityToRead);
+        assertNotNull(entityToRead,
+            "Timeline entity should not be null");
         return null;
       }
     });
   }
 
-  @Test
-  public void testPutDomains() throws Exception {
-    KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
+  @MethodSource("withSsl")
+  @ParameterizedTest
+  void testPutDomains(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
+    KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         TimelineClient client = createTimelineClientForUGI();
@@ -215,62 +231,73 @@ public class TestTimelineAuthenticationFilterForV1 {
         TimelineDomain domainToRead =
             testTimelineServer.getTimelineStore().getDomain(
                 TestTimelineAuthenticationFilterForV1.class.getName());
-        Assert.assertNotNull(domainToRead);
+        assertNotNull(domainToRead,
+            "Timeline domain should not be null");
         return null;
       }
     });
   }
 
-  @Test
-  public void testDelegationTokenOperations() throws Exception {
+  @MethodSource("withSsl")
+  @ParameterizedTest
+  void testDelegationTokenOperations(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
     TimelineClient httpUserClient =
-        KerberosTestUtils.doAs(HTTP_USER + "/localhost",
+        KerberosTestUtils.doAs(PRINCIPAL,
             new Callable<TimelineClient>() {
-            @Override
-            public TimelineClient call() throws Exception {
-              return createTimelineClientForUGI();
-            }
-          });
+              @Override
+              public TimelineClient call() throws Exception {
+                return createTimelineClientForUGI();
+              }
+            });
     UserGroupInformation httpUser =
-        KerberosTestUtils.doAs(HTTP_USER + "/localhost",
+        KerberosTestUtils.doAs(PRINCIPAL,
             new Callable<UserGroupInformation>() {
-            @Override
-            public UserGroupInformation call() throws Exception {
-              return UserGroupInformation.getCurrentUser();
-            }
-          });
+              @Override
+              public UserGroupInformation call() throws Exception {
+                return UserGroupInformation.getCurrentUser();
+              }
+            });
+
     // Let HTTP user to get the delegation for itself
     Token<TimelineDelegationTokenIdentifier> token =
         httpUserClient.getDelegationToken(httpUser.getShortUserName());
-    Assert.assertNotNull(token);
+    assertNotNull(token, "Delegation token should not be null");
     TimelineDelegationTokenIdentifier tDT = token.decodeIdentifier();
-    Assert.assertNotNull(tDT);
-    Assert.assertEquals(new Text(HTTP_USER), tDT.getOwner());
+    assertNotNull(tDT,
+        "Delegation token identifier should not be null");
+    assertEquals(new Text(HTTP_USER), tDT.getOwner(),
+        "Owner of delegation token identifier does not match");
 
     // Renew token
-    Assert.assertFalse(token.getService().toString().isEmpty());
+    assertFalse(token.getService().toString().isEmpty(),
+        "Service field of token should not be empty");
     // Renew the token from the token service address
     long renewTime1 = httpUserClient.renewDelegationToken(token);
     Thread.sleep(100);
     token.setService(new Text());
-    Assert.assertTrue(token.getService().toString().isEmpty());
-    // If the token service address is not avaiable, it still can be renewed
+    assertTrue(token.getService().toString().isEmpty(),
+        "Service field of token should be empty");
+    // If the token service address is not available, it still can be renewed
     // from the configured address
     long renewTime2 = httpUserClient.renewDelegationToken(token);
-    Assert.assertTrue(renewTime1 < renewTime2);
+    assertTrue(renewTime1 < renewTime2,
+        "renewTime2 should be later than renewTime1");
 
     // Cancel token
-    Assert.assertTrue(token.getService().toString().isEmpty());
-    // If the token service address is not avaiable, it still can be canceled
+    assertTrue(token.getService().toString().isEmpty(),
+        "Service field of token should be empty");
+    // If the token service address is not available, it still can be canceled
     // from the configured address
     httpUserClient.cancelDelegationToken(token);
     // Renew should not be successful because the token is canceled
     try {
       httpUserClient.renewDelegationToken(token);
-      Assert.fail();
+      fail("Renew of delegation token should not be successful");
     } catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains(
-            "Renewal request for unknown token"));
+      LOG.info("Exception while renewing delegation token", e);
+      assertTrue(e.getMessage().contains(
+          "Renewal request for unknown token"));
     }
 
     // Let HTTP user to get the delegation token for FOO user
@@ -279,34 +306,40 @@ public class TestTimelineAuthenticationFilterForV1 {
     TimelineClient fooUserClient = fooUgi.doAs(
         new PrivilegedExceptionAction<TimelineClient>() {
           @Override
-          public TimelineClient run() throws Exception {
+          public TimelineClient run() {
             return createTimelineClientForUGI();
           }
         });
     token = fooUserClient.getDelegationToken(httpUser.getShortUserName());
-    Assert.assertNotNull(token);
+    assertNotNull(token, "Delegation token should not be null");
     tDT = token.decodeIdentifier();
-    Assert.assertNotNull(tDT);
-    Assert.assertEquals(new Text(FOO_USER), tDT.getOwner());
-    Assert.assertEquals(new Text(HTTP_USER), tDT.getRealUser());
+    assertNotNull(tDT,
+        "Delegation token identifier should not be null");
+    assertEquals(new Text(FOO_USER), tDT.getOwner(),
+        "Owner of delegation token is not the expected");
+    assertEquals(new Text(HTTP_USER), tDT.getRealUser(),
+        "Real user of delegation token is not the expected");
 
     // Renew token as the renewer
     final Token<TimelineDelegationTokenIdentifier> tokenToRenew = token;
     renewTime1 = httpUserClient.renewDelegationToken(tokenToRenew);
     renewTime2 = httpUserClient.renewDelegationToken(tokenToRenew);
-    Assert.assertTrue(renewTime1 < renewTime2);
+    assertTrue(renewTime1 < renewTime2,
+        "renewTime2 should be later than renewTime1");
 
     // Cancel token
-    Assert.assertFalse(tokenToRenew.getService().toString().isEmpty());
+    assertFalse(tokenToRenew.getService().toString().isEmpty(),
+        "Service field of token should not be empty");
     // Cancel the token from the token service address
     fooUserClient.cancelDelegationToken(tokenToRenew);
 
     // Renew should not be successful because the token is canceled
     try {
       httpUserClient.renewDelegationToken(tokenToRenew);
-      Assert.fail();
+      fail("Renew of delegation token should not be successful");
     } catch (Exception e) {
-      Assert.assertTrue(
+      LOG.info("Exception while renewing delegation token", e);
+      assertTrue(
           e.getMessage().contains("Renewal request for unknown token"));
     }
 
@@ -323,9 +356,10 @@ public class TestTimelineAuthenticationFilterForV1 {
 
     try {
       barUserClient.getDelegationToken(httpUser.getShortUserName());
-      Assert.fail();
+      fail("Retrieval of delegation token should not be successful");
     } catch (Exception e) {
-      Assert.assertTrue(e.getCause() instanceof AuthorizationException ||
+      LOG.info("Exception while retrieving delegation token", e);
+      assertTrue(e.getCause() instanceof AuthorizationException ||
           e.getCause() instanceof AuthenticationException);
     }
   }

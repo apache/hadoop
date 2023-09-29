@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
 /**
@@ -39,12 +40,13 @@ public class QueueCapacitiesInfo {
   public QueueCapacitiesInfo() {
   }
 
-  public QueueCapacitiesInfo(QueueCapacities capacities,
-      QueueResourceQuotas resourceQuotas,
-      boolean considerAMUsage) {
+  public QueueCapacitiesInfo(CSQueue queue, boolean considerAMUsage) {
+    QueueCapacities capacities = queue.getQueueCapacities();
+    QueueResourceQuotas resourceQuotas = queue.getQueueResourceQuotas();
     if (capacities == null) {
       return;
     }
+    QueueCapacityVectorInfo queueCapacityVectorInfo;
     float capacity;
     float usedCapacity;
     float maxCapacity;
@@ -52,7 +54,11 @@ public class QueueCapacitiesInfo {
     float absUsedCapacity;
     float absMaxCapacity;
     float maxAMLimitPercentage;
+    float weight;
+    float normalizedWeight;
     for (String partitionName : capacities.getExistingNodeLabels()) {
+      queueCapacityVectorInfo = new QueueCapacityVectorInfo(
+           queue.getConfiguredCapacityVector(partitionName));
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
       maxCapacity = capacities.getMaximumCapacity(partitionName);
@@ -67,20 +73,18 @@ public class QueueCapacitiesInfo {
       if (maxCapacity < CapacitySchedulerQueueInfo.EPSILON || maxCapacity > 1f)
         maxCapacity = 1f;
       maxCapacity = maxCapacity * 100;
+      weight = capacities.getWeight(partitionName);
+      normalizedWeight = capacities.getNormalizedWeight(partitionName);
       queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
-          partitionName, capacity, usedCapacity, maxCapacity, absCapacity,
+          partitionName, queueCapacityVectorInfo, capacity, usedCapacity, maxCapacity, absCapacity,
           absUsedCapacity, absMaxCapacity,
           considerAMUsage ? maxAMLimitPercentage : 0f,
+          weight, normalizedWeight,
           resourceQuotas.getConfiguredMinResource(partitionName),
           resourceQuotas.getConfiguredMaxResource(partitionName),
           resourceQuotas.getEffectiveMinResource(partitionName),
           resourceQuotas.getEffectiveMaxResource(partitionName)));
     }
-  }
-
-  public QueueCapacitiesInfo(QueueCapacities capacities,
-      QueueResourceQuotas resourceQuotas) {
-    this(capacities, resourceQuotas, true);
   }
 
   public void add(PartitionQueueCapacitiesInfo partitionQueueCapacitiesInfo) {

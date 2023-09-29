@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.Federatio
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the MembershipState record.
@@ -166,6 +166,16 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
   }
 
   @Override
+  public void setWebScheme(String webScheme) {
+    Builder builder = this.translator.getBuilder();
+    if (webScheme == null) {
+      builder.clearWebScheme();
+    } else {
+      builder.setWebScheme(webScheme);
+    }
+  }
+
+  @Override
   public String getRouterId() {
     NamenodeMembershipRecordProtoOrBuilder proto =
         this.translator.getProtoOrBuilder();
@@ -278,6 +288,16 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
   }
 
   @Override
+  public String getWebScheme() {
+    NamenodeMembershipRecordProtoOrBuilder proto =
+            this.translator.getProtoOrBuilder();
+    if (!proto.hasWebScheme()) {
+      return null;
+    }
+    return this.translator.getProtoOrBuilder().getWebScheme();
+  }
+
+  @Override
   public void setStats(MembershipStats stats) {
     if (stats instanceof MembershipStatsPBImpl) {
       MembershipStatsPBImpl statsPB = (MembershipStatsPBImpl)stats;
@@ -315,7 +335,9 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
 
   @Override
   public void setDateModified(long time) {
-    this.translator.getBuilder().setDateModified(time);
+    if (getState() != FederationNamenodeServiceState.EXPIRED) {
+      this.translator.getBuilder().setDateModified(time);
+    }
   }
 
   @Override

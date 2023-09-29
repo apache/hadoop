@@ -29,17 +29,29 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class FakeTimer extends Timer {
+  private long now;
   private long nowNanos;
 
   /** Constructs a FakeTimer with a non-zero value */
   public FakeTimer() {
     // Initialize with a non-trivial value.
+    now = 1577836800000L; // 2020-01-01 00:00:00,000+0000
     nowNanos = TimeUnit.MILLISECONDS.toNanos(1000);
+  }
+
+  /**
+   * FakeTimer constructor with milliseconds to keep as initial value.
+   *
+   * @param time time in millis.
+   */
+  public FakeTimer(long time) {
+    now = time;
+    nowNanos = TimeUnit.MILLISECONDS.toNanos(time);
   }
 
   @Override
   public long now() {
-    return TimeUnit.NANOSECONDS.toMillis(nowNanos);
+    return now;
   }
 
   @Override
@@ -54,6 +66,7 @@ public class FakeTimer extends Timer {
 
   /** Increases the time by milliseconds */
   public void advance(long advMillis) {
+    now += advMillis;
     nowNanos += TimeUnit.MILLISECONDS.toNanos(advMillis);
   }
 
@@ -62,6 +75,7 @@ public class FakeTimer extends Timer {
    * @param advNanos Nanoseconds to advance by.
    */
   public void advanceNanos(long advNanos) {
+    now += TimeUnit.NANOSECONDS.toMillis(advNanos);
     nowNanos += advNanos;
   }
 }

@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.SecretKey;
 import javax.net.ssl.HttpsURLConnection;
@@ -42,6 +43,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -50,16 +52,17 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
-class Fetcher<K,V> extends Thread {
+@VisibleForTesting
+public class Fetcher<K, V> extends Thread {
   
   private static final Logger LOG = LoggerFactory.getLogger(Fetcher.class);
   
-  /** Number of ms before timing out a copy */
+  /** Number of ms before timing out a copy. */
   private static final int DEFAULT_STALLED_COPY_TIMEOUT = 3 * 60 * 1000;
   
-  /** Basic/unit connection timeout (in milliseconds) */
+  /** Basic/unit connection timeout (in milliseconds). */
   private final static int UNIT_CONNECT_TIMEOUT = 60 * 1000;
   
   /* Default read timeout (in milliseconds) */
@@ -71,10 +74,12 @@ class Fetcher<K,V> extends Thread {
   private static final String FETCH_RETRY_AFTER_HEADER = "Retry-After";
 
   protected final Reporter reporter;
-  private enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
+  @VisibleForTesting
+  public enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
                                     CONNECTION, WRONG_REDUCE}
-  
-  private final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";
+
+  @VisibleForTesting
+  public final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";
   private final JobConf jobConf;
   private final Counters.Counter connectionErrs;
   private final Counters.Counter ioErrs;
@@ -82,12 +87,12 @@ class Fetcher<K,V> extends Thread {
   private final Counters.Counter badIdErrs;
   private final Counters.Counter wrongMapErrs;
   private final Counters.Counter wrongReduceErrs;
-  protected final MergeManager<K,V> merger;
-  protected final ShuffleSchedulerImpl<K,V> scheduler;
+  protected final MergeManager<K, V> merger;
+  protected final ShuffleSchedulerImpl<K, V> scheduler;
   protected final ShuffleClientMetrics metrics;
   protected final ExceptionReporter exceptionReporter;
   protected final int id;
-  private static int nextId = 0;
+  private static final AtomicInteger NEXT_ID = new AtomicInteger(0);
   protected final int reduce;
   
   private final int connectionTimeout;
@@ -110,16 +115,16 @@ class Fetcher<K,V> extends Thread {
   private static SSLFactory sslFactory;
 
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
-                 ShuffleSchedulerImpl<K,V> scheduler, MergeManager<K,V> merger,
+                 ShuffleSchedulerImpl<K, V> scheduler, MergeManager<K, V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey shuffleKey) {
     this(job, reduceId, scheduler, merger, reporter, metrics,
-        exceptionReporter, shuffleKey, ++nextId);
+        exceptionReporter, shuffleKey, NEXT_ID.incrementAndGet());
   }
 
   @VisibleForTesting
   Fetcher(JobConf job, TaskAttemptID reduceId, 
-                 ShuffleSchedulerImpl<K,V> scheduler, MergeManager<K,V> merger,
+                 ShuffleSchedulerImpl<K, V> scheduler, MergeManager<K, V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey shuffleKey,
                  int id) {
@@ -314,9 +319,8 @@ class Fetcher<K,V> extends Thread {
       return;
     }
     
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Fetcher " + id + " going to fetch from " + host + " for: "
-        + maps);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Fetcher " + id + " going to fetch from " + host + " for: " + maps);
     }
     
     // List of maps to be fetched yet
@@ -410,8 +414,8 @@ class Fetcher<K,V> extends Thread {
         shouldWait = false;
       } catch (IOException e) {
         if (!fetchRetryEnabled) {
-           // throw exception directly if fetch's retry is not enabled
-           throw e;
+          // throw exception directly if fetch's retry is not enabled
+          throw e;
         }
         if ((Time.monotonicNow() - startTime) >= this.fetchRetryTimeout) {
           LOG.warn("Failed to connect to host: " + url + "after " 
@@ -488,7 +492,7 @@ class Fetcher<K,V> extends Thread {
                                 DataInputStream input,
                                 Set<TaskAttemptID> remaining,
                                 boolean canRetry) throws IOException {
-    MapOutput<K,V> mapOutput = null;
+    MapOutput<K, V> mapOutput = null;
     TaskAttemptID mapId = null;
     long decompressedLength = -1;
     long compressedLength = -1;
@@ -512,7 +516,9 @@ class Fetcher<K,V> extends Thread {
       }
 
       InputStream is = input;
-      is = CryptoUtils.wrapIfNecessary(jobConf, is, compressedLength);
+      is =
+          IntermediateEncryptedStream.wrapIfNecessary(jobConf, is,
+              compressedLength, null);
       compressedLength -= CryptoUtils.cryptoPadding(jobConf);
       decompressedLength -= CryptoUtils.cryptoPadding(jobConf);
       
@@ -608,7 +614,7 @@ class Fetcher<K,V> extends Thread {
     // First time to retry.
     long currentTime = Time.monotonicNow();
     if (retryStartTime == 0) {
-       retryStartTime = currentTime;
+      retryStartTime = currentTime;
     }
   
     // Retry is not timeout, let's do retry with throwing an exception.
@@ -625,7 +631,7 @@ class Fetcher<K,V> extends Thread {
   }
   
   /**
-   * Do some basic verification on the input received -- Being defensive
+   * Do some basic verification on the input received -- Being defensive.
    * @param compressedLength
    * @param decompressedLength
    * @param forReduce
@@ -692,8 +698,7 @@ class Fetcher<K,V> extends Thread {
    * only on the last failure. Instead of connecting with a timeout of 
    * X, we try connecting with a timeout of x < X but multiple times. 
    */
-  private void connect(URLConnection connection, int connectionTimeout)
-  throws IOException {
+  private void connect(URLConnection connection, int connectionTimeout) throws IOException {
     int unit = 0;
     if (connectionTimeout < 0) {
       throw new IOException("Invalid timeout "

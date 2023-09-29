@@ -479,7 +479,7 @@ public class TestBlockReplacement {
       assertEquals("The block should be only on 1 datanode ", 1,
           locatedBlocks1.get(0).getLocations().length);
     } finally {
-      IOUtils.cleanup(null, client);
+      IOUtils.cleanupWithLogger(null, client);
       cluster.shutdown();
     }
   }

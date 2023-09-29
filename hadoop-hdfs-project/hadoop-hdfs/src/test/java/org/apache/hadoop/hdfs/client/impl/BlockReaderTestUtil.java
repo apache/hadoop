@@ -28,7 +28,6 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
@@ -57,10 +56,12 @@ import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /**
  * A helper class to setup the cluster, and get to BlockReader and DataNode for a block.
@@ -219,7 +220,7 @@ public class BlockReaderTestUtil {
             peer = DFSUtilClient.peerFromSocket(sock);
           } finally {
             if (peer == null) {
-              IOUtils.closeQuietly(sock);
+              IOUtils.closeStream(sock);
             }
           }
           return peer;
@@ -238,33 +239,27 @@ public class BlockReaderTestUtil {
   }
 
   public static void enableHdfsCachingTracing() {
-    LogManager.getLogger(CacheReplicationMonitor.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(CacheManager.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(FsDatasetCache.class.getName()).setLevel(
-        Level.TRACE);
+    enableTraceLog(CacheReplicationMonitor.class);
+    enableTraceLog(CacheManager.class);
+    enableTraceLog(FsDatasetCache.class);
   }
 
   public static void enableBlockReaderFactoryTracing() {
-    LogManager.getLogger(BlockReaderFactory.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(ShortCircuitCache.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(ShortCircuitReplica.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(BlockReaderLocal.class.getName()).setLevel(
-        Level.TRACE);
+    enableTraceLog(BlockReaderFactory.class);
+    enableTraceLog(ShortCircuitCache.class);
+    enableTraceLog(ShortCircuitReplica.class);
+    enableTraceLog(BlockReaderLocal.class);
   }
 
   public static void enableShortCircuitShmTracing() {
-    LogManager.getLogger(DfsClientShmManager.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(ShortCircuitRegistry.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(ShortCircuitShm.class.getName()).setLevel(
-        Level.TRACE);
-    LogManager.getLogger(DataNode.class.getName()).setLevel(
-        Level.TRACE);
+    enableTraceLog(DfsClientShmManager.class);
+    enableTraceLog(ShortCircuitRegistry.class);
+    enableTraceLog(ShortCircuitShm.class);
+    enableTraceLog(DataNode.class);
+  }
+
+  private static void enableTraceLog(Class<?> clazz) {
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(clazz), Level.TRACE);
   }
 }

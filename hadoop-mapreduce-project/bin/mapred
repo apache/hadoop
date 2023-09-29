@@ -105,6 +105,8 @@ function mapredcmd_case
     minicluster)
       hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/timelineservice"'/*'
       hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/test"'/*'
+      junitjar=$(echo "${HADOOP_TOOLS_LIB_JARS_DIR}"/junit-[0-9]*.jar)
+      hadoop_add_classpath "${junitjar}"
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.MiniHadoopClusterManager
     ;;
     *)

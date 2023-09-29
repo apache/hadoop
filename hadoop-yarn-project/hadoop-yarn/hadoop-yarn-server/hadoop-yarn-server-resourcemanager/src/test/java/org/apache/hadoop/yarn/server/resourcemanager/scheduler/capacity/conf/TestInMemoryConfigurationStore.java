@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.junit.Test;
+
+import static org.junit.Assert.fail;
+
 /**
  * Tests {@link InMemoryConfigurationStore}.
  */
@@ -26,5 +30,14 @@ public class TestInMemoryConfigurationStore extends ConfigurationStoreBaseTest {
   @Override
   protected YarnConfigurationStore createConfStore() {
     return new InMemoryConfigurationStore();
+  }
+
+  @Test
+  public void checkVersion() {
+    try {
+      confStore.checkVersion();
+    } catch (Exception e) {
+      fail("checkVersion threw exception");
+    }
   }
 }

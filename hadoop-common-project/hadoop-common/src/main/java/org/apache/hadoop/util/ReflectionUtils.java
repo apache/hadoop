@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -29,13 +28,14 @@ import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -118,19 +118,41 @@ public class ReflectionUtils {
    * 
    * @param theClass class of which an object is created
    * @param conf Configuration
+   * @param <T> Generics Type T.
    * @return a new object
    */
   @SuppressWarnings("unchecked")
   public static <T> T newInstance(Class<T> theClass, Configuration conf) {
+    return newInstance(theClass, conf, EMPTY_ARRAY);
+  }
+
+  /** Create an object for the given class and initialize it from conf
+   *
+   * @param theClass class of which an object is created
+   * @param conf Configuration
+   * @param argTypes the types of the arguments
+   * @param values the values of the arguments
+   * @param <T> Generics Type.
+   * @return a new object
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(Class<T> theClass, Configuration conf,
+      Class<?>[] argTypes, Object ... values) {
     T result;
+    if (argTypes.length != values.length) {
+      throw new IllegalArgumentException(argTypes.length
+          + " parameters are required but "
+          + values.length
+          + " arguments are provided");
+    }
     try {
       Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
-        meth = theClass.getDeclaredConstructor(EMPTY_ARRAY);
+        meth = theClass.getDeclaredConstructor(argTypes);
         meth.setAccessible(true);
         CONSTRUCTOR_CACHE.put(theClass, meth);
       }
-      result = meth.newInstance();
+      result = meth.newInstance(values);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -199,16 +221,18 @@ public class ReflectionUtils {
   }
     
   private static long previousLogTime = 0;
-    
+
   /**
    * Log the current thread stacks at INFO level.
    * @param log the logger that logs the stack trace
    * @param title a descriptive title for the call stacks
-   * @param minInterval the minimum time from the last 
+   * @param minInterval the minimum time from the last
+   * @deprecated to be removed with 3.4.0. Use {@link #logThreadInfo(Logger, String, long)} instead.
    */
-  public static void logThreadInfo(Log log,
-                                   String title,
-                                   long minInterval) {
+  @Deprecated
+  public static void logThreadInfo(org.apache.commons.logging.Log log,
+      String title,
+      long minInterval) {
     boolean dumpStack = false;
     if (log.isInfoEnabled()) {
       synchronized (ReflectionUtils.class) {
@@ -222,7 +246,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }
@@ -251,7 +275,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }
@@ -262,6 +286,7 @@ public class ReflectionUtils {
    * Return the correctly-typed {@link Class} of the given object.
    *  
    * @param o object whose correctly-typed <code>Class</code> is to be obtained
+   * @param <T> Generics Type T.
    * @return the correctly typed <code>Class</code> of the given object.
    */
   @SuppressWarnings("unchecked")
@@ -310,11 +335,13 @@ public class ReflectionUtils {
   }
   
   /**
-   * Make a copy of the writable object using serialization to a buffer
+   * Make a copy of the writable object using serialization to a buffer.
    * @param src the object to copy from
    * @param dst the object to copy into, which is destroyed
+   * @param <T> Generics Type.
+   * @param conf configuration.
    * @return dst param (the copy)
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("unchecked")
   public static <T> T copy(Configuration conf, 
@@ -346,11 +373,20 @@ public class ReflectionUtils {
   /**
    * Gets all the declared fields of a class including fields declared in
    * superclasses.
+   *
+   * @param clazz clazz
+   * @return field List
    */
   public static List<Field> getDeclaredFieldsIncludingInherited(Class<?> clazz) {
     List<Field> fields = new ArrayList<Field>();
     while (clazz != null) {
-      for (Field field : clazz.getDeclaredFields()) {
+      Field[] sortedFields = clazz.getDeclaredFields();
+      Arrays.sort(sortedFields, new Comparator<Field>() {
+        public int compare(Field a, Field b) {
+          return a.getName().compareTo(b.getName());
+        }
+      });
+      for (Field field : sortedFields) {
         fields.add(field);
       }
       clazz = clazz.getSuperclass();
@@ -362,6 +398,9 @@ public class ReflectionUtils {
   /**
    * Gets all the declared methods of a class including methods declared in
    * superclasses.
+   *
+   * @param clazz clazz.
+   * @return Method List.
    */
   public static List<Method> getDeclaredMethodsIncludingInherited(Class<?> clazz) {
     List<Method> methods = new ArrayList<Method>();

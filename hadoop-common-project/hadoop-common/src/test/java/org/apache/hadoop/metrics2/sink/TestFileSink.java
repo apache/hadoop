@@ -115,7 +115,7 @@ public class TestFileSink {
       IOUtils.copyBytes(is, baos, 1024, true);
       outFileContent = new String(baos.toByteArray(), "UTF-8");
     } finally {
-      IOUtils.cleanup(null, baos, is);
+      IOUtils.cleanupWithLogger(null, baos, is);
     }
 
     // Check the out file content. Should be something like the following:

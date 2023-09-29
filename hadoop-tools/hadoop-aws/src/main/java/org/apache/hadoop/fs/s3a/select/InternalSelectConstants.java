@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.s3a.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
 
@@ -71,7 +71,7 @@ public final class InternalSelectConstants {
         CSV_OUTPUT_QUOTE_FIELDS,
         CSV_OUTPUT_RECORD_DELIMITER
     ));
-    options.addAll(InternalConstants.STANDARD_OPENFILE_KEYS);
+    options.addAll(InternalConstants.S3A_OPENFILE_KEYS);
     SELECT_OPTIONS = Collections.unmodifiableSet(options);
   }
 }

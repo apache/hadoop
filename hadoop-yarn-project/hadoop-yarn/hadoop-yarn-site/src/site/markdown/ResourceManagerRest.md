@@ -306,29 +306,35 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | type | string | Scheduler type - capacityScheduler |
-| capacity | float | Configured queue capacity in percentage relative to its parent queue |
+| capacity | float | **Configured** queue capacity in percentage relative to its parent queue in legacy-queue-mode, otherwise the **effective** capacity  |
 | usedCapacity | float | Used queue capacity in percentage |
-| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
+| maxCapacity | float | **Configured** maximum queue capacity in percentage relative to its parent queue in legacy-queue-mode, otherwise the **effective** max capacity |
 | queueName | string | Name of the queue |
 | queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources |
 | health | A single health object | The health metrics of capacity scheduler. This metrics existed since 2.8.0, but the output was not well formatted. Hence users can not make use of this field cleanly, this is optimized from 3.2.0 onwards. |
+| weight | float | The configured weight of the queue |
+| normalizedWeight | float | The normalized weight by siblings: `[0.0, 1.0]` in legacy-queue-mode, otherwise 0 |
 
 ### Elements of the queues object for a Parent queue
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| capacity | float | Configured queue capacity in percentage relative to its parent queue |
+| capacity | float | **Configured** queue capacity in percentage relative to its parent queue in legacy-queue-mode, otherwise the **effective** capacity  |
 | usedCapacity | float | Used queue capacity in percentage |
-| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
+| maxCapacity | float | **Configured** maximum queue capacity in percentage relative to its parent queue in legacy-queue-mode, otherwise the **effective** max capacity |
 | absoluteCapacity | float | Absolute capacity percentage this queue can use of entire cluster |
 | absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster |
 | absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
 | numApplications | int | The number of applications currently in the queue |
+| maxParallelApps | int | Maximum number of applications that can run at the same time |
 | usedResources | string | A string describing the current resources used by the queue |
 | queueName | string | The name of the queue |
 | state | string of QueueState | The state of the queue |
 | queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no sub-queues. |
 | resourcesUsed | A single resource object | The total amount of resources used by this queue |
+| mode | string | The configured capacity mode: percentage, absolute, weight, mixed |
+| weight | float | The configured weight of the queue |
+| normalizedWeight | float | The normalized weight by the queue siblings: `[0.0, 1.0]` in legacy-queue-mode, otherwise 0 |
 
 ### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'queues' plus the following:
 
@@ -338,6 +344,9 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | numActiveApplications | int | The number of active applications in this queue |
 | numPendingApplications | int | The number of pending applications in this queue |
 | numContainers | int | The number of containers being used |
+| allocatedContainers | int | The number of allocated containers in this queue |
+| reservedContainers | int | The number of reserved containers in this queue |
+| pendingContainers | int | The number of pending containers in this queue |
 | maxApplications | int | The maximum number of applications this queue can have |
 | maxApplicationsPerUser | int | The maximum number of applications per user this queue can have |
 | maxActiveApplications | int | The maximum number of active applications this queue can have |
@@ -406,319 +415,1735 @@ Response Body:
 
 ```json
 {
-    "scheduler": {
-        "schedulerInfo": {
-            "capacity": 100.0,
-            "maxCapacity": 100.0,
-            "queueName": "root",
-            "queues": {
-                "queue": [
-                    {
-                        "absoluteCapacity": 10.5,
-                        "absoluteMaxCapacity": 50.0,
-                        "absoluteUsedCapacity": 0.0,
-                        "capacity": 10.5,
-                        "maxCapacity": 50.0,
-                        "numApplications": 0,
-                        "queueName": "a",
-                        "queues": {
-                            "queue": [
-                                {
-                                    "absoluteCapacity": 3.15,
-                                    "absoluteMaxCapacity": 25.0,
-                                    "absoluteUsedCapacity": 0.0,
-                                    "capacity": 30.000002,
-                                    "maxCapacity": 50.0,
-                                    "numApplications": 0,
-                                    "queueName": "a1",
-                                    "queues": {
-                                        "queue": [
-                                            {
-                                                "absoluteCapacity": 2.6775,
-                                                "absoluteMaxCapacity": 25.0,
-                                                "absoluteUsedCapacity": 0.0,
-                                                "capacity": 85.0,
-                                                "maxActiveApplications": 1,
-                                                "maxActiveApplicationsPerUser": 1,
-                                                "maxApplications": 267,
-                                                "maxApplicationsPerUser": 267,
-                                                "maxCapacity": 100.0,
-                                                "numActiveApplications": 0,
-                                                "numApplications": 0,
-                                                "numContainers": 0,
-                                                "numPendingApplications": 0,
-                                                "queueName": "a1a",
-                                                "resourcesUsed": {
-                                                    "memory": 0,
-                                                    "vCores": 0
-                                                },
-                                                "state": "RUNNING",
-                                                "type": "capacitySchedulerLeafQueueInfo",
-                                                "usedCapacity": 0.0,
-                                                "usedResources": "<memory:0, vCores:0>",
-                                                "userLimit": 100,
-                                                "userLimitFactor": 1.0,
-                                                "users": null
-                                            },
-                                            {
-                                                "absoluteCapacity": 0.47250003,
-                                                "absoluteMaxCapacity": 25.0,
-                                                "absoluteUsedCapacity": 0.0,
-                                                "capacity": 15.000001,
-                                                "maxActiveApplications": 1,
-                                                "maxActiveApplicationsPerUser": 1,
-                                                "maxApplications": 47,
-                                                "maxApplicationsPerUser": 47,
-                                                "maxCapacity": 100.0,
-                                                "numActiveApplications": 0,
-                                                "numApplications": 0,
-                                                "numContainers": 0,
-                                                "numPendingApplications": 0,
-                                                "queueName": "a1b",
-                                                "resourcesUsed": {
-                                                    "memory": 0,
-                                                    "vCores": 0
-                                                },
-                                                "state": "RUNNING",
-                                                "type": "capacitySchedulerLeafQueueInfo",
-                                                "usedCapacity": 0.0,
-                                                "usedResources": "<memory:0, vCores:0>",
-                                                "userLimit": 100,
-                                                "userLimitFactor": 1.0,
-                                                "users": null
-                                            }
-                                        ]
-                                    },
-                                    "resourcesUsed": {
-                                        "memory": 0,
-                                        "vCores": 0
-                                    },
-                                    "state": "RUNNING",
-                                    "usedCapacity": 0.0,
-                                    "usedResources": "<memory:0, vCores:0>"
-                                },
-                                {
-                                    "absoluteCapacity": 7.35,
-                                    "absoluteMaxCapacity": 50.0,
-                                    "absoluteUsedCapacity": 0.0,
-                                    "capacity": 70.0,
-                                    "maxActiveApplications": 1,
-                                    "maxActiveApplicationsPerUser": 100,
-                                    "maxApplications": 735,
-                                    "maxApplicationsPerUser": 73500,
-                                    "maxCapacity": 100.0,
-                                    "numActiveApplications": 0,
-                                    "numApplications": 0,
-                                    "numContainers": 0,
-                                    "numPendingApplications": 0,
-                                    "queueName": "a2",
-                                    "resourcesUsed": {
-                                        "memory": 0,
-                                        "vCores": 0
-                                    },
-                                    "state": "RUNNING",
-                                    "type": "capacitySchedulerLeafQueueInfo",
-                                    "usedCapacity": 0.0,
-                                    "usedResources": "<memory:0, vCores:0>",
-                                    "userLimit": 100,
-                                    "userLimitFactor": 100.0,
-                                    "users": null
-                                }
-                            ]
-                        },
-                        "resourcesUsed": {
-                            "memory": 0,
-                            "vCores": 0
-                        },
-                        "state": "RUNNING",
-                        "usedCapacity": 0.0,
-                        "usedResources": "<memory:0, vCores:0>"
-                    },
-                    {
-                        "absoluteCapacity": 89.5,
-                        "absoluteMaxCapacity": 100.0,
-                        "absoluteUsedCapacity": 0.0,
-                        "capacity": 89.5,
-                        "maxCapacity": 100.0,
-                        "numApplications": 2,
-                        "queueName": "b",
-                        "queues": {
-                            "queue": [
-                                {
-                                    "absoluteCapacity": 53.7,
-                                    "absoluteMaxCapacity": 100.0,
-                                    "absoluteUsedCapacity": 0.0,
-                                    "capacity": 60.000004,
-                                    "maxActiveApplications": 1,
-                                    "maxActiveApplicationsPerUser": 100,
-                                    "maxApplications": 5370,
-                                    "maxApplicationsPerUser": 537000,
-                                    "maxCapacity": 100.0,
-                                    "numActiveApplications": 1,
-                                    "numApplications": 2,
-                                    "numContainers": 0,
-                                    "numPendingApplications": 1,
-                                    "queueName": "b1",
-                                    "resourcesUsed": {
-                                        "memory": 0,
-                                        "vCores": 0
-                                    },
-                                    "state": "RUNNING",
-                                    "type": "capacitySchedulerLeafQueueInfo",
-                                    "usedCapacity": 0.0,
-                                    "usedResources": "<memory:0, vCores:0>",
-                                    "userLimit": 100,
-                                    "userLimitFactor": 100.0,
-                                    "users": {
-                                        "user": [
-                                            {
-                                                "numActiveApplications": 0,
-                                                "numPendingApplications": 1,
-                                                "resourcesUsed": {
-                                                    "memory": 0,
-                                                    "vCores": 0
-                                                },
-                                                "username": "user2"
-                                            },
-                                            {
-                                                "numActiveApplications": 1,
-                                                "numPendingApplications": 0,
-                                                "resourcesUsed": {
-                                                    "memory": 0,
-                                                    "vCores": 0
-                                                },
-                                                "username": "user1"
-                                            }
-                                        ]
-                                    }
-                                },
-                                {
-                                    "absoluteCapacity": 35.3525,
-                                    "absoluteMaxCapacity": 100.0,
-                                    "absoluteUsedCapacity": 0.0,
-                                    "capacity": 39.5,
-                                    "maxActiveApplications": 1,
-                                    "maxActiveApplicationsPerUser": 100,
-                                    "maxApplications": 3535,
-                                    "maxApplicationsPerUser": 353500,
-                                    "maxCapacity": 100.0,
-                                    "numActiveApplications": 0,
-                                    "numApplications": 0,
-                                    "numContainers": 0,
-                                    "numPendingApplications": 0,
-                                    "queueName": "b2",
-                                    "resourcesUsed": {
-                                        "memory": 0,
-                                        "vCores": 0
-                                    },
-                                    "state": "RUNNING",
-                                    "type": "capacitySchedulerLeafQueueInfo",
-                                    "usedCapacity": 0.0,
-                                    "usedResources": "<memory:0, vCores:0>",
-                                    "userLimit": 100,
-                                    "userLimitFactor": 100.0,
-                                    "users": null
-                                },
-                                {
-                                    "absoluteCapacity": 0.4475,
-                                    "absoluteMaxCapacity": 100.0,
-                                    "absoluteUsedCapacity": 0.0,
-                                    "capacity": 0.5,
-                                    "maxActiveApplications": 1,
-                                    "maxActiveApplicationsPerUser": 100,
-                                    "maxApplications": 44,
-                                    "maxApplicationsPerUser": 4400,
-                                    "maxCapacity": 100.0,
-                                    "numActiveApplications": 0,
-                                    "numApplications": 0,
-                                    "numContainers": 0,
-                                    "numPendingApplications": 0,
-                                    "queueName": "b3",
-                                    "resourcesUsed": {
-                                        "memory": 0,
-                                        "vCores": 0
-                                    },
-                                    "state": "RUNNING",
-                                    "type": "capacitySchedulerLeafQueueInfo",
-                                    "usedCapacity": 0.0,
-                                    "usedResources": "<memory:0, vCores:0>",
-                                    "userLimit": 100,
-                                    "userLimitFactor": 100.0,
-                                    "users": null
-                                }
-                            ]
-                        },
-                        "resourcesUsed": {
-                            "memory": 0,
-                            "vCores": 0
-                        },
-                        "state": "RUNNING",
-                        "usedCapacity": 0.0,
-                        "usedResources": "<memory:0, vCores:0>"
-                    }
-                ]
-            },
-            "health": {
-                "lastrun": 1326381444693,
-                "operationsInfo": [
-                    {
-                        "operation": "last-allocation",
-                        "nodeId": "N/A",
-                        "containerId": "N/A",
-                        "queue": "N/A"
-                    },
-                    {
-                        "operation": "last-release",
-                        "nodeId": "host.domain.com:8041",
-                        "containerId": "container_1326821518301_0005_01_000001",
-                        "queue": "root.default"
-                    },
-                    {
-                        "operation": "last-preemption",
-                        "nodeId": "N/A",
-                        "containerId": "N/A",
-                        "queue": "N/A"
-                    },
-                    {
-                        "operation": "last-reservation",
-                        "nodeId": "N/A",
-                        "containerId": "N/A",
-                        "queue": "N/A"
-                    }
-                ],
-                "lastRunDetails": [
-                    {
-                        "operation": "releases",
-                        "count": 0,
-                        "resources": {
-                            "memory": 0,
-                            "vCores": 0
-                        }
-                    },
-                    {
-                        "operation": "allocations",
-                        "count": 0,
-                        "resources": {
-                            "memory": 0,
-                            "vCores": 0
-                        }
-                    },
-                    {
-                        "operation": "reservations",
-                        "count": 0,
-                        "resources": {
-                            "memory": 0,
-                            "vCores": 0
-                        }
-                    }
-                ]
-            },
-            "type": "capacityScheduler",
-            "usedCapacity": 0.0
+  "scheduler" : {
+    "schedulerInfo" : {
+      "type" : "capacityScheduler",
+      "capacity" : 100,
+      "usedCapacity" : 0,
+      "maxCapacity" : 100,
+      "weight" : -1,
+      "normalizedWeight" : 0,
+      "queueCapacityVectorInfo" : {
+        "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+        "capacityVectorEntries" : [ {
+          "resourceName" : "memory-mb",
+          "resourceValue" : "100.0%"
+        }, {
+          "resourceName" : "vcores",
+          "resourceValue" : "100.0%"
+        } ]
+      },
+      "queueName" : "root",
+      "queuePath" : "root",
+      "maxParallelApps" : 2147483647,
+      "isAbsoluteResource" : false,
+      "queues" : {
+        "queue" : [ {
+          "type" : "capacitySchedulerLeafQueueInfo",
+          "queuePath" : "root.a",
+          "capacity" : 12.5,
+          "usedCapacity" : 0,
+          "maxCapacity" : 50,
+          "absoluteCapacity" : 12.5,
+          "absoluteMaxCapacity" : 50,
+          "absoluteUsedCapacity" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "numApplications" : 0,
+          "maxParallelApps" : 2147483647,
+          "queueName" : "a",
+          "isAbsoluteResource" : false,
+          "state" : "RUNNING",
+          "resourcesUsed" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "hideReservationQueues" : false,
+          "nodeLabels" : [ "*" ],
+          "allocatedContainers" : 0,
+          "reservedContainers" : 0,
+          "pendingContainers" : 0,
+          "capacities" : {
+            "queueCapacitiesByPartition" : [ {
+              "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=12.5%,vcores=12.5%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "12.5%"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "12.5%"
+                } ]
+              },
+              "capacity" : 12.5,
+              "usedCapacity" : 0,
+              "maxCapacity" : 50,
+              "absoluteCapacity" : 12.5,
+              "absoluteUsedCapacity" : 0,
+              "absoluteMaxCapacity" : 50,
+              "maxAMLimitPercentage" : 10,
+              "weight" : -1,
+              "normalizedWeight" : 0,
+              "configuredMinResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "configuredMaxResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "effectiveMinResource" : {
+                "memory" : 4096,
+                "vCores" : 4,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 4096
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 4
+                  } ]
+                }
+              },
+              "effectiveMaxResource" : {
+                "memory" : 16384,
+                "vCores" : 16,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 16384
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 16
+                  } ]
+                }
+              }
+            } ]
+          },
+          "resources" : {
+            "resourceUsagesByPartition" : [ {
+              "partitionName" : "",
+              "used" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "reserved" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "pending" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amUsed" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amLimit" : {
+                "memory" : 2048,
+                "vCores" : 1,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 2048
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 1
+                  } ]
+                }
+              },
+              "userAmLimit" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              }
+            } ]
+          },
+          "minEffectiveCapacity" : {
+            "memory" : 4096,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "maxEffectiveCapacity" : {
+            "memory" : 16384,
+            "vCores" : 16,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 16384
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 16
+              } ]
+            }
+          },
+          "maximumAllocation" : {
+            "memory" : 8192,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "queueAcls" : {
+            "queueAcl" : [ {
+              "accessType" : "ADMINISTER_QUEUE",
+              "accessControlList" : " "
+            }, {
+              "accessType" : "APPLICATION_MAX_PRIORITY",
+              "accessControlList" : "*"
+            }, {
+              "accessType" : "SUBMIT_APP",
+              "accessControlList" : " "
+            } ]
+          },
+          "queuePriority" : 0,
+          "orderingPolicyInfo" : "fifo",
+          "autoCreateChildQueueEnabled" : false,
+          "leafQueueTemplate" : { },
+          "mode" : "percentage",
+          "queueType" : "leaf",
+          "creationMethod" : "static",
+          "autoCreationEligibility" : "off",
+          "autoQueueTemplateProperties" : { },
+          "autoQueueParentTemplateProperties" : { },
+          "autoQueueLeafTemplateProperties" : { },
+          "numActiveApplications" : 0,
+          "numPendingApplications" : 0,
+          "numContainers" : 0,
+          "maxApplications" : 1250,
+          "maxApplicationsPerUser" : 1250,
+          "userLimit" : 100,
+          "users" : { },
+          "userLimitFactor" : 1,
+          "configuredMaxAMResourceLimit" : 0.1,
+          "AMResourceLimit" : {
+            "memory" : 2048,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 2048
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "usedAMResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "userAMResourceLimit" : {
+            "memory" : 2048,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 2048
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "preemptionDisabled" : true,
+          "intraQueuePreemptionDisabled" : true,
+          "defaultPriority" : 0,
+          "isAutoCreatedLeafQueue" : false,
+          "maxApplicationLifetime" : -1,
+          "defaultApplicationLifetime" : -1
+        }, {
+          "type" : "capacitySchedulerLeafQueueInfo",
+          "queuePath" : "root.b",
+          "capacity" : 50,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 50,
+          "absoluteMaxCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "numApplications" : 0,
+          "maxParallelApps" : 2147483647,
+          "queueName" : "b",
+          "isAbsoluteResource" : false,
+          "state" : "RUNNING",
+          "resourcesUsed" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "hideReservationQueues" : false,
+          "nodeLabels" : [ "*" ],
+          "allocatedContainers" : 0,
+          "reservedContainers" : 0,
+          "pendingContainers" : 0,
+          "capacities" : {
+            "queueCapacitiesByPartition" : [ {
+              "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=50.0%,vcores=50.0%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "50.0%"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "50.0%"
+                } ]
+              },
+              "capacity" : 50,
+              "usedCapacity" : 0,
+              "maxCapacity" : 100,
+              "absoluteCapacity" : 50,
+              "absoluteUsedCapacity" : 0,
+              "absoluteMaxCapacity" : 100,
+              "maxAMLimitPercentage" : 10,
+              "weight" : -1,
+              "normalizedWeight" : 0,
+              "configuredMinResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "configuredMaxResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "effectiveMinResource" : {
+                "memory" : 16384,
+                "vCores" : 16,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 16384
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 16
+                  } ]
+                }
+              },
+              "effectiveMaxResource" : {
+                "memory" : 32768,
+                "vCores" : 32,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 32768
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 32
+                  } ]
+                }
+              }
+            } ]
+          },
+          "resources" : {
+            "resourceUsagesByPartition" : [ {
+              "partitionName" : "",
+              "used" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "reserved" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "pending" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amUsed" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amLimit" : {
+                "memory" : 4096,
+                "vCores" : 1,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 4096
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 1
+                  } ]
+                }
+              },
+              "userAmLimit" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              }
+            } ]
+          },
+          "minEffectiveCapacity" : {
+            "memory" : 16384,
+            "vCores" : 16,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 16384
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 16
+              } ]
+            }
+          },
+          "maxEffectiveCapacity" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          },
+          "maximumAllocation" : {
+            "memory" : 8192,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "queueAcls" : {
+            "queueAcl" : [ {
+              "accessType" : "ADMINISTER_QUEUE",
+              "accessControlList" : " "
+            }, {
+              "accessType" : "APPLICATION_MAX_PRIORITY",
+              "accessControlList" : "*"
+            }, {
+              "accessType" : "SUBMIT_APP",
+              "accessControlList" : " "
+            } ]
+          },
+          "queuePriority" : 0,
+          "orderingPolicyInfo" : "fifo",
+          "autoCreateChildQueueEnabled" : false,
+          "leafQueueTemplate" : { },
+          "mode" : "percentage",
+          "queueType" : "leaf",
+          "creationMethod" : "static",
+          "autoCreationEligibility" : "off",
+          "autoQueueTemplateProperties" : { },
+          "autoQueueParentTemplateProperties" : { },
+          "autoQueueLeafTemplateProperties" : { },
+          "numActiveApplications" : 0,
+          "numPendingApplications" : 0,
+          "numContainers" : 0,
+          "maxApplications" : 5000,
+          "maxApplicationsPerUser" : 5000,
+          "userLimit" : 100,
+          "users" : { },
+          "userLimitFactor" : 1,
+          "configuredMaxAMResourceLimit" : 0.1,
+          "AMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "usedAMResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "userAMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "preemptionDisabled" : true,
+          "intraQueuePreemptionDisabled" : true,
+          "defaultPriority" : 0,
+          "isAutoCreatedLeafQueue" : false,
+          "maxApplicationLifetime" : -1,
+          "defaultApplicationLifetime" : -1
+        }, {
+          "type" : "capacitySchedulerLeafQueueInfo",
+          "queuePath" : "root.c",
+          "capacity" : 37.5,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 37.5,
+          "absoluteMaxCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "numApplications" : 0,
+          "maxParallelApps" : 2147483647,
+          "queueName" : "c",
+          "isAbsoluteResource" : false,
+          "state" : "RUNNING",
+          "resourcesUsed" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "hideReservationQueues" : false,
+          "nodeLabels" : [ "*" ],
+          "allocatedContainers" : 0,
+          "reservedContainers" : 0,
+          "pendingContainers" : 0,
+          "capacities" : {
+            "queueCapacitiesByPartition" : [ {
+              "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=37.5%,vcores=37.5%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "37.5%"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "37.5%"
+                } ]
+              },
+              "capacity" : 37.5,
+              "usedCapacity" : 0,
+              "maxCapacity" : 100,
+              "absoluteCapacity" : 37.5,
+              "absoluteUsedCapacity" : 0,
+              "absoluteMaxCapacity" : 100,
+              "maxAMLimitPercentage" : 10,
+              "weight" : -1,
+              "normalizedWeight" : 0,
+              "configuredMinResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "configuredMaxResource" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 8192,
+                    "minimumAllocation" : 1024,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 4,
+                    "minimumAllocation" : 1,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "effectiveMinResource" : {
+                "memory" : 12288,
+                "vCores" : 12,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 12288
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 12
+                  } ]
+                }
+              },
+              "effectiveMaxResource" : {
+                "memory" : 32768,
+                "vCores" : 32,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 32768
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 32
+                  } ]
+                }
+              }
+            } ]
+          },
+          "resources" : {
+            "resourceUsagesByPartition" : [ {
+              "partitionName" : "",
+              "used" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "reserved" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "pending" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amUsed" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              },
+              "amLimit" : {
+                "memory" : 4096,
+                "vCores" : 1,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 4096
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 1
+                  } ]
+                }
+              },
+              "userAmLimit" : {
+                "memory" : 0,
+                "vCores" : 0,
+                "resourceInformations" : {
+                  "resourceInformation" : [ {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "memory-mb",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "Mi",
+                    "value" : 0
+                  }, {
+                    "attributes" : { },
+                    "maximumAllocation" : 9223372036854775807,
+                    "minimumAllocation" : 0,
+                    "name" : "vcores",
+                    "resourceType" : "COUNTABLE",
+                    "units" : "",
+                    "value" : 0
+                  } ]
+                }
+              }
+            } ]
+          },
+          "minEffectiveCapacity" : {
+            "memory" : 12288,
+            "vCores" : 12,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 12288
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 12
+              } ]
+            }
+          },
+          "maxEffectiveCapacity" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          },
+          "maximumAllocation" : {
+            "memory" : 8192,
+            "vCores" : 4,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 8192
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 4
+              } ]
+            }
+          },
+          "queueAcls" : {
+            "queueAcl" : [ {
+              "accessType" : "ADMINISTER_QUEUE",
+              "accessControlList" : " "
+            }, {
+              "accessType" : "APPLICATION_MAX_PRIORITY",
+              "accessControlList" : "*"
+            }, {
+              "accessType" : "SUBMIT_APP",
+              "accessControlList" : " "
+            } ]
+          },
+          "queuePriority" : 0,
+          "orderingPolicyInfo" : "fifo",
+          "autoCreateChildQueueEnabled" : false,
+          "leafQueueTemplate" : { },
+          "mode" : "percentage",
+          "queueType" : "leaf",
+          "creationMethod" : "static",
+          "autoCreationEligibility" : "off",
+          "autoQueueTemplateProperties" : { },
+          "autoQueueParentTemplateProperties" : { },
+          "autoQueueLeafTemplateProperties" : { },
+          "numActiveApplications" : 0,
+          "numPendingApplications" : 0,
+          "numContainers" : 0,
+          "maxApplications" : 3750,
+          "maxApplicationsPerUser" : 3750,
+          "userLimit" : 100,
+          "users" : { },
+          "userLimitFactor" : 1,
+          "configuredMaxAMResourceLimit" : 0.1,
+          "AMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "usedAMResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "userAMResourceLimit" : {
+            "memory" : 4096,
+            "vCores" : 1,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 4096
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 1
+              } ]
+            }
+          },
+          "preemptionDisabled" : true,
+          "intraQueuePreemptionDisabled" : true,
+          "defaultPriority" : 0,
+          "isAutoCreatedLeafQueue" : false,
+          "maxApplicationLifetime" : -1,
+          "defaultApplicationLifetime" : -1
+        } ]
+      },
+      "capacities" : {
+        "queueCapacitiesByPartition" : [ {
+          "partitionName" : "",
+          "queueCapacityVectorInfo" : {
+            "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+            "capacityVectorEntries" : [ {
+              "resourceName" : "memory-mb",
+              "resourceValue" : "100.0%"
+            }, {
+              "resourceName" : "vcores",
+              "resourceValue" : "100.0%"
+            } ]
+          },
+          "capacity" : 100,
+          "usedCapacity" : 0,
+          "maxCapacity" : 100,
+          "absoluteCapacity" : 100,
+          "absoluteUsedCapacity" : 0,
+          "absoluteMaxCapacity" : 100,
+          "maxAMLimitPercentage" : 0,
+          "weight" : -1,
+          "normalizedWeight" : 0,
+          "configuredMinResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 8192,
+                "minimumAllocation" : 1024,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 4,
+                "minimumAllocation" : 1,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "configuredMaxResource" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 8192,
+                "minimumAllocation" : 1024,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 4,
+                "minimumAllocation" : 1,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          },
+          "effectiveMinResource" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          },
+          "effectiveMaxResource" : {
+            "memory" : 32768,
+            "vCores" : 32,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 32768
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 32
+              } ]
+            }
+          }
+        } ]
+      },
+      "health" : {
+        "lastrun" : 0,
+        "operationsInfo" : [ {
+          "operation" : "last-allocation",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-release",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-preemption",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        }, {
+          "operation" : "last-reservation",
+          "nodeId" : "N/A",
+          "containerId" : "N/A",
+          "queue" : "N/A"
+        } ],
+        "lastRunDetails" : [ {
+          "operation" : "releases",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        }, {
+          "operation" : "allocations",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        }, {
+          "operation" : "reservations",
+          "count" : 0,
+          "resources" : {
+            "memory" : 0,
+            "vCores" : 0,
+            "resourceInformations" : {
+              "resourceInformation" : [ {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "memory-mb",
+                "resourceType" : "COUNTABLE",
+                "units" : "Mi",
+                "value" : 0
+              }, {
+                "attributes" : { },
+                "maximumAllocation" : 9223372036854775807,
+                "minimumAllocation" : 0,
+                "name" : "vcores",
+                "resourceType" : "COUNTABLE",
+                "units" : "",
+                "value" : 0
+              } ]
+            }
+          }
+        } ]
+      },
+      "maximumAllocation" : {
+        "memory" : 8192,
+        "vCores" : 4,
+        "resourceInformations" : {
+          "resourceInformation" : [ {
+            "attributes" : { },
+            "maximumAllocation" : 9223372036854775807,
+            "minimumAllocation" : 0,
+            "name" : "memory-mb",
+            "resourceType" : "COUNTABLE",
+            "units" : "Mi",
+            "value" : 8192
+          }, {
+            "attributes" : { },
+            "maximumAllocation" : 9223372036854775807,
+            "minimumAllocation" : 0,
+            "name" : "vcores",
+            "resourceType" : "COUNTABLE",
+            "units" : "",
+            "value" : 4
+          } ]
         }
+      },
+      "queueAcls" : {
+        "queueAcl" : [ {
+          "accessType" : "ADMINISTER_QUEUE",
+          "accessControlList" : "*"
+        }, {
+          "accessType" : "APPLICATION_MAX_PRIORITY",
+          "accessControlList" : "*"
+        }, {
+          "accessType" : "SUBMIT_APP",
+          "accessControlList" : "*"
+        } ]
+      },
+      "queuePriority" : 0,
+      "orderingPolicyInfo" : "utilization",
+      "mode" : "percentage",
+      "queueType" : "parent",
+      "creationMethod" : "static",
+      "autoCreationEligibility" : "off",
+      "autoQueueTemplateProperties" : { },
+      "autoQueueParentTemplateProperties" : { },
+      "autoQueueLeafTemplateProperties" : { }
     }
+  }
 }
-```json
+```
 
 **XML response**
 
@@ -737,246 +2162,1650 @@ Response Header:
 Response Body:
 
 ```xml
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<scheduler>
+<?xml version="1.0" encoding="UTF-8"?><scheduler>
   <schedulerInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="capacityScheduler">
     <capacity>100.0</capacity>
     <usedCapacity>0.0</usedCapacity>
     <maxCapacity>100.0</maxCapacity>
+    <weight>-1.0</weight>
+    <normalizedWeight>0.0</normalizedWeight>
+    <queueCapacityVectorInfo>
+      <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+      <capacityVectorEntries>
+        <resourceName>memory-mb</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+      <capacityVectorEntries>
+        <resourceName>vcores</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+    </queueCapacityVectorInfo>
     <queueName>root</queueName>
+    <queuePath>root</queuePath>
+    <maxParallelApps>2147483647</maxParallelApps>
+    <isAbsoluteResource>false</isAbsoluteResource>
     <queues>
-      <queue>
-        <capacity>10.5</capacity>
+      <queue xsi:type="capacitySchedulerLeafQueueInfo">
+        <queuePath>root.a</queuePath>
+        <capacity>12.5</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>50.0</maxCapacity>
-        <absoluteCapacity>10.5</absoluteCapacity>
+        <absoluteCapacity>12.5</absoluteCapacity>
         <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+        <weight>-1.0</weight>
+        <normalizedWeight>0.0</normalizedWeight>
         <numApplications>0</numApplications>
-        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <maxParallelApps>2147483647</maxParallelApps>
         <queueName>a</queueName>
+        <isAbsoluteResource>false</isAbsoluteResource>
         <state>RUNNING</state>
-        <queues>
-          <queue>
-            <capacity>30.000002</capacity>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </resourcesUsed>
+        <hideReservationQueues>false</hideReservationQueues>
+        <nodeLabels>*</nodeLabels>
+        <allocatedContainers>0</allocatedContainers>
+        <reservedContainers>0</reservedContainers>
+        <pendingContainers>0</pendingContainers>
+        <capacities>
+          <queueCapacitiesByPartition>
+            <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=12.5%,vcores=12.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>12.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>50.0</maxCapacity>
-            <absoluteCapacity>3.15</absoluteCapacity>
-            <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
+            <absoluteCapacity>12.5</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>0</numApplications>
-            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-            <queueName>a1</queueName>
-            <state>RUNNING</state>
-            <queues>
-              <queue xsi:type="capacitySchedulerLeafQueueInfo">
-                <capacity>85.0</capacity>
-                <usedCapacity>0.0</usedCapacity>
-                <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>2.6775</absoluteCapacity>
-                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
-                <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-                <numApplications>0</numApplications>
-                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-                <queueName>a1a</queueName>
-                <state>RUNNING</state>
-                <resourcesUsed>
-                  <memory>0</memory>
-                  <vCores>0</vCores>
-                </resourcesUsed>
-                <numActiveApplications>0</numActiveApplications>
-                <numPendingApplications>0</numPendingApplications>
-                <numContainers>0</numContainers>
-                <maxApplications>267</maxApplications>
-                <maxApplicationsPerUser>267</maxApplicationsPerUser>
-                <maxActiveApplications>1</maxActiveApplications>
-                <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
-                <userLimit>100</userLimit>
-                <users/>
-                <userLimitFactor>1.0</userLimitFactor>
-              </queue>
-              <queue xsi:type="capacitySchedulerLeafQueueInfo">
-                <capacity>15.000001</capacity>
-                <usedCapacity>0.0</usedCapacity>
-                <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>0.47250003</absoluteCapacity>
-                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
-                <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-                <numApplications>0</numApplications>
-                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-                <queueName>a1b</queueName>
-                <state>RUNNING</state>
-                <resourcesUsed>
-                  <memory>0</memory>
-                  <vCores>0</vCores>
-                </resourcesUsed>
-                <numActiveApplications>0</numActiveApplications>
-                <numPendingApplications>0</numPendingApplications>
-                <numContainers>0</numContainers>
-                <maxApplications>47</maxApplications>
-                <maxApplicationsPerUser>47</maxApplicationsPerUser>
-                <maxActiveApplications>1</maxActiveApplications>
-                <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
-                <userLimit>100</userLimit>
-                <users/>
-                <userLimitFactor>1.0</userLimitFactor>
-              </queue>
-            </queues>
-            <resourcesUsed>
-              <memory>0</memory>
-              <vCores>0</vCores>
-            </resourcesUsed>
-          </queue>
-          <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>70.0</capacity>
-            <usedCapacity>0.0</usedCapacity>
-            <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>7.35</absoluteCapacity>
             <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
-            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>0</numApplications>
-            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-            <queueName>a2</queueName>
-            <state>RUNNING</state>
-            <resourcesUsed>
+            <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
+            <weight>-1.0</weight>
+            <normalizedWeight>0.0</normalizedWeight>
+            <configuredMinResource>
               <memory>0</memory>
               <vCores>0</vCores>
-            </resourcesUsed>
-            <numActiveApplications>0</numActiveApplications>
-            <numPendingApplications>0</numPendingApplications>
-            <numContainers>0</numContainers>
-            <maxApplications>735</maxApplications>
-            <maxApplicationsPerUser>73500</maxApplicationsPerUser>
-            <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
-            <userLimit>100</userLimit>
-            <users/>
-            <userLimitFactor>100.0</userLimitFactor>
-          </queue>
-        </queues>
-        <resourcesUsed>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMinResource>
+            <configuredMaxResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMaxResource>
+            <effectiveMinResource>
+              <memory>4096</memory>
+              <vCores>4</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>4096</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>4</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMinResource>
+            <effectiveMaxResource>
+              <memory>16384</memory>
+              <vCores>16</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>16384</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>16</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMaxResource>
+          </queueCapacitiesByPartition>
+        </capacities>
+        <resources>
+          <resourceUsagesByPartition>
+            <partitionName/>
+            <used>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </used>
+            <reserved>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </reserved>
+            <pending>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </pending>
+            <amUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amUsed>
+            <amLimit>
+              <memory>2048</memory>
+              <vCores>1</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>2048</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>1</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amLimit>
+            <userAmLimit>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </userAmLimit>
+          </resourceUsagesByPartition>
+        </resources>
+        <minEffectiveCapacity>
+          <memory>4096</memory>
+          <vCores>4</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>4096</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>4</value>
+            </resourceInformation>
+          </resourceInformations>
+        </minEffectiveCapacity>
+        <maxEffectiveCapacity>
+          <memory>16384</memory>
+          <vCores>16</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>16384</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>16</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maxEffectiveCapacity>
+        <maximumAllocation>
+          <memory>8192</memory>
+          <vCores>4</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>8192</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>4</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maximumAllocation>
+        <queueAcls>
+          <queueAcl>
+            <accessType>ADMINISTER_QUEUE</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>APPLICATION_MAX_PRIORITY</accessType>
+            <accessControlList>*</accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>SUBMIT_APP</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+        </queueAcls>
+        <queuePriority>0</queuePriority>
+        <orderingPolicyInfo>fifo</orderingPolicyInfo>
+        <autoCreateChildQueueEnabled>false</autoCreateChildQueueEnabled>
+        <leafQueueTemplate/>
+        <mode>percentage</mode>
+        <queueType>leaf</queueType>
+        <creationMethod>static</creationMethod>
+        <autoCreationEligibility>off</autoCreationEligibility>
+        <autoQueueTemplateProperties/>
+        <autoQueueParentTemplateProperties/>
+        <autoQueueLeafTemplateProperties/>
+        <numActiveApplications>0</numActiveApplications>
+        <numPendingApplications>0</numPendingApplications>
+        <numContainers>0</numContainers>
+        <maxApplications>1250</maxApplications>
+        <maxApplicationsPerUser>1250</maxApplicationsPerUser>
+        <userLimit>100.0</userLimit>
+        <users/>
+        <userLimitFactor>1.0</userLimitFactor>
+        <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
+        <AMResourceLimit>
+          <memory>2048</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>2048</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </AMResourceLimit>
+        <usedAMResource>
           <memory>0</memory>
           <vCores>0</vCores>
-        </resourcesUsed>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </usedAMResource>
+        <userAMResourceLimit>
+          <memory>2048</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>2048</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </userAMResourceLimit>
+        <preemptionDisabled>true</preemptionDisabled>
+        <intraQueuePreemptionDisabled>true</intraQueuePreemptionDisabled>
+        <defaultPriority>0</defaultPriority>
+        <isAutoCreatedLeafQueue>false</isAutoCreatedLeafQueue>
+        <maxApplicationLifetime>-1</maxApplicationLifetime>
+        <defaultApplicationLifetime>-1</defaultApplicationLifetime>
       </queue>
-      <queue>
-        <capacity>89.5</capacity>
+      <queue xsi:type="capacitySchedulerLeafQueueInfo">
+        <queuePath>root.b</queuePath>
+        <capacity>50.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>89.5</absoluteCapacity>
+        <absoluteCapacity>50.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-        <numApplications>2</numApplications>
-        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <weight>-1.0</weight>
+        <normalizedWeight>0.0</normalizedWeight>
+        <numApplications>0</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
         <queueName>b</queueName>
+        <isAbsoluteResource>false</isAbsoluteResource>
         <state>RUNNING</state>
-        <queues>
-          <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>60.000004</capacity>
-            <usedCapacity>0.0</usedCapacity>
-            <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>53.7</absoluteCapacity>
-            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>2</numApplications>
-            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-            <queueName>b1</queueName>
-            <state>RUNNING</state>
-            <resourcesUsed>
-              <memory>0</memory>
-              <vCores>0</vCores>
-            </resourcesUsed>
-            <numActiveApplications>1</numActiveApplications>
-            <numPendingApplications>1</numPendingApplications>
-            <numContainers>0</numContainers>
-            <maxApplications>5370</maxApplications>
-            <maxApplicationsPerUser>537000</maxApplicationsPerUser>
-            <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
-            <userLimit>100</userLimit>
-            <users>
-              <user>
-                <username>user2</username>
-                <resourcesUsed>
-                  <memory>0</memory>
-                  <vCores>0</vCores>
-                </resourcesUsed>
-                <numPendingApplications>1</numPendingApplications>
-                <numActiveApplications>0</numActiveApplications>
-              </user>
-              <user>
-                <username>user1</username>
-                <resourcesUsed>
-                  <memory>0</memory>
-                  <vCores>0</vCores>
-                </resourcesUsed>
-                <numPendingApplications>0</numPendingApplications>
-                <numActiveApplications>1</numActiveApplications>
-              </user>
-            </users>
-            <userLimitFactor>100.0</userLimitFactor>
-          </queue>
-          <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>39.5</capacity>
-            <usedCapacity>0.0</usedCapacity>
-            <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>35.3525</absoluteCapacity>
-            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>0</numApplications>
-            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-            <queueName>b2</queueName>
-            <state>RUNNING</state>
-            <resourcesUsed>
-              <memory>0</memory>
-              <vCores>0</vCores>
-            </resourcesUsed>
-            <numActiveApplications>0</numActiveApplications>
-            <numPendingApplications>0</numPendingApplications>
-            <numContainers>0</numContainers>
-            <maxApplications>3535</maxApplications>
-            <maxApplicationsPerUser>353500</maxApplicationsPerUser>
-            <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
-            <userLimit>100</userLimit>
-            <users/>
-            <userLimitFactor>100.0</userLimitFactor>
-          </queue>
-          <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>0.5</capacity>
-            <usedCapacity>0.0</usedCapacity>
-            <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>0.4475</absoluteCapacity>
-            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>0</numApplications>
-            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
-            <queueName>b3</queueName>
-            <state>RUNNING</state>
-            <resourcesUsed>
-              <memory>0</memory>
-              <vCores>0</vCores>
-            </resourcesUsed>
-            <numActiveApplications>0</numActiveApplications>
-            <numPendingApplications>0</numPendingApplications>
-            <numContainers>0</numContainers>
-            <maxApplications>44</maxApplications>
-            <maxApplicationsPerUser>4400</maxApplicationsPerUser>
-            <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
-            <userLimit>100</userLimit>
-            <users/>
-            <userLimitFactor>100.0</userLimitFactor>
-          </queue>
-        </queues>
         <resourcesUsed>
           <memory>0</memory>
           <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
         </resourcesUsed>
+        <hideReservationQueues>false</hideReservationQueues>
+        <nodeLabels>*</nodeLabels>
+        <allocatedContainers>0</allocatedContainers>
+        <reservedContainers>0</reservedContainers>
+        <pendingContainers>0</pendingContainers>
+        <capacities>
+          <queueCapacitiesByPartition>
+            <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=50.0%,vcores=50.0%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>50.0</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>50.0</absoluteCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
+            <weight>-1.0</weight>
+            <normalizedWeight>0.0</normalizedWeight>
+            <configuredMinResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMinResource>
+            <configuredMaxResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMaxResource>
+            <effectiveMinResource>
+              <memory>16384</memory>
+              <vCores>16</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>16384</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>16</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMinResource>
+            <effectiveMaxResource>
+              <memory>32768</memory>
+              <vCores>32</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>32768</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>32</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMaxResource>
+          </queueCapacitiesByPartition>
+        </capacities>
+        <resources>
+          <resourceUsagesByPartition>
+            <partitionName/>
+            <used>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </used>
+            <reserved>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </reserved>
+            <pending>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </pending>
+            <amUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amUsed>
+            <amLimit>
+              <memory>4096</memory>
+              <vCores>1</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>4096</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>1</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amLimit>
+            <userAmLimit>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </userAmLimit>
+          </resourceUsagesByPartition>
+        </resources>
+        <minEffectiveCapacity>
+          <memory>16384</memory>
+          <vCores>16</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>16384</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>16</value>
+            </resourceInformation>
+          </resourceInformations>
+        </minEffectiveCapacity>
+        <maxEffectiveCapacity>
+          <memory>32768</memory>
+          <vCores>32</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>32768</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>32</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maxEffectiveCapacity>
+        <maximumAllocation>
+          <memory>8192</memory>
+          <vCores>4</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>8192</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>4</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maximumAllocation>
+        <queueAcls>
+          <queueAcl>
+            <accessType>ADMINISTER_QUEUE</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>APPLICATION_MAX_PRIORITY</accessType>
+            <accessControlList>*</accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>SUBMIT_APP</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+        </queueAcls>
+        <queuePriority>0</queuePriority>
+        <orderingPolicyInfo>fifo</orderingPolicyInfo>
+        <autoCreateChildQueueEnabled>false</autoCreateChildQueueEnabled>
+        <leafQueueTemplate/>
+        <mode>percentage</mode>
+        <queueType>leaf</queueType>
+        <creationMethod>static</creationMethod>
+        <autoCreationEligibility>off</autoCreationEligibility>
+        <autoQueueTemplateProperties/>
+        <autoQueueParentTemplateProperties/>
+        <autoQueueLeafTemplateProperties/>
+        <numActiveApplications>0</numActiveApplications>
+        <numPendingApplications>0</numPendingApplications>
+        <numContainers>0</numContainers>
+        <maxApplications>5000</maxApplications>
+        <maxApplicationsPerUser>5000</maxApplicationsPerUser>
+        <userLimit>100.0</userLimit>
+        <users/>
+        <userLimitFactor>1.0</userLimitFactor>
+        <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
+        <AMResourceLimit>
+          <memory>4096</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>4096</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </AMResourceLimit>
+        <usedAMResource>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </usedAMResource>
+        <userAMResourceLimit>
+          <memory>4096</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>4096</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </userAMResourceLimit>
+        <preemptionDisabled>true</preemptionDisabled>
+        <intraQueuePreemptionDisabled>true</intraQueuePreemptionDisabled>
+        <defaultPriority>0</defaultPriority>
+        <isAutoCreatedLeafQueue>false</isAutoCreatedLeafQueue>
+        <maxApplicationLifetime>-1</maxApplicationLifetime>
+        <defaultApplicationLifetime>-1</defaultApplicationLifetime>
+      </queue>
+      <queue xsi:type="capacitySchedulerLeafQueueInfo">
+        <queuePath>root.c</queuePath>
+        <capacity>37.5</capacity>
+        <usedCapacity>0.0</usedCapacity>
+        <maxCapacity>100.0</maxCapacity>
+        <absoluteCapacity>37.5</absoluteCapacity>
+        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+        <weight>-1.0</weight>
+        <normalizedWeight>0.0</normalizedWeight>
+        <numApplications>0</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
+        <queueName>c</queueName>
+        <isAbsoluteResource>false</isAbsoluteResource>
+        <state>RUNNING</state>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </resourcesUsed>
+        <hideReservationQueues>false</hideReservationQueues>
+        <nodeLabels>*</nodeLabels>
+        <allocatedContainers>0</allocatedContainers>
+        <reservedContainers>0</reservedContainers>
+        <pendingContainers>0</pendingContainers>
+        <capacities>
+          <queueCapacitiesByPartition>
+            <partitionName/>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=37.5%,vcores=37.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>37.5</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>37.5</absoluteCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
+            <weight>-1.0</weight>
+            <normalizedWeight>0.0</normalizedWeight>
+            <configuredMinResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMinResource>
+            <configuredMaxResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMaxResource>
+            <effectiveMinResource>
+              <memory>12288</memory>
+              <vCores>12</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>12288</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>12</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMinResource>
+            <effectiveMaxResource>
+              <memory>32768</memory>
+              <vCores>32</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>32768</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>32</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMaxResource>
+          </queueCapacitiesByPartition>
+        </capacities>
+        <resources>
+          <resourceUsagesByPartition>
+            <partitionName/>
+            <used>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </used>
+            <reserved>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </reserved>
+            <pending>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </pending>
+            <amUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amUsed>
+            <amLimit>
+              <memory>4096</memory>
+              <vCores>1</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>4096</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>1</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amLimit>
+            <userAmLimit>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </userAmLimit>
+          </resourceUsagesByPartition>
+        </resources>
+        <minEffectiveCapacity>
+          <memory>12288</memory>
+          <vCores>12</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>12288</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>12</value>
+            </resourceInformation>
+          </resourceInformations>
+        </minEffectiveCapacity>
+        <maxEffectiveCapacity>
+          <memory>32768</memory>
+          <vCores>32</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>32768</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>32</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maxEffectiveCapacity>
+        <maximumAllocation>
+          <memory>8192</memory>
+          <vCores>4</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>8192</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>4</value>
+            </resourceInformation>
+          </resourceInformations>
+        </maximumAllocation>
+        <queueAcls>
+          <queueAcl>
+            <accessType>ADMINISTER_QUEUE</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>APPLICATION_MAX_PRIORITY</accessType>
+            <accessControlList>*</accessControlList>
+          </queueAcl>
+          <queueAcl>
+            <accessType>SUBMIT_APP</accessType>
+            <accessControlList> </accessControlList>
+          </queueAcl>
+        </queueAcls>
+        <queuePriority>0</queuePriority>
+        <orderingPolicyInfo>fifo</orderingPolicyInfo>
+        <autoCreateChildQueueEnabled>false</autoCreateChildQueueEnabled>
+        <leafQueueTemplate/>
+        <mode>percentage</mode>
+        <queueType>leaf</queueType>
+        <creationMethod>static</creationMethod>
+        <autoCreationEligibility>off</autoCreationEligibility>
+        <autoQueueTemplateProperties/>
+        <autoQueueParentTemplateProperties/>
+        <autoQueueLeafTemplateProperties/>
+        <numActiveApplications>0</numActiveApplications>
+        <numPendingApplications>0</numPendingApplications>
+        <numContainers>0</numContainers>
+        <maxApplications>3750</maxApplications>
+        <maxApplicationsPerUser>3750</maxApplicationsPerUser>
+        <userLimit>100.0</userLimit>
+        <users/>
+        <userLimitFactor>1.0</userLimitFactor>
+        <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
+        <AMResourceLimit>
+          <memory>4096</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>4096</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </AMResourceLimit>
+        <usedAMResource>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </usedAMResource>
+        <userAMResourceLimit>
+          <memory>4096</memory>
+          <vCores>1</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>4096</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>1</value>
+            </resourceInformation>
+          </resourceInformations>
+        </userAMResourceLimit>
+        <preemptionDisabled>true</preemptionDisabled>
+        <intraQueuePreemptionDisabled>true</intraQueuePreemptionDisabled>
+        <defaultPriority>0</defaultPriority>
+        <isAutoCreatedLeafQueue>false</isAutoCreatedLeafQueue>
+        <maxApplicationLifetime>-1</maxApplicationLifetime>
+        <defaultApplicationLifetime>-1</defaultApplicationLifetime>
       </queue>
     </queues>
+    <capacities>
+      <queueCapacitiesByPartition>
+        <partitionName/>
+        <queueCapacityVectorInfo>
+          <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+          <capacityVectorEntries>
+            <resourceName>memory-mb</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+          <capacityVectorEntries>
+            <resourceName>vcores</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+        </queueCapacityVectorInfo>
+        <capacity>100.0</capacity>
+        <usedCapacity>0.0</usedCapacity>
+        <maxCapacity>100.0</maxCapacity>
+        <absoluteCapacity>100.0</absoluteCapacity>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+        <maxAMLimitPercentage>0.0</maxAMLimitPercentage>
+        <weight>-1.0</weight>
+        <normalizedWeight>0.0</normalizedWeight>
+        <configuredMinResource>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>8192</maximumAllocation>
+              <minimumAllocation>1024</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>4</maximumAllocation>
+              <minimumAllocation>1</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </configuredMinResource>
+        <configuredMaxResource>
+          <memory>0</memory>
+          <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>8192</maximumAllocation>
+              <minimumAllocation>1024</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>4</maximumAllocation>
+              <minimumAllocation>1</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
+        </configuredMaxResource>
+        <effectiveMinResource>
+          <memory>32768</memory>
+          <vCores>32</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>32768</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>32</value>
+            </resourceInformation>
+          </resourceInformations>
+        </effectiveMinResource>
+        <effectiveMaxResource>
+          <memory>32768</memory>
+          <vCores>32</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>32768</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>32</value>
+            </resourceInformation>
+          </resourceInformations>
+        </effectiveMaxResource>
+      </queueCapacitiesByPartition>
+    </capacities>
     <health>
-      <lastrun>1326381444693</lastrun>
+      <lastrun>0</lastrun>
       <operationsInfo>
         <operation>last-allocation</operation>
         <nodeId>N/A</nodeId>
@@ -985,9 +3814,9 @@ Response Body:
       </operationsInfo>
       <operationsInfo>
         <operation>last-release</operation>
-        <nodeId>host.domain.com:8041</nodeId>
-        <containerId>container_1326821518301_0005_01_000001</containerId>
-        <queue>root.default</queue>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
       </operationsInfo>
       <operationsInfo>
         <operation>last-preemption</operation>
@@ -1007,6 +3836,26 @@ Response Body:
         <resources>
           <memory>0</memory>
           <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
         </resources>
       </lastRunDetails>
       <lastRunDetails>
@@ -1015,6 +3864,26 @@ Response Body:
         <resources>
           <memory>0</memory>
           <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
         </resources>
       </lastRunDetails>
       <lastRunDetails>
@@ -1023,9 +3892,76 @@ Response Body:
         <resources>
           <memory>0</memory>
           <vCores>0</vCores>
+          <resourceInformations>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>memory-mb</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units>Mi</units>
+              <value>0</value>
+            </resourceInformation>
+            <resourceInformation>
+              <attributes/>
+              <maximumAllocation>9223372036854775807</maximumAllocation>
+              <minimumAllocation>0</minimumAllocation>
+              <name>vcores</name>
+              <resourceType>COUNTABLE</resourceType>
+              <units/>
+              <value>0</value>
+            </resourceInformation>
+          </resourceInformations>
         </resources>
       </lastRunDetails>
     </health>
+    <maximumAllocation>
+      <memory>8192</memory>
+      <vCores>4</vCores>
+      <resourceInformations>
+        <resourceInformation>
+          <attributes/>
+          <maximumAllocation>9223372036854775807</maximumAllocation>
+          <minimumAllocation>0</minimumAllocation>
+          <name>memory-mb</name>
+          <resourceType>COUNTABLE</resourceType>
+          <units>Mi</units>
+          <value>8192</value>
+        </resourceInformation>
+        <resourceInformation>
+          <attributes/>
+          <maximumAllocation>9223372036854775807</maximumAllocation>
+          <minimumAllocation>0</minimumAllocation>
+          <name>vcores</name>
+          <resourceType>COUNTABLE</resourceType>
+          <units/>
+          <value>4</value>
+        </resourceInformation>
+      </resourceInformations>
+    </maximumAllocation>
+    <queueAcls>
+      <queueAcl>
+        <accessType>ADMINISTER_QUEUE</accessType>
+        <accessControlList>*</accessControlList>
+      </queueAcl>
+      <queueAcl>
+        <accessType>APPLICATION_MAX_PRIORITY</accessType>
+        <accessControlList>*</accessControlList>
+      </queueAcl>
+      <queueAcl>
+        <accessType>SUBMIT_APP</accessType>
+        <accessControlList>*</accessControlList>
+      </queueAcl>
+    </queueAcls>
+    <queuePriority>0</queuePriority>
+    <orderingPolicyInfo>utilization</orderingPolicyInfo>
+    <mode>percentage</mode>
+    <queueType>parent</queueType>
+    <creationMethod>static</creationMethod>
+    <autoCreationEligibility>off</autoCreationEligibility>
+    <autoQueueTemplateProperties/>
+    <autoQueueParentTemplateProperties/>
+    <autoQueueLeafTemplateProperties/>
   </schedulerInfo>
 </scheduler>
 ```
@@ -1564,6 +4500,7 @@ Multiple parameters can be specified for GET operations. The started and finishe
       * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
       * applicationTypes - applications matching the given application types, specified as a comma-separated list.
       * applicationTags - applications matching any of the given application tags, specified as a comma-separated list.
+      * name - name of the application
       * deSelects - a generic fields which will be skipped in the result.
 
 ### Elements of the *apps* (Applications) object
@@ -1582,11 +4519,11 @@ Current supported items:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| resouceRequests | comma separated string | Skip resource requests of application in return |
+| resourceRequests | comma separated string | Skip resource requests of application in return |
 
 e.g:
 
-      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resouceRequests
+      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resourceRequests
 
 
 ### Response Examples
@@ -1956,7 +4893,7 @@ With the Application Statistics API, you can obtain a collection of triples, eac
 
 ### Query Parameters Required
 
-Two paramters can be specified. The parameters are case insensitive.
+Two parameters can be specified. The parameters are case insensitive.
 
       * states - states of the applications, specified as a comma-separated list. If states is not provided, the API will enumerate all application states and return the counts of them.
       * applicationTypes - types of the applications, specified as a comma-separated list. If applicationTypes is not provided, the API will count the applications of any application type. In this case, the response shows * to indicate any application type. Note that we only support at most one applicationType temporarily. Otherwise, users will expect an BadRequestException.
@@ -2261,6 +5198,7 @@ appAttempts:
 | logsLink | string | The http link to the app attempt logs |
 | containerId | string | The id of the container for the app attempt |
 | startTime | long | The start time of the attempt (in ms since epoch) |
+| appAttemptState | string | The state of the application attempt - valid values are members of the RMAppAttemptState enum: NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, FINAL_SAVING |
 
 ### Response Examples
 
@@ -2289,7 +5227,8 @@ Response Body:
             "startTime" : 1326381444693,
             "id" : 1,
             "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1",
-            "containerId" : "container_1326821518301_0005_01_000001"
+            "containerId" : "container_1326821518301_0005_01_000001",
+            "appAttemptState" : "RUNNING"
          }
       ]
    }
@@ -2322,6 +5261,7 @@ Response Body:
     <startTime>1326381444693</startTime>
     <containerId>container_1326821518301_0005_01_000001</containerId>
     <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1</logsLink>
+    <appAttemptState>RUNNING</appAttemptState>
   </appAttempt>
 </appAttempts>
 ```
@@ -3036,7 +5976,7 @@ Response Body:
 Cluster Writeable APIs
 ----------------------
 
-The setions below refer to APIs which allow to create and modify applications. These APIs are currently in alpha and may change in the future.
+The sections below refer to APIs which allow to create and modify applications. These APIs are currently in alpha and may change in the future.
 
 Cluster New Application API
 ---------------------------
@@ -3066,7 +6006,7 @@ The NewApplication response contains the following elements:
 | application-id | string | The newly created application id |
 | maximum-resource-capabilities | object | The maximum resource capabilities available on this cluster |
 
-The *maximum-resource-capabilites* object contains the following elements:
+The *maximum-resource-capabilities* object contains the following elements:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -3160,7 +6100,7 @@ Please note that this feature is currently in the alpha stage and may change in 
 | resource | object | The resources the application master requires, described below |
 | application-type | string | The application type(MapReduce, Pig, Hive, etc) |
 | keep-containers-across-application-attempts | boolean | Should YARN keep the containers used by this application instead of destroying them |
-| application-tags | object | List of application tags, please see the request examples on how to speciy the tags |
+| application-tags | object | List of application tags, please see the request examples on how to specify the tags |
 | log-aggregation-context| object | Represents all of the information needed by the NodeManager to handle the logs for this application |
 | attempt-failures-validity-interval| long | The failure number will no take attempt failures which happen out of the validityInterval into failure count|
 | reservation-id| string | Represent the unique id of the corresponding reserved resource allocation in the scheduler |
@@ -3175,7 +6115,7 @@ The am-container-spec object should be used to provide the container launch cont
 | local-resources | object | Object describing the resources that need to be localized, described below |
 | environment | object | Environment variables for your containers, specified as key value pairs |
 | commands | object | The commands for launching your container, in the order in which they should be executed |
-| service-data | object | Application specific service data; key is the name of the auxiliary servce, value is base-64 encoding of the data you wish to pass |
+| service-data | object | Application specific service data; key is the name of the auxiliary service, value is base-64 encoding of the data you wish to pass |
 | credentials | object | The credentials required for your application to run, described below |
 | application-acls | objec | ACLs for your application; the key can be "VIEW\_APP" or "MODIFY\_APP", the value is the list of users with the permissions |
 
@@ -3211,8 +6151,8 @@ Elements of the POST request body *log-aggregation-context* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| log-include-pattern | string | The log files which match the defined include pattern will be uploaded when the applicaiton finishes |
-| log-exclude-pattern | string | The log files which match the defined exclude pattern will not be uploaded when the applicaiton finishes |
+| log-include-pattern | string | The log files which match the defined include pattern will be uploaded when the application finishes |
+| log-exclude-pattern | string | The log files which match the defined exclude pattern will not be uploaded when the application finishes |
 | rolled-log-include-pattern | string | The log files which match the defined include pattern will be aggregated in a rolling fashion |
 | rolled-log-exclude-pattern | string | The log files which match the defined exclude pattern will not be aggregated in a rolling fashion |
 | log-aggregation-policy-class-name | string | The policy which will be used by NodeManager to aggregate the logs |
@@ -3440,7 +6380,7 @@ Response Body:
 Cluster Application State API
 -----------------------------
 
-With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the iniital response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
+With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the initial response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
 
 Please note that in order to kill an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
 
@@ -3619,7 +6559,7 @@ Request Body:
 
 Response Header:
 
-    HTTP/1.1 403 Unauthorized
+    HTTP/1.1 401 Unauthorized
     Server: Jetty(6.1.26)
 
 **Bad Request Error Response**
@@ -4428,7 +7368,7 @@ Elements of the *reservation-request* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| duration | long | The duration of a ReservationRequeust in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
+| duration | long | The duration of a ReservationRequest in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
 | num-containers | int | The number of containers required in this phase of the reservation (capture the maximum parallelism of the job(s) in this phase). |
 | min-concurrency | int | The minimum number of containers that must be concurrently allocated to satisfy this allocation (capture min-parallelism, useful to express gang semantics). |
 | capability | object | Allows to specify the size of each container (memory, vCores).|
@@ -4604,7 +7544,7 @@ Elements of the *reservation-request* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| duration | long | The duration of a ReservationRequeust in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
+| duration | long | The duration of a ReservationRequest in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
 | num-containers | int | The number of containers required in this phase of the reservation (capture the maximum parallelism of the job(s) in this phase). |
 | min-concurrency | int | The minimum number of containers that must be concurrently allocated to satisfy this allocation (capture min-parallelism, useful to express gang semantics). |
 | capability | object | Allows to specify the size of each container (memory, vCores).|
@@ -5292,6 +8232,87 @@ Response Header:
       Content-Type: application/xml
       Transfer-Encoding: chunked
 
+**Adding Node Labels to a queue**
+
+Assuming we are using the capacity scheduler and the current queue configuration is two queues root.default, and root.a, this example adds a Node Label x to the queue root.a. Create a Node Label x and assign the nodes with below commands.
+
+```yarn rmadmin -addToClusterNodeLabels "x(exclusive=true)"```
+
+```yarn rmadmin -replaceLabelsOnNode "<nodeId>=x"```
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <update-queue>
+          <queue-name>root.a</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels</key>
+              <value>x</value>
+            </entry>
+            <entry>
+              <key>accessible-node-labels.x.capacity</key>
+              <value>100</value>
+            </entry>
+          </params>
+        </update-queue>
+        <update-queue>
+          <queue-name>root</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels.x.capacity</key>
+              <value>100</value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+**Removing Node Labels from a queue**
+
+Assuming we are using the capacity scheduler and the current queue configuration is two queues root.default, and root.a and Node Label x is assigned to queue root.a. This example unsets the Node Label x from the queue root.a and removes it.
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <update-queue>
+          <queue-name>root.a</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels</key>
+              <value></value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+```yarn rmadmin -removeFromClusterNodeLabels x```
+
 
 Cluster Container Signal API
 --------------------------------
@@ -5345,3 +8366,758 @@ Response Header:
       Server: Jetty(6.1.26)
 
 No response body.
+
+
+Scheduler Activities API
+--------------------------------
+
+  The scheduler activities RESTful API is available if you are using capacity scheduler and can fetch scheduler activities info recorded in a scheduling cycle. The API returns a message that includes important scheduling activities info which has a hierarchical layout with following fields:
+
+  * **Activities** - Activities is the root object of scheduler activities.
+  * **Allocations** - Allocations are allocation attempts based on partition or reservation.
+  * **Hierarchical Queues** - Hierarchical Queues where the scheduler have been tried to allocate containers to, each of them contains queue name, allocation state, optional diagnostic and optional children.
+  * **Applications** - Applications are shown as children of leaf queue, each of them contains the basic info about the application.
+  * **Requests** - Requests are shown as children of application, each of them contains the basic info about the request.
+  * **Nodes** - Nodes are shown as children of request, each of them contains node id, allocation state, optional name which should appear after allocating or reserving a container on the node, and optional diagnostic which should present if failed to allocate or reserve a container on this node. For aggregated nodes grouped by allocation state and diagnostic, each of them contains allocation state, aggregated node IDs and optional diagnostic.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * nodeId - specified node ID, if not specified, the scheduler will record the scheduling activities info for the next scheduling cycle on all nodes.
+      * groupBy - aggregation type of application activities, currently only support "diagnostic" with which user can query aggregated activities grouped by allocation state and diagnostic.
+
+### Elements of the *Activities* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| nodeId | string | The node ID on which scheduler tries to allocate containers. |
+| timestamp | long | Timestamp of the activities. |
+| dateTime | string | Date time of the activities. |
+| diagnostic | string | Top diagnostic of the activities about empty results, unavailable environments, or illegal input parameters, such as "waiting for display", "waiting for the next allocation", "No node manager running in the cluster", "Got invalid groupBy: xx, valid groupBy types: DIAGNOSTICS" |
+| allocations | array of allocations | A collection of allocation objects. |
+
+### Elements of the *Allocation* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| partition | string | Partition of the allocation. |
+| updatedContainerId | string | Updated(allocated or reserved) container id in the allocation. |
+| finalAllocationState | string | Final allocation state of the allocation, including ALLOCATED, ALLOCATED_FROM_RESERVED, RESERVED, and SKIPPED. |
+| root | Queue | Queue object |
+
+### Elements of the *Queue* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the queue. |
+| allocationState | string | Final allocation state of the queue, including ACCEPTED, REJECTED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the queue. |
+| children | array of queues or applications | A collection of queue objects (for parent queues) or app objects (for leaf queues) |
+
+### Elements of the *Application* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the application. |
+| appPriority | string | Priority of the application. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the application. |
+| children | array of requests | A collection of request objects |
+
+### Elements of the *Request* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the request, the value format is "request_&lt;requestPriority&gt;_&lt;allocationRequestId&gt;" which can be used to identify different requests. |
+| requestPriority | string | Priority of the request. |
+| allocationRequestId | string | Allocation request id of the request. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the request. |
+| children | array of nodes | A collection of node objects. |
+
+### Elements of the *Node* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Container information which is optional and can be shown when allocation state is ALLOCATED, RESERVED or ALLOCATED_FROM_RESERVED. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic about node in normal mode or nodes in aggregation mode |
+| nodeId | string | The node id on which the scheduling process is based, won’t show for aggregation query with groupBy parameter. |
+| nodeIds | array of strings | A collection of node IDs for aggregated activities, only show for aggregation query with groupBy parameter. |
+| count | int | The number of node IDs, only show for aggregation query with groupBy parameter. |
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+Following is an output example when global scheduling is enabled, there are multiple activities at the node level for a single request. For single node placement, differences are that nodeId will be shown as a field of activities and there should be only one activity at the node level for every request.
+
+```json
+{
+  "activities": {
+    "timestamp": 1562296830912,
+    "dateTime": "Fri Jul 05 11:20:30 CST 2019",
+    "allocations": [
+      {
+        "partition": "",
+        "finalAllocationState": "ALLOCATED",
+        "root": {
+          "name": "root",
+          "allocationState": "ACCEPTED",
+          "children": [
+            {
+              "name": "a",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resources"
+            },
+            {
+              "name": "b",
+              "allocationState": "ACCEPTED",
+              "children": [
+                {
+                  "name": "application_1562296828063_0001",
+                  "appPriority": 0,
+                  "allocationState": "ALLOCATED",
+                  "children": [
+                    {
+                      "name": "request_1_-1",
+                      "requestPriority": 1,
+                      "allocationRequestId": -1,
+                      "allocationState": "ALLOCATED",
+                      "children": [
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.2:1234"
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.3:1234"
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.4:1234"
+                        },
+                        {
+                          "name": "Container: [ContainerId: null, AllocationRequestId: -1, Version: 0, NodeId: 127.0.0.1:1234, NodeHttpAddress: 127.0.0.1:2, Resource: <memory:3072, vCores:1>, Priority: 1, Token: null, ExecutionType: GUARANTEED, ]",
+                          "allocationState": "ALLOCATED",
+                          "nodeId": "127.0.0.1:1234"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+When we query scheduler activities REST API with query parameters("groupBy=diagnostic"), 4 node activities info will be grouped into 2 groups: SKIPPED group with the same diagnostic "Node's total resource is insufficient for request, insufficient resources=[memory-mb]" and ALLOCATED group, the output should be as follows:
+
+```json
+{
+  "activities": {
+    "timestamp": 1562297536893,
+    "dateTime": "Fri Jul 05 11:32:16 CST 2019",
+    "allocations": [
+      {
+        "partition": "",
+        "finalAllocationState": "ALLOCATED",
+        "root": {
+          "name": "root",
+          "allocationState": "ACCEPTED",
+          "children": [
+            {
+              "name": "a",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resources"
+            },
+            {
+              "name": "b",
+              "allocationState": "ACCEPTED",
+              "children": [
+                {
+                  "name": "application_1562297533892_0001",
+                  "appPriority": 0,
+                  "allocationState": "ALLOCATED",
+                  "children": [
+                    {
+                      "name": "request_1_-1",
+                      "requestPriority": 1,
+                      "allocationRequestId": -1,
+                      "allocationState": "ALLOCATED",
+                      "children": [
+                        {
+                          "allocationState": "ALLOCATED",
+                          "count": 1,
+                          "nodeIds": [
+                            "127.0.0.1:1234"
+                          ]
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]",
+                          "count": 3,
+                          "nodeIds": [
+                            "127.0.0.2:1234",
+                            "127.0.0.3:1234",
+                            "127.0.0.4:1234"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<activities>
+  <timestamp>1562296830912</timestamp>
+  <dateTime>Fri Jul 05 11:20:30 CST 2019</dateTime>
+  <allocations>
+    <partition></partition>
+    <finalAllocationState>ALLOCATED</finalAllocationState>
+    <root>
+      <name>root</name>
+      <allocationState>ACCEPTED</allocationState>
+      <children>
+        <name>a</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </children>
+      <children>
+        <name>b</name>
+        <allocationState>ACCEPTED</allocationState>
+        <children>
+          <name>application_1562296828063_0001</name>
+          <appPriority>0</appPriority>
+          <allocationState>ACCEPTED</allocationState>
+          <children>
+            <name>request_1_-1</name>
+            <requestPriority>1</requestPriority>
+            <allocationRequestId>-1</allocationRequestId>
+            <allocationState>ALLOCATED</allocationState>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.2:1234</nodeId>
+            </children>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.3:1234</nodeId>
+            </children>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.4:1234</nodeId>
+            </children>
+            <children>
+              <name>Container: [ContainerId: null, AllocationRequestId: -1, Version: 0, NodeId: 127.0.0.1:1234, NodeHttpAddress: 127.0.0.1:2, Resource: &lt;memory:3072, vCores:1&gt;, Priority: 1, Token: null, ExecutionType: GUARANTEED, ]</name>
+              <allocationState>ALLOCATED</allocationState>
+              <nodeId>127.0.0.1:1234</nodeId>
+            </children>
+          </children>
+        </children>
+      </children>
+    </root>
+  </allocations>
+</activities>
+```
+
+
+Scheduler Bulk Activities API
+--------------------------------
+
+  The scheduler bulk activities RESTful API can fetch scheduler activities info recorded for multiple scheduling cycle. This may take time
+to return as it internally waits until a certain amount of records are generated specified by activitiesCount.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * activitiesCount - number of schecduling cycle to record with maximum of 500.
+      * groupBy - aggregation type of application activities, currently only support "diagnostic" with which
+        user can query aggregated activities grouped by allocation state and diagnostic.
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities?activitiesCount=2
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+Following is an output example with query parameter activitiesCount set to 2. This fetches scheduler activities info
+recorded in last two scheduling cycle.
+
+```json
+{
+  "bulkActivities": {
+    "activities": [
+      {
+        "nodeId": "127.0.0.1:1234",
+        "timestamp": 1593684431432,
+        "dateTime": "Thu Jul 02 10:07:11 UTC 2020",
+        "allocations": [
+          {
+            "partition": "",
+            "finalAllocationState": "SKIPPED",
+            "root": {
+              "name": "root",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resource"
+            }
+          }
+        ]
+      },
+      {
+        "nodeId": "127.0.0.2:1234",
+        "timestamp": 1593684431432,
+        "dateTime": "Thu Jul 02 10:07:11 UTC 2020",
+        "allocations": [
+          {
+            "partition": "",
+            "finalAllocationState": "SKIPPED",
+            "root": {
+              "name": "root",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resource"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities?activitiesCount=2
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```xml
+<bulkActivities>
+  <activities>
+    <nodeId>127.0.0.1:1234</nodeId>
+    <timestamp>1593683816380</timestamp>
+    <dateTime>Thu Jul 02 09:56:56 UTC 2020</dateTime>
+    <allocations>
+      <partition/>
+      <finalAllocationState>SKIPPED</finalAllocationState>
+      <root>
+        <name>root</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </root>
+    </allocations>
+  </activities>
+  <activities>
+    <nodeId>127.0.0.2:1234</nodeId>
+    <timestamp>1593683816385</timestamp>
+    <dateTime>Thu Jul 02 09:56:56 UTC 2020</dateTime>
+    <allocations>
+      <partition/>
+      <finalAllocationState>SKIPPED</finalAllocationState>
+      <root>
+        <name>root</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </root>
+    </allocations>
+  </activities>
+</bulkActivities>
+```
+
+
+Application Activities API
+--------------------------------
+
+Application activities RESTful API is available if you are using capacity scheduler and can fetch useful scheduling info for a specified application, the response has a hierarchical layout with following fields:
+
+* **AppActivities** - AppActivities are root element of application activities within basic information.
+* **Allocations** - Allocations are allocation attempts at app level queried from the cache.
+* **Requests** - Requests are shown as children of allocation, each of them contains request name, request priority, allocation request id, allocation state and optional children.
+* **Nodes** - Nodes are shown as children of request, each of them contains node id, allocation state, optional name which should appear after allocating or reserving a container on the node, and optional diagnostic which should appear if failed to allocate or reserve a container on the node. For aggregated nodes grouped by allocation state and diagnostic, each of them contains allocation state, aggregated node IDs and optional diagnostic.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * maxTime - the max duration in seconds from now on for recording application activities. If not specified, this will default to 3 (seconds).
+      * requestPriorities - the priorities of request, used to filter application activities, specified as a comma-separated list.
+      * allocationRequestIds - the allocation request IDs of request, used to filter application activities, specified as a comma-separated list.
+      * groupBy - the aggregation type of application activities, currently only support “diagnostic” with which user can query aggregated activities grouped by allocation state and diagnostic.
+      * limit - the limit of application activities which can reduce the cost for both server and client side.
+      * actions - the required actions of app activities including "refresh" and "get", specified as a comma-separated list.
+      * summarize - whether app activities in multiple scheduling processes need to be summarized, specified as boolean, it's useful when multi-node placement disabled, because only one node can be considered in a single scheduling process, enabling this can give us a summary with diagnostics on all nodes.
+
+### Elements of the *AppActivities* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| applicationId | string | The specified application id. |
+| allocations | array of allocations | A collection of allocation objects in descending order by time. |
+
+### Elements of the *Allocation* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| nodeId | string | ID of the node. |
+| timestamp | long | Timestamp of the allocation. |
+| dateTime | string | Date time of the allocation. |
+| queueName | string | Queue name of the application. |
+| appPriority | int | Priority of the application |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the application. |
+| children | array of requests | A collection of request objects |
+
+### Elements of the *Request* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| requestPriority | string | Priority of the request. |
+| allocationRequestId | string | Allocation request id of the request. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the request. |
+| children | array of nodes | A collection of node objects. |
+
+### Elements of the *Node* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | ID of the updated container, will show "Container-Id-Not-Assigned" if not assigned. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic about node in normal mode or nodes in aggregation mode |
+| nodeId | string | The node id on which the scheduling process is based, won’t show for aggregation query with groupBy parameter. |
+| nodeIds | array of strings | A collection of node IDs for aggregated app activities, only show for aggregation query with groupBy parameter. |
+| count | int | The number of node IDs, only show for aggregation query with groupBy parameter. |
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "appActivities": {
+    "applicationId": "application_1562312049195_0001",
+    "allocations": [
+      {
+        "timestamp": 1562312052039,
+        "dateTime": "Fri Jul 05 15:34:12 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "RESERVED",
+        "children": [
+          {
+            "requestPriority": 1,
+            "allocationRequestId": -1,
+            "allocationState": "RESERVED",
+            "children": [
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.3:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.4:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.2:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "RESERVED",
+                "diagnostic": "Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:1024, vCores:3>",
+                "nodeId": "127.0.0.1:1234"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "timestamp": 1562312052031,
+        "dateTime": "Fri Jul 05 15:34:12 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "ALLOCATED",
+        "children": [
+          {
+            "requestPriority": 0,
+            "allocationRequestId": -1,
+            "allocationState": "ALLOCATED",
+            "children": [
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "ALLOCATED",
+                "nodeId": "127.0.0.2:1234"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When we query scheduler activities REST API with a query parameter ("groupBy=diagnostic"), 4 node activities will be separated into two groups: SKIPPED group with the same diagnostic “Node's total resource is insufficient for request, insufficient resources=[memory-mb]” and ALLOCATED group, the output should be as follows:
+
+```json
+{
+  "appActivities": {
+    "applicationId": "application_1562312658870_0001",
+    "allocations": [
+      {
+        "timestamp": 1562312661536,
+        "dateTime": "Fri Jul 05 15:44:21 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "RESERVED",
+        "children": [
+          {
+            "requestPriority": 1,
+            "allocationRequestId": -1,
+            "allocationState": "RESERVED",
+            "children": [
+              {
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]",
+                "count": 3,
+                "nodeIds": [
+                  "127.0.0.3:1234",
+                  "127.0.0.4:1234",
+                  "127.0.0.2:1234"
+                ]
+              },
+              {
+                "allocationState": "RESERVED",
+                "diagnostic": "Node does not have sufficient resource for request, insufficient resources=[memory-mb]",
+                "count": 1,
+                "nodeIds": [
+                  "127.0.0.1:1234"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "timestamp": 1562312661522,
+        "dateTime": "Fri Jul 05 15:44:21 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "ALLOCATED",
+        "children": [
+          {
+            "requestPriority": 0,
+            "allocationRequestId": -1,
+            "allocationState": "ALLOCATED",
+            "children": [
+              {
+                "allocationState": "ALLOCATED",
+                "count": 1,
+                "nodeIds": [
+                  "127.0.0.2:1234"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+
+<appActivities>
+  <applicationId>application_1562312049195_0001</applicationId>
+  <allocations>
+    <timestamp>1562312052039</timestamp>
+    <dateTime>Fri Jul 05 15:34:12 CST 2019</dateTime>
+    <queueName>b</queueName>
+    <appPriority>0</appPriority>
+    <allocationState>RESERVED</allocationState>
+    <children>
+      <requestPriority>1</requestPriority>
+      <allocationRequestId>-1</allocationRequestId>
+      <allocationState>RESERVED</allocationState>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.3:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.4:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.2:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>RESERVED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:1024, vCores:3&gt;</diagnostic>
+        <nodeId>127.0.0.1:1234</nodeId>
+      </children>
+    </children>
+  </allocations>
+  <allocations>
+    <timestamp>1562312052031</timestamp>
+    <dateTime>Fri Jul 05 15:34:12 CST 2019</dateTime>
+    <queueName>b</queueName>
+    <appPriority>0</appPriority>
+    <allocationState>ALLOCATED</allocationState>
+    <children>
+      <requestPriority>0</requestPriority>
+      <allocationRequestId>-1</allocationRequestId>
+      <allocationState>ALLOCATED</allocationState>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>ALLOCATED</allocationState>
+        <nodeId>127.0.0.2:1234</nodeId>
+      </children>
+    </children>
+  </allocations>
+</appActivitiesInfo>
+```

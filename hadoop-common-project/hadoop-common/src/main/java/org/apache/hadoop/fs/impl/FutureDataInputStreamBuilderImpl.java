@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.impl;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,12 +27,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
@@ -46,7 +48,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  * options accordingly, for example:
  *
  * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
+ * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
  *
  */
@@ -61,6 +63,12 @@ public abstract class FutureDataInputStreamBuilderImpl
   private int bufferSize;
 
   /**
+   * File status passed in through a {@link #withFileStatus(FileStatus)}
+   * call; null otherwise.
+   */
+  private FileStatus status;
+
+  /**
    * Construct from a {@link FileContext}.
    *
    * @param fc FileContext
@@ -69,8 +77,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileContext fc,
       @Nonnull Path path) throws IOException {
-    super(checkNotNull(path));
-    checkNotNull(fc);
+    super(requireNonNull(path, "path"));
+    requireNonNull(fc, "file context");
     this.fileSystem = null;
     bufferSize = IO_FILE_BUFFER_SIZE_DEFAULT;
   }
@@ -82,8 +90,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileSystem fileSystem,
       @Nonnull Path path) {
-    super(checkNotNull(path));
-    this.fileSystem = checkNotNull(fileSystem);
+    super(requireNonNull(path, "path"));
+    this.fileSystem = requireNonNull(fileSystem, "fileSystem");
     initFromFS();
   }
 
@@ -108,7 +116,7 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   protected FileSystem getFS() {
-    checkNotNull(fileSystem);
+    requireNonNull(fileSystem, "fileSystem");
     return fileSystem;
   }
 
@@ -118,6 +126,9 @@ public abstract class FutureDataInputStreamBuilderImpl
 
   /**
    * Set the size of the buffer to be used.
+   *
+   * @param bufSize buffer size.
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder bufferSize(int bufSize) {
     bufferSize = bufSize;
@@ -129,6 +140,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    * This must be used after the constructor has been invoked to create
    * the actual builder: it allows for subclasses to do things after
    * construction.
+   *
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder builder() {
     return getThisBuilder();
@@ -137,5 +150,20 @@ public abstract class FutureDataInputStreamBuilderImpl
   @Override
   public FutureDataInputStreamBuilder getThisBuilder() {
     return this;
+  }
+
+  @Override
+  public FutureDataInputStreamBuilder withFileStatus(
+      @Nullable FileStatus st) {
+    this.status = st;
+    return this;
+  }
+
+  /**
+   * Get any status set in {@link #withFileStatus(FileStatus)}.
+   * @return a status value or null.
+   */
+  protected FileStatus getStatus() {
+    return status;
   }
 }

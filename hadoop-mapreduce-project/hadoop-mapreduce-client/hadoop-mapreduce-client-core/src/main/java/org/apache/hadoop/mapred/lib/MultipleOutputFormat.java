@@ -175,7 +175,7 @@ extends FileOutputFormat<K, V> {
   
 
   /**
-   * Generate the outfile name based on a given anme and the input file name. If
+   * Generate the outfile name based on a given name and the input file name. If
    * the {@link JobContext#MAP_INPUT_FILE} does not exists (i.e. this is not for a map only job),
    * the given name is returned unchanged. If the config value for
    * "num.of.trailing.legs.to.use" is not set, or set 0 or negative, the given
@@ -187,7 +187,7 @@ extends FileOutputFormat<K, V> {
    *          the job config
    * @param name
    *          the output file name
-   * @return the outfile name based on a given anme and the input file name.
+   * @return the outfile name based on a given name and the input file name.
    */
   protected String getInputFileBasedOutputFileName(JobConf job, String name) {
     String infilepath = job.get(MRJobConfig.MAP_INPUT_FILE);

@@ -106,7 +106,7 @@ For more details of YARN CGroups configurations, please refer to [Using CGroups 
 
 ### In `container-executor.cfg`
 
-In general, following config needs to be added to `container-executor.cfg`. The fpag.major-device-number and allowed-device-minor-numbers are optional allowed devices.
+In general, following config needs to be added to `container-executor.cfg`. The fpga.major-device-number and allowed-device-minor-numbers are optional allowed devices.
 
 ```
 [fpga]

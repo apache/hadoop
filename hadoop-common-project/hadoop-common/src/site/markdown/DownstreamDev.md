@@ -300,7 +300,7 @@ that conflicts with a property defined by Hadoop can lead to unexpected and
 undesirable results. Users are encouraged to avoid using custom configuration
 property names that conflict with the namespace of Hadoop-defined properties
 and thus should avoid using any prefixes used by Hadoop,
-e.g. hadoop, io, ipc, fs, net, file, ftp, kfs, ha, file, dfs, mapred,
+e.g. hadoop, io, ipc, fs, net, ftp, ha, file, dfs, mapred,
 mapreduce, and yarn.
 
 ### Logging Configuration Files
@@ -430,4 +430,3 @@ please contact the developer mailing list for the relevant component(s):
 * [hdfs-dev](mailto:hdfs-dev@hadoop.apache.org)
 * [mapreduce-dev](mailto:mapreduce-dev@hadoop.apache.org)
 * [yarn-dev](mailto:yarn-dev@hadoop.apache.org)
-* [submarine-dev](mailto:submarine-dev@hadoop.apache.org)

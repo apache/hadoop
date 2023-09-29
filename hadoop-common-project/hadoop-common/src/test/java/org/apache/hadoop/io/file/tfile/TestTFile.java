@@ -109,7 +109,7 @@ public class TestTFile {
       byte[] val = readValue(scanner);
       String keyStr = String.format(localFormatter, i);
       String valStr = value + keyStr;
-      assertTrue("btyes for keys do not match " + keyStr + " "
+      assertTrue("bytes for keys do not match " + keyStr + " "
           + new String(key), Arrays.equals(keyStr.getBytes(), key));
       assertTrue("bytes for vals do not match " + valStr + " "
           + new String(val), Arrays.equals(
@@ -117,7 +117,7 @@ public class TestTFile {
       assertTrue(scanner.advance());
       key = readKey(scanner);
       val = readValue(scanner);
-      assertTrue("btyes for keys do not match", Arrays.equals(
+      assertTrue("bytes for keys do not match", Arrays.equals(
           keyStr.getBytes(), key));
       assertTrue("bytes for vals do not match", Arrays.equals(
           valStr.getBytes(), val));
@@ -146,11 +146,11 @@ public class TestTFile {
     for (int i = start; i < (start + n); i++) {
       byte[] key = readKey(scanner);
       String keyStr = String.format(localFormatter, i);
-      assertTrue("btyes for keys do not match", Arrays.equals(
+      assertTrue("bytes for keys do not match", Arrays.equals(
           keyStr.getBytes(), key));
       scanner.advance();
       key = readKey(scanner);
-      assertTrue("btyes for keys do not match", Arrays.equals(
+      assertTrue("bytes for keys do not match", Arrays.equals(
           keyStr.getBytes(), key));
       scanner.advance();
     }

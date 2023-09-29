@@ -49,7 +49,7 @@ public class AssignedDevice implements Serializable, Comparable {
 
   @Override
   public int compareTo(Object o) {
-    if (o == null || !(o instanceof AssignedDevice)) {
+    if (!(o instanceof AssignedDevice)) {
       return -1;
     }
     AssignedDevice other = (AssignedDevice) o;
@@ -62,7 +62,7 @@ public class AssignedDevice implements Serializable, Comparable {
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || !(o instanceof AssignedDevice)) {
+    if (!(o instanceof AssignedDevice)) {
       return false;
     }
     AssignedDevice other = (AssignedDevice) o;

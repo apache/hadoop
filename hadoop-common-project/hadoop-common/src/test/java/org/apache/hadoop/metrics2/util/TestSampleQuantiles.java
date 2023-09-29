@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.metrics2.lib.MutableInverseQuantiles;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSampleQuantiles {
 
@@ -36,6 +37,7 @@ public class TestSampleQuantiles {
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
   SampleQuantiles estimator;
+  final static int NUM_REPEATS = 10;
 
   @Before
   public void init() {
@@ -49,24 +51,24 @@ public class TestSampleQuantiles {
   @Test
   public void testCount() throws IOException {
     // Counts start off zero
-    assertEquals(estimator.getCount(), 0);
-    assertEquals(estimator.getSampleCount(), 0);
+    assertThat(estimator.getCount()).isZero();
+    assertThat(estimator.getSampleCount()).isZero();
     
     // Snapshot should be null if there are no entries.
-    assertNull(estimator.snapshot());
+    assertThat(estimator.snapshot()).isNull();
 
     // Count increment correctly by 1
     estimator.insert(1337);
-    assertEquals(estimator.getCount(), 1);
+    assertThat(estimator.getCount()).isOne();
     estimator.snapshot();
-    assertEquals(estimator.getSampleCount(), 1);
+    assertThat(estimator.getSampleCount()).isOne();
     
-    assertEquals(
+    assertThat(estimator.toString()).isEqualTo(
         "50.00 %ile +/- 5.00%: 1337\n" +
         "75.00 %ile +/- 2.50%: 1337\n" +
         "90.00 %ile +/- 1.00%: 1337\n" +
         "95.00 %ile +/- 0.50%: 1337\n" +
-        "99.00 %ile +/- 0.10%: 1337", estimator.toString());
+        "99.00 %ile +/- 0.10%: 1337");
   }
 
   /**
@@ -79,9 +81,9 @@ public class TestSampleQuantiles {
       estimator.insert(i);
     }
     estimator.clear();
-    assertEquals(estimator.getCount(), 0);
-    assertEquals(estimator.getSampleCount(), 0);
-    assertNull(estimator.snapshot());
+    assertThat(estimator.getCount()).isZero();
+    assertThat(estimator.getSampleCount()).isZero();
+    assertThat(estimator.snapshot()).isNull();
   }
 
   /**
@@ -91,30 +93,72 @@ public class TestSampleQuantiles {
   @Test
   public void testQuantileError() throws IOException {
     final int count = 100000;
-    Random r = new Random(0xDEADDEAD);
-    Long[] values = new Long[count];
+    Random rnd = new Random(0xDEADDEAD);
+    int[] values = new int[count];
     for (int i = 0; i < count; i++) {
-      values[i] = (long) (i + 1);
+      values[i] = i + 1;
     }
-    // Do 10 shuffle/insert/check cycles
-    for (int i = 0; i < 10; i++) {
-      System.out.println("Starting run " + i);
-      Collections.shuffle(Arrays.asList(values), r);
+
+    // Repeat shuffle/insert/check cycles 10 times
+    for (int i = 0; i < NUM_REPEATS; i++) {
+
+      // Shuffle
+      Collections.shuffle(Arrays.asList(values), rnd);
       estimator.clear();
-      for (int j = 0; j < count; j++) {
-        estimator.insert(values[j]);
+
+      // Insert
+      for (int value : values) {
+        estimator.insert(value);
       }
       Map<Quantile, Long> snapshot;
       snapshot = estimator.snapshot();
+
+      // Check
       for (Quantile q : quantiles) {
         long actual = (long) (q.quantile * count);
         long error = (long) (q.error * count);
         long estimate = snapshot.get(q);
-        System.out
-            .println(String.format("Expected %d with error %d, estimated %d",
-                actual, error, estimate));
-        assertTrue(estimate <= actual + error);
-        assertTrue(estimate >= actual - error);
+        assertThat(estimate <= actual + error).isTrue();
+        assertThat(estimate >= actual - error).isTrue();
+      }
+    }
+  }
+
+  /**
+   * Correctness test that checks that absolute error of the estimate for inverse quantiles
+   * is within specified error bounds for some randomly permuted streams of items.
+   */
+  @Test
+  public void testInverseQuantiles() throws IOException {
+    SampleQuantiles inverseQuantilesEstimator =
+        new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
+    final int count = 100000;
+    Random rnd = new Random(0xDEADDEAD);
+    int[] values = new int[count];
+    for (int i = 0; i < count; i++) {
+      values[i] = i + 1;
+    }
+
+    // Repeat shuffle/insert/check cycles 10 times
+    for (int i = 0; i < NUM_REPEATS; i++) {
+      // Shuffle
+      Collections.shuffle(Arrays.asList(values), rnd);
+      inverseQuantilesEstimator.clear();
+
+      // Insert
+      for (int value : values) {
+        inverseQuantilesEstimator.insert(value);
+      }
+      Map<Quantile, Long> snapshot;
+      snapshot = inverseQuantilesEstimator.snapshot();
+
+      // Check
+      for (Quantile q : MutableInverseQuantiles.INVERSE_QUANTILES) {
+        long actual = (long) (q.quantile * count);
+        long error = (long) (q.error * count);
+        long estimate = snapshot.get(q);
+        assertThat(estimate <= actual + error).isTrue();
+        assertThat(estimate >= actual - error).isTrue();
       }
     }
   }

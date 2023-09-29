@@ -107,12 +107,6 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
         submitApplication(responseGetNewApp.getApplicationId(), user);
     Assert.assertNotNull(responseSubmitApp);
 
-    LOG.info("testRouterClientRMServiceE2E - Kill Application");
-
-    KillApplicationResponse responseKillApp =
-        forceKillApplication(responseGetNewApp.getApplicationId(), user);
-    Assert.assertNotNull(responseKillApp);
-
     LOG.info("testRouterClientRMServiceE2E - Get Cluster Metrics");
 
     GetClusterMetricsResponse responseGetClusterMetrics =
@@ -168,6 +162,12 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
     ReservationDeleteResponse responseDeleteReser =
         deleteReservation(user, getNewReservationResponse.getReservationId());
     Assert.assertNotNull(responseDeleteReser);
+
+    LOG.info("testRouterClientRMServiceE2E - Kill Application");
+
+    KillApplicationResponse responseKillApp =
+        forceKillApplication(responseGetNewApp.getApplicationId(), user);
+    Assert.assertNotNull(responseKillApp);
   }
 
   /**

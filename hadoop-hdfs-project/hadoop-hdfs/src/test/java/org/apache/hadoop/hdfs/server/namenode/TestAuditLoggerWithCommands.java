@@ -51,6 +51,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import org.mockito.Mockito;
 
@@ -92,7 +93,7 @@ public class TestAuditLoggerWithCommands {
     user2 =
         UserGroupInformation.createUserForTesting("theEngineer",
             new String[]{"hadoop"});
-    auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+    auditlog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
     proto = cluster.getNameNodeRpc();
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
     fs2 = DFSTestUtil.getFileSystemAs(user2, conf);
@@ -1203,6 +1204,18 @@ public class TestAuditLoggerWithCommands {
     } catch (AccessControlException ace) {
       verifyAuditLogs(auditLogString);
     }
+  }
+
+  @Test
+  public void testDeleteRoot() throws Exception {
+    Path srcDir = new Path("/");
+    fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
+    boolean result = fileSys.delete(srcDir, true);
+    fileSys.close();
+    assertFalse(result);
+    String aceDeletePattern =
+        ".*allowed=false.*ugi=theDoctor.*cmd=delete.*";
+    verifyAuditLogs(aceDeletePattern);
   }
 
   private void verifyAuditRestoreFailedStorageACE(

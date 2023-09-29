@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.util.constraint;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
@@ -165,7 +165,8 @@ public final class PlacementConstraintParser {
 
     /**
      * Validate the schema before actual parsing the expression.
-     * @throws PlacementConstraintParseException
+     * @throws PlacementConstraintParseException when the placement constraint parser
+     * fails to parse an expression.
      */
     default void validate() throws PlacementConstraintParseException {
       // do nothing
@@ -633,9 +634,10 @@ public final class PlacementConstraintParser {
 
     /**
      * Parses source tags from expression "sourceTags(numOfAllocations)".
-     * @param expr
+     * @param expr expression string.
      * @return source tags, see {@link SourceTags}
-     * @throws PlacementConstraintParseException
+     * @throws PlacementConstraintParseException when the placement constraint parser
+     * fails to parse an expression.
      */
     public static SourceTags parseFrom(String expr)
         throws PlacementConstraintParseException {
@@ -718,7 +720,8 @@ public final class PlacementConstraintParser {
    * </ul>
    * @param expression expression string.
    * @return a map of source tags to placement constraint mapping.
-   * @throws PlacementConstraintParseException
+   * @throws PlacementConstraintParseException when the placement constraint parser
+   * fails to parse an expression.
    */
   public static Map<SourceTags, PlacementConstraint> parsePlacementSpec(
       String expression) throws PlacementConstraintParseException {

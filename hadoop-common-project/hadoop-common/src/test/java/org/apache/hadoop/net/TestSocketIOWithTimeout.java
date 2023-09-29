@@ -24,6 +24,11 @@ import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.nio.channels.Pipe;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil;
@@ -40,7 +45,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.*;
 
 /**
- * This tests timout out from SocketInputStream and
+ * This tests timeout out from SocketInputStream and
  * SocketOutputStream using pipes.
  * 
  * Normal read and write using these streams are tested by pretty much
@@ -184,5 +189,117 @@ public class TestSocketIOWithTimeout {
         sink.close();
       }
     }
+  }
+
+  @Test
+  public void testSocketIOWithTimeoutByMultiThread() throws Exception {
+    CountDownLatch latch = new CountDownLatch(1);
+    Runnable ioTask = () -> {
+      try {
+        Pipe pipe = Pipe.open();
+        try (Pipe.SourceChannel source = pipe.source();
+             InputStream in = new SocketInputStream(source, TIMEOUT);
+             Pipe.SinkChannel sink = pipe.sink();
+             OutputStream out = new SocketOutputStream(sink, TIMEOUT)) {
+
+          byte[] writeBytes = TEST_STRING.getBytes();
+          byte[] readBytes = new byte[writeBytes.length];
+          latch.await();
+
+          out.write(writeBytes);
+          doIO(null, out, TIMEOUT);
+
+          in.read(readBytes);
+          assertArrayEquals(writeBytes, readBytes);
+          doIO(in, null, TIMEOUT);
+        }
+      } catch (Exception e) {
+        fail(e.getMessage());
+      }
+    };
+
+    int threadCnt = 64;
+    ExecutorService threadPool = Executors.newFixedThreadPool(threadCnt);
+    for (int i = 0; i < threadCnt; ++i) {
+      threadPool.submit(ioTask);
+    }
+
+    Thread.sleep(1000);
+    latch.countDown();
+
+    threadPool.shutdown();
+    assertTrue(threadPool.awaitTermination(3, TimeUnit.SECONDS));
+  }
+
+  @Test
+  public void testSocketIOWithTimeoutInterrupted() throws Exception {
+    Pipe pipe = Pipe.open();
+    final int timeout = TIMEOUT * 10;
+
+    try (Pipe.SourceChannel source = pipe.source();
+        InputStream in = new SocketInputStream(source, timeout)) {
+
+      TestingThread thread = new TestingThread(ctx) {
+        @Override
+        public void doWork() throws Exception {
+          try {
+            in.read();
+            fail("Did not fail with interrupt");
+          } catch (InterruptedIOException ste) {
+            String detail = ste.getMessage();
+            String totalString = "Total timeout mills is " + timeout;
+            String leftString = "millis timeout left";
+
+            assertTrue(detail.contains(totalString));
+            assertTrue(detail.contains(leftString));
+          }
+        }
+      };
+
+      ctx.addThread(thread);
+      ctx.startThreads();
+      // If the thread is interrupted before it calls read()
+      // then it throws ClosedByInterruptException due to
+      // some Java quirk. Waiting for it to call read()
+      // gets it into select(), so we get the expected
+      // InterruptedIOException.
+      Thread.sleep(1000);
+      thread.interrupt();
+      ctx.stop();
+    }
+  }
+
+  @Test
+  public void testSocketIOWithTimeoutInterruptedByMultiThread()
+      throws Exception {
+    final int timeout = TIMEOUT * 10;
+    AtomicLong readCount = new AtomicLong();
+    AtomicLong exceptionCount = new AtomicLong();
+    Runnable ioTask = () -> {
+      try {
+        Pipe pipe = Pipe.open();
+        try (Pipe.SourceChannel source = pipe.source();
+             InputStream in = new SocketInputStream(source, timeout)) {
+          in.read();
+          readCount.incrementAndGet();
+        } catch (InterruptedIOException ste) {
+          exceptionCount.incrementAndGet();
+        }
+      } catch (Exception e) {
+        fail(e.getMessage());
+      }
+    };
+
+    int threadCnt = 64;
+    ExecutorService threadPool = Executors.newFixedThreadPool(threadCnt);
+    for (int i = 0; i < threadCnt; ++i) {
+      threadPool.submit(ioTask);
+    }
+    Thread.sleep(1000);
+    threadPool.shutdownNow();
+    threadPool.awaitTermination(1, TimeUnit.SECONDS);
+
+    assertEquals(0, readCount.get());
+    assertEquals(threadCnt, exceptionCount.get());
   }
 }

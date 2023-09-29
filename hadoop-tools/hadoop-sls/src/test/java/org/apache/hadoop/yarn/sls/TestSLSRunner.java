@@ -22,13 +22,17 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.*;
 
+import java.security.Security;
 import java.util.*;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * This test performs simple runs of the SLS with different trace types and
@@ -86,4 +90,39 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
     runSLS(conf, timeTillShutdownInsec);
   }
 
+  /**
+   * Test to check whether caching is enabled based on config.
+   */
+  @Test
+  public void testEnableCaching() {
+    String networkCacheDefault = Security.getProperty(
+        SLSRunner.NETWORK_CACHE_TTL);
+    String networkNegativeCacheDefault =
+        Security.getProperty(SLSRunner.NETWORK_NEGATIVE_CACHE_TTL);
+
+    try {
+      Configuration conf = new Configuration(false);
+      // check when dns caching is disabled
+      conf.setBoolean(SLSConfiguration.DNS_CACHING_ENABLED, false);
+      SLSRunner.enableDNSCaching(conf);
+      assertEquals(networkCacheDefault,
+          Security.getProperty(SLSRunner.NETWORK_CACHE_TTL));
+      assertEquals(networkNegativeCacheDefault,
+          Security.getProperty(SLSRunner.NETWORK_NEGATIVE_CACHE_TTL));
+
+      // check when dns caching is enabled
+      conf.setBoolean(SLSConfiguration.DNS_CACHING_ENABLED, true);
+      SLSRunner.enableDNSCaching(conf);
+      assertEquals("-1",
+          Security.getProperty(SLSRunner.NETWORK_CACHE_TTL));
+      assertEquals("-1",
+          Security.getProperty(SLSRunner.NETWORK_NEGATIVE_CACHE_TTL));
+    } finally {
+      // set security settings back to default
+      Security.setProperty(SLSRunner.NETWORK_CACHE_TTL,
+          String.valueOf(networkCacheDefault));
+      Security.setProperty(SLSRunner.NETWORK_NEGATIVE_CACHE_TTL,
+          String.valueOf(networkNegativeCacheDefault));
+    }
+  }
 }

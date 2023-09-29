@@ -40,11 +40,11 @@ public final class ActivitiesUtils {
     }
     if (groupBy == RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC) {
       Map<ActivityState, Map<String, List<String>>> groupingResults =
-          activityNodes.stream().collect(Collectors
-              .groupingBy(ActivityNode::getState, Collectors
+          activityNodes.stream()
+              .filter(e -> e.getNodeId() != null)
+              .collect(Collectors.groupingBy(ActivityNode::getState, Collectors
                   .groupingBy(ActivityNode::getShortDiagnostic,
-                      Collectors.mapping(e -> e.getNodeId() == null ?
-                          "" :
+                      Collectors.mapping(e -> e.getNodeId() == null ? "" :
                           e.getNodeId().toString(), Collectors.toList()))));
       return groupingResults.entrySet().stream().flatMap(
           stateMap -> stateMap.getValue().entrySet().stream().map(
@@ -53,8 +53,8 @@ public final class ActivitiesUtils {
                   diagMap.getValue())))
           .collect(Collectors.toList());
     } else {
-      return activityNodes.stream().map(
-          e -> new ActivityNodeInfo(e.getName(), e.getState(),
+      return activityNodes.stream().filter(e -> e.getNodeId() != null)
+          .map(e -> new ActivityNodeInfo(e.getName(), e.getState(),
               e.getDiagnostic(), e.getNodeId())).collect(Collectors.toList());
     }
   }

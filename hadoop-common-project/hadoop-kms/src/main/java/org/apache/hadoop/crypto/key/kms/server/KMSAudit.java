@@ -20,8 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.AuditEvent;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.OpStatus;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
@@ -31,14 +31,14 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Strings;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalNotification;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -56,10 +56,10 @@ import java.util.Set;
  */
 public class KMSAudit {
   @VisibleForTesting
-  static final Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = Sets.newHashSet(
+  static final Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = new HashSet<>(Arrays.asList(
       KMS.KMSOp.GET_KEY_VERSION, KMS.KMSOp.GET_CURRENT_KEY,
       KMS.KMSOp.DECRYPT_EEK, KMS.KMSOp.GENERATE_EEK, KMS.KMSOp.REENCRYPT_EEK
-  );
+  ));
 
   private Cache<String, AuditEvent> cache;
 
@@ -191,7 +191,7 @@ public class KMSAudit {
   private void op(final OpStatus opStatus, final Object op,
       final UserGroupInformation ugi, final String key, final String remoteHost,
       final String extraMsg) {
-    final String user = ugi == null ? null: ugi.getShortUserName();
+    final String user = ugi == null ? null: ugi.getUserName();
     if (!Strings.isNullOrEmpty(user) && !Strings.isNullOrEmpty(key)
         && (op != null)
         && AGGREGATE_OPS_WHITELIST.contains(op)) {

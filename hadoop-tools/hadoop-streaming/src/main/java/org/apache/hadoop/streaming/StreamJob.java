@@ -34,12 +34,12 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
@@ -381,16 +381,17 @@ public class StreamJob implements Tool {
 
   private Option createOption(String name, String desc,
                               String argName, int max, boolean required){
-    return OptionBuilder
-           .withArgName(argName)
-           .hasArgs(max)
-           .withDescription(desc)
-           .isRequired(required)
-           .create(name);
+    return Option.builder(name)
+           .argName(argName)
+           .hasArgs()
+           .numberOfArgs(max)
+           .desc(desc)
+           .required(required)
+           .build();
   }
 
   private Option createBoolOption(String name, String desc){
-    return OptionBuilder.withDescription(desc).create(name);
+    return Option.builder(name).desc(desc).build();
   }
 
   private void validate(final Path path) throws IOException {
@@ -969,10 +970,12 @@ public class StreamJob implements Tool {
         fail(LINK_URI);
     }
     // set the jobconf for the caching parameters
-    if (cacheArchives != null)
-      DistributedCache.setCacheArchives(archiveURIs, jobConf_);
-    if (cacheFiles != null)
-      DistributedCache.setCacheFiles(fileURIs, jobConf_);
+    if (cacheArchives != null) {
+      Job.setCacheArchives(archiveURIs, jobConf_);
+    }
+    if (cacheFiles != null) {
+      Job.setCacheFiles(fileURIs, jobConf_);
+    }
 
     if (verbose_) {
       listJobConfProperties();

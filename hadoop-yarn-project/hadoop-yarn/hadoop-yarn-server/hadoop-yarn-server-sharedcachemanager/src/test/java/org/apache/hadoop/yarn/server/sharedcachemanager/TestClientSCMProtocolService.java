@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.spy;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
@@ -42,11 +43,11 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.ClientSCMMetrics
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.spy;
 
 
 /**
@@ -55,7 +56,7 @@ import org.junit.Test;
 public class TestClientSCMProtocolService {
   private static File testDir = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTestDirs() throws IOException {
     testDir = new File("target",
         TestSharedCacheUploaderService.class.getCanonicalName());
@@ -64,7 +65,7 @@ public class TestClientSCMProtocolService {
     testDir = testDir.getAbsoluteFile();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTestDirs() throws IOException {
     if (testDir != null) {
       testDir.delete();
@@ -78,7 +79,7 @@ public class TestClientSCMProtocolService {
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  @Before
+  @BeforeEach
   public void startUp() {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
@@ -105,7 +106,7 @@ public class TestClientSCMProtocolService {
             conf);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     if (store != null) {
       store.stop();
@@ -124,19 +125,19 @@ public class TestClientSCMProtocolService {
   }
 
   @Test
-  public void testUse_MissingEntry() throws Exception {
+  void testUse_MissingEntry() throws Exception {
     long misses = ClientSCMMetrics.getInstance().getCacheMisses();
     UseSharedCacheResourceRequest request =
         recordFactory.newRecordInstance(UseSharedCacheResourceRequest.class);
     request.setResourceKey("key1");
     request.setAppId(createAppId(1, 1L));
     assertNull(clientSCMProxy.use(request).getPath());
-    assertEquals("Client SCM metrics aren't updated.", 1, ClientSCMMetrics
-        .getInstance().getCacheMisses() - misses);
+    assertEquals(1, ClientSCMMetrics
+        .getInstance().getCacheMisses() - misses, "Client SCM metrics aren't updated.");
   }
 
   @Test
-  public void testUse_ExistingEntry_NoAppIds() throws Exception {
+  void testUse_ExistingEntry_NoAppIds() throws Exception {
     // Pre-populate the SCM with one cache entry
     store.addResource("key1", "foo.jar");
 
@@ -150,13 +151,13 @@ public class TestClientSCMProtocolService {
     String expectedPath = testDir.getAbsolutePath() + "/k/e/y/key1/foo.jar";
     assertEquals(expectedPath, clientSCMProxy.use(request).getPath());
     assertEquals(1, store.getResourceReferences("key1").size());
-    assertEquals("Client SCM metrics aren't updated.", 1, ClientSCMMetrics
-        .getInstance().getCacheHits() - hits);
+    assertEquals(1, ClientSCMMetrics
+        .getInstance().getCacheHits() - hits, "Client SCM metrics aren't updated.");
 
   }
 
   @Test
-  public void testUse_ExistingEntry_OneId() throws Exception {
+  void testUse_ExistingEntry_OneId() throws Exception {
     // Pre-populate the SCM with one cache entry
     store.addResource("key1", "foo.jar");
     store.addResourceReference("key1",
@@ -174,12 +175,12 @@ public class TestClientSCMProtocolService {
     String expectedPath = testDir.getAbsolutePath() + "/k/e/y/key1/foo.jar";
     assertEquals(expectedPath, clientSCMProxy.use(request).getPath());
     assertEquals(2, store.getResourceReferences("key1").size());
-    assertEquals("Client SCM metrics aren't updated.", 1, ClientSCMMetrics
-        .getInstance().getCacheHits() - hits);
+    assertEquals(1, ClientSCMMetrics
+        .getInstance().getCacheHits() - hits, "Client SCM metrics aren't updated.");
   }
 
   @Test
-  public void testUse_ExistingEntry_DupId() throws Exception {
+  void testUse_ExistingEntry_DupId() throws Exception {
     // Pre-populate the SCM with one cache entry
     store.addResource("key1", "foo.jar");
     UserGroupInformation testUGI = UserGroupInformation.getCurrentUser();
@@ -201,12 +202,12 @@ public class TestClientSCMProtocolService {
     assertEquals(expectedPath, clientSCMProxy.use(request).getPath());
     assertEquals(1, store.getResourceReferences("key1").size());
 
-    assertEquals("Client SCM metrics aren't updated.", 1, ClientSCMMetrics
-        .getInstance().getCacheHits() - hits);
+    assertEquals(1, ClientSCMMetrics
+        .getInstance().getCacheHits() - hits, "Client SCM metrics aren't updated.");
   }
 
   @Test
-  public void testRelease_ExistingEntry_NonExistantAppId() throws Exception {
+  void testRelease_ExistingEntry_NonExistantAppId() throws Exception {
     // Pre-populate the SCM with one cache entry
     store.addResource("key1", "foo.jar");
     store.addResourceReference("key1",
@@ -224,13 +225,14 @@ public class TestClientSCMProtocolService {
     assertEquals(1, store.getResourceReferences("key1").size());
 
     assertEquals(
-        "Client SCM metrics were updated when a release did not happen", 0,
-        ClientSCMMetrics.getInstance().getCacheReleases() - releases);
+        0,
+        ClientSCMMetrics.getInstance().getCacheReleases() - releases,
+        "Client SCM metrics were updated when a release did not happen");
 
   }
 
   @Test
-  public void testRelease_ExistingEntry_WithAppId() throws Exception {
+  void testRelease_ExistingEntry_WithAppId() throws Exception {
     // Pre-populate the SCM with one cache entry
     store.addResource("key1", "foo.jar");
     UserGroupInformation testUGI = UserGroupInformation.getCurrentUser();
@@ -249,13 +251,13 @@ public class TestClientSCMProtocolService {
     clientSCMProxy.release(request);
     assertEquals(0, store.getResourceReferences("key1").size());
 
-    assertEquals("Client SCM metrics aren't updated.", 1, ClientSCMMetrics
-        .getInstance().getCacheReleases() - releases);
+    assertEquals(1, ClientSCMMetrics
+        .getInstance().getCacheReleases() - releases, "Client SCM metrics aren't updated.");
 
   }
 
   @Test
-  public void testRelease_MissingEntry() throws Exception {
+  void testRelease_MissingEntry() throws Exception {
 
     long releases = ClientSCMMetrics.getInstance().getCacheReleases();
 
@@ -268,8 +270,9 @@ public class TestClientSCMProtocolService {
     assertNotNull(store.getResourceReferences("key2"));
     assertEquals(0, store.getResourceReferences("key2").size());
     assertEquals(
-        "Client SCM metrics were updated when a release did not happen.", 0,
-        ClientSCMMetrics.getInstance().getCacheReleases() - releases);
+        0,
+        ClientSCMMetrics.getInstance().getCacheReleases() - releases,
+        "Client SCM metrics were updated when a release did not happen.");
   }
 
   private ApplicationId createAppId(int id, long timestamp) {

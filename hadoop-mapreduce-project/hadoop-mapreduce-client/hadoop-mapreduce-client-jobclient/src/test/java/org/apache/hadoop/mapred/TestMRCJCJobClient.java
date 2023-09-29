@@ -29,10 +29,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TestMRJobClient;
 import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.Tool;
+
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 @Ignore
 public class TestMRCJCJobClient extends TestMRJobClient {
-  
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    setupClassBase(TestMRCJCJobClient.class);
+  }
+
   private String runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
                         "text.txt"));

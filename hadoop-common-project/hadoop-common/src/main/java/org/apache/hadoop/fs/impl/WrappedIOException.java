@@ -19,24 +19,23 @@
 package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
+import java.io.UncheckedIOException;
 
-import com.google.common.base.Preconditions;
-
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A wrapper for an IOException which
- * {@link FutureIOSupport#raiseInnerCause(ExecutionException)} knows to
- * always extract the exception.
+ * A wrapper for an IOException.
  *
  * The constructor signature guarantees the cause will be an IOException,
  * and as it checks for a null-argument, non-null.
+ * @deprecated use the {@code UncheckedIOException} directly.]
  */
+@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class WrappedIOException extends RuntimeException {
+public class WrappedIOException extends UncheckedIOException {
 
   private static final long serialVersionUID = 2510210974235779294L;
 
@@ -49,8 +48,4 @@ public class WrappedIOException extends RuntimeException {
     super(Preconditions.checkNotNull(cause));
   }
 
-  @Override
-  public synchronized IOException getCause() {
-    return (IOException) super.getCause();
-  }
 }

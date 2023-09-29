@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -30,9 +30,9 @@ import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.util.PerformanceAdvisory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,7 +174,7 @@ public class DomainSocketFactory {
     } finally {
       if (!success) {
         if (sock != null) {
-          IOUtils.closeQuietly(sock);
+          IOUtils.closeStream(sock);
         }
         pathMap.put(info.getPath(), PathState.UNUSABLE);
         sock = null;

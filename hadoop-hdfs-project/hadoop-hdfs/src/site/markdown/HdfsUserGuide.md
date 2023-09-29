@@ -227,7 +227,7 @@ For command usage, see [namenode](./HDFSCommands.html#namenode).
 Balancer
 --------
 
-HDFS data might not always be be placed uniformly across the DataNode. One common reason is addition of new DataNodes to an existing cluster. While placing new blocks (data for a file is stored as a series of blocks), NameNode considers various parameters before choosing the DataNodes to receive these blocks. Some of the considerations are:
+HDFS data might not always be placed uniformly across the DataNode. One common reason is addition of new DataNodes to an existing cluster. While placing new blocks (data for a file is stored as a series of blocks), NameNode considers various parameters before choosing the DataNodes to receive these blocks. Some of the considerations are:
 
 * Policy to keep one of the replicas of a block on the same node as
   the node that is writing the block.
@@ -241,6 +241,28 @@ HDFS data might not always be be placed uniformly across the DataNode. One commo
 * Spread HDFS data uniformly across the DataNodes in the cluster.
 
 Due to multiple competing considerations, data might not be uniformly placed across the DataNodes. HDFS provides a tool for administrators that analyzes block placement and rebalanaces data across the DataNode. A brief administrator's guide for balancer is available at [HADOOP-1652](https://issues.apache.org/jira/browse/HADOOP-1652).
+
+Balancer supports two modes: run as a tool or as a long-running service:
+
+* In tool mode, it'll try to balance the clusters in best effort, and exit for the following conditions:
+
+    * All clusters are balanced.
+
+    * No bytes are moved for too many iterations (default is 5).
+
+    * No blocks can be moved.
+
+    * Cluster is upgrade in progress.
+
+    * Other errors.
+
+* In service mode, balancer will run as a long running daemon service. It works like this:
+
+    * For each round, it'll try to balance the cluster until success or return on error.
+
+    * You can config the interval between each round, the interval is set by `dfs.balancer.service.interval`.
+
+    * When encounter unexpected exceptions, it will try several times before stoping the service, which is set by `dfs.balancer.service.retries.on.exception`.
 
 For command usage, see [balancer](./HDFSCommands.html#balancer).
 
@@ -329,7 +351,13 @@ Datanode supports hot swappable drives. The user can add or replace HDFS data vo
 * The user runs `dfsadmin -reconfig datanode HOST:PORT start` to start
   the reconfiguration process. The user can use
   `dfsadmin -reconfig datanode HOST:PORT status`
-  to query the running status of the reconfiguration task.
+  to query the running status of the reconfiguration task. In place of
+  HOST:PORT, we can also specify livenodes for datanode. It would allow
+  start or query reconfiguration on all live datanodes, whereas specifying
+  HOST:PORT would only allow start or query of reconfiguration on the
+  particular datanode represented by HOST:PORT. The examples for livenodes
+  queries are `dfsadmin -reconfig datanode livenodes start` and
+  `dfsadmin -reconfig datanode livenodes status`.
 
 * Once the reconfiguration task has completed, the user can safely `umount`
   the removed data volume directories and physically remove the disks.

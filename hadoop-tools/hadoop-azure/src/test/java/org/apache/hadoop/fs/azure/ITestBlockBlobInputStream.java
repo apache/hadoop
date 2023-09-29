@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
@@ -304,6 +305,61 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
     assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
 
     assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
+  }
+
+  @Test
+  public void test_202_PosReadTest() throws Exception {
+    assumeHugeFileExists();
+    FutureDataInputStreamBuilder builder = accountUsingInputStreamV2
+        .getFileSystem().openFile(TEST_FILE_PATH);
+    builder.opt(AzureNativeFileSystemStore.FS_AZURE_BLOCK_BLOB_BUFFERED_PREAD_DISABLE, true);
+    try (
+        FSDataInputStream inputStreamV1
+            = accountUsingInputStreamV1.getFileSystem().open(TEST_FILE_PATH);
+        FSDataInputStream inputStreamV2
+            = accountUsingInputStreamV2.getFileSystem().open(TEST_FILE_PATH);
+        FSDataInputStream inputStreamV2NoBuffer = builder.build().get();
+    ) {
+      final int bufferSize = 4 * KILOBYTE;
+      byte[] bufferV1 = new byte[bufferSize];
+      byte[] bufferV2 = new byte[bufferSize];
+      byte[] bufferV2NoBuffer = new byte[bufferSize];
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, 0,
+          bufferV1, bufferV2, bufferV2NoBuffer);
+
+      int pos = 2 * KILOBYTE;
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
+
+      pos = 10 * KILOBYTE;
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
+
+      pos = 4100 * KILOBYTE;
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
+    }
+  }
+
+  private void verifyConsistentReads(FSDataInputStream inputStreamV1,
+      FSDataInputStream inputStreamV2, FSDataInputStream inputStreamV2NoBuffer,
+      int pos, byte[] bufferV1, byte[] bufferV2, byte[] bufferV2NoBuffer)
+      throws IOException {
+    int size = bufferV1.length;
+    int numBytesReadV1 = inputStreamV1.read(pos, bufferV1, 0, size);
+    assertEquals("Bytes read from V1 stream", size, numBytesReadV1);
+
+    int numBytesReadV2 = inputStreamV2.read(pos, bufferV2, 0, size);
+    assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
+
+    int numBytesReadV2NoBuffer = inputStreamV2NoBuffer.read(pos,
+        bufferV2NoBuffer, 0, size);
+    assertEquals("Bytes read from V2 stream (buffered pread disabled)", size,
+        numBytesReadV2NoBuffer);
+
+    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
+    assertArrayEquals("Mismatch in read data", bufferV2, bufferV2NoBuffer);
   }
 
   /**

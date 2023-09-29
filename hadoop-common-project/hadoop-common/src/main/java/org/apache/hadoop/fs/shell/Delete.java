@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -97,7 +98,7 @@ class Delete {
           throw e;
         }
         // prevent -f on a non-existent glob from failing
-        return new LinkedList<PathData>();
+        return Collections.emptyList();
       }
     }
 

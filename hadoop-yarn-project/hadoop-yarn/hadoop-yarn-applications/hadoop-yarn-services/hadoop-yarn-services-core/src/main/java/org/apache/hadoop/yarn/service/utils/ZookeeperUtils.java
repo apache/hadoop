@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
 

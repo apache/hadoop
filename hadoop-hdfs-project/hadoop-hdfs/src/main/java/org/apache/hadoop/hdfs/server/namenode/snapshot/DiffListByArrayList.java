@@ -57,6 +57,8 @@ public class DiffListByArrayList<T extends Comparable<Integer>>
 
   @Override
   public T remove(int i) {
+    // DeletionOrdered: only can remove the element at index 0
+    assert !SnapshotManager.isDeletionOrdered() || i == 0;
     return list.remove(i);
   }
 

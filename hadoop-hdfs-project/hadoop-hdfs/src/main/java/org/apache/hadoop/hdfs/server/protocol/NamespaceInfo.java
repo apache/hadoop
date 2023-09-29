@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.util.VersionInfo;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * NamespaceInfo is returned by the name-node in reply 
@@ -108,6 +108,29 @@ public class NamespaceInfo extends StorageInfo {
     this.buildVersion = buildVersion;
     this.softwareVersion = softwareVersion;
     this.capabilities = capabilities;
+  }
+
+  public NamespaceInfo(StorageInfo storage) {
+    super(storage);
+    if (storage instanceof NamespaceInfo) {
+      this.capabilities = ((NamespaceInfo)storage).capabilities;
+      this.blockPoolID = ((NamespaceInfo)storage).blockPoolID;
+    } else {
+      this.capabilities = CAPABILITIES_SUPPORTED;
+    }
+    this.buildVersion = Storage.getBuildVersion();
+    this.softwareVersion = VersionInfo.getVersion();
+    if (storage instanceof NNStorage) {
+      this.blockPoolID = ((NNStorage)storage).getBlockPoolID();
+    } else {
+      this.blockPoolID = null;
+    }
+
+  }
+
+  public NamespaceInfo(StorageInfo storage, HAServiceState st) {
+    this(storage);
+    this.state = st;
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID, 

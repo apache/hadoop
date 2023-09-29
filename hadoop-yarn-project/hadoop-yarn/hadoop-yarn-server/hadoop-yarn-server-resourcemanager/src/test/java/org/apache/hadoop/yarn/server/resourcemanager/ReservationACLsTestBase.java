@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,7 +51,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,7 +69,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
   private final int defaultDuration = 600000;
   private final ReservationRequest defaultRequest = ReservationRequest
-          .newInstance(BuilderUtils.newResource(1024, 1), 1, 1,
+          .newInstance(Resources.createResource(1024), 1, 1,
                   defaultDuration);
   private final ReservationRequests defaultRequests = ReservationRequests
           .newInstance(Collections.singletonList(defaultRequest),
@@ -552,49 +556,35 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     return csConf;
   }
 
-  private static Configuration createFairSchedulerConfiguration() throws
-          IOException {
+  private static Configuration createFairSchedulerConfiguration() {
     FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration();
 
-    final String TEST_DIR = new File(System.getProperty("test.build.data",
+    final String testDir = new File(System.getProperty("test.build.data",
             "/tmp")).getAbsolutePath();
-    final String ALLOC_FILE = new File(TEST_DIR, "test-queues.xml")
+    final String allocFile = new File(testDir, "test-queues.xml")
             .getAbsolutePath();
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("  <queue name=\"queueA\">");
-    out.println("    <aclSubmitReservations>" +
-            "queueA_user,common_user " +
-            "</aclSubmitReservations>");
-    out.println("    <aclAdministerReservations>" +
-            "queueA_admin " +
-            "</aclAdministerReservations>");
-    out.println("    <aclListReservations>common_user </aclListReservations>");
-    out.println("    <aclSubmitApps>queueA_user,common_user </aclSubmitApps>");
-    out.println("    <aclAdministerApps>queueA_admin </aclAdministerApps>");
-    out.println("    <reservation> </reservation>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueB\">");
-    out.println("    <aclSubmitApps>queueB_user,common_user </aclSubmitApps>");
-    out.println("    <aclAdministerApps>queueB_admin </aclAdministerApps>");
-    out.println("    <aclSubmitReservations>" +
-            "queueB_user,common_user " +
-            "</aclSubmitReservations>");
-    out.println("    <aclAdministerReservations>" +
-            "queueB_admin " +
-            "</aclAdministerReservations>");
-    out.println("    <aclListReservations>common_user </aclListReservations>");
-    out.println("    <reservation> </reservation>");
-    out.println("  </queue>");
-    out.println("  <queue name=\"queueC\">");
-    out.println("    <reservation> </reservation>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
-    fsConf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("queueA")
+            .aclSubmitReservations("queueA_user,common_user ")
+            .aclAdministerReservations("queueA_admin ")
+            .aclListReservations("common_user ")
+            .aclSubmitApps("queueA_user,common_user ")
+            .aclAdministerApps("queueA_admin ")
+            .reservation().build())
+        .addQueue(new AllocationFileQueue.Builder("queueB")
+            .aclSubmitReservations("queueB_user,common_user ")
+            .aclAdministerReservations("queueB_admin ")
+            .aclListReservations("common_user ")
+            .aclSubmitApps("queueB_user,common_user ")
+            .aclAdministerApps("queueB_admin ")
+            .reservation().build())
+        .addQueue(new AllocationFileQueue.Builder("queueC")
+            .reservation().build())
+        .writeToFile(allocFile);
+
+    fsConf.set(FairSchedulerConfiguration.ALLOCATION_FILE, allocFile);
 
     fsConf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
     fsConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);

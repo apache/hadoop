@@ -22,9 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -32,11 +32,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -164,9 +165,9 @@ public class TestLeaseManager {
           file.getFileUnderConstructionFeature().getClientName(), file);
 
       // Save a fsimage.
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       cluster.getNameNodeRpc().saveNamespace(0,0);
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
 
       // Restart the namenode.
       cluster.restartNameNode(true);

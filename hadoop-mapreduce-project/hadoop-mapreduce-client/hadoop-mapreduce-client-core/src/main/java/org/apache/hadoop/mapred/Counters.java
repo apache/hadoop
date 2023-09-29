@@ -45,7 +45,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 import org.slf4j.Logger;
 
-import com.google.common.collect.Iterators;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
 /**
  * A set of named counters.

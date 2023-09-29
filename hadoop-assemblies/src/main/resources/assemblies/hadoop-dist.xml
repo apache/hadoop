@@ -131,6 +131,19 @@
       </includes>
       <outputDirectory>/include</outputDirectory>
     </fileSet>
+    <fileSet>
+      <directory>.</directory>
+      <includes>
+        <include>LICENSE-binary</include>
+        <include>NOTICE-binary</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>./license-binary</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>

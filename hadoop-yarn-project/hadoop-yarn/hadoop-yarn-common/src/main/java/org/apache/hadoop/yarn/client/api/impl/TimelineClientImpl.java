@@ -28,6 +28,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -51,7 +53,7 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 
 @Private
@@ -87,6 +89,7 @@ public class TimelineClientImpl extends TimelineClient {
   private TimelineWriter timelineWriter;
 
   private String timelineServiceAddress;
+  private String authType;
 
   @Private
   @VisibleForTesting
@@ -127,6 +130,12 @@ public class TimelineClientImpl extends TimelineClient {
           conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
     }
+
+    String defaultAuth = UserGroupInformation.isSecurityEnabled() ?
+        KerberosAuthenticationHandler.TYPE :
+        PseudoAuthenticationHandler.TYPE;
+    authType = conf.get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE,
+        defaultAuth);
     LOG.info("Timeline service address: " + getTimelineServiceAddress());
     super.serviceInit(conf);
   }
@@ -192,6 +201,12 @@ public class TimelineClientImpl extends TimelineClient {
   @Override
   public Token<TimelineDelegationTokenIdentifier> getDelegationToken(
       final String renewer) throws IOException, YarnException {
+    if(authType.equals(PseudoAuthenticationHandler.TYPE)) {
+      LOG.info("Skipping get timeline delegation token since authType="
+          + PseudoAuthenticationHandler.TYPE);
+      // Null tokens are ignored by YarnClient so this is safe
+      return null;
+    }
     PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>>
         getDTAction =
         new PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>>() {
@@ -218,6 +233,12 @@ public class TimelineClientImpl extends TimelineClient {
   public long renewDelegationToken(
       final Token<TimelineDelegationTokenIdentifier> timelineDT)
           throws IOException, YarnException {
+    if(authType.equals(PseudoAuthenticationHandler.TYPE)) {
+      LOG.info("Skipping renew timeline delegation token since authType="
+          + PseudoAuthenticationHandler.TYPE);
+      // RM will skip renew if expirytime less than 0
+      return -1;
+    }
     final boolean isTokenServiceAddrEmpty =
         timelineDT.getService().toString().isEmpty();
     final String scheme = isTokenServiceAddrEmpty ? null
@@ -256,6 +277,11 @@ public class TimelineClientImpl extends TimelineClient {
   public void cancelDelegationToken(
       final Token<TimelineDelegationTokenIdentifier> timelineDT)
       throws IOException, YarnException {
+    if(authType.equals(PseudoAuthenticationHandler.TYPE)) {
+      LOG.info("Skipping cancel timeline delegation token since authType="
+          + PseudoAuthenticationHandler.TYPE);
+      return;
+    }
     final boolean isTokenServiceAddrEmpty =
         timelineDT.getService().toString().isEmpty();
     final String scheme = isTokenServiceAddrEmpty ? null
@@ -349,7 +375,9 @@ public class TimelineClientImpl extends TimelineClient {
     client.start();
     try {
       if (UserGroupInformation.isSecurityEnabled()
-          && conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false)) {
+          && conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false)
+          && conf.get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE)
+              .equals(KerberosAuthenticationHandler.TYPE)) {
         Token<TimelineDelegationTokenIdentifier> token =
             client.getDelegationToken(
                 UserGroupInformation.getCurrentUser().getUserName());

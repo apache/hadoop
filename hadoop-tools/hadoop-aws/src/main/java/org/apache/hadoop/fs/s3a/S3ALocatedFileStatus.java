@@ -19,28 +19,42 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.LocatedFileStatus;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
  */
-public class S3ALocatedFileStatus extends LocatedFileStatus {
+public class S3ALocatedFileStatus extends LocatedFileStatus implements EtagSource {
 
   private static final long serialVersionUID = 3597192103662929338L;
 
   private final String eTag;
   private final String versionId;
 
-  public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations,
-      String eTag, String versionId) {
+  private final Tristate isEmptyDirectory;
+
+  public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations) {
     super(checkNotNull(status), locations);
-    this.eTag = eTag;
-    this.versionId = versionId;
+    this.eTag = status.getEtag();
+    this.versionId = status.getVersionId();
+    isEmptyDirectory = status.isEmptyDirectory();
   }
 
+  /**
+   * @return the S3 object eTag when available, else null.
+   * @deprecated use {@link EtagSource#getEtag()} for
+   * public access.
+   */
+  @Deprecated
   public String getETag() {
+    return getEtag();
+  }
+
+  @Override
+  public String getEtag() {
     return eTag;
   }
 
@@ -64,15 +78,32 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
   /**
    * Generate an S3AFileStatus instance, including etag and
    * version ID, if present.
+   * @return the S3A status.
    */
   public S3AFileStatus toS3AFileStatus() {
     return new S3AFileStatus(
+        getPath(),
+        isDirectory(),
+        isEmptyDirectory,
         getLen(),
         getModificationTime(),
-        getPath(),
         getBlockSize(),
         getOwner(),
-        getETag(),
+        getEtag(),
         getVersionId());
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        super.toString());
+    sb.append("[eTag='").
+        append(eTag != null ? eTag : "")
+        .append('\'');
+    sb.append(", versionId='")
+        .append(versionId != null ? versionId: "")
+        .append('\'');
+    sb.append(']');
+    return sb.toString();
   }
 }

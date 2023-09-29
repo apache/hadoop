@@ -27,6 +27,7 @@ final class BalancerParameters {
   private final BalancingPolicy policy;
   private final double threshold;
   private final int maxIdleIteration;
+  private final long hotBlockTimeInterval;
   /** Exclude the nodes in this set. */
   private final Set<String> excludedNodes;
   /** If empty, include any node; otherwise, include only these nodes. */
@@ -45,6 +46,10 @@ final class BalancerParameters {
    */
   private final boolean runDuringUpgrade;
 
+  private final boolean runAsService;
+
+  private final boolean sortTopNodes;
+
   static final BalancerParameters DEFAULT = new BalancerParameters();
 
   private BalancerParameters() {
@@ -60,6 +65,9 @@ final class BalancerParameters {
     this.sourceNodes = builder.sourceNodes;
     this.blockpools = builder.blockpools;
     this.runDuringUpgrade = builder.runDuringUpgrade;
+    this.runAsService = builder.runAsService;
+    this.sortTopNodes = builder.sortTopNodes;
+    this.hotBlockTimeInterval = builder.hotBlockTimeInterval;
   }
 
   BalancingPolicy getBalancingPolicy() {
@@ -94,16 +102,30 @@ final class BalancerParameters {
     return this.runDuringUpgrade;
   }
 
+  boolean getRunAsService() {
+    return this.runAsService;
+  }
+
+  boolean getSortTopNodes() {
+    return this.sortTopNodes;
+  }
+
+  long getHotBlockTimeInterval() {
+    return this.hotBlockTimeInterval;
+  }
+
   @Override
   public String toString() {
     return String.format("%s.%s [%s," + " threshold = %s,"
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
-        + " #blockpools = %s," + " run during upgrade = %s]",
+        + " #blockpools = %s," + " run during upgrade = %s,"
+        + " sort top nodes = %s,"
+        + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
         includedNodes.size(), sourceNodes.size(), blockpools.size(),
-        runDuringUpgrade);
+        runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
   }
 
   static class Builder {
@@ -117,6 +139,9 @@ final class BalancerParameters {
     private Set<String> sourceNodes = Collections.<String> emptySet();
     private Set<String> blockpools = Collections.<String> emptySet();
     private boolean runDuringUpgrade = false;
+    private boolean runAsService = false;
+    private boolean sortTopNodes = false;
+    private long hotBlockTimeInterval = 0;
 
     Builder() {
     }
@@ -133,6 +158,11 @@ final class BalancerParameters {
 
     Builder setMaxIdleIteration(int m) {
       this.maxIdleIteration = m;
+      return this;
+    }
+
+    Builder setHotBlockTimeInterval(long t) {
+      this.hotBlockTimeInterval = t;
       return this;
     }
 
@@ -158,6 +188,16 @@ final class BalancerParameters {
 
     Builder setRunDuringUpgrade(boolean run) {
       this.runDuringUpgrade = run;
+      return this;
+    }
+
+    Builder setRunAsService(boolean asService) {
+      this.runAsService = asService;
+      return this;
+    }
+
+    Builder setSortTopNodes(boolean shouldSortTopNodes) {
+      this.sortTopNodes = shouldSortTopNodes;
       return this;
     }
 

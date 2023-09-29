@@ -42,6 +42,10 @@ public class ApplicationPlacementContext {
     return queue;
   }
 
+  public void setQueue(String q) {
+    queue = q;
+  }
+
   public String getParentQueue() {
     return parentQueue;
   }
@@ -49,4 +53,13 @@ public class ApplicationPlacementContext {
   public boolean hasParentQueue() {
     return parentQueue != null;
   }
+
+  public String getFullQueuePath() {
+    if (parentQueue != null) {
+      return parentQueue + "." + queue;
+    } else {
+      return queue;
+    }
+  }
+
 }

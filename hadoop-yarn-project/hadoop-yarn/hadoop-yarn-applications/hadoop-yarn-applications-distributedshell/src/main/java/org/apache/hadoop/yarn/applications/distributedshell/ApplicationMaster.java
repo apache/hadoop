@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -128,7 +128,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -781,7 +781,7 @@ public class ApplicationMaster {
     new HelpFormatter().printHelp("ApplicationMaster", opts);
   }
 
-  private void cleanup() {
+  protected void cleanup() {
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
@@ -1619,12 +1619,9 @@ public class ApplicationMaster {
   }
 
   private String readContent(String filePath) throws IOException {
-    DataInputStream ds = null;
-    try {
-      ds = new DataInputStream(new FileInputStream(filePath));
+    try (DataInputStream ds = new DataInputStream(
+        new FileInputStream(filePath))) {
       return ds.readUTF();
-    } finally {
-      org.apache.commons.io.IOUtils.closeQuietly(ds);
     }
   }
 

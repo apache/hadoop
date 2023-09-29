@@ -20,11 +20,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -35,11 +35,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-annotations</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
@@ -68,8 +63,18 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -113,11 +118,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-daemon</groupId>
       <artifactId>commons-daemon</artifactId>
       <scope>compile</scope>
@@ -142,6 +142,16 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>findbugs</artifactId>
       <version>3.0.1</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>xml-apis</groupId>
+          <artifactId>xml-apis</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>xerces</groupId>
+          <artifactId>xercesImpl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -166,17 +176,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core4</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -190,7 +191,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -212,6 +213,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
     </dependency>
   </dependencies>
 
@@ -301,10 +311,57 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>src-compile-protoc</id>
+            <configuration>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../hadoop-hdfs-client/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>**/DFSUtil.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
             </configuration>
           </execution>
         </executions>
@@ -313,38 +370,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
-          <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../hadoop-hdfs-client/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>HdfsServer.proto</include>
-                  <include>DatanodeProtocol.proto</include>
-                  <include>DatanodeLifelineProtocol.proto</include>
-                  <include>HAZKInfo.proto</include>
-                  <include>InterDatanodeProtocol.proto</include>
-                  <include>JournalProtocol.proto</include>
-                  <include>NamenodeProtocol.proto</include>
-                  <include>QJournalProtocol.proto</include>
-                  <include>editlog.proto</include>
-                  <include>fsimage.proto</include>
-                  <include>AliasMapProtocol.proto</include>
-                  <include>InterQJournalProtocol.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
           <execution>
             <id>resource-gz</id>
             <phase>generate-resources</phase>
@@ -391,11 +416,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/secondary/robots.txt</exclude>
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
-            <exclude>src/main/webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>src/main/webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>src/main/webapps/static/moment.min.js</exclude>
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
-            <exclude>src/main/webapps/static/jquery-3.3.1.min.js</exclude>
+            <exclude>src/main/webapps/static/jquery-3.6.0.min.js</exclude>
             <exclude>src/main/webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>src/main/webapps/static/json-bignum.js</exclude>
             <exclude>src/main/webapps/static/dataTables.bootstrap.css</exclude>

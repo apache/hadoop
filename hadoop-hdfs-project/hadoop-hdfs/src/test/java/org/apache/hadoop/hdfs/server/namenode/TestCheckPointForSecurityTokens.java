@@ -24,11 +24,11 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
@@ -91,11 +91,11 @@ public class TestCheckPointForSecurityTokens {
         log.scanLog(Long.MAX_VALUE, true);
         long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
         assertEquals("In-progress log " + log + " should have 5 transactions",
-                     5, numTransactions);;
+                     5, numTransactions);
       }
 
       // Saving image in safe mode should succeed
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.setSafeMode(SafeModeAction.ENTER);
       try {
         admin.run(args);
       } catch(Exception e) {

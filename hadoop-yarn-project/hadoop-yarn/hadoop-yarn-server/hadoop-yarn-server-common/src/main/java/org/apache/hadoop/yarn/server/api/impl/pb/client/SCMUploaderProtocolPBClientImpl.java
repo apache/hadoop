@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderCanU
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderNotifyRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderNotifyResponsePBImpl;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class SCMUploaderProtocolPBClientImpl implements
     SCMUploaderProtocol, Closeable {
@@ -50,7 +50,7 @@ public class SCMUploaderProtocolPBClientImpl implements
   public SCMUploaderProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, SCMUploaderProtocolPB.class,
-      ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy =
         RPC.getProxy(SCMUploaderProtocolPB.class, clientVersion, addr, conf);
   }

@@ -73,7 +73,9 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean overwrite = false;
   private boolean targetPathExists = true;
   private boolean ignoreFailures = false;
+  private boolean skipCrc = false;
   private int blocksPerChunk = 0;
+  private boolean updateRoot = false;
 
   /**
    * Create a output committer
@@ -87,6 +89,9 @@ public class CopyCommitter extends FileOutputCommitter {
     blocksPerChunk = context.getConfiguration().getInt(
         DistCpOptionSwitch.BLOCKS_PER_CHUNK.getConfigLabel(), 0);
     LOG.debug("blocks per chunk {}", blocksPerChunk);
+    skipCrc = context.getConfiguration().getBoolean(
+        DistCpOptionSwitch.SKIP_CRC.getConfigLabel(), false);
+    LOG.debug("skip CRC is {}", skipCrc);
     this.taskAttemptContext = context;
   }
 
@@ -96,6 +101,8 @@ public class CopyCommitter extends FileOutputCommitter {
     Configuration conf = jobContext.getConfiguration();
     syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
     overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
+    updateRoot =
+        conf.getBoolean(CONF_LABEL_UPDATE_ROOT, false);
     targetPathExists = conf.getBoolean(
         DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
     ignoreFailures = conf.getBoolean(
@@ -109,13 +116,6 @@ public class CopyCommitter extends FileOutputCommitter {
 
     cleanupTempFiles(jobContext);
 
-    String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
-    final boolean preserveRawXattrs =
-        conf.getBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
-    if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
-      preserveFileAttributesForDirectories(conf);
-    }
-
     try {
       if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false)) {
         deleteMissing(conf);
@@ -124,6 +124,13 @@ public class CopyCommitter extends FileOutputCommitter {
       } else if (conf.get(CONF_LABEL_TRACK_MISSING) != null) {
         // save missing information to a directory
         trackMissing(conf);
+      }
+      // for HDFS-14621, should preserve status after -delete
+      String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
+      final boolean preserveRawXattrs = conf.getBoolean(
+              DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
+      if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
+        preserveFileAttributesForDirectories(conf);
       }
       taskAttemptContext.setStatus("Commit Successful");
     }
@@ -145,9 +152,15 @@ public class CopyCommitter extends FileOutputCommitter {
   }
 
   private void cleanupTempFiles(JobContext context) {
-    try {
-      Configuration conf = context.getConfiguration();
+    Configuration conf = context.getConfiguration();
 
+    final boolean directWrite = conf.getBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    if (directWrite) {
+      return;
+    }
+
+    try {
       Path targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
       FileSystem targetFS = targetWorkPath.getFileSystem(conf);
 
@@ -247,7 +260,8 @@ public class CopyCommitter extends FileOutputCommitter {
             == srcFileStatus.getLen()) {
           // This is the last chunk of the splits, consolidate allChunkPaths
           try {
-            concatFileChunks(conf, targetFile, allChunkPaths);
+            concatFileChunks(conf, srcFileStatus.getPath(), targetFile,
+                allChunkPaths, srcFileStatus);
           } catch (IOException e) {
             // If the concat failed because a chunk file doesn't exist,
             // then we assume that the CopyMapper has skipped copying this
@@ -313,8 +327,10 @@ public class CopyCommitter extends FileOutputCommitter {
     SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
                                       SequenceFile.Reader.file(sourceListing));
     long totalLen = clusterFS.getFileStatus(sourceListing).getLen();
-
-    Path targetRoot = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
+    // For Atomic Copy the Final & Work Path are different & atomic copy has
+    // already moved it to final path.
+    Path targetRoot =
+            new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
 
     long preservedEntries = 0;
     try {
@@ -329,9 +345,12 @@ public class CopyCommitter extends FileOutputCommitter {
 
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
         //
-        // Skip the root folder when syncOrOverwrite is true.
+        // Skip the root folder when skipRoot is true.
         //
-        if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
+        boolean skipRoot = syncOrOverwrite && !updateRoot;
+        if (targetRoot.equals(targetFile) && skipRoot) {
+          continue;
+        }
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,
@@ -546,10 +565,6 @@ public class CopyCommitter extends FileOutputCommitter {
         conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     List<Path> targets = new ArrayList<>(1);
     targets.add(targetFinalPath);
-    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
-        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
-        ? DistCpConstants.RAW_NONE_PATH
-        : DistCpConstants.NONE_PATH;
     //
     // Set up options to be the same from the CopyListing.buildListing's
     // perspective, so to collect similar listings as when doing the copy
@@ -557,12 +572,15 @@ public class CopyCommitter extends FileOutputCommitter {
     // thread count is picked up from the job
     int threads = conf.getInt(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
         DistCpConstants.DEFAULT_LISTSTATUS_THREADS);
+    boolean useIterator =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_USE_ITERATOR, false);
     LOG.info("Scanning destination directory {} with thread count: {}",
         targetFinalPath, threads);
-    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
+    DistCpOptions options = new DistCpOptions.Builder(targets, targetFinalPath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
         .withNumListstatusThreads(threads)
+        .withUseIterator(useIterator)
         .build();
     DistCpContext distCpContext = new DistCpContext(options);
     distCpContext.setTargetPathExists(targetPathExists);
@@ -603,8 +621,10 @@ public class CopyCommitter extends FileOutputCommitter {
   /**
    * Concat the passed chunk files into one and rename it the targetFile.
    */
-  private void concatFileChunks(Configuration conf, Path targetFile,
-      LinkedList<Path> allChunkPaths) throws IOException {
+  private void concatFileChunks(Configuration conf, Path sourceFile,
+                                Path targetFile, LinkedList<Path> allChunkPaths,
+                                CopyListingFileStatus srcFileStatus)
+      throws IOException {
     if (allChunkPaths.size() == 1) {
       return;
     }
@@ -613,6 +633,7 @@ public class CopyCommitter extends FileOutputCommitter {
           + allChunkPaths.size());
     }
     FileSystem dstfs = targetFile.getFileSystem(conf);
+    FileSystem srcfs = sourceFile.getFileSystem(conf);
 
     Path firstChunkFile = allChunkPaths.removeFirst();
     Path[] restChunkFiles = new Path[allChunkPaths.size()];
@@ -630,6 +651,9 @@ public class CopyCommitter extends FileOutputCommitter {
       LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
     }
     rename(dstfs, firstChunkFile, targetFile);
+    DistCpUtils.compareFileLengthsAndChecksums(srcFileStatus.getLen(),
+        srcfs, sourceFile, null, dstfs,
+            targetFile, skipCrc, srcFileStatus.getLen());
   }
 
   /**

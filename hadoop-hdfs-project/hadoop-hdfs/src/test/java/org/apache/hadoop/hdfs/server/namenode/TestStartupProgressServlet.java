@@ -32,7 +32,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.junit.Before;
 import org.junit.Test;

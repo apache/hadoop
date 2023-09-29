@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.fs;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -33,25 +33,51 @@ import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.BufferedIOStatisticsOutputStream;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_EXCEPTIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_EXCEPTIONS;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -62,6 +88,7 @@ import org.apache.hadoop.util.StringUtils;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
+  private long defaultBlockSize;
   // Temporary workaround for HADOOP-9652.
   private static boolean useDeprecatedFileStatus = true;
 
@@ -82,7 +109,12 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
   
-  /** Convert a path to a File. */
+  /**
+   * Convert a path to a File.
+   *
+   * @param path the path.
+   * @return file.
+   */
   public File pathToFile(Path path) {
     checkPath(path);
     if (!path.isAbsolute()) {
@@ -98,17 +130,47 @@ public class RawLocalFileSystem extends FileSystem {
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    defaultBlockSize = getDefaultBlockSize(new Path(uri));
   }
   
   /*******************************************************
    * For open()'s FSInputStream.
    *******************************************************/
-  class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor {
+  class LocalFSFileInputStream extends FSInputStream implements
+      HasFileDescriptor, IOStatisticsSource, StreamCapabilities {
     private FileInputStream fis;
+    private final File name;
     private long position;
+    private AsynchronousFileChannel asyncChannel = null;
+
+    /**
+     * Minimal set of counters.
+     */
+    private final IOStatisticsStore ioStatistics = iostatisticsStore()
+        .withCounters(
+            STREAM_READ_BYTES,
+            STREAM_READ_EXCEPTIONS,
+            STREAM_READ_SEEK_OPERATIONS,
+            STREAM_READ_SKIP_OPERATIONS,
+            STREAM_READ_SKIP_BYTES)
+        .build();
+
+    /** Reference to the bytes read counter for slightly faster counting. */
+    private final AtomicLong bytesRead;
+
+    /**
+     * Thread level IOStatistics aggregator to update in close().
+     */
+    private final IOStatisticsAggregator
+        ioStatisticsAggregator;
 
     public LocalFSFileInputStream(Path f) throws IOException {
-      fis = new FileInputStream(pathToFile(f));
+      name = pathToFile(f);
+      fis = new FileInputStream(name);
+      bytesRead = ioStatistics.getCounterReference(
+          STREAM_READ_BYTES);
+      ioStatisticsAggregator =
+          IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator();
     }
     
     @Override
@@ -131,16 +193,26 @@ public class RawLocalFileSystem extends FileSystem {
       return false;
     }
     
-    /*
-     * Just forward to the fis
+    /**
+     * Just forward to the fis.
      */
     @Override
     public int available() throws IOException { return fis.available(); }
     @Override
-    public void close() throws IOException { fis.close(); }
-    @Override
     public boolean markSupported() { return false; }
-    
+
+    @Override
+    public void close() throws IOException {
+      try {
+        fis.close();
+        if (asyncChannel != null) {
+          asyncChannel.close();
+        }
+      } finally {
+        ioStatisticsAggregator.aggregate(ioStatistics);
+      }
+    }
+
     @Override
     public int read() throws IOException {
       try {
@@ -148,9 +220,11 @@ public class RawLocalFileSystem extends FileSystem {
         if (value >= 0) {
           this.position++;
           statistics.incrementBytesRead(1);
+          bytesRead.addAndGet(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS);
         throw new FSError(e);                   // assume native fs error
       }
     }
@@ -164,9 +238,11 @@ public class RawLocalFileSystem extends FileSystem {
         if (value > 0) {
           this.position += value;
           statistics.incrementBytesRead(value);
+          bytesRead.addAndGet(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS);
         throw new FSError(e);                   // assume native fs error
       }
     }
@@ -185,18 +261,22 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.getChannel().read(bb, position);
         if (value > 0) {
           statistics.incrementBytesRead(value);
+          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
         }
         return value;
       } catch (IOException e) {
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS);
         throw new FSError(e);
       }
     }
     
     @Override
     public long skip(long n) throws IOException {
+      ioStatistics.incrementCounter(STREAM_READ_SKIP_OPERATIONS);
       long value = fis.skip(n);
       if (value > 0) {
         this.position += value;
+        ioStatistics.incrementCounter(STREAM_READ_SKIP_BYTES, value);
       }
       return value;
     }
@@ -205,8 +285,108 @@ public class RawLocalFileSystem extends FileSystem {
     public FileDescriptor getFileDescriptor() throws IOException {
       return fis.getFD();
     }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      // a bit inefficient, but intended to make it easier to add
+      // new capabilities.
+      switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
+      case StreamCapabilities.VECTOREDIO:
+        return true;
+      default:
+        return false;
+      }
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return ioStatistics;
+    }
+
+    AsynchronousFileChannel getAsyncChannel() throws IOException {
+      if (asyncChannel == null) {
+        synchronized (this) {
+          asyncChannel = AsynchronousFileChannel.open(name.toPath(),
+                  StandardOpenOption.READ);
+        }
+      }
+      return asyncChannel;
+    }
+
+    @Override
+    public void readVectored(List<? extends FileRange> ranges,
+                             IntFunction<ByteBuffer> allocate) throws IOException {
+
+      List<? extends FileRange> sortedRanges = Arrays.asList(sortRanges(ranges));
+      // Set up all of the futures, so that we can use them if things fail
+      for(FileRange range: sortedRanges) {
+        VectoredReadUtils.validateRangeRequest(range);
+        range.setData(new CompletableFuture<>());
+      }
+      try {
+        AsynchronousFileChannel channel = getAsyncChannel();
+        ByteBuffer[] buffers = new ByteBuffer[sortedRanges.size()];
+        AsyncHandler asyncHandler = new AsyncHandler(channel, sortedRanges, buffers);
+        for(int i = 0; i < sortedRanges.size(); ++i) {
+          FileRange range = sortedRanges.get(i);
+          buffers[i] = allocate.apply(range.getLength());
+          channel.read(buffers[i], range.getOffset(), i, asyncHandler);
+        }
+      } catch (IOException ioe) {
+        LOG.debug("Exception occurred during vectored read ", ioe);
+        for(FileRange range: sortedRanges) {
+          range.getData().completeExceptionally(ioe);
+        }
+      }
+    }
   }
-  
+
+  /**
+   * A CompletionHandler that implements readFully and translates back
+   * into the form of CompletionHandler that our users expect.
+   */
+  static class AsyncHandler implements CompletionHandler<Integer, Integer> {
+    private final AsynchronousFileChannel channel;
+    private final List<? extends FileRange> ranges;
+    private final ByteBuffer[] buffers;
+
+    AsyncHandler(AsynchronousFileChannel channel,
+                 List<? extends FileRange> ranges,
+                 ByteBuffer[] buffers) {
+      this.channel = channel;
+      this.ranges = ranges;
+      this.buffers = buffers;
+    }
+
+    @Override
+    public void completed(Integer result, Integer r) {
+      FileRange range = ranges.get(r);
+      ByteBuffer buffer = buffers[r];
+      if (result == -1) {
+        failed(new EOFException("Read past End of File"), r);
+      } else {
+        if (buffer.remaining() > 0) {
+          // issue a read for the rest of the buffer
+          // QQ: What if this fails? It has the same handler.
+          channel.read(buffer, range.getOffset() + buffer.position(), r, this);
+        } else {
+          // QQ: Why  is this required? I think because we don't want the
+          // user to read data beyond limit.
+          buffer.flip();
+          range.getData().complete(buffer);
+        }
+      }
+    }
+
+    @Override
+    public void failed(Throwable exc, Integer r) {
+      LOG.debug("Failed while reading range {} ", r, exc);
+      ranges.get(r).getData().completeExceptionally(exc);
+    }
+  }
+
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     getFileStatus(f);
@@ -229,12 +409,32 @@ public class RawLocalFileSystem extends FileSystem {
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
-  class LocalFSFileOutputStream extends OutputStream {
+  final class LocalFSFileOutputStream extends OutputStream implements
+      IOStatisticsSource, StreamCapabilities, Syncable {
     private FileOutputStream fos;
-    
+
+    /**
+     * Minimal set of counters.
+     */
+    private final IOStatisticsStore ioStatistics = iostatisticsStore()
+        .withCounters(
+            STREAM_WRITE_BYTES,
+            STREAM_WRITE_EXCEPTIONS)
+        .build();
+
+    /**
+     * Thread level IOStatistics aggregator to update in close().
+     */
+    private final IOStatisticsAggregator
+        ioStatisticsAggregator;
+
     private LocalFSFileOutputStream(Path f, boolean append,
         FsPermission permission) throws IOException {
       File file = pathToFile(f);
+      // store the aggregator before attempting any IO.
+      ioStatisticsAggregator =
+          IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator();
+
       if (!append && permission == null) {
         permission = FsPermission.getFileDefault();
       }
@@ -253,7 +453,7 @@ public class RawLocalFileSystem extends FileSystem {
             success = true;
           } finally {
             if (!success) {
-              IOUtils.cleanup(LOG, this.fos);
+              IOUtils.cleanupWithLogger(LOG, this.fos);
             }
           }
         }
@@ -261,17 +461,26 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     /*
-     * Just forward to the fos
+     * Close the fos; update the IOStatisticsContext.
      */
     @Override
-    public void close() throws IOException { fos.close(); }
+    public void close() throws IOException {
+      try {
+        fos.close();
+      } finally {
+        ioStatisticsAggregator.aggregate(ioStatistics);
+      }
+    }
+
     @Override
     public void flush() throws IOException { fos.flush(); }
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
       try {
         fos.write(b, off, len);
+        ioStatistics.incrementCounter(STREAM_WRITE_BYTES, len);
       } catch (IOException e) {                // unexpected exception
+        ioStatistics.incrementCounter(STREAM_WRITE_EXCEPTIONS);
         throw new FSError(e);                  // assume native fs error
       }
     }
@@ -280,9 +489,44 @@ public class RawLocalFileSystem extends FileSystem {
     public void write(int b) throws IOException {
       try {
         fos.write(b);
+        ioStatistics.incrementCounter(STREAM_WRITE_BYTES);
       } catch (IOException e) {              // unexpected exception
+        ioStatistics.incrementCounter(STREAM_WRITE_EXCEPTIONS);
         throw new FSError(e);                // assume native fs error
       }
+    }
+
+    @Override
+    public void hflush() throws IOException {
+      flush();
+    }
+
+    /**
+     * HSync calls sync on fhe file descriptor after a local flush() call.
+     * @throws IOException failure
+     */
+    @Override
+    public void hsync() throws IOException {
+      flush();
+      fos.getFD().sync();
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      // a bit inefficient, but intended to make it easier to add
+      // new capabilities.
+      switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
+        return true;
+      default:
+        return StoreImplementationUtils.isProbeForSyncable(capability);
+      }
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return ioStatistics;
     }
   }
 
@@ -316,8 +560,8 @@ public class RawLocalFileSystem extends FileSystem {
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
-    return new FSDataOutputStream(new BufferedOutputStream(
-        createOutputStreamWithMode(f, false, permission), bufferSize),
+    return new FSDataOutputStream(new BufferedIOStatisticsOutputStream(
+        createOutputStreamWithMode(f, false, permission), bufferSize, true),
         statistics);
   }
   
@@ -338,8 +582,8 @@ public class RawLocalFileSystem extends FileSystem {
     if (exists(f) && !flags.contains(CreateFlag.OVERWRITE)) {
       throw new FileAlreadyExistsException("File already exists: " + f);
     }
-    return new FSDataOutputStream(new BufferedOutputStream(
-        createOutputStreamWithMode(f, false, permission), bufferSize),
+    return new FSDataOutputStream(new BufferedIOStatisticsOutputStream(
+        createOutputStreamWithMode(f, false, permission), bufferSize, true),
             statistics);
   }
 
@@ -516,7 +760,12 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return new FileStatus[] {
         new DeprecatedRawLocalFileStatus(localf,
-        getDefaultBlockSize(f), this) };
+        defaultBlockSize, this) };
+  }
+
+  @Override
+  public boolean exists(Path f) throws IOException {
+    return pathToFile(f).exists();
   }
   
   protected boolean mkOneDir(File p2f) throws IOException {
@@ -661,7 +910,7 @@ public class RawLocalFileSystem extends FileSystem {
     File path = pathToFile(f);
     if (path.exists()) {
       return new DeprecatedRawLocalFileStatus(pathToFile(f),
-          getDefaultBlockSize(f), this);
+          defaultBlockSize, this);
     } else {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
@@ -1049,7 +1298,7 @@ public class RawLocalFileSystem extends FileSystem {
   private FileStatus getNativeFileLinkStatus(final Path f,
       boolean dereference) throws IOException {
     checkPath(f);
-    Stat stat = new Stat(f, getDefaultBlockSize(f), dereference, this);
+    Stat stat = new Stat(f, defaultBlockSize, dereference, this);
     FileStatus status = stat.getFileStatus();
     return status;
   }
@@ -1059,5 +1308,27 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PATHHANDLES:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_TRUNCATE:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      return FileSystem.areSymlinksEnabled();
+    default:
+      return super.hasPathCapability(path, capability);
+    }
+  }
+
+  @VisibleForTesting
+  static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
+    RawLocalFileSystem.useDeprecatedFileStatus = useDeprecatedFileStatus;
   }
 }

@@ -115,7 +115,7 @@ public class HBaseTimelineReaderImpl
           "");
     } catch (IOException e){
       return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
           "HBase connection is down");
     }
   }

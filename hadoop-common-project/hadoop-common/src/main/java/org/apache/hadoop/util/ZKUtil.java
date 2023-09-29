@@ -27,10 +27,9 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**
  * Utilities for working with ZooKeeper.
@@ -89,6 +88,7 @@ public class ZKUtil {
    * Parse comma separated list of ACL entries to secure generated nodes, e.g.
    * <code>sasl:hdfs/host1@MY.DOMAIN:cdrwa,sasl:hdfs/host2@MY.DOMAIN:cdrwa</code>
    *
+   * @param aclString aclString.
    * @return ACL list
    * @throws BadAclFormatException if an ACL is invalid
    */

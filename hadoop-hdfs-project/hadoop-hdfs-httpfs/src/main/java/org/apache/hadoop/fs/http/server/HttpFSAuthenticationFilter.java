@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.http.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
@@ -35,6 +36,8 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 
@@ -46,7 +49,9 @@ import java.util.Properties;
 public class HttpFSAuthenticationFilter
     extends DelegationTokenAuthenticationFilter {
 
-  static final String CONF_PREFIX = "httpfs.authentication.";
+  public static final String CONF_PREFIX = "httpfs.authentication.";
+  public static final String HADOOP_HTTP_CONF_PREFIX = "hadoop.http.authentication.";
+  static final String[] CONF_PREFIXES = {CONF_PREFIX, HADOOP_HTTP_CONF_PREFIX};
 
   private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET
       + ".file";
@@ -55,8 +60,9 @@ public class HttpFSAuthenticationFilter
    * Returns the hadoop-auth configuration from HttpFSServer's configuration.
    * <p>
    * It returns all HttpFSServer's configuration properties prefixed with
-   * <code>httpfs.authentication</code>. The <code>httpfs.authentication</code>
-   * prefix is removed from the returned property names.
+   * <code>hadoop.http.authentication</code>. The
+   * <code>hadoop.http.authentication</code> prefix is removed from the
+   * returned property names.
    *
    * @param configPrefix parameter not used.
    * @param filterConfig parameter not used.
@@ -66,18 +72,9 @@ public class HttpFSAuthenticationFilter
   @Override
   protected Properties getConfiguration(String configPrefix,
       FilterConfig filterConfig) throws ServletException{
-    Properties props = new Properties();
     Configuration conf = HttpFSServerWebApp.get().getConfig();
-
-    props.setProperty(AuthenticationFilter.COOKIE_PATH, "/");
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(CONF_PREFIX)) {
-        String value = conf.get(name);
-        name = name.substring(CONF_PREFIX.length());
-        props.setProperty(name, value);
-      }
-    }
+    Properties props = HttpServer2.getFilterProperties(conf,
+        new ArrayList<>(Arrays.asList(CONF_PREFIXES)));
 
     String signatureSecretFile = props.getProperty(SIGNATURE_SECRET_FILE, null);
     if (signatureSecretFile == null) {
@@ -94,8 +91,16 @@ public class HttpFSAuthenticationFilter
           secret.append((char) c);
           c = reader.read();
         }
+
+        String secretString = secret.toString();
+        if (secretString.isEmpty()) {
+          throw new RuntimeException(
+              "No secret in HttpFs signature secret file: "
+                  + signatureSecretFile);
+        }
+
         props.setProperty(AuthenticationFilter.SIGNATURE_SECRET,
-            secret.toString());
+            secretString);
       } catch (IOException ex) {
         throw new RuntimeException("Could not read HttpFS signature "
             + "secret file: " + signatureSecretFile);

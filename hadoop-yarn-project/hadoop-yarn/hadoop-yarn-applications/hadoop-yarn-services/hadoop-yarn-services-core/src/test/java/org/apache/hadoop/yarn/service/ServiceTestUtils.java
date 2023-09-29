@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.google.common.base.Throwables;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.conf.Configuration;
@@ -98,7 +98,7 @@ public class ServiceTestUtils {
 
   public static final JsonSerDeser<Service> JSON_SER_DESER =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   // Example service definition
   // 2 components, each of which has 2 containers.
@@ -218,6 +218,8 @@ public class ServiceTestUtils {
       setConf(new YarnConfiguration());
       conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, false);
       conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, false);
+      conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+          YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time

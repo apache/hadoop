@@ -26,12 +26,32 @@ and reliable commitment of output to S3.
 For details on their internal design, see
 [S3A Committers: Architecture and Implementation](./committer_architecture.html).
 
+### January 2021 Update
+
+Now that S3 is fully consistent, problems related to inconsistent directory
+listings have gone. However the rename problem exists: committing work by
+renaming directories is unsafe as well as horribly slow.
+
+This architecture document, and the committers, were written at a time when S3
+was inconsistent. The two committers addressed this problem differently
+
+* Staging Committer: rely on a cluster HDFS filesystem for safely propagating
+  the lists of files to commit from workers to the job manager/driver.
+* Magic Committer: require S3Guard to offer consistent directory listings on the
+  object store.
+
+With consistent S3, the Magic Committer can be safely used with any S3 bucket.
+The choice of which to use, then, is matter for experimentation.
+
+This document was written in 2017, a time when S3 was only
+consistent when an extra consistency layer such as S3Guard was used. The
+document indicates where requirements/constraints which existed then are now
+obsolete.
 
 ## Introduction: The Commit Problem
 
-
 Apache Hadoop MapReduce (and behind the scenes, Apache Spark) often write
-the output of their work to filesystems
+the output of their work to filesystems.
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -48,40 +68,37 @@ process across the cluster may rename a file or directory to the same path.
 If the rename fails for any reason, either the data is at the original location,
 or it is at the destination, -in which case the rename actually succeeded.
 
-**The S3 object store and the `s3a://` filesystem client cannot meet these requirements.*
+_The S3 object store and the `s3a://` filesystem client cannot meet these requirements._
 
-1. Amazon S3 has inconsistent directory listings unless S3Guard is enabled.
-1. The S3A mimics `rename()` by copying files and then deleting the originals.
+Although S3 is (now) consistent, the S3A client still mimics `rename()`
+by copying files and then deleting the originals.
 This can fail partway through, and there is nothing to prevent any other process
 in the cluster attempting a rename at the same time.
 
 As a result,
 
-* Files my not be listed, hence not renamed into place.
-* Deleted files may still be discovered, confusing the rename process to the point
-of failure.
-* If a rename fails, the data is left in an unknown state.
+* If a 'rename' fails, the data is left in an unknown state.
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
-*. While S3Guard may deliver the listing consistency, commit time is still
-proportional to the amount of data created. It still can't handle task failure.
+* Commit time is still proportional to the amount of data created.
+It still can't handle task failure.
 
 **Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks
-loss or corruption of generated data**
+loss or corruption of generated data**.
 
 
-To address these problems there is now explicit support in the `hadop-aws`
-module for committing work to Amazon S3 via the S3A filesystem client,
-*the S3A Committers*
+To address these problems there is now explicit support in the `hadoop-aws`
+module for committing work to Amazon S3 via the S3A filesystem client:
+*the S3A Committers*.
 
 
 For safe, as well as high-performance output of work to S3,
-we need use "a committer" explicitly written to work with S3, treating it as
-an object store with special features.
+we need to use "a committer" explicitly written to work with S3,
+treating it as an object store with special features.
 
 
-### Background : Hadoop's "Commit Protocol"
+### Background: Hadoop's "Commit Protocol"
 
 How exactly is work written to its final destination? That is accomplished by
 a "commit protocol" between the workers and the job manager.
@@ -89,10 +106,10 @@ a "commit protocol" between the workers and the job manager.
 This protocol is implemented in Hadoop MapReduce, with a similar but extended
 version in Apache Spark:
 
-1. A "Job" is the entire query, with inputs to outputs
+1. The "Job" is the entire query. It takes a given set of input and produces some output.
 1. The "Job Manager" is the process in charge of choreographing the execution
 of the job. It may perform some of the actual computation too.
-1. The job has "workers", which are processes which work the actual data
+1. The job has "workers", which are processes which work with the actual data
 and write the results.
 1. Workers execute "Tasks", which are fractions of the job, a job whose
 input has been *partitioned* into units of work which can be executed independently.
@@ -109,7 +126,7 @@ this "speculation" delivers speedup as it can address the "straggler problem".
 When multiple workers are working on the same data, only one worker is allowed
 to write the final output.
 1. The entire job may fail (often from the failure of the Job Manager (MR Master, Spark Driver, ...)).
-1, The network may partition, with workers isolated from each other or
+1. The network may partition, with workers isolated from each other or
 the process managing the entire commit.
 1. Restarted jobs may recover from a failure by reusing the output of all
 completed tasks (MapReduce with the "v1" algorithm), or just by rerunning everything
@@ -120,34 +137,34 @@ What is "the commit protocol" then? It is the requirements on workers as to
 when their data is made visible, where, for a filesystem, "visible" means "can
 be seen in the destination directory of the query."
 
-* There is a destination directory of work, "the output directory."
-* The final output of tasks must be in this directory *or paths underneath it*.
+* There is a destination directory of work: "the output directory".
+The final output of tasks must be in this directory *or paths underneath it*.
 * The intermediate output of a task must not be visible in the destination directory.
 That is: they must not write directly to the destination.
 * The final output of a task *may* be visible under the destination.
-* The Job Manager makes the decision as to whether a task's data is to be "committed",
-be it directly to the final directory or to some intermediate store..
-* Individual workers communicate with the Job manager to manage the commit process:
-whether the output is to be *committed* or *aborted*
+* Individual workers communicate with the Job manager to manage the commit process.
+* The Job Manager makes the decision on if a task's output data is to be "committed",
+be it directly to the final directory or to some intermediate store.
 * When a worker commits the output of a task, it somehow promotes its intermediate work to becoming
 final.
 * When a worker aborts a task's output, that output must not become visible
 (i.e. it is not committed).
 * Jobs themselves may be committed/aborted (the nature of "when" is not covered here).
 * After a Job is committed, all its work must be visible.
-* And a file `_SUCCESS` may be written to the output directory.
+A file named `_SUCCESS` may be written to the output directory.
 * After a Job is aborted, all its intermediate data is lost.
 * Jobs may also fail. When restarted, the successor job must be able to clean up
 all the intermediate and committed work of its predecessor(s).
 * Task and Job processes measure the intervals between communications with their
 Application Master and YARN respectively.
-When the interval has grown too large they must conclude
+When the interval has grown too large, they must conclude
 that the network has partitioned and that they must abort their work.
 
 
 That's "essentially" it. When working with HDFS and similar filesystems,
 directory `rename()` is the mechanism used to commit the work of tasks and
 jobs.
+
 * Tasks write data to task attempt directories under the directory `_temporary`
 underneath the final destination directory.
 * When a task is committed, these files are renamed to the destination directory
@@ -163,22 +180,19 @@ and restarting the job.
 whose output is in the job attempt directory, *and only rerunning all uncommitted tasks*.
 
 
-None of this algorithm works safely or swiftly when working with "raw" AWS S3 storage:
-* Directory listing can be inconsistent: the tasks and jobs may not list all work to
-be committed.
-* Renames go from being fast, atomic operations to slow operations which can fail partway through.
+This algorithm does not work safely or swiftly with AWS S3 storage because
+renames go from being fast, atomic operations to slow operations which can fail partway through.
 
 This then is the problem which the S3A committers address:
-
-*How to safely and reliably commit work to Amazon S3 or compatible object store*
+*How to safely and reliably commit work to Amazon S3 or compatible object store.*
 
 
 ## Meet the S3A Committers
 
 Since Hadoop 3.1, the S3A FileSystem has been accompanied by classes
-designed to integrate with the Hadoop and Spark job commit protocols, classes
-which interact with the S3A filesystem to reliably commit work work to S3:
-*The S3A Committers*
+designed to integrate with the Hadoop and Spark job commit protocols,
+classes which interact with the S3A filesystem to reliably commit work to S3:
+*The S3A Committers*.
 
 The underlying architecture of this process is very complex, and
 covered in [the committer architecture documentation](./committer_architecture.html).
@@ -204,8 +218,8 @@ conflict with existing files is resolved.
 
 | feature | staging | magic |
 |--------|---------|---|
-| task output destination | local disk | S3A *without completing the write* |
-| task commit process | upload data from disk to S3 | list all pending uploads on s3 and write details to job attempt directory |
+| task output destination | write to local disk | upload to S3 *without completing the write* |
+| task commit process | upload data from disk to S3 *without completing the write* | list all pending uploads on S3 and write details to job attempt directory |
 | task abort process | delete local disk data | list all pending uploads and abort them |
 | job commit | list & complete pending uploads | list & complete pending uploads |
 
@@ -213,33 +227,30 @@ The other metric is "maturity". There, the fact that the Staging committers
 are based on Netflix's production code counts in its favor.
 
 
-### The Staging Committer
+### The Staging Committers
 
-This is based on work from Netflix. It "stages" data into the local filesystem.
-It also requires the cluster to have HDFS, so that
+This is based on work from Netflix.
+It "stages" data into the local filesystem, using URLs with `file://` schemas.
 
-Tasks write to URLs with `file://` schemas. When a task is committed,
-its files are listed, uploaded to S3 as incompleted Multipart Uploads.
+When a task is committed, its files are listed and uploaded to S3 as incomplete Multipart Uploads.
 The information needed to complete the uploads is saved to HDFS where
 it is committed through the standard "v1" commit algorithm.
 
 When the Job is committed, the Job Manager reads the lists of pending writes from its
 HDFS Job destination directory and completes those uploads.
 
-Canceling a task is straightforward: the local directory is deleted with
-its staged data. Canceling a job is achieved by reading in the lists of
+Canceling a _task_ is straightforward: the local directory is deleted with its staged data.
+Canceling a _job_ is achieved by reading in the lists of
 pending writes from the HDFS job attempt directory, and aborting those
 uploads. For extra safety, all outstanding multipart writes to the destination directory
 are aborted.
 
-The staging committer comes in two slightly different forms, with slightly
-different conflict resolution policies:
+There are two staging committers with slightly different conflict resolution behaviors:
 
-
-* **Directory**: the entire directory tree of data is written or overwritten,
+* **Directory Committer**: the entire directory tree of data is written or overwritten,
 as normal.
 
-* **Partitioned**: special handling of partitioned directory trees of the form
+* **Partitioned Committer**: special handling of partitioned directory trees of the form
 `YEAR=2017/MONTH=09/DAY=19`: conflict resolution is limited to the partitions
 being updated.
 
@@ -250,12 +261,15 @@ directories containing new data. It is intended for use with Apache Spark
 only.
 
 
-## Conflict Resolution in the Staging Committers
+#### Conflict Resolution in the Staging Committers
 
 The Staging committers offer the ability to replace the conflict policy
 of the execution engine with policy designed to work with the tree of data.
 This is based on the experience and needs of Netflix, where efficiently adding
 new data to an existing partitioned directory tree is a common operation.
+
+An XML configuration is shown below.
+The default conflict mode if unset would be `append`.
 
 ```xml
 <property>
@@ -268,40 +282,37 @@ new data to an existing partitioned directory tree is a common operation.
 </property>
 ```
 
-**replace** : when the job is committed (and not before), delete files in
+The _Directory Committer_ uses the entire directory tree for conflict resolution.
+For this committer, the behavior of each conflict mode is shown below:
+
+- **replace**: When the job is committed (and not before), delete files in
 directories into which new data will be written.
 
-**fail**: when there are existing files in the destination, fail the job.
+- **fail**: When there are existing files in the destination, fail the job.
 
-**append**: Add new data to the directories at the destination; overwriting
+- **append**: Add new data to the directories at the destination; overwriting
 any with the same name. Reliable use requires unique names for generated files,
 which the committers generate
 by default.
 
-The difference between the two staging committers are as follows:
+The _Partitioned Committer_ calculates the partitions into which files are added,
+the final directories in the tree, and uses that in its conflict resolution process.
+For the _Partitioned Committer_, the behavior of each mode is as follows:
 
-The Directory Committer uses the entire directory tree for conflict resolution.
-If any file exists at the destination it will fail in job setup; if the resolution
-mechanism is "replace" then all existing files will be deleted.
-
-The partitioned committer calculates the partitions into which files are added,
-the final directories in the tree, and uses that in its conflict resolution
-process:
-
-
-**replace** : delete all data in the destination partition before committing
+- **replace**: Delete all data in the destination _partition_ before committing
 the new files.
 
-**fail**: fail if there is data in the destination partition, ignoring the state
+- **fail**: Fail if there is data in the destination _partition_, ignoring the state
 of any parallel partitions.
 
-**append**: add the new data.
+- **append**: Add the new data to the destination _partition_,
+  overwriting any files with the same name.
 
-It's intended for use in Apache Spark Dataset operations, rather
+The _Partitioned Committer_ is intended for use in Apache Spark Dataset operations, rather
 than Hadoop's original MapReduce engine, and only in jobs
 where adding new data to an existing dataset is the desired goal.
 
-Prerequisites for successful work
+Prerequisites for success with the _Partitioned Committer_:
 
 1. The output is written into partitions via `PARTITIONED BY` or `partitionedBy()`
 instructions.
@@ -341,31 +352,32 @@ task commit.
 
 However, it has extra requirements of the filesystem
 
-1. It requires a consistent object store, which for Amazon S3,
-means that [S3Guard](./s3guard.html) must be enabled. For third-party stores,
-consult the documentation.
+1. The object store must be consistent.
 1. The S3A client must be configured to recognize interactions
-with the magic directories and treat them specially.
+with the magic directories and treat them as a special case.
+
+Now that [Amazon S3 is consistent](https://aws.amazon.com/s3/consistency/),
+the magic directory path rewriting is enabled by default.
+
+The Magic Committer has not been field tested to the extent of Netflix's committer;
+consider it the least mature of the committers.
 
 
-It's also not been field tested to the extent of Netflix's committer; consider
-it the least mature of the committers.
+### Which Committer to Use?
 
-
-#### Which Committer to Use?
-
-1. If you want to create or update existing partitioned data trees in Spark, use thee
+1. If you want to create or update existing partitioned data trees in Spark, use the
 Partitioned Committer. Make sure you have enough hard disk capacity for all staged data.
 Do not use it in other situations.
 
-1. If you know that your object store is consistent, or that the processes
-writing data use S3Guard, use the Magic Committer for higher performance
-writing of large amounts of data.
+1. If you do not have a shared cluster store: use the Magic Committer.
+   
+1. If you are writing large amounts of data: use the Magic Committer.
 
 1. Otherwise: use the directory committer, making sure you have enough
 hard disk capacity for all staged data.
 
-Put differently: start with the Directory Committer.
+Now that S3 is consistent, there are fewer reasons not to use the Magic Committer.
+Experiment with both to see which works best for your work.
 
 ## Switching to an S3A Committer
 
@@ -383,8 +395,8 @@ This is done in `mapred-default.xml`
 </property>
 ```
 
-What is missing is an explicit choice of committer to use in the property
-`fs.s3a.committer.name`; so the classic (and unsafe) file committer is used.
+You must also choose which of the S3A committers to use with the `fs.s3a.committer.name` property.
+Otherwise, the classic (and unsafe) file committer is used.
 
 | `fs.s3a.committer.name` |  Committer |
 |--------|---------|
@@ -393,9 +405,7 @@ What is missing is an explicit choice of committer to use in the property
 | `magic` | the "magic" committer |
 | `file` | the original and unsafe File committer; (default) |
 
-
-
-## Using the Directory and Partitioned Staging Committers
+## Using the Staging Committers
 
 Generated files are initially written to a local directory underneath one of the temporary
 directories listed in `fs.s3a.buffer.dir`.
@@ -407,16 +417,14 @@ The staging committer needs a path in the cluster filesystem
 Temporary files are saved in HDFS (or other cluster filesystem) under the path
 `${fs.s3a.committer.staging.tmp.path}/${user}` where `user` is the name of the user running the job.
 The default value of `fs.s3a.committer.staging.tmp.path` is `tmp/staging`,
-Which will be converted at run time to a path under the current user's home directory,
-essentially `~/tmp/staging`
- so the temporary directory
+resulting in the HDFS directory `~/tmp/staging/${user}`.
 
 The application attempt ID is used to create a unique path under this directory,
 resulting in a path `~/tmp/staging/${user}/${application-attempt-id}/` under which
 summary data of each task's pending commits are managed using the standard
 `FileOutputFormat` committer.
 
-When a task is committed the data is uploaded under the destination directory.
+When a task is committed, the data is uploaded under the destination directory.
 The policy of how to react if the destination exists is defined by
 the `fs.s3a.committer.staging.conflict-mode` setting.
 
@@ -427,9 +435,9 @@ the `fs.s3a.committer.staging.conflict-mode` setting.
 | `append` | Add the new files to the existing directory tree |
 
 
-## The "Partitioned" Staging Committer
+### The "Partitioned" Staging Committer
 
-This committer an extension of the "Directory" committer which has a special conflict resolution
+This committer is an extension of the "Directory" committer which has a special conflict resolution
 policy designed to support operations which insert new data into a directory tree structured
 using Hive's partitioning strategy: different levels of the tree represent different columns.
 
@@ -456,10 +464,10 @@ logs/YEAR=2017/MONTH=04/
 A partitioned structure like this allows for queries using Hive or Spark to filter out
 files which do not contain relevant data.
 
-What the partitioned committer does is, where the tooling permits, allows callers
-to add data to an existing partitioned layout*.
+The partitioned committer allows callers to add new data to an existing partitioned layout,
+where the application supports it.
 
-More specifically, it does this by having a conflict resolution options which
+More specifically, it does this by reducing the scope of conflict resolution to
 only act on individual partitions, rather than across the entire output tree.
 
 | `fs.s3a.committer.staging.conflict-mode` | Meaning |
@@ -477,18 +485,18 @@ was written. With the policy of `append`, the new file would be added to
 the existing set of files.
 
 
-### Notes
+### Notes on using Staging Committers
 
 1. A deep partition tree can itself be a performance problem in S3 and the s3a client,
-or, more specifically. a problem with applications which use recursive directory tree
+or more specifically a problem with applications which use recursive directory tree
 walks to work with data.
 
 1. The outcome if you have more than one job trying simultaneously to write data
 to the same destination with any policy other than "append" is undefined.
 
 1. In the `append` operation, there is no check for conflict with file names.
-If, in the example above, the file `log-20170228.avro` already existed,
-it would be overridden. Set `fs.s3a.committer.staging.unique-filenames` to `true`
+If the file `log-20170228.avro` in the example above already existed, it would be overwritten.
+Set `fs.s3a.committer.staging.unique-filenames` to `true`
 to ensure that a UUID is included in every filename to avoid this.
 
 
@@ -499,10 +507,11 @@ performance.
 
 ### FileSystem client setup
 
-1. Use a *consistent* S3 object store. For Amazon S3, this means enabling
-[S3Guard](./s3guard.html). For S3-compatible filesystems, consult the filesystem
-documentation to see if it is consistent, hence compatible "out of the box".
-1. Turn the magic on by `fs.s3a.committer.magic.enabled"`
+The S3A connector can recognize files created under paths with `${MAGIC PATH}/` as a parent directory.
+This allows it to handle those files in a special way, such as uploading to a different location
+and storing the information needed to complete pending multipart uploads.
+
+Turn the magic on by setting `fs.s3a.committer.magic.enabled` to `true`:
 
 ```xml
 <property>
@@ -514,41 +523,36 @@ documentation to see if it is consistent, hence compatible "out of the box".
 </property>
 ```
 
-*Do not use the Magic Committer on an inconsistent S3 object store. For
-Amazon S3, that means S3Guard must *always* be enabled.
-
-
 ### Enabling the committer
+
+Set the committer used by S3A's committer factory to `magic`:
 
 ```xml
 <property>
   <name>fs.s3a.committer.name</name>
   <value>magic</value>
 </property>
-
 ```
 
 Conflict management is left to the execution engine itself.
 
-## Committer Configuration Options
+## Committer Options Reference
 
+### Common S3A Committer Options
 
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job | `true` |
-| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
-| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `append` or `replace`| `append` |
-| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames | `true` |
-| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem | `false` |
+The table below provides a summary of each option.
 
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Write a `_SUCCESS` file on the successful completion of the job. | `true` |
+| `fs.s3a.buffer.dir` | Local filesystem directory for data being written and/or staged. | `${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a` |
+| `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `true` |
+| `fs.s3a.committer.abort.pending.uploads` | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
+| `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files.| -4 |
+| `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
+| `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
 
-
-
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. | |
-| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data | `tmp/staging` |
-
+The examples below shows how these options can be configured in XML.
 
 ```xml
 <property>
@@ -562,23 +566,87 @@ Conflict management is left to the execution engine itself.
 
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.committer.threads</name>
-  <value>8</value>
+  <value>-4</value>
   <description>
     Number of threads in committers for parallel operations on files
-    (upload, commit, abort, delete...)
+    (upload, commit, abort, delete...).
+    Two thread pools this size are created, one for the outer
+    task-level parallelism, and one for parallel execution
+    within tasks (POSTs to commit individual uploads)
+    If the value is negative, it is inverted and then multiplied
+    by the number of cores in the CPU.
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the committers abort all pending uploads to the destination
+    directory?
+
+    Set to false if more than one job is writing to the same directory tree.
+    Was:  "fs.s3a.committer.staging.abort.pending.uploads" when only used
+    by the staging committers.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
+  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
+  <description>
+    The committer factory to use when writing data to S3A filesystems.
+    If mapreduce.outputcommitter.factory.class is set, it will
+    override this property.
+
+    (This property is set in mapred-default.xml)
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.require.uuid</name>
+  <value>false</value>
+  <description>
+    Require the committer fail to initialize if a unique ID is not set in
+    "spark.sql.sources.writeJobUUID" or "fs.s3a.committer.uuid".
+    This helps guarantee that unique IDs for jobs are being
+    passed down in spark applications.
+  
+    Setting this option outside of spark will stop the S3A committer
+    in job setup. In MapReduce workloads the job attempt ID is unique
+    and so no unique ID need be passed down.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.generate.uuid</name>
+  <value>false</value>
+  <description>
+    Generate a Job UUID if none is passed down from Spark.
+    This uuid is only generated if the fs.s3a.committer.require.uuid flag
+    is false. 
+  </description>
+</property>
+```
+
+### Staging committer (Directory and Partitioned) options
+
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `fs.s3a.committer.staging.conflict-mode` | Conflict resolution: `fail`, `append`, or `replace`.| `append` |
+| `fs.s3a.committer.staging.tmp.path` | Path in the cluster filesystem for temporary data. | `tmp/staging` |
+| `fs.s3a.committer.staging.unique-filenames` | Generate unique filenames. | `true` |
+| `fs.s3a.committer.staging.abort.pending.uploads` | Deprecated; replaced by `fs.s3a.committer.abort.pending.uploads`. |  `(false)` |
+
+```xml
 <property>
   <name>fs.s3a.committer.staging.tmp.path</name>
   <value>tmp/staging</value>
@@ -598,7 +666,7 @@ Conflict management is left to the execution engine itself.
   <value>true</value>
   <description>
     Option for final files to have a unique name through job attempt info,
-    or the value of fs.s3a.committer.staging.uuid
+    or the value of fs.s3a.committer.uuid.
     When writing data with the "append" conflict option, this guarantees
     that new data will not overwrite any existing data.
   </description>
@@ -613,38 +681,66 @@ Conflict management is left to the execution engine itself.
   </description>
 </property>
 
-<property>
-  <name>s.s3a.committer.staging.abort.pending.uploads</name>
-  <value>true</value>
-  <description>
-    Should the staging committers abort all pending uploads to the destination
-    directory?
-
-    Changing this if more than one partitioned committer is
-    writing to the same destination tree simultaneously; otherwise
-    the first job to complete will cancel all outstanding uploads from the
-    others. However, it may lead to leaked outstanding uploads from failed
-    tasks. If disabled, configure the bucket lifecycle to remove uploads
-    after a time period, and/or set up a workflow to explicitly delete
-    entries. Otherwise there is a risk that uncommitted uploads may run up
-    bills.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
-  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
-  <description>
-    The committer factory to use when writing data to S3A filesystems.
-    If mapreduce.outputcommitter.factory.class is set, it will
-    override this property.
-
-    (This property is set in mapred-default.xml)
-  </description>
-</property>
 
 ```
 
+### Disabling magic committer path rewriting
+
+The magic committer recognizes when files are created under paths with `${MAGIC PATH}/` as a parent directory
+and redirects the upload to a different location, adding the information needed to complete the upload
+in the job commit operation.
+
+If, for some reason, you *do not* want these paths to be redirected and completed later,
+the feature can be disabled by setting `fs.s3a.committer.magic.enabled` to false.
+By default, it is enabled.
+
+```xml
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>true</value>
+  <description>
+    Enable support in the S3A filesystem for the "Magic" committer.
+  </description>
+</property>
+```
+
+You will not be able to use the Magic Committer if this option is disabled.
+
+## <a name="concurrent-jobs"></a> Concurrent Jobs writing to the same destination
+
+It is sometimes possible for multiple jobs to simultaneously write to the same destination path. To support
+such use case, The "MAGIC PATH" for each job is unique of the format `__magic_job-${jobId}` so that
+multiple job running simultaneously do not step into each other.
+
+Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `false`by default
+
+```xml
+<property>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
+  <value>false</value>
+</property>
+```
+
+If more than one job is writing to the same destination path then every task MUST
+be creating files with paths/filenames unique to the specific job.
+It is not enough for them to be unique by task `part-00000.snappy.parquet`,
+because each job will have tasks with the same name, so generate files with conflicting operations.
+
+For the staging committers, enable `fs.s3a.committer.staging.unique-filenames` to ensure unique names are
+generated during the upload. Otherwise, use what configuration options are available in the specific `FileOutputFormat`.
+
+Note: by default, the option `mapreduce.output.basename` sets the base name for files;
+changing that from the default `part` value to something unique for each job may achieve this.
+
+For example, for any job executed through Hadoop MapReduce, the Job ID can be used in the filename.
+
+```xml
+<property>
+  <name>mapreduce.output.basename</name>
+  <value>part-${mapreduce.job.id}</value>
+</property>
+```
 
 ## Troubleshooting
 
@@ -655,14 +751,12 @@ org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://landsat-pds': Filesy
 in configuration option fs.s3a.committer.magic.enabled
 ```
 
-The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
-declared as supporting it.
+The Job is configured to use the magic committer,
+but the S3A bucket has not been explicitly declared as supporting it.
 
-The destination bucket **must** be declared as supporting the magic committer.
-
-This can be done for those buckets which are known to be consistent, either
-because [S3Guard](s3guard.html) is used to provide consistency,
-or because the S3-compatible filesystem is known to be strongly consistent.
+Magic Committer support within the S3A filesystem has been enabled by default since Hadoop 3.3.1.
+This error will only surface with a configuration which has explicitly disabled it.
+Remove all global/per-bucket declarations of `fs.s3a.bucket.magic.enabled` or set them to `true`.
 
 ```xml
 <property>
@@ -671,36 +765,38 @@ or because the S3-compatible filesystem is known to be strongly consistent.
 </property>
 ```
 
-*IMPORTANT*: only enable the magic committer against object stores which
-offer consistent listings. By default, Amazon S3 does not do this -which is
-why the option `fs.s3a.committer.magic.enabled` is disabled by default.
-
-
 Tip: you can verify that a bucket supports the magic committer through the
 `hadoop s3guard bucket-info` command:
 
 
 ```
 > hadoop s3guard bucket-info -magic s3a://landsat-pds/
-
-Filesystem s3a://landsat-pds
 Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
-The "magic" committer is not supported
 
 S3A Client
-  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
-  Endpoint: fs.s3a.endpoint=s3.amazonaws.com
-  Encryption: fs.s3a.server-side-encryption-algorithm=none
-  Input seek policy: fs.s3a.experimental.input.fadvise=normal
-  Change Detection Source: fs.s3a.change.detection.source=etag
-  Change Detection Mode: fs.s3a.change.detection.mode=server
-Delegation token support is disabled
-2019-05-17 13:53:38,245 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) -
- Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
+        Signing Algorithm: fs.s3a.signing-algorithm=(unset)
+        Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+        Encryption: fs.s3a.encryption.algorithm=none
+        Input seek policy: fs.s3a.experimental.input.fadvise=normal
+        Change Detection Source: fs.s3a.change.detection.source=etag
+        Change Detection Mode: fs.s3a.change.detection.mode=server
+
+S3A Committers
+        The "magic" committer is supported in the filesystem
+        S3A Committer factory class: mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
+        S3A Committer name: fs.s3a.committer.name=magic
+        Store magic committer integration: fs.s3a.committer.magic.enabled=true
+
+Security
+        Delegation token support is disabled
+
+Directory Markers
+        The directory marker policy is "keep"
+        Available Policies: delete, keep, authoritative
+        Authoritative paths: fs.s3a.authoritative.path=```
 ```
 
-## Error message: "File being created has a magic path, but the filesystem has magic file support disabled:
+### Error message: "File being created has a magic path, but the filesystem has magic file support disabled"
 
 A file is being written to a path which is used for "magic" files,
 files which are actually written to a different destination than their stated path
@@ -708,12 +804,7 @@ files which are actually written to a different destination than their stated pa
 
 This message should not appear through the committer itself &mdash;it will
 fail with the error message in the previous section, but may arise
-if other applications are attempting to create files under the path `/__magic/`.
-
-Make sure the filesystem meets the requirements of the magic committer
-(a consistent S3A filesystem through S3Guard or the S3 service itself),
-and set the `fs.s3a.committer.magic.enabled` flag to indicate that magic file
-writes are supported.
+if other applications are attempting to create files under the path `/${MAGIC PATH}/`.
 
 
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)
@@ -748,7 +839,7 @@ the failure happen at the start of a job.
 (Setting this option will not interfere with the Staging Committers' use of HDFS,
 as it explicitly sets the algorithm to "2" for that part of its work).
 
-The other way to check which committer to use is to examine the `_SUCCESS` file.
+The other way to check which committer was used is to examine the `_SUCCESS` file.
 If it is 0-bytes long, the classic `FileOutputCommitter` committed the job.
 The S3A committers all write a non-empty JSON file; the `committer` field lists
 the committer used.
@@ -764,7 +855,7 @@ all committers registered for the s3a:// schema.
 1. The output format has overridden `FileOutputFormat.getOutputCommitter()`
 and is returning its own committer -one which is a subclass of `FileOutputCommitter`.
 
-That final cause. *the output format is returning its own committer*, is not
+The final cause "the output format is returning its own committer" is not
 easily fixed; it may be that the custom committer performs critical work
 during its lifecycle, and contains assumptions about the state of the written
 data during task and job commit (i.e. it is in the destination filesystem).
@@ -781,7 +872,7 @@ If you have subclassed `FileOutputCommitter` and want to move to the
 factory model, please get in touch.
 
 
-## Job/Task fails with PathExistsException: Destination path exists and committer conflict resolution mode is "fail"
+### Job/Task fails with PathExistsException: Destination path exists and committer conflict resolution mode is "fail"
 
 This surfaces when either of two conditions are met.
 
@@ -789,13 +880,13 @@ This surfaces when either of two conditions are met.
 `fail` and the output/destination directory exists.
 The job will fail in the driver during job setup.
 1. The Partitioned Committer is used with `fs.s3a.committer.staging.conflict-mode` set to
-`fail`  and one of the partitions. The specific task(s) generating conflicting data will fail
+`fail` and one of the partitions exist. The specific task(s) generating conflicting data will fail
 during task commit, which will cause the entire job to fail.
 
 If you are trying to write data and want write conflicts to be rejected, this is the correct
 behavior: there was data at the destination so the job was aborted.
 
-## Staging committer task fails with IOException: No space left on device
+### Staging committer task fails with IOException: No space left on device
 
 There's not enough space on the local hard disk (real or virtual)
 to store all the uncommitted data of the active tasks on that host.
@@ -821,3 +912,169 @@ generating less data each.
 1. Use the magic committer. This only needs enough disk storage to buffer
 blocks of the currently being written file during their upload process,
 so can use a lot less disk space.
+
+### Jobs run with directory/partitioned committers complete but the output is empty.
+
+Make sure that `fs.s3a.committer.staging.tmp.path` is set to a path on the shared cluster
+filesystem (usually HDFS). It MUST NOT be set to a local directory, as then the job committer,
+running on a different host *will not see the lists of pending uploads to commit*.
+
+### Magic output committer task fails "The specified upload does not exist" "Error Code: NoSuchUpload"
+
+The magic committer is being used and a task writing data to the S3 store fails
+with an error message about the upload not existing.
+
+```
+java.io.FileNotFoundException: upload part #1 upload
+    YWHTRqBaxlsutujKYS3eZHfdp6INCNXbk0JVtydX_qzL5fZcoznxRbbBZRfswOjomddy3ghRyguOqywJTfGG1Eq6wOW2gitP4fqWrBYMroasAygkmXNYF7XmUyFHYzja
+    on test/ITestMagicCommitProtocol-testParallelJobsToSameDestPaths/part-m-00000:
+    com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not
+    exist. The upload ID may be invalid, or the upload may have been aborted or
+    completed. (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload;
+    Request ID: EBE6A0C9F8213AC3; S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=),
+    S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=:NoSuchUpload
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:259)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:286)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:154)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.uploadPart(WriteOperationHelper.java:590)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.lambda$uploadBlockAsync$0(S3ABlockOutputStream.java:652)
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception:
+    The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: EBE6A0C9F8213AC3; S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=),
+    S3 Extended Request ID: cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1113)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:726)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:668)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:532)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:512)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4920)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4866)
+    at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:3715)
+    at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:3700)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:2343)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$uploadPart$8(WriteOperationHelper.java:594)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:110)
+    ... 15 more
+```
+
+The block write failed because the previously created upload was aborted before the data could be written.
+
+Causes
+
+1. Another job has written to the same directory tree with an S3A committer
+   -and when that job was committed, all incomplete uploads were aborted.
+1. The `hadoop s3guard uploads --abort` command has being called on/above the directory.
+1. Some other program is cancelling uploads to that bucket/path under it.
+1. The job is lasting over 24h and a bucket lifecycle policy is aborting the uploads.
+
+The `_SUCCESS` file from the previous job may provide diagnostics.
+
+If the cause is Concurrent Jobs, see [Concurrent Jobs writing to the same destination](#concurrent-jobs).
+
+### Job commit fails "java.io.FileNotFoundException: Completing multipart upload" "The specified upload does not exist"
+
+The job commit fails with an error about the specified upload not existing.
+
+```
+java.io.FileNotFoundException: Completing multipart upload on
+    test/DELAY_LISTING_ME/ITestDirectoryCommitProtocol-testParallelJobsToSameDestPaths/part-m-00001:
+    com.amazonaws.services.s3.model.AmazonS3Exception:
+    The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload;
+    Request ID: 8E6173241D2970CB; S3 Extended Request ID:
+    Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=),
+    S3 Extended Request ID:
+    Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=:NoSuchUpload
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:259)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.finalizeMultipartUpload(WriteOperationHelper.java:261)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.commitUpload(WriteOperationHelper.java:549)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.innerCommit(CommitOperations.java:199)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.commit(CommitOperations.java:168)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.commitOrFail(CommitOperations.java:144)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.access$100(CommitOperations.java:74)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations$CommitContext.commitOrFail(CommitOperations.java:612)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.lambda$loadAndCommit$5(AbstractS3ACommitter.java:535)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder.runSingleThreaded(Tasks.java:164)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder.run(Tasks.java:149)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.loadAndCommit(AbstractS3ACommitter.java:534)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.lambda$commitPendingUploads$2(AbstractS3ACommitter.java:482)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder$1.run(Tasks.java:253)
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: 8E6173241D2970CB;
+    S3 Extended Request ID: Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=),
+
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1113)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:726)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:668)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:532)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:512)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4920)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4866)
+    at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:3464)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$finalizeMultipartUpload$1(WriteOperationHelper.java:267)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:110)
+```
+
+The problem is likely to be that of the previous one: concurrent jobs are writing the same output directory,
+or another program has cancelled all pending uploads.
+
+See [Concurrent Jobs writing to the same destination](#concurrent-jobs).
+
+### Job commit fails `java.io.FileNotFoundException` "File hdfs://.../staging-uploads/_temporary/0 does not exist"
+
+The Staging committer will fail in job commit if the intermediate directory on the cluster FS is missing during job commit.
+
+This is possible if another job used the same staging upload directory and,
+ after committing its work, it deleted the directory.
+
+A unique Job ID is required for each spark job run by a specific user.
+Spark generates job IDs for its committers using the current timestamp,
+and if two jobs/stages are started in the same second, they will have the same job ID.
+
+See [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230).
+
+This is fixed in all spark releases which have the patch applied.
+
+You can set the property `fs.s3a.committer.staging.require.uuid` to fail
+the staging committers fast if a unique Job ID isn't found in
+`spark.sql.sources.writeJobUUID`.
+
+### Job setup fails `Job/task context does not contain a unique ID in spark.sql.sources.writeJobUUID`
+
+This will surface in job setup if the option `fs.s3a.committer.require.uuid` is `true`, and
+one of the following conditions are met
+
+1. The committer is being used in a Hadoop MapReduce job, whose job attempt ID is unique
+   -there is no need to add this requirement.
+   Fix: unset `fs.s3a.committer.require.uuid`.
+1. The committer is being used in spark, and the version of spark being used does not
+   set the `spark.sql.sources.writeJobUUID` property.
+   Either upgrade to a new spark release, or set `fs.s3a.committer.generate.uuid` to true.

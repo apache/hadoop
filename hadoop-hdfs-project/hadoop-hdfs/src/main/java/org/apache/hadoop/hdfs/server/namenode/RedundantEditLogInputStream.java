@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
@@ -47,7 +47,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
 
   /** Limit logging about fast forwarding the stream to every 5 seconds max. */
   private static final long FAST_FORWARD_LOGGING_INTERVAL_MS = 5000;
-  private final LogThrottlingHelper fastForwardLoggingHelper =
+  private static final LogThrottlingHelper FAST_FORWARD_LOGGING_HELPER =
       new LogThrottlingHelper(FAST_FORWARD_LOGGING_INTERVAL_MS);
 
   /**
@@ -170,6 +170,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       }
       return nextOp();
     } catch (IOException e) {
+      LOG.warn("encountered an exception", e);
       return null;
     }
   }
@@ -181,7 +182,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       case SKIP_UNTIL:
        try {
           if (prevTxId != HdfsServerConstants.INVALID_TXID) {
-            LogAction logAction = fastForwardLoggingHelper.record();
+            LogAction logAction = FAST_FORWARD_LOGGING_HELPER.record();
             if (logAction.shouldLog()) {
               LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
                   "' to transaction ID " + (prevTxId + 1) +
@@ -228,7 +229,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
               "streams are shorter than the current one!  The best " +
               "remaining edit log ends at transaction " +
               newLast + ", but we thought we could read up to transaction " +
-              oldLast + ".  If you continue, metadata will be lost forever!");
+              oldLast + ".  If you continue, metadata will be lost forever!",
+              prevException);
         }
         LOG.error("Got error reading edit log input stream " +
           streams[curIdx].getName() + "; failing over to edit log " +

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.registry.client.impl.zk;
 
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
 /**
@@ -62,10 +62,10 @@ public interface ZookeeperConfigOptions {
    *
    * <p>
    *   Default value is derived from
-   *   {@link ZooKeeperSaslClient#LOGIN_CONTEXT_NAME_KEY}
+   *   {@link ZKClientConfig#LOGIN_CONTEXT_NAME_KEY}
    */
   String PROP_ZK_SASL_CLIENT_CONTEXT =
-      ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY;
+    ZKClientConfig.LOGIN_CONTEXT_NAME_KEY;
 
   /**
    * The SASL client username: {@value}.

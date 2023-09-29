@@ -95,7 +95,7 @@ public class TestWebHDFSForHA {
       final Path dir2 = new Path("/test2");
       Assert.assertTrue(fs.mkdirs(dir2));
     } finally {
-      IOUtils.cleanup(null, fs);
+      IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -130,7 +130,7 @@ public class TestWebHDFSForHA {
       verify(fs).renewDelegationToken(token);
       verify(fs).cancelDelegationToken(token);
     } finally {
-      IOUtils.cleanup(null, fs);
+      IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -199,7 +199,7 @@ public class TestWebHDFSForHA {
       Exception unwrapped = re.unwrapRemoteException(StandbyException.class);
       Assert.assertTrue(unwrapped instanceof StandbyException);
     } finally {
-      IOUtils.cleanup(null, fs);
+      IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -238,7 +238,7 @@ public class TestWebHDFSForHA {
       IOUtils.readFully(in, buf, 0, buf.length);
       Assert.assertArrayEquals(data, buf);
     } finally {
-      IOUtils.cleanup(null, fs);
+      IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -264,7 +264,7 @@ public class TestWebHDFSForHA {
       fs = (WebHdfsFileSystem)FileSystem.get(WEBHDFS_URI, conf);
       Assert.assertEquals(2, fs.getResolvedNNAddr().length);
     } finally {
-      IOUtils.cleanup(null, fs);
+      IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -304,7 +304,7 @@ public class TestWebHDFSForHA {
           } catch (IOException e) {
             result = false;
           } finally {
-            IOUtils.cleanup(null, fs);
+            IOUtils.cleanupWithLogger(null, fs);
           }
           synchronized (TestWebHDFSForHA.this) {
             resultMap.put("mkdirs", result);

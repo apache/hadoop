@@ -18,8 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.base.Supplier;
-import org.apache.commons.io.IOUtils;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.function.Supplier;
+
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +52,13 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -101,8 +108,8 @@ public class TestSpaceReservation {
   }
 
   static {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
   /**
@@ -554,7 +561,7 @@ public class TestSpaceReservation {
           String filename = "/file-" + rand.nextLong();
           os = localClient.create(filename, false);
           os.write(data, 0, rand.nextInt(data.length));
-          IOUtils.closeQuietly(os);
+          IOUtils.closeStream(os);
           os = null;
           localClient.delete(filename, false);
           Thread.sleep(50);     // Sleep for a bit to avoid killing the system.
@@ -566,7 +573,7 @@ public class TestSpaceReservation {
           return;
         } finally {
           if (os != null) {
-            IOUtils.closeQuietly(os);
+            IOUtils.closeStream(os);
           }
         }
       }
@@ -744,5 +751,49 @@ public class TestSpaceReservation {
       }
     }, 500, 30000);
     checkReservedSpace(0);
+  }
+
+  /**
+   * Ensure that bytes reserved of ReplicaInfo gets cleared
+   * during finalize.
+   *
+   * @throws IOException
+   */
+  @Test(timeout = 300000)
+  public void testReplicaInfoBytesReservedReleasedOnFinalize() throws IOException {
+    short replication = 3;
+    int bufferLength = 4096;
+    startCluster(BLOCK_SIZE, replication, -1);
+
+    String methodName = GenericTestUtils.getMethodName();
+    Path path = new Path("/" + methodName + ".01.dat");
+
+    FSDataOutputStream fos =
+        fs.create(path, FsPermission.getFileDefault(), EnumSet.of(CreateFlag.CREATE), bufferLength,
+            replication, BLOCK_SIZE, null);
+    // Allocate a block.
+    fos.write(new byte[bufferLength]);
+    fos.hsync();
+
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+    long expectedReservedSpace = BLOCK_SIZE - bufferLength;
+
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    Collection<ReplicaInfo> replicas = FsDatasetTestUtil.getReplicas(fsDataSetImpl, bpid);
+    ReplicaInfo r = replicas.iterator().next();
+
+    // Verify Initial Bytes Reserved for Replica and Volume are correct
+    assertEquals(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(),
+        expectedReservedSpace);
+    assertEquals(r.getBytesReserved(), expectedReservedSpace);
+
+    // Verify Bytes Reserved for Replica and Volume are correct after finalize
+    fsDataSetImpl.finalizeNewReplica(r, new ExtendedBlock(bpid, r));
+
+    assertEquals(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(), 0L);
+    assertEquals(r.getBytesReserved(), 0L);
+
+    fos.close();
   }
 }

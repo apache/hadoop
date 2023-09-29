@@ -157,6 +157,9 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE);
 
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE);
+
     // Ignore NodeManager "work in progress" variables
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED);
@@ -182,7 +185,13 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY);
     configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+    configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT);
 
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);
@@ -214,6 +223,20 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         "yarn.log-aggregation.file-controller.TFile.class");
     // Add the filters used for checking for collision of default values.
     initDefaultValueCollisionCheck();
+
+    configurationPropsToSkipCompare.add(YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT);
+    configurationPropsToSkipCompare.add(YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_AUX_SERVICE_FMT);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH);
+    configurationPropsToSkipCompare.add(YarnConfiguration.LINUX_CONTAINER_RUNTIME_CLASS_FMT);
   }
 
   /**

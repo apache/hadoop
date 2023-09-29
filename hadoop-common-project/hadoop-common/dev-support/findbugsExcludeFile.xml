@@ -284,6 +284,10 @@
       <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.ProtobufRpcEngineProtos.*"/>
     </Match>
     <Match>
+        <!-- protobuf generated code -->
+        <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.ProtobufRpcEngine2Protos.*"/>
+    </Match>
+    <Match>
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.ProtocolInfoProtos.*"/>
     </Match>
@@ -375,21 +379,6 @@
        <Bug code="JLM" />
      </Match>
 
-  <!--
-  OpenStack Swift FS module -closes streams in a different method
-  from where they are opened.
-  -->
-    <Match>
-      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
-      <Method name="uploadFileAttempt"/>
-      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-    </Match>
-    <Match>
-      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
-      <Method name="uploadFilePartAttempt"/>
-      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-    </Match>
-
      <!-- code from maven source, null value is checked at callee side. -->
      <Match>
        <Class name="org.apache.hadoop.util.ComparableVersion$ListItem" />
@@ -459,5 +448,11 @@
     <Class name="org.apache.hadoop.util.JsonSerialization"/>
     <Method name="save"/>
     <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.ipc.ProtobufHelper" />
+    <Method name="getFixedByteString" />
+    <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
   </Match>
 </FindBugsFilter>

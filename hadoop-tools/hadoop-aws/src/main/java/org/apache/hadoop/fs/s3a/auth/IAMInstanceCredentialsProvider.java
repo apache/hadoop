@@ -21,55 +21,80 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.Closeable;
 import java.io.IOException;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This is going to be an IAM credential provider which performs
- * async refresh for lower-latency on IO calls.
- * Initially it does not do this, simply shares the single IAM instance
- * across all instances. This makes it less expensive to declare.
+ * This is an IAM credential provider which wraps
+ * an {@code ContainerCredentialsProvider}
+ * to provide credentials when the S3A connector is instantiated on AWS EC2
+ * or the AWS container services.
+ * <p>
+ * When it fails to authenticate, it raises a
+ * {@link NoAwsCredentialsException} which can be recognized by retry handlers
+ * as a non-recoverable failure.
+ * <p>
+ * It is implicitly public; marked evolving as we can change its semantics.
  *
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class IAMInstanceCredentialsProvider
-    implements AWSCredentialsProvider, Closeable {
+    implements AwsCredentialsProvider, Closeable {
 
-  private static final InstanceProfileCredentialsProvider INSTANCE =
-      InstanceProfileCredentialsProvider.getInstance();
+  private final AwsCredentialsProvider containerCredentialsProvider =
+      ContainerCredentialsProvider.builder().build();
 
   public IAMInstanceCredentialsProvider() {
   }
 
   /**
    * Ask for the credentials.
-   * as it invariably means "you aren't running on EC2"
+   * Failure invariably means "you aren't running in an EC2 VM or AWS container".
    * @return the credentials
+   * @throws NoAwsCredentialsException on auth failure to indicate non-recoverable.
    */
   @Override
-  public AWSCredentials getCredentials() {
+  public AwsCredentials resolveCredentials() {
     try {
-      return INSTANCE.getCredentials();
-    } catch (AmazonClientException e) {
+      return getCredentials();
+    } catch (SdkClientException e) {
       throw new NoAwsCredentialsException("IAMInstanceCredentialsProvider",
           e.getMessage(),
           e);
     }
   }
 
-  @Override
-  public void refresh() {
-    INSTANCE.refresh();
+  /**
+   * First try {@link ContainerCredentialsProvider}, which will throw an exception if credentials
+   * cannot be retrieved from the container. Then resolve credentials
+   * using {@link InstanceProfileCredentialsProvider}.
+   *
+   * @return credentials
+   */
+  private AwsCredentials getCredentials() {
+    try {
+      return containerCredentialsProvider.resolveCredentials();
+    } catch (SdkClientException e) {
+      return InstanceProfileCredentialsProvider.create().resolveCredentials();
+    }
   }
 
   @Override
   public void close() throws IOException {
-    // until async, no-op.
+    // no-op.
+  }
+
+  @Override
+  public String toString() {
+    return "IAMInstanceCredentialsProvider{" +
+        "containerCredentialsProvider=" + containerCredentialsProvider +
+        '}';
   }
 }

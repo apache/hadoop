@@ -89,6 +89,9 @@ public class TestKerberosAuthenticationHandler
     // handler
     handler = getNewAuthenticationHandler();
     Properties props = getDefaultProperties();
+    // Set whitelist for testing
+    props.setProperty(KerberosAuthenticationHandler.ENDPOINT_WHITELIST,
+        "/white,/white2,/white3");
     try {
       handler.init(props);
     } catch (Exception ex) {
@@ -298,11 +301,10 @@ public class TestKerberosAuthenticationHandler
         GSSContext gssContext = null;
         try {
           String servicePrincipal = KerberosTestUtils.getServerPrincipal();
-          Oid oid =
-              KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL");
+          Oid oid = KerberosUtil.NT_GSS_KRB5_PRINCIPAL_OID;
           GSSName serviceName = gssManager.createName(servicePrincipal,
               oid);
-          oid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
+          oid = KerberosUtil.GSS_KRB5_MECH_OID;
           gssContext = gssManager.createContext(serviceName, oid, null,
                                                   GSSContext.DEFAULT_LIFETIME);
           gssContext.requestCredDeleg(true);
@@ -361,6 +363,27 @@ public class TestKerberosAuthenticationHandler
     Mockito.when(request.getHeader(KerberosAuthenticator.AUTHORIZATION))
         .thenReturn(KerberosAuthenticator.NEGOTIATE + token);
 
+    try {
+      handler.authenticate(request, response);
+      Assert.fail();
+    } catch (AuthenticationException ex) {
+      // Expected
+    } catch (Exception ex) {
+      Assert.fail();
+    }
+  }
+
+  @Test
+  public void testRequestToWhitelist() throws Exception {
+    final String token = new Base64(0).encodeToString(new byte[]{0, 1, 2});
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response =
+        Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getHeader(KerberosAuthenticator.AUTHORIZATION))
+        .thenReturn(KerberosAuthenticator.NEGOTIATE + token);
+    Mockito.when(request.getServletPath()).thenReturn("/white");
+    handler.authenticate(request, response);
+    Mockito.when(request.getServletPath()).thenReturn("/white4");
     try {
       handler.authenticate(request, response);
       Assert.fail();

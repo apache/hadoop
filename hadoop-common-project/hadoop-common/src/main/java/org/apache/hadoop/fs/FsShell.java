@@ -35,8 +35,8 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,7 +130,7 @@ public class FsShell extends Configured implements Tool {
    * Returns the current trash location for the path specified
    * @param path to be deleted
    * @return path to the trash
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Path getCurrentTrashDir(Path path) throws IOException {
     return getTrash().getCurrentTrashDir(path);

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderIoProvider;

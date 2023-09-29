@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -40,6 +42,7 @@ import static org.junit.Assert.fail;
 public class TestLowRedundancyBlockQueues {
 
   private final ErasureCodingPolicy ecPolicy;
+  private static AtomicLong mockINodeId = new AtomicLong(0);
 
   public TestLowRedundancyBlockQueues(ErasureCodingPolicy policy) {
     ecPolicy = policy;
@@ -51,7 +54,15 @@ public class TestLowRedundancyBlockQueues {
   }
 
   private BlockInfo genBlockInfo(long id) {
-    return new BlockInfoContiguous(new Block(id), (short) 3);
+    return genBlockInfo(id, false);
+  }
+
+  private BlockInfo genBlockInfo(long id, boolean isCorruptBlock) {
+    BlockInfo bInfo = new BlockInfoContiguous(new Block(id), (short) 3);
+    if (!isCorruptBlock) {
+      bInfo.setBlockCollectionId(mockINodeId.incrementAndGet());
+    }
+    return bInfo;
   }
 
   private BlockInfo genStripedBlockInfo(long id, long numBytes) {
@@ -90,6 +101,67 @@ public class TestLowRedundancyBlockQueues {
             "blocks count is incorrect!",
         highestPriorityECBlockCount,
         queues.getHighestPriorityECBlockCount());
+  }
+
+  /**
+   * Tests that deleted blocks should not be returned by
+   * {@link LowRedundancyBlocks#chooseLowRedundancyBlocks(int, boolean)}.
+   * @throws Exception
+   */
+  @Test
+  public void testDeletedBlocks() throws Exception {
+    int numBlocks = 5;
+    LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    // create 5 blockinfos. The first one is corrupt.
+    for (int ind = 0; ind < numBlocks; ind++) {
+      BlockInfo blockInfo = genBlockInfo(ind, ind == 0);
+      queues.add(blockInfo, 2, 0, 0, 3);
+    }
+    List<List<BlockInfo>> blocks;
+    // Get two blocks from the queue, but we should only get one because first
+    // block is deleted.
+    blocks = queues.chooseLowRedundancyBlocks(2, false);
+
+    assertEquals(1, blocks.get(2).size());
+    assertEquals(1, blocks.get(2).get(0).getBlockId());
+
+    // Get the next blocks - should be ID 2
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(2, blocks.get(2).get(0).getBlockId());
+
+    // Get the next block, but also reset this time - should be ID 3 returned
+    blocks = queues.chooseLowRedundancyBlocks(1, true);
+    assertEquals(3, blocks.get(2).get(0).getBlockId());
+
+    // Get one more block and due to resetting the queue it will be block id 1
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(1, blocks.get(2).get(0).getBlockId());
+  }
+
+  @Test
+  public void testQueuePositionCanBeReset() throws Throwable {
+    LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    for (int i=0; i< 4; i++) {
+      BlockInfo block = genBlockInfo(i);
+      queues.add(block, 2, 0, 0, 3);
+    }
+    List<List<BlockInfo>> blocks;
+    // Get one block from the queue - should be block ID 0 returned
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(1, blocks.get(2).size());
+    assertEquals(0, blocks.get(2).get(0).getBlockId());
+
+    // Get the next blocks - should be ID 1
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(1, blocks.get(2).get(0).getBlockId());
+
+    // Get the next block, but also reset this time - should be ID 2 returned
+    blocks = queues.chooseLowRedundancyBlocks(1, true);
+    assertEquals(2, blocks.get(2).get(0).getBlockId());
+
+    // Get one more block and due to resetting the queue it will be block id 0
+    blocks = queues.chooseLowRedundancyBlocks(1, false);
+    assertEquals(0, blocks.get(2).get(0).getBlockId());
   }
 
   /**
@@ -248,5 +320,16 @@ public class TestLowRedundancyBlockQueues {
       }
     }
     fail("Block " + block + " not found in level " + level);
+  }
+
+  @Test
+  public void testRemoveBlockInManyQueues() {
+    LowRedundancyBlocks neededReconstruction = new LowRedundancyBlocks();
+    BlockInfo block = new BlockInfoContiguous(new Block(), (short)1024);
+    neededReconstruction.add(block, 2, 0, 1, 3);
+    neededReconstruction.add(block, 0, 0, 0, 3);
+    neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
+    assertFalse("Should not contain the block.",
+        neededReconstruction.contains(block));
   }
 }

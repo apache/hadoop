@@ -69,7 +69,7 @@ public class ProtocolProxy<T> {
     }
     int[] serverMethodsCodes = serverInfo.getMethods();
     if (serverMethodsCodes != null) {
-      serverMethods = new HashSet<Integer>(serverMethodsCodes.length);
+      serverMethods = new HashSet<>(serverMethodsCodes.length);
       for (int m : serverMethodsCodes) {
         this.serverMethods.add(Integer.valueOf(m));
       }
@@ -85,11 +85,12 @@ public class ProtocolProxy<T> {
   }
   
   /**
-   * Check if a method is supported by the server or not
+   * Check if a method is supported by the server or not.
    * 
    * @param methodName a method's name in String format
    * @param parameterTypes a method's parameter types
    * @return true if the method is supported by the server
+   * @throws IOException raised on errors performing I/O.
    */
   public synchronized boolean isMethodSupported(String methodName,
                                    Class<?>... parameterTypes)

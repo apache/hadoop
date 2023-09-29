@@ -39,6 +39,7 @@ public class HsAboutPage extends HsView {
     commonPreHead(html);
     //override the nav config from commonPReHead
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
+    setTitle("About History Server");
   }
 
   /**

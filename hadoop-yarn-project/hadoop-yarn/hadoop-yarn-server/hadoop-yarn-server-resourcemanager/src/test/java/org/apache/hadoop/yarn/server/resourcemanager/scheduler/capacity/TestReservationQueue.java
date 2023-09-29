@@ -26,9 +26,14 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -44,34 +49,51 @@ public class TestReservationQueue {
 
   private CapacitySchedulerConfiguration csConf;
   private CapacitySchedulerContext csContext;
+  private CapacitySchedulerQueueContext queueContext;
   final static int DEF_MAX_APPS = 10000;
   final static int GB = 1024;
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
   private ReservationQueue autoCreatedLeafQueue;
+  private PlanQueue planQueue;
+  private final Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, SchedulerDynamicEditException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
 
     YarnConfiguration conf = new YarnConfiguration();
     csContext = mock(CapacitySchedulerContext.class);
+    CapacitySchedulerQueueManager csQm = mock(
+        CapacitySchedulerQueueManager.class);
+    ConfiguredNodeLabels labels = new ConfiguredNodeLabels(csConf);
+    when(csQm.getConfiguredNodeLabelsForAllQueues()).thenReturn(labels);
+    NullRMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(csConf);
+    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    when(csQm.getQueueCapacityHandler()).thenReturn(
+        new CapacitySchedulerQueueCapacityHandler(mgr, csConf));
     when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(csQm);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(16 * GB, 32));
     when(csContext.getClusterResource()).thenReturn(
-        Resources.createResource(100 * 16 * GB, 100 * 32));
+        clusterResource);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     RMContext mockRMContext = TestUtils.getMockRMContext();
     when(csContext.getRMContext()).thenReturn(mockRMContext);
 
+    queueContext = new CapacitySchedulerQueueContext(csContext);
+
     // create a queue
-    PlanQueue pq = new PlanQueue(csContext, "root", null, null);
-    autoCreatedLeafQueue = new ReservationQueue(csContext, "a", pq);
+    planQueue = new PlanQueue(queueContext, "root", null, null);
+    autoCreatedLeafQueue = new ReservationQueue(queueContext, "a", planQueue);
+    planQueue.addChildQueue(autoCreatedLeafQueue);
   }
 
   private void validateAutoCreatedLeafQueue(double capacity) {
@@ -83,9 +105,14 @@ public class TestReservationQueue {
 
   @Test
   public void testAddSubtractCapacity() throws Exception {
-
     // verify that setting, adding, subtracting capacity works
     autoCreatedLeafQueue.setCapacity(1.0F);
+    autoCreatedLeafQueue.setMaxCapacity(1.0F);
+
+
+    planQueue.updateClusterResource(
+        clusterResource, new ResourceLimits(clusterResource));
+
     validateAutoCreatedLeafQueue(1);
     autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(0.9f, 1f));
     validateAutoCreatedLeafQueue(0.9);

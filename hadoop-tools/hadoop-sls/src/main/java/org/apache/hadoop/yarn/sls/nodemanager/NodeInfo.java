@@ -186,7 +186,6 @@ public class NodeInfo {
 
     @Override
     public List<Container> pullNewlyIncreasedContainers() {
-      // TODO Auto-generated method stub
       return null;
     }
 
@@ -246,15 +245,21 @@ public class NodeInfo {
     @Override
     public void resetUpdatedCapability() {
     }
+
+    @Override
+    public long calculateHeartBeatInterval(
+        long defaultInterval, long minInterval, long maxInterval,
+        float speedupFactor, float slowdownFactor) {
+      return defaultInterval;
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,
                               final Resource resource, int port) {
     final NodeId nodeId = newNodeID(hostName, port);
     final String nodeAddr = hostName + ":" + port;
-    final String httpAddress = hostName;
-    
-    return new FakeRMNodeImpl(nodeId, nodeAddr, httpAddress,
+
+    return new FakeRMNodeImpl(nodeId, nodeAddr, hostName,
         resource, rackName, "Me good",
         port, hostName, null);
   }

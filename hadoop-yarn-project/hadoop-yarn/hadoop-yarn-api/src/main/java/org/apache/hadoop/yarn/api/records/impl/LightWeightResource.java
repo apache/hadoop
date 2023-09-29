@@ -139,7 +139,7 @@ public class LightWeightResource extends Resource {
     if (this == obj) {
       return true;
     }
-    if (obj == null || !(obj instanceof Resource)) {
+    if (!(obj instanceof Resource)) {
       return false;
     }
     Resource other = (Resource) obj;

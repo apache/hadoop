@@ -58,6 +58,35 @@ import org.junit.Test;
  */
 public class TestNodeBlacklistingOnAMFailures {
 
+  private RMApp submitAppWithAMResourceRequests(MockRM rm,
+      List<ResourceRequest> amResourceRequests) throws Exception {
+    int maxAttempts =
+        rm.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder.create()
+        .withAmResourceRequests(amResourceRequests)
+        .withAppName("app1")
+        .withUser("user")
+        .withAcls(null)
+        .withUnmanagedAM(false)
+        .withQueue(null)
+        .withMaxAppAttempts(maxAttempts)
+        .withCredentials(null)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(true)
+        .withKeepContainers(false)
+        .withApplicationId(null)
+        .withAttemptFailuresValidityInterval(0)
+        .withLogAggregationContext(null)
+        .withCancelTokensWhenComplete(true)
+        .withAppPriority(amResourceRequests.get(0).getPriority())
+        .withAmLabel(amResourceRequests.get(0).getNodeLabelExpression())
+        .withApplicationTimeouts(null)
+        .withTokensConf(null)
+        .build();
+    return MockRMAppSubmitter.submit(rm, data);
+  }
+
   @Before
   public void setup() {
     QueueMetrics.clearQueueMetrics();
@@ -87,7 +116,7 @@ public class TestNodeBlacklistingOnAMFailures {
         new MockNM("127.0.0.2:2345", 8000, rm.getResourceTrackerService());
     nm2.registerNode();
 
-    RMApp app = rm.submitApp(200);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm1);
     ContainerId amContainerId =
@@ -215,7 +244,7 @@ public class TestNodeBlacklistingOnAMFailures {
     reqs.add(anyReq);
     reqs.add(rackReq);
     reqs.add(nodeReq);
-    RMApp app = rm.submitApp(reqs);
+    RMApp app = submitAppWithAMResourceRequests(rm, reqs);
 
     MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm2);
     ContainerId amContainerId =
@@ -302,7 +331,7 @@ public class TestNodeBlacklistingOnAMFailures {
     reqs.add(anyReq);
     reqs.add(rackReq);
     reqs.add(nodeReq);
-    RMApp app = rm.submitApp(reqs);
+    RMApp app = submitAppWithAMResourceRequests(rm, reqs);
 
     MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm2);
     ContainerId amContainerId =
@@ -363,7 +392,7 @@ public class TestNodeBlacklistingOnAMFailures {
         new MockNM("127.0.0.1:1234", 8000, rm.getResourceTrackerService());
     node.registerNode();
 
-    RMApp app = rm.submitApp(200);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm);
     ApplicationId appId = app.getApplicationId();
 
     int numAppAttempts = 1;

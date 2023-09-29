@@ -34,8 +34,11 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.util.ExitUtil;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestTaskProgressReporter {
   private static int statusUpdateTimes = 0;
@@ -177,6 +180,11 @@ public class TestTaskProgressReporter {
     }
   }
 
+  @After
+  public void cleanup() {
+    FileSystem.clearStatistics();
+  }
+
   @Test(timeout=60000)
   public void testScratchDirSize() throws Exception {
     String tmpPath = TEST_DIR + "/testBytesWrittenLimit-tmpFile-"
@@ -262,7 +270,7 @@ public class TestTaskProgressReporter {
     task.setTaskDone();
     reporter.resetDoneFlag();
     t.join();
-    Assert.assertEquals(statusUpdateTimes, 2);
+    assertThat(statusUpdateTimes).isEqualTo(2);
   }
 
   @Test(timeout=10000)

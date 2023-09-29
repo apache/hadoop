@@ -46,7 +46,7 @@ To enable encrypted shuffle, set the following properties in core-site.xml of al
 | `hadoop.ssl.keystores.factory.class` | `org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory` | The KeyStoresFactory implementation to use |
 | `hadoop.ssl.server.conf` | `ssl-server.xml` | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
 | `hadoop.ssl.client.conf` | `ssl-client.xml` | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
-| `hadoop.ssl.enabled.protocols` | `TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2` | The supported SSL protocols |
+| `hadoop.ssl.enabled.protocols` | `TLSv1.2` | The supported SSL protocols. The parameter will only be used from DatanodeHttpServer. |
 
 **IMPORTANT:** Currently requiring client certificates should be set to false. Refer the [Client Certificates](#Client_Certificates) section for details.
 

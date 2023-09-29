@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
@@ -59,7 +59,11 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   public static final ResourceInformation FPGAS =
           ResourceInformation.newInstance(FPGA_URI);
 
-  public static final Map<String, ResourceInformation> MANDATORY_RESOURCES =
+  /**
+   * Special resources that should be treated separately
+   * from arbitrary resource types.
+   */
+  public static final Map<String, ResourceInformation> SPECIAL_RESOURCES =
       ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS, FPGA_URI, FPGAS);
 
   /**

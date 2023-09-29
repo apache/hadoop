@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
@@ -36,10 +38,12 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.*;
@@ -156,7 +160,7 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> getEcPolicyAsMap(
+  public static Map<String, Object> getEcPolicyAsMap(
       final ErasureCodingPolicy ecPolicy) {
     /** Convert an ErasureCodingPolicy to a map. */
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -333,6 +337,17 @@ public class JsonUtil {
       return null;
     }
 
+    final Map<String, Object> m = toJsonMap(locatedblocks);
+    return toJsonString(LocatedBlocks.class, m);
+  }
+
+  /** Convert LocatedBlocks to a Map. */
+  public static Map<String, Object> toJsonMap(final LocatedBlocks locatedblocks)
+      throws IOException {
+    if (locatedblocks == null) {
+      return null;
+    }
+
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("fileLength", locatedblocks.getFileLength());
     m.put("isUnderConstruction", locatedblocks.isUnderConstruction());
@@ -340,7 +355,7 @@ public class JsonUtil {
     m.put("locatedBlocks", toJsonArray(locatedblocks.getLocatedBlocks()));
     m.put("lastLocatedBlock", toJsonMap(locatedblocks.getLastLocatedBlock()));
     m.put("isLastBlockComplete", locatedblocks.isLastBlockComplete());
-    return toJsonString(LocatedBlocks.class, m);
+    return m;
   }
 
   /** Convert a ContentSummary to a Json string. */
@@ -353,25 +368,50 @@ public class JsonUtil {
     m.put("length", contentsummary.getLength());
     m.put("fileCount", contentsummary.getFileCount());
     m.put("directoryCount", contentsummary.getDirectoryCount());
-    m.put("quota", contentsummary.getQuota());
-    m.put("spaceConsumed", contentsummary.getSpaceConsumed());
-    m.put("spaceQuota", contentsummary.getSpaceQuota());
-    final Map<String, Map<String, Long>> typeQuota =
-        new TreeMap<String, Map<String, Long>>();
+    m.put("ecPolicy", contentsummary.getErasureCodingPolicy());
+    // For ContentSummary we don't need this since we already have
+    // separate count for file and directory.
+    m.putAll(toJsonMap(contentsummary, false));
+    m.put("snapshotLength", contentsummary.getSnapshotLength());
+    m.put("snapshotFileCount", contentsummary.getSnapshotFileCount());
+    m.put("snapshotDirectoryCount",
+        contentsummary.getSnapshotDirectoryCount());
+    m.put("snapshotSpaceConsumed", contentsummary.getSnapshotSpaceConsumed());
+    return toJsonString(ContentSummary.class, m);
+  }
+
+  /** Convert a QuotaUsage to a JSON string. */
+  public static String toJsonString(final QuotaUsage quotaUsage) {
+    if (quotaUsage == null) {
+      return null;
+    }
+    return toJsonString(QuotaUsage.class, toJsonMap(quotaUsage, true));
+  }
+
+  private static Map<String, Object> toJsonMap(
+      final QuotaUsage quotaUsage, boolean includeFileAndDirectoryCount) {
+    final Map<String, Object> m = new TreeMap<>();
+    if (includeFileAndDirectoryCount) {
+      m.put("fileAndDirectoryCount", quotaUsage.getFileAndDirectoryCount());
+    }
+    m.put("quota", quotaUsage.getQuota());
+    m.put("spaceConsumed", quotaUsage.getSpaceConsumed());
+    m.put("spaceQuota", quotaUsage.getSpaceQuota());
+    final Map<String, Map<String, Long>> typeQuota = new TreeMap<>();
     for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      long tQuota = contentsummary.getTypeQuota(t);
+      long tQuota = quotaUsage.getTypeQuota(t);
       if (tQuota != HdfsConstants.QUOTA_RESET) {
         Map<String, Long> type = typeQuota.get(t.toString());
         if (type == null) {
-          type = new TreeMap<String, Long>();
+          type = new TreeMap<>();
           typeQuota.put(t.toString(), type);
         }
-        type.put("quota", contentsummary.getTypeQuota(t));
-        type.put("consumed", contentsummary.getTypeConsumed(t));
+        type.put("quota", quotaUsage.getTypeQuota(t));
+        type.put("consumed", quotaUsage.getTypeConsumed(t));
       }
     }
     m.put("typeQuota", typeQuota);
-    return toJsonString(ContentSummary.class, m);
+    return m;
   }
 
   /** Convert a MD5MD5CRC32FileChecksum to a Json string. */
@@ -550,6 +590,58 @@ public class JsonUtil {
     return m;
   }
 
+  public static String toJsonString(SnapshotDiffReportListing diffReport) {
+    return toJsonString(SnapshotDiffReportListing.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReportListing diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("lastPath", DFSUtilClient.bytes2String(diffReport.getLastPath()));
+    m.put("lastIndex", diffReport.getLastIndex());
+    m.put("isFromEarlier", diffReport.getIsFromEarlier());
+
+    Object[] modifyList = new Object[diffReport.getModifyList().size()];
+    for (int i = 0; i < diffReport.getModifyList().size(); i++) {
+      modifyList[i] = toJsonMap(diffReport.getModifyList().get(i));
+    }
+    m.put("modifyList", modifyList);
+
+    Object[] createList = new Object[diffReport.getCreateList().size()];
+    for (int i = 0; i < diffReport.getCreateList().size(); i++) {
+      createList[i] = toJsonMap(diffReport.getCreateList().get(i));
+    }
+    m.put("createList", createList);
+
+    Object[] deleteList = new Object[diffReport.getDeleteList().size()];
+    for (int i = 0; i < diffReport.getDeleteList().size(); i++) {
+      deleteList[i] = toJsonMap(diffReport.getDeleteList().get(i));
+    }
+    m.put("deleteList", deleteList);
+
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReportListing.DiffReportListingEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("dirId", diffReportEntry.getDirId());
+    m.put("fileId", diffReportEntry.getFileId());
+
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getSourcePath()));
+    }
+
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getTargetPath()));
+    }
+
+    m.put("isReference", diffReportEntry.isReference());
+    return m;
+  }
+
   public static String toJsonString(
       SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
     if (snapshottableDirectoryList == null) {
@@ -560,6 +652,17 @@ public class JsonUtil {
       a[i] = toJsonMap(snapshottableDirectoryList[i]);
     }
     return toJsonString("SnapshottableDirectoryList", a);
+  }
+
+  public static String toJsonString(SnapshotStatus[] snapshotList) {
+    if (snapshotList == null) {
+      return toJsonString("SnapshotList", null);
+    }
+    Object[] a = new Object[snapshotList.length];
+    for (int i = 0; i < snapshotList.length; i++) {
+      a[i] = toJsonMap(snapshotList[i]);
+    }
+    return toJsonString("SnapshotList", a);
   }
 
   private static Object toJsonMap(
@@ -573,7 +676,21 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> toJsonMap(
+  private static Object toJsonMap(
+      SnapshotStatus snapshotStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    HdfsFileStatus status = snapshotStatus.getDirStatus();
+    m.put("snapshotID", snapshotStatus.getSnapshotID());
+    m.put("deletionStatus", snapshotStatus.isDeleted() ? "DELETED" : "ACTIVE");
+    m.put("fullPath", SnapshotStatus.getSnapshotPath(
+            DFSUtilClient.bytes2String(snapshotStatus.getParentFullPath()),
+        status.getLocalName()));
+    m.put("dirStatus", toJsonMap(snapshotStatus.getDirStatus()));
+    return m;
+  }
+
+  @VisibleForTesting
+  static Map<String, Object> toJsonMap(
       final BlockLocation blockLocation) throws IOException {
     if (blockLocation == null) {
       return null;
@@ -593,15 +710,91 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
+    return toJsonString("BlockLocations", JsonUtil.toJsonMap(locations));
+  }
+
+  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
+      throws IOException {
     if (locations == null) {
       return null;
     }
     final Map<String, Object> m = new HashMap<>();
     Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
+    for (int i = 0; i < locations.length; i++) {
       blockLocations[i] = toJsonMap(locations[i]);
     }
     m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return toJsonString("BlockLocations", m);
+    return m;
+  }
+
+  public static String toJsonString(FsStatus status) {
+    return toJsonString(FsStatus.class, toJsonMap(status));
+  }
+
+  public static Map<String, Object> toJsonMap(FsStatus status) {
+    if (status == null) {
+      return null;
+    }
+    final Map<String, Object> m = new HashMap<>();
+    m.put("capacity", status.getCapacity());
+    m.put("used", status.getUsed());
+    m.put("remaining", status.getRemaining());
+    return m;
+  }
+
+  public static Map<String, Object> toJsonMap(ErasureCodingPolicyInfo ecPolicyInfo) {
+    if (ecPolicyInfo == null) {
+      return null;
+    }
+    Map<String, Object> m = new HashMap<>();
+    m.put("policy", ecPolicyInfo.getPolicy());
+    m.put("state", ecPolicyInfo.getState());
+    return m;
+  }
+
+  public static Map<String, Object> toJsonMap(FileStatus status) throws IOException {
+    Map<String, Object> m = new HashMap<>();
+    m.put("path", status.getPath().toUri().getPath());
+    m.put("length", status.getLen());
+    m.put("isdir", status.isDirectory());
+    m.put("block_replication", status.getReplication());
+    m.put("blocksize", status.getBlockSize());
+    m.put("modification_time", status.getModificationTime());
+    m.put("access_time", status.getAccessTime());
+    FsPermission perm = status.getPermission();
+    if (perm != null) {
+      m.put("permission", toString(perm));
+    }
+    m.put("owner", status.getOwner());
+    m.put("group", status.getGroup());
+    if (status.isSymlink()) {
+      m.put("symlink", status.getSymlink());
+    }
+    return m;
+  }
+
+  public static String toJsonString(ErasureCodingPolicyInfo[] ecPolicyInfos) {
+    final Map<String, Object> erasureCodingPolicies = new HashMap<>();
+    Object[] erasureCodingPolicyInfos = null;
+    if (ecPolicyInfos != null && ecPolicyInfos.length > 0) {
+      erasureCodingPolicyInfos = new Object[ecPolicyInfos.length];
+      for (int i = 0; i < ecPolicyInfos.length; i++) {
+        erasureCodingPolicyInfos[i] = toJsonMap(ecPolicyInfos[i]);
+      }
+    }
+    erasureCodingPolicies.put("ErasureCodingPolicyInfo", erasureCodingPolicyInfos);
+    return toJsonString("ErasureCodingPolicies", erasureCodingPolicies);
+  }
+
+  public static String toJsonString(Collection<FileStatus> trashPaths) throws IOException {
+    List<FileStatus> list = new ArrayList<>(trashPaths);
+    Object[] paths = null;
+    if(list.size() > 0){
+      paths = new Object[list.size()];
+      for(int i = 0; i < list.size(); i++){
+        paths[i] = toJsonMap(list.get(i));
+      }
+    }
+    return toJsonString("Paths", paths);
   }
 }

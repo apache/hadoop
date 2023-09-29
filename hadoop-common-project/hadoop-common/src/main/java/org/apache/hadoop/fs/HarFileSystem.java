@@ -35,6 +35,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -460,7 +463,7 @@ public class HarFileSystem extends FileSystem {
    * @param start the start of the desired range in the contained file
    * @param len the length of the desired range
    * @return block locations for this segment of file
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
@@ -511,41 +514,22 @@ public class HarFileSystem extends FileSystem {
     if (!parentString.endsWith(Path.SEPARATOR)){
         parentString += Path.SEPARATOR;
     }
-    Path harPath = new Path(parentString);
-    int harlen = harPath.depth();
-    final Map<String, FileStatus> cache = new TreeMap<String, FileStatus>();
 
-    for (HarStatus hstatus : metadata.archive.values()) {
-      String child = hstatus.getName();
-      if ((child.startsWith(parentString))) {
-        Path thisPath = new Path(child);
-        if (thisPath.depth() == harlen + 1) {
-          statuses.add(toFileStatus(hstatus, cache));
-        }
-      }
+    for (String child: parent.children) {
+      Path p = new Path(parentString + child);
+      statuses.add(toFileStatus(metadata.archive.get(p)));
     }
   }
 
   /**
    * Combine the status stored in the index and the underlying status. 
    * @param h status stored in the index
-   * @param cache caching the underlying file statuses
    * @return the combined file status
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
-  private FileStatus toFileStatus(HarStatus h,
-      Map<String, FileStatus> cache) throws IOException {
-    FileStatus underlying = null;
-    if (cache != null) {
-      underlying = cache.get(h.partName);
-    }
-    if (underlying == null) {
-      final Path p = h.isDir? archivePath: new Path(archivePath, h.partName);
-      underlying = fs.getFileStatus(p);
-      if (cache != null) {
-        cache.put(h.partName, underlying);
-      }
-    }
+  private FileStatus toFileStatus(HarStatus h) throws IOException {
+    final Path p = h.isDir ? archivePath : new Path(archivePath, h.partName);
+    FileStatus underlying = metadata.getPartFileStatus(p);
 
     long modTime = 0;
     int version = metadata.getVersion();
@@ -651,12 +635,12 @@ public class HarFileSystem extends FileSystem {
    * while creating a hadoop archive.
    * @param f the path in har filesystem
    * @return filestatus.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     HarStatus hstatus = getFileHarStatus(f);
-    return toFileStatus(hstatus, null);
+    return toFileStatus(hstatus);
   }
 
   private HarStatus getFileHarStatus(Path f) throws IOException {
@@ -672,6 +656,11 @@ public class HarFileSystem extends FileSystem {
       throw new FileNotFoundException("File: " +  f + " does not exist in " + uri);
     }
     return hstatus;
+  }
+
+  @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    fs.msync();
   }
 
   /**
@@ -808,7 +797,7 @@ public class HarFileSystem extends FileSystem {
     if (hstatus.isDir()) {
       fileStatusesInIndex(hstatus, statuses);
     } else {
-      statuses.add(toFileStatus(hstatus, null));
+      statuses.add(toFileStatus(hstatus));
     }
     
     return statuses.toArray(new FileStatus[statuses.size()]);
@@ -899,7 +888,22 @@ public class HarFileSystem extends FileSystem {
     throws IOException {
     throw new IOException("Har: setPermission not allowed");
   }
-  
+
+  /**
+   * Declare that this filesystem connector is always read only.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /**
    * Hadoop archives input stream. This input stream fakes EOF 
    * since archive files are part of bigger part files.
@@ -1100,7 +1104,7 @@ public class HarFileSystem extends FileSystem {
      * @param start the start position in the part file
      * @param length the length of valid data in the part file
      * @param bufsize the buffer size
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public HarFSDataInputStream(FileSystem fs, Path  p, long start, 
         long length, int bufsize) throws IOException {
@@ -1121,7 +1125,8 @@ public class HarFileSystem extends FileSystem {
 
     List<Store> stores = new ArrayList<Store>();
     Map<Path, HarStatus> archive = new HashMap<Path, HarStatus>();
-    private Map<Path, FileStatus> partFileStatuses = new HashMap<Path, FileStatus>();
+    // keys are always the internal har path.
+    private Map<Path, FileStatus> partFileStatuses = new ConcurrentHashMap<>();
 
     public HarMetaData(FileSystem fs, Path masterIndexPath, Path archiveIndexPath) {
       this.fs = fs;
@@ -1129,14 +1134,21 @@ public class HarFileSystem extends FileSystem {
       this.archiveIndexPath = archiveIndexPath;
     }
 
-    public FileStatus getPartFileStatus(Path partPath) throws IOException {
+    public FileStatus getPartFileStatus(Path path) throws IOException {
+      Path partPath = getPathInHar(path);
       FileStatus status;
       status = partFileStatuses.get(partPath);
       if (status == null) {
-        status = fs.getFileStatus(partPath);
+        status = fs.getFileStatus(path);
         partFileStatuses.put(partPath, status);
       }
       return status;
+    }
+
+    private void addPartFileStatuses(Path path) throws IOException {
+      for (FileStatus stat : fs.listStatus(path)) {
+        partFileStatuses.put(getPathInHar(stat.getPath()), stat);
+      }
     }
 
     public long getMasterIndexTimestamp() {
@@ -1195,16 +1207,22 @@ public class HarFileSystem extends FileSystem {
       try {
         FileStatus archiveStat = fs.getFileStatus(archiveIndexPath);
         archiveIndexTimestamp = archiveStat.getModificationTime();
-        LineReader aLin;
+
+        // pre-populate part cache.
+        addPartFileStatuses(archiveIndexPath.getParent());
+        LineReader aLin = null;
 
         // now start reading the real index file
+        long pos = -1;
         for (Store s: stores) {
-          read = 0;
-          aIn.seek(s.begin);
-          aLin = new LineReader(aIn, getConf());
-          while (read + s.begin < s.end) {
-            int tmp = aLin.readLine(line);
-            read += tmp;
+          if (pos != s.begin) {
+            pos = s.begin;
+            aIn.seek(s.begin);
+            aLin = new LineReader(aIn, getConf());
+          }
+
+          while (pos < s.end) {
+            pos += aLin.readLine(line);
             String lineFeed = line.toString();
             String[] parsed = lineFeed.split(" ");
             parsed[0] = decodeFileName(parsed[0]);

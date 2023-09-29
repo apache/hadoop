@@ -44,7 +44,7 @@ public class AssignedGpuDevice extends GpuDevice {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof AssignedGpuDevice)) {
+    if (!(obj instanceof AssignedGpuDevice)) {
       return false;
     }
     AssignedGpuDevice other = (AssignedGpuDevice) obj;
@@ -54,7 +54,7 @@ public class AssignedGpuDevice extends GpuDevice {
 
   @Override
   public int compareTo(Object obj) {
-    if (obj == null || (!(obj instanceof AssignedGpuDevice))) {
+    if ((!(obj instanceof AssignedGpuDevice))) {
       return -1;
     }
 

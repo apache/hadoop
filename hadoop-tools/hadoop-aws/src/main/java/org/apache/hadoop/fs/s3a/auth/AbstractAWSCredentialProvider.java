@@ -21,16 +21,17 @@ package org.apache.hadoop.fs.s3a.auth;
 import javax.annotation.Nullable;
 import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Base class for AWS credential providers which
  * take a URI and config in their constructor.
+ *
  */
 public abstract class AbstractAWSCredentialProvider
-    implements AWSCredentialsProvider {
+    implements AwsCredentialsProvider {
 
   private final URI binding;
 
@@ -61,10 +62,4 @@ public abstract class AbstractAWSCredentialProvider
     return binding;
   }
 
-  /**
-   * Refresh is a no-op by default.
-   */
-  @Override
-  public void refresh() {
-  }
 }

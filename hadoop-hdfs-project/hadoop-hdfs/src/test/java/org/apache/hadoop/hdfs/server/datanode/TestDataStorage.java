@@ -44,6 +44,7 @@ import static org.junit.Assert.fail;
 public class TestDataStorage {
   private final static String DEFAULT_BPID = "bp-0";
   private final static String CLUSTER_ID = "cluster0";
+  private final static String CLUSTER_ID2 = "cluster1";
   private final static String BUILD_VERSION = "2.0";
   private final static String SOFTWARE_VERSION = "2.0";
   private final static long CTIME = 1;
@@ -163,6 +164,33 @@ public class TestDataStorage {
     locations = createStorageLocations(6);
     storage.addStorageLocations(mockDN, nsInfo, locations, START_OPT);
     assertEquals(6, storage.getNumStorageDirs());
+  }
+
+  @Test
+  public void testAddStorageDirectoriesFailure() throws IOException {
+    final int numLocations = 1;
+    List<StorageLocation> locations = createStorageLocations(numLocations);
+    assertEquals(numLocations, locations.size());
+
+    NamespaceInfo namespaceInfo = new NamespaceInfo(0, CLUSTER_ID,
+        DEFAULT_BPID, CTIME, BUILD_VERSION, SOFTWARE_VERSION);
+    List<StorageDirectory> successLocations = storage.addStorageLocations(
+        mockDN, namespaceInfo, locations, START_OPT);
+    assertEquals(1, successLocations.size());
+
+    // After the DataNode restarts, the value of the clusterId is different
+    // from the value before the restart.
+    storage.unlockAll();
+    DataNode newMockDN = Mockito.mock(DataNode.class);
+    Mockito.when(newMockDN.getConf()).thenReturn(new HdfsConfiguration());
+    DataStorage newStorage = new DataStorage();
+    NamespaceInfo newNamespaceInfo = new NamespaceInfo(0, CLUSTER_ID2,
+        DEFAULT_BPID, CTIME, BUILD_VERSION, SOFTWARE_VERSION);
+    successLocations = newStorage.addStorageLocations(
+            newMockDN, newNamespaceInfo, locations, START_OPT);
+    assertEquals(0, successLocations.size());
+    newStorage.unlockAll();
+    newMockDN.shutdown();
   }
 
   @Test

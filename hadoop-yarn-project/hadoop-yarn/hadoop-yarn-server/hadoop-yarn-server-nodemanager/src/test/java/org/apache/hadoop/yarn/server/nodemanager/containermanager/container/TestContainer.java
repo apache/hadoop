@@ -106,6 +106,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -1316,6 +1317,7 @@ public class TestContainer {
         new HashMap<>();
     private final Map<ContainerEventType, ContainerState> eventToFinalState =
         new HashMap<>();
+    private final ContainerExecutor exec;
 
     WrappedContainer(int appId, long timestamp, int id, String user)
         throws IOException {
@@ -1352,6 +1354,7 @@ public class TestContainer {
           container.sendLaunchEvent();
         }
       };
+      exec = mock(ContainerExecutor.class);
       dispatcher.register(LocalizationEventType.class, localizerBus);
       dispatcher.register(ContainersLauncherEventType.class, launcherBus);
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
@@ -1389,7 +1392,7 @@ public class TestContainer {
       cId = BuilderUtils.newContainerId(appId, 1, timestamp, id);
       when(mockContainer.getId()).thenReturn(cId);
 
-      Resource resource = BuilderUtils.newResource(1024, 1);
+      Resource resource = Resources.createResource(1024);
       when(mockContainer.getResource()).thenReturn(resource);
       String host = "127.0.0.1";
       int port = 1234;
@@ -1411,6 +1414,9 @@ public class TestContainer {
         localResources = Collections.<String, LocalResource> emptyMap();
       }
       when(ctxt.getLocalResources()).thenReturn(localResources);
+
+      when(exec.getLocalResources(any())).thenReturn(localResources);
+      when(context.getContainerExecutor()).thenReturn(exec);
 
       if (withServiceData) {
         Random r = new Random();

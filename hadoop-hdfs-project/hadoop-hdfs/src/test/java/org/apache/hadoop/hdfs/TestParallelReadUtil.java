@@ -25,16 +25,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * Driver class for testing the use of DFSInputStream by multiple concurrent
@@ -57,8 +57,9 @@ public class TestParallelReadUtil {
   static {
     // The client-trace log ends up causing a lot of blocking threads
     // in this when it's being used as a performance benchmark.
-    LogManager.getLogger(DataNode.class.getName() + ".clienttrace")
-      .setLevel(Level.WARN);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(DataNode.class.getName() + ".clienttrace"),
+        Level.WARN);
   }
 
   private class TestFileInfo {

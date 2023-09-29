@@ -18,8 +18,10 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +36,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Manage the heartbeats received from datanodes.
@@ -43,7 +45,15 @@ import com.google.common.annotations.VisibleForTesting;
  */
 class HeartbeatManager implements DatanodeStatistics {
   static final Logger LOG = LoggerFactory.getLogger(HeartbeatManager.class);
-
+  private static final String REPORT_DELTA_STALE_DN_HEADER =
+      "StaleNodes Report: [New Stale Nodes]: %d";
+  private static final String REPORT_STALE_DN_LINE_ENTRY = "%n\t %s";
+  private static final String REPORT_STALE_DN_LINE_TAIL = ", %s";
+  private static final String REPORT_REMOVE_DEAD_NODE_ENTRY =
+      "StaleNodes Report: [Remove DeadNode]: %s";
+  private static final String REPORT_REMOVE_STALE_NODE_ENTRY =
+      "StaleNodes Report: [Remove StaleNode]: %s";
+  private static final int REPORT_STALE_NODE_NODES_PER_LINE = 10;
   /**
    * Stores a subset of the datanodeMap in DatanodeManager,
    * containing nodes that are considered alive.
@@ -56,14 +66,20 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Statistics, which are synchronized by the heartbeat manager lock. */
   private final DatanodeStats stats = new DatanodeStats();
 
-  /** The time period to check for expired datanodes */
+  /** The time period to check for expired datanodes. */
   private final long heartbeatRecheckInterval;
-  /** Heartbeat monitor thread */
+  /** Heartbeat monitor thread. */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
   private final StopWatch heartbeatStopWatch = new StopWatch();
+  private final int numOfDeadDatanodesRemove;
 
   final Namesystem namesystem;
   final BlockManager blockManager;
+  /** Enable log for datanode staleness. */
+  private final boolean enableLogStaleNodes;
+
+  /** reports for stale datanodes. */
+  private final Set<DatanodeDescriptor> staleDataNodes = new HashSet<>();
 
   HeartbeatManager(final Namesystem namesystem,
       final BlockManager blockManager, final Configuration conf) {
@@ -78,6 +94,12 @@ class HeartbeatManager implements DatanodeStatistics {
     long staleInterval = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);// 30s
+    enableLogStaleNodes = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_DEFAULT);
+    this.numOfDeadDatanodesRemove = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_REMOVE_DEAD_DATANODE_BATCHNUM_KEY,
+        DFSConfigKeys.DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT);
 
     if (avoidStaleDataNodesForWrite && staleInterval < recheckInterval) {
       this.heartbeatRecheckInterval = staleInterval;
@@ -161,6 +183,11 @@ class HeartbeatManager implements DatanodeStatistics {
   public int getNumDatanodesInService() {
     return stats.getNodesInService();
   }
+
+  @Override
+  public int getInServiceAvailableVolumeCount() {
+    return stats.getNodesInServiceAvailableVolumeCount();
+  }
   
   @Override
   public long getCacheCapacity() {
@@ -228,6 +255,7 @@ class HeartbeatManager implements DatanodeStatistics {
     if (node.isAlive()) {
       stats.subtract(node);
       datanodes.remove(node);
+      removeNodeFromStaleList(node);
       node.setAlive(false);
     }
   }
@@ -237,9 +265,12 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void updateLifeline(final DatanodeDescriptor node,
@@ -247,13 +278,16 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    // This intentionally calls updateHeartbeatState instead of
-    // updateHeartbeat, because we don't want to modify the
-    // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
-    // not count as arrival of the first heartbeat.
-    blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      // This intentionally calls updateHeartbeatState instead of
+      // updateHeartbeat, because we don't want to modify the
+      // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
+      // not count as arrival of the first heartbeat.
+      blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void startDecommission(final DatanodeDescriptor node) {
@@ -324,9 +358,62 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   /**
+   * Remove deadNode from StaleNodeList if it exists.
+   * This method assumes that it is called inside a synchronized block.
+   *
+   * @param d node descriptor to be marked as dead.
+   * @return true if the node was already on the stale list.
+   */
+  private boolean removeNodeFromStaleList(DatanodeDescriptor d) {
+    return removeNodeFromStaleList(d, true);
+  }
+
+  /**
+   * Remove node from StaleNodeList if it exists.
+   * If enabled, the log will show whether the node is removed from list because
+   * it is dead or not.
+   * This method assumes that it is called inside a synchronized block.
+   *
+   * @param d node descriptor to be marked as dead.
+   * @param isDead
+   * @return true if the node was already in the stale list.
+   */
+  private boolean removeNodeFromStaleList(DatanodeDescriptor d,
+      boolean isDead) {
+    boolean result = false;
+    result = staleDataNodes.remove(d);
+    if (enableLogStaleNodes && result) {
+      LOG.info(String.format(isDead ?
+              REPORT_REMOVE_DEAD_NODE_ENTRY : REPORT_REMOVE_STALE_NODE_ENTRY,
+          d));
+    }
+    return result;
+  }
+
+  /**
+   * Dump the new stale data nodes added since last heartbeat check.
+   *
+   * @param staleNodes list of datanodes added in the last heartbeat check.
+   */
+  private void dumpStaleNodes(List<DatanodeDescriptor> staleNodes) {
+    // log nodes detected as stale
+    if (enableLogStaleNodes && (!staleNodes.isEmpty())) {
+      StringBuilder staleLogMSG =
+          new StringBuilder(String.format(REPORT_DELTA_STALE_DN_HEADER,
+              staleNodes.size()));
+      for (int ind = 0; ind < staleNodes.size(); ind++) {
+        String logFormat = (ind % REPORT_STALE_NODE_NODES_PER_LINE == 0) ?
+            REPORT_STALE_DN_LINE_ENTRY : REPORT_STALE_DN_LINE_TAIL;
+        staleLogMSG.append(String.format(logFormat, staleNodes.get(ind)));
+      }
+      LOG.info(staleLogMSG.toString());
+    }
+  }
+
+  /**
    * Check if there are any expired heartbeats, and if so,
    * whether any blocks have to be re-replicated.
-   * While removing dead datanodes, make sure that only one datanode is marked
+   * While removing dead datanodes, make sure that limited datanodes is marked
    * dead at a time within the synchronized section. Otherwise, a cascading
    * effect causes more datanodes to be declared dead.
    * Check if there are any failed storage and if so,
@@ -358,72 +445,89 @@ class HeartbeatManager implements DatanodeStatistics {
       return;
     }
     boolean allAlive = false;
+    // Locate limited dead nodes.
+    List<DatanodeDescriptor> deadDatanodes = new ArrayList<>(
+        numOfDeadDatanodesRemove);
+    // Locate limited failed storages that isn't on a dead node.
+    List<DatanodeStorageInfo> failedStorages = new ArrayList<>(
+        numOfDeadDatanodesRemove);
+
     while (!allAlive) {
-      // locate the first dead node.
-      DatanodeDescriptor dead = null;
 
-      // locate the first failed storage that isn't on a dead node.
-      DatanodeStorageInfo failedStorage = null;
+      deadDatanodes.clear();
+      failedStorages.clear();
 
-      // check the number of stale nodes
-      int numOfStaleNodes = 0;
+      // check the number of stale storages
       int numOfStaleStorages = 0;
+      List<DatanodeDescriptor> staleNodes = new ArrayList<>();
       synchronized(this) {
         for (DatanodeDescriptor d : datanodes) {
           // check if an excessive GC pause has occurred
           if (shouldAbortHeartbeatCheck(0)) {
             return;
           }
-          if (dead == null && dm.isDatanodeDead(d)) {
+          if (deadDatanodes.size() < numOfDeadDatanodesRemove &&
+              dm.isDatanodeDead(d)) {
             stats.incrExpiredHeartbeats();
-            dead = d;
+            deadDatanodes.add(d);
+            // remove the node from stale list to adjust the stale list size
+            // before setting the stale count of the DatanodeManager
+            removeNodeFromStaleList(d);
+          } else {
+            if (d.isStale(dm.getStaleInterval())) {
+              if (staleDataNodes.add(d)) {
+                // the node is n
+                staleNodes.add(d);
+              }
+            } else {
+              // remove the node if it is no longer stale
+              removeNodeFromStaleList(d, false);
+            }
           }
-          if (d.isStale(dm.getStaleInterval())) {
-            LOG.warn(String.format("Stale datanode {}."
-                    + " No heartbeat received since last {} milliseconds"),
-                    d.getName(), dm.getStaleInterval());
-            numOfStaleNodes++;
-          }
+
           DatanodeStorageInfo[] storageInfos = d.getStorageInfos();
           for(DatanodeStorageInfo storageInfo : storageInfos) {
             if (storageInfo.areBlockContentsStale()) {
               numOfStaleStorages++;
             }
 
-            if (failedStorage == null &&
+            if (failedStorages.size() < numOfDeadDatanodesRemove &&
                 storageInfo.areBlocksOnFailedStorage() &&
-                d != dead) {
-              failedStorage = storageInfo;
+                !deadDatanodes.contains(d)) {
+              failedStorages.add(storageInfo);
             }
           }
-
         }
         
         // Set the number of stale nodes in the DatanodeManager
-        dm.setNumStaleNodes(numOfStaleNodes);
+        dm.setNumStaleNodes(staleDataNodes.size());
         dm.setNumStaleStorages(numOfStaleStorages);
       }
 
-      allAlive = dead == null && failedStorage == null;
+      // log nodes detected as stale since last heartBeat
+      dumpStaleNodes(staleNodes);
+
+      allAlive = deadDatanodes.isEmpty() && failedStorages.isEmpty();
       if (!allAlive && namesystem.isInStartupSafeMode()) {
         return;
       }
-      if (dead != null) {
+
+      for (DatanodeDescriptor dead : deadDatanodes) {
         // acquire the fsnamesystem lock, and then remove the dead node.
         namesystem.writeLock();
         try {
           dm.removeDeadDatanode(dead, !dead.isMaintenance());
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeDeadDatanode");
         }
       }
-      if (failedStorage != null) {
+      for (DatanodeStorageInfo failedStorage : failedStorages) {
         // acquire the fsnamesystem lock, and remove blocks on the storage.
         namesystem.writeLock();
         try {
           blockManager.removeBlocksAssociatedTo(failedStorage);
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeBlocksAssociatedTo");
         }
       }
     }

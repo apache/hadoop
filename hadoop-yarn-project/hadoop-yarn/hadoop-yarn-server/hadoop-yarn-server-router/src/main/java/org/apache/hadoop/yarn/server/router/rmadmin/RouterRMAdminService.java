@@ -20,23 +20,19 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
@@ -67,11 +63,21 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * RouterRMAdminService is a service that runs on each router that can be used
@@ -79,7 +85,7 @@ import com.google.common.annotations.VisibleForTesting;
  * messages from client to the cluster resource manager. It listens
  * {@code ResourceManagerAdministrationProtocol} messages from the client and
  * creates a request intercepting pipeline instance for each client. The
- * pipeline is a chain of intercepter instances that can inspect and modify the
+ * pipeline is a chain of interceptor instances that can inspect and modify the
  * request/response as needed. The main difference with AMRMProxyService is the
  * protocol they implement.
  */
@@ -103,7 +109,7 @@ public class RouterRMAdminService extends AbstractService
 
   @Override
   protected void serviceStart() throws Exception {
-    LOG.info("Starting Router RMAdmin Service");
+    LOG.info("Starting Router RMAdmin Service.");
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation.setConfiguration(conf);
@@ -117,9 +123,7 @@ public class RouterRMAdminService extends AbstractService
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
-    this.userPipelineMap = Collections.synchronizedMap(
-        new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
-            maxCacheSize, true));
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
 
     Configuration serverConf = new Configuration(conf);
 
@@ -130,15 +134,19 @@ public class RouterRMAdminService extends AbstractService
     this.server = rpc.getServer(ResourceManagerAdministrationProtocol.class,
         this, listenerEndpoint, serverConf, null, numWorkerThreads);
 
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      refreshServiceAcls(conf, RouterPolicyProvider.getInstance());
+    }
+
     this.server.start();
-    LOG.info("Router RMAdminService listening on address: "
-        + this.server.getListenerAddress());
+    LOG.info("Router RMAdminService listening on address: {}.", this.server.getListenerAddress());
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping Router RMAdminService");
+    LOG.info("Stopping Router RMAdminService.");
     if (this.server != null) {
       this.server.stop();
     }
@@ -146,29 +154,18 @@ public class RouterRMAdminService extends AbstractService
     super.serviceStop();
   }
 
-  /**
-   * Returns the comma separated intercepter class names from the configuration.
-   *
-   * @param conf
-   * @return the intercepter class names as an instance of ArrayList
-   */
-  private List<String> getInterceptorClassNames(Configuration conf) {
-    String configuredInterceptorClassNames =
-        conf.get(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
-            YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS);
-
-    List<String> interceptorClassNames = new ArrayList<String>();
-    Collection<String> tempList =
-        StringUtils.getStringCollection(configuredInterceptorClassNames);
-    for (String item : tempList) {
-      interceptorClassNames.add(item.trim());
-    }
-
-    return interceptorClassNames;
+  void refreshServiceAcls(Configuration configuration,
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
   }
 
   @VisibleForTesting
-  protected RequestInterceptorChainWrapper getInterceptorChain()
+  public Server getServer() {
+    return this.server;
+  }
+
+  @VisibleForTesting
+  public RequestInterceptorChainWrapper getInterceptorChain()
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
     RequestInterceptorChainWrapper chain = userPipelineMap.get(user);
@@ -179,9 +176,9 @@ public class RouterRMAdminService extends AbstractService
   }
 
   /**
-   * Gets the Request intercepter chains for all the users.
+   * Gets the Request interceptor chains for all the users.
    *
-   * @return the request intercepter chains.
+   * @return the request interceptor chains.
    */
   @VisibleForTesting
   protected Map<String, RequestInterceptorChainWrapper> getPipelines() {
@@ -189,57 +186,22 @@ public class RouterRMAdminService extends AbstractService
   }
 
   /**
-   * This method creates and returns reference of the first intercepter in the
-   * chain of request intercepter instances.
+   * This method creates and returns reference of the first interceptor in the
+   * chain of request interceptor instances.
    *
-   * @return the reference of the first intercepter in the chain
+   * @return the reference of the first interceptor in the chain
    */
   @VisibleForTesting
   protected RMAdminRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-
-    List<String> interceptorClassNames = getInterceptorClassNames(conf);
-
-    RMAdminRequestInterceptor pipeline = null;
-    RMAdminRequestInterceptor current = null;
-    for (String interceptorClassName : interceptorClassNames) {
-      try {
-        Class<?> interceptorClass = conf.getClassByName(interceptorClassName);
-        if (RMAdminRequestInterceptor.class
-            .isAssignableFrom(interceptorClass)) {
-          RMAdminRequestInterceptor interceptorInstance =
-              (RMAdminRequestInterceptor) ReflectionUtils
-                  .newInstance(interceptorClass, conf);
-          if (pipeline == null) {
-            pipeline = interceptorInstance;
-            current = interceptorInstance;
-            continue;
-          } else {
-            current.setNextInterceptor(interceptorInstance);
-            current = interceptorInstance;
-          }
-        } else {
-          throw new YarnRuntimeException(
-              "Class: " + interceptorClassName + " not instance of "
-                  + RMAdminRequestInterceptor.class.getCanonicalName());
-        }
-      } catch (ClassNotFoundException e) {
-        throw new YarnRuntimeException(
-            "Could not instantiate RMAdminRequestInterceptor: "
-                + interceptorClassName,
-            e);
-      }
-    }
-
-    if (pipeline == null) {
-      throw new YarnRuntimeException(
-          "RequestInterceptor pipeline is not configured in the system");
-    }
-    return pipeline;
+    return RouterServerUtil.createRequestInterceptorChain(conf,
+        YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
+        YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS,
+        RMAdminRequestInterceptor.class);
   }
 
   /**
-   * Initializes the request intercepter pipeline for the specified user.
+   * Initializes the request interceptor pipeline for the specified user.
    *
    * @param user
    */
@@ -256,14 +218,14 @@ public class RouterRMAdminService extends AbstractService
       try {
         // We should init the pipeline instance after it is created and then
         // add to the map, to ensure thread safe.
-        LOG.info("Initializing request processing pipeline for user: {}", user);
+        LOG.info("Initializing request processing pipeline for user: {}.", user);
 
         RMAdminRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
         chainWrapper.init(interceptorChain);
       } catch (Exception e) {
-        LOG.error("Init RMAdminRequestInterceptor error for user: " + user, e);
+        LOG.error("Init RMAdminRequestInterceptor error for user: {}.", user, e);
         throw e;
       }
 
@@ -290,9 +252,9 @@ public class RouterRMAdminService extends AbstractService
     }
 
     /**
-     * Gets the root request intercepter.
+     * Gets the root request interceptor.
      *
-     * @return the root request intercepter
+     * @return the root request interceptor
      */
     public synchronized RMAdminRequestInterceptor getRootInterceptor() {
       return rootInterceptor;
@@ -428,5 +390,33 @@ public class RouterRMAdminService extends AbstractService
       throws YarnException, IOException {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
     return pipeline.getRootInterceptor().mapAttributesToNodes(request);
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(
+      DeregisterSubClusterRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().deregisterSubCluster(request);
+  }
+
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().saveFederationQueuePolicy(request);
+  }
+
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().batchSaveFederationQueuePolicies(request);
+  }
+
+  @Override
+  public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().listFederationQueuePolicies(request);
   }
 }

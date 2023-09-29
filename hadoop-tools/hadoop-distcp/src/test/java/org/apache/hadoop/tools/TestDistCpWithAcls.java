@@ -96,7 +96,7 @@ public class TestDistCpWithAcls {
 
   @AfterClass
   public static void shutdown() {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
     }

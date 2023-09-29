@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -71,11 +71,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * A JournalNode can manage journals for several clusters at once.
@@ -264,9 +264,9 @@ public class Journal implements Closeable {
    */
   @Override // Closeable
   public void close() throws IOException {
-    storage.close();
     IOUtils.closeStream(committedTxnId);
     IOUtils.closeStream(curSegment);
+    storage.close();
   }
   
   JNStorage getStorage() {
@@ -750,10 +750,23 @@ public class Journal implements Closeable {
           "is a requirement to fetch journaled edits via RPC. Please enable " +
           "it via " + DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY);
     }
-    if (sinceTxId > getHighestWrittenTxId()) {
-      // Requested edits that don't exist yet; short-circuit the cache here
+    long highestTxId = getHighestWrittenTxId();
+    if (sinceTxId == highestTxId + 1) {
+      // Requested edits that don't exist yet, but this is expected,
+      // because namenode always get the journaled edits with the sinceTxId
+      // equal to image.getLastAppliedTxId() + 1. Short-circuiting the cache here
+      // and returning a response with a count of 0.
       metrics.rpcEmptyResponses.incr();
       return GetJournaledEditsResponseProto.newBuilder().setTxnCount(0).build();
+    } else if (sinceTxId > highestTxId + 1) {
+      // Requested edits that don't exist yet and this is unexpected. Means that there is a lag
+      // in this journal that does not contain some edits that should exist.
+      // Throw one NewerTxnIdException to make namenode treat this response as an exception.
+      // More detailed info please refer to: HDFS-16659 and HDFS-16771.
+      metrics.rpcEmptyResponses.incr();
+      throw new NewerTxnIdException(
+          "Highest txn ID available in the journal is %d, but requested txns starting at %d.",
+          highestTxId, sinceTxId);
     }
     try {
       List<ByteBuffer> buffers = new ArrayList<>();
@@ -773,7 +786,7 @@ public class Journal implements Closeable {
           .setEditLog(output.toByteString())
           .build();
     } catch (JournaledEditsCache.CacheMissException cme) {
-      metrics.rpcRequestCacheMissAmount.add(cme.getCacheMissAmount());
+      metrics.addRpcRequestCacheMissAmount(cme.getCacheMissAmount());
       throw cme;
     }
   }
@@ -1178,6 +1191,8 @@ public class Journal implements Closeable {
     // directory will be renamed.  It will be reopened lazily on next access.
     IOUtils.cleanupWithLogger(LOG, committedTxnId);
     storage.getJournalManager().doRollback();
+    // HADOOP-17142: refresh properties after rollback performed.
+    storage.refreshStorage();
   }
 
   synchronized void discardSegments(long startTxId) throws IOException {

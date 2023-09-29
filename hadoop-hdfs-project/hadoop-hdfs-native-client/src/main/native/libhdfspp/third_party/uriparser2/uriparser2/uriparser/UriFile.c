@@ -90,7 +90,7 @@ static URI_INLINE int URI_FUNC(FilenameToUriString)(const URI_CHAR * filename,
 		if ((input[0] == _UT('\0'))
 				|| (fromUnix && input[0] == _UT('/'))
 				|| (!fromUnix && input[0] == _UT('\\'))) {
-			/* Copy text after last seperator */
+			/* Copy text after last separator */
 			if (lastSep + 1 < input) {
 				if (!fromUnix && absolute && (firstSegment == URI_TRUE)) {
 					/* Quick hack to not convert "C:" to "C%3A" */

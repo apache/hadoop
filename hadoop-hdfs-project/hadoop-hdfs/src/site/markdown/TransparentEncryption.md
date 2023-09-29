@@ -53,7 +53,7 @@ Architecture
 
 For transparent encryption, we introduce a new abstraction to HDFS: the *encryption zone*. An encryption zone is a special directory whose contents will be transparently encrypted upon write and transparently decrypted upon read. Each encryption zone is associated with a single *encryption zone key* which is specified when the zone is created. Each file within an encryption zone has its own unique *data encryption key (DEK)*. DEKs are never handled directly by HDFS. Instead, HDFS only ever handles an *encrypted data encryption key (EDEK)*. Clients decrypt an EDEK, and then use the subsequent DEK to read and write data. HDFS datanodes simply see a stream of encrypted bytes.
 
-A very important use case of encryption is to "switch it on" and ensure all files across the entire filesystem are encrypted. To support this strong guarantee without losing the flexibility of using different encryption zone keys in different parts of the filesystem, HDFS allows *nested encryption zones*. After an encryption zone is created (e.g. on the root directory `/`), a user can create more encryption zones on its descendant directories (e.g. `/home/alice`) with different keys. The EDEK of a file will generated using the encryption zone key from the closest ancestor encryption zone.
+A very important use case of encryption is to "switch it on" and ensure all files across the entire filesystem are encrypted. To support this strong guarantee without losing the flexibility of using different encryption zone keys in different parts of the filesystem, HDFS allows *nested encryption zones*. After an encryption zone is created (e.g. on the root directory `/`), a user can create more encryption zones on its descendant directories (e.g. `/home/alice`) with different keys. The EDEK of a file will be generated using the encryption zone key from the closest ancestor encryption zone.
 
 A new cluster service is required to manage encryption keys: the Hadoop Key Management Server (KMS). In the context of HDFS encryption, the KMS performs three basic responsibilities:
 
@@ -111,11 +111,17 @@ Default: `org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec, org.apache.hadoop.c
 
 Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. The first implementation will be used if available, others are fallbacks.
 
+#### hadoop.security.crypto.codec.classes.sm4.ctr.nopadding
+
+Default: `org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec, org.apache.hadoop.crypto.JceSm4CtrCryptoCodec`
+
+Comma-separated list of crypto codec implementations for SM4/CTR/NoPadding. The first implementation will be used if available, others are fallbacks.
+
 #### hadoop.security.crypto.cipher.suite
 
 Default: `AES/CTR/NoPadding`
 
-Cipher suite for crypto codec.
+Cipher suite for crypto codec, now AES/CTR/NoPadding and SM4/CTR/NoPadding are supported.
 
 #### hadoop.security.crypto.jce.provider
 

@@ -92,6 +92,9 @@ public class AuthenticatedURL {
     @Override
     public void put(URI uri, Map<String, List<String>> responseHeaders) {
       List<String> headers = responseHeaders.get("Set-Cookie");
+      if (headers == null) {
+        headers = responseHeaders.get("set-cookie");
+      }
       if (headers != null) {
         for (String header : headers) {
           List<HttpCookie> cookies;
@@ -99,7 +102,10 @@ public class AuthenticatedURL {
             cookies = HttpCookie.parse(header);
           } catch (IllegalArgumentException iae) {
             // don't care. just skip malformed cookie headers.
-            LOG.debug("Cannot parse cookie header: " + header, iae);
+            // When header is empty - "Cannot parse cookie header, header = ,
+            // reason = Empty cookie header string"
+            LOG.debug("Cannot parse cookie header, header = {}, reason = {} ",
+                header, iae.getMessage());
             continue;
           }
           for (HttpCookie cookie : cookies) {
@@ -150,7 +156,6 @@ public class AuthenticatedURL {
         cookieHeaders = new HashMap<>();
         cookieHeaders.put("Cookie", Arrays.asList(cookie.toString()));
       }
-      LOG.trace("Setting token value to {} ({})", authCookie, oldCookie);
     }
 
     private void setAuthCookieValue(String value) {

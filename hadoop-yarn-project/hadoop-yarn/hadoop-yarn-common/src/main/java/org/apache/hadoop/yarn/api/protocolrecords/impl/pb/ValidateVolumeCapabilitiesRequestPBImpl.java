@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
@@ -68,9 +68,9 @@ public class ValidateVolumeCapabilitiesRequestPBImpl extends
     CsiAdaptorProtos.VolumeCapability vc =
         CsiAdaptorProtos.VolumeCapability.newBuilder()
             .setAccessMode(CsiAdaptorProtos.VolumeCapability.AccessMode
-                .valueOf(volumeCapability.getAccessMode().ordinal()))
+                .forNumber(volumeCapability.getAccessMode().ordinal()))
             .setVolumeType(CsiAdaptorProtos.VolumeCapability.VolumeType
-                .valueOf(volumeCapability.getVolumeType().ordinal()))
+                .forNumber(volumeCapability.getVolumeType().ordinal()))
             .addAllMountFlags(volumeCapability.getMountFlags())
             .build();
     builder.addVolumeCapabilities(vc);

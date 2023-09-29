@@ -27,12 +27,16 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHO
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_DIRS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -58,6 +62,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -68,6 +74,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.SaslPropertiesResolver;
+import org.apache.hadoop.util.Preconditions;
 
 import java.util.concurrent.TimeUnit;
 
@@ -80,6 +87,7 @@ public class DNConf {
   final int socketTimeout;
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
+  final int ecChecksumSocketTimeout;
   private final int transferSocketSendBufferSize;
   private final int transferSocketRecvBufferSize;
   private final boolean tcpNoDelay;
@@ -93,18 +101,19 @@ public class DNConf {
   final boolean encryptDataTransfer;
   final boolean connectToDnViaHostname;
   final boolean overwriteDownstreamDerivedQOP;
+  private final boolean pmemCacheRecoveryEnabled;
 
   final long readaheadLength;
   final long heartBeatInterval;
   private final long lifelineIntervalMs;
-  final long blockReportInterval;
-  final long blockReportSplitThreshold;
-  final boolean peerStatsEnabled;
-  final boolean diskStatsEnabled;
-  final long outliersReportIntervalMs;
+  volatile long blockReportInterval;
+  volatile long blockReportSplitThreshold;
+  volatile boolean peerStatsEnabled;
+  volatile boolean diskStatsEnabled;
+  volatile long outliersReportIntervalMs;
   final long ibrInterval;
-  final long initialBlockReportDelayMs;
-  final long cacheReportInterval;
+  volatile long initialBlockReportDelayMs;
+  volatile long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
@@ -115,6 +124,8 @@ public class DNConf {
   
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
+
+  private final long processCommandsThresholdMs;
 
   final long maxLockedMemory;
   private final String[] pmemDirs;
@@ -138,6 +149,9 @@ public class DNConf {
     socketKeepaliveTimeout = getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY,
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT);
+    ecChecksumSocketTimeout = getConf().getInt(
+        DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY,
+        DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT);
     this.transferSocketSendBufferSize = getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
@@ -201,19 +215,7 @@ public class DNConf {
     this.datanodeSlowIoWarningThresholdMs = getConf().getLong(
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
-
-    long initBRDelay = getConf().getTimeDuration(
-        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT,
-        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-    if (initBRDelay >= blockReportInterval) {
-      initBRDelay = 0;
-      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY + " is "
-          + "greater than or equal to" + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY
-          + ".  Setting initial delay to 0 msec:");
-    }
-    initialBlockReportDelayMs = initBRDelay;
-    
+    initBlockReportDelay();
     heartBeatInterval = getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
         TimeUnit.MILLISECONDS);
@@ -264,7 +266,7 @@ public class DNConf {
         DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT);
 
     this.pmemDirs = getConf().getTrimmedStrings(
-        DFS_DATANODE_CACHE_PMEM_DIRS_KEY);
+        DFS_DATANODE_PMEM_CACHE_DIRS_KEY);
 
     this.restartReplicaExpiry = getConf().getLong(
         DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY,
@@ -285,6 +287,29 @@ public class DNConf {
     String[] dataDirs =
         getConf().getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     this.volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
+
+    this.pmemCacheRecoveryEnabled = getConf().getBoolean(
+        DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY,
+        DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT);
+
+    this.processCommandsThresholdMs = getConf().getTimeDuration(
+        DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY,
+        DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT,
+        TimeUnit.MILLISECONDS
+    );
+  }
+
+  private void initBlockReportDelay() {
+    long initBRDelay = getConf().getTimeDuration(
+        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
+        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    if (initBRDelay >= blockReportInterval || initBRDelay < 0) {
+      initBRDelay = 0;
+      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY +
+          " is greater than or equal to " + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY +
+          ". Setting initial delay to 0 msec.");
+    }
+    initialBlockReportDelayMs = initBRDelay;
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -294,7 +319,7 @@ public class DNConf {
   
   /**
    * Returns the configuration.
-   * 
+   *
    * @return Configuration the configuration
    */
   public Configuration getConf() {
@@ -353,6 +378,15 @@ public class DNConf {
    */
   public int getSocketWriteTimeout() {
     return socketWriteTimeout;
+  }
+
+  /**
+   * Returns socket timeout for computing the checksum of EC blocks
+   *
+   * @return int socket timeout
+   */
+  public int getEcChecksumSocketTimeout() {
+    return ecChecksumSocketTimeout;
   }
 
   /**
@@ -433,5 +467,59 @@ public class DNConf {
 
   public String[] getPmemVolumes() {
     return pmemDirs;
+  }
+
+  public boolean getPmemCacheRecoveryEnabled() {
+    return pmemCacheRecoveryEnabled;
+  }
+
+  public long getProcessCommandsThresholdMs() {
+    return processCommandsThresholdMs;
+  }
+
+  void setBlockReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0,
+        DFS_BLOCKREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
+    blockReportInterval = intervalMs;
+  }
+
+  public long getBlockReportInterval() {
+    return blockReportInterval;
+  }
+
+  void setCacheReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0,
+        DFS_CACHEREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
+    cacheReportInterval = intervalMs;
+  }
+
+  public long getCacheReportInterval() {
+    return cacheReportInterval;
+  }
+
+  void setBlockReportSplitThreshold(long threshold) {
+    Preconditions.checkArgument(threshold >= 0,
+        DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY + " should be larger than or equal to 0");
+    blockReportSplitThreshold = threshold;
+  }
+
+  void setInitBRDelayMs(String delayMs) {
+    dn.getConf().set(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, delayMs);
+    initBlockReportDelay();
+  }
+
+  void setPeerStatsEnabled(boolean enablePeerStats) {
+    peerStatsEnabled = enablePeerStats;
+  }
+
+  public void setFileIoProfilingSamplingPercentage(int samplingPercentage) {
+    diskStatsEnabled = Util.isDiskStatsEnabled(samplingPercentage);
+  }
+
+  public void setOutliersReportIntervalMs(String reportIntervalMs) {
+    dn.getConf().set(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, reportIntervalMs);
+    outliersReportIntervalMs = getConf().getTimeDuration(
+        DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
+        DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
   }
 }

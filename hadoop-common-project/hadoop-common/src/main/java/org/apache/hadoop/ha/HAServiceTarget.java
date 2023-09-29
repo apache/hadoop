@@ -31,7 +31,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ha.protocolPB.ZKFCProtocolClientSideTranslatorPB;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Represents a target of the client side HA administration commands.
@@ -43,6 +43,12 @@ public abstract class HAServiceTarget {
   private static final String HOST_SUBST_KEY = "host";
   private static final String PORT_SUBST_KEY = "port";
   private static final String ADDRESS_SUBST_KEY = "address";
+
+  /**
+   * The HAState this service target is intended to be after transition
+   * is complete.
+   */
+  private HAServiceProtocol.HAServiceState transitionTargetHAStatus;
 
   /**
    * @return the IPC address of the target node.
@@ -87,10 +93,22 @@ public abstract class HAServiceTarget {
   
   /**
    * @return a proxy to connect to the target HA Service.
+   * @param timeoutMs timeout in milliseconds.
+   * @param conf Configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   public HAServiceProtocol getProxy(Configuration conf, int timeoutMs)
       throws IOException {
     return getProxyForAddress(conf, timeoutMs, getAddress());
+  }
+
+  public void setTransitionTargetHAStatus(
+      HAServiceProtocol.HAServiceState status) {
+    this.transitionTargetHAStatus = status;
+  }
+
+  public HAServiceProtocol.HAServiceState getTransitionTargetHAStatus() {
+    return this.transitionTargetHAStatus;
   }
 
   /**
@@ -100,26 +118,37 @@ public abstract class HAServiceTarget {
    * returned proxy defaults to using {@link #getAddress()}, which means this
    * method's behavior is identical to {@link #getProxy(Configuration, int)}.
    *
-   * @param conf Configuration
+   * @param conf configuration.
    * @param timeoutMs timeout in milliseconds
    * @return a proxy to connect to the target HA service for health monitoring
    * @throws IOException if there is an error
    */
   public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
       int timeoutMs) throws IOException {
+    return getHealthMonitorProxy(conf, timeoutMs, 1);
+  }
+
+  public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
+      int timeoutMs, int retries) throws IOException {
     InetSocketAddress addr = getHealthMonitorAddress();
     if (addr == null) {
       addr = getAddress();
     }
-    return getProxyForAddress(conf, timeoutMs, addr);
+    return getProxyForAddress(conf, timeoutMs, retries, addr);
   }
 
   private HAServiceProtocol getProxyForAddress(Configuration conf,
       int timeoutMs, InetSocketAddress addr) throws IOException {
+    // Lower the timeout by setting retries to 1, so we quickly fail to connect
+    return getProxyForAddress(conf, timeoutMs, 1, addr);
+  }
+
+  private HAServiceProtocol getProxyForAddress(Configuration conf,
+      int timeoutMs, int retries, InetSocketAddress addr) throws IOException {
     Configuration confCopy = new Configuration(conf);
-    // Lower the timeout so we quickly fail to connect
     confCopy.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+        retries);
     SocketFactory factory = NetUtils.getDefaultSocketFactory(confCopy);
     return new HAServiceProtocolClientSideTranslatorPB(
         addr,
@@ -128,6 +157,9 @@ public abstract class HAServiceTarget {
 
   /**
    * @return a proxy to the ZKFC which is associated with this HA service.
+   * @param conf configuration.
+   * @param timeoutMs timeout in milliseconds.
+   * @throws IOException raised on errors performing I/O.
    */
   public ZKFCProtocol getZKFCProxy(Configuration conf, int timeoutMs)
       throws IOException {

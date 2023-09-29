@@ -19,8 +19,9 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController;
+import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -39,12 +40,6 @@ import java.util.concurrent.TimeUnit;
  */
 @InterfaceAudience.Private
 public class RBFConfigKeys extends CommonConfigurationKeysPublic {
-
-  public static final String HDFS_RBF_SITE_XML = "hdfs-rbf-site.xml";
-
-  static {
-    Configuration.addDefaultResource(HDFS_RBF_SITE_XML);
-  }
 
   // HDFS Router-based federation
   public static final String FEDERATION_ROUTER_PREFIX =
@@ -86,6 +81,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends RouterRpcMonitor>
       DFS_ROUTER_METRICS_CLASS_DEFAULT =
       FederationRPCPerformanceMonitor.class;
+  public static final String DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY =
+      FEDERATION_ROUTER_PREFIX + "top.num.token.realowners";
+  public static final int
+      DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT = 10;
 
   // HDFS Router heartbeat
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =
@@ -97,8 +96,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat.interval";
   public static final long DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_HEALTH_MONITOR_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "health.monitor.timeout";
+  public static final long DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(30);
   public static final String DFS_ROUTER_MONITOR_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.namenode";
+  public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED =
+      FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservice.resolution-enabled";
+  public static final boolean
+      DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED_DEFAULT = false;
+  public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLVER_IMPL
+      = FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservice.resolver.impl";
   public static final String DFS_ROUTER_MONITOR_LOCAL_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.localnamenode.enable";
   public static final boolean DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT = true;
@@ -106,6 +115,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat-state.interval";
   public static final long DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.jmx.interval";
+  public static final long DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT = 0;
 
   // HDFS Router NN client
   public static final String
@@ -130,6 +142,12 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "connection.clean.ms";
   public static final long DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.multiple.socket";
+  public static final boolean DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_DEFAULT = false;
+  public static final String DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY =
+      FEDERATION_ROUTER_PREFIX + "max.concurrency.per.connection";
+  public static final int DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_DEFAULT = 1;
 
   // HDFS Router RPC client
   public static final String DFS_ROUTER_CLIENT_THREADS_SIZE =
@@ -176,6 +194,20 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "enable";
   public static final boolean DFS_ROUTER_STORE_ENABLE_DEFAULT = true;
 
+  public static final String DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY =
+      FEDERATION_ROUTER_PREFIX + "observer.read.default";
+  public static final boolean DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE = false;
+  public static final String DFS_ROUTER_OBSERVER_READ_OVERRIDES =
+      FEDERATION_ROUTER_PREFIX + "observer.read.overrides";
+
+  public static final String DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE =
+      FEDERATION_ROUTER_PREFIX + "observer.federated.state.propagation.maxsize";
+  public static final int DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT = 5;
+
+  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY =
+      FEDERATION_ROUTER_PREFIX + "observer.state.id.refresh.period";
+  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT = "15s";
+
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       FEDERATION_STORE_PREFIX + "serializer";
   public static final Class<StateStoreSerializerPBImpl>
@@ -201,10 +233,39 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS
+      = FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT = -1;
   public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
       FEDERATION_STORE_PREFIX + "router.expiration";
   public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS =
+      FEDERATION_STORE_ROUTER_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT = -1;
+
+  // HDFS Router-based federation State Store ZK DRIVER
+  public static final String FEDERATION_STORE_ZK_DRIVER_PREFIX =
+      RBFConfigKeys.FEDERATION_STORE_PREFIX + "driver.zk.";
+  public static final String FEDERATION_STORE_ZK_PARENT_PATH =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "parent-path";
+  public static final String FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT =
+      "/hdfs-federation";
+  public static final String FEDERATION_STORE_ZK_ASYNC_MAX_THREADS =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "async.max.threads";
+  public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
+      -1;
+
+  // HDFS Router-based federation File based store implementation specific configs
+  public static final String FEDERATION_STORE_FILE_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.file.async.threads";
+  public static final int FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT = 0;
+
+  public static final String FEDERATION_STORE_FS_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.fs.async.threads";
+  public static final int FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT = 0;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =
@@ -242,7 +303,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       TimeUnit.MINUTES.toMillis(1);
   /**
    * Remote router mount table cache is updated through RouterClient(RPC call).
-   * To improve performance, RouterClient connections are cached but it should
+   * To improve performance, RouterClient connections are cached, but it should
    * not be kept in cache forever. This property defines the max time a
    * connection can be cached.
    */
@@ -269,6 +330,13 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ADMIN_ENABLE =
       FEDERATION_ROUTER_PREFIX + "admin.enable";
   public static final boolean DFS_ROUTER_ADMIN_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY =
+      FEDERATION_ROUTER_PREFIX + "fs-limits.max-component-length";
+  public static final int DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT = 0;
+  public static final String DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "admin.mount.check.enable";
+  public static final boolean DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT =
+      false;
 
   // HDFS Router-based federation web
   public static final String DFS_ROUTER_HTTP_ENABLE =
@@ -295,14 +363,17 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
   public static final long DN_REPORT_CACHE_EXPIRE_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.get.dn.usage";
+  public static final boolean DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT = true;
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =
       FEDERATION_ROUTER_PREFIX + "quota.enable";
   public static final boolean DFS_ROUTER_QUOTA_ENABLED_DEFAULT = false;
-  public static final String DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL =
+  public static final String DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL =
       FEDERATION_ROUTER_PREFIX + "quota-cache.update.interval";
-  public static final long DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT =
+  public static final long DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL_DEFAULT =
       60000;
 
   // HDFS Router security
@@ -322,4 +393,47 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends AbstractDelegationTokenSecretManager>
       DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT =
       ZKDelegationTokenSecretManagerImpl.class;
+
+  // HDFS Router fairness
+  public static final String FEDERATION_ROUTER_FAIRNESS_PREFIX =
+      FEDERATION_ROUTER_PREFIX + "fairness.";
+  public static final String
+      DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "policy.controller.class";
+  public static final Class<? extends RouterRpcFairnessPolicyController>
+      DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS_DEFAULT =
+      NoRouterRpcFairnessPolicyController.class;
+  public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+  public static final String DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "acquire.timeout";
+  public static final long   DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(1);
+
+  // HDFS Router Federation Rename.
+  public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
+      FEDERATION_ROUTER_PREFIX + "federation.rename.";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "option";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT =
+      "NONE";
+  public static final String
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "force.close.open.file";
+  public static final boolean
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE_DEFAULT = true;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_MAP =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "map";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_BANDWIDTH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "bandwidth";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DELAY =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "delay";
+  public static final long DFS_ROUTER_FEDERATION_RENAME_DELAY_DEFAULT = 1000;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DIFF =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "diff";
+  public static final int DFS_ROUTER_FEDERATION_RENAME_DIFF_DEFAULT = 0;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "trash";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH_DEFAULT =
+      "trash";
 }

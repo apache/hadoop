@@ -334,7 +334,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     verifyBufferPositionAtEnd(inputChunks);
   }
 
-  private void verifyBufferPositionAtEnd(ECChunk[] inputChunks) {
+  void verifyBufferPositionAtEnd(ECChunk[] inputChunks) {
     for (ECChunk chunk : inputChunks) {
       if (chunk != null) {
         Assert.assertEquals(0, chunk.getBuffer().remaining());

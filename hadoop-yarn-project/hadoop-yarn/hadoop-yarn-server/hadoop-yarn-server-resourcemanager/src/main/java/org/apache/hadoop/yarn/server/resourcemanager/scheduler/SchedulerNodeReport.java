@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 
 /**
  * Node usage report.
@@ -30,12 +31,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class SchedulerNodeReport {
   private final Resource used;
   private final Resource avail;
+  private final ResourceUtilization utilization;
   private final int num;
   
   public SchedulerNodeReport(SchedulerNode node) {
     this.used = node.getAllocatedResource();
     this.avail = node.getUnallocatedResource();
     this.num = node.getNumContainers();
+    this.utilization = node.getNodeUtilization();
   }
   
   /**
@@ -57,5 +60,13 @@ public class SchedulerNodeReport {
    */
   public int getNumContainers() {
     return num;
+  }
+
+  /**
+   *
+   * @return utilization of this node
+   */
+  public ResourceUtilization getUtilization() {
+    return utilization;
   }
 }

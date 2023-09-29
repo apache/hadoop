@@ -36,6 +36,7 @@ public abstract class PlacementRule {
   /**
    * Set the config based on the passed in argument. This construct is used to
    * not pollute this abstract class with implementation specific references.
+   * @param initArg initialization arguments.
    */
   public void setConfig(Object initArg) {
     // Default is a noop
@@ -79,4 +80,29 @@ public abstract class PlacementRule {
    */
   public abstract ApplicationPlacementContext getPlacementForApp(
       ApplicationSubmissionContext asc, String user) throws YarnException;
+
+
+  /**
+   * Return the scheduler queue name the application should be placed in
+   * wrapped in an {@link ApplicationPlacementContext} object.
+   *
+   * A non <code>null</code> return value places the application in a queue,
+   * a <code>null</code> value means the queue is not yet determined. The
+   * next {@link PlacementRule} in the list maintained in the
+   * {@link PlacementManager} will be executed.
+   *
+   * @param asc The context of the application created on submission
+   * @param user The name of the user submitting the application
+   * @param recovery Indicates if the submission is a recovery
+   *
+   * @throws YarnException for any error while executing the rule
+   *
+   * @return The queue name wrapped in {@link ApplicationPlacementContext} or
+   * <code>null</code> if no queue was resolved
+   */
+  public ApplicationPlacementContext getPlacementForApp(
+      ApplicationSubmissionContext asc, String user, boolean recovery)
+      throws YarnException {
+    return getPlacementForApp(asc, user);
+  }
 }

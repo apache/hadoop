@@ -20,13 +20,18 @@ package org.apache.hadoop.security.authorize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.lang.annotation.Annotation;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.TestRPC.TestProtocol;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.TokenInfo;
 import org.junit.Test;
 
 public class TestServiceAuthorization {
@@ -49,6 +54,53 @@ public class TestServiceAuthorization {
       return new Service[] { new Service(ACL_CONFIG, TestProtocol.class), 
           new Service(ACL_CONFIG1, TestProtocol1.class),
       };
+    }
+  }
+
+  private static class CustomSecurityInfo extends SecurityInfo {
+    @Override
+    public KerberosInfo getKerberosInfo(Class<?> protocol,
+        Configuration conf) {
+      return new KerberosInfo() {
+        @Override
+        public Class<? extends Annotation> annotationType() {
+          return null;
+        }
+        @Override
+        public String serverPrincipal() {
+          return null;
+        }
+        @Override
+        public String clientPrincipal() {
+          return "dfs.datanode.kerberos.principal";
+        }
+      };
+    }
+
+    @Override
+    public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
+      return null;
+    }
+  }
+
+  @Test
+  public void testWithClientPrincipalOnUnsecureMode()
+      throws UnknownHostException {
+    UserGroupInformation hdfsUser = UserGroupInformation.createUserForTesting(
+        "hdfs", new String[] {"hadoop"});
+    ServiceAuthorizationManager serviceAuthorizationManager =
+        new ServiceAuthorizationManager();
+    SecurityUtil.setSecurityInfoProviders(new CustomSecurityInfo());
+
+    Configuration conf = new Configuration();
+    conf.set("dfs.datanode.kerberos.principal", "dn/_HOST@EXAMPLE.COM");
+    conf.set(ACL_CONFIG, "user1 hadoop");
+    serviceAuthorizationManager.refresh(conf, new TestPolicyProvider());
+    try {
+      serviceAuthorizationManager.authorize(hdfsUser, TestProtocol.class, conf,
+          InetAddress.getByName(ADDRESS));
+    } catch (AuthorizationException e) {
+      fail();
     }
   }
 

@@ -74,7 +74,9 @@ public abstract class AppAdminClient extends CompositeService {
     }
     if (!clientClassMap.containsKey(appType)) {
       throw new IllegalArgumentException("App admin client class name not " +
-          "specified for type " + appType);
+          "specified for type " + appType + ". Please ensure " + appType +
+          " framework has provided a client implementation to handle" +
+          " this functionality.");
     }
     String clientClassName = clientClassMap.get(appType);
     Class<? extends AppAdminClient> clientClass;
@@ -253,6 +255,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName            the name of the application.
    * @param componentInstances the name of the component instances.
+   * @return exit code.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -265,6 +270,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName    the name of the application.
    * @param components the name of the components.
+   * @return exit code.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -277,11 +285,14 @@ public abstract class AppAdminClient extends CompositeService {
    * @param appName  the name of the application.
    * @param userName the name of the user.
    * @return exit code
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws InterruptedException  if interrupted.
    */
   @Public
   @Unstable
   public abstract int actionCleanUp(String appName, String userName) throws
-      IOException, YarnException;
+      IOException, YarnException, InterruptedException;
 
   @Public
   @Unstable
@@ -295,6 +306,8 @@ public abstract class AppAdminClient extends CompositeService {
    * @param appName  the name of the application
    * @param fileName specification of application upgrade to save.
    * @return exit code
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -306,8 +319,8 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName the name of the application
    * @return exit code
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -319,6 +332,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName            the name of the application.
    * @param componentInstances the name of the component instances.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
+   * @return exit code.
    */
   @Public
   @Unstable

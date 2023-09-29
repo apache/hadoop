@@ -19,6 +19,7 @@
 package org.apache.hadoop.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -60,7 +61,7 @@ public class CompositeService extends AbstractService {
    */
   public List<Service> getServices() {
     synchronized (serviceList) {
-      return new ArrayList<Service>(serviceList);
+      return Collections.unmodifiableList(new ArrayList<>(serviceList));
     }
   }
 
@@ -81,7 +82,7 @@ public class CompositeService extends AbstractService {
   /**
    * If the passed object is an instance of {@link Service},
    * add it to the list of services managed by this {@link CompositeService}
-   * @param object
+   * @param object object.
    * @return true if a service is added, false otherwise.
    */
   protected boolean addIfService(Object object) {

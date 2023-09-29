@@ -57,6 +57,9 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     RENAMESNAPSHOT(false, HttpURLConnection.HTTP_OK),
     SETSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
 
+    SETQUOTA(false, HttpURLConnection.HTTP_OK),
+    SETQUOTABYSTORAGETYPE(false, HttpURLConnection.HTTP_OK),
+
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final boolean doOutputAndRedirect;

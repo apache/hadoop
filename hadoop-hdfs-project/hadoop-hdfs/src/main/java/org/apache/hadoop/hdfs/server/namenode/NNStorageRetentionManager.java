@@ -36,11 +36,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFil
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.util.Lists;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
 
 /**
  * The NNStorageRetentionManager is responsible for inspecting the storage
@@ -80,6 +79,9 @@ public class NNStorageRetentionManager {
         "Must retain at least one checkpoint");
     Preconditions.checkArgument(numExtraEditsToRetain >= 0,
         DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY +
+        " must not be negative");
+    Preconditions.checkArgument(maxExtraEditsSegmentsToRetain >= 0,
+        DFSConfigKeys.DFS_NAMENODE_MAX_EXTRA_EDITS_SEGMENTS_RETAINED_KEY +
         " must not be negative");
     
     this.storage = storage;
@@ -184,45 +186,45 @@ public class NNStorageRetentionManager {
    * @return the transaction ID corresponding to the oldest checkpoint
    * that should be retained. 
    */
-  private long getImageTxIdToRetain(FSImageTransactionalStorageInspector inspector) {
-      
-    List<FSImageFile> images = inspector.getFoundImages();
-    TreeSet<Long> imageTxIds = Sets.newTreeSet();
+  private long getImageTxIdToRetain(
+      FSImageTransactionalStorageInspector inspector) {
+
+    final List<FSImageFile> images = inspector.getFoundImages();
+    if (images.isEmpty()) {
+      return 0L;
+    }
+
+    TreeSet<Long> imageTxIds = new TreeSet<>(Collections.reverseOrder());
     for (FSImageFile image : images) {
       imageTxIds.add(image.getCheckpointTxId());
     }
-    
+
     List<Long> imageTxIdsList = Lists.newArrayList(imageTxIds);
-    if (imageTxIdsList.isEmpty()) {
-      return 0;
-    }
-    
-    Collections.reverse(imageTxIdsList);
-    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());    
+    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());
     long minTxId = imageTxIdsList.get(toRetain - 1);
-    LOG.info("Going to retain " + toRetain + " images with txid >= " +
-        minTxId);
+    LOG.info("Going to retain {} images with txid >= {}", toRetain, minTxId);
     return minTxId;
   }
-  
+
   /**
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
-  static interface StoragePurger {
+  interface StoragePurger {
     void purgeLog(EditLogFile log);
     void purgeImage(FSImageFile image);
+    void markStale(EditLogFile log);
   }
   
   static class DeletionStoragePurger implements StoragePurger {
     @Override
     public void purgeLog(EditLogFile log) {
-      LOG.info("Purging old edit log " + log);
+      LOG.info("Purging old edit log {}", log);
       deleteOrWarn(log.getFile());
     }
 
     @Override
     public void purgeImage(FSImageFile image) {
-      LOG.info("Purging old image " + image);
+      LOG.info("Purging old image {}", image);
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }
@@ -231,8 +233,18 @@ public class NNStorageRetentionManager {
       if (!file.delete()) {
         // It's OK if we fail to delete something -- we'll catch it
         // next time we swing through this directory.
-        LOG.warn("Could not delete " + file);
+        LOG.warn("Could not delete {}", file);
       }      
+    }
+
+    public void markStale(EditLogFile log){
+      try {
+        log.moveAsideStaleInprogressFile();
+      } catch (IOException e) {
+        // It is ok to just log the rename failure and go on, we will try next
+        // time just as with deletions.
+        LOG.warn("Could not mark {} as stale", log, e);
+      }
     }
   }
 

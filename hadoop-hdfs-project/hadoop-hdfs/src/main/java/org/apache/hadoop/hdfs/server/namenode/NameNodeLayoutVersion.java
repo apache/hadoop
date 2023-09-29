@@ -66,10 +66,10 @@ public class NameNodeLayoutVersion {
    * layout version is the earliest prior version to which a downgrade is
    * possible after initiating rolling upgrade.  If the feature cannot satisfy
    * compatibility with any prior version, then set its minimum compatible
-   * lqyout version to itself to indicate that downgrade is impossible.
+   * layout version to itself to indicate that downgrade is impossible.
    * Satisfying compatibility might require adding logic to the new feature to
    * reject operations or handle them differently while rolling upgrade is in
-   * progress.  In general, it's possible to satisfy compatiblity for downgrade
+   * progress.  In general, it's possible to satisfy compatibility for downgrade
    * if the new feature just involves adding new edit log ops.  Deeper
    * structural changes, such as changing the way we place files in the metadata
    * directories, might be incompatible.  Feature implementations should strive
@@ -89,14 +89,16 @@ public class NameNodeLayoutVersion {
     APPEND_NEW_BLOCK(-62, -61, "Support appending to new block"),
     QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types"),
     ERASURE_CODING(-64, -61, "Support erasure coding"),
-    EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage");
+    EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage"),
+    SNAPSHOT_MODIFICATION_TIME(-66, -61, "Support modification time for snapshot"),
+    NVDIMM_SUPPORT(-67, -61, "Support NVDIMM storage type");
 
     private final FeatureInfo info;
 
     /**
      * Feature that is added at layout version {@code lv} - 1. 
      * @param lv new layout version with the addition of this feature
-     * @param minCompatLV minimium compatible layout version
+     * @param minCompatLV minimum compatible layout version
      * @param description description of the feature
      */
     Feature(final int lv, int minCompatLV, final String description) {
@@ -104,7 +106,7 @@ public class NameNodeLayoutVersion {
     }
 
     /**
-     * NameNode feature that is added at layout version {@code ancestoryLV}.
+     * NameNode feature that is added at layout version {@code ancestorLV}.
      * @param lv new layout version with the addition of this feature
      * @param ancestorLV layout version from which the new lv is derived from.
      * @param minCompatLV minimum compatible layout version

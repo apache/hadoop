@@ -41,7 +41,6 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.ServerCnxnFactoryAccessor;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -51,7 +50,7 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Copy-paste of ClientBase from ZooKeeper, but without any of the
@@ -64,6 +63,15 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
     public static int CONNECTION_TIMEOUT = 30000;
     static final File BASETEST = GenericTestUtils.getTestDir();
+
+  static {
+    // The 4-letter-words commands are simple diagnostics telnet commands in
+    // ZooKeeper. Since ZooKeeper 3.5, these are disabled by default due to
+    // security concerns: https://issues.apache.org/jira/browse/ZOOKEEPER-2693
+    // We are enabling them for the tests here, as some tests in hadoop or in
+    // other projects might still use them
+    System.setProperty("zookeeper.4lw.commands.whitelist", "*");
+  }
 
     protected final String hostPort = initHostPort();
     protected int maxCnxns = 0;
@@ -428,9 +436,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
 
     protected static ZooKeeperServer getServer(ServerCnxnFactory fac) {
-        ZooKeeperServer zs = ServerCnxnFactoryAccessor.getZkServer(fac);
-
-        return zs;
+        return fac.getZooKeeperServer();
     }
 
     protected void tearDownAll() throws Exception {

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +38,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
@@ -52,7 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -130,7 +133,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
   @Test
   public void testReconnect() throws Exception {
     String hostname1 = "localhost1";
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -149,7 +152,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
 
     rmNodeEvents.clear();
     resourceTrackerService.registerNodeManager(request1);
-    capability = BuilderUtils.newResource(1024, 2);
+    capability = Resources.createResource(1024, 2);
     request1.setResource(capability);
     Assert.assertEquals(RMNodeEventType.RECONNECTED,
         rmNodeEvents.get(0).getType());
@@ -173,14 +176,18 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
     dispatcher.register(SchedulerEventType.class, scheduler);
 
     String hostname1 = "localhost1";
-    Resource capability = BuilderUtils.newResource(4096, 4);
+    Resource capability = Resources.createResource(4096, 4);
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     NodeId nodeId1 = NodeId.newInstance(hostname1, 0);
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     request1.setNodeId(nodeId1);
     request1.setHttpPort(0);
     request1.setResource(capability);
+    request1.setNodeStatus(mockNodeStatus);
     resourceTrackerService.registerNodeManager(request1);
     Assert.assertNotNull(context.getRMNodes().get(nodeId1));
     // verify Scheduler and RMContext use same RMNode reference.
@@ -188,7 +195,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
         context.getRMNodes().get(nodeId1));
     Assert.assertEquals(context.getRMNodes().get(nodeId1).
         getTotalCapability(), capability);
-    Resource capability1 = BuilderUtils.newResource(2048, 2);
+    Resource capability1 = Resources.createResource(2048, 2);
     request1.setResource(capability1);
     resourceTrackerService.registerNodeManager(request1);
     Assert.assertNotNull(context.getRMNodes().get(nodeId1));

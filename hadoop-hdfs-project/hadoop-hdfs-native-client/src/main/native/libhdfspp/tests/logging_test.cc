@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#include <common/logging.h>
-#include <bindings/c/hdfs.cc>
+#include "bindings/c/hdfs.cc"
+#include "common/logging.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

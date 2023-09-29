@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,8 +41,8 @@ class ProfilingFileIoEvents {
   static final Logger LOG =
       LoggerFactory.getLogger(ProfilingFileIoEvents.class);
 
-  private final boolean isEnabled;
-  private final int sampleRangeMax;
+  private volatile boolean isEnabled;
+  private volatile int sampleRangeMax;
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
@@ -49,15 +50,7 @@ class ProfilingFileIoEvents {
           DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
           DFSConfigKeys
               .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT);
-      isEnabled = Util.isDiskStatsEnabled(fileIOSamplingPercentage);
-      if (fileIOSamplingPercentage > 100) {
-        LOG.warn(DFSConfigKeys
-            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY +
-            " value cannot be more than 100. Setting value to 100");
-        fileIOSamplingPercentage = 100;
-      }
-      sampleRangeMax = (int) ((double) fileIOSamplingPercentage / 100 *
-          Integer.MAX_VALUE);
+      setSampleRangeMax(fileIOSamplingPercentage);
     } else {
       isEnabled = false;
       sampleRangeMax = 0;
@@ -80,7 +73,7 @@ class ProfilingFileIoEvents {
     if (isEnabled) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
-        metrics.addMetadastaOperationLatency(Time.monotonicNow() - begin);
+        metrics.addMetadataOperationLatency(Time.monotonicNow() - begin);
       }
     }
   }
@@ -116,6 +109,12 @@ class ProfilingFileIoEvents {
         case WRITE:
           metrics.addWriteIoLatency(latency);
           break;
+        case TRANSFER:
+          metrics.addTransferIoLatency(latency);
+          break;
+        case NATIVE_COPY:
+          metrics.addNativeCopyIoLatency(latency);
+          break;
         default:
         }
       }
@@ -138,5 +137,27 @@ class ProfilingFileIoEvents {
       }
     }
     return null;
+  }
+
+  public void setSampleRangeMax(int fileIOSamplingPercentage) {
+    isEnabled = Util.isDiskStatsEnabled(fileIOSamplingPercentage);
+    if (fileIOSamplingPercentage > 100) {
+      LOG.warn(DFSConfigKeys
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY +
+          " value cannot be more than 100. Setting value to 100");
+      fileIOSamplingPercentage = 100;
+    }
+    sampleRangeMax = (int) ((double) fileIOSamplingPercentage / 100 *
+        Integer.MAX_VALUE);
+  }
+
+  @VisibleForTesting
+  public boolean getDiskStatsEnabled() {
+    return isEnabled;
+  }
+
+  @VisibleForTesting
+  public int getSampleRangeMax() {
+    return sampleRangeMax;
   }
 }

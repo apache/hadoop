@@ -30,7 +30,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -139,6 +139,8 @@ public class TestMetaSave {
     nnRpc.delete("/filestatus0", true);
     nnRpc.delete("/filestatus1", true);
 
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     nnRpc.metaSave("metasaveAfterDelete.out.txt");
 
     // Verification
@@ -212,7 +214,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 
@@ -271,7 +273,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 

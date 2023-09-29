@@ -21,7 +21,7 @@
 
 #include "hdfspp/ioservice.h"
 
-#include <asio/io_service.hpp>
+#include <boost/asio/io_service.hpp>
 #include "common/new_delete.h"
 
 #include <mutex>
@@ -45,7 +45,7 @@ class IoServiceImpl : public IoService {
   void PostTask(std::function<void(void)> asyncTask) override;
   void Run() override;
   void Stop() override;
-  asio::io_service& GetRaw() override;
+  boost::asio::io_service& GetRaw() override;
 
   // Add a single worker thread, in the common case try to avoid this in favor
   // of Init[Default]Workers. Public for use by tests and rare cases where a
@@ -57,7 +57,7 @@ class IoServiceImpl : public IoService {
 
  private:
   std::mutex state_lock_;
-  ::asio::io_service io_service_;
+  boost::asio::io_service io_service_;
 
   // For doing logging + resource manager updates on thread start/exit
   void ThreadStartHook();

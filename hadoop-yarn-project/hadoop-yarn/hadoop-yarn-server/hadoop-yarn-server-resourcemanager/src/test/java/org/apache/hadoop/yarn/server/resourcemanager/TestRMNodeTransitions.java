@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -40,13 +43,19 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -64,6 +73,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -72,11 +83,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -121,7 +135,7 @@ public class TestRMNodeTransitions {
     rmContext =
         new RMContextImpl(rmDispatcher, mock(ContainerAllocationExpirer.class),
           null, null, mock(DelegationTokenRenewer.class), null, null, null,
-          null, null);
+          null, getMockResourceScheduler());
     NodesListManager nodesListManager = mock(NodesListManager.class);
     HostsFileReader reader = mock(HostsFileReader.class);
     when(nodesListManager.getHostsReader()).thenReturn(reader);
@@ -189,10 +203,27 @@ public class TestRMNodeTransitions {
     return event;
   }
 
+  private ResourceScheduler getMockResourceScheduler() {
+    ResourceScheduler resourceScheduler = mock(ResourceScheduler.class);
+    SchedulerNode schedulerNode = mock(SchedulerNode.class);
+    when(schedulerNode.getCopiedListOfRunningContainers())
+        .thenReturn(Collections.emptyList());
+    when(resourceScheduler.getSchedulerNode(ArgumentMatchers.any()))
+        .thenReturn(schedulerNode);
+    return resourceScheduler;
+  }
+
   private List<ApplicationId> getAppIdList() {
     List<ApplicationId> appIdList = new ArrayList<ApplicationId>();
     appIdList.add(BuilderUtils.newApplicationId(0, 0));
     return appIdList;
+  }
+
+  private List<ContainerId> getContainerIdList() {
+    List<ContainerId> containerIdList = new ArrayList<ContainerId>();
+    containerIdList.add(BuilderUtils.newContainerId(BuilderUtils
+        .newApplicationAttemptId(BuilderUtils.newApplicationId(0, 0), 0), 0));
+    return containerIdList;
   }
 
   private RMNodeStatusEvent getMockRMNodeStatusEventWithoutRunningApps() {
@@ -207,10 +238,37 @@ public class TestRMNodeTransitions {
     return event;
   }
 
+  private static ContainerStatus getMockContainerStatus(
+      final ContainerId containerId, final Resource capability,
+      final ContainerState containerState) {
+    return getMockContainerStatus(containerId, capability, containerState,
+        ExecutionType.GUARANTEED);
+  }
+
+  private static ContainerStatus getMockContainerStatus(
+      final ContainerId containerId, final Resource capability,
+      final ContainerState containerState, final ExecutionType executionType) {
+    final ContainerStatus containerStatus = mock(ContainerStatus.class);
+    doReturn(containerId).when(containerStatus).getContainerId();
+    doReturn(containerState).when(containerStatus).getState();
+    doReturn(capability).when(containerStatus).getCapability();
+    doReturn(executionType).when(containerStatus).getExecutionType();
+    return containerStatus;
+  }
+
+  private static NMContainerStatus createNMContainerStatus(
+      final ContainerId containerId, final ExecutionType executionType,
+      final ContainerState containerState, final Resource capability) {
+    return NMContainerStatus.newInstance(containerId, 0, containerState,
+        capability, "", 0, Priority.newInstance(0), 0,
+        CommonNodeLabelsManager.NO_LABEL, executionType, -1);
+  }
+
   @Test (timeout = 5000)
   public void testExpiredContainer() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     verify(scheduler).handle(any(NodeAddedSchedulerEvent.class));
     
     // Expire a container
@@ -223,8 +281,8 @@ public class TestRMNodeTransitions {
     // Now verify that scheduler isn't notified of an expired container
     // by checking number of 'completedContainers' it got in the previous event
     RMNodeStatusEvent statusEvent = getMockRMNodeStatusEvent(null);
-    ContainerStatus containerStatus = mock(ContainerStatus.class);
-    doReturn(completedContainerId).when(containerStatus).getContainerId();
+    ContainerStatus containerStatus = getMockContainerStatus(
+        completedContainerId, null, ContainerState.COMPLETE);
     doReturn(Collections.singletonList(containerStatus)).
         when(statusEvent).getContainers();
     node.handle(statusEvent);
@@ -273,12 +331,13 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testContainerUpdate() throws InterruptedException{
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
     RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
-    node2.handle(new RMNodeStartedEvent(null, null, null));
+    node2.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
 
     ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
     ApplicationId app1 = BuilderUtils.newApplicationId(1, 1);
@@ -295,12 +354,13 @@ public class TestRMNodeTransitions {
     RMNodeStatusEvent statusEventFromNode2_1 = getMockRMNodeStatusEvent(null);
     RMNodeStatusEvent statusEventFromNode2_2 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatusFromNode1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatusFromNode2_1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatusFromNode2_2 = mock(ContainerStatus.class);
+    ContainerStatus containerStatusFromNode1 = getMockContainerStatus(
+        completedContainerIdFromNode1, null, ContainerState.COMPLETE);
+    ContainerStatus containerStatusFromNode2_1 = getMockContainerStatus(
+        completedContainerIdFromNode2_1, null, ContainerState.COMPLETE);
+    ContainerStatus containerStatusFromNode2_2 = getMockContainerStatus(
+        completedContainerIdFromNode2_2, null, ContainerState.COMPLETE);
 
-    doReturn(completedContainerIdFromNode1).when(containerStatusFromNode1)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode1))
         .when(statusEventFromNode1).getContainers();
     node.handle(statusEventFromNode1);
@@ -310,13 +370,9 @@ public class TestRMNodeTransitions {
 
     completedContainers.clear();
 
-    doReturn(completedContainerIdFromNode2_1).when(containerStatusFromNode2_1)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode2_1))
         .when(statusEventFromNode2_1).getContainers();
 
-    doReturn(completedContainerIdFromNode2_2).when(containerStatusFromNode2_2)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode2_2))
         .when(statusEventFromNode2_2).getContainers();
 
@@ -332,10 +388,186 @@ public class TestRMNodeTransitions {
         .getContainerId());
   }
 
+  /**
+   * Tests that allocated resources are counted correctly on new nodes
+   * that are added to the cluster.
+   */
+  @Test
+  public void testAddWithAllocatedContainers() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    RMNodeImpl node = getNewNode();
+    ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
+
+    // Independently computed expected allocated resource to verify against
+    final Resource expectedResource = Resource.newInstance(Resources.none());
+
+    // Guaranteed containers
+    final ContainerId newContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 0);
+    final Resource newContainerCapability =
+        Resource.newInstance(100, 1);
+    Resources.addTo(expectedResource, newContainerCapability);
+    final NMContainerStatus newContainerStatus = createNMContainerStatus(
+        newContainerId, ExecutionType.GUARANTEED,
+        ContainerState.NEW, newContainerCapability);
+
+    final ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 1);
+    final Resource runningContainerCapability =
+        Resource.newInstance(200, 2);
+    Resources.addTo(expectedResource, runningContainerCapability);
+    final NMContainerStatus runningContainerStatus = createNMContainerStatus(
+        runningContainerId, ExecutionType.GUARANTEED,
+        ContainerState.RUNNING, runningContainerCapability);
+
+    // Opportunistic containers
+    final ContainerId newOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
+    final Resource newOppContainerCapability =
+        Resource.newInstance(300, 3);
+    Resources.addTo(expectedResource, newOppContainerCapability);
+    final NMContainerStatus newOppContainerStatus = createNMContainerStatus(
+        newOppContainerId, ExecutionType.OPPORTUNISTIC,
+        ContainerState.NEW, newOppContainerCapability);
+
+    final ContainerId runningOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
+    final Resource runningOppContainerCapability =
+        Resource.newInstance(400, 4);
+    Resources.addTo(expectedResource, runningOppContainerCapability);
+    final NMContainerStatus runningOppContainerStatus = createNMContainerStatus(
+        runningOppContainerId, ExecutionType.OPPORTUNISTIC,
+        ContainerState.RUNNING, runningOppContainerCapability);
+
+    node.handle(new RMNodeStartedEvent(node.getNodeID(),
+        Arrays.asList(newContainerStatus, runningContainerStatus,
+            newOppContainerStatus, runningOppContainerStatus),
+        null, mockNodeStatus));
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+    Assert.assertNotNull(nodesListManagerEvent);
+    Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
+        nodesListManagerEvent.getType());
+    Assert.assertEquals(expectedResource, node.getAllocatedContainerResource());
+  }
+
+  /**
+   * Tests that allocated container resources are counted correctly in
+   * {@link org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode}
+   * upon a node update. Resources should be counted for both GUARANTEED
+   * and OPPORTUNISTIC containers.
+   */
+  @Test (timeout = 5000)
+  public void testAllocatedContainerUpdate() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    //Start the node
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
+
+    // Make sure that the node starts with no allocated resources
+    Assert.assertEquals(Resources.none(), node.getAllocatedContainerResource());
+
+    ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
+    final ContainerId newContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 0);
+    final ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 1);
+
+    rmContext.getRMApps().put(app0, Mockito.mock(RMApp.class));
+
+    RMNodeStatusEvent statusEventFromNode1 = getMockRMNodeStatusEvent(null);
+
+    final List<ContainerStatus> containerStatuses = new ArrayList<>();
+
+    // Use different memory and VCores for new and running state containers
+    // to test that they add up correctly
+    final Resource newContainerCapability =
+        Resource.newInstance(100, 1);
+    final Resource runningContainerCapability =
+        Resource.newInstance(200, 2);
+    final Resource completedContainerCapability =
+        Resource.newInstance(50, 3);
+    final ContainerStatus newContainerStatusFromNode = getMockContainerStatus(
+        newContainerId, newContainerCapability, ContainerState.NEW);
+    final ContainerStatus runningContainerStatusFromNode =
+        getMockContainerStatus(runningContainerId, runningContainerCapability,
+            ContainerState.RUNNING);
+
+    containerStatuses.addAll(Arrays.asList(
+        newContainerStatusFromNode, runningContainerStatusFromNode));
+    doReturn(containerStatuses).when(statusEventFromNode1).getContainers();
+    node.handle(statusEventFromNode1);
+    Assert.assertEquals(Resource.newInstance(300, 3),
+        node.getAllocatedContainerResource());
+
+    final ContainerId newOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
+    final ContainerId runningOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
+
+    // Use the same resource capability as in previous for opportunistic case
+    RMNodeStatusEvent statusEventFromNode2 = getMockRMNodeStatusEvent(null);
+    final ContainerStatus newOppContainerStatusFromNode =
+        getMockContainerStatus(newOppContainerId, newContainerCapability,
+            ContainerState.NEW, ExecutionType.OPPORTUNISTIC);
+    final ContainerStatus runningOppContainerStatusFromNode =
+        getMockContainerStatus(runningOppContainerId,
+            runningContainerCapability, ContainerState.RUNNING,
+            ExecutionType.OPPORTUNISTIC);
+
+    containerStatuses.addAll(Arrays.asList(
+        newOppContainerStatusFromNode, runningOppContainerStatusFromNode));
+
+    // Pass in both guaranteed and opportunistic container statuses
+    doReturn(containerStatuses).when(statusEventFromNode2).getContainers();
+
+    node.handle(statusEventFromNode2);
+
+    // The result here should be double the first check,
+    // since allocated resources are doubled, just
+    // with different execution types
+    Assert.assertEquals(Resource.newInstance(600, 6),
+        node.getAllocatedContainerResource());
+
+    RMNodeStatusEvent statusEventFromNode3 = getMockRMNodeStatusEvent(null);
+    final ContainerId completedContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 4);
+    final ContainerId completedOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 5);
+    final ContainerStatus completedContainerStatusFromNode =
+        getMockContainerStatus(completedContainerId, completedContainerCapability,
+            ContainerState.COMPLETE, ExecutionType.OPPORTUNISTIC);
+    final ContainerStatus completedOppContainerStatusFromNode =
+        getMockContainerStatus(completedOppContainerId,
+            completedContainerCapability, ContainerState.COMPLETE,
+            ExecutionType.OPPORTUNISTIC);
+
+    containerStatuses.addAll(Arrays.asList(
+        completedContainerStatusFromNode, completedOppContainerStatusFromNode));
+
+    doReturn(containerStatuses).when(statusEventFromNode3).getContainers();
+    node.handle(statusEventFromNode3);
+
+    // Adding completed containers should not have changed
+    // the resources allocated
+    Assert.assertEquals(Resource.newInstance(600, 6),
+        node.getAllocatedContainerResource());
+
+    RMNodeStatusEvent emptyStatusEventFromNode =
+        getMockRMNodeStatusEvent(null);
+
+    doReturn(Collections.emptyList())
+        .when(emptyStatusEventFromNode).getContainers();
+    node.handle(emptyStatusEventFromNode);
+
+    // Passing an empty containers list should yield no resources allocated
+    Assert.assertEquals(Resources.none(),
+        node.getAllocatedContainerResource());
+  }
+
   @Test (timeout = 5000)
   public void testStatusChange(){
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     //Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -349,14 +581,14 @@ public class TestRMNodeTransitions {
     RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent(null);
     RMNodeStatusEvent statusEvent2 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatus2 = mock(ContainerStatus.class);
+    ContainerStatus containerStatus1 = getMockContainerStatus(
+        completedContainerId1, null, null);
+    ContainerStatus containerStatus2 = getMockContainerStatus(
+        completedContainerId2, null, null);
 
-    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
     doReturn(Collections.singletonList(containerStatus1))
         .when(statusEvent1).getContainers();
      
-    doReturn(completedContainerId2).when(containerStatus2).getContainerId();
     doReturn(Collections.singletonList(containerStatus2))
         .when(statusEvent2).getContainers();
 
@@ -601,6 +833,33 @@ public class TestRMNodeTransitions {
   }
 
   @Test
+  public void testAddUnhealthyNode() {
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+
+    NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
+        System.currentTimeMillis());
+    NodeStatus nodeStatus = NodeStatus.newInstance(node.getNodeID(), 0,
+        new ArrayList<>(), null, status, null, null, null);
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        nodeStatus));
+
+    Assert.assertEquals("Unhealthy Nodes",
+        initialUnhealthy + 1, cm.getUnhealthyNMs());
+    Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
+    Assert.assertEquals("Decommissioned Nodes",
+        initialDecommissioned, cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes",
+        initialRebooted, cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.UNHEALTHY, node.getState());
+  }
+
+  @Test
   public void testNMShutdown() {
     RMNodeImpl node = getRunningNode();
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
@@ -705,7 +964,9 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null,
         capability, nmVersion);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
   }
@@ -756,7 +1017,10 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
         null, capability, null);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.REBOOTING));
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
@@ -772,7 +1036,9 @@ public class TestRMNodeTransitions {
     int initialUnhealthy = cm.getUnhealthyNMs();
     int initialDecommissioned = cm.getNumDecommisionedNMs();
     int initialRebooted = cm.getNumRebootedNMs();
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals("Active Nodes", initialActive + 1, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",
@@ -1017,10 +1283,13 @@ public class TestRMNodeTransitions {
     Resource oldCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", oldCapacity.getMemorySize(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    assertFalse("updatedCapability should be false.",
+        node.isUpdatedCapability());
     node.handle(new RMNodeEvent(node.getNodeID(),
         RMNodeEventType.RECOMMISSION));
     Resource originalCapacity = node.getOriginalTotalCapability();
     assertEquals("Original total capability not null after recommission", null, originalCapacity);
+    assertTrue("updatedCapability should be set.", node.isUpdatedCapability());
   }
 
   @Test
@@ -1045,6 +1314,12 @@ public class TestRMNodeTransitions {
         node.getLaunchedContainers().contains(cid1));
     Assert.assertTrue("second container not running",
         node.getLaunchedContainers().contains(cid2));
+    assertEquals("unexpected number of running containers",
+        2, node.getUpdatedExistContainers().size());
+    Assert.assertTrue("first container not running",
+        node.getUpdatedExistContainers().containsKey(cid1));
+    Assert.assertTrue("second container not running",
+        node.getUpdatedExistContainers().containsKey(cid2));
     assertEquals("already completed containers",
         0, completedContainers.size());
     containerStats.remove(0);
@@ -1064,12 +1339,17 @@ public class TestRMNodeTransitions {
         1, node.getLaunchedContainers().size());
     Assert.assertTrue("second container not running",
         node.getLaunchedContainers().contains(cid2));
+    assertEquals("unexpected number of running containers",
+        1, node.getUpdatedExistContainers().size());
+    Assert.assertTrue("second container not running",
+        node.getUpdatedExistContainers().containsKey(cid2));
   }
 
   @Test
   public void testForHandlingDuplicatedCompltedContainers() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     // Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -1078,9 +1358,9 @@ public class TestRMNodeTransitions {
 
     RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
+    ContainerStatus containerStatus1 = getMockContainerStatus(
+        completedContainerId1, null, ContainerState.COMPLETE);
 
-    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
     doReturn(Collections.singletonList(containerStatus1)).when(statusEvent1)
         .getContainers();
 
@@ -1104,5 +1384,147 @@ public class TestRMNodeTransitions {
 
     Assert.assertEquals(1, hbrsp.getContainersToBeRemovedFromNM().size());
     Assert.assertEquals(0, node.getCompletedContainers().size());
+  }
+
+  @Test
+  public void testFinishedContainersPulledByAMOnNewNode() {
+    RMNodeImpl rmNode = getNewNode();
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+
+    rmNode.handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
+        getContainerIdList()));
+    Assert.assertEquals(1, rmNode.getContainersToBeRemovedFromNM().size());
+
+  }
+
+  private void calcIntervalTest(RMNodeImpl rmNode, ResourceUtilization nodeUtil,
+      long hbDefault, long hbMin, long hbMax, float speedup, float slowdown,
+                                float cpuUtil, long expectedHb) {
+    nodeUtil.setCPU(cpuUtil);
+    rmNode.setNodeUtilization(nodeUtil);
+    long hbInterval = rmNode.calculateHeartBeatInterval(hbDefault, hbMin, hbMax,
+        speedup, slowdown);
+    assertEquals("heartbeat interval incorrect", expectedHb, hbInterval);
+  }
+
+  @Test
+  public void testCalculateHeartBeatInterval() {
+    RMNodeImpl rmNode = getRunningNode();
+    Resource nodeCapability = rmNode.getTotalCapability();
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    // Set cluster capability to 10 * nodeCapability
+    int vcoreUnit = nodeCapability.getVirtualCores();
+    rmNode.setPhysicalResource(nodeCapability);
+    int clusterVcores = vcoreUnit * 10;
+    metrics.incrCapability(
+        Resource.newInstance(10 * nodeCapability.getMemorySize(),
+            clusterVcores));
+
+    long hbDefault = 2000;
+    long hbMin = 1500;
+    long hbMax = 2500;
+    float speedup = 1.0F;
+    float slowdown = 1.0F;
+    metrics.incrUtilizedVirtualCores(vcoreUnit * 5); // 50 % cluster util
+    ResourceUtilization nodeUtil = ResourceUtilization.newInstance(
+        1024, vcoreUnit, 0.0F * vcoreUnit); // 0% rmNode util
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, hbMin); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, hbMin); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1600); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1800); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2200); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2400); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, hbMax); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, hbMax); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // Try with 50% speedup/slowdown factors
+    speedup = 0.5F;
+    slowdown = 0.5F;
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, 1600); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, 1700); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1800); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1900); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2100); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2200); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, 2300); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, 2400); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // With Physical Resource null, it should always return default
+    rmNode.setPhysicalResource(null);
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.1F, hbDefault); // 10%
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbDefault); // 100%
+  }
+
+  @Test
+  public void testFinishedContainersPulledByAmOnDecommissioningNode() {
+    RMNodeImpl rMNodeImpl = getRunningNode();
+    rMNodeImpl.handle(
+        new RMNodeEvent(rMNodeImpl.getNodeID(), RMNodeEventType.GRACEFUL_DECOMMISSION));
+    Assert.assertEquals(NodeState.DECOMMISSIONING, rMNodeImpl.getState());
+
+    ContainerId containerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(BuilderUtils.newApplicationId(0, 0), 0), 0);
+    List<ContainerId> containerIds = Arrays.asList(containerId);
+
+    rMNodeImpl.handle(
+        new RMNodeFinishedContainersPulledByAMEvent(rMNodeImpl.getNodeID(), containerIds));
+    Assert.assertEquals(NodeState.DECOMMISSIONING, rMNodeImpl.getState());
+
+    // Verify expected containersToBeRemovedFromNM from NodeHeartbeatResponse.
+    NodeHeartbeatResponse response =
+        YarnServerBuilderUtils.newNodeHeartbeatResponse(1, NodeAction.NORMAL, null, null, null,
+            null, 1000);
+    rMNodeImpl.setAndUpdateNodeHeartbeatResponse(response);
+    Assert.assertEquals(1, response.getContainersToBeRemovedFromNM().size());
   }
 }

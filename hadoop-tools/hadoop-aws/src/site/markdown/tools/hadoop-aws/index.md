@@ -16,24 +16,38 @@
 
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
-**NOTE:  Hadoop's `s3:` and `s3n:` connectors have been removed.
-Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
-
-**Consult the [s3n documentation](./s3n.html) for migration instructions.**
 
 
-See also:
+## <a name="compatibility"></a> Compatibility
+
+
+###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
+
+This release does not delete directory markers when creating
+files or directories underneath.
+This is incompatible with versions of the Hadoop S3A client released
+before 2021.
+
+Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+full details.
+
+## <a name="documents"></a> Documents
 
 * [Encryption](./encryption.html)
 * [Performance](./performance.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
+* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
 * [Working with IAM Assumed Roles](./assumed_roles.html)
 * [S3A Delegation Token Support](./delegation_tokens.html)
 * [S3A Delegation Token Architecture](delegation_token_architecture.html).
+* [Auditing](./auditing.html).
+* [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
+* [Prefetching](./prefetching.html)
+* [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
 
 ## <a name="overview"></a> Overview
 
@@ -70,11 +84,11 @@ schemes.
 * Supports authentication via: environment variables, Hadoop configuration
 properties, the Hadoop key management store and IAM roles.
 * Supports per-bucket configuration.
-* With [S3Guard](./s3guard.html), adds high performance and consistent metadata/
-directory read operations. This delivers consistency as well as speed.
 * Supports S3 "Server Side Encryption" for both reading and writing:
- SSE-S3, SSE-KMS and SSE-C
+ SSE-S3, SSE-KMS and SSE-C.
 * Instrumented with Hadoop metrics.
+* Before S3 was consistent, provided a consistent view of inconsistent storage
+  through [S3Guard](./s3guard.html).
 * Actively maintained by the open source community.
 
 
@@ -134,32 +148,11 @@ Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
 done— relaxed some of the constraints which classic "POSIX" filesystems promise.
 
-The [S3Guard](./s3guard.html) feature attempts to address some of these, but
-it cannot do so completely. Do read these warnings and consider how
-they apply.
-
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-### Warning #1: S3 Consistency model
 
-Amazon S3 is an example of "an object store". In order to achieve scalability
-and especially high availability, S3 has —as many other cloud object stores have
-done— relaxed some of the constraints which classic "POSIX" filesystems promise.
-
-Specifically
-
-1. Files that are newly created from the Hadoop Filesystem APIs may not be
-immediately visible.
-2. File delete and update operations may not immediately propagate. Old
-copies of the file may exist for an indeterminate time period.
-3. Directory operations: `delete()` and `rename()` are implemented by
-recursive file-by-file operations. They take time at least proportional to
-the number of files, during which time partial updates may be visible. If
-the operations are interrupted, the filesystem is left in an intermediate state.
-
-
-### Warning #2: Directories are mimiced
+### Warning #1: Directories are mimicked
 
 The S3A clients mimics directories by:
 
@@ -184,7 +177,7 @@ Parts of Hadoop relying on this can have unexpected behaviour. E.g. the
 performance recursive listings whenever possible.
 * It is possible to create files under files if the caller tries hard.
 * The time to rename a directory is proportional to the number of files
-underneath it (directory or indirectly) and the size of the files. (The copyis
+underneath it (directory or indirectly) and the size of the files. (The copy is
 executed inside the S3 storage, so the time is independent of the bandwidth
 from client to S3).
 * Directory renames are not atomic: they can fail partway through, and callers
@@ -199,7 +192,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have different authorization models
+### Warning #2: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -242,6 +235,9 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
+updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
 *Important*: The S3A connector no longer supports username and secrets
 in URLs of the form `s3a://key:secret@bucket/`.
@@ -253,56 +249,39 @@ a warning has been printed since Hadoop 2.8 whenever such a URL was used.
 ```xml
 <property>
   <name>fs.s3a.access.key</name>
-  <description>AWS access key ID.
-   Omit for IAM role-based or provider-based authentication.</description>
+  <description>AWS access key ID used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
 
 <property>
   <name>fs.s3a.secret.key</name>
-  <description>AWS secret key.
-   Omit for IAM role-based or provider-based authentication.</description>
-</property>
-
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <description>
-    Comma-separated class names of credential provider classes which implement
-    com.amazonaws.auth.AWSCredentialsProvider.
-
-    These are loaded and queried in sequence for a valid set of credentials.
-    Each listed class must implement one of the following means of
-    construction, which are attempted in order:
-    1. a public constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration,
-    2. a public static method named getInstance that accepts no
-       arguments and returns an instance of
-       com.amazonaws.auth.AWSCredentialsProvider, or
-    3. a public default constructor.
-
-    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
-    anonymous access to a publicly accessible S3 bucket without any credentials.
-    Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases. It can be useful
-    for accessing public data sets without requiring AWS credentials.
-
-    If unspecified, then the default list of credential provider classes,
-    queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
-       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
-        configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID and
-        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
-  </description>
+  <description>AWS secret key used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
 
 <property>
   <name>fs.s3a.session.token</name>
-  <description>
-    Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
     as one of the providers.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>
+    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
+    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider,
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+  </value>
+  <description>
+    Comma-separated class names of credential provider classes which implement
+    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
+
+    When S3A delegation tokens are not enabled, this list will be used
+    to directly authenticate with S3 and other AWS services.
+    When S3A Delegation tokens are enabled, depending upon the delegation
+    token binding it may be used
+    to communicate wih the STS endpoint to request session/role
+    credentials.
   </description>
 </property>
 ```
@@ -320,7 +299,7 @@ export AWS_SECRET_ACCESS_KEY=my.secret.key
 
 If the environment variable `AWS_SESSION_TOKEN` is set, session authentication
 using "Temporary Security Credentials" is enabled; the Key ID and secret key
-must be set to the credentials for that specific sesssion.
+must be set to the credentials for that specific session.
 
 ```bash
 export AWS_SESSION_TOKEN=SECRET-SESSION-TOKEN
@@ -345,7 +324,7 @@ the Hadoop configuration files.
 
 By default, the S3A client follows the following authentication chain:
 
-1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key
+1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key`
 are looked for in the Hadoop XML configuration/Hadoop credential providers,
 returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
@@ -354,13 +333,19 @@ credentials if they are defined.
 1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
 are then looked for: these will return session or full credentials depending
 on which values are set.
-1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
+1. An attempt is made to query the Amazon EC2 Instance/k8s container Metadata Service to
  retrieve credentials published to EC2 VMs.
 
 S3A can be configured to obtain client authentication providers from classes
-which integrate with the AWS SDK by implementing the `com.amazonaws.auth.AWSCredentialsProvider`
-Interface. This is done by listing the implementation classes, in order of
+which integrate with the AWS SDK by implementing the
+`software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`
+interface.
+This is done by listing the implementation classes, in order of
 preference, in the configuration option `fs.s3a.aws.credentials.provider`.
+In previous hadoop releases, providers were required to
+implement the AWS V1 SDK interface `com.amazonaws.auth.AWSCredentialsProvider`.
+Consult the [Upgrading S3A to AWS SDK V2](./aws_sdk_upgrade.html) documentation
+to see how to migrate credential providers.
 
 *Important*: AWS Credential Providers are distinct from _Hadoop Credential Providers_.
 As will be covered later, Hadoop Credential Providers allow passwords and other secrets
@@ -375,21 +360,23 @@ this is advised as a more secure way to store valuable secrets.
 
 There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
 
+| Hadoop module credential provider                              | Authentication Mechanism                         |
+|----------------------------------------------------------------|--------------------------------------------------|
+| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`     | Session Credentials in configuration             |
+| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`        | Simple name/secret credentials in configuration  |
+| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`     | Anonymous Login                                  |
+| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`  | [Assumed Role credentials](./assumed_roles.html) |
+| `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` | EC2/k8s instance credentials                     |
+
+
+There are also many in the Amazon SDKs, with the common ones being.
+
 | classname | description |
 |-----------|-------------|
-| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
-| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
-| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
-| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider<`| [Assumed Role credentials](assumed_roles.html) |
+| `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` | AWS Environment Variables |
+| `software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
+| `software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider`| EC2/k8s Metadata Credentials |
 
-
-There are also many in the Amazon SDKs, in particular two which are automatically
-set up in the authentication chain:
-
-| classname | description |
-|-----------|-------------|
-| `com.amazonaws.auth.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
-| `com.amazonaws.auth.EnvironmentVariableCredentialsProvider`| AWS Environment Variables |
 
 
 ### <a name="auth_iam"></a> EC2 IAM Metadata Authentication with `InstanceProfileCredentialsProvider`
@@ -399,6 +386,37 @@ Applications running in EC2 may associate an IAM role with the VM and query the
 for credentials to access S3.  Within the AWS SDK, this functionality is
 provided by `InstanceProfileCredentialsProvider`, which internally enforces a
 singleton instance in order to prevent throttling problem.
+
+### <a name="auth_named_profile"></a> Using Named Profile Credentials with `ProfileCredentialsProvider`
+
+You can configure Hadoop to authenticate to AWS using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
+
+To authenticate with a named profile:
+
+1. Declare `software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider` as the provider.
+1. Set your profile via the `AWS_PROFILE` environment variable.
+1. Due to a [bug in version 1 of the AWS Java SDK](https://github.com/aws/aws-sdk-java/issues/803),
+you'll need to remove the `profile` prefix from the AWS configuration section heading.
+
+    Here's an example of what your AWS configuration files should look like:
+
+    ```
+    $ cat ~/.aws/config
+    [user1]
+    region = us-east-1
+    $ cat ~/.aws/credentials
+    [user1]
+    aws_access_key_id = ...
+    aws_secret_access_key = ...
+    aws_session_token = ...
+    aws_security_token = ...
+    ```
+Note:
+
+1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
+1. For the credentials to be available to applications running in a Hadoop cluster, the
+   configuration files MUST be in the `~/.aws/` directory on the local filesystem in
+   all hosts in the cluster.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 
@@ -477,7 +495,7 @@ providers listed after it will be ignored.
 
 ### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which supports the secret
+This is the standard credential provider, which supports the secret
 key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
 values.
 
@@ -498,50 +516,9 @@ This means that the default S3A authentication chain can be defined as
   <value>
     org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
     org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
     org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
-  <description>
-    Comma-separated class names of credential provider classes which implement
-    com.amazonaws.auth.AWSCredentialsProvider.
-
-    When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
-    When S3A Delegation tokens are enabled, depending upon the delegation
-    token binding it may be used
-    to communicate wih the STS endpoint to request session/role
-    credentials.
-
-    These are loaded and queried in sequence for a valid set of credentials.
-    Each listed class must implement one of the following means of
-    construction, which are attempted in order:
-    * a public constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration,
-    * a public constructor accepting org.apache.hadoop.conf.Configuration,
-    * a public static method named getInstance that accepts no
-       arguments and returns an instance of
-       com.amazonaws.auth.AWSCredentialsProvider, or
-    * a public default constructor.
-
-    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
-    anonymous access to a publicly accessible S3 bucket without any credentials.
-    Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases. It can be useful
-    for accessing public data sets without requiring AWS credentials.
-
-    If unspecified, then the default list of credential provider classes,
-    queried in sequence, is:
-    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
-       for session login secrets in the Hadoop configuration.
-    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
-       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
-        configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID and
-        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
-  </description>
 </property>
 ```
 
@@ -602,24 +579,24 @@ files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
 (`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
-and `fs.s3a.server-side-encryption.key`) can
+and `fs.s3a.encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
-credential provider then declareed in the hadoop configuration.
+credential provider then declared in the Hadoop configuration.
 
 For additional reading on the Hadoop Credential Provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 
-The following configuration options can be storeed in Hadoop Credential Provider
+The following configuration options can be stored in Hadoop Credential Provider
 stores.
 
 ```
 fs.s3a.access.key
 fs.s3a.secret.key
 fs.s3a.session.token
-fs.s3a.server-side-encryption.key
-fs.s3a.server-side-encryption-algorithm
+fs.s3a.encryption.key
+fs.s3a.encryption.algorithm
 ```
 
 The first three are for authentication; the final two for
@@ -700,7 +677,7 @@ of credentials.
 
 ### Using secrets from credential providers
 
-Once the provider is set in the Hadoop configuration, hadoop commands
+Once the provider is set in the Hadoop configuration, Hadoop commands
 work exactly as if the secrets were in an XML file.
 
 ```bash
@@ -733,10 +710,9 @@ All S3A client options are configured with options with the prefix `fs.s3a.`.
 The client supports <a href="per_bucket_configuration">Per-bucket configuration</a>
 to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
-S3Guard options, various minor options.
+and various minor options.
 
-Here are the S3A properties for use in production. The S3Guard options are
-documented in the [S3Guard documenents](./s3guard.html); some testing-related
+Here are the S3A properties for use in production; some testing-related
 options are covered in [Testing](./testing.md).
 
 ```xml
@@ -757,6 +733,16 @@ options are covered in [Testing](./testing.md).
   <description>AWS S3 endpoint to connect to. An up-to-date list is
     provided in the AWS Documentation: regions and endpoints. Without this
     property, the standard region (s3.amazonaws.com) is assumed.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.endpoint.region</name>
+  <description>AWS S3 region for a bucket, which bypasses the parsing of
+    fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+    while using privateLink URL and explicitly set the bucket region.
+    If set to a blank string (or 1+ space), falls back to the
+    (potentially brittle) SDK region resolution process.
   </description>
 </property>
 
@@ -860,7 +846,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -868,7 +854,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128MB</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -889,7 +875,9 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
     PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-    or BucketOwnerFullControl.</description>
+    or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+    </description>
 </property>
 
 <property>
@@ -912,27 +900,33 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
-  <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default. It supports the following values: 'AES256' (for SSE-S3), 'SSE-KMS'
-     and 'SSE-C'
+  <name>fs.s3a.encryption.algorithm</name>
+  <description>Specify a server-side encryption or client-side
+     encryption algorithm for s3a: file system. Unset by default. It supports the
+     following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
-    <name>fs.s3a.server-side-encryption.key</name>
-    <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.</description>
+    <name>fs.s3a.encryption.key</name>
+    <description>Specific encryption key to use if fs.s3a.encryption.algorithm
+        has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    , the value of this property should be the Base64 encoded key. If you are
+     using SSE-KMS and leave this property empty, you'll be using your default's
+     S3 KMS key, otherwise you should set this property to the specific KMS key
+     id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
+     generated from AWS console.
+    </description>
 </property>
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3a</value>
+  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.</description>
+    uploads to.
+    Yarn container path will be used as default value on yarn applications,
+    otherwise fall back to hadoop.tmp.dir
+  </description>
 </property>
 
 <property>
@@ -978,10 +972,101 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.input.async.drain.threshold</name>
+  <value>64K</value>
+  <description>Bytes to read ahead during a seek() before closing and
+  re-opening the S3 HTTP connection. This option will be overridden if
+  any call to setReadahead() is made to an open stream.</description>
+</property>
+
+<property>
   <name>fs.s3a.list.version</name>
   <value>2</value>
   <description>Select which version of the S3 SDK's List Objects API to use.
   Currently support 2 (default) and 1 (older API).</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+  Time out on HTTP requests to the AWS service; 0 means no timeout.
+  Measured in seconds; the usual time suffixes are all supported
+
+  Important: this is the maximum duration of any AWS service call,
+  including upload and copy operations. If non-zero, it must be larger
+  than the time to upload multi-megabyte blocks to S3 from the client,
+  and to rename many-GB files. Use with care.
+
+  Values that are larger than Integer.MAX_VALUE milliseconds are
+  converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+  <description>
+     The value can be 0 (default), 1 or 2.
+     When set to 0, bucket existence checks won't be done
+     during initialization thus making it faster.
+     Though it should be noted that when the bucket is not available in S3,
+     or if fs.s3a.endpoint points to the wrong instance of a private S3 store
+     consecutive calls like listing, read, write etc. will fail with
+     an UnknownStoreException.
+     When set to 1, the bucket existence check will be done using the
+     V1 API of the S3 protocol which doesn't verify the client's permissions
+     to list or read data in the bucket.
+     When set to 2, the bucket existence check will be done using the
+     V2 API of the S3 protocol which does verify that the
+     client has permission to read the bucket.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.object.content.encoding</name>
+  <value></value>
+  <description>
+    Content encoding: gzip, deflate, compress, br, etc.
+    This will be set in the "Content-Encoding" header of the object,
+    and returned in HTTP HEAD/GET requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.create.storage.class</name>
+  <value></value>
+  <description>
+      Storage class: standard, reduced_redundancy, intelligent_tiering, etc.
+      Specify the storage class for S3A PUT object requests.
+      If not set the storage class will be null
+      and mapped to default standard class on S3.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.enabled</name>
+  <value>false</value>
+  <description>
+    Enables prefetching and caching when reading from input stream.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.size</name>
+  <value>8MB</value>
+  <description>
+      The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.count</name>
+  <value>8</value>
+  <description>
+      Maximum number of blocks prefetched concurrently at any given time.
+  </description>
 </property>
 ```
 
@@ -1018,7 +1103,7 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
@@ -1033,7 +1118,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
@@ -1068,10 +1153,10 @@ be the wrong decision: rebuild the `hadoop-aws` module with the constant
 
 
 
-### Throttled requests from S3 and Dynamo DB
+### Throttled requests from S3
 
 
-When S3A or Dynamo DB returns a response indicating that requests
+When AWS S3 returns a response indicating that requests
 from the caller are being throttled, an exponential back-off with
 an initial interval and a maximum number of requests.
 
@@ -1138,8 +1223,6 @@ performed by clients.
 !. Maybe: increase `fs.s3a.readahead.range` to increase the minimum amount
 of data asked for in every GET request, as well as how much data is
 skipped in the existing stream before aborting it and creating a new stream.
-1. If the DynamoDB tables used by S3Guard are being throttled, increase
-the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
 1. KMS: "consult AWS about increasing your capacity".
 
 
@@ -1202,9 +1285,9 @@ The configurations items controlling this behavior are:
 In the default configuration, S3 object eTags are used to detect changes.  When
 the filesystem retrieves a file from S3 using
 [Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
-it captures the eTag and uses that eTag in an 'If-Match' condition on each
+it captures the eTag and uses that eTag in an `If-Match` condition on each
 subsequent request.  If a concurrent writer has overwritten the file, the
-'If-Match' condition will fail and a RemoteFileChangedException will be thrown.
+'If-Match' condition will fail and a `RemoteFileChangedException` will be thrown.
 
 Even in this default configuration, a new write may not trigger this exception
 on an open reader.  For example, if the reader only reads forward in the file
@@ -1215,13 +1298,6 @@ that had already read the first byte.  Seeks backward on the other hand can
 result in new 'Get Object' requests that can trigger the
 `RemoteFileChangedException`.
 
-Additionally, due to the eventual consistency of S3 in a read-after-overwrite
-scenario, visibility of a new write may be delayed, avoiding the
-`RemoteFileChangedException` for some readers.  That said, if a reader does not
-see `RemoteFileChangedException`, they will have at least read a consistent view
-of a single version of the file (the version available when they started
-reading).
-
 ### Change detection with S3 Versions.
 
 It is possible to switch to using the
@@ -1229,7 +1305,7 @@ It is possible to switch to using the
 instead of eTag as the change detection mechanism.  Use of this option requires
 object versioning to be enabled on any S3 buckets used by the filesystem.  The
 benefit of using version id instead of eTag is potentially reduced frequency
-of RemoteFileChangedException. With object versioning enabled, old versions
+of `RemoteFileChangedException`. With object versioning enabled, old versions
 of objects remain available after they have been overwritten.
 This means an open input stream will still be able to seek backwards after a
 concurrent writer has overwritten the file.
@@ -1266,7 +1342,7 @@ an S3 implementation that doesn't return eTags.
 
 When `true` (default) and 'Get Object' doesn't return eTag or
 version ID (depending on configured 'source'), a `NoVersionAttributeException`
-will be thrown.  When `false` and and eTag or version ID is not returned,
+will be thrown.  When `false` and eTag or version ID is not returned,
 the stream can be read, but without any version checking.
 
 
@@ -1289,7 +1365,7 @@ role information available when deployed in Amazon EC2.
 ```xml
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>com.amazonaws.auth.InstanceProfileCredentialsProvider</value>
+  <value>org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider</value>
 </property>
 ```
 
@@ -1329,31 +1405,47 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 </property>
 ```
 
-### Customizing S3A secrets held in credential files
+#### per-bucket configuration and deprecated configuration options
+
+Per-bucket declaration of the deprecated encryption options
+will take priority over a global option -even when the
+global option uses the newer configuration keys.
+
+This means that when setting encryption options in XML files,
+the option, `fs.bucket.BUCKET.fs.s3a.server-side-encryption-algorithm`
+will take priority over the global value of `fs.bucket.s3a.encryption.algorithm`.
+The same holds for the encryption key option `fs.s3a.encryption.key`
+and its predecessor `fs.s3a.server-side-encryption.key`.
 
 
-Secrets in JCEKS files or provided by other Hadoop credential providers
-can also be configured on a per bucket basis. The S3A client will
-look for the per-bucket secrets be
+For a site configuration of:
 
+```xml
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption-algorithm</name>
+  <value>SSE-KMS</value>
+</property>
 
-Consider a JCEKS file with six keys:
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption.key</name>
+  <value>arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.algorithm</name>
+  <value>AES256</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.key</name>
+  <value>unset</value>
+</property>
+
 
 ```
-fs.s3a.access.key
-fs.s3a.secret.key
-fs.s3a.server-side-encryption-algorithm
-fs.s3a.bucket.nightly.access.key
-fs.s3a.bucket.nightly.secret.key
-fs.s3a.bucket.nightly.session.token
-fs.s3a.bucket.nightly.server-side-encryption.key
-fs.s3a.bucket.nightly.server-side-encryption-algorithm
-```
 
-When accessing the bucket `s3a://nightly/`, the per-bucket configuration
-options for that bucket will be used, here the access keys and token,
-and including the encryption algorithm and key.
-
+The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
+`arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 
@@ -1482,6 +1574,109 @@ Why explicitly declare a bucket bound to the central endpoint? It ensures
 that if the default endpoint is changed to a new region, data store in
 US-east is still reachable.
 
+## <a name="accesspoints"></a>Configuring S3 AccessPoints usage with S3A
+S3a now supports [S3 Access Point](https://aws.amazon.com/s3/features/access-points/) usage which
+improves VPC integration with S3 and simplifies your data's permission model because different
+policies can be applied now on the Access Point level. For more information about why to use and
+how to create them make sure to read the official documentation.
+
+Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name.
+You can set the Access Point ARN property using the following per bucket configuration property:
+```xml
+<property>
+    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
+    <value> {ACCESSPOINT_ARN_HERE} </value>
+    <description>Configure S3a traffic to use this AccessPoint</description>
+</property>
+```
+
+This configures access to the `sample-bucket` bucket for S3A, to go through the
+new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
+configured ARN when getting data from S3 instead of your bucket.
+
+The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
+Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
+to known sources of data defined through Access Points. In case there is a need to access a bucket
+directly (without Access Points) then you can use per bucket overrides to disable this setting on a
+bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
+
+```xml
+<!-- Require access point only access -->
+<property>
+    <name>fs.s3a.accesspoint.required</name>
+    <value>true</value>
+</property>
+<!-- Disable it on a per-bucket basis if needed -->
+<property>
+    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
+    <value>false</value>
+</property>
+```
+
+Before using Access Points make sure you're not impacted by the following:
+- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
+- The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
+`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
+considering endpoints, if you have any custom signers that use the host endpoint property make
+sure to update them if needed;
+
+## <a name="requester_pays"></a>Requester Pays buckets
+
+S3A supports buckets with
+[Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html)
+enabled. When a bucket is configured with requester pays, the requester must cover
+the per-request cost.
+
+For requests to be successful, the S3 client must acknowledge that they will pay
+for these requests by setting a request flag, usually a header, on each request.
+
+To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled` property.
+
+```xml
+<property>
+    <name>fs.s3a.requester.pays.enabled</name>
+    <value>true</value>
+</property>
+```
+
+## <a name="storage_classes"></a>Storage Classes
+
+Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/)
+that you can choose from based on behavior of your applications. By using the right
+storage class, you can reduce the cost of your bucket.
+
+S3A uses Standard storage class for PUT object requests by default, which is suitable for
+general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
+the storage class you want.
+
+```xml
+<property>
+    <name>fs.s3a.create.storage.class</name>
+    <value>intelligent_tiering</value>
+</property>
+```
+
+Please note that S3A does not support reading from archive storage classes at the moment.
+`AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
+
+## <a name="upload"></a>Configuring S3A for S3 on Outposts
+
+S3A now supports [S3 on Outposts](https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html).
+Accessing data through an access point is done by using its Amazon Resource Name (ARN), as opposed to just the bucket name.
+The only supported storage class on Outposts is **OUTPOSTS**, and by default objects are encrypted with [SSE-S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-outposts-data-encryption.html).
+You can set the Access Point ARN property using the following per bucket configuration property:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.sample-outpost-bucket.accesspoint.arn</name>
+  <value>arn:aws:s3-outposts:region:account-id:outpost/outpost-id/accesspoint/accesspoint-name</value>
+  <description>Configure S3a traffic to use this S3 on Outposts Access Point ARN</description>
+</property>
+```
+
+This configures access to the `sample-outpost-bucket` for S3A to go through the new Access Point ARN. So, for example `s3a://sample-outpost-bucket/key` will now use your configured ARN when getting data from S3 on Outpost instead of your bucket.
+
+
 ## <a name="upload"></a>How S3A writes data to S3
 
 The original S3A client implemented file writes by
@@ -1499,7 +1694,9 @@ The "fast" output stream
 
 1.  Uploads large files as blocks with the size set by
     `fs.s3a.multipart.size`. That is: the threshold at which multipart uploads
-    begin and the size of each upload are identical.
+    begin and the size of each upload are identical. This behavior can be enabled
+    or disabled by using the flag `fs.s3a.multipart.uploads.enabled` which by
+    default is set to true.
 1.  Buffers blocks to disk (default) or in on-heap or off-heap memory.
 1.  Uploads blocks in parallel in background threads.
 1.  Begins uploading blocks as soon as the buffered data exceeds this partition
@@ -1598,9 +1795,12 @@ consumed, and so eliminates heap size as the limiting factor in queued uploads
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3a</value>
+  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.</description>
+    uploads to.
+    Yarn container path will be used as default value on yarn applications,
+    otherwise fall back to hadoop.tmp.dir
+  </description>
 </property>
 ```
 
@@ -1638,7 +1838,7 @@ in byte arrays in the JVM's heap prior to upload.
 This *may* be faster than buffering to disk.
 
 The amount of data which can be buffered is limited by the available
-size of the JVM heap heap. The slower the write bandwidth to S3, the greater
+size of the JVM heap. The slower the write bandwidth to S3, the greater
 the risk of heap overflows. This risk can be mitigated by
 [tuning the upload settings](#upload_thread_tuning).
 
@@ -1879,3 +2079,55 @@ To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
 hadoop distcp -update -skipcrccheck -numListstatusThreads 40 /user/alice/datasets s3a://alice-backup/datasets
 ```
 
+### <a name="customsigners"></a> Advanced - Custom Signers
+
+AWS uees request signing to authenticate requests. In general, there should
+be no need to override the signers, and the defaults work out of the box.
+If, however, this is required - this section talks about how to configure
+custom signers. There’s 2 broad config categories to be set - one for
+registering a custom signer and another to specify usage.
+
+#### Registering Custom Signers
+```xml
+<property>
+  <name>fs.s3a.custom.signers</name>
+  <value>comma separated list of signers</value>
+  <!-- Example
+  <value>AWS4SignerType,CS1:CS1ClassName,CS2:CS2ClassName:CS2InitClass</value>
+  -->
+</property>
+```
+Acceptable value for each custom signer
+
+`SignerName`- this is used in case one of the default signers is being used.
+(E.g `AWS4SignerType`, `QueryStringSignerType`, `AWSS3V4SignerType`).
+If no custom signers are being used - this value does not need to be set.
+
+`SignerName:SignerClassName` - register a new signer with the specified name,
+and the class for this signer.
+The Signer Class must implement `software.amazon.awssdk.core.signer.Signer`.
+
+`SignerName:SignerClassName:SignerInitializerClassName` - similar time above
+except also allows for a custom SignerInitializer
+(`org.apache.hadoop.fs.s3a.AwsSignerInitializer`) class to be specified.
+
+#### Usage of the Signers
+Signers can be set at a per-service level (S3, etc) or a common
+signer for all services.
+
+```xml
+<property>
+  <name>fs.s3a.s3.signing-algorithm</name>
+  <value>${S3SignerName}</value>
+  <description>Specify the signer for S3</description>
+</property>
+
+<property>
+  <name>fs.s3a.signing-algorithm</name>
+  <value>${SignerName}</value>
+</property>
+```
+
+For a specific service, the service specific signer is looked up first.
+If that is not specified, the common signer is looked up. If this is
+not specified as well, SDK settings are used.

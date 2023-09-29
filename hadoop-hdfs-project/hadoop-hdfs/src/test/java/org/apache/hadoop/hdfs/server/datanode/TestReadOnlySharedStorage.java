@@ -51,7 +51,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Test proper {@link BlockManager} replication counting for {@link DatanodeStorage}s

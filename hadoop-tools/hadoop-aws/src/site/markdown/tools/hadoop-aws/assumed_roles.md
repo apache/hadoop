@@ -39,16 +39,32 @@ are, how to configure their policies, etc.
 * You need a role to assume, and know its "ARN".
 * You need a pair of long-lived IAM User credentials, not the root account set.
 * Have the AWS CLI installed, and test that it works there.
-* Give the role access to S3, and, if using S3Guard, to DynamoDB.
+* Give the role access to S3.
 * For working with data encrypted with SSE-KMS, the role must
 have access to the appropriate KMS keys.
 
 Trying to learn how IAM Assumed Roles work by debugging stack traces from
 the S3A client is "suboptimal".
 
-### <a name="how_it_works"></a> How the S3A connector support IAM Assumed Roles.
+### <a name="how_it_works"></a> How the S3A connector supports IAM Assumed Roles.
 
-To use assumed roles, the client must be configured to use the
+
+The S3A connector support IAM Assumed Roles in two ways:
+
+1. Using the full credentials on the client to request credentials for a specific
+    role -credentials which are then used for all the store operations.
+    This can be used to verify that a specific role has the access permissions
+    you need, or to "su" into a role which has permissions that's the full
+    accounts does not directly qualify for -such as access to a KMS key.
+2. Using the full credentials to request role credentials which are then
+    propagated into a launched application as delegation tokens.
+    This extends the previous use as it allows the jobs to be submitted to a
+    shared cluster with the permissions of the requested role, rather than
+    those of the VMs/Containers of the deployed cluster.
+
+For Delegation Token integration, see (Delegation Tokens)[delegation_tokens.html]
+
+To for Assumed Role authentication, the client must be configured to use the
 *Assumed Role Credential Provider*, `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`,
 in the configuration option `fs.s3a.aws.credentials.provider`.
 
@@ -64,7 +80,7 @@ and for background refreshes, a different credential provider must be
 created, one which uses long-lived credentials (secret keys, environment variables).
 Short lived credentials (e.g other session tokens, EC2 instance credentials) cannot be used.
 
-A list of providers can be set in `s.s3a.assumed.role.credentials.provider`;
+A list of providers can be set in `fs.s3a.assumed.role.credentials.provider`;
 if unset the standard `BasicAWSCredentialsProvider` credential provider is used,
 which uses `fs.s3a.access.key` and `fs.s3a.secret.key`.
 
@@ -179,7 +195,7 @@ Here are the full set of configuration options.
 <property>
   <name>fs.s3a.assumed.role.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
   </value>
   <description>
     List of credential providers to authenticate with the STS endpoint and
@@ -217,9 +233,6 @@ Permissions which must be granted when reading from a bucket:
 s3:Get*
 s3:ListBucket
 ```
-
-When using S3Guard, the client needs the appropriate
-<a href="s3guard-permissions">DynamoDB access permissions</a>
 
 To use SSE-KMS encryption, the client needs the
 <a href="sse-kms-permissions">SSE-KMS Permissions</a> to access the
@@ -261,47 +274,6 @@ If the caller doesn't have these permissions, the operation will fail with an
 `AccessDeniedException`: the S3 Store does not provide the specifics of
 the cause of the failure.
 
-### <a name="s3guard-permissions"></a> S3Guard Permissions
-
-To use S3Guard, all clients must have a subset of the
-[AWS DynamoDB Permissions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/api-permissions-reference.html).
-
-To work with buckets protected with S3Guard, the client must have
-all the following rights on the DynamoDB Table used to protect that bucket.
-
-```
-dynamodb:BatchGetItem
-dynamodb:BatchWriteItem
-dynamodb:DeleteItem
-dynamodb:DescribeTable
-dynamodb:GetItem
-dynamodb:PutItem
-dynamodb:Query
-dynamodb:UpdateItem
-```
-
-This is true, *even if the client only has read access to the data*.
-
-For the `hadoop s3guard` table management commands, _extra_ permissions are required:
-
-```
-dynamodb:CreateTable
-dynamodb:DescribeLimits
-dynamodb:DeleteTable
-dynamodb:Scan
-dynamodb:TagResource
-dynamodb:UntagResource
-dynamodb:UpdateTable
-```
-
-Without these permissions, tables cannot be created, destroyed or have their IO capacity
-changed through the `s3guard set-capacity` call.
-The `dynamodb:Scan` permission is needed for `s3guard prune`
-
-The `dynamodb:CreateTable` permission is needed by a client it tries to
-create the DynamoDB table on startup, that is
-`fs.s3a.s3guard.ddb.table.create` is `true` and the table does not already exist.
-
 ### <a name="mixed-permissions"></a> Mixed Permissions in a single S3 Bucket
 
 Mixing permissions down the "directory tree" is limited
@@ -331,10 +303,6 @@ Even though the operation failed, for a single file copy, the destination
 file will exist.
 For a directory copy, only a partial copy of the source data may take place
 before the permission failure is raised.
-
-
-*S3Guard*: if [S3Guard](s3guard.html) is used to manage the directory listings,
-then after partial failures of rename/copy the DynamoDB tables can get out of sync.
 
 ### Example: Read access to the base, R/W to the path underneath
 
@@ -758,35 +726,49 @@ Make sure that all the read and write permissions are allowed for any bucket/pat
 to which data is being written to, and read permissions for all
 buckets read from.
 
+### <a name="access_denied_kms"></a> `AccessDeniedException` When working with KMS-encrypted data
+
 If the bucket is using SSE-KMS to encrypt data:
 
 1. The caller must have the `kms:Decrypt` permission to read the data.
-1. The caller needs `kms:Decrypt` and `kms:GenerateDataKey`.
+1. The caller needs `kms:Decrypt` and `kms:GenerateDataKey` to write data.
 
 Without permissions, the request fails *and there is no explicit message indicating
 that this is an encryption-key issue*.
 
-### <a name="dynamodb_exception"></a> `AccessDeniedException` + `AmazonDynamoDBException`
+This problem is most obvious when you fail when writing data in a "Writing Object" operation.
+
+If the client does have write access to the bucket, verify that the caller has
+`kms:GenerateDataKey` permissions for the encryption key in use.
 
 ```
-java.nio.file.AccessDeniedException: bucket1:
-  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
-  User: arn:aws:sts::980678866538:assumed-role/s3guard-test-role/test is not authorized to perform:
-  dynamodb:DescribeTable on resource: arn:aws:dynamodb:us-west-1:980678866538:table/bucket1
-   (Service: AmazonDynamoDBv2; Status Code: 400;
+java.nio.file.AccessDeniedException: test/testDTFileSystemClient: Writing Object on test/testDTFileSystemClient:
+  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; 
+  Error Code: AccessDenied; Request ID: E86544FF1D029857)
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:243)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:111)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:314)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:406)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:310)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:285)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:150)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.putObject(WriteOperationHelper.java:460)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.lambda$putObject$0(S3ABlockOutputStream.java:438)
+    at org.apache.hadoop.util.SemaphoredDelegatingExecutor$CallableWithPermitRelease.call(SemaphoredDelegatingExecutor.java:219)
+    at org.apache.hadoop.util.SemaphoredDelegatingExecutor$CallableWithPermitRelease.call(SemaphoredDelegatingExecutor.java:219)
+    at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:125)
+    at com.google.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:57)
+    at com.google.common.util.concurrent.TrustedListenableFutureTask.run(TrustedListenableFutureTask.java:78)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+    at java.lang.Thread.run(Thread.java:748)
+Caused by:  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403;
+            Error Code: AccessDenied; Request ID: E86544FF1D029857)
 ```
 
-The caller is trying to access an S3 bucket which uses S3Guard, but the caller
-lacks the relevant DynamoDB access permissions.
-
-The `dynamodb:DescribeTable` operation is the first one used in S3Guard to access,
-the DynamoDB table, so it is often the first to fail. It can be a sign
-that the role has no permissions at all to access the table named in the exception,
-or just that this specific permission has been omitted.
-
-If the role policy requested for the assumed role didn't ask for any DynamoDB
-permissions, this is where all attempts to work with a S3Guarded bucket will
-fail. Check the value of `fs.s3a.assumed.role.policy`
+Note: the ability to read encrypted data in the store does not guarantee that the caller can encrypt new data.
+It is a separate permission.
 
 ### Error `Unable to execute HTTP request`
 

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -65,6 +64,22 @@ public class UpdateNodeResourceRequestPBImpl extends UpdateNodeResourceRequest {
     initNodeResourceMap();
     this.nodeResourceMap.clear();
     this.nodeResourceMap.putAll(nodeResourceMap);
+  }
+
+  @Override
+  public String getSubClusterId() {
+    UpdateNodeResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 
   public UpdateNodeResourceRequestProto getProto() {

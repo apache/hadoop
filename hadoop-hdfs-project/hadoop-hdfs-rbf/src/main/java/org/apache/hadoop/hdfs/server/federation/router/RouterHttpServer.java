@@ -88,10 +88,8 @@ public class RouterHttpServer extends AbstractService {
 
     this.httpServer = builder.build();
 
-    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-        RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY));
-    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), httpKeytab,
-        httpServer, RouterWebHdfsMethods.class.getPackage().getName());
+    NameNodeHttpServer.initWebHdfs(conf, httpServer,
+        RouterWebHdfsMethods.class.getPackage().getName());
 
     this.httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, this.router);
     this.httpServer.setAttribute(JspHelper.CURRENT_CONF, this.conf);
@@ -118,10 +116,16 @@ public class RouterHttpServer extends AbstractService {
 
   private static void setupServlets(
       HttpServer2 httpServer, Configuration conf) {
-    // TODO Add servlets for FSCK, etc
     httpServer.addInternalServlet(IsRouterActiveServlet.SERVLET_NAME,
         IsRouterActiveServlet.PATH_SPEC,
         IsRouterActiveServlet.class);
+    httpServer.addInternalServlet(RouterFsckServlet.SERVLET_NAME,
+        RouterFsckServlet.PATH_SPEC,
+        RouterFsckServlet.class,
+        true);
+    httpServer.addInternalServlet(RouterNetworkTopologyServlet.SERVLET_NAME,
+        RouterNetworkTopologyServlet.PATH_SPEC,
+        RouterNetworkTopologyServlet.class);
   }
 
   public InetSocketAddress getHttpAddress() {
@@ -130,6 +134,10 @@ public class RouterHttpServer extends AbstractService {
 
   public InetSocketAddress getHttpsAddress() {
     return this.httpsAddress;
+  }
+
+  static Configuration getConfFromContext(ServletContext context) {
+    return (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
   }
 
   public static Router getRouterFromContext(ServletContext context) {

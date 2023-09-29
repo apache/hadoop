@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -119,6 +119,7 @@ public class BlockRecoveryWorker {
       List<BlockRecord> syncList = new ArrayList<>(locs.length);
       int errorCount = 0;
       int candidateReplicaCnt = 0;
+      DataNodeFaultInjector.get().delay();
 
       // Check generation stamps, replica size and state. Replica must satisfy
       // the following criteria to be included in syncList for recovery:
@@ -467,9 +468,9 @@ public class BlockRecoveryWorker {
       // notify Namenode the new size and locations
       final DatanodeID[] newLocs = new DatanodeID[totalBlkNum];
       final String[] newStorages = new String[totalBlkNum];
-      for (int i = 0; i < totalBlkNum; i++) {
-        newLocs[blockIndices[i]] = DatanodeID.EMPTY_DATANODE_ID;
-        newStorages[blockIndices[i]] = "";
+      for (int i = 0; i < newLocs.length; i++) {
+        newLocs[i] = DatanodeID.EMPTY_DATANODE_ID;
+        newStorages[i] = "";
       }
       for (BlockRecord r : rurList) {
         int index = (int) (r.rInfo.getBlockId() &
@@ -600,17 +601,22 @@ public class BlockRecoveryWorker {
     Daemon d = new Daemon(datanode.threadGroup, new Runnable() {
       @Override
       public void run() {
-        for(RecoveringBlock b : blocks) {
-          try {
-            logRecoverBlock(who, b);
-            if (b.isStriped()) {
-              new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
-            } else {
-              new RecoveryTaskContiguous(b).recover();
+        datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
+        try {
+          for (RecoveringBlock b : blocks) {
+            try {
+              logRecoverBlock(who, b);
+              if (b.isStriped()) {
+                new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
+              } else {
+                new RecoveryTaskContiguous(b).recover();
+              }
+            } catch (IOException e) {
+              LOG.warn("recover Block: {} FAILED: {}", b, e);
             }
-          } catch (IOException e) {
-            LOG.warn("recoverBlocks FAILED: " + b, e);
           }
+        } finally {
+          datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
         }
       }
     });

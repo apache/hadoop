@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies.MultipleLinearRandomRetry;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ public class RetryUtils {
    *     - non-IOException.
    *     
    *
-   * @param conf
+   * @param conf configuration.
    * @param retryPolicyEnabledKey     conf property key for enabling retry
    * @param defaultRetryPolicyEnabled default retryPolicyEnabledKey conf value 
    * @param retryPolicySpecKey        conf property key for retry policy spec
@@ -168,7 +168,7 @@ public class RetryUtils {
    * Retry policy spec:
    *   N pairs of sleep-time and number-of-retries "s1,n1,s2,n2,..."
    * 
-   * @param conf
+   * @param conf configuration.
    * @param retryPolicyEnabledKey     conf property key for enabling retry
    * @param defaultRetryPolicyEnabled default retryPolicyEnabledKey conf value 
    * @param retryPolicySpecKey        conf property key for retry policy spec

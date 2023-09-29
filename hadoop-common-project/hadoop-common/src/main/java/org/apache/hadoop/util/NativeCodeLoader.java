@@ -75,22 +75,23 @@ public final class NativeCodeLoader {
   }
 
   /**
-   * Returns true only if this build was compiled with support for snappy.
-   */
-  public static native boolean buildSupportsSnappy();
-
-  /**
    * Returns true only if this build was compiled with support for ISA-L.
+   *
+   * @return if this build was compiled with support for ISA-L true, not false.
    */
   public static native boolean buildSupportsIsal();
 
   /**
-  * Returns true only if this build was compiled with support for ZStandard.
+   * Returns true only if this build was compiled with support for ZStandard.
+   *
+   * @return if this build was compiled with support for ZStandard true,not false.
    */
   public static native boolean buildSupportsZstd();
 
   /**
    * Returns true only if this build was compiled with support for openssl.
+   *
+   * @return if this build was compiled with support for openssl true,not false.
    */
   public static native boolean buildSupportsOpenssl();
 

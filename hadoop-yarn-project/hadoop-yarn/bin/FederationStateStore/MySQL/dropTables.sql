@@ -25,3 +25,13 @@ DROP TABLE applicationsHomeSubCluster;
 DROP TABLE membership;
 
 DROP TABLE policies;
+
+DROP TABLE reservationsHomeSubCluster;
+
+DROP TABLE masterKeys;
+
+DROP TABLE delegationTokens;
+
+DROP TABLE sequenceTable;
+
+DROP TABLE versions;

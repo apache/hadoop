@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistra
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationsRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,10 +52,14 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
 
   @BeforeClass
   public static void create() {
-    // Reduce expirations to 5 seconds
+    // Reduce expirations to 2 seconds
     getConf().setTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS,
-        5, TimeUnit.SECONDS);
+        2, TimeUnit.SECONDS);
+    // Set deletion time to 2 seconds
+    getConf().setTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS,
+        2, TimeUnit.SECONDS);
   }
 
   @Before
@@ -130,8 +136,8 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
   }
 
   @Test
-  public void testRouterStateExpired()
-      throws IOException, InterruptedException {
+  public void testRouterStateExpiredAndDeletion()
+      throws IOException, InterruptedException, TimeoutException {
 
     long dateStarted = Time.now();
     String address = "testaddress";
@@ -149,17 +155,46 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
         routerStore.getRouterRegistration(getRequest).getRouter();
     assertNotNull(record);
 
-    // Wait past expiration (set to 5 sec in config)
-    Thread.sleep(6000);
+    // Wait past expiration (set in conf to 2 seconds)
+    GenericTestUtils.waitFor(() -> {
+      try {
+        RouterState routerState = routerStore
+            .getRouterRegistration(getRequest).getRouter();
+        // Verify entry is expired
+        return routerState.getStatus() == RouterServiceState.EXPIRED;
+      } catch (IOException e) {
+        return false;
+      }
+    }, 100, 3000);
 
-    // Verify expired
-    RouterState r = routerStore.getRouterRegistration(getRequest).getRouter();
-    assertEquals(RouterServiceState.EXPIRED, r.getStatus());
-
-    // Heartbeat again and this shouldn't be EXPIRED anymore
+    // Heartbeat again and this shouldn't be EXPIRED at this point
     assertTrue(routerStore.routerHeartbeat(request).getStatus());
-    r = routerStore.getRouterRegistration(getRequest).getRouter();
+    RouterState r = routerStore.getRouterRegistration(getRequest).getRouter();
     assertEquals(RouterServiceState.RUNNING, r.getStatus());
+
+    // Wait past expiration (set in conf to 2 seconds)
+    GenericTestUtils.waitFor(() -> {
+      try {
+        RouterState routerState = routerStore
+            .getRouterRegistration(getRequest).getRouter();
+        // Verify entry is expired
+        return routerState.getStatus() == RouterServiceState.EXPIRED;
+      } catch (IOException e) {
+        return false;
+      }
+    }, 100, 3000);
+
+    // Wait deletion (set in conf to 2 seconds)
+    GenericTestUtils.waitFor(() -> {
+      try {
+        RouterState routerState = routerStore
+            .getRouterRegistration(getRequest).getRouter();
+        // Verify entry is deleted
+        return routerState.getStatus() == null;
+      } catch (IOException e) {
+        return false;
+      }
+    }, 100, 3000);
   }
 
   @Test

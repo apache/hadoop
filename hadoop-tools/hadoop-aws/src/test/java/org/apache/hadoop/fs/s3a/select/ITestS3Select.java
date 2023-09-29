@@ -47,9 +47,9 @@ import org.apache.hadoop.fs.s3a.AWSServiceIOException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -63,8 +63,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectBinding.expandBackslashChars;
@@ -102,9 +102,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    Assume.assumeTrue("S3 Select is not enabled",
-        getFileSystem().hasCapability(S3_SELECT_CAPABILITY));
     csvPath = path(getMethodName() + ".csv");
+    Assume.assumeTrue("S3 Select is not enabled",
+        getFileSystem().hasPathCapability(csvPath, S3_SELECT_CAPABILITY));
     selectConf = new Configuration(false);
     selectConf.setBoolean(SELECT_ERRORS_INCLUDE_SQL, true);
     createStandardCsvFile(getFileSystem(), csvPath, ALL_QUOTES);
@@ -256,6 +256,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     ContractTestUtils.touch(fs, path);
     parseToLines(fs.openFile(path)
             .must(SELECT_SQL, SELECT_EVERYTHING)
+            .withFileStatus(fs.getFileStatus(path))
             .build()
             .get(),
         0);
@@ -301,8 +302,8 @@ public class ITestS3Select extends AbstractS3SelectTest {
                  SELECT_EVERYTHING)) {
       SelectInputStream sis
           = (SelectInputStream) seekStream.getWrappedStream();
-      S3AInstrumentation.InputStreamStatistics streamStats
-          = sis.getS3AStreamStatistics();
+      S3AInputStreamStatistics streamStats =
+          sis.getS3AStreamStatistics();
       // lazy seek doesn't raise a problem here
       seekStream.seek(0);
       assertEquals("first byte read", fullData[0], seekStream.read());
@@ -343,7 +344,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
       assertEquals("byte at seek position",
           fullData[(int)seekStream.getPos()], seekStream.read());
       assertEquals("Seek bytes skipped in " + streamStats,
-          seekRange, streamStats.bytesSkippedOnSeek);
+          seekRange, streamStats.getBytesSkippedOnSeek());
 
       // try an invalid readahead range
       intercept(IllegalArgumentException.class,
@@ -394,8 +395,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
         "SELECT * FROM S3OBJECT s WHERE s._5 = `TRUE`");
     // and do a quick check on the instrumentation
     long bytesRead = getFileSystem().getInstrumentation()
-        .getCounterValue(Statistic.STREAM_SEEK_BYTES_READ);
-    assertNotEquals("No bytes read count", 0, bytesRead);
+        .getCounterValue(Statistic.STREAM_READ_BYTES);
+    assertNotEquals("No bytes read count in filesystem instrumentation counter",
+        0, bytesRead);
   }
 
   @Test
@@ -494,7 +496,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedInputFormat() throws Throwable {
-    describe("Request an unsupported input format");
+    describe("Request an Unsupported input format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "pptx");
@@ -508,7 +510,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedOutputFormat() throws Throwable {
-    describe("Request a (currently) unsupported output format");
+    describe("Request a (currently) Unsupported output format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "csv")
@@ -548,14 +550,14 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(dir)
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
 
     // try the parent
     builder = getFileSystem().openFile(dir.getParent())
             .must(SELECT_SQL,
                 SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(FileNotFoundException.class,
         "", builder.build());
   }
 
@@ -565,7 +567,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(path("/"))
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(PathIOException.class,
+    interceptFuture(IOException.class,
         "", builder.build());
   }
 
@@ -587,13 +589,14 @@ public class ITestS3Select extends AbstractS3SelectTest {
     stream.setReadahead(1L);
     assertEquals("Readahead on " + sis, 1, sis.getReadahead());
     stream.read();
-    S3AInstrumentation.InputStreamStatistics stats
-        = sis.getS3AStreamStatistics();
+    S3AInputStreamStatistics stats
+        = (S3AInputStreamStatistics)
+        sis.getS3AStreamStatistics();
     assertEquals("Read count in " + sis,
-        1, stats.bytesRead);
+        1, stats.getBytesRead());
     stream.close();
     assertEquals("Abort count in " + sis,
-        1, stats.aborted);
+        1, stats.getAborted());
     readOps.assertDiffEquals("Read operations are still considered active",
         0);
     intercept(PathIOException.class, FSExceptionMessages.STREAM_IS_CLOSED,
@@ -607,12 +610,14 @@ public class ITestS3Select extends AbstractS3SelectTest {
         "SELECT * FROM S3OBJECT s");
     stream.setReadahead(0x1000L);
     SelectInputStream sis = (SelectInputStream) stream.getWrappedStream();
-    S3AInstrumentation.InputStreamStatistics stats
-        = sis.getS3AStreamStatistics();
+    S3AInputStreamStatistics stats
+        = (S3AInputStreamStatistics)
+        sis.getS3AStreamStatistics();
     stream.close();
-    assertEquals("Close count in " + sis, 1, stats.closed);
-    assertEquals("Abort count in " + sis, 0, stats.aborted);
-    assertTrue("No bytes read in close of " + sis, stats.bytesReadInClose > 0);
+    assertEquals("Close count in " + sis, 1, stats.getClosed());
+    assertEquals("Abort count in " + sis, 0, stats.getAborted());
+    assertTrue("No bytes read in close of " + sis,
+        stats.getBytesReadInClose() > 0);
   }
 
   @Test
@@ -762,7 +767,8 @@ public class ITestS3Select extends AbstractS3SelectTest {
     JobConf conf = createJobConf();
     inputOpt(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_NONE);
     inputMust(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_IGNORE);
-    inputMust(conf, INPUT_FADVISE, INPUT_FADV_NORMAL);
+    inputMust(conf, FS_OPTION_OPENFILE_READ_POLICY,
+        FS_OPTION_OPENFILE_READ_POLICY_DEFAULT);
     inputMust(conf, SELECT_ERRORS_INCLUDE_SQL, "true");
     verifySelectionCount(EVEN_ROWS_COUNT,
         SELECT_EVEN_ROWS_NO_HEADER,

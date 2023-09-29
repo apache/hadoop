@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
+import org.apache.hadoop.hdfs.web.resources.AllUsersParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
@@ -57,6 +60,7 @@ import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
+import org.apache.hadoop.hdfs.web.resources.NameSpaceQuotaParam;
 import org.apache.hadoop.hdfs.web.resources.NewLengthParam;
 import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
@@ -71,8 +75,12 @@ import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotDiffStartPathParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotDiffIndexParam;
 import org.apache.hadoop.hdfs.web.resources.StartAfterParam;
 import org.apache.hadoop.hdfs.web.resources.StoragePolicyParam;
+import org.apache.hadoop.hdfs.web.resources.StorageSpaceQuotaParam;
+import org.apache.hadoop.hdfs.web.resources.StorageTypeParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.TokenKindParam;
 import org.apache.hadoop.hdfs.web.resources.TokenServiceParam;
@@ -90,6 +98,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,6 +110,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WebHDFS Router implementation. This is an extension of
@@ -112,20 +123,18 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterWebHdfsMethods.class);
 
-  private static final ThreadLocal<String> REMOTE_ADDRESS =
-      new ThreadLocal<String>();
-
   private @Context HttpServletRequest request;
   private String method;
   private String query;
   private String reqPath;
+  private String remoteAddr;
 
   public RouterWebHdfsMethods(@Context HttpServletRequest request) {
     super(request);
     this.method = request.getMethod();
     this.query = request.getQueryString();
     this.reqPath = request.getServletPath();
-    REMOTE_ADDRESS.set(JspHelper.getRemoteAddr(request));
+    this.remoteAddr = JspHelper.getRemoteAddr(request);
   }
 
   @Override
@@ -136,7 +145,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
                       final Param<?, ?>... parameters) {
     super.init(ugi, delegation, username, doAsUser, path, op, parameters);
 
-    REMOTE_ADDRESS.set(JspHelper.getRemoteAddr(request));
+    remoteAddr = JspHelper.getRemoteAddr(request);
   }
 
   @Override
@@ -150,12 +159,12 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   }
 
   private void reset() {
-    REMOTE_ADDRESS.set(null);
+    remoteAddr = null;
   }
 
   @Override
   protected String getRemoteAddr() {
-    return REMOTE_ADDRESS.get();
+    return remoteAddr;
   }
 
   @Override
@@ -209,7 +218,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName,
-      final ECPolicyParam ecpolicy
+      final ECPolicyParam ecpolicy,
+      final NameSpaceQuotaParam namespaceQuota,
+      final StorageSpaceQuotaParam storagespaceQuota,
+      final StorageTypeParam storageType
   ) throws IOException, URISyntaxException {
 
     switch(op.getValue()) {
@@ -261,7 +273,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           accessTime, renameOptions, createParent, delegationTokenArgument,
           aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
           oldSnapshotName, exclDatanodes, createFlagParam, noredirectParam,
-          policyName, ecpolicy);
+          policyName, ecpolicy, namespaceQuota, storagespaceQuota, storageType);
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -328,10 +340,13 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final FsActionParam fsAction,
       final SnapshotNameParam snapshotName,
       final OldSnapshotNameParam oldSnapshotName,
+      final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      final SnapshotDiffIndexParam snapshotDiffIndex,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
   ) throws IOException, URISyntaxException {
     try {
       final Router router = getRouter();
@@ -372,11 +387,15 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       case GETXATTRS:
       case LISTXATTRS:
       case CHECKACCESS:
+      case GETLINKTARGET:
+      case GETFILELINKSTATUS:
+      case GETSTATUS:
       {
         return super.get(ugi, delegation, username, doAsUser, fullpath, op,
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
-            tokenKind, tokenService, noredirectParam, startAfter);
+            snapshotDiffStartPath, snapshotDiffIndex,
+            tokenKind, tokenService, noredirectParam, startAfter, allUsers);
       }
       default:
         throw new UnsupportedOperationException(op + " is not supported");
@@ -396,7 +415,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
    * @param path Path to check.
    * @param op Operation to perform.
    * @param openOffset Offset for opening a file.
-   * @param excludeDatanodes Blocks to excluded.
+   * @param excludeDatanodes Blocks to exclude.
    * @param parameters Other parameters.
    * @return Redirection URI.
    * @throws URISyntaxException If it cannot parse the URI.
@@ -407,6 +426,9 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final DoAsParam doAsUser, final String path, final HttpOpParam.Op op,
       final long openOffset, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+    if (!DFSUtil.isValidName(path)) {
+      throw new InvalidPathException(path);
+    }
     final DatanodeInfo dn =
         chooseDatanode(router, path, op, openOffset, excludeDatanodes);
 
@@ -448,29 +470,34 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private DatanodeInfo chooseDatanode(final Router router,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
-    // We need to get the DNs as a privileged user
     final RouterRpcServer rpcServer = getRPCServer(router);
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    RouterRpcServer.setCurrentUser(loginUser);
-
-    DatanodeInfo[] dns = null;
+    DatanodeInfo[] dns = {};
+    String resolvedNs = "";
     try {
-      dns = rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
+      dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
-    } finally {
-      // Reset ugi to remote user for remaining operations.
-      RouterRpcServer.resetCurrentUser();
+    }
+
+    if (op == PutOpParam.Op.CREATE) {
+      try {
+        resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
+      } catch (IOException e) {
+        LOG.error("Cannot get the name service " +
+            "to create file for path {} ", path, e);
+      }
     }
 
     HashSet<Node> excludes = new HashSet<Node>();
-    if (excludeDatanodes != null) {
-      Collection<String> collection =
-          getTrimmedStringCollection(excludeDatanodes);
-      for (DatanodeInfo dn : dns) {
-        if (collection.contains(dn.getName())) {
-          excludes.add(dn);
-        }
+    Collection<String> collection =
+        getTrimmedStringCollection(excludeDatanodes);
+    for (DatanodeInfo dn : dns) {
+      String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
+      if (collection.contains(dn.getName())) {
+        excludes.add(dn);
+      } else if (op == PutOpParam.Op.CREATE && !ns.equals(resolvedNs)) {
+        // for CREATE, the dest dn should be in the resolved ns
+        excludes.add(dn);
       }
     }
 
@@ -503,6 +530,22 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     }
 
     return getRandomDatanode(dns, excludes);
+  }
+
+  /**
+   * Get the nameservice info from datanode network location.
+   * @param location network location with format `/ns0/rack1`
+   * @return nameservice this datanode is in
+   */
+  @VisibleForTesting
+  public static String getNsFromDataNodeNetworkLocation(String location) {
+    // network location should be in the format of /ns/rack
+    Pattern pattern = Pattern.compile("^/([^/]*)/");
+    Matcher matcher = pattern.matcher(location);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
   }
 
   /**

@@ -23,25 +23,26 @@ import java.net.URI;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.auth.AWSCredentials;
-import com.google.common.annotations.VisibleForTesting;
-
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 
+
 /**
  * Base class for session credential support.
+ *
  */
 @InterfaceAudience.Private
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 
   /** Credentials, created in {@link #init()}. */
-  private AWSCredentials awsCredentials;
+  private volatile AwsCredentials awsCredentials;
 
   /** Atomic flag for on-demand initialization. */
   private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -50,7 +51,7 @@ public abstract class AbstractSessionCredentialsProvider
    * The (possibly translated) initialization exception.
    * Used for testing.
    */
-  private IOException initializationException;
+  private volatile IOException initializationException;
 
   /**
    * Constructor.
@@ -69,9 +70,9 @@ public abstract class AbstractSessionCredentialsProvider
    * @throws IOException on any failure.
    */
   @Retries.OnceTranslated
-  protected void init() throws IOException {
+  protected synchronized void init() throws IOException {
     // stop re-entrant attempts
-    if (initialized.getAndSet(true)) {
+    if (isInitialized()) {
       return;
     }
     try {
@@ -80,6 +81,8 @@ public abstract class AbstractSessionCredentialsProvider
     } catch (IOException e) {
       initializationException = e;
       throw e;
+    } finally {
+      initialized.set(true);
     }
   }
 
@@ -99,7 +102,7 @@ public abstract class AbstractSessionCredentialsProvider
    * @return the credentials
    * @throws IOException on any failure.
    */
-  protected abstract AWSCredentials createCredentials(Configuration config)
+  protected abstract AwsCredentials createCredentials(Configuration config)
       throws IOException;
 
   /**
@@ -109,10 +112,10 @@ public abstract class AbstractSessionCredentialsProvider
    * is thrown here before any attempt to return the credentials
    * is made.
    * @return credentials, if set.
-   * @throws SdkBaseException if one was raised during init
+   * @throws SdkException if one was raised during init
    * @throws CredentialInitializationException on other failures.
    */
-  public AWSCredentials getCredentials() throws SdkBaseException {
+  public AwsCredentials resolveCredentials() throws SdkException {
     // do an on-demand init then raise an AWS SDK exception if
     // there was a failure.
     try {
@@ -120,21 +123,23 @@ public abstract class AbstractSessionCredentialsProvider
         init();
       }
     } catch (IOException e) {
-      if (e.getCause() instanceof SdkBaseException) {
-        throw (SdkBaseException) e.getCause();
+      if (e.getCause() instanceof SdkException) {
+        throw (SdkException) e.getCause();
       } else {
         throw new CredentialInitializationException(e.getMessage(), e);
       }
     }
     if (awsCredentials == null) {
       throw new CredentialInitializationException(
-          "Provider " + this + " has no credentials");
+          "Provider " + this + " has no credentials: " +
+             (initializationException != null ? initializationException.toString() : ""),
+          initializationException);
     }
     return awsCredentials;
   }
 
   public final boolean hasCredentials() {
-    return awsCredentials == null;
+    return awsCredentials != null;
   }
 
   @Override
@@ -157,15 +162,16 @@ public abstract class AbstractSessionCredentialsProvider
    * This will be interpreted as "this provider has no credentials to offer",
    * rather than an explicit error or anonymous access.
    */
-  protected static final class NoCredentials implements AWSCredentials {
+  protected static final class NoCredentials implements AwsCredentials {
     @Override
-    public String getAWSAccessKeyId() {
+    public String accessKeyId() {
       return null;
     }
 
     @Override
-    public String getAWSSecretKey() {
+    public String secretAccessKey() {
       return null;
     }
   }
+
 }

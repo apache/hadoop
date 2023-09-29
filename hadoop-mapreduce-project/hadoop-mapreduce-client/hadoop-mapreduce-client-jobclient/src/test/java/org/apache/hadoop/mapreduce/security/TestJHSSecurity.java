@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.security;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -26,6 +25,8 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +38,6 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenR
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
-import org.apache.hadoop.mapreduce.v2.hs.HistoryClientService;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService;
 import org.apache.hadoop.mapreduce.v2.hs.JHSDelegationTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
@@ -62,7 +62,7 @@ public class TestJHSSecurity {
       LoggerFactory.getLogger(TestJHSSecurity.class);
   
   @Test
-  public void testDelegationToken() throws IOException, InterruptedException {
+  public void testDelegationToken() throws Exception {
 
     org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
@@ -81,7 +81,7 @@ public class TestJHSSecurity {
     final long renewInterval = 10000l;
 
     JobHistoryServer jobHistoryServer = null;
-    MRClientProtocol clientUsingDT = null;
+    MRClientProtocol clientUsingDT;
     long tokenFetchTime;
     try {
       jobHistoryServer = new JobHistoryServer() {
@@ -92,22 +92,10 @@ public class TestJHSSecurity {
         @Override
         protected JHSDelegationTokenSecretManager createJHSSecretManager(
             Configuration conf, HistoryServerStateStoreService store) {
-          return new JHSDelegationTokenSecretManager(initialInterval, 
+          return new JHSDelegationTokenSecretManager(initialInterval,
               maxLifetime, renewInterval, 3600000, store);
         }
-
-        @Override
-        protected HistoryClientService createHistoryClientService() {
-          return new HistoryClientService(historyContext, 
-            this.jhsDTSecretManager) {
-            @Override
-            protected void initializeWebApp(Configuration conf) {
-              // Don't need it, skip.;
-              }
-          };
-        }
       };
-//      final JobHistoryServer jobHistoryServer = jhServer;
       jobHistoryServer.init(conf);
       jobHistoryServer.start();
       final MRClientProtocol hsService = jobHistoryServer.getClientService()
@@ -168,14 +156,11 @@ public class TestJHSSecurity {
       }
       Thread.sleep(50l);
       LOG.info("At time: " + System.currentTimeMillis() + ", token should be invalid");
-      // Token should have expired.      
-      try {
-        clientUsingDT.getJobReport(jobReportRequest);
-        fail("Should not have succeeded with an expired token");
-      } catch (IOException e) {
-        assertTrue(e.getCause().getMessage().contains("is expired"));
-      }
-      
+      // Token should have expired.
+      final MRClientProtocol finalClientUsingDT = clientUsingDT;
+      LambdaTestUtils.intercept(SecretManager.InvalidToken.class, "has expired",
+          () -> finalClientUsingDT.getJobReport(jobReportRequest));
+
       // Test cancellation
       // Stop the existing proxy, start another.
       if (clientUsingDT != null) {

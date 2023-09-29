@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.junit.Assert;
@@ -124,7 +123,7 @@ public class FairSchedulerTestBase {
       int memory, int vcores, String host, int priority, int numContainers,
       boolean relaxLocality) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
-    request.setCapability(BuilderUtils.newResource(memory, vcores));
+    request.setCapability(Resources.createResource(memory, vcores));
     request.setResourceName(host);
     request.setNumContainers(numContainers);
     Priority prio = recordFactory.newRecordInstance(Priority.class);
@@ -268,6 +267,30 @@ public class FairSchedulerTestBase {
     scheduler.allocate(attId, ask, null, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
     scheduler.update();
+  }
+
+  protected ApplicationAttemptId createRecoveringApplication(
+      Resource amResource, String queueId, String userId) {
+    ApplicationAttemptId id =
+        createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+
+    // On restore the app is already created but we need to check the AM
+    // resource, make sure it is set for test
+    ResourceRequest amRequest = createResourceRequest(
+        // cast to int as we're not testing large values so it is safe
+        (int)amResource.getMemorySize(), amResource.getVirtualCores(),
+        ResourceRequest.ANY, 1, 1, true);
+    List<ResourceRequest> amReqs = new ArrayList<>();
+    amReqs.add(amRequest);
+    createApplicationWithAMResourceInternal(id, queueId, userId, amResource,
+        amReqs);
+
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queueId);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, true,
+        placementCtx);
+    return id;
   }
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,

@@ -24,7 +24,11 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -59,6 +63,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.AM_ALLOW_NON_EXCLUSIVE_ALLOCATION;
+
 /**
  * Allocate normal (new) containers, considers locality/label, etc. Using
  * delayed scheduling mechanism to get better locality allocation.
@@ -72,23 +78,20 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       ActivitiesManager activitiesManager) {
     super(application, rc, rmContext, activitiesManager);
   }
-  
-  private boolean checkHeadroom(Resource clusterResource,
-      ResourceLimits currentResourceLimits, Resource required,
-      String nodePartition) {
+
+  private boolean checkHeadroom(ResourceLimits currentResourceLimits,
+                                Resource required, String nodePartition) {
     // If headroom + currentReservation < required, we cannot allocate this
     // require
-    Resource resourceCouldBeUnReserved = application.getCurrentReservation();
-    if (!application.getCSLeafQueue().getReservationContinueLooking()
-        || !nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
-      // If we don't allow reservation continuous looking, OR we're looking at
-      // non-default node partition, we won't allow to unreserve before
-      // allocation.
+    Resource resourceCouldBeUnReserved =
+        application.getAppAttemptResourceUsage().getReserved(nodePartition);
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
+      // If we don't allow reservation continuous looking,
+      // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
     }
-    return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
-        currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
-        required);
+    return Resources.fitsIn(rc, required,
+        Resources.add(currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved));
   }
 
   /*
@@ -97,8 +100,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * We will consider stuffs like exclusivity, pending resource, node partition,
    * headroom, etc.
    */
-  private ContainerAllocation preCheckForNodeCandidateSet(
-      Resource clusterResource, FiCaSchedulerNode node,
+  private ContainerAllocation preCheckForNodeCandidateSet(FiCaSchedulerNode node,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
@@ -107,7 +109,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     if (offswitchPendingAsk.getCount() <= 0) {
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.PRIORITY_SKIPPED_BECAUSE_NULL_ANY_REQUEST);
+          ActivityDiagnosticConstant.REQUEST_DO_NOT_NEED_RESOURCE,
+          ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
@@ -118,14 +121,14 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     if (application.getOutstandingAsksCount(schedulerKey) <= 0) {
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.APPLICATION_PRIORITY_DO_NOT_NEED_RESOURCE);
+          ActivityDiagnosticConstant.REQUEST_DO_NOT_NEED_RESOURCE,
+          ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
-    // AM container allocation doesn't support non-exclusive allocation to
-    // avoid painful of preempt an AM container
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
-      if (application.isWaitingForAMContainer()) {
+      if (application.isWaitingForAMContainer() && !rmContext.getYarnConfiguration()
+          .getBoolean(AM_ALLOW_NON_EXCLUSIVE_ALLOCATION, false)) {
         LOG.debug("Skip allocating AM container to app_attempt={},"
             + " don't allow to allocate AM container in non-exclusive mode",
             application.getApplicationAttemptId());
@@ -133,7 +136,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             "Skipping assigning to Node in Ignore Exclusivity mode. ");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.SKIP_IN_IGNORE_EXCLUSIVITY_MODE);
+            ActivityDiagnosticConstant.
+                REQUEST_SKIPPED_IN_IGNORE_EXCLUSIVITY_MODE,
+            ActivityLevel.REQUEST);
         return ContainerAllocation.APP_SKIPPED;
       }
     }
@@ -148,27 +153,30 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           activitiesManager, node, application, schedulerKey,
           ActivityDiagnosticConstant.
               NODE_DO_NOT_MATCH_PARTITION_OR_PLACEMENT_CONSTRAINTS
-              + ActivitiesManager.getDiagnostics(dcOpt));
+              + ActivitiesManager.getDiagnostics(dcOpt),
+          ActivityLevel.NODE);
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
-    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
       if (!shouldAllocOrReserveNewContainer(schedulerKey, required)) {
         LOG.debug("doesn't need containers based on reservation algo!");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.DO_NOT_NEED_ALLOCATIONATTEMPTINFOS);
+            ActivityDiagnosticConstant.REQUEST_SKIPPED_BECAUSE_OF_RESERVATION,
+            ActivityLevel.REQUEST);
         return ContainerAllocation.PRIORITY_SKIPPED;
       }
     }
 
-    if (!checkHeadroom(clusterResource, resourceLimits, required,
-        node.getPartition())) {
+    if (!checkHeadroom(resourceLimits, required, node.getPartition())) {
       LOG.debug("cannot allocate required resource={} because of headroom",
           required);
-      ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
+      ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.QUEUE_SKIPPED_HEADROOM);
+          ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM,
+          ActivityState.REJECTED,
+          ActivityLevel.REQUEST);
       return ContainerAllocation.QUEUE_SKIPPED;
     }
 
@@ -183,7 +191,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // thread.
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.PRIORITY_SKIPPED_BECAUSE_NULL_ANY_REQUEST);
+          ActivityDiagnosticConstant.REQUEST_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
+          ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
     String requestPartition =
@@ -213,7 +222,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         }
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.NON_PARTITIONED_PARTITION_FIRST);
+            ActivityDiagnosticConstant.
+                REQUEST_SKIPPED_BECAUSE_NON_PARTITIONED_PARTITION_FIRST,
+            ActivityLevel.REQUEST);
         return ContainerAllocation.APP_SKIPPED;
       }
     }
@@ -228,7 +239,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_BLACK_LISTED_NODE);
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.SKIP_BLACK_LISTED_NODE);
+          ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+          ActivityLevel.NODE);
       return ContainerAllocation.APP_SKIPPED;
     }
 
@@ -366,9 +378,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     }
 
     // Skip node-local request, go to rack-local request
-    ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-        activitiesManager, node, application, schedulerKey,
-        ActivityDiagnosticConstant.SKIP_NODE_LOCAL_REQUEST);
     return ContainerAllocation.LOCALITY_SKIPPED;
   }
 
@@ -384,9 +393,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     }
 
     // Skip rack-local request, go to off-switch request
-    ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-        activitiesManager, node, application, schedulerKey,
-        ActivityDiagnosticConstant.SKIP_RACK_LOCAL_REQUEST);
     return ContainerAllocation.LOCALITY_SKIPPED;
   }
 
@@ -405,7 +411,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_DUE_TO_LOCALITY);
     ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
         activitiesManager, node, application, schedulerKey,
-        ActivityDiagnosticConstant.SKIP_OFF_SWITCH_REQUEST);
+        ActivityDiagnosticConstant.NODE_SKIPPED_BECAUSE_OF_OFF_SWITCH_DELAY,
+        ActivityLevel.NODE);
     return ContainerAllocation.APP_SKIPPED;
   }
 
@@ -439,7 +446,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (!appInfo.canDelayTo(schedulerKey, node.getRackName())) {
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.SKIP_PRIORITY_BECAUSE_OF_RELAX_LOCALITY);
+            ActivityDiagnosticConstant.NODE_SKIPPED_BECAUSE_OF_RELAX_LOCALITY,
+            ActivityLevel.NODE);
         return ContainerAllocation.PRIORITY_SKIPPED;
       }
 
@@ -465,7 +473,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (!appInfo.canDelayTo(schedulerKey, ResourceRequest.ANY)) {
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.SKIP_PRIORITY_BECAUSE_OF_RELAX_LOCALITY);
+            ActivityDiagnosticConstant.NODE_SKIPPED_BECAUSE_OF_RELAX_LOCALITY,
+            ActivityLevel.NODE);
         return ContainerAllocation.PRIORITY_SKIPPED;
       }
 
@@ -489,7 +498,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     }
     ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
         activitiesManager, node, application, schedulerKey,
-        ActivityDiagnosticConstant.PRIORITY_SKIPPED);
+        ActivityDiagnosticConstant.
+            NODE_SKIPPED_BECAUSE_OF_NO_OFF_SWITCH_AND_LOCALITY_VIOLATION,
+        ActivityLevel.NODE);
     return ContainerAllocation.PRIORITY_SKIPPED;
   }
 
@@ -516,8 +527,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Skip this locality request
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.NOT_SUFFICIENT_RESOURCE
-              + getResourceDiagnostics(capability, totalResource));
+          ActivityDiagnosticConstant.
+              NODE_TOTAL_RESOURCE_INSUFFICIENT_FOR_REQUEST
+              + getResourceDiagnostics(capability, totalResource),
+          ActivityLevel.NODE);
       return ContainerAllocation.LOCALITY_SKIPPED;
     }
 
@@ -542,7 +555,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     RMContainer unreservedContainer = null;
     boolean reservationsContinueLooking =
-        application.getCSLeafQueue().getReservationContinueLooking();
+        application.getCSLeafQueue().isReservationsContinueLooking();
 
     // Check if we need to kill some containers to allocate this one
     List<RMContainer> toKillContainers = null;
@@ -569,13 +582,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Allocate...
       // We will only do continuous reservation when this is not allocated from
       // reserved container
-      if (rmContainer == null && reservationsContinueLooking
-          && node.getLabels().isEmpty()) {
+      if (rmContainer == null && reservationsContinueLooking) {
         // when reservationsContinueLooking is set, we may need to unreserve
         // some containers to meet this queue, its parents', or the users'
         // resource limits.
-        // TODO, need change here when we want to support continuous reservation
-        // looking for labeled partitions.
         if (!shouldAllocOrReserveNewContainer || needToUnreserve) {
           if (!needToUnreserve) {
             // If we shouldn't allocate/reserve new container then we should
@@ -597,7 +607,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
                 activitiesManager, node, application, schedulerKey,
                 ActivityDiagnosticConstant.
-                    NODE_CAN_NOT_FIND_CONTAINER_TO_BE_UNRESERVED_WHEN_NEEDED);
+                    NODE_CAN_NOT_FIND_CONTAINER_TO_BE_UNRESERVED_WHEN_NEEDED,
+                ActivityLevel.NODE);
             return ContainerAllocation.LOCALITY_SKIPPED;
           }
         }
@@ -622,18 +633,20 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             // Skip the locality request
             ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
                 activitiesManager, node, application, schedulerKey,
-                ActivityDiagnosticConstant.NOT_SUFFICIENT_RESOURCE
-                    + getResourceDiagnostics(capability, availableForDC));
+                ActivityDiagnosticConstant.NODE_DO_NOT_HAVE_SUFFICIENT_RESOURCE
+                    + getResourceDiagnostics(capability, availableForDC),
+                ActivityLevel.NODE);
             return ContainerAllocation.LOCALITY_SKIPPED;          
           }
         }
 
         ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
-            ActivityDiagnosticConstant.NOT_SUFFICIENT_RESOURCE
+            ActivityDiagnosticConstant.NODE_DO_NOT_HAVE_SUFFICIENT_RESOURCE
                 + getResourceDiagnostics(capability, availableForDC),
             rmContainer == null ?
-                ActivityState.RESERVED : ActivityState.RE_RESERVED);
+                ActivityState.RESERVED : ActivityState.RE_RESERVED,
+            ActivityLevel.NODE);
         ContainerAllocation result = new ContainerAllocation(null,
             pendingAsk.getPerAllocationResource(), AllocationState.RESERVED);
         result.containerNodeType = type;
@@ -643,8 +656,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Skip the locality request
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.NOT_SUFFICIENT_RESOURCE
-              + getResourceDiagnostics(capability, availableForDC));
+          ActivityDiagnosticConstant.NODE_DO_NOT_HAVE_SUFFICIENT_RESOURCE
+              + getResourceDiagnostics(capability, availableForDC),
+          ActivityLevel.NODE);
       return ContainerAllocation.LOCALITY_SKIPPED;    
     }
   }
@@ -719,7 +733,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
               null, AllocationState.APP_SKIPPED);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(activitiesManager,
           node, application, schedulerKey,
-          ActivityDiagnosticConstant.FAIL_TO_ALLOCATE, ActivityState.REJECTED);
+          ActivityDiagnosticConstant.APPLICATION_FAIL_TO_ALLOCATE,
+          ActivityState.REJECTED, ActivityLevel.APP);
       return ret;
     }
     
@@ -741,8 +756,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       LOG.warn("Couldn't get container for allocation!");
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(activitiesManager,
           node, application, schedulerKey,
-          ActivityDiagnosticConstant.COULD_NOT_GET_CONTAINER,
-          ActivityState.REJECTED);
+          ActivityDiagnosticConstant.APPLICATION_COULD_NOT_GET_CONTAINER,
+          ActivityState.REJECTED, ActivityLevel.APP);
       return ContainerAllocation.APP_SKIPPED;
     }
 
@@ -765,8 +780,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
               .recordAppActivityWithoutAllocation(activitiesManager, node,
                   application, schedulerKey,
                   ActivityDiagnosticConstant.
-                      PRIORITY_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
-                  ActivityState.REJECTED);
+                      REQUEST_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
+                  ActivityState.REJECTED, ActivityLevel.REQUEST);
           return ContainerAllocation.PRIORITY_SKIPPED;
         }
         updatedContainer = new RMContainerImpl(container, schedulerKey,
@@ -818,6 +833,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Do checks before determining which node to allocate
     // Directly return if this check fails.
     ContainerAllocation result;
+    ContainerAllocation lastReservation = null;
 
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
@@ -827,8 +843,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     if (schedulingPS == null) {
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, null, application, schedulerKey,
-          ActivityDiagnosticConstant.
-              APPLICATION_PRIORITY_DO_NOT_NEED_RESOURCE);
+          ActivityDiagnosticConstant.REQUEST_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
+          ActivityLevel.REQUEST);
       return new ContainerAllocation(reservedContainer, null,
           AllocationState.PRIORITY_SKIPPED);
     }
@@ -837,11 +853,25 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     Iterator<FiCaSchedulerNode> iter = schedulingPS.getPreferredNodeIterator(
         candidates);
+
     while (iter.hasNext()) {
       FiCaSchedulerNode node = iter.next();
 
+      // Do not schedule if there are any reservations to fulfill on the node
+      if (iter.hasNext() &&
+          node.getReservedContainer() != null &&
+          isSkipAllocateOnNodesWithReservedContainer()) {
+        LOG.debug("Skipping scheduling on node {} since it has already been"
+                + " reserved by {}", node.getNodeID(),
+            node.getReservedContainer().getContainerId());
+        ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
+            activitiesManager, node, application, schedulerKey,
+            ActivityDiagnosticConstant.NODE_HAS_BEEN_RESERVED, ActivityLevel.NODE);
+        continue;
+      }
+
       if (reservedContainer == null) {
-        result = preCheckForNodeCandidateSet(clusterResource, node,
+        result = preCheckForNodeCandidateSet(node,
             schedulingMode, resourceLimits, schedulerKey);
         if (null != result) {
           continue;
@@ -859,16 +889,41 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       result = tryAllocateOnNode(clusterResource, node, schedulingMode,
           resourceLimits, schedulerKey, reservedContainer);
 
-      if (AllocationState.ALLOCATED == result.getAllocationState()
-          || AllocationState.RESERVED == result.getAllocationState()) {
+      if (AllocationState.ALLOCATED == result.getAllocationState()) {
         result = doAllocation(result, node, schedulerKey, reservedContainer);
         break;
+      }
+
+      // In MultiNodePlacement, Try Allocate on other Available nodes
+      // from Iterator as well before Reserving. Else there won't be any
+      // Allocate of new containers when the first node in the
+      // iterator could not fit and returns RESERVED allocation.
+      if (AllocationState.RESERVED == result.getAllocationState()) {
+        lastReservation = result;
+        if (iter.hasNext()) {
+          continue;
+        } else {
+          result = doAllocation(lastReservation, node, schedulerKey,
+              reservedContainer);
+        }
       }
     }
 
     return result;
   }
-  
+
+  private boolean isSkipAllocateOnNodesWithReservedContainer() {
+    ResourceScheduler scheduler = rmContext.getScheduler();
+    boolean skipAllocateOnNodesWithReservedContainer = false;
+    if (scheduler instanceof CapacityScheduler) {
+      CapacityScheduler cs = (CapacityScheduler) scheduler;
+      CapacitySchedulerConfiguration csConf = cs.getConfiguration();
+      skipAllocateOnNodesWithReservedContainer =
+          csConf.getSkipAllocateOnNodesWithReservedContainer();
+    }
+    return skipAllocateOnNodesWithReservedContainer;
+  }
+
   @Override
   public CSAssignment assignContainers(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
@@ -888,7 +943,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         }
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, null,
-            ActivityDiagnosticConstant.APPLICATION_DO_NOT_NEED_RESOURCE);
+            ActivityDiagnosticConstant.APPLICATION_DO_NOT_NEED_RESOURCE,
+            ActivityLevel.APP);
         return CSAssignment.SKIP_ASSIGNMENT;
       }
       

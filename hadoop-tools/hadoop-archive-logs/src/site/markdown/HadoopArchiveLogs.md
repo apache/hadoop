@@ -59,7 +59,7 @@ How to Archive Logs
     -verbose                       Print more details.
 
 The tool only supports running one instance on a cluster at a time in order
-to prevent conflicts. It does this by checking for the existance of a
+to prevent conflicts. It does this by checking for the existence of a
 directory named ``archive-logs-work`` under
 ``yarn.nodemanager.remote-app-log-dir`` in HDFS
 (default: ``/tmp/logs/archive-logs-work``). If for some reason that
@@ -76,7 +76,7 @@ The tool works by performing the following procedure:
     - its aggregation status has successfully completed
     - has at least ``-minNumberLogFiles`` log files
     - the sum of its log files size is less than ``-maxTotalLogsSize`` megabytes
- 2. If there are are more than ``-maxEligibleApps`` applications found, the
+ 2. If there are more than ``-maxEligibleApps`` applications found, the
     newest applications are dropped. They can be processed next time.
  3. A shell script is generated based on the eligible applications
  4. The Distributed Shell program is run with the aformentioned script. It

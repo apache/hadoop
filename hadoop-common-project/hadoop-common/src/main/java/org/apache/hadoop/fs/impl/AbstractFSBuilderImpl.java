@@ -26,7 +26,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,19 +36,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Builder for filesystem/filecontext operations of various kinds,
  * with option support.
  *
  * <code>
- *   .opt("foofs:option.a", true)
- *   .opt("foofs:option.b", "value")
- *   .opt("barfs:cache", true)
- *   .must("foofs:cache", true)
- *   .must("barfs:cache-size", 256 * 1024 * 1024)
+ *   .opt("fs.s3a.open.option.caching", true)
+ *   .opt("fs.option.openfile.read.policy", "random, adaptive")
+ *   .opt("fs.s3a.open.option.etag", "9fe4c37c25b")
+ *   .optLong("fs.option.openfile.length", 1_500_000_000_000)
+ *   .must("fs.option.openfile.buffer.size", 256_000)
+ *   .mustLong("fs.option.openfile.split.start", 256_000_000)
+ *   .mustLong("fs.option.openfile.split.end", 512_000_000)
  *   .build();
  * </code>
  *
@@ -64,6 +66,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@SuppressWarnings({"deprecation", "unused"})
 public abstract class
     AbstractFSBuilderImpl<S, B extends FSBuilder<S, B>>
     implements FSBuilder<S, B> {
@@ -87,6 +90,9 @@ public abstract class
 
   /** Keep track of the keys for mandatory options. */
   private final Set<String> mandatoryKeys = new HashSet<>();
+
+  /** Keep track of the optional keys. */
+  private final Set<String> optionalKeys = new HashSet<>();
 
   /**
    * Constructor with both optional path and path handle.
@@ -163,6 +169,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, @Nonnull final String value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.set(key, value);
     return getThisBuilder();
   }
@@ -174,9 +181,7 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, boolean value) {
-    mandatoryKeys.remove(key);
-    options.setBoolean(key, value);
-    return getThisBuilder();
+    return opt(key, Boolean.toString(value));
   }
 
   /**
@@ -186,9 +191,17 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, int value) {
-    mandatoryKeys.remove(key);
-    options.setInt(key, value);
-    return getThisBuilder();
+    return optLong(key, value);
+  }
+
+  @Override
+  public B opt(@Nonnull final String key, final long value) {
+    return optLong(key, value);
+  }
+
+  @Override
+  public B optLong(@Nonnull final String key, final long value) {
+    return opt(key, Long.toString(value));
   }
 
   /**
@@ -198,9 +211,7 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, float value) {
-    mandatoryKeys.remove(key);
-    options.setFloat(key, value);
-    return getThisBuilder();
+    return optLong(key, (long) value);
   }
 
   /**
@@ -210,9 +221,17 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, double value) {
-    mandatoryKeys.remove(key);
-    options.setDouble(key, value);
-    return getThisBuilder();
+    return optLong(key, (long) value);
+  }
+
+  /**
+   * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  @Override
+  public B optDouble(@Nonnull final String key, double value) {
+    return opt(key, Double.toString(value));
   }
 
   /**
@@ -223,6 +242,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setStrings(key, values);
     return getThisBuilder();
   }
@@ -247,9 +267,22 @@ public abstract class
    */
   @Override
   public B must(@Nonnull final String key, boolean value) {
-    mandatoryKeys.add(key);
-    options.setBoolean(key, value);
-    return getThisBuilder();
+    return must(key, Boolean.toString(value));
+  }
+
+  @Override
+  public B mustLong(@Nonnull final String key, final long value) {
+    return must(key, Long.toString(value));
+  }
+
+  /**
+   * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  @Override
+  public B mustDouble(@Nonnull final String key, double value) {
+    return must(key, Double.toString(value));
   }
 
   /**
@@ -259,33 +292,22 @@ public abstract class
    */
   @Override
   public B must(@Nonnull final String key, int value) {
-    mandatoryKeys.add(key);
-    options.setInt(key, value);
-    return getThisBuilder();
+    return mustLong(key, value);
   }
 
-  /**
-   * Set mandatory float option.
-   *
-   * @see #must(String, String)
-   */
   @Override
-  public B must(@Nonnull final String key, float value) {
-    mandatoryKeys.add(key);
-    options.setFloat(key, value);
-    return getThisBuilder();
+  public B must(@Nonnull final String key, final long value) {
+    return mustLong(key, value);
   }
 
-  /**
-   * Set mandatory double option.
-   *
-   * @see #must(String, String)
-   */
+  @Override
+  public B must(@Nonnull final String key, final float value) {
+    return mustLong(key, (long) value);
+  }
+
   @Override
   public B must(@Nonnull final String key, double value) {
-    mandatoryKeys.add(key);
-    options.setDouble(key, value);
-    return getThisBuilder();
+    return mustLong(key, (long) value);
   }
 
   /**
@@ -296,6 +318,7 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setStrings(key, values);
     return getThisBuilder();
   }
@@ -310,9 +333,17 @@ public abstract class
 
   /**
    * Get all the keys that are set as mandatory keys.
+   * @return mandatory keys.
    */
   public Set<String> getMandatoryKeys() {
     return Collections.unmodifiableSet(mandatoryKeys);
+  }
+  /**
+   * Get all the keys that are set as optional keys.
+   * @return optional keys.
+   */
+  public Set<String> getOptionalKeys() {
+    return Collections.unmodifiableSet(optionalKeys);
   }
 
   /**

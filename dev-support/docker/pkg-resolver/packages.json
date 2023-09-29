@@ -1,0 +1,360 @@
+{
+  "ant": {
+    "debian:10": "ant",
+    "ubuntu:focal": "ant",
+    "ubuntu:focal::arch64": "ant",
+    "centos:7": "ant",
+    "centos:8": "ant"
+  },
+  "apt-utils": {
+    "debian:10": "apt-utils",
+    "ubuntu:focal": "apt-utils",
+    "ubuntu:focal::arch64": "apt-utils"
+  },
+  "automake": {
+    "debian:10": "automake",
+    "ubuntu:focal": "automake",
+    "ubuntu:focal::arch64": "automake",
+    "centos:7": "automake",
+    "centos:8": "automake"
+  },
+  "autoconf": {
+    "centos:7": "autoconf"
+  },
+  "bats": {
+    "debian:10": "bats",
+    "ubuntu:focal": "bats",
+    "ubuntu:focal::arch64": "bats"
+  },
+  "build-essential": {
+    "debian:10": "build-essential",
+    "ubuntu:focal": "build-essential",
+    "ubuntu:focal::arch64": "build-essential",
+    "centos:7": "build-essential"
+  },
+  "bzip2": {
+    "debian:10": [
+      "bzip2",
+      "libbz2-dev"
+    ],
+    "ubuntu:focal": [
+      "bzip2",
+      "libbz2-dev"
+    ],
+    "ubuntu:focal::arch64": [
+      "bzip2",
+      "libbz2-dev"
+    ],
+    "centos:7": [
+      "bzip2",
+      "bzip2-devel"
+    ],
+    "centos:8": [
+      "bzip2",
+      "bzip2-devel"
+    ]
+  },
+  "clang": {
+    "debian:10": "clang",
+    "ubuntu:focal": "clang",
+    "ubuntu:focal::arch64": "clang",
+    "centos:7": "clang",
+    "centos:8": "clang"
+  },
+  "cmake": {
+    "ubuntu:focal": "cmake",
+    "ubuntu:focal::arch64": "cmake"
+  },
+  "curl": {
+    "debian:10": [
+      "curl",
+      "libcurl4-openssl-dev"
+    ],
+    "ubuntu:focal": [
+      "curl",
+      "libcurl4-openssl-dev"
+    ],
+    "ubuntu:focal::arch64": [
+      "curl",
+      "libcurl4-openssl-dev"
+    ],
+    "centos:7": [
+      "curl",
+      "libcurl-devel"
+    ],
+    "centos:8": [
+      "curl",
+      "libcurl-devel"
+    ]
+  },
+  "doxygen": {
+    "debian:10": "doxygen",
+    "ubuntu:focal": "doxygen",
+    "ubuntu:focal::arch64": "doxygen",
+    "centos:7": "doxygen"
+  },
+  "dnf": {
+    "centos:8": "dnf"
+  },
+  "fuse": {
+    "debian:10": [
+      "fuse",
+      "libfuse-dev"
+    ],
+    "ubuntu:focal": [
+      "fuse",
+      "libfuse-dev"
+    ],
+    "ubuntu:focal::arch64": [
+      "fuse",
+      "libfuse-dev"
+    ],
+    "centos:7": [
+      "fuse",
+      "fuse-libs",
+      "fuse-devel"
+    ],
+    "centos:8": [
+      "fuse",
+      "fuse-libs",
+      "fuse-devel"
+    ]
+  },
+  "gcc": {
+    "debian:10": {
+      "bullseye": [
+        "gcc",
+        "g++"
+      ]
+    },
+    "ubuntu:focal": [
+      "gcc",
+      "g++"
+    ],
+    "ubuntu:focal::arch64": [
+      "gcc",
+      "g++"
+    ],
+    "centos:7": [
+      "centos-release-scl",
+      "devtoolset-9"
+    ]
+  },
+  "gettext": {
+    "centos:7": "gettext-devel"
+  },
+  "git": {
+    "debian:10": "git",
+    "ubuntu:focal": "git",
+    "ubuntu:focal::arch64": "git",
+    "centos:8": "git"
+  },
+  "gnupg-agent": {
+    "debian:10": "gnupg-agent",
+    "ubuntu:focal": "gnupg-agent",
+    "ubuntu:focal::arch64": "gnupg-agent"
+  },
+  "hugo": {
+    "debian:10": "hugo",
+    "ubuntu:focal": "hugo",
+    "ubuntu:focal::arch64": "hugo"
+  },
+  "libbcprov-java": {
+    "debian:10": "libbcprov-java",
+    "ubuntu:focal": "libbcprov-java",
+    "ubuntu:focal::arch64": "libbcprov-java"
+  },
+  "libtool": {
+    "debian:10": "libtool",
+    "ubuntu:focal": "libtool",
+    "ubuntu:focal::arch64": "libtool",
+    "centos:7": "libtool",
+    "centos:8": "libtool"
+  },
+  "openssl": {
+    "debian:10": "libssl-dev",
+    "ubuntu:focal": "libssl-dev",
+    "ubuntu:focal::arch64": "libssl-dev",
+    "centos:7": "openssl-devel",
+    "centos:8": "openssl-devel"
+  },
+  "perl": {
+    "centos:7": [
+      "perl-CPAN",
+      "perl-devel"
+    ]
+  },
+  "protocol-buffers": {
+    "debian:10": [
+      "libprotobuf-dev",
+      "libprotoc-dev"
+    ],
+    "ubuntu:focal": [
+      "libprotobuf-dev",
+      "libprotoc-dev"
+    ],
+    "ubuntu:focal::arch64": [
+      "libprotobuf-dev",
+      "libprotoc-dev"
+    ]
+  },
+  "sasl": {
+    "debian:10": "libsasl2-dev",
+    "ubuntu:focal": "libsasl2-dev",
+    "ubuntu:focal::arch64": "libsasl2-dev",
+    "centos:7": "cyrus-sasl-devel",
+    "centos:8": "cyrus-sasl-devel"
+  },
+  "snappy": {
+    "debian:10": "libsnappy-dev",
+    "ubuntu:focal": "libsnappy-dev",
+    "ubuntu:focal::arch64": "libsnappy-dev",
+    "centos:7": "snappy-devel"
+  },
+  "zlib": {
+    "debian:10": [
+      "libzstd-dev",
+      "zlib1g-dev"
+    ],
+    "ubuntu:focal": [
+      "libzstd-dev",
+      "zlib1g-dev"
+    ],
+    "ubuntu:focal::arch64": [
+      "libzstd-dev",
+      "zlib1g-dev"
+    ],
+    "centos:7": [
+      "zlib-devel",
+      "lz4-devel"
+    ],
+    "centos:8": [
+      "zlib-devel",
+      "lz4-devel"
+    ]
+  },
+  "locales": {
+    "debian:10": "locales",
+    "ubuntu:focal": "locales",
+    "ubuntu:focal::arch64": "locales"
+  },
+  "libtirpc-devel": {
+    "centos:7": "libtirpc-devel",
+    "centos:8": "libtirpc-devel"
+  },
+  "libpmem": {
+    "centos:7": "libpmem-devel"
+  },
+  "make": {
+    "debian:10": "make",
+    "ubuntu:focal": "make",
+    "ubuntu:focal::arch64": "make",
+    "centos:7": "make",
+    "centos:8": "make"
+  },
+  "maven": {
+    "debian:10": "maven",
+    "ubuntu:focal": "maven",
+    "ubuntu:focal::arch64": "maven"
+  },
+  "java": {
+    "debian:10": "openjdk-11-jdk",
+    "ubuntu:focal": [
+      "openjdk-8-jdk",
+      "openjdk-11-jdk"
+    ],
+    "ubuntu:focal::arch64": [
+      "openjdk-8-jdk",
+      "openjdk-11-jdk"
+    ]
+  },
+  "pinentry-curses": {
+    "debian:10": "pinentry-curses",
+    "ubuntu:focal": "pinentry-curses",
+    "ubuntu:focal::arch64": "pinentry-curses",
+    "centos:7": "pinentry-curses",
+    "centos:8": "pinentry-curses"
+  },
+  "pkg-config": {
+    "debian:10": "pkg-config",
+    "ubuntu:focal": "pkg-config",
+    "ubuntu:focal::arch64": "pkg-config",
+    "centos:8": "pkg-config"
+  },
+  "python": {
+    "debian:10": [
+      "python3",
+      "python3-pip",
+      "python3-pkg-resources",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
+    "ubuntu:focal": [
+      "python3",
+      "python3-pip",
+      "python3-pkg-resources",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
+    "ubuntu:focal::arch64": [
+      "python2.7",
+      "python3",
+      "python3-pip",
+      "python3-pkg-resources",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
+    "centos:7": [
+      "python3",
+      "python3-pip",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
+    "centos:8": [
+      "python3",
+      "python3-pip",
+      "python3-setuptools",
+      "python3-wheel"
+    ]
+  },
+  "rsync": {
+    "debian:10": "rsync",
+    "ubuntu:focal": "rsync",
+    "ubuntu:focal::arch64": "rsync",
+    "centos:7": "rsync",
+    "centos:8": "rsync"
+  },
+  "shellcheck": {
+    "debian:10": "shellcheck",
+    "ubuntu:focal": "shellcheck",
+    "ubuntu:focal::arch64": "shellcheck"
+  },
+  "shasum": {
+    "centos:7": "perl-Digest-SHA",
+    "centos:8": "perl-Digest-SHA"
+  },
+  "software-properties-common": {
+    "debian:10": "software-properties-common",
+    "ubuntu:focal": "software-properties-common",
+    "ubuntu:focal::arch64": "software-properties-common"
+  },
+  "sudo": {
+    "debian:10": "sudo",
+    "ubuntu:focal": "sudo",
+    "ubuntu:focal::arch64": "sudo",
+    "centos:7": "sudo",
+    "centos:8": "sudo"
+  },
+  "valgrind": {
+    "debian:10": "valgrind",
+    "ubuntu:focal": "valgrind",
+    "ubuntu:focal::arch64": "valgrind",
+    "centos:7": "valgrind",
+    "centos:8": "valgrind"
+  },
+  "yasm": {
+    "debian:10": "yasm",
+    "ubuntu:focal": "yasm",
+    "ubuntu:focal::arch64": "yasm"
+  }
+}

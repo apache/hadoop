@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.RMAp
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class ApplicationAttemptStateDataPBImpl extends
     ApplicationAttemptStateData {
@@ -453,5 +453,17 @@ public class ApplicationAttemptStateDataPBImpl extends
       builder.addAllPreemptedResourceUsageMap(ProtoUtils
           .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
     }
+  }
+
+  @Override
+  public int getTotalAllocatedContainers() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getTotalAllocatedContainers();
+  }
+
+  @Override
+  public void setTotalAllocatedContainers(int totalAllocatedContainers) {
+    maybeInitBuilder();
+    builder.setTotalAllocatedContainers(totalAllocatedContainers);
   }
 }

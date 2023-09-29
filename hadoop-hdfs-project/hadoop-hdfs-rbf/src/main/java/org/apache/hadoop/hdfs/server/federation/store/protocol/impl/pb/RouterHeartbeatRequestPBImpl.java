@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.RouterStatePBImpl;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the state store API object

@@ -38,6 +38,11 @@ public class ITestAbfsFileSystemContractRename extends AbstractContractRenameTes
   public void setup() throws Exception {
     binding.setup();
     super.setup();
+    // Base rename contract test class re-uses the test folder
+    // This leads to failures when the test is re-run as same ABFS test
+    // containers are re-used for test run and creation of source and
+    // destination test paths fail, as they are already present.
+    binding.getFileSystem().delete(binding.getTestPath(), true);
   }
 
   @Override

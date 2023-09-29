@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -582,9 +582,9 @@ public class TestRandomOpsWithSnapshots {
     // Randomly decide whether we want to do a check point
     if (generator.nextBoolean()) {
       LOG.info("checkClusterHealth, doing a checkpoint on NN.");
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      hdfs.setSafeMode(SafeModeAction.ENTER);
       hdfs.saveNamespace();
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      hdfs.setSafeMode(SafeModeAction.LEAVE);
     }
 
     /** Restart name node making sure loading from image successfully */

@@ -36,6 +36,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -84,12 +86,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.Schedulabl
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ConcurrentHashMultiset;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ConcurrentHashMultiset;
 
 /**
  * Represents an application attempt from the viewpoint of the scheduler.
@@ -205,6 +208,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private AtomicLong unconfirmedAllocatedMem = new AtomicLong();
   private AtomicInteger unconfirmedAllocatedVcores = new AtomicInteger();
 
+  private String nodeLabelExpression;
+
+  private final long startTime;
+
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
@@ -226,16 +233,19 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         unmanagedAM = appSubmissionContext.getUnmanagedAM();
         this.logAggregationContext =
             appSubmissionContext.getLogAggregationContext();
+        this.nodeLabelExpression =
+            appSubmissionContext.getNodeLabelExpression();
       }
       applicationSchedulingEnvs = rmApp.getApplicationSchedulingEnvs();
     }
 
     this.appSchedulingInfo = new AppSchedulingInfo(applicationAttemptId, user,
         queue, abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage,
-        applicationSchedulingEnvs, rmContext);
+        applicationSchedulingEnvs, rmContext, unmanagedAM);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+    startTime = SystemClock.getInstance().getTime();
   }
 
   public void setOpportunisticContainerContext(
@@ -392,7 +402,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  public void removeRMContainer(ContainerId containerId) {
+  /**
+   * Removes an RM container from the map of live containers
+   * related to this application attempt.
+   * @param containerId The container ID of the RMContainer to remove
+   * @return true if the container is in the map
+   */
+  public boolean removeRMContainer(ContainerId containerId) {
     writeLock.lock();
     try {
       RMContainer rmContainer = liveContainers.remove(containerId);
@@ -405,7 +421,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           this.attemptResourceUsageAllocatedRemotely
               .decUsed(rmContainer.getAllocatedResource());
         }
+
+        return true;
       }
+
+      return false;
     } finally {
       writeLock.unlock();
     }
@@ -584,7 +604,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (rmContainer.getState() == RMContainerState.NEW) {
         attemptResourceUsage.incReserved(node.getPartition(),
             container.getResource());
-        ((RMContainerImpl) rmContainer).setQueueName(this.getQueueName());
+
+        ResourceScheduler scheduler = this.rmContext.getScheduler();
+        String qn = this.getQueueName();
+        if (scheduler instanceof CapacityScheduler) {
+          qn = ((CapacityScheduler)scheduler).normalizeQueueName(qn);
+        }
+        ((RMContainerImpl) rmContainer).setQueueName(qn);
 
         // Reset the re-reservation count
         resetReReservations(schedulerKey);
@@ -630,7 +656,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   @SuppressWarnings("unchecked")
   public void containerLaunchedOnNode(ContainerId containerId,
       NodeId nodeId) {
-    writeLock.lock();
+    readLock.lock();
     try {
       // Inform the container
       RMContainer rmContainer = getRMContainer(containerId);
@@ -644,7 +670,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       rmContainer.handle(
           new RMContainerEvent(containerId, RMContainerEventType.LAUNCHED));
     } finally {
-      writeLock.unlock();
+      readLock.unlock();
     }
   }
   
@@ -775,6 +801,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * Called when AM heartbeats. These containers were recovered by the RM after
    * the AM had registered. They are reported to the AM in the
    * <code>AllocateResponse#containersFromPreviousAttempts</code>.
+   * @return Container List.
    */
   public List<Container> pullPreviousAttemptContainers() {
     writeLock.lock();
@@ -1110,8 +1137,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           getRunningAggregateAppResourceUsage();
       Resource usedResourceClone = Resources.clone(
           attemptResourceUsage.getAllUsed());
-      Resource reservedResourceClone = Resources.clone(
-          attemptResourceUsage.getReserved());
+      Resource reservedResourceClone =
+          Resources.clone(attemptResourceUsage.getAllReserved());
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
@@ -1122,7 +1149,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           .put(ResourceInformation.VCORES.getName(), 0L);
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
-      if (!calc.isInvalidDivisor(cluster)) {
+      if (!calc.isAllInvalidDivisor(cluster)) {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
         queueUsagePerc = calc.divide(cluster, usedResourceClone,
@@ -1178,7 +1205,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     try {
       QueueMetrics oldMetrics = queue.getMetrics();
       QueueMetrics newMetrics = newQueue.getMetrics();
-      String newQueueName = newQueue.getQueueName();
+      String newQueueName = newQueue instanceof CSQueue ?
+              ((CSQueue) newQueue).getQueuePath() : newQueue.getQueueName();
       String user = getUser();
 
       for (RMContainer liveContainer : liveContainers.values()) {
@@ -1209,7 +1237,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  public void recoverContainer(SchedulerNode node,
+  public boolean recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
     writeLock.lock();
     try {
@@ -1217,7 +1245,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       appSchedulingInfo.recoverContainer(rmContainer, node.getPartition());
 
       if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
-        return;
+        return false;
       }
       LOG.info("SchedulerAttempt " + getApplicationAttemptId()
           + " is recovering container " + rmContainer.getContainerId());
@@ -1226,6 +1254,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         attemptResourceUsage.incUsed(node.getPartition(),
             rmContainer.getContainer().getResource());
       }
+
+      return true;
 
       // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
       // is called.
@@ -1468,5 +1498,16 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   public Map<String, String> getApplicationSchedulingEnvs() {
     return this.applicationSchedulingEnvs;
+  }
+
+  @Override
+  public String getPartition() {
+    return nodeLabelExpression == null ? "" : nodeLabelExpression;
+  }
+
+
+  @Override
+  public long getStartTime() {
+    return startTime;
   }
 }

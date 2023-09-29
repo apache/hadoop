@@ -18,20 +18,22 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Level;
+
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLog4jWarningErrorMetricsAppender {
 
@@ -81,186 +83,179 @@ public class TestLog4jWarningErrorMetricsAppender {
   }
 
   @Test
-  public void testPurge() throws Exception {
+  void testPurge() throws Exception {
     setupAppender(2, 1, 1);
     logMessages(Level.ERROR, "test message 1", 1);
     cutoff.clear();
     cutoff.add(0L);
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).get(0)
-      .size());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(1, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).get(0)
+        .size());
     Thread.sleep(3000);
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(0, appender.getErrorMessagesAndCounts(cutoff).get(0)
-      .size());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getErrorMessagesAndCounts(cutoff).get(0)
+        .size());
 
     setupAppender(2, 1000, 2);
 
     logMessages(Level.ERROR, "test message 1", 3);
     logMessages(Level.ERROR, "test message 2", 2);
 
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(5, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).get(0)
-      .size());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(5, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).get(0)
+        .size());
     logMessages(Level.ERROR, "test message 3", 3);
     Thread.sleep(2000);
-    Assert.assertEquals(8, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).get(0)
-      .size());
+    assertEquals(8, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).get(0)
+        .size());
   }
 
   @Test
-  public void testErrorCounts() throws Exception {
+  void testErrorCounts() throws Exception {
     cutoff.clear();
     setupAppender(100, 100, 100);
     cutoff.add(0L);
     logMessages(Level.ERROR, "test message 1", 2);
     logMessages(Level.ERROR, "test message 2", 3);
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningCounts(cutoff).size());
-    Assert.assertEquals(5, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert
-      .assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(1, appender.getWarningCounts(cutoff).size());
+    assertEquals(5, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
     Thread.sleep(1000);
     cutoff.add(Time.now() / 1000);
     logMessages(Level.ERROR, "test message 3", 2);
-    Assert.assertEquals(2, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(2, appender.getWarningCounts(cutoff).size());
-    Assert.assertEquals(7, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(2, appender.getErrorCounts(cutoff).get(1).longValue());
-    Assert
-      .assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
-    Assert
-      .assertEquals(0, appender.getWarningCounts(cutoff).get(1).longValue());
+    assertEquals(2, appender.getErrorCounts(cutoff).size());
+    assertEquals(2, appender.getWarningCounts(cutoff).size());
+    assertEquals(7, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(2, appender.getErrorCounts(cutoff).get(1).longValue());
+    assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getWarningCounts(cutoff).get(1).longValue());
   }
 
   @Test
-  public void testWarningCounts() throws Exception {
+  void testWarningCounts() throws Exception {
     cutoff.clear();
     setupAppender(100, 100, 100);
     cutoff.add(0L);
     logMessages(Level.WARN, "test message 1", 2);
     logMessages(Level.WARN, "test message 2", 3);
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningCounts(cutoff).size());
-    Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert
-      .assertEquals(5, appender.getWarningCounts(cutoff).get(0).longValue());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(1, appender.getWarningCounts(cutoff).size());
+    assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(5, appender.getWarningCounts(cutoff).get(0).longValue());
     Thread.sleep(1000);
     cutoff.add(Time.now() / 1000);
     logMessages(Level.WARN, "test message 3", 2);
-    Assert.assertEquals(2, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(2, appender.getWarningCounts(cutoff).size());
-    Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(1).longValue());
-    Assert
-      .assertEquals(7, appender.getWarningCounts(cutoff).get(0).longValue());
-    Assert
-      .assertEquals(2, appender.getWarningCounts(cutoff).get(1).longValue());
+    assertEquals(2, appender.getErrorCounts(cutoff).size());
+    assertEquals(2, appender.getWarningCounts(cutoff).size());
+    assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getErrorCounts(cutoff).get(1).longValue());
+    assertEquals(7, appender.getWarningCounts(cutoff).get(0).longValue());
+    assertEquals(2, appender.getWarningCounts(cutoff).get(1).longValue());
   }
 
   @Test
-  public void testWarningMessages() throws Exception {
+  void testWarningMessages() throws Exception {
     cutoff.clear();
     setupAppender(100, 100, 100);
     cutoff.add(0L);
     logMessages(Level.WARN, "test message 1", 2);
     logMessages(Level.WARN, "test message 2", 3);
-    Assert.assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
     Map<String, Log4jWarningErrorMetricsAppender.Element> errorsMap =
         appender.getErrorMessagesAndCounts(cutoff).get(0);
     Map<String, Log4jWarningErrorMetricsAppender.Element> warningsMap =
         appender.getWarningMessagesAndCounts(cutoff).get(0);
-    Assert.assertEquals(0, errorsMap.size());
-    Assert.assertEquals(2, warningsMap.size());
-    Assert.assertTrue(warningsMap.containsKey("test message 1"));
-    Assert.assertTrue(warningsMap.containsKey("test message 2"));
+    assertEquals(0, errorsMap.size());
+    assertEquals(2, warningsMap.size());
+    assertTrue(warningsMap.containsKey("test message 1"));
+    assertTrue(warningsMap.containsKey("test message 2"));
     Log4jWarningErrorMetricsAppender.Element msg1Info = warningsMap.get("test message 1");
     Log4jWarningErrorMetricsAppender.Element msg2Info = warningsMap.get("test message 2");
-    Assert.assertEquals(2, msg1Info.count.intValue());
-    Assert.assertEquals(3, msg2Info.count.intValue());
+    assertEquals(2, msg1Info.count.intValue());
+    assertEquals(3, msg2Info.count.intValue());
     Thread.sleep(1000);
     cutoff.add(Time.now() / 1000);
     logMessages(Level.WARN, "test message 3", 2);
-    Assert.assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(2, appender.getWarningMessagesAndCounts(cutoff).size());
+    assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).size());
+    assertEquals(2, appender.getWarningMessagesAndCounts(cutoff).size());
     errorsMap = appender.getErrorMessagesAndCounts(cutoff).get(0);
     warningsMap = appender.getWarningMessagesAndCounts(cutoff).get(0);
-    Assert.assertEquals(0, errorsMap.size());
-    Assert.assertEquals(3, warningsMap.size());
-    Assert.assertTrue(warningsMap.containsKey("test message 3"));
+    assertEquals(0, errorsMap.size());
+    assertEquals(3, warningsMap.size());
+    assertTrue(warningsMap.containsKey("test message 3"));
     errorsMap = appender.getErrorMessagesAndCounts(cutoff).get(1);
     warningsMap = appender.getWarningMessagesAndCounts(cutoff).get(1);
-    Assert.assertEquals(0, errorsMap.size());
-    Assert.assertEquals(1, warningsMap.size());
-    Assert.assertTrue(warningsMap.containsKey("test message 3"));
+    assertEquals(0, errorsMap.size());
+    assertEquals(1, warningsMap.size());
+    assertTrue(warningsMap.containsKey("test message 3"));
     Log4jWarningErrorMetricsAppender.Element msg3Info = warningsMap.get("test message 3");
-    Assert.assertEquals(2, msg3Info.count.intValue());
+    assertEquals(2, msg3Info.count.intValue());
   }
 
   @Test
-  public void testErrorMessages() throws Exception {
+  void testErrorMessages() throws Exception {
     cutoff.clear();
     setupAppender(100, 100, 100);
     cutoff.add(0L);
     logMessages(Level.ERROR, "test message 1", 2);
     logMessages(Level.ERROR, "test message 2", 3);
-    Assert.assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
     Map<String, Log4jWarningErrorMetricsAppender.Element> errorsMap =
         appender.getErrorMessagesAndCounts(cutoff).get(0);
     Map<String, Log4jWarningErrorMetricsAppender.Element> warningsMap =
         appender.getWarningMessagesAndCounts(cutoff).get(0);
-    Assert.assertEquals(2, errorsMap.size());
-    Assert.assertEquals(0, warningsMap.size());
-    Assert.assertTrue(errorsMap.containsKey("test message 1"));
-    Assert.assertTrue(errorsMap.containsKey("test message 2"));
+    assertEquals(2, errorsMap.size());
+    assertEquals(0, warningsMap.size());
+    assertTrue(errorsMap.containsKey("test message 1"));
+    assertTrue(errorsMap.containsKey("test message 2"));
     Log4jWarningErrorMetricsAppender.Element msg1Info = errorsMap.get("test message 1");
     Log4jWarningErrorMetricsAppender.Element msg2Info = errorsMap.get("test message 2");
-    Assert.assertEquals(2, msg1Info.count.intValue());
-    Assert.assertEquals(3, msg2Info.count.intValue());
+    assertEquals(2, msg1Info.count.intValue());
+    assertEquals(3, msg2Info.count.intValue());
     Thread.sleep(1000);
     cutoff.add(Time.now() / 1000);
     logMessages(Level.ERROR, "test message 3", 2);
-    Assert.assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(2, appender.getWarningMessagesAndCounts(cutoff).size());
+    assertEquals(2, appender.getErrorMessagesAndCounts(cutoff).size());
+    assertEquals(2, appender.getWarningMessagesAndCounts(cutoff).size());
     errorsMap = appender.getErrorMessagesAndCounts(cutoff).get(0);
     warningsMap = appender.getWarningMessagesAndCounts(cutoff).get(0);
-    Assert.assertEquals(3, errorsMap.size());
-    Assert.assertEquals(0, warningsMap.size());
-    Assert.assertTrue(errorsMap.containsKey("test message 3"));
+    assertEquals(3, errorsMap.size());
+    assertEquals(0, warningsMap.size());
+    assertTrue(errorsMap.containsKey("test message 3"));
     errorsMap = appender.getErrorMessagesAndCounts(cutoff).get(1);
     warningsMap = appender.getWarningMessagesAndCounts(cutoff).get(1);
-    Assert.assertEquals(1, errorsMap.size());
-    Assert.assertEquals(0, warningsMap.size());
-    Assert.assertTrue(errorsMap.containsKey("test message 3"));
+    assertEquals(1, errorsMap.size());
+    assertEquals(0, warningsMap.size());
+    assertTrue(errorsMap.containsKey("test message 3"));
     Log4jWarningErrorMetricsAppender.Element msg3Info = errorsMap.get("test message 3");
-    Assert.assertEquals(2, msg3Info.count.intValue());
+    assertEquals(2, msg3Info.count.intValue());
   }
 
   @Test
-  public void testInfoDebugTrace() {
+  void testInfoDebugTrace() {
     cutoff.clear();
     setupAppender(100, 100, 100);
     cutoff.add(0L);
     logMessages(Level.INFO, "test message 1", 2);
     logMessages(Level.DEBUG, "test message 2", 2);
     logMessages(Level.TRACE, "test message 3", 2);
-    Assert.assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
-    Assert.assertEquals(1, appender.getWarningCounts(cutoff).size());
-    Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
-    Assert
-      .assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
-    Assert.assertEquals(0, appender.getErrorMessagesAndCounts(cutoff).get(0)
-      .size());
-    Assert.assertEquals(0, appender.getWarningMessagesAndCounts(cutoff).get(0)
-      .size());
+    assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getWarningMessagesAndCounts(cutoff).size());
+    assertEquals(1, appender.getErrorCounts(cutoff).size());
+    assertEquals(1, appender.getWarningCounts(cutoff).size());
+    assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getWarningCounts(cutoff).get(0).longValue());
+    assertEquals(0, appender.getErrorMessagesAndCounts(cutoff).get(0)
+        .size());
+    assertEquals(0, appender.getWarningMessagesAndCounts(cutoff).get(0)
+        .size());
   }
 
 }

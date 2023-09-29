@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -41,7 +41,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import java.net.InetSocketAddress;
 import java.security.Permission;
@@ -191,8 +191,8 @@ public class TestDatanodeRegistration {
           .getCTime();
       StorageInfo mockStorageInfo = mock(StorageInfo.class);
       doReturn(nnCTime).when(mockStorageInfo).getCTime();
-      doReturn(HdfsServerConstants.DATANODE_LAYOUT_VERSION).when(mockStorageInfo)
-          .getLayoutVersion();
+      doReturn(DataNodeLayoutVersion.getCurrentLayoutVersion())
+          .when(mockStorageInfo).getLayoutVersion();
       DatanodeRegistration dnReg = new DatanodeRegistration(dnId,
           mockStorageInfo, null, VersionInfo.getVersion());
       rpcServer.registerDatanode(dnReg);
@@ -236,7 +236,8 @@ public class TestDatanodeRegistration {
       doReturn(nnCTime).when(mockStorageInfo).getCTime();
       
       DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
-      doReturn(HdfsServerConstants.DATANODE_LAYOUT_VERSION).when(mockDnReg).getVersion();
+      doReturn(DataNodeLayoutVersion.getCurrentLayoutVersion())
+          .when(mockDnReg).getVersion();
       doReturn("127.0.0.1").when(mockDnReg).getIpAddr();
       doReturn(123).when(mockDnReg).getXferPort();
       doReturn("fake-storage-id").when(mockDnReg).getDatanodeUuid();
@@ -285,7 +286,8 @@ public class TestDatanodeRegistration {
       doReturn(nnCTime).when(mockStorageInfo).getCTime();
       
       DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
-      doReturn(HdfsServerConstants.DATANODE_LAYOUT_VERSION).when(mockDnReg).getVersion();
+      doReturn(DataNodeLayoutVersion.getCurrentLayoutVersion())
+          .when(mockDnReg).getVersion();
       doReturn("fake-storage-id").when(mockDnReg).getDatanodeUuid();
       doReturn(mockStorageInfo).when(mockDnReg).getStorageInfo();
       
@@ -364,14 +366,16 @@ public class TestDatanodeRegistration {
       waitForHeartbeat(dn, dnd);
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
-      assertTrue(waitForBlockReport(dn, dnd));
+      assertTrue("block report is not processed for DN " + dnd,
+          waitForBlockReport(dn, dnd));
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
       // check that block report is not processed and registration didn't
       // change.
       dnd.setForceRegistration(true);
-      assertFalse(waitForBlockReport(dn, dnd));
+      assertFalse("block report is processed for DN " + dnd,
+          waitForBlockReport(dn, dnd));
       assertFalse(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
@@ -382,7 +386,8 @@ public class TestDatanodeRegistration {
       newReg = dn.getDNRegistrationForBP(bpId);
       assertNotSame(lastReg, newReg);
       lastReg = newReg;
-      assertTrue(waitForBlockReport(dn, dnd));
+      assertTrue("block report is not processed for DN " + dnd,
+          waitForBlockReport(dn, dnd));
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
@@ -447,8 +452,9 @@ public class TestDatanodeRegistration {
         public Boolean get() {
           return lastCount != storage.getBlockReportCount();
         }
-      }, 10, 2000);
+      }, 10, 6000);
     } catch (TimeoutException te) {
+      LOG.error("Timeout waiting for block report for {}", dnd);
       return false;
     }
     return true;

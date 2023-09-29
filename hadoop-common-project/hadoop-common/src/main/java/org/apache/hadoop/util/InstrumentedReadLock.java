@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
@@ -44,12 +44,7 @@ public class InstrumentedReadLock extends InstrumentedLock {
    * there can be multiple threads that hold the read lock concurrently.
    */
   private final ThreadLocal<Long> readLockHeldTimeStamp =
-      new ThreadLocal<Long>() {
-    @Override
-    protected Long initialValue() {
-      return Long.MAX_VALUE;
-    };
-  };
+      ThreadLocal.withInitial(() -> Long.MAX_VALUE);
 
   public InstrumentedReadLock(String name, Logger logger,
       ReentrantReadWriteLock readWriteLock,
@@ -75,7 +70,7 @@ public class InstrumentedReadLock extends InstrumentedLock {
     getLock().unlock();
     if (needReport) {
       readLockHeldTimeStamp.remove();
-      check(localLockAcquireTime, localLockReleaseTime);
+      check(localLockAcquireTime, localLockReleaseTime, true);
     }
   }
 

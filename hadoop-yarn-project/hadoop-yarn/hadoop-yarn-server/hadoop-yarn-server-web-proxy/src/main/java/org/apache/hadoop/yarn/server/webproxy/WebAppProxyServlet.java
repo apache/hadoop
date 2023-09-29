@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -45,7 +46,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriBuilderException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -95,15 +96,13 @@ public class WebAppProxyServlet extends HttpServlet {
   public static final String PROXY_USER_COOKIE_NAME = "proxy-user";
 
   private transient List<TrackingUriPlugin> trackingUriPlugins;
-  private final String rmAppPageUrlBase;
-  private final String ahsAppPageUrlBase;
   private final String failurePageUrlBase;
   private transient YarnConfiguration conf;
 
   /**
    * HTTP methods.
    */
-  private enum HTTP { GET, POST, HEAD, PUT, DELETE };
+  private enum HTTP { GET, POST, HEAD, PUT, DELETE }
 
   /**
    * Empty Hamlet class.
@@ -122,6 +121,9 @@ public class WebAppProxyServlet extends HttpServlet {
     }
   }
 
+  protected void setConf(YarnConfiguration conf){
+    this.conf = conf;
+  }
   /**
    * Default constructor
    */
@@ -131,16 +133,21 @@ public class WebAppProxyServlet extends HttpServlet {
     this.trackingUriPlugins =
         conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
             TrackingUriPlugin.class);
-    this.rmAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
-          "cluster", "app");
     this.failurePageUrlBase =
         StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
           "cluster", "failure");
-    this.ahsAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(conf)
-          + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
-          "applicationhistory", "app");
+  }
+
+  private String getRmAppPageUrlBase(ApplicationId id) throws YarnException, IOException {
+    ServletContext context = getServletContext();
+    AppReportFetcher af = (AppReportFetcher) context.getAttribute(WebAppProxy.FETCHER_ATTRIBUTE);
+    return af.getRmAppPageUrlBase(id);
+  }
+
+  private String getAhsAppPageUrlBase() {
+    ServletContext context = getServletContext();
+    AppReportFetcher af = (AppReportFetcher) context.getAttribute(WebAppProxy.FETCHER_ATTRIBUTE);
+    return af.getAhsAppPageUrlBase();
   }
 
   /**
@@ -230,6 +237,14 @@ public class WebAppProxyServlet extends HttpServlet {
 
     String httpsPolicy = conf.get(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY,
         YarnConfiguration.DEFAULT_RM_APPLICATION_HTTPS_POLICY);
+
+    boolean connectionTimeoutEnabled =
+        conf.getBoolean(YarnConfiguration.RM_PROXY_TIMEOUT_ENABLED,
+        YarnConfiguration.DEFALUT_RM_PROXY_TIMEOUT_ENABLED);
+    int connectionTimeout =
+        conf.getInt(YarnConfiguration.RM_PROXY_CONNECTION_TIMEOUT,
+            YarnConfiguration.DEFAULT_RM_PROXY_CONNECTION_TIMEOUT);
+
     if (httpsPolicy.equals("LENIENT") || httpsPolicy.equals("STRICT")) {
       ProxyCA proxyCA = getProxyCA();
       // ProxyCA could be null when the Proxy is run outside the RM
@@ -250,10 +265,18 @@ public class WebAppProxyServlet extends HttpServlet {
     InetAddress localAddress = InetAddress.getByName(proxyHost);
     LOG.debug("local InetAddress for proxy host: {}", localAddress);
     httpClientBuilder.setDefaultRequestConfig(
-        RequestConfig.custom()
-        .setCircularRedirectsAllowed(true)
-        .setLocalAddress(localAddress)
-        .build());
+        connectionTimeoutEnabled ?
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .setConnectionRequestTimeout(connectionTimeout)
+                .setSocketTimeout(connectionTimeout)
+                .setConnectTimeout(connectionTimeout)
+                .build() :
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .build());
 
     HttpRequestBase base = null;
     if (method.equals(HTTP.GET)) {
@@ -559,7 +582,7 @@ public class WebAppProxyServlet extends HttpServlet {
    */
   private URI getTrackingUri(HttpServletRequest req, HttpServletResponse resp,
       ApplicationId id, String originalUri, AppReportSource appReportSource)
-      throws IOException, URISyntaxException {
+      throws IOException, URISyntaxException, YarnException {
     URI trackingUri = null;
 
     if ((originalUri == null) ||
@@ -570,15 +593,15 @@ public class WebAppProxyServlet extends HttpServlet {
         // and Application Report was fetched from RM
         LOG.debug("Original tracking url is '{}'. Redirecting to RM app page",
             originalUri == null ? "NULL" : originalUri);
-        ProxyUtils.sendRedirect(req, resp,
-            StringHelper.pjoin(rmAppPageUrlBase, id.toString()));
+        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getRmAppPageUrlBase(id),
+            id.toString()));
       } else if (appReportSource == AppReportSource.AHS) {
         // fallback to Application History Server app page if the application
         // report was fetched from AHS
         LOG.debug("Original tracking url is '{}'. Redirecting to AHS app page",
             originalUri == null ? "NULL" : originalUri);
-        ProxyUtils.sendRedirect(req, resp,
-            StringHelper.pjoin(ahsAppPageUrlBase, id.toString()));
+        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getAhsAppPageUrlBase(),
+            id.toString()));
       }
     } else if (ProxyUriUtils.getSchemeFromUrl(originalUri).isEmpty()) {
       trackingUri =
@@ -621,7 +644,6 @@ public class WebAppProxyServlet extends HttpServlet {
    * again... If this method returns true, there was a redirect, and
    * it was handled by redirecting the current request to an error page.
    *
-   * @param path the part of the request path after the app id
    * @param id the app id
    * @param req the request object
    * @param resp the response object

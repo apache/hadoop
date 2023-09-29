@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of {@link GetSubClusterInfoResponse}.
@@ -114,12 +114,14 @@ public class GetSubClusterInfoResponsePBImpl extends GetSubClusterInfoResponse {
   }
 
   @Override
-  public void setSubClusterInfo(SubClusterInfo subClusterInfo) {
+  public void setSubClusterInfo(SubClusterInfo paramSubClusterInfo) {
     maybeInitBuilder();
-    if (subClusterInfo == null) {
+    if (paramSubClusterInfo == null) {
       builder.clearSubClusterInfo();
+      return;
     }
-    this.subClusterInfo = subClusterInfo;
+    this.subClusterInfo = paramSubClusterInfo;
+    builder.setSubClusterInfo(convertToProtoFormat(paramSubClusterInfo));
   }
 
   private SubClusterInfo convertFromProtoFormat(

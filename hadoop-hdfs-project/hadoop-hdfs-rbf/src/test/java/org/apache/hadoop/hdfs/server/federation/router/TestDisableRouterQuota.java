@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import java.io.IOException;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -46,6 +47,7 @@ public class TestDisableRouterQuota {
         .quota(false) //set false to verify the quota disabled in Router
         .rpc()
         .build();
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "0.0.0.0:0");
     router.init(routerConf);
     router.setRouterId("TestRouterId");
     router.start();
@@ -68,15 +70,21 @@ public class TestDisableRouterQuota {
   public void testSetQuota() throws Exception {
     long nsQuota = 1024;
     long ssQuota = 1024;
+    Quota quotaModule = router.getRpcServer().getQuotaModule();
 
-    try {
-      Quota quotaModule = router.getRpcServer().getQuotaModule();
-      quotaModule.setQuota("/test", nsQuota, ssQuota, null);
-      fail("The setQuota call should fail.");
-    } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "The quota system is disabled in Router.", ioe);
-    }
+    // don't checkMountEntry called by RouterAdminServer#synchronizeQuota
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "The quota system is disabled in Router.",
+        "The setQuota call should fail.",
+        () -> quotaModule.setQuota("/test", nsQuota, ssQuota, null, false));
+
+    // do checkMountEntry called by RouterClientProtocol#setQuota
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "The quota system is disabled in Router.",
+        "The setQuota call should fail.",
+        () -> quotaModule.setQuota("/test", nsQuota, ssQuota, null, true));
   }
 
   @Test
@@ -91,4 +99,13 @@ public class TestDisableRouterQuota {
     }
   }
 
+  @Test
+  public void testGetGlobalQuota() throws Exception {
+    LambdaTestUtils.intercept(IOException.class,
+        "The quota system is disabled in Router.",
+        "The getGlobalQuota call should fail.", () -> {
+          Quota quotaModule = router.getRpcServer().getQuotaModule();
+          quotaModule.getGlobalQuota("/test");
+        });
+  }
 }

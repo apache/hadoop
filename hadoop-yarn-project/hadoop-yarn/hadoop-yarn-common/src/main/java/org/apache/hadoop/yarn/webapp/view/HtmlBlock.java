@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 public abstract class HtmlBlock extends TextView implements SubView {
 
   protected static final String UNAVAILABLE = "N/A";
+  protected static final long BYTES_IN_MB = 1024 * 1024;
+  protected static final String DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
   public class Block extends Hamlet {
     Block(PrintWriter out, int level, boolean wasInline) {
@@ -95,4 +97,28 @@ public abstract class HtmlBlock extends TextView implements SubView {
     return callerUGI;
   }
 
+  /**
+   * Initialize User Help Information Div.
+   * When the user does not configure the Yarn Federation function, prompt the user.
+   *
+   * @param html HTML page.
+   * @param isEnabled If federation is enabled.
+   */
+  protected void initUserHelpInformationDiv(Block html, boolean isEnabled) {
+    if (!isEnabled) {
+      html.style(".alert {padding: 15px; margin-bottom: 20px; " +
+          " border: 1px solid transparent; border-radius: 4px;}");
+      html.style(".alert-dismissable {padding-right: 35px;}");
+      html.style(".alert-info {color: #856404;background-color: #fff3cd;border-color: #ffeeba;}");
+
+      Hamlet.DIV<Hamlet> div = html.div("#div_id").$class("alert alert-dismissable alert-info");
+      div.p().$style("color:red").__("Federation is not Enabled.").__()
+          .p().__()
+          .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
+          .p().__()
+          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
+          "Hadoop: YARN Federation").
+          __();
+    }
+  }
 }

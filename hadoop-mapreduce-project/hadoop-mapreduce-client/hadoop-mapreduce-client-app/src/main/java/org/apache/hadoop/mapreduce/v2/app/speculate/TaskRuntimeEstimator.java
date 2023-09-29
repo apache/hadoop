@@ -87,4 +87,19 @@ public interface TaskRuntimeEstimator {
    *
    */
   public long runtimeEstimateVariance(TaskAttemptId id);
+
+  /**
+   *
+   * Returns true if the estimator has no updates records for a threshold time
+   * window. This helps to identify task attempts that are stalled at the
+   * beginning of execution.
+   *
+   * @param id the {@link TaskAttemptId} of the attempt we are asking about
+   * @param timeStamp the time of the report we compare with
+   * @return true if the task attempt has no progress for a given time window
+   *
+   */
+  default boolean hasStagnatedProgress(TaskAttemptId id, long timeStamp) {
+    return false;
+  }
 }

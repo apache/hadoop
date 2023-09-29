@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListR
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationRequestProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -43,8 +43,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -84,7 +84,7 @@ public class ReconfigurationProtocolTranslatorPB implements
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int socketTimeout) throws IOException {
     RPC.setProtocolEngine(conf, ReconfigurationProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     return RPC.getProxy(ReconfigurationProtocolPB.class,
         RPC.getProtocolVersion(ReconfigurationProtocolPB.class),
         addr, ticket, conf, factory, socketTimeout);

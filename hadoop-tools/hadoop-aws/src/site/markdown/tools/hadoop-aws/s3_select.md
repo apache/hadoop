@@ -14,7 +14,7 @@
 
 # S3 Select
 
-**Experimental Feature**
+**Deprecated Feature**
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
@@ -59,6 +59,20 @@ Record Readers.
 * Structured source file formats like Apache Parquet.
 It's better here to directly use the Apache Spark, Hive, Impala, Flink or
 similar, which all use the latest ASF-supported libraries.
+
+## Dependencies: eventstream JAR
+
+To use S3 Select through the S3A connector, an extra JAR MUST be added to the classpath of your application,
+`eventstream-1.0.1.jar`.a
+For command line tool use, this should be done by adding it to `share/hadoop/common/lib/`
+
+```xml
+<dependency>
+  <groupId>software.amazon.eventstream</groupId>
+  <artifactId>eventstream</artifactId>
+  <version>1.0.1</version>
+</dependency>
+```
 
 ## Enabling/Disabling S3 Select
 
@@ -288,10 +302,12 @@ hadoop s3guard \
 ```
 
 
-## Use in MR/Analytics queries: Work in Progress
+## Use in MR/Analytics queries: Partially Supported
 
-S3 Select support in analytics queries is a work in progress. It does
-not work reliably with large source files where the work is split up.
+S3 Select support in analytics queries is only partially supported.
+It does not work reliably with large source files where the work is split up,
+and as the various query engines all assume that .csv and .json formats are splittable,
+things go very wrong, fast.
 
 As a proof of concept *only*, S3 Select queries can be made through
 MapReduce jobs which use any Hadoop `RecordReader`
@@ -615,24 +631,10 @@ characters can be configured in the Hadoop configuration.
 
 **Consistency**
 
-* Assume the usual S3 consistency model applies.
+Since November 2020, AWS S3 has been fully consistent.
+This also applies to S3 Select.
+We do not know what happens if an object is overwritten while a query is active.
 
-* When enabled, S3Guard's DynamoDB table will declare whether or not
-a newly deleted file is visible: if it is marked as deleted, the
-select request will be rejected with a `FileNotFoundException`.
-
-* When an existing S3-hosted object is changed, the S3 select operation
-may return the results of a SELECT call as applied to either the old
-or new version.
-
-* We don't know whether you can get partially consistent reads, or whether
-an extended read ever picks up a later value.
-
-* The AWS S3 load balancers can briefly cache 404/Not-Found entries
-from a failed HEAD/GET request against a nonexistent file; this cached
-entry can briefly create create inconsistency, despite the
-AWS "Create is consistent" model. There is no attempt to detect or recover from
-this.
 
 **Concurrency**
 
@@ -677,6 +679,24 @@ to the `get()` call: do it.
 
 ## Troubleshooting
 
+### `NoClassDefFoundError: software/amazon/eventstream/MessageDecoder`
+
+Select operation failing with a missing eventstream class.
+
+```
+java.io.IOException: java.lang.NoClassDefFoundError: software/amazon/eventstream/MessageDecoder
+at org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper.select(SelectObjectContentHelper.java:75)
+at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$select$10(WriteOperationHelper.java:660)
+at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62)
+at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+```
+
+The eventstream JAR is not on the classpath/not in sync with the version of the full "bundle.jar" JDK
+
+Fix: get a compatible version of the JAR on the classpath.
+
+### SQL errors
+
 Getting S3 Select code to work is hard, though those knowledgeable in SQL
 will find it easier.
 
@@ -687,7 +707,6 @@ Problems can be split into:
 1. Datatype casting issues
 1. Bad records/data in source files.
 1. Failure to configure MR jobs to work correctly.
-1. Failure of MR jobs due to
 
 The exceptions here are all based on the experience during writing tests;
 more may surface with broader use.
@@ -752,7 +771,7 @@ at org.apache.hadoop.mapreduce.lib.input.LineRecordReader.nextKeyValue(LineRecor
 ```
 
 The underlying problem is that the gzip decompressor is automatically enabled
-when the the source file ends with the ".gz" extension. Because S3 Select
+when the source file ends with the ".gz" extension. Because S3 Select
 returns decompressed data, the codec fails.
 
 The workaround here is to declare that the job should add the "Passthrough Codec"
@@ -946,6 +965,21 @@ Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: GZIP is not applic
   Service: Amazon S3; Status Code: 400; Error Code: InvalidCompressionFormat;
   at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse
   ...
+```
+
+
+### AWSBadRequestException  `UnsupportedStorageClass`
+
+S3 Select doesn't work with some storage classes like Glacier or Reduced Redundancy.
+Make sure you've set `fs.s3a.create.storage.class` to a supported storage class for S3 Select.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException:
+    Select on s3a://example/dataset.csv.gz:
+    com.amazonaws.services.s3.model.AmazonS3Exception:
+     We do not support REDUCED_REDUNDANCY storage class.
+     Please check the service documentation and try again.
+     (Service: Amazon S3; Status Code: 400; Error Code: UnsupportedStorageClass
 ```
 
 ### `PathIOException`: "seek() not supported"

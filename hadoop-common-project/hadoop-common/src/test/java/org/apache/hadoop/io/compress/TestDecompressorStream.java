@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -48,7 +47,7 @@ public class TestDecompressorStream {
   @Test
   public void testReadOneByte() throws IOException {
     for (int i = 0; i < TEST_STRING.length(); ++i) {
-      assertThat(decompressorStream.read(), is((int) TEST_STRING.charAt(i)));
+      assertThat(decompressorStream.read()).isEqualTo(TEST_STRING.charAt(i));
     }
     try {
       int ret = decompressorStream.read();
@@ -68,8 +67,8 @@ public class TestDecompressorStream {
       int n = Math.min(bytesToRead, buf.length);
       int bytesRead = decompressorStream.read(buf, 0, n);
       assertTrue(bytesRead > 0 && bytesRead <= n);
-      assertThat(new String(buf, 0, bytesRead),
-          is(TEST_STRING.substring(i, i + bytesRead)));
+      assertThat(new String(buf, 0, bytesRead))
+          .isEqualTo(TEST_STRING.substring(i, i + bytesRead));
       bytesToRead = bytesToRead - bytesRead;
       i = i + bytesRead;
     }
@@ -83,12 +82,12 @@ public class TestDecompressorStream {
 
   @Test
   public void testSkip() throws IOException {
-    assertThat(decompressorStream.skip(12), is(12L));
-    assertThat(decompressorStream.read(), is((int)TEST_STRING.charAt(12)));
-    assertThat(decompressorStream.read(), is((int)TEST_STRING.charAt(13)));
-    assertThat(decompressorStream.read(), is((int)TEST_STRING.charAt(14)));
-    assertThat(decompressorStream.skip(10), is(10L));
-    assertThat(decompressorStream.read(), is((int)TEST_STRING.charAt(25)));
+    assertThat(decompressorStream.skip(12)).isEqualTo(12L);
+    assertThat(decompressorStream.read()).isEqualTo(TEST_STRING.charAt(12));
+    assertThat(decompressorStream.read()).isEqualTo(TEST_STRING.charAt(13));
+    assertThat(decompressorStream.read()).isEqualTo(TEST_STRING.charAt(14));
+    assertThat(decompressorStream.skip(10)).isEqualTo(10L);
+    assertThat(decompressorStream.read()).isEqualTo(TEST_STRING.charAt(25));
     try {
       long ret = decompressorStream.skip(1000);
       fail("Not reachable but got ret " + ret);

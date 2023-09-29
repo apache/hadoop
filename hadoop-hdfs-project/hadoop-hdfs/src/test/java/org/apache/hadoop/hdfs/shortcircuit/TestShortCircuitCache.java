@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry.RegisteredShm;
@@ -78,6 +80,7 @@ import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -87,9 +90,9 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.collect.HashMultimap;
+import org.apache.hadoop.util.Preconditions;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 
 @NotThreadSafe
 public class TestShortCircuitCache {
@@ -169,7 +172,23 @@ public class TestShortCircuitCache {
         new ShortCircuitCache(10, 1, 10, 1, 1, 10000, 0);
     cache.close();
   }
-  
+
+  @Test(timeout=5000)
+  public void testInvalidConfiguration() throws Exception {
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxTotalSize must be greater than zero.",
+        () -> new ShortCircuitCache(-1, 1, 10, 1, 1, 10000, 0));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxNonMmappedEvictableLifespanMs must be greater than zero.",
+        () -> new ShortCircuitCache(10, -1, 10, 1, 1, 10000, 0));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "dfs.client.mmap.cache.size must be greater than zero.",
+        () -> new ShortCircuitCache(10, 1, -1, 1, 1, 10000, 0));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxEvictableMmapedLifespanMs must be greater than zero.",
+        () -> new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0));
+  }
+
   @Test(timeout=60000)
   public void testAddAndRetrieve() throws Exception {
     final ShortCircuitCache cache =
@@ -431,7 +450,7 @@ public class TestShortCircuitCache {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     cache.getDfsClientShmManager().visit(new Visitor() {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
@@ -501,7 +520,7 @@ public class TestShortCircuitCache {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     String TEST_FILE = "/test_file";
     final int TEST_FILE_LEN = 8193;
     final int SEED = 0xFADED;
@@ -565,7 +584,7 @@ public class TestShortCircuitCache {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
     final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache(0);
     cache.getDfsClientShmManager().visit(new Visitor() {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
@@ -877,19 +896,20 @@ public class TestShortCircuitCache {
             return peerCache;
           });
 
-      Mockito.when(clientContext.getShortCircuitCache()).thenAnswer(
+      Mockito.when(clientContext.getShortCircuitCache(
+          blk.getBlock().getBlockId())).thenAnswer(
           (Answer<ShortCircuitCache>) shortCircuitCacheCall -> {
-            ShortCircuitCache cache = Mockito.mock(ShortCircuitCache.class);
-            Mockito.when(cache.allocShmSlot(
+              ShortCircuitCache cache = Mockito.mock(ShortCircuitCache.class);
+              Mockito.when(cache.allocShmSlot(
                 Mockito.any(DatanodeInfo.class),
                 Mockito.any(DomainPeer.class),
                 Mockito.any(MutableBoolean.class),
                 Mockito.any(ExtendedBlockId.class),
                 Mockito.anyString()))
-                .thenAnswer((Answer<Slot>) call -> null);
+                  .thenAnswer((Answer<Slot>) call -> null);
 
-            return cache;
-          }
+              return cache;
+            }
       );
 
       DatanodeInfo[] nodes = blk.getLocations();
@@ -907,6 +927,173 @@ public class TestShortCircuitCache {
         Assert.fail("Should not throw NPE when the native library is unable " +
             "to create new files!");
       }
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testDomainSocketClosedByDN() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf =
+        createShortCircuitConf("testDomainSocketClosedByDN", sockDir);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache();
+      DomainPeer peer = getDomainPeerToDn(conf);
+      MutableBoolean usedPeer = new MutableBoolean(false);
+      ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
+      final DatanodeInfo datanode = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(cluster.getDataNodes().get(0).getDatanodeId()).build();
+      // Allocating the first shm slot requires using up a peer.
+      Slot slot1 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
+          "testReleaseSlotReuseDomainSocket_client");
+
+      cluster.getDataNodes().get(0).getShortCircuitRegistry()
+          .registerSlot(blockId, slot1.getSlotId(), false);
+
+      Slot slot2 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
+          "testReleaseSlotReuseDomainSocket_client");
+
+      cluster.getDataNodes().get(0).getShortCircuitRegistry()
+          .registerSlot(blockId, slot2.getSlotId(), false);
+
+      cache.scheduleSlotReleaser(slot1);
+
+      Thread.sleep(2000);
+      cache.scheduleSlotReleaser(slot2);
+      Thread.sleep(2000);
+      Assert.assertEquals(0,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  // Regression test for HDFS-16535
+  @Test(timeout = 60000)
+  public void testDomainSocketClosedByMultipleDNs() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    String testName = "testDomainSocketClosedByMultipleDNs";
+    Configuration conf = createShortCircuitConf(testName, sockDir);
+    conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
+        testName + "._PORT").getAbsolutePath());
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache();
+
+      ExtendedBlockId blockId0 = new ExtendedBlockId(123, "xyz");
+      ExtendedBlockId blockId1 = new ExtendedBlockId(456, "xyz");
+
+      DataNode dn0 = cluster.getDataNodes().get(0);
+      DataNode dn1 = cluster.getDataNodes().get(1);
+
+      DomainPeer peer0 = new DomainPeer(DomainSocket.connect(new File(
+          sockDir.getDir(), testName + "." + dn0.getXferPort()).getAbsolutePath()));
+      DomainPeer peer1 = new DomainPeer(DomainSocket.connect(new File(
+          sockDir.getDir(), testName + "." + dn1.getXferPort()).getAbsolutePath()));
+
+      final DatanodeInfo dnInfo0 = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(dn0.getDatanodeId()).build();
+      final DatanodeInfo dnInfo1 = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(dn1.getDatanodeId()).build();
+
+      // Allocate 2 shm slots from DataNode-0
+      MutableBoolean usedPeer = new MutableBoolean(false);
+      Slot slot1 = cache.allocShmSlot(dnInfo0, peer0, usedPeer, blockId0,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn0.getShortCircuitRegistry()
+          .registerSlot(blockId0, slot1.getSlotId(), false);
+
+      Slot slot2 = cache.allocShmSlot(dnInfo0, peer0, usedPeer, blockId0,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn0.getShortCircuitRegistry()
+          .registerSlot(blockId0, slot2.getSlotId(), false);
+
+      // Allocate 1 shm slot from DataNode-1
+      Slot slot3 = cache.allocShmSlot(dnInfo1, peer1, usedPeer, blockId1,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn1.getShortCircuitRegistry()
+          .registerSlot(blockId1, slot3.getSlotId(), false);
+
+      Assert.assertEquals(2, cache.getDfsClientShmManager().getShmNum());
+      Assert.assertEquals(1, dn0.getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(1, dn1.getShortCircuitRegistry().getShmNum());
+
+      // Release the slot of DataNode-1 first.
+      cache.scheduleSlotReleaser(slot3);
+      Thread.sleep(2000);
+      Assert.assertEquals(1, cache.getDfsClientShmManager().getShmNum());
+
+      // Release the slots of DataNode-0.
+      cache.scheduleSlotReleaser(slot1);
+      Thread.sleep(2000);
+      Assert.assertEquals("0 ShmNum means the shm of DataNode-0 is shutdown" +
+              " due to slot release failures.",
+          1, cache.getDfsClientShmManager().getShmNum());
+      cache.scheduleSlotReleaser(slot2);
+      Thread.sleep(2000);
+
+      Assert.assertEquals(0, dn0.getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, dn1.getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testDNRestart() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf("testDNRestart", sockDir);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache();
+      DomainPeer peer = getDomainPeerToDn(conf);
+      MutableBoolean usedPeer = new MutableBoolean(false);
+      ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
+      final DatanodeInfo datanode = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(cluster.getDataNodes().get(0).getDatanodeId()).build();
+      // Allocating the first shm slot requires using up a peer.
+      Slot slot1 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
+          "testReleaseSlotReuseDomainSocket_client");
+
+      cluster.getDataNodes().get(0).getShortCircuitRegistry()
+          .registerSlot(blockId, slot1.getSlotId(), false);
+
+      // restart the datanode to invalidate the cache
+      cluster.restartDataNode(0);
+      Thread.sleep(1000);
+      // after the restart, new allocation and release should not be affect
+      cache.scheduleSlotReleaser(slot1);
+
+      Slot slot2 = null;
+      try {
+        slot2 = cache.allocShmSlot(datanode, peer, usedPeer, blockId,
+            "testReleaseSlotReuseDomainSocket_client");
+      } catch (ClosedChannelException ce) {
+
+      }
+      cache.scheduleSlotReleaser(slot2);
+      Thread.sleep(2000);
+      Assert.assertEquals(0,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
+    } finally {
+      cluster.shutdown();
     }
   }
 }

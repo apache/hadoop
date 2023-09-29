@@ -17,23 +17,19 @@
  */
 package org.apache.hadoop.mapred.nativetask.combinertest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.TaskCounter;
 import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
@@ -90,9 +86,9 @@ public class LargeKVCombinerTest {
       final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf,
                                                 inputPath, nativeOutputPath);
 
-      assertTrue(nativejob.waitForCompletion(true));
+      assertThat(nativejob.waitForCompletion(true)).isTrue();
 
-      assertTrue(normaljob.waitForCompletion(true));
+      assertThat(normaljob.waitForCompletion(true)).isTrue();
 
       final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
 
@@ -100,7 +96,7 @@ public class LargeKVCombinerTest {
         ", max size: " + max + ", normal out: " + hadoopOutputPath +
         ", native Out: " + nativeOutputPath;
 
-      assertEquals(reason, true, compareRet);
+      assertThat(compareRet).withFailMessage(reason).isTrue();
       ResultVerifier.verifyCounters(normaljob, nativejob, true);
     }
     fs.close();

@@ -48,6 +48,14 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-federation-balance/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-extras/src/main/shellprofile.d</directory>
       <includes>
         <include>*</include>
@@ -106,6 +114,13 @@
     </fileSet>
     <fileSet>
       <directory>../hadoop-distcp/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-federation-balance/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
         <include>*-sources.jar</include>
@@ -174,28 +189,6 @@
       <directory>../hadoop-sls/target/hadoop-sls-${project.version}/sls</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sls</outputDirectory>
     </fileSet>
-    <fileSet>
-    <directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target</directory>
-    <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
-    <includes>
-    <include>*-sources.jar</include>
-    </includes>
-    </fileSet>
-    <fileSet>
-    <directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target/hadoop-dynamometer-blockgen-${project.version}/dynamometer-blockgen</directory>
-    <outputDirectory>/share/hadoop/${hadoop.component}/dynamometer-blockgen</outputDirectory>
-    </fileSet>
-    <!--<fileSet>-->
-      <!--<directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target</directory>-->
-      <!--<outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>-->
-      <!--<includes>-->
-        <!--<include>*-sources.jar</include>-->
-      <!--</includes>-->
-    <!--</fileSet>-->
-    <!--<fileSet>-->
-      <!--<directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target/hadoop-dynamometer-blockgen-${project.version}/dynamometer-blockgen</directory>-->
-      <!--<outputDirectory>/share/hadoop/${hadoop.component}/dynamometer-blockgen</outputDirectory>-->
-    <!--</fileSet>-->
     <fileSet>
       <directory>../hadoop-resourceestimator/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>

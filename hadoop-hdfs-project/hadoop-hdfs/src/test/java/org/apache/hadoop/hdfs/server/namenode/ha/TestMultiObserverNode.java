@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -46,6 +47,7 @@ public class TestMultiObserverNode {
   @BeforeClass
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 2, 0, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
     dfs = HATestUtil.configureObserverReadFs(

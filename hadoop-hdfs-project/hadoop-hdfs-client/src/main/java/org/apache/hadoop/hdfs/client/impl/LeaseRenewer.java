@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,7 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,12 +80,25 @@ public class LeaseRenewer {
   private static long leaseRenewerGraceDefault = 60*1000L;
   static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;
 
+  private AtomicBoolean isLSRunning = new AtomicBoolean(false);
+
   /** Get a {@link LeaseRenewer} instance */
   public static LeaseRenewer getInstance(final String authority,
       final UserGroupInformation ugi, final DFSClient dfsc) {
     final LeaseRenewer r = Factory.INSTANCE.get(authority, ugi);
     r.addClient(dfsc);
     return r;
+  }
+
+  /**
+   * Remove the given renewer from the Factory.
+   * Subsequent call will receive new {@link LeaseRenewer} instance.
+   * @param renewer Instance to be cleared from Factory
+   */
+  public static void remove(LeaseRenewer renewer) {
+    synchronized (renewer) {
+      Factory.INSTANCE.remove(renewer);
+    }
   }
 
   /**
@@ -156,6 +170,9 @@ public class LeaseRenewer {
       final LeaseRenewer stored = renewers.get(r.factorykey);
       //Since a renewer may expire, the stored renewer can be different.
       if (r == stored) {
+        // Expire LeaseRenewer daemon thread as soon as possible.
+        r.clearClients();
+        r.setEmptyTime(0);
         renewers.remove(r.factorykey);
       }
     }
@@ -241,6 +258,10 @@ public class LeaseRenewer {
     }
   }
 
+  private synchronized void clearClients() {
+    dfsclients.clear();
+  }
+
   private synchronized boolean clientsRunning() {
     for(Iterator<DFSClient> i = dfsclients.iterator(); i.hasNext(); ) {
       if (!i.next().isClientRunning()) {
@@ -270,8 +291,9 @@ public class LeaseRenewer {
         half: LEASE_RENEWER_SLEEP_DEFAULT;
   }
 
+  @VisibleForTesting
   /** Is the daemon running? */
-  synchronized boolean isRunning() {
+  public synchronized boolean isRunning() {
     return daemon != null && daemon.isAlive();
   }
 
@@ -291,18 +313,25 @@ public class LeaseRenewer {
         && Time.monotonicNow() - emptyTime > gracePeriod;
   }
 
-  public synchronized void put(final DFSClient dfsc) {
+  public synchronized boolean put(final DFSClient dfsc) {
     if (dfsc.isClientRunning()) {
       if (!isRunning() || isRenewerExpired()) {
-        //start a new deamon with a new id.
+        // Start a new daemon with a new id.
         final int id = ++currentId;
+        if (isLSRunning.get()) {
+          // Not allowed to add multiple daemons into LeaseRenewer, let client
+          // create new LR and continue to acquire lease.
+          return false;
+        }
+        isLSRunning.getAndSet(true);
+
         daemon = new Daemon(new Runnable() {
           @Override
           public void run() {
             try {
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Lease renewer daemon for " + clientsString()
-                    + " with renew id " + id + " started");
+                LOG.debug("Lease renewer daemon for {} with renew id {} started",
+                    clientsString(), id);
               }
               LeaseRenewer.this.run(id);
             } catch(InterruptedException e) {
@@ -312,8 +341,8 @@ public class LeaseRenewer {
                 Factory.INSTANCE.remove(LeaseRenewer.this);
               }
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Lease renewer daemon for " + clientsString()
-                    + " with renew id " + id + " exited");
+                LOG.debug("Lease renewer daemon for {} with renew id {} exited",
+                    clientsString(), id);
               }
             }
           }
@@ -327,6 +356,7 @@ public class LeaseRenewer {
       }
       emptyTime = Long.MAX_VALUE;
     }
+    return true;
   }
 
   @VisibleForTesting
@@ -414,20 +444,17 @@ public class LeaseRenewer {
         try {
           renew();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Lease renewer daemon for " + clientsString()
-                + " with renew id " + id + " executed");
+            LOG.debug("Lease renewer daemon for {} with renew id {} executed",
+                clientsString(), id);
           }
           lastRenewed = Time.monotonicNow();
         } catch (SocketTimeoutException ie) {
-          LOG.warn("Failed to renew lease for " + clientsString() + " for "
-              + (elapsed/1000) + " seconds.  Aborting ...", ie);
+          LOG.warn("Failed to renew lease for {} for {} seconds.  Aborting ...",
+              clientsString(), (elapsed/1000), ie);
           List<DFSClient> dfsclientsCopy;
           synchronized (this) {
             DFSClientFaultInjector.get().delayWhenRenewLeaseTimeout();
             dfsclientsCopy = new ArrayList<>(dfsclients);
-            dfsclients.clear();
-            //Expire the current LeaseRenewer thread.
-            emptyTime = 0;
             Factory.INSTANCE.remove(LeaseRenewer.this);
           }
           for (DFSClient dfsClient : dfsclientsCopy) {
@@ -435,8 +462,8 @@ public class LeaseRenewer {
           }
           break;
         } catch (IOException ie) {
-          LOG.warn("Failed to renew lease for " + clientsString() + " for "
-              + (elapsed/1000) + " seconds.  Will retry shortly ...", ie);
+          LOG.warn("Failed to renew lease for {} for {} seconds.  Will retry shortly ...",
+              clientsString(), (elapsed/1000), ie);
         }
       }
 
@@ -444,11 +471,11 @@ public class LeaseRenewer {
         if (id != currentId || isRenewerExpired()) {
           if (LOG.isDebugEnabled()) {
             if (id != currentId) {
-              LOG.debug("Lease renewer daemon for " + clientsString()
-                  + " with renew id " + id + " is not current");
+              LOG.debug("Lease renewer daemon for {} with renew id {} is not current",
+                  clientsString(), id);
             } else {
-              LOG.debug("Lease renewer daemon for " + clientsString()
-                  + " with renew id " + id + " expired");
+              LOG.debug("Lease renewer daemon for {} with renew id {} expired",
+                  clientsString(), id);
             }
           }
           //no longer the current daemon or expired

@@ -70,8 +70,6 @@ public class MockRMApp implements RMApp {
   int maxAppAttempts = 1;
   List<ResourceRequest> amReqs;
   private Set<String> applicationTags = null;
-  private boolean logAggregationEnabled;
-  private boolean logAggregationFinished;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
@@ -119,6 +117,11 @@ public class MockRMApp implements RMApp {
   @Override
   public String getUser() {
     return user;
+  }
+
+  @Override
+  public String getRealUser() {
+    return null;
   }
 
   public void setUser(String user) {
@@ -236,24 +239,6 @@ public class MockRMApp implements RMApp {
   @Override
   public int getMaxAppAttempts() {
     return maxAppAttempts;
-  }
-
-  @Override
-  public boolean isLogAggregationEnabled() {
-    return logAggregationEnabled;
-  }
-
-  @Override
-  public boolean isLogAggregationFinished() {
-    return logAggregationFinished;
-  }
-
-  public void setLogAggregationEnabled(boolean enabled) {
-    this.logAggregationEnabled = enabled;
-  }
-
-  public void setLogAggregationFinished(boolean finished) {
-    this.logAggregationFinished = finished;
   }
 
   public void setNumMaxRetries(int maxAppAttempts) {

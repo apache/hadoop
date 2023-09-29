@@ -96,9 +96,9 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.LocalizationStateProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interners;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Utils to convert enum protos to corresponding java enums and vice versa.
@@ -113,27 +113,74 @@ public class ProtoUtils {
   /*
    * ContainerState
    */
-  private final static String CONTAINER_STATE_PREFIX = "C_";
-  public static ContainerStateProto convertToProtoFormat(ContainerState e) {
-    return ContainerStateProto.valueOf(CONTAINER_STATE_PREFIX + e.name());
+  public static ContainerStateProto convertToProtoFormat(ContainerState state) {
+    switch (state) {
+    case NEW:
+      return ContainerStateProto.C_NEW;
+    case RUNNING:
+      return ContainerStateProto.C_RUNNING;
+    case COMPLETE:
+      return ContainerStateProto.C_COMPLETE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerState conversion unsupported");
+    }
   }
-  public static ContainerState convertFromProtoFormat(ContainerStateProto e) {
-    return ContainerState.valueOf(e.name().replace(CONTAINER_STATE_PREFIX, ""));
+
+  public static ContainerState convertFromProtoFormat(
+      ContainerStateProto proto) {
+    switch (proto) {
+    case C_NEW:
+      return ContainerState.NEW;
+    case C_RUNNING:
+      return ContainerState.RUNNING;
+    case C_COMPLETE:
+      return ContainerState.COMPLETE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerStateProto conversion unsupported");
+    }
   }
 
   /*
    * Container SubState
    */
-  private final static String CONTAINER_SUB_STATE_PREFIX = "CSS_";
   public static ContainerSubStateProto convertToProtoFormat(
-      ContainerSubState e) {
-    return ContainerSubStateProto.valueOf(
-        CONTAINER_SUB_STATE_PREFIX + e.name());
+      ContainerSubState state) {
+    switch (state) {
+    case SCHEDULED:
+      return ContainerSubStateProto.CSS_SCHEDULED;
+    case RUNNING:
+      return ContainerSubStateProto.CSS_RUNNING;
+    case PAUSED:
+      return ContainerSubStateProto.CSS_PAUSED;
+    case COMPLETING:
+      return ContainerSubStateProto.CSS_COMPLETING;
+    case DONE:
+      return ContainerSubStateProto.CSS_DONE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerSubState conversion unsupported");
+    }
   }
+
   public static ContainerSubState convertFromProtoFormat(
-      ContainerSubStateProto e) {
-    return ContainerSubState.valueOf(
-        e.name().substring(CONTAINER_SUB_STATE_PREFIX.length()));
+      ContainerSubStateProto proto) {
+    switch (proto) {
+    case CSS_SCHEDULED:
+      return ContainerSubState.SCHEDULED;
+    case CSS_RUNNING:
+      return ContainerSubState.RUNNING;
+    case CSS_PAUSED:
+      return ContainerSubState.PAUSED;
+    case CSS_COMPLETING:
+      return ContainerSubState.COMPLETING;
+    case CSS_DONE:
+      return ContainerSubState.DONE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerSubStateProto conversion unsupported");
+    }
   }
   /*
    * NodeState
@@ -540,11 +587,40 @@ public class ProtoUtils {
     return ret;
   }
 
+  public static List<YarnProtos.StringFloatMapProto>
+      convertMapToStringFloatMapProtoList(
+      Map<String, Float> map) {
+    List<YarnProtos.StringFloatMapProto> ret = new ArrayList<>();
+    if (map != null) {
+      for (Map.Entry<String, Float> entry : map.entrySet()) {
+        YarnProtos.StringFloatMapProto.Builder tmp =
+            YarnProtos.StringFloatMapProto.newBuilder();
+        tmp.setKey(entry.getKey());
+        tmp.setValue(entry.getValue());
+        ret.add(tmp.build());
+      }
+    }
+    return ret;
+  }
+
   public static Map<String, String> convertStringStringMapProtoListToMap(
       List<StringStringMapProto> pList) {
     Map<String, String> ret = new HashMap<>();
     if (pList != null) {
       for (StringStringMapProto p : pList) {
+        if (p.hasKey()) {
+          ret.put(p.getKey(), p.getValue());
+        }
+      }
+    }
+    return ret;
+  }
+
+  public static Map<String, Float> convertStringFloatMapProtoListToMap(
+      List<YarnProtos.StringFloatMapProto> pList) {
+    Map<String, Float> ret = new HashMap<>();
+    if (pList != null) {
+      for (YarnProtos.StringFloatMapProto p : pList) {
         if (p.hasKey()) {
           ret.put(p.getKey(), p.getValue());
         }

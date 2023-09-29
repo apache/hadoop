@@ -128,6 +128,7 @@ public class TestSnapshotFileLength {
         hdfs.getFileChecksum(file1snap1), is(snapChksum1));
     try {
       AppendTestUtil.write(out, 0, toAppend);
+      out.hflush();
       // Test reading from snapshot of file that is open for append
       byte[] dataFromSnapshot = DFSTestUtil.readFileBuffer(hdfs, file1snap1);
       assertThat("Wrong data size in snapshot.",

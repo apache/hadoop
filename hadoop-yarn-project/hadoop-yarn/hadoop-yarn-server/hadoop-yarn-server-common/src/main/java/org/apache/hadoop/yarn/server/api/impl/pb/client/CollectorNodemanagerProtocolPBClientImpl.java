@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.GetTimelineColl
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollectorInfoRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollectorInfoResponsePBImpl;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class CollectorNodemanagerProtocolPBClientImpl implements
     CollectorNodemanagerProtocol, Closeable {
@@ -63,7 +63,7 @@ public class CollectorNodemanagerProtocolPBClientImpl implements
   public CollectorNodemanagerProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, CollectorNodemanagerProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);

@@ -22,23 +22,24 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.Lists;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 
 /**
@@ -63,6 +64,7 @@ class DummyHAService extends HAServiceTarget {
   public int fenceCount = 0;
   public int activeTransitionCount = 0;
   boolean testWithProtoBufRPC = false;
+  int rpcTimeout;
   
   static ArrayList<DummyHAService> instances = Lists.newArrayList();
   int index;
@@ -82,7 +84,8 @@ class DummyHAService extends HAServiceTarget {
     }
     Configuration conf = new Configuration();
     this.proxy = makeMock(conf, HA_HM_RPC_TIMEOUT_DEFAULT);
-    this.healthMonitorProxy = makeHealthMonitorMock(conf, HA_HM_RPC_TIMEOUT_DEFAULT);
+    this.healthMonitorProxy = makeHealthMonitorMock(conf,
+        HA_HM_RPC_TIMEOUT_DEFAULT, HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT);
     try {
       conf.set(DUMMY_FENCE_KEY, DummyFencer.class.getName());
       this.fencer = Mockito.spy(
@@ -116,7 +119,7 @@ class DummyHAService extends HAServiceTarget {
 
     try {
       RPC.setProtocolEngine(conf,
-          HAServiceProtocolPB.class, ProtobufRpcEngine.class);
+          HAServiceProtocolPB.class, ProtobufRpcEngine2.class);
       HAServiceProtocolServerSideTranslatorPB haServiceProtocolXlator =
           new HAServiceProtocolServerSideTranslatorPB(new MockHAProtocolImpl());
       BlockingService haPbService = HAServiceProtocolService
@@ -149,13 +152,13 @@ class DummyHAService extends HAServiceTarget {
   }
 
   private HAServiceProtocol makeHealthMonitorMock(Configuration conf,
-      int timeoutMs) {
+      int timeoutMs, int retries) {
     HAServiceProtocol service;
     if (!testWithProtoBufRPC) {
       service = new MockHAProtocolImpl();
     } else {
       try {
-        service = super.getHealthMonitorProxy(conf, timeoutMs);
+        service = super.getHealthMonitorProxy(conf, timeoutMs, retries);
       } catch (IOException e) {
         return null;
       }
@@ -189,9 +192,9 @@ class DummyHAService extends HAServiceTarget {
 
   @Override
   public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
-      int timeout) throws IOException {
+      int timeout, int retries) throws IOException {
     if (testWithProtoBufRPC) {
-      proxy = makeHealthMonitorMock(conf, timeout);
+      proxy = makeHealthMonitorMock(conf, timeout, retries);
     }
     return proxy;
   }

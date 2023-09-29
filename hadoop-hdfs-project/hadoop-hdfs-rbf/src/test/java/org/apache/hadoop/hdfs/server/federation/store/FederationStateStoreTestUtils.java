@@ -235,9 +235,7 @@ public final class FederationStateStoreTestUtils {
     StateStoreDriver driver = stateStore.getDriver();
     driver.verifyDriverReady();
     if (driver.removeAll(clazz)) {
-      if (driver.putAll(records, true, false)) {
-        return true;
-      }
+      return driver.putAll(records, true, false).isOperationSuccessful();
     }
     return false;
   }
@@ -260,7 +258,8 @@ public final class FederationStateStoreTestUtils {
       FederationNamenodeServiceState state) throws IOException {
     MembershipState entry = MembershipState.newInstance(
         "routerId", nameserviceId, namenodeId, "clusterId", "test",
-        "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", state, false);
+        "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", "http", "0.0.0.0:0",
+        state, false);
     MembershipStats stats = MembershipStats.newInstance();
     stats.setNumOfActiveDatanodes(100);
     stats.setNumOfDeadDatanodes(10);
@@ -268,6 +267,7 @@ public final class FederationStateStoreTestUtils {
     stats.setNumOfDecomActiveDatanodes(15);
     stats.setNumOfDecomDeadDatanodes(5);
     stats.setNumOfBlocks(10);
+    stats.setPendingSPSPaths(10);
     entry.setStats(stats);
     return entry;
   }

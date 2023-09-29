@@ -237,8 +237,8 @@ public class AuthenticationFilter implements Filter {
         provider.init(config, ctx, validity);
       } catch (Exception e) {
         if (!disallowFallbackToRandomSecretProvider) {
-          LOG.info("Unable to initialize FileSignerSecretProvider, " +
-                       "falling back to use random secrets.");
+          LOG.warn("Unable to initialize FileSignerSecretProvider, " +
+              "falling back to use random secrets. Reason: " + e.getMessage());
           provider = new RandomSignerSecretProvider();
           provider.init(config, ctx, validity);
         } else {
@@ -616,14 +616,22 @@ public class AuthenticationFilter implements Filter {
         // present.. reset to 403 if not found..
         if ((errCode == HttpServletResponse.SC_UNAUTHORIZED)
             && (!httpResponse.containsHeader(
-                KerberosAuthenticator.WWW_AUTHENTICATE))) {
+                KerberosAuthenticator.WWW_AUTHENTICATE)
+                && !httpResponse.containsHeader(
+                KerberosAuthenticator.WWW_AUTHENTICATE.toLowerCase()))) {
           errCode = HttpServletResponse.SC_FORBIDDEN;
         }
+        // After Jetty 9.4.21, sendError() no longer allows a custom message.
+        // use setStatus() to set a custom message.
+        String reason;
         if (authenticationEx == null) {
-          httpResponse.sendError(errCode, "Authentication required");
+          reason = "Authentication required";
         } else {
-          httpResponse.sendError(errCode, authenticationEx.getMessage());
+          reason = authenticationEx.getMessage();
         }
+
+        httpResponse.setStatus(errCode, reason);
+        httpResponse.sendError(errCode, reason);
       }
     }
   }
@@ -681,7 +689,7 @@ public class AuthenticationFilter implements Filter {
     if (expires >= 0 && isCookiePersistent) {
       Date date = new Date(expires);
       SimpleDateFormat df = new SimpleDateFormat("EEE, " +
-              "dd-MMM-yyyy HH:mm:ss zzz");
+              "dd-MMM-yyyy HH:mm:ss zzz", Locale.US);
       df.setTimeZone(TimeZone.getTimeZone("GMT"));
       sb.append("; Expires=").append(df.format(date));
     }

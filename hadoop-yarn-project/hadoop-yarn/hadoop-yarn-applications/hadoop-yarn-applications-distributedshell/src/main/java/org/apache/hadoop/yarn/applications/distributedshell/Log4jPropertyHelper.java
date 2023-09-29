@@ -23,21 +23,17 @@ import java.io.InputStream;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
-
 
 public class Log4jPropertyHelper {
 
   public static void updateLog4jConfiguration(Class<?> targetClass,
       String log4jPath) throws Exception {
     Properties customProperties = new Properties();
-    FileInputStream fs = null;
-    InputStream is = null;
-    try {
-      fs = new FileInputStream(log4jPath);
-      is = targetClass.getResourceAsStream("/log4j.properties");
+    try (
+        FileInputStream fs = new FileInputStream(log4jPath);
+        InputStream is = targetClass.getResourceAsStream("/log4j.properties")) {
       customProperties.load(fs);
       Properties originalProperties = new Properties();
       originalProperties.load(is);
@@ -47,9 +43,6 @@ public class Log4jPropertyHelper {
       }
       LogManager.resetConfiguration();
       PropertyConfigurator.configure(originalProperties);
-    }finally {
-      IOUtils.closeQuietly(is);
-      IOUtils.closeQuietly(fs);
     }
   }
 }

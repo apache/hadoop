@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.io.erasurecode.rawcoder.InvalidDecodingException;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -53,6 +54,8 @@ class StripedBlockReconstructor extends StripedReconstructor
     try {
       initDecoderIfNecessary();
 
+      initDecodingValidatorIfNecessary();
+
       getStripedReader().init();
 
       stripedWriter.init();
@@ -67,7 +70,11 @@ class StripedBlockReconstructor extends StripedReconstructor
       LOG.warn("Failed to reconstruct striped block: {}", getBlockGroup(), e);
       getDatanode().getMetrics().incrECFailedReconstructionTasks();
     } finally {
-      getDatanode().decrementXmitsInProgress(getXmits());
+      float xmitWeight = getErasureCodingWorker().getXmitWeight();
+      // if the xmits is smaller than 1, the xmitsSubmitted should be set to 1
+      // because if it set to zero, we cannot to measure the xmits submitted
+      int xmitsSubmitted = Math.max((int) (getXmits() * xmitWeight), 1);
+      getDatanode().decrementXmitsInProgress(xmitsSubmitted);
       final DataNodeMetrics metrics = getDatanode().getMetrics();
       metrics.incrECReconstructionTasks();
       metrics.incrECReconstructionBytesRead(getBytesRead());
@@ -88,6 +95,10 @@ class StripedBlockReconstructor extends StripedReconstructor
           (int) Math.min(getStripedReader().getBufferSize(), remaining);
 
       long start = Time.monotonicNow();
+      long bytesToRead = (long) toReconstructLen * getStripedReader().getMinRequiredSources();
+      if (getDatanode().getEcReconstuctReadThrottler() != null) {
+        getDatanode().getEcReconstuctReadThrottler().throttle(bytesToRead);
+      }
       // step1: read from minimum source DNs required for reconstruction.
       // The returned success list is the source DNs we do real read from
       getStripedReader().readMinimumSources(toReconstructLen);
@@ -98,6 +109,10 @@ class StripedBlockReconstructor extends StripedReconstructor
       long decodeEnd = Time.monotonicNow();
 
       // step3: transfer data
+      long bytesToWrite = (long) toReconstructLen * stripedWriter.getTargets();
+      if (getDatanode().getEcReconstuctWriteThrottler() != null) {
+        getDatanode().getEcReconstuctWriteThrottler().throttle(bytesToWrite);
+      }
       if (stripedWriter.transferData2Targets() == 0) {
         String error = "Transfer failed for all targets.";
         throw new IOException(error);
@@ -122,12 +137,38 @@ class StripedBlockReconstructor extends StripedReconstructor
     int[] erasedIndices = stripedWriter.getRealTargetIndices();
     ByteBuffer[] outputs = stripedWriter.getRealTargetBuffers(toReconstructLen);
 
+    if (isValidationEnabled()) {
+      markBuffers(inputs);
+      decode(inputs, erasedIndices, outputs);
+      resetBuffers(inputs);
+
+      DataNodeFaultInjector.get().badDecoding(outputs);
+      long start = Time.monotonicNow();
+      try {
+        getValidator().validate(inputs, erasedIndices, outputs);
+        long validateEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateEnd - start);
+      } catch (InvalidDecodingException e) {
+        long validateFailedEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateFailedEnd - start);
+        getDatanode().getMetrics().incrECInvalidReconstructionTasks();
+        throw e;
+      }
+    } else {
+      decode(inputs, erasedIndices, outputs);
+    }
+
+    stripedWriter.updateRealTargetBuffers(toReconstructLen);
+  }
+
+  private void decode(ByteBuffer[] inputs, int[] erasedIndices,
+      ByteBuffer[] outputs) throws IOException {
     long start = System.nanoTime();
     getDecoder().decode(inputs, erasedIndices, outputs);
     long end = System.nanoTime();
     this.getDatanode().getMetrics().incrECDecodingTime(end - start);
-
-    stripedWriter.updateRealTargetBuffers(toReconstructLen);
   }
 
   /**

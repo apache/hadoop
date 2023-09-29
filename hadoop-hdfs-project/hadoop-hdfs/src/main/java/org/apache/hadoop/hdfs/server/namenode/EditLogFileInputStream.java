@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -45,9 +45,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 
 /**
  * An implementation of the abstract class {@link EditLogInputStream}, which
@@ -67,7 +67,6 @@ public class EditLogFileInputStream extends EditLogInputStream {
     CLOSED
   }
   private State state = State.UNINIT;
-  private InputStream fStream = null;
   private int logVersion = 0;
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;
@@ -153,6 +152,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       throws LogHeaderCorruptException, IOException {
     Preconditions.checkState(state == State.UNINIT);
     BufferedInputStream bin = null;
+    InputStream fStream = null;
     try {
       fStream = log.getInputStream();
       bin = new BufferedInputStream(fStream);
@@ -162,6 +162,16 @@ public class EditLogFileInputStream extends EditLogInputStream {
         logVersion = readLogVersion(dataIn, verifyLayoutVersion);
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
+      }
+      if (logVersion == -1) {
+        // The edits in progress file is pre-allocated with 1MB of "-1" bytes
+        // when it is created, then the header is written. If the header is
+        // -1, it indicates the an exception occurred pre-allocating the file
+        // and the header was never written. Therefore this is effectively a
+        // corrupt and empty log.
+        throw new LogHeaderCorruptException("No header present in log (value " +
+            "is -1), probably due to disk space issues when it was created. " +
+            "The log has no transactions and will be sidelined.");
       }
       // We assume future layout will also support ADD_LAYOUT_FLAGS
       if (NameNodeLayoutVersion.supports(
@@ -314,7 +324,15 @@ public class EditLogFileInputStream extends EditLogInputStream {
   
   @Override
   public String toString() {
-    return getName();
+    return "EditLogFileInputStream{" +
+            "log=" + log.getName() +
+            ", firstTxId=" + firstTxId +
+            ", lastTxId=" + lastTxId +
+            ", isInProgress=" + isInProgress +
+            ", maxOpSize=" + maxOpSize +
+            ", state=" + state +
+            ", logVersion=" + logVersion +
+            '}';
   }
 
   /**

@@ -41,7 +41,7 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * OfflineEditsXmlLoader walks an EditsVisitor over an OEV XML file
@@ -86,6 +86,10 @@ class OfflineEditsXmlLoader
   public void loadEdits() throws IOException {
     try {
       XMLReader xr = XMLReaderFactory.createXMLReader();
+      xr.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+      xr.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+      xr.setFeature("http://xml.org/sax/features/external-general-entities", false);
+      xr.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
       xr.setContentHandler(this);
       xr.setErrorHandler(this);
       xr.setDTDHandler(null);

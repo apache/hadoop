@@ -28,7 +28,7 @@ import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,6 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -189,21 +188,15 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop login commit");
-      }
+      LOG.debug("hadoop login commit");
       // if we already have a user, we are done.
       if (!subject.getPrincipals(User.class).isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using existing subject:"+subject.getPrincipals());
-        }
+        LOG.debug("Using existing subject: {}", subject.getPrincipals());
         return true;
       }
       Principal user = getCanonicalUser(KerberosPrincipal.class);
       if (user != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using kerberos user:"+user);
-        }
+        LOG.debug("Using kerberos user: {}", user);
       }
       //If we don't have a kerberos user and security is disabled, check
       //if user is specified in the environment or properties
@@ -217,15 +210,11 @@ public class UserGroupInformation {
       // use the OS user
       if (user == null) {
         user = getCanonicalUser(OS_PRINCIPAL_CLASS);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using local user:"+user);
-        }
+        LOG.debug("Using local user: {}", user);
       }
       // if we found the user, add our principal
       if (user != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Using user: \"" + user + "\" with name " + user.getName());
-        }
+        LOG.debug("Using user: \"{}\" with name: {}", user, user.getName());
 
         User userEntry = null;
         try {
@@ -237,15 +226,12 @@ public class UserGroupInformation {
         } catch (Exception e) {
           throw (LoginException)(new LoginException(e.toString()).initCause(e));
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User entry: \"" + userEntry.toString() + "\"" );
-        }
+        LOG.debug("User entry: \"{}\"", userEntry);
 
         subject.getPrincipals().add(userEntry);
         return true;
       }
-      LOG.error("Can't find user in " + subject);
-      throw new LoginException("Can't find user name");
+      throw new LoginException("Failed to find user in name " + subject);
     }
 
     @Override
@@ -256,17 +242,13 @@ public class UserGroupInformation {
 
     @Override
     public boolean login() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop login");
-      }
+      LOG.debug("Hadoop login");
       return true;
     }
 
     @Override
     public boolean logout() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop logout");
-      }
+      LOG.debug("Hadoop logout");
       return true;
     }
   }
@@ -444,23 +426,12 @@ public class UserGroupInformation {
   
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
-  private static final boolean is64Bit =
-      System.getProperty("os.arch").contains("64") ||
-      System.getProperty("os.arch").contains("s390x");
-  private static final boolean aix = System.getProperty("os.name").equals("AIX");
 
   /* Return the OS login module class name */
+  /* For IBM JDK, use the common OS login module class name for all platforms */
   private static String getOSLoginModuleName() {
     if (IBM_JAVA) {
-      if (windows) {
-        return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
-            : "com.ibm.security.auth.module.NTLoginModule";
-      } else if (aix) {
-        return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
-            : "com.ibm.security.auth.module.AIXLoginModule";
-      } else {
-        return "com.ibm.security.auth.module.LinuxLoginModule";
-      }
+      return "com.ibm.security.auth.module.JAASLoginModule";
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -468,23 +439,14 @@ public class UserGroupInformation {
   }
 
   /* Return the OS principal class */
+  /* For IBM JDK, use the common OS principal class for all platforms */
   @SuppressWarnings("unchecked")
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
       if (IBM_JAVA) {
-        if (is64Bit) {
-          principalClass = "com.ibm.security.auth.UsernamePrincipal";
-        } else {
-          if (windows) {
-            principalClass = "com.ibm.security.auth.NTUserPrincipal";
-          } else if (aix) {
-            principalClass = "com.ibm.security.auth.AIXPrincipal";
-          } else {
-            principalClass = "com.ibm.security.auth.LinuxPrincipal";
-          }
-        }
+        principalClass = "com.ibm.security.auth.UsernamePrincipal";
       } else {
         principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
             : "com.sun.security.auth.UnixPrincipal";
@@ -567,6 +529,26 @@ public class UserGroupInformation {
     user.setLogin(login);
   }
 
+  /** This method checks for a successful Kerberos login
+    * and returns true by default if it is not using Kerberos.
+    *
+    * @return true on successful login
+   */
+  public boolean isLoginSuccess() {
+    LoginContext login = user.getLogin();
+    return (login instanceof HadoopLoginContext)
+        ? ((HadoopLoginContext) login).isLoginSuccess()
+        : true;
+  }
+
+  /**
+   * Set the last login time for logged in user
+   * @param loginTime the number of milliseconds since the beginning of time
+   */
+  private void setLastLogin(long loginTime) {
+    user.setLastLogin(loginTime);
+  }
+
   /**
    * Create a UserGroupInformation for the given subject.
    * This does not change the subject or acquire new credentials.
@@ -601,6 +583,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
+    ensureInitialized();
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
@@ -618,6 +601,7 @@ public class UserGroupInformation {
    * @param user               The user name, or NULL if none is specified.
    *
    * @return                   The most appropriate UserGroupInformation
+   * @throws IOException raised on errors performing I/O.
    */ 
   public static UserGroupInformation getBestUGI(
       String ticketCachePath, String user) throws IOException {
@@ -638,6 +622,7 @@ public class UserGroupInformation {
    * @param ticketCache     the path to the ticket cache file
    *
    * @throws IOException        if the kerberos login fails
+   * @return UserGroupInformation.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -659,8 +644,9 @@ public class UserGroupInformation {
    *                            The creator of subject is responsible for
    *                            renewing credentials.
    *
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException if the kerberos login fails
+   * @return UserGroupInformation
    */
   public static UserGroupInformation getUGIFromSubject(Subject subject)
       throws IOException {
@@ -687,6 +673,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getLoginUser() throws IOException {
+    ensureInitialized();
     UserGroupInformation loginUser = loginUserRef.get();
     // a potential race condition exists only for the initial creation of
     // the login user.  there's no need to penalize all subsequent calls
@@ -714,7 +701,7 @@ public class UserGroupInformation {
    * remove the login method that is followed by a space from the username
    * e.g. "jack (auth:SIMPLE)" {@literal ->} "jack"
    *
-   * @param userName
+   * @param userName userName.
    * @return userName without login method
    */
   public static String trimLoginMethod(String userName) {
@@ -808,12 +795,10 @@ public class UserGroupInformation {
         LOG.debug("Loaded {} base64 tokens", numTokenBase64);
       }
     } catch (IOException ioe) {
-      LOG.debug("failure to load login credentials", ioe);
+      LOG.debug("Failure to load login credentials", ioe);
       throw ioe;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("UGI loginUser:"+loginUser);
-    }
+    LOG.debug("UGI loginUser: {}", loginUser);
     return loginUser;
   }
 
@@ -994,10 +979,7 @@ public class UserGroupInformation {
       do {
         try {
           long now = Time.now();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Current time is " + now);
-            LOG.debug("Next refresh is " + nextRefresh);
-          }
+          LOG.debug("Current time is {}, next refresh is {}", now, nextRefresh);
           if (now < nextRefresh) {
             Thread.sleep(nextRefresh - now);
           }
@@ -1033,18 +1015,18 @@ public class UserGroupInformation {
           try {
             tgtEndTime = tgt.getEndTime().getTime();
           } catch (NullPointerException npe) {
-            LOG.error(String.format("NPE thrown while getting " +
-                "KerberosTicket endTime. Aborting renew thread for %s.",
-                getUserName()), ie);
+            LOG.error("NPE thrown while getting KerberosTicket endTime. "
+                + "Aborting renew thread for {}.", getUserName(), ie);
             return;
           }
 
-          LOG.warn(String.format("Exception encountered while running the " +
-                  "renewal command for %s. " +
-                  "(TGT end time:%d, renewalFailures: %d, " +
-                  "renewalFailuresTotal: %d)", getUserName(), tgtEndTime,
-              metrics.renewalFailures.value(),
-              metrics.renewalFailuresTotal.value()), ie);
+          LOG.warn(
+              "Exception encountered while running the "
+                  + "renewal command for {}. "
+                  + "(TGT end time:{}, renewalFailures: {}, "
+                  + "renewalFailuresTotal: {})",
+              getUserName(), tgtEndTime, metrics.renewalFailures.value(),
+              metrics.renewalFailuresTotal.value(), ie);
           if (rp == null) {
             // Use a dummy maxRetries to create the policy. The policy will
             // only be used to get next retry time with exponential back-off.
@@ -1091,9 +1073,7 @@ public class UserGroupInformation {
     @Override
     public void relogin() throws IOException {
       String output = Shell.execCommand(kinitCmd, "-R");
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Renewed ticket. kinit output: {}", output);
-      }
+      LOG.debug("Renewed ticket. kinit output: {}", output);
       reloginFromTicketCache();
     }
   }
@@ -1141,7 +1121,7 @@ public class UserGroupInformation {
    * file and logs them in. They become the currently logged-in user.
    * @param user the principal name to load from the keytab
    * @param path the path to the keytab file
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException if it's a kerberos login exception.
    */
   @InterfaceAudience.Public
@@ -1160,9 +1140,10 @@ public class UserGroupInformation {
 
     setLoginUser(u);
 
-    LOG.info("Login successful for user {} using keytab file {}. Keytab auto" +
-            " renewal enabled : {}",
-            user, path, isKerberosKeyTabLoginRenewalEnabled());
+    LOG.info(
+        "Login successful for user {} using keytab file {}. Keytab auto"
+            + " renewal enabled : {}",
+        user, new File(path).getName(), isKerberosKeyTabLoginRenewalEnabled());
   }
 
   /**
@@ -1170,7 +1151,7 @@ public class UserGroupInformation {
    * This method assumes that the user logged in by calling
    * {@link #loginUserFromKeytab(String, String)}.
    *
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException if a failure occurred in logout,
    * or if the user did not log in by invoking loginUserFromKeyTab() before.
    */
@@ -1193,9 +1174,7 @@ public class UserGroupInformation {
     }
 
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating logout for " + getUserName());
-      }
+      LOG.debug("Initiating logout for {}", getUserName());
       // hadoop login context internally locks credentials.
       login.logout();
     } catch (LoginException le) {
@@ -1212,7 +1191,7 @@ public class UserGroupInformation {
   /**
    * Re-login a user from keytab if TGT is expired or is close to expiry.
    * 
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException if it's a kerberos login exception.
    */
   public void checkTGTAndReloginFromKeytab() throws IOException {
@@ -1260,7 +1239,7 @@ public class UserGroupInformation {
    * happened already.
    * The Subject field of this UserGroupInformation object is updated to have
    * the new credentials.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException on a failure
    */
   @InterfaceAudience.Public
@@ -1269,7 +1248,29 @@ public class UserGroupInformation {
     reloginFromKeytab(false);
   }
 
+  /**
+   * Force re-Login a user in from a keytab file irrespective of the last login
+   * time. Loads a user identity from a keytab file and logs them in. They
+   * become the currently logged-in user. This method assumes that
+   * {@link #loginUserFromKeytab(String, String)} had happened already. The
+   * Subject field of this UserGroupInformation object is updated to have the
+   * new credentials.
+   *
+   * @throws IOException raised on errors performing I/O.
+   * @throws KerberosAuthException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void forceReloginFromKeytab() throws IOException {
+    reloginFromKeytab(false, true);
+  }
+
   private void reloginFromKeytab(boolean checkTGT) throws IOException {
+    reloginFromKeytab(checkTGT, false);
+  }
+
+  private void reloginFromKeytab(boolean checkTGT, boolean ignoreLastLoginTime)
+      throws IOException {
     if (!shouldRelogin() || !isFromKeytab()) {
       return;
     }
@@ -1284,7 +1285,24 @@ public class UserGroupInformation {
         return;
       }
     }
-    relogin(login);
+    relogin(login, ignoreLastLoginTime);
+  }
+
+  /**
+   * Force re-Login a user in from the ticket cache irrespective of the last
+   * login time. This method assumes that login had happened already. The
+   * Subject field of this UserGroupInformation object is updated to have the
+   * new credentials.
+   *
+   * @throws IOException
+   *           raised on errors performing I/O.
+   * @throws KerberosAuthException
+   *           on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void forceReloginFromTicketCache() throws IOException {
+    reloginFromTicketCache(true);
   }
 
   /**
@@ -1292,12 +1310,17 @@ public class UserGroupInformation {
    * method assumes that login had happened already.
    * The Subject field of this UserGroupInformation object is updated to have
    * the new credentials.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws KerberosAuthException on a failure
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public void reloginFromTicketCache() throws IOException {
+    reloginFromTicketCache(false);
+  }
+
+  private void reloginFromTicketCache(boolean ignoreLastLoginTime)
+      throws IOException {
     if (!shouldRelogin() || !isFromTicket()) {
       return;
     }
@@ -1305,33 +1328,33 @@ public class UserGroupInformation {
     if (login == null) {
       throw new KerberosAuthException(MUST_FIRST_LOGIN);
     }
-    relogin(login);
+    relogin(login, ignoreLastLoginTime);
   }
 
-  private void relogin(HadoopLoginContext login) throws IOException {
+  private void relogin(HadoopLoginContext login, boolean ignoreLastLoginTime)
+      throws IOException {
     // ensure the relogin is atomic to avoid leaving credentials in an
     // inconsistent state.  prevents other ugi instances, SASL, and SPNEGO
     // from accessing or altering credentials during the relogin.
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-        unprotectedRelogin(login);
+        unprotectedRelogin(login, ignoreLastLoginTime);
       }
     }
   }
 
-  private void unprotectedRelogin(HadoopLoginContext login) throws IOException {
+  private void unprotectedRelogin(HadoopLoginContext login,
+      boolean ignoreLastLoginTime) throws IOException {
     assert Thread.holdsLock(login.getSubjectLock());
     long now = Time.now();
-    if (!hasSufficientTimeElapsed(now)) {
+    if (!hasSufficientTimeElapsed(now) && !ignoreLastLoginTime) {
       return;
     }
     // register most recent relogin attempt
     user.setLastLogin(now);
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating logout for " + getUserName());
-      }
+      LOG.debug("Initiating logout for {}", getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
       //the Java kerberos login module code, only the kerberos credentials
       //are cleared
@@ -1340,9 +1363,7 @@ public class UserGroupInformation {
       //have the new credentials (pass it to the LoginContext constructor)
       login = newLoginContext(
         login.getAppName(), login.getSubject(), login.getConfiguration());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating re-login for " + getUserName());
-      }
+      LOG.debug("Initiating re-login for {}", getUserName());
       login.login();
       // this should be unnecessary.  originally added due to improper locking
       // of the subject during relogin.
@@ -1362,6 +1383,7 @@ public class UserGroupInformation {
    * @param user the principal name to load from the keytab
    * @param path the path to the keytab file
    * @throws IOException if the keytab file can't be read
+   * @return UserGroupInformation.
    */
   public
   static UserGroupInformation loginUserFromKeytabAndReturnUGI(String user,
@@ -1388,8 +1410,9 @@ public class UserGroupInformation {
   }
   
   /**
-   * Did the login happen via keytab
+   * Did the login happen via keytab.
    * @return true or false
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -1398,8 +1421,9 @@ public class UserGroupInformation {
   }
 
   /**
-   * Did the login happen via ticket cache
+   * Did the login happen via ticket cache.
    * @return true or false
+   * @throws IOException raised on errors performing I/O.
    */
   public static boolean isLoginTicketBased()  throws IOException {
     return getLoginUser().isFromTicket();
@@ -1421,6 +1445,7 @@ public class UserGroupInformation {
    * Create a user from a login name. It is intended to be used for remote
    * users in RPC, since it won't have any credentials.
    * @param user the full user principal name, must not be empty or null
+   * @param authMethod authMethod.
    * @return the UserGroupInformation for the remote user.
    */
   @InterfaceAudience.Public
@@ -1490,8 +1515,8 @@ public class UserGroupInformation {
   /**
    * Create a proxy user using username of the effective user and the ugi of the
    * real user.
-   * @param user
-   * @param realUser
+   * @param user user.
+   * @param realUser realUser.
    * @return proxyUser ugi
    */
   @InterfaceAudience.Public
@@ -1524,15 +1549,27 @@ public class UserGroupInformation {
     return null;
   }
 
-
+  /**
+   * If this is a proxy user, get the real user. Otherwise, return
+   * this user.
+   * @param user the user to check
+   * @return the real user or self
+   */
+  public static UserGroupInformation getRealUserOrSelf(UserGroupInformation user) {
+    if (user == null) {
+      return null;
+    }
+    UserGroupInformation real = user.getRealUser();
+    return real != null ? real : user;
+  }
   
   /**
    * This class is used for storing the groups for testing. It stores a local
    * map that has the translation of usernames to groups.
    */
   private static class TestingGroups extends Groups {
-    private final Map<String, List<String>> userToGroupsMapping = 
-      new HashMap<String,List<String>>();
+    private final Map<String, Set<String>> userToGroupsMapping =
+        new HashMap<>();
     private Groups underlyingImplementation;
     
     private TestingGroups(Groups underlyingImplementation) {
@@ -1542,17 +1579,22 @@ public class UserGroupInformation {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
-      List<String> result = userToGroupsMapping.get(user);
-      
-      if (result == null) {
-        result = underlyingImplementation.getGroups(user);
-      }
+      return new ArrayList<>(getGroupsSet(user));
+    }
 
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result = userToGroupsMapping.get(user);
+      if (result == null) {
+        result = underlyingImplementation.getGroupsSet(user);
+      }
       return result;
     }
 
     private void setUserGroups(String user, String[] groups) {
-      userToGroupsMapping.put(user, Arrays.asList(groups));
+      Set<String> groupsSet = new LinkedHashSet<>();
+      Collections.addAll(groupsSet, groups);
+      userToGroupsMapping.put(user, groupsSet);
     }
   }
 
@@ -1611,11 +1653,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    List<String> groups = getGroups();
-    if (groups.isEmpty()) {
+    Set<String> groupsSet = getGroupsSet();
+    if (groupsSet.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups.get(0);
+    return groupsSet.iterator().next();
   }
 
   /**
@@ -1728,32 +1770,46 @@ public class UserGroupInformation {
   }
 
   /**
-   * Get the group names for this user. {@link #getGroups()} is less
+   * Get the group names for this user. {@link #getGroupsSet()} is less
    * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
   public String[] getGroupNames() {
-    List<String> groups = getGroups();
-    return groups.toArray(new String[groups.size()]);
+    Collection<String> groupsSet = getGroupsSet();
+    return groupsSet.toArray(new String[groupsSet.size()]);
   }
 
   /**
-   * Get the group names for this user.
+   * Get the group names for this user. {@link #getGroupsSet()} is less
+   * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
+   * @deprecated Use {@link #getGroupsSet()} instead.
    */
+  @Deprecated
   public List<String> getGroups() {
     ensureInitialized();
     try {
       return groups.getGroups(getShortUserName());
     } catch (IOException ie) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to get groups for user " + getShortUserName()
-            + " by " + ie);
-        LOG.trace("TRACE", ie);
-      }
+      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
       return Collections.emptyList();
+    }
+  }
+
+  /**
+   * Get the groups names for the user as a Set.
+   * @return the set of users with the primary group first. If the command
+   *     fails, it returns an empty set.
+   */
+  public Set<String> getGroupsSet() {
+    ensureInitialized();
+    try {
+      return groups.getGroupsSet(getShortUserName());
+    } catch (IOException ie) {
+      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
+      return Collections.emptySet();
     }
   }
 
@@ -1773,7 +1829,7 @@ public class UserGroupInformation {
   /**
    * Sets the authentication method in the subject
    * 
-   * @param authMethod
+   * @param authMethod authMethod.
    */
   public synchronized 
   void setAuthenticationMethod(AuthenticationMethod authMethod) {
@@ -1783,7 +1839,7 @@ public class UserGroupInformation {
   /**
    * Sets the authentication method in the subject
    * 
-   * @param authMethod
+   * @param authMethod authMethod.
    */
   public void setAuthenticationMethod(AuthMethod authMethod) {
     user.setAuthenticationMethod(AuthenticationMethod.valueOf(authMethod));
@@ -1816,7 +1872,7 @@ public class UserGroupInformation {
    * Returns the authentication method of a ugi. If the authentication method is
    * PROXY, returns the authentication method of the real user.
    * 
-   * @param ugi
+   * @param ugi ugi.
    * @return AuthenticationMethod
    */
   public static AuthenticationMethod getRealAuthenticationMethod(
@@ -1867,7 +1923,10 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
-    logPrivilegedAction(subject, action);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+          new Exception());
+    }
     return Subject.doAs(subject, action);
   }
   
@@ -1887,13 +1946,14 @@ public class UserGroupInformation {
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {
-      logPrivilegedAction(subject, action);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+            new Exception());
+      }
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("PrivilegedActionException as:" + this + " cause:" + cause);
-      }
+      LOG.debug("PrivilegedActionException as: {}", this, cause);
       if (cause == null) {
         throw new RuntimeException("PrivilegedActionException with no " +
                 "underlying cause. UGI [" + this + "]" +": " + pae, pae);
@@ -1911,27 +1971,21 @@ public class UserGroupInformation {
     }
   }
 
-  private void logPrivilegedAction(Subject subject, Object action) {
-    if (LOG.isDebugEnabled()) {
-      // would be nice if action included a descriptive toString()
-      String where = new Throwable().getStackTrace()[2].toString();
-      LOG.debug("PrivilegedAction as:"+this+" from:"+where);
-    }
-  }
-
   /**
    * Log current UGI and token information into specified log.
    * @param ugi - UGI
-   * @throws IOException
+   * @param log log.
+   * @param caption caption.
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
   @InterfaceStability.Unstable
   public static void logUserInfo(Logger log, String caption,
-      UserGroupInformation ugi) throws IOException {
+      UserGroupInformation ugi) {
     if (log.isDebugEnabled()) {
       log.debug(caption + " UGI: " + ugi);
-      for (Token<?> token : ugi.getTokens()) {
-        log.debug("+token:" + token);
+      for (Map.Entry<Text, Token<? extends TokenIdentifier>> kv :
+          ugi.getCredentials().getTokenMap().entrySet()) {
+        log.debug("+token: {} -> {}", kv.getKey(), kv.getValue());
       }
     }
   }
@@ -1939,7 +1993,8 @@ public class UserGroupInformation {
   /**
    * Log all (current, real, login) UGI and token info into specified log.
    * @param ugi - UGI
-   * @throws IOException
+   * @param log - log.
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
   @InterfaceStability.Unstable
@@ -1957,7 +2012,7 @@ public class UserGroupInformation {
   /**
    * Log all (current, real, login) UGI and token info into UGI debug log.
    * @param ugi - UGI
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void logAllUserInfo(UserGroupInformation ugi) throws
       IOException {
@@ -2002,6 +2057,7 @@ public class UserGroupInformation {
       if (subject == null) {
         params.put(LoginParam.PRINCIPAL, ugi.getUserName());
         ugi.setLogin(login);
+        ugi.setLastLogin(Time.now());
       }
       return ugi;
     } catch (LoginException le) {
@@ -2059,6 +2115,11 @@ public class UserGroupInformation {
       super(appName, subject, null, conf);
       this.appName = appName;
       this.conf = conf;
+    }
+
+    /** Get the login status. */
+    public boolean isLoginSuccess() {
+      return isLoggedIn.get();
     }
 
     String getAppName() {
@@ -2234,7 +2295,7 @@ public class UserGroupInformation {
    * A test method to print out the current user's UGI.
    * @param args if there are two arguments, read the user from the keytab
    * and print it out.
-   * @throws Exception
+   * @throws Exception Exception.
    */
   public static void main(String [] args) throws Exception {
   System.out.println("Getting UGI for current user");

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,7 +74,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     // With FairOrderingPolicy enabled on queue a, all 20 resources should be
     // preempted from app1
     String appsConfig =
-    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1, user1 in a
             + "(1,1,n1,,60,false,0,user1);" +
             "a\t" // app2, user2 in a
@@ -85,7 +86,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -121,7 +122,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     // With FifoOrderingPolicy enabled on queue a, the first 5 should come from
     // the youngest app, app2, until app2 is reduced to the user limit of 35.
     String appsConfig =
-    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1, user1 in a
             + "(1,1,n1,,60,false,0,user1);" +
             "a\t" // app2, user2 in a
@@ -133,7 +134,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
@@ -144,7 +145,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     // The next 15 should come from app1 even though app2 is younger since app2
     // has already been reduced to its user limit.
     appsConfig =
-    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1, user1 in a
             + "(1,1,n1,,60,false,0,user1);" +
             "a\t" // app2, user2 in a
@@ -156,7 +157,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -194,7 +195,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     // preempted from app1 since it's the most over served app from the most
     // over served user
     String appsConfig =
-    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 and app2, user1 in a
             + "(1,1,n1,,35,false,0,user1);" +
             "a\t"
@@ -208,7 +209,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -242,7 +243,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     // user4/app4 is requesting 20 resources in queue a
     // With 3 users, preemptable user limit should be around 35 resources each.
     String appsConfig =
-    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1, user1 in a
             + "(1,1,n1,,40,false,0,user1);" +
         "a\t" // app2, user1 in a
@@ -258,18 +259,18 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
 
     // app3 is the younges and also over its user limit. 5 should be preempted
     // from app3 until it comes down to user3's user limit.
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
 
     // User1's app2 is its youngest. 19 should be preempted from app2, leaving
     // only the AM
-    verify(mDisp, times(19)).handle(argThat(
+    verify(eventHandler, times(19)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
     // Preempt the remaining resource from User1's oldest app1.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }

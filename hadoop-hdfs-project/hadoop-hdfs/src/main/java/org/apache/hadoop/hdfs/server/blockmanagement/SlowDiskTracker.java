@@ -23,16 +23,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Doubles;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +77,7 @@ public class SlowDiskTracker {
    * Number of disks to include in JSON report per operation. We will return
    * disks with the highest latency.
    */
-  private static final int MAX_DISKS_TO_REPORT = 5;
+  private final int maxDisksToReport;
   private static final String DATANODE_DISK_SEPARATOR = ":";
   private final long reportGenerationIntervalMs;
 
@@ -107,6 +107,9 @@ public class SlowDiskTracker {
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+    this.maxDisksToReport = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_KEY,
+        DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT);
     this.reportValidityMs = reportGenerationIntervalMs * 3;
   }
 
@@ -135,10 +138,9 @@ public class SlowDiskTracker {
       diskIDLatencyMap.put(diskID, diskLatency);
     }
 
-    checkAndUpdateReportIfNecessary();
   }
 
-  private void checkAndUpdateReportIfNecessary() {
+  public void checkAndUpdateReportIfNecessary() {
     // Check if it is time for update
     long now = timer.monotonicNow();
     if (now - lastUpdateTime > reportGenerationIntervalMs) {
@@ -154,7 +156,7 @@ public class SlowDiskTracker {
         @Override
         public void run() {
           slowDisksReport = getSlowDisks(diskIDLatencyMap,
-              MAX_DISKS_TO_REPORT, now);
+              maxDisksToReport, now);
 
           cleanUpOldReports(now);
 

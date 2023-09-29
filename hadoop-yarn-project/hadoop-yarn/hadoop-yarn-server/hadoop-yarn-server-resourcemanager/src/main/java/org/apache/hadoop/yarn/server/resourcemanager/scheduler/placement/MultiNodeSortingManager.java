@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,8 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 
 /**
  * Node Sorting Manager which runs all sorter threads and policies.
@@ -48,6 +51,7 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
   private Set<MultiNodePolicySpec> policySpecs = new HashSet<MultiNodePolicySpec>();
   private Configuration conf;
   private boolean multiNodePlacementEnabled;
+  private long skipNodeInterval;
 
   public MultiNodeSortingManager() {
     super("MultiNodeSortingManager");
@@ -59,6 +63,7 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
     LOG.info("Initializing NodeSortingService=" + getName());
     super.serviceInit(configuration);
     this.conf = configuration;
+    this.skipNodeInterval = YarnConfiguration.getSkipNodeInterval(conf);
   }
 
   @Override
@@ -134,6 +139,42 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
       policy.addAndRefreshNodesSet(nodes, partition);
     }
 
-    return policy.getPreferredNodeIterator(nodes, partition);
+    Iterator<N> nodesIterator = policy.getPreferredNodeIterator(nodes,
+        partition);
+
+    // Skip node which missed YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER
+    // heartbeats since the node might be dead and we should not continue
+    // allocate containers on that.
+    Iterator<N> filteringIterator = new Iterator() {
+      private N cached;
+      private boolean hasCached;
+      @Override
+      public boolean hasNext() {
+        if (hasCached) {
+          return true;
+        }
+        while (nodesIterator.hasNext()) {
+          cached = nodesIterator.next();
+          if (SchedulerUtils.isNodeHeartbeated(cached, skipNodeInterval)) {
+            hasCached = true;
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public N next() {
+        if (hasCached) {
+          hasCached = false;
+          return cached;
+        }
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        return next();
+      }
+    };
+    return filteringIterator;
   }
 }

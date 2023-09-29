@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 
@@ -57,7 +58,7 @@ public class TestKMSClientProvider {
   private final String oldTokenService = "host:16000";
 
   @Rule
-  public Timeout globalTimeout = new Timeout(60000);
+  public Timeout globalTimeout = new Timeout(60000, TimeUnit.MILLISECONDS);
 
   {
     GenericTestUtils.setLogLevel(KMSClientProvider.LOG, Level.TRACE);

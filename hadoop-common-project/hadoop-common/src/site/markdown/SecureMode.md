@@ -20,7 +20,9 @@ Hadoop in Secure Mode
 Introduction
 ------------
 
-This document describes how to configure authentication for Hadoop in secure mode. When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
+In its default configuration, we expect you to make sure attackers don't have access to your Hadoop cluster by restricting all network access. If you want any restrictions on who can remotely access data or submit work, you MUST secure authentication and access for your Hadoop cluster as described in this document.
+
+When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
 
 Forward and reverse host lookup for all service hosts must be configured correctly to allow services to authenticate with each other. Host lookups may be configured using either DNS or `/etc/hosts` files. Working knowledge of Kerberos and DNS is recommended before attempting to configure Hadoop services in Secure Mode.
 
@@ -203,6 +205,8 @@ Setting `dfs.encrypt.data.transfer.cipher.suites` to `AES/CTR/NoPadding` activat
 
 AES offers the greatest cryptographic strength and the best performance. At this time, 3DES and RC4 have been used more often in Hadoop clusters.
 
+You can also set `dfs.encrypt.data.transfer.cipher.suites` to `SM4/CTR/NoPadding` to activates SM4 encryption. By default, this is unspecified. The SM4 key bit length can be configured by setting `dfs.encrypt.data.transfer.cipher.key.bitlength` to 128, 192 or 256. The default is 128.
+
 ### Data Encryption on HTTP
 
 Data transfer between Web-console and clients are protected by using SSL(HTTPS). SSL configuration is recommended but not required to configure Hadoop security with Kerberos.
@@ -267,9 +271,8 @@ The following settings allow configuring SSL access to the NameNode web UI (opti
 
 | Parameter                    | Value                                           | Notes                                                                                                                                                                                                                                                                                                                                                                                              |
 |:-----------------------------|:------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `dfs.http.policy`            | `HTTP_ONLY` or `HTTPS_ONLY` or `HTTP_AND_HTTPS` | `HTTPS_ONLY` turns off http access. This option takes precedence over the deprecated configuration dfs.https.enable and hadoop.ssl.enabled. If using SASL to authenticate data transfer protocol instead of running DataNode as root and using privileged ports, then this property must be set to `HTTPS_ONLY` to guarantee authentication of HTTP servers. (See `dfs.data.transfer.protection`.) |
+| `dfs.http.policy`            | `HTTP_ONLY` or `HTTPS_ONLY` or `HTTP_AND_HTTPS` | `HTTPS_ONLY` turns off http access. If using SASL to authenticate data transfer protocol instead of running DataNode as root and using privileged ports, then this property must be set to `HTTPS_ONLY` to guarantee authentication of HTTP servers. (See `dfs.data.transfer.protection`.) |
 | `dfs.namenode.https-address` | `0.0.0.0:9871`                                 | This parameter is used in non-HA mode and without federation. See [HDFS High Availability](../hadoop-hdfs/HDFSHighAvailabilityWithNFS.html#Deployment) and [HDFS Federation](../hadoop-hdfs/Federation.html#Federation_Configuration) for details.                                                                                                                                                 |
-| `dfs.https.enable`           | `true`                                          | This value is deprecated. `Use dfs.http.policy`                                                                                                                                                                                                                                                                                                                                                    |
 
 ### Secondary NameNode
 
@@ -594,7 +597,7 @@ hadoop kdiag \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```
 
-This attempts to to perform all diagnostics without failing early, load in
+This attempts to perform all diagnostics without failing early, load in
 the HDFS and YARN XML resources, require a minimum key length of 1024 bytes,
 and log in as the principal `zookeeper/devix.example.org@REALM`, whose key must be in
 the keytab `zk.service.keytab`

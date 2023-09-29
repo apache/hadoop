@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderCanU
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderNotifyRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.SCMUploaderNotifyResponsePBImpl;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class SCMUploaderProtocolPBServiceImpl implements
     SCMUploaderProtocolPB {

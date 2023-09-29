@@ -33,8 +33,8 @@
 
 #include "configuration.h"
 #include "hdfspp/uri.h"
+#include "x-platform/syscall.h"
 
-#include <strings.h>
 #include <sstream>
 #include <map>
 #include <rapidxml/rapidxml.hpp>
@@ -124,10 +124,10 @@ optional<bool> Configuration::GetBool(const std::string& key) const {
     return optional<bool>();
   }
 
-  if (!strcasecmp(raw->c_str(), "true")) {
+  if (XPlatform::Syscall::StringCompareIgnoreCase(*raw, "true")) {
     return std::experimental::make_optional(true);
   }
-  if (!strcasecmp(raw->c_str(), "false")) {
+  if (XPlatform::Syscall::StringCompareIgnoreCase(*raw, "false")) {
     return std::experimental::make_optional(false);
   }
 

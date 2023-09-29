@@ -16,11 +16,14 @@
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common)
+set(HADOOP_COMMON_PATH ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common)
+list(APPEND CMAKE_MODULE_PATH ${HADOOP_COMMON_PATH})
 include(HadoopCommon)
 
 # Set gtest path
 set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common/src/main/native/gtest)
+
+set(HADOOP_COMMON_SEC_PATH ${HADOOP_COMMON_PATH}/src/main/native/src/org/apache/hadoop/security)
 
 # determine if container-executor.conf.dir is an absolute
 # path in case the OS we're compiling on doesn't have
@@ -115,6 +118,7 @@ include_directories(
     main/native/container-executor
     main/native/container-executor/impl
     main/native/oom-listener/impl
+    ${HADOOP_COMMON_SEC_PATH}
 )
 # add gtest as system library to suppress gcc warnings
 include_directories(SYSTEM ${GTEST_SRC_DIR}/include)
@@ -129,6 +133,7 @@ add_library(container
     main/native/container-executor/impl/configuration.c
     main/native/container-executor/impl/container-executor.c
     main/native/container-executor/impl/get_executable.c
+    main/native/container-executor/impl/utils/file-utils.c
     main/native/container-executor/impl/utils/string-utils.c
     main/native/container-executor/impl/utils/path-utils.c
     main/native/container-executor/impl/modules/cgroups/cgroups-operations.c
@@ -137,6 +142,15 @@ add_library(container
     main/native/container-executor/impl/modules/fpga/fpga-module.c
     main/native/container-executor/impl/modules/devices/devices-module.c
     main/native/container-executor/impl/utils/docker-util.c
+    main/native/container-executor/impl/utils/mount-utils.c
+    main/native/container-executor/impl/utils/cJSON/cJSON.c
+    main/native/container-executor/impl/runc/runc.c
+    main/native/container-executor/impl/runc/runc_base_ctx.c
+    main/native/container-executor/impl/runc/runc_launch_cmd.c
+    main/native/container-executor/impl/runc/runc_reap.c
+    main/native/container-executor/impl/runc/runc_write_config.c
+    ${HADOOP_COMMON_SEC_PATH}/hadoop_user_info.c
+    ${HADOOP_COMMON_SEC_PATH}/hadoop_group_info.c
 )
 
 add_executable(container-executor
@@ -145,6 +159,7 @@ add_executable(container-executor
 
 target_link_libraries(container-executor
     container
+    crypto
 )
 
 output_directory(container-executor target/usr/local/bin)
@@ -154,7 +169,9 @@ add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
 target_link_libraries(test-container-executor
-    container ${EXTRA_LIBS}
+    container
+    ${EXTRA_LIBS}
+    crypto
 )
 
 output_directory(test-container-executor target/usr/local/bin)
@@ -172,8 +189,15 @@ add_executable(cetest
         main/native/container-executor/test/modules/fpga/test-fpga-module.cc
         main/native/container-executor/test/modules/devices/test-devices-module.cc
         main/native/container-executor/test/test_util.cc
-        main/native/container-executor/test/utils/test_docker_util.cc)
-target_link_libraries(cetest gtest container)
+        main/native/container-executor/test/utils/test_docker_util.cc
+        main/native/container-executor/test/utils/test_runc_util.cc
+)
+target_link_libraries(cetest
+        gtest
+        container
+        crypto
+)
+
 output_directory(cetest test)
 
 # CGroup OOM listener

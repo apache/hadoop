@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.util.function.Function;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,6 +32,7 @@ public class TestViewFsConfig {
   @Test(expected = FileAlreadyExistsException.class)
   public void testInvalidConfig() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
+    ConfigUtil.setIsNestedMountPointSupported(conf, false);
     ConfigUtil.addLink(conf, "/internalDir/linkToDir2",
         new Path("file:///dir2").toUri());
     ConfigUtil.addLink(conf, "/internalDir/linkToDir2/linkToDir3",
@@ -39,10 +41,10 @@ public class TestViewFsConfig {
     class Foo {
     }
 
-    new InodeTree<Foo>(conf, null) {
+    new InodeTree<Foo>(conf, null, null, false) {
 
       @Override
-      protected Foo getTargetFileSystem(final URI uri) {
+      protected Function<URI, Foo> initAndGetTargetFs() {
         return null;
       }
 

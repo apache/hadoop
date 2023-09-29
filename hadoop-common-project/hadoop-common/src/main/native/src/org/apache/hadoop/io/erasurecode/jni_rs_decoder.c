@@ -66,6 +66,7 @@ jintArray outputOffsets) {
 
   decode(&rsDecoder->decoder, rsDecoder->inputs, tmpErasedIndexes,
                            numErased, rsDecoder->outputs, chunkSize);
+  (*env)->ReleaseIntArrayElements(env, erasedIndexes, tmpErasedIndexes, 0);
 }
 
 JNIEXPORT void JNICALL

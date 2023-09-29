@@ -28,7 +28,6 @@ import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
  * This class creates snappy compressors/decompressors.
@@ -57,43 +56,12 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
   }
 
   /**
-   * Are the native snappy libraries loaded &amp; initialized?
-   */
-  public static void checkNativeCodeLoaded() {
-    if (!NativeCodeLoader.buildSupportsSnappy()) {
-      throw new RuntimeException("native snappy library not available: " +
-          "this version of libhadoop was built without " +
-          "snappy support.");
-    }
-    if (!NativeCodeLoader.isNativeCodeLoaded()) {
-      throw new RuntimeException("Failed to load libhadoop.");
-    }
-    if (!SnappyCompressor.isNativeCodeLoaded()) {
-      throw new RuntimeException("native snappy library not available: " +
-          "SnappyCompressor has not been loaded.");
-    }
-    if (!SnappyDecompressor.isNativeCodeLoaded()) {
-      throw new RuntimeException("native snappy library not available: " +
-          "SnappyDecompressor has not been loaded.");
-    }
-  }
-  
-  public static boolean isNativeCodeLoaded() {
-    return SnappyCompressor.isNativeCodeLoaded() && 
-        SnappyDecompressor.isNativeCodeLoaded();
-  }
-
-  public static String getLibraryName() {
-    return SnappyCompressor.getLibraryName();
-  }
-
-  /**
    * Create a {@link CompressionOutputStream} that will write to the given
    * {@link OutputStream}.
    *
    * @param out the location for the final output stream
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -109,13 +77,12 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    * @param out        the location for the final output stream
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
                                                     Compressor compressor)
       throws IOException {
-    checkNativeCodeLoaded();
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT);
@@ -133,7 +100,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public Class<? extends Compressor> getCompressorType() {
-    checkNativeCodeLoaded();
     return SnappyCompressor.class;
   }
 
@@ -144,7 +110,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public Compressor createCompressor() {
-    checkNativeCodeLoaded();
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT);
@@ -157,7 +122,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -173,13 +138,12 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
                                                   Decompressor decompressor)
       throws IOException {
-    checkNativeCodeLoaded();
     return new BlockDecompressorStream(in, decompressor, conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT));
@@ -192,7 +156,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
-    checkNativeCodeLoaded();
     return SnappyDecompressor.class;
   }
 
@@ -203,7 +166,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public Decompressor createDecompressor() {
-    checkNativeCodeLoaded();
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT);
@@ -215,7 +177,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public DirectDecompressor createDirectDecompressor() {
-    return isNativeCodeLoaded() ? new SnappyDirectDecompressor() : null;
+    return new SnappyDirectDecompressor();
   }
 
   /**
@@ -225,6 +187,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public String getDefaultExtension() {
-    return ".snappy";
+    return CodecConstants.SNAPPY_CODEC_EXTENSION;
   }
 }

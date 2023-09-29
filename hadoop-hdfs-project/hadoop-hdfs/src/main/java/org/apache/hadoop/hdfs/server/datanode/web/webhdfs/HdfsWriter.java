@@ -30,8 +30,8 @@ import org.apache.hadoop.io.IOUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 
 class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
   private final DFSClient client;

@@ -23,14 +23,14 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 public class TestFilterFs {
 
-  private static final Log LOG = FileSystem.LOG;
+  private static final Logger LOG = FileSystem.LOG;
 
   public static class DontCheck {
     public void checkScheme(URI uri, String supportedScheme) { }

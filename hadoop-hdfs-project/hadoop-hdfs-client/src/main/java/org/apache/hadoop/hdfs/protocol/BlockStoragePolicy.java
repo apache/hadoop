@@ -23,7 +23,7 @@ import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.StorageType;
@@ -219,7 +219,7 @@ public class BlockStoragePolicy implements BlockStoragePolicySpi {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof BlockStoragePolicy)) {
+    } else if (!(obj instanceof BlockStoragePolicy)) {
       return false;
     }
     final BlockStoragePolicy that = (BlockStoragePolicy)obj;

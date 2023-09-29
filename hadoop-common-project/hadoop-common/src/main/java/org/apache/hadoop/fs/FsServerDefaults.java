@@ -56,6 +56,7 @@ public class FsServerDefaults implements Writable {
   private DataChecksum.Type checksumType;
   private String keyProviderUri;
   private byte storagepolicyId;
+  private boolean snapshotTrashRootEnabled;
 
   public FsServerDefaults() {
   }
@@ -83,6 +84,18 @@ public class FsServerDefaults implements Writable {
       boolean encryptDataTransfer, long trashInterval,
       DataChecksum.Type checksumType,
       String keyProviderUri, byte storagepolicy) {
+    this(blockSize, bytesPerChecksum, writePacketSize, replication,
+        fileBufferSize, encryptDataTransfer, trashInterval,
+        checksumType, keyProviderUri, storagepolicy,
+        false);
+  }
+
+  public FsServerDefaults(long blockSize, int bytesPerChecksum,
+      int writePacketSize, short replication, int fileBufferSize,
+      boolean encryptDataTransfer, long trashInterval,
+      DataChecksum.Type checksumType,
+      String keyProviderUri, byte storagepolicy,
+      boolean snapshotTrashRootEnabled) {
     this.blockSize = blockSize;
     this.bytesPerChecksum = bytesPerChecksum;
     this.writePacketSize = writePacketSize;
@@ -93,6 +106,7 @@ public class FsServerDefaults implements Writable {
     this.checksumType = checksumType;
     this.keyProviderUri = keyProviderUri;
     this.storagepolicyId = storagepolicy;
+    this.snapshotTrashRootEnabled = snapshotTrashRootEnabled;
   }
 
   public long getBlockSize() {
@@ -137,6 +151,10 @@ public class FsServerDefaults implements Writable {
 
   public byte getDefaultStoragePolicyId() {
     return storagepolicyId;
+  }
+
+  public boolean getSnapshotTrashRootEnabled() {
+    return snapshotTrashRootEnabled;
   }
 
   // /////////////////////////////////////////

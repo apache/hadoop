@@ -30,7 +30,9 @@ import java.util.Map;
 import java.util.Set;
 
 class ErasureCodingWork extends BlockReconstructionWork {
-  private final byte[] liveBlockIndicies;
+  private final byte[] liveBlockIndices;
+  private final byte[] liveBusyBlockIndices;
+  private final byte[] excludeReconstructedIndices;
   private final String blockPoolId;
 
   public ErasureCodingWork(String blockPoolId, BlockInfo block,
@@ -38,18 +40,21 @@ class ErasureCodingWork extends BlockReconstructionWork {
       DatanodeDescriptor[] srcNodes,
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> liveReplicaStorages,
-      int additionalReplRequired,
-      int priority, byte[] liveBlockIndicies) {
+      int additionalReplRequired, int priority,
+      byte[] liveBlockIndices, byte[] liveBusyBlockIndices,
+      byte[] excludeReconstrutedIndices) {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.blockPoolId = blockPoolId;
-    this.liveBlockIndicies = liveBlockIndicies;
-    BlockManager.LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
+    this.liveBlockIndices = liveBlockIndices;
+    this.liveBusyBlockIndices = liveBusyBlockIndices;
+    this.excludeReconstructedIndices = excludeReconstrutedIndices;
+    LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
 
-  byte[] getLiveBlockIndicies() {
-    return liveBlockIndicies;
+  byte[] getLiveBlockIndices() {
+    return liveBlockIndices;
   }
 
   @Override
@@ -57,10 +62,18 @@ class ErasureCodingWork extends BlockReconstructionWork {
       BlockStoragePolicySuite storagePolicySuite,
       Set<Node> excludedNodes) {
     // TODO: new placement policy for EC considering multiple writers
-    DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
-        getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-        getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
-        storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+    DatanodeStorageInfo[] chosenTargets = null;
+    // HDFS-14720. If the block is deleted, the block size will become
+    // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
+    // to send for replication or reconstruction
+    if (!getBlock().isDeleted()) {
+      chosenTargets = blockplacement.chooseTarget(
+          getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
+          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+    } else {
+      LOG.warn("ErasureCodingWork could not need choose targets for {}", getBlock());
+    }
     setTargets(chosenTargets);
   }
 
@@ -70,12 +83,16 @@ class ErasureCodingWork extends BlockReconstructionWork {
    */
   private boolean hasAllInternalBlocks() {
     final BlockInfoStriped block = (BlockInfoStriped) getBlock();
-    if (getSrcNodes().length < block.getRealTotalBlockNum()) {
+    if (liveBlockIndices.length
+        + liveBusyBlockIndices.length < block.getRealTotalBlockNum()) {
       return false;
     }
     BitSet bitSet = new BitSet(block.getTotalBlockNum());
-    for (byte index : liveBlockIndicies) {
+    for (byte index : liveBlockIndices) {
       bitSet.set(index);
+    }
+    for (byte busyIndex: liveBusyBlockIndices) {
+      bitSet.set(busyIndex);
     }
     for (int i = 0; i < block.getRealDataBlockNum(); i++) {
       if (!bitSet.get(i)) {
@@ -141,34 +158,44 @@ class ErasureCodingWork extends BlockReconstructionWork {
     } else {
       targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
           new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
-          getLiveBlockIndicies(), stripedBlk.getErasureCodingPolicy());
+          liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
     }
   }
 
   private void createReplicationWork(int sourceIndex,
       DatanodeStorageInfo target) {
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
-    final byte blockIndex = liveBlockIndicies[sourceIndex];
+    final byte blockIndex = liveBlockIndices[sourceIndex];
     final DatanodeDescriptor source = getSrcNodes()[sourceIndex];
     final long internBlkLen = StripedBlockUtil.getInternalBlockLength(
         stripedBlk.getNumBytes(), stripedBlk.getCellSize(),
         stripedBlk.getDataBlockNum(), blockIndex);
     final Block targetBlk = new Block(stripedBlk.getBlockId() + blockIndex,
         internBlkLen, stripedBlk.getGenerationStamp());
-    source.addBlockToBeReplicated(targetBlk,
+    source.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target});
-    if (BlockManager.LOG.isDebugEnabled()) {
-      BlockManager.LOG.debug("Add replication task from source {} to "
-          + "target {} for EC block {}", source, target, targetBlk);
-    }
+    LOG.debug("Add replication task from source {} to "
+        + "target {} for EC block {}", source, target, targetBlk);
   }
 
   private List<Integer> findLeavingServiceSources() {
+    // Mark the block in normal node.
+    BlockInfoStriped block = (BlockInfoStriped)getBlock();
+    BitSet bitSet = new BitSet(block.getRealTotalBlockNum());
+    for (int i = 0; i < getSrcNodes().length; i++) {
+      if (getSrcNodes()[i].isInService()) {
+        bitSet.set(liveBlockIndices[i]);
+      }
+    }
+    // If the block is on the node which is decommissioning or
+    // entering_maintenance, and it doesn't exist on other normal nodes,
+    // we just add the node into source list.
     List<Integer> srcIndices = new ArrayList<>();
     for (int i = 0; i < getSrcNodes().length; i++) {
-      if (getSrcNodes()[i].isDecommissionInProgress() ||
+      if ((getSrcNodes()[i].isDecommissionInProgress() ||
           (getSrcNodes()[i].isEnteringMaintenance() &&
-          getSrcNodes()[i].isAlive())) {
+          getSrcNodes()[i].isAlive())) &&
+          !bitSet.get(liveBlockIndices[i])) {
         srcIndices.add(i);
       }
     }

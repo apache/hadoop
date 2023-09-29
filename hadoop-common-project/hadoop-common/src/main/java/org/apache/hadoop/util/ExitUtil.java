@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -36,8 +38,10 @@ public final class ExitUtil {
       LOG = LoggerFactory.getLogger(ExitUtil.class.getName());
   private static volatile boolean systemExitDisabled = false;
   private static volatile boolean systemHaltDisabled = false;
-  private static volatile ExitException firstExitException;
-  private static volatile HaltException firstHaltException;
+  private static final AtomicReference<ExitException> FIRST_EXIT_EXCEPTION =
+      new AtomicReference<>();
+  private static final AtomicReference<HaltException> FIRST_HALT_EXCEPTION =
+      new AtomicReference<>();
   /** Message raised from an exit exception if none were provided: {@value}. */
   public static final String EXIT_EXCEPTION_MESSAGE = "ExitException";
   /** Message raised from a halt exception if none were provided: {@value}. */
@@ -159,28 +163,29 @@ public final class ExitUtil {
    */
   public static boolean terminateCalled() {
     // Either we set this member or we actually called System#exit
-    return firstExitException != null;
+    return FIRST_EXIT_EXCEPTION.get() != null;
   }
 
   /**
    * @return true if halt has been called.
    */
   public static boolean haltCalled() {
-    return firstHaltException != null;
+    // Either we set this member or we actually called Runtime#halt
+    return FIRST_HALT_EXCEPTION.get() != null;
   }
 
   /**
-   * @return the first ExitException thrown, null if none thrown yet.
+   * @return the first {@code ExitException} thrown, null if none thrown yet.
    */
   public static ExitException getFirstExitException() {
-    return firstExitException;
+    return FIRST_EXIT_EXCEPTION.get();
   }
 
   /**
    * @return the first {@code HaltException} thrown, null if none thrown yet.
    */
   public static HaltException getFirstHaltException() {
-    return firstHaltException;
+    return FIRST_HALT_EXCEPTION.get();
   }
 
   /**
@@ -188,64 +193,136 @@ public final class ExitUtil {
    * where one test in the suite expects an exit but others do not.
    */
   public static void resetFirstExitException() {
-    firstExitException = null;
-  }
-
-  public static void resetFirstHaltException() {
-    firstHaltException = null;
+    FIRST_EXIT_EXCEPTION.set(null);
   }
 
   /**
+   * Reset the tracking of process termination. This is for use in unit tests
+   * where one test in the suite expects a halt but others do not.
+   */
+  public static void resetFirstHaltException() {
+    FIRST_HALT_EXCEPTION.set(null);
+  }
+
+  /**
+   * Suppresses if legit and returns the first non-null of the two. Legit means
+   * <code>suppressor</code> if neither <code>null</code> nor <code>suppressed</code>.
+   * @param suppressor <code>Throwable</code> that suppresses <code>suppressed</code>
+   * @param suppressed <code>Throwable</code> that is suppressed by <code>suppressor</code>
+   * @return <code>suppressor</code> if not <code>null</code>, <code>suppressed</code> otherwise
+   */
+  private static <T extends Throwable> T addSuppressed(T suppressor, T suppressed) {
+    if (suppressor == null) {
+      return suppressed;
+    }
+    if (suppressor != suppressed) {
+      suppressor.addSuppressed(suppressed);
+    }
+    return suppressor;
+  }
+
+  /**
+   * Exits the JVM if exit is enabled, rethrow provided exception or any raised error otherwise.
    * Inner termination: either exit with the exception's exit code,
    * or, if system exits are disabled, rethrow the exception.
    * @param ee exit exception
+   * @throws ExitException if {@link System#exit(int)} is disabled and not suppressed by an Error
+   * @throws Error if {@link System#exit(int)} is disabled and one Error arise, suppressing
+   * anything else, even <code>ee</code>
    */
-  public static synchronized void terminate(ExitException ee)
-      throws ExitException {
-    int status = ee.getExitCode();
-    String msg = ee.getMessage();
+  public static void terminate(final ExitException ee) throws ExitException {
+    final int status = ee.getExitCode();
+    Error caught = null;
     if (status != 0) {
-      //exit indicates a problem, log it
-      LOG.debug("Exiting with status {}: {}",  status, msg, ee);
-      LOG.info("Exiting with status {}: {}", status, msg);
+      try {
+        // exit indicates a problem, log it
+        String msg = ee.getMessage();
+        LOG.debug("Exiting with status {}: {}",  status, msg, ee);
+        LOG.info("Exiting with status {}: {}", status, msg);
+      } catch (Error e) {
+        // errors have higher priority than HaltException, it may be re-thrown.
+        // OOM and ThreadDeath are 2 examples of Errors to re-throw
+        caught = e;
+      } catch (Throwable t) {
+        // all other kind of throwables are suppressed
+        addSuppressed(ee, t);
+      }
     }
     if (systemExitDisabled) {
-      LOG.error("Terminate called", ee);
-      if (!terminateCalled()) {
-        firstExitException = ee;
+      try {
+        LOG.error("Terminate called", ee);
+      } catch (Error e) {
+        // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
+        caught = addSuppressed(caught, e);
+      } catch (Throwable t) {
+        // all other kind of throwables are suppressed
+        addSuppressed(ee, t);
       }
+      FIRST_EXIT_EXCEPTION.compareAndSet(null, ee);
+      if (caught != null) {
+        caught.addSuppressed(ee);
+        throw caught;
+      }
+      // not suppressed by a higher prority error
       throw ee;
+    } else {
+      // when exit is enabled, whatever Throwable happened, we exit the VM
+      System.exit(status);
     }
-    System.exit(status);
   }
 
   /**
-   * Forcibly terminates the currently running Java virtual machine.
-   * The exception argument is rethrown if JVM halting is disabled.
-   * @param ee the exception containing the status code, message and any stack
+   * Halts the JVM if halt is enabled, rethrow provided exception or any raised error otherwise.
+   * If halt is disabled, this method throws either the exception argument if no
+   * error arise, the first error if at least one arise, suppressing <code>he</code>.
+   * If halt is enabled, all throwables are caught, even errors.
+   *
+   * @param he the exception containing the status code, message and any stack
    * trace.
-   * @throws HaltException if {@link Runtime#halt(int)} is disabled.
+   * @throws HaltException if {@link Runtime#halt(int)} is disabled and not suppressed by an Error
+   * @throws Error if {@link Runtime#halt(int)} is disabled and one Error arise, suppressing
+   * anyuthing else, even <code>he</code>
    */
-  public static synchronized void halt(HaltException ee) throws HaltException {
-    int status = ee.getExitCode();
-    String msg = ee.getMessage();
-    try {
-      if (status != 0) {
-        //exit indicates a problem, log it
-        LOG.debug("Halt with status {}: {}", status, msg, ee);
-        LOG.info("Halt with status {}: {}", status, msg, msg);
+  public static void halt(final HaltException he) throws HaltException {
+    final int status = he.getExitCode();
+    Error caught = null;
+    if (status != 0) {
+      try {
+        // exit indicates a problem, log it
+        String msg = he.getMessage();
+        LOG.info("Halt with status {}: {}", status, msg, he);
+      } catch (Error e) {
+        // errors have higher priority than HaltException, it may be re-thrown.
+        // OOM and ThreadDeath are 2 examples of Errors to re-throw
+        caught = e;
+      } catch (Throwable t) {
+        // all other kind of throwables are suppressed
+        addSuppressed(he, t);
       }
-    } catch (Exception ignored) {
-      // ignore exceptions here, as it may be due to an out of memory situation
     }
+    // systemHaltDisabled is volatile and not used in scenario nheding atomicty,
+    // thus it does not nhed a synchronized access nor a atomic access
     if (systemHaltDisabled) {
-      LOG.error("Halt called", ee);
-      if (!haltCalled()) {
-        firstHaltException = ee;
+      try {
+        LOG.error("Halt called", he);
+      } catch (Error e) {
+        // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
+        caught = addSuppressed(caught, e);
+      } catch (Throwable t) {
+        // all other kind of throwables are suppressed
+        addSuppressed(he, t);
       }
-      throw ee;
+      FIRST_HALT_EXCEPTION.compareAndSet(null, he);
+      if (caught != null) {
+        caught.addSuppressed(he);
+        throw caught;
+      }
+      // not suppressed by a higher prority error
+      throw he;
+    } else {
+      // when halt is enabled, whatever Throwable happened, we halt the VM
+      Runtime.getRuntime().halt(status);
     }
-    Runtime.getRuntime().halt(status);
   }
 
   /**

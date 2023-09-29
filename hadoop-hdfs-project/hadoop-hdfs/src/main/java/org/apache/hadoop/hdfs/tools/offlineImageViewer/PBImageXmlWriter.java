@@ -31,7 +31,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -68,9 +67,11 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.LimitInputStream;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
@@ -433,7 +434,7 @@ public final class PBImageXmlWriter {
       int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
-          XAttrNamespaceProto.valueOf(ns).toString());
+          XAttrNamespaceProto.forNumber(ns).toString());
       o(SECTION_NAME, SerialNumberManager.XATTR.getString(
           XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
           stringTable));

@@ -50,7 +50,7 @@ public final class SelectConstants {
    * Does the FS Support S3 Select?
    * Value: {@value}.
    */
-  public static final String S3_SELECT_CAPABILITY = "s3a:fs.s3a.select.sql";
+  public static final String S3_SELECT_CAPABILITY = "fs.s3a.capability.select.sql";
 
   /**
    * Flag: is S3 select enabled?

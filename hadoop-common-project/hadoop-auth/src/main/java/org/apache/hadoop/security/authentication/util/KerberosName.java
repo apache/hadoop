@@ -26,7 +26,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -281,7 +281,7 @@ public class KerberosName {
         if (paramNum != null) {
           try {
             int num = Integer.parseInt(paramNum);
-            if (num < 0 || num > params.length) {
+            if (num < 0 || num >= params.length) {
               throw new BadFormatString("index " + num + " from " + format +
                                         " is outside of the valid range 0 to " +
                                         (params.length - 1));

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto;
@@ -51,7 +52,9 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeMa
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-    
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
+
 public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest {
   RegisterNodeManagerRequestProto proto = RegisterNodeManagerRequestProto.getDefaultInstance();
   RegisterNodeManagerRequestProto.Builder builder = null;
@@ -68,6 +71,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
 
   /** Physical resources in the node. */
   private Resource physicalResource = null;
+  private NodeStatus nodeStatus;
 
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
@@ -120,6 +124,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     }
     if (this.logAggregationReportsForApps != null) {
       addLogAggregationStatusForAppsToProto();
+    }
+    if (this.nodeStatus != null) {
+      builder.setNodeStatus(convertToProtoFormat(this.nodeStatus));
     }
   }
 
@@ -360,6 +367,28 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   }
 
   @Override
+  public synchronized NodeStatus getNodeStatus() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.nodeStatus != null) {
+      return this.nodeStatus;
+    }
+    if (!p.hasNodeStatus()) {
+      return null;
+    }
+    this.nodeStatus = convertFromProtoFormat(p.getNodeStatus());
+    return this.nodeStatus;
+  }
+
+  @Override
+  public synchronized void setNodeStatus(NodeStatus pNodeStatus) {
+    maybeInitBuilder();
+    if (pNodeStatus == null) {
+      builder.clearNodeStatus();
+    }
+    this.nodeStatus = pNodeStatus;
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }
@@ -532,5 +561,13 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
       builder.clearLogAggregationReportsForApps();
     }
     this.logAggregationReportsForApps = logAggregationStatusForApps;
+  }
+
+  private NodeStatusPBImpl convertFromProtoFormat(NodeStatusProto s) {
+    return new NodeStatusPBImpl(s);
+  }
+
+  private NodeStatusProto convertToProtoFormat(NodeStatus s) {
+    return ((NodeStatusPBImpl)s).getProto();
   }
 }

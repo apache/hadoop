@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -31,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
@@ -195,9 +194,9 @@ public class TestAddStripedBlocks {
 
       // save namespace, restart namenode, and check
       dfs = cluster.getFileSystem();
-      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       dfs.saveNamespace();
-      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
       cluster.restartNameNode(true);
       fsdir = cluster.getNamesystem().getFSDirectory();
       fileNode = fsdir.getINode4Write(file.toString()).asFile();
@@ -206,7 +205,7 @@ public class TestAddStripedBlocks {
       assertTrue(blocks[0].isStriped());
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 
@@ -271,7 +270,7 @@ public class TestAddStripedBlocks {
       assertArrayEquals(indices, blockIndices);
       assertArrayEquals(expectedDNs, datanodes);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 
@@ -327,7 +326,7 @@ public class TestAddStripedBlocks {
         assertTrue(storageIDs.contains(newstorage.getStorageID()));
       }
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
 
     // 3. restart the namenode. mimic the full block reports and check the
@@ -351,8 +350,7 @@ public class TestAddStripedBlocks {
       StorageBlockReport[] reports = {new StorageBlockReport(storage,
           bll)};
       cluster.getNameNodeRpc().blockReport(dn.getDNRegistrationForBP(bpId),
-          bpId, reports,
-          new BlockReportContext(1, 0, System.nanoTime(), 0, true));
+          bpId, reports, null);
     }
 
     DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()

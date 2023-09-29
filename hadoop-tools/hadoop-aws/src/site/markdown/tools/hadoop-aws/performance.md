@@ -30,11 +30,11 @@ That's because its a very different system, as you can see:
 | communication | RPC | HTTP GET/PUT/HEAD/LIST/COPY requests |
 | data locality | local storage | remote S3 servers |
 | replication | multiple datanodes | asynchronous after upload |
-| consistency | consistent data and listings | eventual consistent for listings, deletes and updates |
+| consistency | consistent data and listings | consistent since November 2020|
 | bandwidth | best: local IO, worst: datacenter network | bandwidth between servers and S3 |
 | latency | low | high, especially for "low cost" directory operations |
-| rename | fast, atomic | slow faked rename through COPY & DELETE|
-| delete | fast, atomic | fast for a file, slow & non-atomic for directories |
+| rename | fast, atomic | slow faked rename through COPY and DELETE|
+| delete | fast, atomic | fast for a file, slow and non-atomic for directories |
 | writing| incremental | in blocks; not visible until the writer is closed |
 | reading | seek() is fast | seek() is slow and expensive |
 | IOPs | limited only by hardware | callers are throttled to shards in an s3 bucket |
@@ -55,15 +55,44 @@ it isn't, and some attempts to preserve the metaphor are "aggressively suboptima
 
 To make most efficient use of S3, care is needed.
 
-## <a name="s3guard"></a> Speeding up directory listing operations through S3Guard
+## <a name="vectoredIO"></a> Improving read performance using Vectored IO
+The S3A FileSystem supports implementation of vectored read api using which
+a client can provide a list of file ranges to read returning a future read
+object associated with each range. For full api specification please see
+[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
 
-[S3Guard](s3guard.html) provides significant speedups for operations which
-list files a lot. This includes the setup of all queries against data:
-MapReduce, Hive and Spark, as well as DistCP.
+The following properties can be configured to optimise vectored reads based
+on the client requirements.
 
-
-Experiment with using it to see what speedup it delivers.
-
+```xml
+<property>
+  <name>fs.s3a.vectored.read.min.seek.size</name>
+  <value>4K</value>
+  <description>
+     What is the smallest reasonable seek in bytes such
+     that we group ranges together during vectored
+     read operation.
+   </description>
+</property>
+<property>
+   <name>fs.s3a.vectored.read.max.merged.size</name>
+   <value>1M</value>
+   <description>
+      What is the largest merged read size in bytes such
+      that we group ranges together during vectored read.
+      Setting this value to 0 will disable merging of ranges.
+   </description>
+<property>
+   <name>fs.s3a.vectored.active.ranged.reads</name>
+   <value>4</value>
+   <description>
+      Maximum number of range reads a single input stream can have
+      active (downloading, or queued) to the central FileSystem
+      instance's pool of queued operations.
+      This stops a single stream overloading the shared thread pool.
+   </description>
+</property>
+```
 
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
@@ -93,7 +122,7 @@ Optimised for random IO, specifically the Hadoop `PositionedReadable`
 operations —though `seek(offset); read(byte_buffer)` also benefits.
 
 Rather than ask for the whole file, the range of the HTTP request is
-set to that that of the length of data desired in the `read` operation
+set to the length of data desired in the `read` operation
 (Rounded up to the readahead value set in `setReadahead()` if necessary).
 
 By reducing the cost of closing existing HTTP requests, this is
@@ -143,7 +172,7 @@ sequential to `random`.
 This policy essentially recognizes the initial read pattern of columnar
 storage formats (e.g. Apache ORC and Apache Parquet), which seek to the end
 of a file, read in index data and then seek backwards to selectively read
-columns. The first seeks may be be expensive compared to the random policy,
+columns. The first seeks may be expensive compared to the random policy,
 however the overall process is much less expensive than either sequentially
 reading through a file with the `random` policy, or reading columnar data
 with the `sequential` policy.
@@ -157,9 +186,7 @@ When using S3 as a destination, this is slow because of the way `rename()`
 is mimicked with copy and delete.
 
 If committing output takes a long time, it is because you are using the standard
-`FileOutputCommitter`. If you are doing this on any S3 endpoint which lacks
-list consistency (Amazon S3 without [S3Guard](s3guard.html)), this committer
-is at risk of losing data!
+`FileOutputCommitter`.
 
 *Your problem may appear to be performance, but that is a symptom
 of the underlying problem: the way S3A fakes rename operations means that
@@ -281,7 +308,7 @@ killer.
 `fs.s3a.threads.max` and `fs.s3a.connection.maximum`.
 
 1. Make sure that the bucket is using `sequential` or `normal` fadvise seek policies,
-that is, `fs.s3a.experimental.fadvise` is not set to `random`
+that is, `fs.s3a.experimental.input.fadvise` is not set to `random`
 
 1. Perform listings in parallel by setting `-numListstatusThreads`
 to a higher number. Make sure that `fs.s3a.connection.maximum`
@@ -314,7 +341,7 @@ the S3 bucket/shard.
 </property>
 
 <property>
-  <name>fs.s3a.experimental.fadvise</name>
+  <name>fs.s3a.experimental.input.fadvise</name>
   <value>normal</value>
 </property>
 
@@ -357,7 +384,7 @@ data loss.
 Amazon S3 uses a set of front-end servers to provide access to the underlying data.
 The choice of which front-end server to use is handled via load-balancing DNS
 service: when the IP address of an S3 bucket is looked up, the choice of which
-IP address to return to the client is made based on the the current load
+IP address to return to the client is made based on the current load
 of the front-end servers.
 
 Over time, the load across the front-end changes, so those servers considered
@@ -448,27 +475,6 @@ If you believe that you are reaching these limits, you may be able to
 get them increased.
 Consult [the KMS Rate Limit documentation](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
 
-### <a name="s3guard_throttling"></a> S3Guard and Throttling
-
-
-S3Guard uses DynamoDB for directory and file lookups;
-it is rate limited to the amount of (guaranteed) IO purchased for a
-table.
-
-To see the allocated capacity of a bucket, the `hadoop s3guard bucket-info s3a://bucket`
-command will print out the allocated capacity.
-
-
-If significant throttling events/rate is observed here, the pre-allocated
-IOPs can be increased with the `hadoop s3guard set-capacity` command, or
-through the AWS Console. Throttling events in S3Guard are noted in logs, and
-also in the S3A metrics `s3guard_metadatastore_throttle_rate` and
-`s3guard_metadatastore_throttled`.
-
-If you are using DistCP for a large backup to/from a S3Guarded bucket, it is
-actually possible to increase the capacity for the duration of the operation.
-
-
 ## <a name="coding"></a> Best Practises for Code
 
 Here are some best practises if you are writing applications to work with
@@ -483,10 +489,6 @@ multiple HTTP requests to scan each directory, all the way down.
 Cache the outcome of `getFileStats()`, rather than repeatedly ask for it.
 That includes using `isFile()`, `isDirectory()`, which are simply wrappers
 around `getFileStatus()`.
-
-Don't immediately look for a file with a `getFileStatus()` or listing call
-after creating it, or try to read it immediately.
-This is where eventual consistency problems surface: the data may not yet be visible.
 
 Rely on `FileNotFoundException` being raised if the source of an operation is
 missing, rather than implementing your own probe for the file before
@@ -516,3 +518,180 @@ With an object store this is slow, and may cause problems if the caller
 expects an immediate response. For example, a thread may block so long
 that other liveness checks start to fail.
 Consider spawning off an executor thread to do these background cleanup operations.
+
+## <a name="coding"></a> Tuning SSL Performance
+
+By default, S3A uses HTTPS to communicate with AWS Services. This means that all
+communication with S3 is encrypted using SSL. The overhead of this encryption
+can significantly slow down applications. The configuration option
+`fs.s3a.ssl.channel.mode` allows applications to trigger certain SSL
+optimizations.
+
+By default, `fs.s3a.ssl.channel.mode` is set to `default_jsse`, which uses
+the Java Secure Socket Extension implementation of SSL (this is the default
+implementation when running Java). However, there is one difference, the GCM
+cipher is removed from the list of enabled cipher suites when running on Java 8.
+The GCM cipher has known performance issues when running on Java 8, see
+HADOOP-15669 and HADOOP-16050 for details. It is important to note that the
+GCM cipher is only disabled on Java 8. GCM performance has been improved
+in Java 9, so if `default_jsse` is specified and applications run on Java
+9, they should see no difference compared to running with the vanilla JSSE.
+
+`fs.s3a.ssl.channel.mode` can be set to `default_jsse_with_gcm`. This option
+includes GCM in the list of cipher suites on Java 8, so it is equivalent to
+running with the vanilla JSSE.
+
+### <a name="openssl"></a> OpenSSL Acceleration
+
+**Experimental Feature**
+
+As of HADOOP-16050 and HADOOP-16346, `fs.s3a.ssl.channel.mode` can be set to
+either `default` or `openssl` to enable native OpenSSL acceleration of HTTPS
+requests. OpenSSL implements the SSL and TLS protocols using native code. For
+users reading a large amount of data over HTTPS, OpenSSL can provide a
+significant performance benefit over the JSSE.
+
+S3A uses the
+[WildFly OpenSSL](https://github.com/wildfly-security/wildfly-openssl) library
+to bind OpenSSL to the Java JSSE APIs. This library allows S3A to
+transparently read data using OpenSSL. The `wildfly-openssl` library is an
+optional runtime dependency of S3A and contains native libraries for binding the Java
+JSSE to OpenSSL.
+
+WildFly OpenSSL must load OpenSSL itself. This can be done using the system
+property `org.wildfly.openssl.path`. For example,
+`HADOOP_OPTS="-Dorg.wildfly.openssl.path=<path to OpenSSL libraries>
+${HADOOP_OPTS}"`. See WildFly OpenSSL documentation for more details.
+
+When `fs.s3a.ssl.channel.mode` is set to `default`, S3A will attempt to load
+the OpenSSL libraries using the WildFly library. If it is unsuccessful, it
+will fall back to the `default_jsse` behavior.
+
+When `fs.s3a.ssl.channel.mode` is set to `openssl`, S3A will attempt to load
+the OpenSSL libraries using WildFly. If it is unsuccessful, it will throw an
+exception and S3A initialization will fail.
+
+### `fs.s3a.ssl.channel.mode` Configuration
+
+`fs.s3a.ssl.channel.mode` can be configured as follows:
+
+```xml
+<property>
+  <name>fs.s3a.ssl.channel.mode</name>
+  <value>default_jsse</value>
+  <description>
+    If secure connections to S3 are enabled, configures the SSL
+    implementation used to encrypt connections to S3. Supported values are:
+    "default_jsse", "default_jsse_with_gcm", "default", and "openssl".
+    "default_jsse" uses the Java Secure Socket Extension package (JSSE).
+    However, when running on Java 8, the GCM cipher is removed from the list
+    of enabled ciphers. This is due to performance issues with GCM in Java 8.
+    "default_jsse_with_gcm" uses the JSSE with the default list of cipher
+    suites. "default_jsse_with_gcm" is equivalent to the behavior prior to
+    this feature being introduced. "default" attempts to use OpenSSL rather
+    than the JSSE for SSL encryption, if OpenSSL libraries cannot be loaded,
+    it falls back to the "default_jsse" behavior. "openssl" attempts to use
+    OpenSSL as well, but fails if OpenSSL libraries cannot be loaded.
+  </description>
+</property>
+```
+
+Supported values for `fs.s3a.ssl.channel.mode`:
+
+| `fs.s3a.ssl.channel.mode` Value | Description |
+|-------------------------------|-------------|
+| `default_jsse` | Uses Java JSSE without GCM on Java 8 |
+| `default_jsse_with_gcm` | Uses Java JSSE |
+| `default` | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
+| `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+
+The naming convention is setup in order to preserve backwards compatibility
+with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HADOOP-15669).
+
+Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
+further SSL optimizations are made.
+
+### WildFly classpath requirements
+
+For OpenSSL acceleration to work, a compatible version of the
+wildfly JAR must be on the classpath. This is not explicitly declared
+in the dependencies of the published `hadoop-aws` module, as it is
+optional.
+
+If the wildfly JAR is not found, the network acceleration will fall back
+to the JVM, always.
+
+Note: there have been compatibility problems with wildfly JARs and openSSL
+releases in the past: version 1.0.4.Final is not compatible with openssl 1.1.1.
+An extra complication was older versions of the `azure-data-lake-store-sdk`
+JAR used in `hadoop-azure-datalake` contained an unshaded copy of the 1.0.4.Final
+classes, causing binding problems even when a later version was explicitly
+being placed on the classpath.
+
+
+## Tuning FileSystem Initialization.
+
+### Disabling bucket existence checks
+
+When an S3A Filesystem instance is created and initialized, the client
+checks if the bucket provided is valid. This can be slow.
+You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+</property>
+```
+
+Note: if the bucket does not exist, this issue will surface when operations are performed
+on the filesystem; you will see `UnknownStoreException` stack traces.
+
+### Rate limiting parallel FileSystem creation operations
+
+Applications normally ask for filesystems from the shared cache,
+via `FileSystem.get()` or `Path.getFileSystem()`.
+The cache, `FileSystem.CACHE` will, for each user, cachec one instance of a filesystem
+for a given URI.
+All calls to `FileSystem.get` for a cached FS for a URI such
+as `s3a://landsat-pds/` will return that singe single instance.
+
+FileSystem instances are created on-demand for the cache,
+and will be done in each thread which requests an instance.
+This is done outside of any synchronisation block.
+Once a task has an initialized FileSystem instance, it will, in a synchronized block
+add it to the cache.
+If it turns out that the cache now already has an instance for that URI, it will
+revert the cached copy to it, and close the FS instance it has just created.
+
+If a FileSystem takes time to be initialized, and many threads are trying to
+retrieve a FileSystem instance for the same S3 bucket in parallel,
+All but one of the threads will be doing useless work, and may unintentionally
+be creating lock contention on shared objects.
+
+There is an option, `fs.creation.parallel.count`, which uses a semaphore
+to limit the number of FS instances which may be created in parallel.
+
+Setting this to a low number will reduce the amount of wasted work,
+at the expense of limiting the number of FileSystem clients which
+can be created simultaneously for different object stores/distributed
+filesystems.
+
+For example, a value of four would put an upper limit on the number
+of wasted instantiations of a connector for the `s3a://landsat-pds/`
+bucket.
+
+```xml
+<property>
+  <name>fs.creation.parallel.count</name>
+  <value>4</value>
+</property>
+```
+
+It would also mean that if four threads were in the process
+of creating such connectors, all threads trying to create
+connectors for other buckets, would end up blocking too.
+
+Consider experimenting with this when running applications
+where many threads may try to simultaneously interact
+with the same slow-to-initialize object stores.

@@ -117,7 +117,7 @@ public class NNBench extends Configured implements Tool {
    * @throws IOException on error
    */
   private void cleanupBeforeTestrun() throws IOException {
-    FileSystem tempFS = FileSystem.get(getConf());
+    FileSystem tempFS = FileSystem.get(new Path(baseDir).toUri(), getConf());
     
     // Delete the data directory only if it is the create/write operation
     if (operation.equals(OP_CREATE_WRITE)) {
@@ -193,7 +193,8 @@ public class NNBench extends Configured implements Tool {
       "\t-replicationFactorPerFile <Replication factor for the files." +
         " default is 1. This is not mandatory>\n" +
       "\t-baseDir <base DFS path. default is /benchmarks/NNBench. " +
-      "This is not mandatory>\n" +
+        "Supports cross-cluster access by using full path with schema and " +
+        "cluster. This is not mandatory>\n" +
       "\t-readFileAfterOpen <true or false. if true, it reads the file and " +
       "reports the average time to read. This is valid with the open_read " +
       "operation. default is false. This is not mandatory>\n" +
@@ -305,7 +306,7 @@ public class NNBench extends Configured implements Tool {
    * @throws IOException on error
    */
   private int analyzeResults() throws IOException {
-    final FileSystem fs = FileSystem.get(getConf());
+    final FileSystem fs = FileSystem.get(new Path(baseDir).toUri(), getConf());
     Path reduceDir = new Path(baseDir, OUTPUT_DIR_NAME);
 
     long totalTimeAL1 = 0l;
@@ -642,9 +643,10 @@ public class NNBench extends Configured implements Tool {
      */
     public void configure(JobConf conf) {
       setConf(conf);
-      
+
       try {
-        filesystem = FileSystem.get(conf);
+        String dir = conf.get("test.nnbench.basedir");
+        filesystem = FileSystem.get(new Path(dir).toUri(), conf);
       } catch(Exception e) {
         throw new RuntimeException("Cannot get file system.", e);
       }
@@ -668,7 +670,7 @@ public class NNBench extends Configured implements Tool {
       long startTime = getConf().getLong("test.nnbench.starttime", 0l);
       long currentTime = System.currentTimeMillis();
       long sleepTime = startTime - currentTime;
-      boolean retVal = false;
+      boolean retVal = true;
       
       // If the sleep time is greater than 0, then sleep and return
       if (sleepTime > 0) {

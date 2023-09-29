@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.security;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,11 +61,11 @@ public class NetgroupCache {
    * @return list of cached groups
    */
   public static List<String> getNetgroupNames() {
-    return new LinkedList<String>(getGroups());
+    return new ArrayList<>(getGroups());
   }
 
   private static Set<String> getGroups() {
-    Set<String> allGroups = new HashSet<String> ();
+    Set<String> allGroups = new HashSet<>();
     for (Set<String> userGroups : userToNetgroupsMap.values()) {
       allGroups.addAll(userGroups);
     }

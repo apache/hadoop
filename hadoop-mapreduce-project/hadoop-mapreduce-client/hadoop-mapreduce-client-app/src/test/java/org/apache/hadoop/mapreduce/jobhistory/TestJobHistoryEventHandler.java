@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.CounterGroup;
@@ -412,8 +415,9 @@ public class TestJobHistoryEventHandler {
               JobStateInternal.FAILED.toString())));
 
       // verify the value of the sensitive property in job.xml is restored.
-      Assert.assertEquals(sensitivePropertyName + " is modified.",
-          conf.get(sensitivePropertyName), sensitivePropertyValue);
+      assertThat(conf.get(sensitivePropertyName))
+          .isEqualTo(sensitivePropertyValue)
+          .withFailMessage(sensitivePropertyName + " is modified.");
 
       // load the job_conf.xml in JHS directory and verify property redaction.
       Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
@@ -543,19 +547,19 @@ public class TestJobHistoryEventHandler {
 
       JobHistoryEventHandler.MetaInfo mi =
           JobHistoryEventHandler.fileMap.get(t.jobId);
-      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
-      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      assertThat(mi.getJobIndexInfo().getSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobIndexInfo().getJobStartTime()).isEqualTo(200);
+      assertThat(mi.getJobSummary().getJobSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobSummary().getJobLaunchTime()).isEqualTo(200);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
           0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
 
-      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
-      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      assertThat(mi.getJobIndexInfo().getSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobIndexInfo().getJobStartTime()).isEqualTo(200);
+      assertThat(mi.getJobSummary().getJobSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobSummary().getJobLaunchTime()).isEqualTo(200);
       verify(jheh, times(1)).processDoneFiles(t.jobId);
 
       mockWriter = jheh.getEventWriter();
@@ -1034,6 +1038,48 @@ public class TestJobHistoryEventHandler {
       jheh.stop();
     }
   }
+
+  @Test(timeout = 50000)
+  public void testJobHistoryFilePermissions() throws Exception {
+    TestParams t = new TestParams(true);
+    Configuration conf = new Configuration();
+    String setFilePermission = "777";
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS, setFilePermission);
+
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, dfsCluster.getURI().toString());
+
+    JHEvenHandlerForTest realJheh = new JHEvenHandlerForTest(t.mockAppContext,
+        0, false);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    try {
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+          new AMStartedEvent(t.appAttemptId, 200, t.containerId, "nmhost",
+              3000, 4000, -1)));
+
+      // Job finishes and successfully writes history
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+          new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0,
+              0, 0, 0, 0, 0,
+              new Counters(),
+              new Counters(), new Counters())));
+
+      verify(jheh, times(1)).processDoneFiles(any(JobId.class));
+
+      String intermediateSummaryFileName = JobHistoryUtils.getIntermediateSummaryFileName(t.jobId);
+      String doneDir = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
+      FileSystem fs = FileSystem.get(dfsCluster.getConfiguration(0));
+      Path intermediateSummaryFileNamePath = new Path(doneDir, intermediateSummaryFileName);
+      FsPermission getIntermediateSummaryFilePermission =
+          fs.getFileStatus(intermediateSummaryFileNamePath).getPermission();
+      assertEquals(setFilePermission,
+          String.valueOf(getIntermediateSummaryFilePermission.toOctal()));
+    } finally {
+      jheh.stop();
+    }
+  }
 }
 
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
@@ -1117,6 +1163,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
 class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
   public JHEventHandlerForSigtermTest(AppContext context, int startCount) {
     super(context, startCount);
+    JobHistoryEventHandler.fileMap.clear();
   }
 
   public void addToFileMap(JobId jobId) {

@@ -20,7 +20,8 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import static org.junit.Assert.assertEquals;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 
@@ -46,6 +47,6 @@ public class TestMaster {
     // Change master address to a valid value
     conf.set(MRConfig.MASTER_ADDRESS, "bar.com:8042");    
     String masterHostname = Master.getMasterAddress(conf);
-    assertEquals(masterHostname, "bar.com");
+    assertThat(masterHostname).isEqualTo("bar.com");
   }
 }

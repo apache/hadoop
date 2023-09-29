@@ -202,8 +202,10 @@ public class TestBlobMetadata extends AbstractWasbTestWithTimeout {
     Path selfishFile = new Path("/noOneElse");
     fs.create(selfishFile, justMe, true, 4096, fs.getDefaultReplication(),
         fs.getDefaultBlockSize(), null).close();
+    String mockUri = AzureBlobStorageTestAccount.toMockUri(selfishFile);
+    assertNotNull("converted URI", mockUri);
     HashMap<String, String> metadata = backingStore
-        .getMetadata(AzureBlobStorageTestAccount.toMockUri(selfishFile));
+        .getMetadata(mockUri);
     assertNotNull(metadata);
     String storedPermission = metadata.get("hdi_permission");
     assertEquals(getExpectedPermissionString("rw-------"), storedPermission);

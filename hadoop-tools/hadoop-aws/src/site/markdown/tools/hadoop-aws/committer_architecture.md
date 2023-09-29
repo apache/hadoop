@@ -20,6 +20,27 @@ This document covers the architecture and implementation details of the S3A comm
 
 For information on using the committers, see [the S3A Committers](./committer.html).
 
+### January 2021 Update
+
+Now that S3 is fully consistent, problems related to inconsistent
+directory listings have gone. However the rename problem exists: committing
+work by renaming directories is unsafe as well as horribly slow.
+
+This architecture document, and the committers, were written at a time
+when S3 was inconsistent. The two committers addressed this problem differently
+
+* Staging Committer: rely on a cluster HDFS filesystem for safely propagating
+  the lists of files to commit from workers to the job manager/driver.
+* Magic Committer: require S3Guard to offer consistent directory listings
+  on the object store.
+
+With consistent S3, the Magic Committer can be safely used with any S3 bucket.
+The choice of which to use, then, is matter for experimentation.
+
+This architecture document was written in 2017, a time when S3 was only
+consistent when an extra consistency layer such as S3Guard was used.
+The document indicates where requirements/constraints which existed then
+are now obsolete.
 
 ## Problem: Efficient, reliable commits of work to consistent S3 buckets
 
@@ -42,23 +63,23 @@ entries, the duration of the lock is low.
 
 In contrast to a "real" filesystem, Amazon's S3A object store, similar to
 most others, does not support `rename()` at all. A hash operation on the filename
-determines the location of of the data —there is no separate metadata to change.
+determines the location of the data —there is no separate metadata to change.
 To mimic renaming, the Hadoop S3A client has to copy the data to a new object
 with the destination filename, then delete the original entry. This copy
 can be executed server-side, but as it does not complete until the in-cluster
 copy has completed, it takes time proportional to the amount of data.
 
 The rename overhead is the most visible issue, but it is not the most dangerous.
-That is the fact that path listings have no consistency guarantees, and may
-lag the addition or deletion of files.
-If files are not listed, the commit operation will *not* copy them, and
-so they will not appear in the final output.
+That is the fact that until late 2020, path listings had no consistency guarantees,
+and may have lagged the addition or deletion of files.
+If files were not listed, the commit operation would *not* copy them, and
+so they would not appear in the final output.
 
 The solution to this problem is closely coupled to the S3 protocol itself:
 delayed completion of multi-part PUT operations
 
 That is: tasks write all data as multipart uploads, *but delay the final
-commit action until until the final, single job commit action.* Only that
+commit action until the final, single job commit action.* Only that
 data committed in the job commit action will be made visible; work from speculative
 and failed tasks will not be instantiated. As there is no rename, there is no
 delay while data is copied from a temporary directory to the final directory.
@@ -242,7 +263,7 @@ def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
 
 On a genuine filesystem this is an `O(1)` directory rename.
 
-On an object store with a mimiced rename, it is `O(data)` for the copy,
+On an object store with a mimicked rename, it is `O(data)` for the copy,
 along with overhead for listing and deleting all files (For S3, that's
 `(1 + files/500)` lists, and the same number of delete calls.
 
@@ -286,7 +307,7 @@ def isCommitJobRepeatable() :
 Accordingly, it is a failure point in the protocol. With a low number of files
 and fast rename/list algorithms, the window of vulnerability is low. At
 scale, the vulnerability increases. It could actually be reduced through
-parallel execution of the renaming of of committed tasks.
+parallel execution of the renaming of committed tasks.
 
 
 ### Job Abort
@@ -476,7 +497,7 @@ def needsTaskCommit(fs, jobAttemptPath, taskAttemptPath, dest):
 
 def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
   if fs.exists(taskAttemptPath) :
-    mergePathsV2(fs. taskAttemptPath, dest)
+    mergePathsV2(fs, taskAttemptPath, dest)
 ```
 
 ### v2 Task Abort
@@ -828,6 +849,8 @@ commit sequence in `Task.done()`, when `talkToAMTGetPermissionToCommit()`
 
 # Requirements of an S3A Committer
 
+The design requirements of the S3A committer were
+
 1. Support an eventually consistent S3 object store as a reliable direct
 destination of work through the S3A filesystem client.
 1. Efficient: implies no rename, and a minimal amount of delay in the job driver's
@@ -841,6 +864,7 @@ the job, and any previous incompleted jobs.
 1. Security: not to permit privilege escalation from other users with
 write access to the same file system(s).
 
+ 
 
 ## Features of S3 and the S3A Client
 
@@ -852,8 +876,8 @@ MR committer algorithms have significant performance problems.
 
 1. Single-object renames are implemented as a copy and delete sequence.
 1. COPY is atomic, but overwrites cannot be prevented.
-1. Amazon S3 is eventually consistent on listings, deletes and updates.
-1. Amazon S3 has create consistency, however, the negative response of a HEAD/GET
+1. [Obsolete] Amazon S3 is eventually consistent on listings, deletes and updates. 
+1. [Obsolete] Amazon S3 has create consistency, however, the negative response of a HEAD/GET
 performed on a path before an object was created can be cached, unintentionally
 creating a create inconsistency. The S3A client library does perform such a check,
 on `create()` and `rename()` to check the state of the destination path, and
@@ -872,11 +896,12 @@ data, with the `S3ABlockOutputStream` of HADOOP-13560 uploading written data
 as parts of a multipart PUT once the threshold set in the configuration
 parameter `fs.s3a.multipart.size` (default: 100MB).
 
-[S3Guard](./s3guard.html) adds an option of consistent view of the filesystem
+[S3Guard](./s3guard.html) added an option of consistent view of the filesystem
 to all processes using the shared DynamoDB table as the authoritative store of
-metadata. Some S3-compatible object stores are fully consistent; the
-proposed algorithm is designed to work with such object stores without the
-need for any DynamoDB tables.
+metadata.
+The proposed algorithm was designed to work with such object stores without the
+need for any DynamoDB tables. Since AWS S3 became consistent in 2020, this
+means that they will work directly with the store.
 
 ## Related work: Spark's `DirectOutputCommitter`
 
@@ -903,7 +928,7 @@ not be a problem.
 IBM's [Stocator](https://github.com/SparkTC/stocator) can transform indirect
 writes of V1/V2 committers into direct writes to the destination directory.
 
-Hpw does it do this? It's a special Hadoop `FileSystem` implementation which
+How does it do this? It's a special Hadoop `FileSystem` implementation which
 recognizes writes to `_temporary` paths and translate them to writes to the
 base directory. As well as translating the write operation, it also supports
 a `getFileStatus()` call on the original path, returning details on the file
@@ -969,7 +994,7 @@ It is that fact, that a different process may perform different parts
 of the upload, which make this algorithm viable.
 
 
-## The Netfix "Staging" committer
+## The Netflix "Staging" committer
 
 Ryan Blue, of Netflix, has submitted an alternate committer, one which has a
 number of appealing features
@@ -1081,7 +1106,7 @@ output reaches the job commit.
 Similarly, if a task is aborted, temporary output on the local FS is removed.
 
 If a task dies while the committer is running, it is possible for data to be
-eft on the local FS or as unfinished parts in S3.
+left on the local FS or as unfinished parts in S3.
 Unfinished upload parts in S3 are not visible to table readers and are cleaned
 up following the rules in the target bucket's life-cycle policy.
 
@@ -1246,8 +1271,8 @@ for parallel committing of work, including all the error handling based on
 the Netflix experience.
 
 It differs in that it directly streams data to S3 (there is no staging),
-and it also stores the lists of pending commits in S3 too. That mandates
-consistent metadata on S3, which S3Guard provides.
+and it also stores the lists of pending commits in S3 too. It
+requires a consistent S3 store.
 
 
 ### Core concept: A new/modified output stream for delayed PUT commits
@@ -1283,12 +1308,12 @@ so returning the special new stream.
 
 
 
-This is done with a "magic" temporary directory name, `__magic`, to indicate that all files
+This is done with a "MAGIC PATH" (where the filesystem knows to remap paths with prefix `__magic_job-${jobId}`) temporary directory name to indicate that all files
 created under this path are not to be completed during the stream write process.
 Directories created under the path will still be created —this allows job- and
 task-specific directories to be created for individual job and task attempts.
 
-For example, the pattern `__magic/${jobID}/${taskId}` could be used to
+For example, the pattern `${MAGIC PATH}/${jobID}/${taskId}` could be used to
 store pending commits to the final directory for that specific task. If that
 task is committed, all pending commit files stored in that path will be loaded
 and used to commit the final uploads.
@@ -1297,21 +1322,31 @@ Consider a job with the final directory `/results/latest`
 
  The intermediate directory for the task 01 attempt 01 of job `job_400_1` would be
 
-    /results/latest/__magic/job_400_1/_task_01_01
+    /results/latest/__magic_job-400/job_400_1/_task_01_01
 
 This would be returned as the temp directory.
 
 When a client attempted to create the file
-`/results/latest/__magic/job_400_1/task_01_01/latest.orc.lzo` , the S3A FS would initiate
+`/results/latest/__magic_job-400/job_400_1/task_01_01/latest.orc.lzo` , the S3A FS would initiate
 a multipart request with the final destination of `/results/latest/latest.orc.lzo`.
 
 As data was written to the output stream, it would be incrementally uploaded as
 individual multipart PUT operations
 
 On `close()`, summary data would be written to the file
-`/results/latest/__magic/job400_1/task_01_01/latest.orc.lzo.pending`.
+`/results/latest/__magic_job-400/job400_1/task_01_01/latest.orc.lzo.pending`.
 This would contain the upload ID and all the parts and etags of uploaded data.
 
+A marker file is also created, so that code which verifies that a newly created file
+exists does not fail.
+1. These marker files are zero bytes long.
+1. They declare the full length of the final file in the HTTP header
+   `x-hadoop-s3a-magic-data-length`.
+1. A call to `getXAttr("header.x-hadoop-s3a-magic-data-length")` will return a
+  string containing the number of bytes in the data uploaded.
+
+This is needed so that the Spark write-tracking code can report how much data
+has been created.
 
 #### Task commit
 
@@ -1323,7 +1358,7 @@ to the job attempt.
 1. These are merged into to a single `Pendingset` structure.
 1. Which is saved to a `.pendingset` file in the job attempt directory.
 1. Finally, the task attempt directory is deleted. In the example, this
-would be to `/results/latest/__magic/job400_1/task_01_01.pendingset`;
+would be to `/results/latest/__magic_job-400/job400_1/task_01_01.pendingset`;
 
 
 A failure to load any of the single pending upload files (i.e. the file
@@ -1351,9 +1386,9 @@ file.
 
 To allow tasks to generate data in subdirectories, a special filename `__base`
 will be used to provide an extra cue as to the final path. When mapping an output
-path  `/results/latest/__magic/job_400/task_01_01/__base/2017/2017-01-01.orc.lzo.pending`
+path  `/results/latest/__magic_job-400/job_400/task_01_01/__base/2017/2017-01-01.orc.lzo.pending`
 to a final destination path, the path will become `/results/latest/2017/2017-01-01.orc.lzo`.
-That is: all directories between `__magic` and `__base` inclusive will be ignored.
+That is: all directories between `__magic_job-400` and `__base` inclusive will be ignored.
 
 
 **Issues**
@@ -1444,16 +1479,16 @@ Job drivers themselves may be preempted.
 
 One failure case is that the entire execution framework failed; a new process
 must identify outstanding jobs with pending work, and abort them, then delete
-the appropriate `__magic` directories.
+the appropriate `"MAGIC PATH"` directories.
 
-This can be done either by scanning the directory tree for `__magic` directories
+This can be done either by scanning the directory tree for `"MAGIC PATH"` directories
 and scanning underneath them, or by using the `listMultipartUploads()` call to
 list multipart uploads under a path, then cancel them. The most efficient solution
 may be to use `listMultipartUploads` to identify all outstanding request, and use that
-to identify which requests to cancel, and where to scan for `__magic` directories.
+to identify which requests to cancel, and where to scan for `"MAGIC PATH"` directories.
 This strategy should address scalability problems when working with repositories
 with many millions of objects —rather than list all keys searching for those
-with `/__magic/**/*.pending` in their name, work backwards from the active uploads to
+with `/${MAGIC PATH}/**/*.pending` in their name, work backwards from the active uploads to
 the directories with the data.
 
 We may also want to consider having a cleanup operation in the S3 CLI to
@@ -1480,7 +1515,7 @@ The time to commit a job will be `O(files/threads)`
 Every `.pendingset` file in the job attempt directory must be loaded, and a PUT
 request issued for every incomplete upload listed in the files.
 
-Note that it is the bulk listing of all children which is where full consistency
+[Obsolete] Note that it is the bulk listing of all children which is where full consistency
 is required. If instead, the list of files to commit could be returned from
 tasks to the job committer, as the Spark commit protocol allows, it would be
 possible to commit data to an inconsistent object store.
@@ -1525,7 +1560,7 @@ commit algorithms.
 1. It is possible to create more than one client writing to the
 same destination file within the same S3A client/task, either sequentially or in parallel.
 
-1. Even with a consistent metadata store, if a job overwrites existing
+1. [Obsolete] Even with a consistent metadata store, if a job overwrites existing
 files, then old data may still be visible to clients reading the data, until
 the update has propagated to all replicas of the data.
 
@@ -1534,11 +1569,11 @@ a directory, then it is not going to work: the existing data will not be cleaned
 up. A cleanup operation would need to be included in the job commit, deleting
 all files in the destination directory which where not being overwritten.
 
-1. It requires a path element, such as `__magic` which cannot be used
+1. It requires a path element, such as `"MAGIC PATH"` which cannot be used
 for any purpose other than for the storage of pending commit data.
 
 1. Unless extra code is added to every FS operation, it will still be possible
-to manipulate files under the `__magic` tree. That's not bad, it just potentially
+to manipulate files under the `"MAGIC PATH"` tree. That's not bad, just potentially
 confusing.
 
 1. As written data is not materialized until the commit, it will not be possible
@@ -1657,9 +1692,9 @@ must be used, which means: the V2 classes.
 #### Resolved issues
 
 
-**Magic Committer: Name of directory**
+**Magic Committer: Directory Naming**
 
-The design proposes the name `__magic` for the directory. HDFS and
+The design proposes `__magic_job-` as the prefix for the magic paths of different jobs for the directory. HDFS and
 the various scanning routines always treat files and directories starting with `_`
 as temporary/excluded data.
 
@@ -1670,14 +1705,14 @@ It is legal to create subdirectories in a task work directory, which
 will then be moved into the destination directory, retaining that directory
 tree.
 
-That is, a if the task working dir is `dest/__magic/app1/task1/`, all files
-under `dest/__magic/app1/task1/part-0000/` must end up under the path
+That is, a if the task working dir is `dest/${MAGIC PATH}/app1/task1/`, all files
+under `dest/${MAGIC PATH}/app1/task1/part-0000/` must end up under the path
 `dest/part-0000/`.
 
 This behavior is relied upon for the writing of intermediate map data in an MR
 job.
 
-This means it is not simply enough to strip off all elements of under `__magic`,
+This means it is not simply enough to strip off all elements of under ``"MAGIC PATH"``,
 it is critical to determine the base path.
 
 Proposed: use the special name `__base` as a marker of the base element for
@@ -1692,14 +1727,6 @@ base for relative paths created underneath it.
 ## Testing
 
 The committers can only be tested against an S3-compatible object store.
-
-Although a consistent object store is a requirement for a production deployment
-of the magic committer an inconsistent one has appeared to work during testing, simply by
-adding some delays to the operations: a task commit does not succeed until
-all the objects which it has PUT are visible in the LIST operation. Assuming
-that further listings from the same process also show the objects, the job
-committer will be able to list and commit the uploads.
-
 
 The committers have some unit tests, and integration tests based on
 the protocol integration test lifted from `org.apache.hadoop.mapreduce.lib.output.TestFileOutputCommitter`
@@ -1766,7 +1793,8 @@ tree.
 Alternatively, the fact that Spark tasks provide data to the job committer on their
 completion means that a list of pending PUT commands could be built up, with the commit
 operations being executed by an S3A-specific implementation of the `FileCommitProtocol`.
-As noted earlier, this may permit the requirement for a consistent list operation
+
+[Obsolete] As noted earlier, this may permit the requirement for a consistent list operation
 to be bypassed. It would still be important to list what was being written, as
 it is needed to aid aborting work in failed tasks, but the list of files
 created by successful tasks could be passed directly from the task to committer,
@@ -1790,7 +1818,7 @@ directory on the job commit, so is *very* expensive, and not something which
 we recommend when working with S3.
 
 
-To use a S3Guard committer, it must also be identified as the Parquet committer.
+To use an S3A committer, it must also be identified as the Parquet committer.
 The fact that instances are dynamically instantiated somewhat complicates the process.
 
 In early tests; we can switch committers for ORC output without making any changes
@@ -1890,25 +1918,15 @@ bandwidth and the data upload bandwidth.
 
 No use is made of the cluster filesystem; there are no risks there.
 
-A consistent store is required, which, for Amazon's infrastructure, means S3Guard.
-This is covered below.
-
-A malicious user with write access to the `__magic` directory could manipulate
+A malicious user with write access to the ``"MAGIC PATH"`` directory could manipulate
 or delete the metadata of pending uploads, or potentially inject new work int
-the commit. Having access to the `__magic` directory implies write access
+the commit. Having access to the ``"MAGIC PATH"`` directory implies write access
 to the parent destination directory: a malicious user could just as easily
 manipulate the final output, without needing to attack the committer's intermediate
 files.
 
-
 ### Security Risks of all committers
 
-
-#### Visibility
-
-* If S3Guard is used for storing metadata, then the metadata is visible to
-all users with read access. A malicious user with write access could delete
-entries of newly generated files, so they would not be visible.
 
 
 #### Malicious Serialized Data
@@ -1941,7 +1959,7 @@ any of the text fields, script which could then be executed in some XSS
 attack. We may wish to consider sanitizing this data on load.
 
 * Paths in tampered data could be modified in an attempt to commit an upload across
-an existing file, or the MPU ID alterated to prematurely commit a different upload.
+an existing file, or the MPU ID altered to prematurely commit a different upload.
 These attempts will not going to succeed, because the destination
 path of the upload is declared on the initial POST to initiate the MPU, and
 operations associated with the MPU must also declare the path: if the path and

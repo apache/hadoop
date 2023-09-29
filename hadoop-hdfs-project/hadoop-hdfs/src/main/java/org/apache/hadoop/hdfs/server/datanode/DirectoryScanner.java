@@ -41,20 +41,20 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.ScanInfo;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
  * Periodically scans the data directories for block and block metadata files.
@@ -66,7 +66,8 @@ public class DirectoryScanner implements Runnable {
       LoggerFactory.getLogger(DirectoryScanner.class);
 
   private static final int DEFAULT_MAP_SIZE = 32768;
-
+  private final int reconcileBlocksBatchSize;
+  private final long reconcileBlocksBatchInterval;
   private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
@@ -141,7 +142,8 @@ public class DirectoryScanner implements Runnable {
           + ", missing metadata files: " + missingMetaFile
           + ", missing block files: " + missingBlockFile
           + ", missing blocks in memory: " + missingMemoryBlocks
-          + ", mismatched blocks: " + mismatchBlocks;
+          + ", mismatched blocks: " + mismatchBlocks
+          + ", duplicated blocks: " + duplicateBlocks;
     }
   }
 
@@ -174,7 +176,8 @@ public class DirectoryScanner implements Runnable {
     /**
      * Create a new info list initialized to the given expected size.
      *
-     * @param sz initial expected size
+     * @param volume
+     * @param blockPools list of known block pools
      */
     ScanInfoVolumeReport(final FsVolumeSpi volume,
         final Collection<String> blockPools) {
@@ -221,8 +224,6 @@ public class DirectoryScanner implements Runnable {
 
     /**
      * Create a block pool report.
-     *
-     * @param volume
      */
     BlockPoolReport() {
       this.blockPools = new HashSet<>(2);
@@ -317,13 +318,49 @@ public class DirectoryScanner implements Runnable {
 
     masterThread =
         new ScheduledThreadPoolExecutor(1, new Daemon.DaemonFactory());
+
+    int reconcileBatchSize =
+        conf.getInt(DFSConfigKeys.
+                DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE,
+            DFSConfigKeys.
+                DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE_DEFAULT);
+
+    if (reconcileBatchSize <= 0) {
+      LOG.warn("Invalid value configured for " +
+              "dfs.datanode.reconcile.blocks.batch.size, " +
+              "should be greater than 0, Using default.");
+      reconcileBatchSize =
+          DFSConfigKeys.
+              DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE_DEFAULT;
+    }
+
+    reconcileBlocksBatchSize = reconcileBatchSize;
+
+    long reconcileBatchInterval =
+        conf.getTimeDuration(DFSConfigKeys.
+                DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL,
+            DFSConfigKeys.
+                DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+
+    if (reconcileBatchInterval <= 0) {
+      LOG.warn("Invalid value configured for " +
+              "dfs.datanode.reconcile.blocks.batch.interval, " +
+              "should be greater than 0, Using default.");
+      reconcileBatchInterval =
+          DFSConfigKeys.
+              DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL_DEFAULT;
+    }
+
+    reconcileBlocksBatchInterval = reconcileBatchInterval;
   }
 
   /**
    * Start the scanner. The scanner will run every
    * {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY} seconds.
    */
-  void start() {
+  @VisibleForTesting
+  public void start() {
     shouldRun.set(true);
     long firstScanTime = ThreadLocalRandom.current().nextLong(scanPeriodMsecs);
 
@@ -349,12 +386,14 @@ public class DirectoryScanner implements Runnable {
    * Clear the current cache of diffs and statistics.
    */
   private void clear() {
-    diffs.clear();
+    synchronized (diffs) {
+      diffs.clear();
+    }
     stats.clear();
   }
 
   /**
-   * Main program loop for DirectoryScanner. Runs {@link reconcile()} and
+   * Main program loop for DirectoryScanner. Runs {@link #reconcile()} and
    * handles any exceptions.
    */
   @Override
@@ -367,6 +406,7 @@ public class DirectoryScanner implements Runnable {
     }
     try {
       reconcile();
+      dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
     } catch (Exception e) {
       // Log and continue - allows Executor to run again next cycle
       LOG.error(
@@ -424,10 +464,25 @@ public class DirectoryScanner implements Runnable {
    */
   @VisibleForTesting
   public void reconcile() throws IOException {
+    LOG.debug("reconcile start DirectoryScanning");
     scan();
 
-    for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
-      dataset.checkAndUpdate(entry.getKey(), entry.getValue());
+    // HDFS-14476: run checkAndUpdate with batch to avoid holding the lock too
+    // long
+    int loopCount = 0;
+    synchronized (diffs) {
+      for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
+        dataset.checkAndUpdate(entry.getKey(), entry.getValue());
+
+        if (loopCount % reconcileBlocksBatchSize == 0) {
+          try {
+            Thread.sleep(reconcileBlocksBatchInterval);
+          } catch (InterruptedException e) {
+            // do nothing
+          }
+        }
+        loopCount++;
+      }
     }
 
     if (!retainDiffs) {
@@ -455,48 +510,53 @@ public class DirectoryScanner implements Runnable {
     // Pre-sort the reports outside of the lock
     blockPoolReport.sortBlocks();
 
-    // Hold FSDataset lock to prevent further changes to the block map
-    try (AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      for (final String bpid : blockPoolReport.getBlockPoolIds()) {
-        List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);
+    for (final String bpid : blockPoolReport.getBlockPoolIds()) {
+      List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);
 
-        Stats statsRecord = new Stats(bpid);
-        stats.put(bpid, statsRecord);
-        Collection<ScanInfo> diffRecord = new ArrayList<>();
+      Stats statsRecord = new Stats(bpid);
+      stats.put(bpid, statsRecord);
+      Collection<ScanInfo> diffRecord = new ArrayList<>();
 
-        statsRecord.totalBlocks = blockpoolReport.size();
-        final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
-        Collections.sort(bl); // Sort based on blockId
+      statsRecord.totalBlocks = blockpoolReport.size();
+      final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
+      Collections.sort(bl); // Sort based on blockId
 
-        int d = 0; // index for blockpoolReport
-        int m = 0; // index for memReprot
-        while (m < bl.size() && d < blockpoolReport.size()) {
-          ReplicaInfo memBlock = bl.get(m);
-          ScanInfo info = blockpoolReport.get(d);
-          if (info.getBlockId() < memBlock.getBlockId()) {
-            if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
-              // Block is missing in memory
-              statsRecord.missingMemoryBlocks++;
-              addDifference(diffRecord, statsRecord, info);
-            }
-            d++;
-            continue;
+      int d = 0; // index for blockpoolReport
+      int m = 0; // index for memReprot
+      while (m < bl.size() && d < blockpoolReport.size()) {
+        ReplicaInfo memBlock = bl.get(m);
+        ScanInfo info = blockpoolReport.get(d);
+        if (info.getBlockId() < memBlock.getBlockId()) {
+          if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
+            // Block is missing in memory
+            statsRecord.missingMemoryBlocks++;
+            addDifference(diffRecord, statsRecord, info);
           }
-          if (info.getBlockId() > memBlock.getBlockId()) {
-            // Block is missing on the disk
-            addDifference(diffRecord, statsRecord, memBlock.getBlockId(),
-                info.getVolume());
-            m++;
-            continue;
-          }
+          d++;
+          continue;
+        }
+        if (info.getBlockId() > memBlock.getBlockId()) {
+          // Block is missing on the disk
+          addDifference(diffRecord, statsRecord, memBlock.getBlockId(),
+              info.getVolume());
+          m++;
+          continue;
+        }
+
+        // Block and meta must be regular file
+        boolean isRegular = FileUtil.isRegularFile(info.getBlockFile(), false) &&
+                FileUtil.isRegularFile(info.getMetaFile(), false);
+        if (!isRegular) {
+          statsRecord.mismatchBlocks++;
+          addDifference(diffRecord, statsRecord, info);
+        } else {
           // Block file and/or metadata file exists on the disk
           // Block exists in memory
-          if (info.getVolume().getStorageType() != StorageType.PROVIDED
-              && info.getBlockFile() == null) {
+          if (info.getBlockFile() == null) {
             // Block metadata file exits and block file is missing
             addDifference(diffRecord, statsRecord, info);
           } else if (info.getGenStamp() != memBlock.getGenerationStamp()
-              || info.getBlockLength() != memBlock.getNumBytes()) {
+                  || info.getBlockLength() != memBlock.getNumBytes()) {
             // Block metadata file is missing or has wrong generation stamp,
             // or block file length is different than expected
             statsRecord.mismatchBlocks++;
@@ -506,35 +566,37 @@ public class DirectoryScanner implements Runnable {
             statsRecord.duplicateBlocks++;
             addDifference(diffRecord, statsRecord, info);
           }
-          d++;
+        }
+        d++;
 
-          if (d < blockpoolReport.size()) {
-            // There may be multiple on-disk records for the same block, do not
-            // increment the memory record pointer if so.
-            ScanInfo nextInfo = blockpoolReport.get(d);
-            if (nextInfo.getBlockId() != info.getBlockId()) {
-              ++m;
-            }
-          } else {
+        if (d < blockpoolReport.size()) {
+          // There may be multiple on-disk records for the same block, do not
+          // increment the memory record pointer if so.
+          ScanInfo nextInfo = blockpoolReport.get(d);
+          if (nextInfo.getBlockId() != info.getBlockId()) {
             ++m;
           }
+        } else {
+          ++m;
         }
-        while (m < bl.size()) {
-          ReplicaInfo current = bl.get(m++);
-          addDifference(diffRecord, statsRecord, current.getBlockId(),
-              current.getVolume());
-        }
-        while (d < blockpoolReport.size()) {
-          if (!dataset.isDeletingBlock(bpid,
-              blockpoolReport.get(d).getBlockId())) {
-            statsRecord.missingMemoryBlocks++;
-            addDifference(diffRecord, statsRecord, blockpoolReport.get(d));
-          }
-          d++;
-        }
-        diffs.addAll(bpid, diffRecord);
-        LOG.info("Scan Results: {}", statsRecord);
       }
+      while (m < bl.size()) {
+        ReplicaInfo current = bl.get(m++);
+        addDifference(diffRecord, statsRecord, current.getBlockId(),
+            current.getVolume());
+      }
+      while (d < blockpoolReport.size()) {
+        if (!dataset.isDeletingBlock(bpid,
+            blockpoolReport.get(d).getBlockId())) {
+          statsRecord.missingMemoryBlocks++;
+          addDifference(diffRecord, statsRecord, blockpoolReport.get(d));
+        }
+        d++;
+      }
+      synchronized (diffs) {
+        diffs.addAll(bpid, diffRecord);
+      }
+      LOG.info("Scan Results: {}", statsRecord);
     }
   }
 
@@ -568,7 +630,7 @@ public class DirectoryScanner implements Runnable {
       long blockId, FsVolumeSpi vol) {
     statsRecord.missingBlockFile++;
     statsRecord.missingMetaFile++;
-    diffRecord.add(new ScanInfo(blockId, null, null, vol));
+    diffRecord.add(new ScanInfo(blockId, null, null, null, vol));
   }
 
   /**

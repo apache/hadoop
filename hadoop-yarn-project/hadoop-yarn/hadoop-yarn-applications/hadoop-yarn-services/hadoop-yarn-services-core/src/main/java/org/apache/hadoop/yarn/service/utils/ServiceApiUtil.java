@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
@@ -64,6 +64,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_DOES_NOT_NEED_UPGRADE;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE;
@@ -73,20 +75,20 @@ public class ServiceApiUtil {
       LoggerFactory.getLogger(ServiceApiUtil.class);
   public static JsonSerDeser<Service> jsonSerDeser =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   public static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
       new JsonSerDeser<>(Container[].class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   public static final JsonSerDeser<ComponentContainers[]>
       COMP_CONTAINERS_JSON_SERDE = new JsonSerDeser<>(
           ComponentContainers[].class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   public static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
       new JsonSerDeser<>(Component[].class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
@@ -246,6 +248,16 @@ public class ServiceApiUtil {
     }
   }
 
+  public static void validateJvmOpts(String jvmOpts)
+      throws IllegalArgumentException {
+    Pattern pattern = Pattern.compile("[!~#?@*&%${}()<>\\[\\]|\",`;]");
+    Matcher matcher = pattern.matcher(jvmOpts);
+    if (matcher.find()) {
+      throw new IllegalArgumentException(
+          RestApiErrorMessages.ERROR_JVM_OPTS);
+    }
+  }
+
   public static void validateKerberosPrincipal(
       KerberosPrincipal kerberosPrincipal) throws IOException {
     if (!StringUtils.isEmpty(kerberosPrincipal.getPrincipalName())) {
@@ -341,19 +353,6 @@ public class ServiceApiUtil {
               RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL,
               constraint.getName() == null ? "" : constraint.getName() + " ",
               comp.getName()));
-          }
-          if (constraint.getTargetTags().isEmpty()) {
-            throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
-              constraint.getName() == null ? "" : constraint.getName() + " ",
-              comp.getName()));
-          }
-          for (String targetTag : constraint.getTargetTags()) {
-            if (!comp.getName().equals(targetTag)) {
-              throw new IllegalArgumentException(String.format(
-                  RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
-                  targetTag, comp.getName(), comp.getName(), comp.getName()));
-            }
           }
         }
       }

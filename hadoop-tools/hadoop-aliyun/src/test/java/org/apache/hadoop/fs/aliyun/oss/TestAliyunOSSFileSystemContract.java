@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -46,6 +47,8 @@ import static org.junit.Assume.assumeTrue;
 public class TestAliyunOSSFileSystemContract
     extends FileSystemContractBaseTest {
   public static final String TEST_FS_OSS_NAME = "test.fs.oss.name";
+  public static final String FS_OSS_IMPL_DISABLE_CACHE
+      = "fs.oss.impl.disable.cache";
   private static Path testRootPath =
       new Path(AliyunOSSTestUtils.generateUniqueTestPath());
 
@@ -94,6 +97,28 @@ public class TestAliyunOSSFileSystemContract
         UserGroupInformation.getCurrentUser().getShortUserName());
     assertEquals(fs.getGroup(),
         UserGroupInformation.getCurrentUser().getShortUserName());
+  }
+
+  @Test
+  public void testGetFileStatusInVersioningBucket() throws Exception {
+    Path file = this.path("/test/hadoop/file");
+    for (int i = 1; i <= 30; ++i) {
+      this.createFile(new Path(file, "sub" + i));
+    }
+    assertTrue("File exists", this.fs.exists(file));
+    FileStatus fs = this.fs.getFileStatus(file);
+    assertEquals(fs.getOwner(),
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals(fs.getGroup(),
+        UserGroupInformation.getCurrentUser().getShortUserName());
+
+    AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
+    for (int i = 0; i < 29; ++i) {
+      store.deleteObjects(Arrays.asList("test/hadoop/file/sub" + i));
+    }
+
+    // HADOOP-16840, will throw FileNotFoundException without this fix
+    this.fs.getFileStatus(file);
   }
 
   @Test
@@ -390,7 +415,7 @@ public class TestAliyunOSSFileSystemContract
     Thread thread = new Thread(task);
     thread.start();
     while (!task.isRunning()) {
-      Thread.sleep(1000);
+      Thread.sleep(1);
     }
 
     if (changing) {
@@ -398,7 +423,11 @@ public class TestAliyunOSSFileSystemContract
     }
 
     thread.join();
-    assertEquals(result, task.isSucceed());
+    if (changing) {
+      assertTrue(task.isSucceed() || fs.exists(this.path("a")));
+    } else {
+      assertEquals(result, task.isSucceed());
+    }
   }
 
   class TestRenameTask implements Runnable {
@@ -428,6 +457,8 @@ public class TestAliyunOSSFileSystemContract
         running = true;
         result = fs.rename(srcPath, dstPath);
       } catch (Exception e) {
+        e.printStackTrace();
+        this.result = false;
       }
     }
   }

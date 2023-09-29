@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 /**
  * Utility class for Federation policy.
  */
@@ -48,7 +50,7 @@ public final class FederationPolicyUtils {
   public static final String NO_ACTIVE_SUBCLUSTER_AVAILABLE =
       "No active SubCluster available to submit the request.";
 
-  private static final Random RAND = new Random(System.currentTimeMillis());
+  private static Random rand = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private FederationPolicyUtils() {
@@ -186,8 +188,8 @@ public final class FederationPolicyUtils {
    * @throws FederationPolicyException if there are no usable subclusters.
    */
   public static void validateSubClusterAvailability(
-      List<SubClusterId> activeSubClusters,
-      List<SubClusterId> blackListSubClusters)
+      Collection<SubClusterId> activeSubClusters,
+      Collection<SubClusterId> blackListSubClusters)
       throws FederationPolicyException {
     if (activeSubClusters != null && !activeSubClusters.isEmpty()) {
       if (blackListSubClusters == null) {
@@ -223,7 +225,7 @@ public final class FederationPolicyUtils {
     if (totalWeight == 0) {
       return -1;
     }
-    float samplePoint = RAND.nextFloat() * totalWeight;
+    float samplePoint = rand.nextFloat() * totalWeight;
     int lastIndex = 0;
     for (i = 0; i < weights.size(); i++) {
       if (weights.get(i) > 0) {
@@ -235,8 +237,13 @@ public final class FederationPolicyUtils {
         }
       }
     }
-    // This can only happen if samplePoint is very close to totoalWeight and
+    // This can only happen if samplePoint is very close to totalWeight and
     // float rounding kicks in during subtractions
     return lastIndex;
+  }
+
+  @VisibleForTesting
+  public static void setRand(long seed){
+    rand.setSeed(seed);
   }
 }

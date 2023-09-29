@@ -23,17 +23,17 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.commons.io.IOUtils;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.file.tfile.BoundedRangeFileInputStream;
 import org.apache.hadoop.io.file.tfile.Compression;
@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregation
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController.IndexedLogsMeta;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController.IndexedPerAggregationLogMeta;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 
 /**
  * The Aggregated Logs Block implementation for Indexed File.
@@ -232,7 +231,7 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
         } finally {
-          IOUtils.closeQuietly(in);
+          IOUtils.closeStream(in);
         }
       }
     }

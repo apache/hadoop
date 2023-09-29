@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
@@ -50,6 +52,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
@@ -59,6 +62,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -93,9 +97,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
@@ -105,7 +109,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestRMAdminService {
 
-  private Configuration configuration;;
+  private Configuration configuration;
   private MockRM rm = null;
   private FileSystem fs;
   private Path workingPath;
@@ -171,6 +175,39 @@ public class TestRMAdminService {
       fail("Using localConfigurationProvider. Should not get any exception.");
     }
   }
+
+
+  @Test
+  public void testFileSystemCloseWithFileSystemBasedConfigurationProvider()
+      throws Exception {
+    MiniDFSCluster hdfsCluster = null;
+    try {
+      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+          .numDataNodes(1).build();
+      FileSystem fs1 = hdfsCluster.getFileSystem();
+      ConfigurationProvider configurationProvider = new
+          FileSystemBasedConfigurationProvider();
+      configurationProvider.init(hdfsConfig);
+      fs1.close();
+      try {
+        configurationProvider.getConfigurationInputStream(hdfsConfig,
+            "yarn-site.xml");
+      } catch (IOException e) {
+        if (e.getMessage().contains("Filesystem closed")) {
+          fail("FileSystemBasedConfigurationProvider failed to handle " +
+              "FileSystem close");
+        } else {
+          fail("Should not get any exceptions");
+        }
+      }
+    } finally {
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
+    }
+  }
+
 
   @Test
   public void testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider()
@@ -1420,6 +1457,11 @@ public class TestRMAdminService {
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
       // Do nothing
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return ImmutableSet.copyOf(group);
     }
 
     public static void updateGroups() {

@@ -108,9 +108,73 @@
   </property>
 
   <property>
-    <description>The expiry interval for application master reporting.</description>
+    <description>
+      The threshold used to trigger the logging of event types
+      and counts in RM's main event dispatcher. Default length is 5000,
+      which means RM will print events info when the queue size cumulatively
+      reaches 5000 every time. Such info can be used to reveal what kind of events
+      that RM is stuck at processing mostly, it can help to
+      narrow down certain performance issues.
+    </description>
+    <name>yarn.dispatcher.print-events-info.threshold</name>
+    <value>5000</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher thread cpu monitor sampling rate.
+      Units are samples per minute.  This controls how often to sample
+      the cpu utilization of the resource manager dispatcher thread.
+      The cpu utilization is displayed on the RM UI as scheduler busy %.
+      Set this to zero to disable the dispatcher thread monitor.  Defaults
+      to 60 samples per minute.
+    </description>
+    <name>yarn.dispatcher.cpu-monitor.samples-per-min</name>
+    <value>60</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the corePoolSize of this thread pool,
+      the meaning of corePoolSize is the number of threads to keep in the pool.
+      the default value is 1.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.core-pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the maximumPoolSize of this thread pool,
+      the meaning of maximumPoolSize is the maximum number of threads to allow in the pool.
+      the default value is 5.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the keepAliveTime of this thread pool,
+      The meaning of keepAliveTime is as follows
+      when the number of threads is greater than the core,
+      this is the maximum time that excess idle threads will wait for new tasks before terminating.
+      the default value is 10s.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.keep-alive-time</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      The expiry interval for application master reporting.
+      The default is 900000 ms, or 15m.
+    </description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
-    <value>600000</value>
+    <value>900000</value>
   </property>
 
   <property>
@@ -244,6 +308,12 @@
   </property>
 
   <property>
+    <description>Enable tools section in all ui1 webapp.</description>
+    <name>yarn.webapp.ui1.tools.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>
       Explicitly provide WAR file path for ui2 if needed.
     </description>
@@ -314,11 +384,10 @@
   </property>
 
   <property>
-    <description>The maximum number of application attempts. It's a global
-    setting for all application masters. Each application master can specify
-    its individual maximum number of application attempts via the API, but the
-    individual number cannot be more than the global upper bound. If it is,
-    the resourcemanager will override it. The default number is set to 2, to
+    <description>The default maximum number of application attempts, if unset by
+    the user. Each application master can specify its individual maximum number of application
+    attempts via the API, but the individual number cannot be more than the global upper bound in
+    yarn.resourcemanager.am.global.max-attempts. The default number is set to 2, to
     allow at least one retry for AM.</description>
     <name>yarn.resourcemanager.am.max-attempts</name>
     <value>2</value>
@@ -673,6 +742,12 @@
   </property>
 
   <property>
+    <description>Enable SSL/TLS encryption for the ZooKeeper communication.</description>
+    <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
@@ -713,6 +788,14 @@
       org.apache.hadoop.yarn.client.RMFailoverProxyProvider</description>
     <name>yarn.client.failover-proxy-provider</name>
     <value>org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider</value>
+  </property>
+
+  <property>
+    <description>When HA is not enabled, the class to be used by Clients, AMs and
+      NMs to retry connecting to the Active RM. It should extend
+      org.apache.hadoop.yarn.client.RMFailoverProxyProvider</description>
+    <name>yarn.client.failover-no-ha-proxy-provider</name>
+    <value>org.apache.hadoop.yarn.client.DefaultNoHARMFailoverProxyProvider</value>
   </property>
 
   <property>
@@ -785,6 +868,16 @@
   </property>
 
   <property>
+    <description>If true, ResourceManager will always try to cancel delegation
+      tokens after the application completes, even if the client sets
+      shouldCancelAtEnd false.  References to delegation tokens are tracked,
+      so they will not be canceled until all sub-tasks are done using them.
+    </description>
+    <name>yarn.resourcemanager.delegation-token.always-cancel</name>
+    <value>false</value>
+  </property>
+
+  <property>
   <description>If true, ResourceManager will have proxy-user privileges.
     Use case: In a secure cluster, YARN requires the user hdfs delegation-tokens to
     do localization and log-aggregation on behalf of the user. If this is set to true,
@@ -822,6 +915,63 @@
     <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
     <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>Enables heart-beat interval scaling.  The NodeManager
+      heart-beat interval will scale based on the difference between the CPU
+      utilization on the node and the cluster-wide average CPU utilization.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable
+    </name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      minimum heart-beat interval in milliseconds
+    </description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      maximum heart-beat interval in milliseconds</description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when speeding up heartbeat intervals.
+      At 1.0, 20% less than average CPU utilization will result in a 20%
+      decrease in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor
+    </name>
+    <value>1.0</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when slowing down heartbeat intervals.
+      At 1.0, 20% greater than average CPU utilization will result in a 20%
+      increase in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-slowdown-factor
+    </name>
+    <value>1.0</value>
+  </property>
+
+  <property>
+    <description>The Number of consecutive missed heartbeats after which node will be
+    skipped from scheduling</description>
+    <name>yarn.scheduler.skip.node.multiplier</name>
+    <value>2</value>
   </property>
 
   <property>
@@ -903,6 +1053,33 @@
   </property>
 
   <property>
+    <description>
+      This setting enables/disables timeline server v1 publisher to publish timeline events in batch.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.enable-batch</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The size of timeline server v1 publisher sending events in one request.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.batch-size</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      When enable batch publishing in timeline server v1, we must avoid that the
+      publisher waits for a batch to be filled up and hold events in buffer for long
+      time. So we add another thread which send event's in the buffer periodically.
+      This config sets the interval of the cyclical sending thread.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.interval-seconds</name>
+    <value>60</value>
+  </property>
+
+  <property>
     <description>Number of diagnostics/failure messages can be saved in RM for
     log aggregation. It also defines the number of diagnostics/failure
     messages can be shown in log aggregation web ui.</description>
@@ -942,6 +1119,42 @@
     </description>
     <name>yarn.resourcemanager.delegation.token.renew-interval</name>
     <value>86400000</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration is used for
+      how often the tokens are scanned for expired tokens in milliseconds.
+      the background thread(delegation token remover thread)
+      will delete expired tokens after the configured time.
+      the default value is 1h.
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
+    RM DelegationTokenRenewer thread timeout
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+    Default maximum number of retries for each RM DelegationTokenRenewer thread
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-max-attempts</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Time interval between each RM DelegationTokenRenewer thread retry attempt
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-interval</name>
+    <value>60s</value>
   </property>
 
   <property>
@@ -1079,6 +1292,17 @@
   </property>
 
   <property>
+    <description>
+      * PATH components that will be prepended to the user's path.
+      * If this is defined and the user does not define PATH, NM will also
+      * append ":$PATH" to prevent this from eclipsing the PATH defined in
+      * the container. This feature is only available for Linux.
+    </description>
+    <name>yarn.nodemanager.force.path</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Environment variables that containers may override rather than use NodeManager's default.</description>
     <name>yarn.nodemanager.env-whitelist</name>
     <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ</value>
@@ -1115,8 +1339,36 @@
   </property>
 
   <property>
-    <description>Max number of OPPORTUNISTIC containers to queue at the
-      nodemanager.</description>
+    <description>
+      How long the container executor should wait for the exit code file to
+      appear after a reacquired container has exited.
+    </description>
+    <name>yarn.nodemanager.container-executor.exit-code-file.timeout-ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
+    <description>
+      At the NM, the policy to determine whether to queue an
+      OPPORTUNISTIC container or not.
+      If set to BY_QUEUE_LEN, uses the queue capacity, as set by
+      yarn.nodemanager.opportunistic-containers-max-queue-length
+      to limit how many containers to accept/queue.
+      If set to BY_RESOURCES, limits the number of containers
+      accepted based on the resource capacity of the node.
+    </description>
+    <name>yarn.nodemanager.opportunistic-containers-queue-policy</name>
+    <value>BY_QUEUE_LEN</value>
+  </property>
+
+  <property>
+    <description>
+      Max number of OPPORTUNISTIC containers to queue at the
+      nodemanager (NM). If the value is 0 or negative,
+      NMs do not allow any OPPORTUNISTIC containers.
+      If the value is positive, the NM caps the number of OPPORTUNISTIC
+      containers that can be queued at the NM.
+    </description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
     <value>0</value>
   </property>
@@ -1233,6 +1485,17 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
+    <value>true</value>
+    <description>Since on JDK17 it is no longer possible to use the reflection API to
+      access public fields and methods, add-exports flags should be added to container
+      localizers regardless of the user specified JAVA_OPTS. Setting this to true will
+      add the flags to the container localizer on nodes with JDK17 or higher.
+      Defaults to true, but the setting has no effect on nodes using JDK16 and before.
+    </description>
+  </property>
+
+  <property>
     <description>
       The log level for container localizer while it is an independent process.
     </description>
@@ -1276,6 +1539,27 @@
   </property>
 
   <property>
+    <description>
+      Whether to enable application placement based on user ID passed via
+      application tags. When it is enabled, userid=&lt;userId&gt;
+      pattern will be checked and if found, the application will be placed
+      onto the found user's queue,
+      if the original user has enough rights on the passed user's queue.
+    </description>
+    <name>yarn.resourcemanager.application-tag-based-placement.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Comma separated list of users who can use the application tag based
+      placement, if it is enabled.
+    </description>
+    <name>yarn.resourcemanager.application-tag-based-placement.username.whitelist</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>How long to keep aggregation logs before deleting them.  -1 disables. 
     Be careful set this too small and you will spam the name node.</description>
     <name>yarn.log-aggregation.retain-seconds</name>
@@ -1289,6 +1573,14 @@
     you will spam the name node.</description>
     <name>yarn.log-aggregation.retain-check-interval-seconds</name>
     <value>-1</value>
+  </property>
+
+  <property>
+    <description>The log files created under NM Local Directories
+    will be logged if it exceeds the configured bytes. This
+    only takes effect if log4j level is at least Debug.</description>
+    <name>yarn.log-aggregation.debug.filesize</name>
+    <value>104857600</value>
   </property>
 
   <property>
@@ -1324,6 +1616,15 @@
   </property>
 
   <property>
+    <description>Whether to clean up nodemanager logs when log aggregation is enabled. Setting to
+      false disables the cleanup nodemanager logging, and it causes disk full in the long run. Users
+      can set to false for test-only purpose.
+    </description>
+    <name>yarn.log-aggregation.enable-local-cleanup</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Time in seconds to retain user logs. Only applicable if
     log aggregation is disabled
     </description>
@@ -1353,6 +1654,14 @@
   </property>
 
   <property>
+    <description>If the NodeManager creates the remote-app-log-dir folder,
+    it will be created with this groupname.
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir.groupname</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Generate additional logs about container launches.
     Currently, this creates a copy of the launch script and lists the
     directory contents of the container work dir. When listing directory
@@ -1362,6 +1671,21 @@
     </description>
     <name>yarn.nodemanager.log-container-debug-info.enabled</name>
     <value>true</value>
+  </property>
+
+  <property>
+    <description>Generate additional logs about container launches,
+      if container returned with non-zero exit code.
+      Currently, this creates a copy of the launch script and lists the
+      directory contents of the container work dir. When listing directory
+      contents, we follow symlinks to a max-depth of 5(including symlinks
+      which point to outside the container work dir) which may lead to a
+      slowness in launching containers.
+      If yarn.nodemanager.log-container-debug-info.enabled is true,
+      it does not have effect on the behavior.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info-on-error.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -1560,6 +1884,34 @@
   </property>
 
   <property>
+    <description>Flag to enable the container log monitor which enforces
+      container log directory size limits.</description>
+    <name>yarn.nodemanager.container-log-monitor.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>How often to check the usage of a container's log directories
+      in milliseconds</description>
+    <name>yarn.nodemanager.container-log-monitor.interval-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for a single
+      container log directory</description>
+    <name>yarn.nodemanager.container-log-monitor.dir-size-limit-bytes</name>
+    <value>1000000000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for all of a container's
+      logs</description>
+    <name>yarn.nodemanager.container-log-monitor.total-size-limit-bytes</name>
+    <value>10000000000</value>
+  </property>
+
+  <property>
     <description>Class that calculates containers current resource utilization.
     If not set, the value for yarn.nodemanager.resource-calculator.class will
     be used.</description>
@@ -1567,27 +1919,28 @@
   </property>
 
   <property>
-    <description>Frequency of running node health script.</description>
-    <name>yarn.nodemanager.health-checker.interval-ms</name>
-    <value>600000</value>
+    <description>The nodemanager health check scripts to run.</description>
+    <name>yarn.nodemanager.health-checker.scripts</name>
+    <value>script</value>
   </property>
 
   <property>
-    <description>Script time out period.</description>
-    <name>yarn.nodemanager.health-checker.script.timeout-ms</name>
+    <description>Health check script time out period.</description>
+    <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
   </property>
 
   <property>
-    <description>The health check script to run.</description>
-    <name>yarn.nodemanager.health-checker.script.path</name>
-    <value></value>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
   </property>
 
   <property>
-    <description>The arguments to pass to the health check script.</description>
-    <name>yarn.nodemanager.health-checker.script.opts</name>
-    <value></value>
+    <description>Frequency of running node health scripts.</description>
+    <name>yarn.nodemanager.health-checker.interval-ms</name>
+    <value>600000</value>
   </property>
 
   <property>
@@ -1607,11 +1960,26 @@
   </property>
 
   <property>
+    <description>Enable/Disable the disk utilisation percentage
+      threshold for disk health checker.</description>
+    <name>yarn.nodemanager.disk-health-checker.disk-utilization-threshold.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description> Enable/Disable the minimum disk free
+      space threshold for disk health checker.</description>
+    <name>yarn.nodemanager.disk-health-checker.disk-free-space-threshold.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
     for full disk. This applies to yarn.nodemanager.local-dirs and
-    yarn.nodemanager.log-dirs.</description>
+    yarn.nodemanager.log-dirs when
+      yarn.nodemanager.disk-health-checker.disk-utilization-threshold.enabled is true.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
     <value>90.0</value>
   </property>
@@ -1628,10 +1996,24 @@
   </property>
 
   <property>
-    <description>The minimum space that must be available on a disk for
-    it to be used. This applies to yarn.nodemanager.local-dirs and
-    yarn.nodemanager.log-dirs.</description>
+    <description>The minimum space in megabytes that must be available on a disk for
+    it to be used. If space on a disk falls below this threshold, it will be marked
+    as bad. This applies to yarn.nodemanager.local-dirs and
+    yarn.nodemanager.log-dirs when
+      yarn.nodemanager.disk-health-checker.disk-free-space-threshold.enabled is true.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>The minimum space in megabytes that must be available on a bad
+    disk for it to be marked as good.  This value should not be less
+    than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    If it is less than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb,
+    or it is not set, it will be set to the
+    same value as yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    This applies to yarn.nodemanager.local-dirs and yarn.nodemanager.log-dirs.</description>
+    <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-watermark-high-mb</name>
     <value>0</value>
   </property>
 
@@ -1740,7 +2122,7 @@
 
   <property>
     <description>Comma separated list of runtimes that are allowed when using
-    LinuxContainerExecutor. The allowed values are default, docker, and
+    LinuxContainerExecutor. The allowed values are default, docker, runc, and
     javasandbox.</description>
     <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
     <value>default</value>
@@ -1883,6 +2265,144 @@
   </property>
 
   <property>
+    <description>The runC image tag to manifest plugin
+      class to be used.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.ImageTagToManifestPlugin</value>
+  </property>
+
+  <property>
+    <description>The runC manifest to resources plugin class to
+      be used.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.manifest-to-resources-plugin</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.HdfsManifestToResourcesPlugin</value>
+  </property>
+
+  <property>
+    <description>The HDFS location under which the oci image manifests, layers,
+      and configs directories exist.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-toplevel-dir</name>
+    <value>/runc-root</value>
+  </property>
+
+  <property>
+    <description>Target count of layer mounts that we should keep on disk
+      at one time.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.layer-mounts-to-keep</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>The interval in seconds between executions of
+      reaping layer mounts.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.layer-mounts-interval-secs</name>
+    <value>600</value>
+  </property>
+
+  <property>
+    <description>Image to be used if no other image is specified.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-name</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Allow or disallow privileged containers.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.privileged-containers.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The set of networks allowed when launching containers
+      using the RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+  </property>
+
+  <property>
+    <description>The set of runtimes allowed when launching containers
+      using the RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.allowed-container-runtimes</name>
+    <value>runc</value>
+  </property>
+
+  <property>
+    <description>ACL list for users allowed to run privileged
+      containers.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.privileged-containers.acl</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Allow host pid namespace for runC containers.
+      Use with care.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.host-pid-namespace.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The default list of read-only mounts to be bind-mounted
+      into all runC containers that use RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.default-ro-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The default list of read-write mounts to be bind-mounted
+      into all runC containers that use RuncContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.default-rw-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Path to the seccomp profile to use with runC
+      containers</description>
+    <name>yarn.nodemanager.runtime.linux.runc.seccomp-profile</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The HDFS location where the runC image tag to hash
+      file exists.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.hdfs-hash-file</name>
+    <value>/runc-root/image-tag-to-hash</value>
+  </property>
+
+  <property>
+    <description>The local file system location where the runC image tag
+      to hash file exists.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.local-hash-file</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The interval in seconds between refreshing the hdfs image tag
+      to hash cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.cache-refresh-interval-secs</name>
+    <value>60</value>
+  </property>
+
+  <property>
+    <description>The number of manifests to cache in the image tag
+      to hash cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.num-manifests-to-cache</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The timeout value in seconds for the values in
+      the stat cache.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.hdfs-manifest-to-resources-plugin.stat-cache-timeout-interval-secs</name>
+    <value>360</value>
+  </property>
+
+  <property>
+    <description>The size of the stat cache which stores stats of the
+      layers and config.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.hdfs-manifest-to-resources-plugin.stat-cache-size</name>
+    <value>500</value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
@@ -1972,6 +2492,24 @@
       manifest. If 0 or less, manifest will not be reloaded.</description>
     <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
     <value>0</value>
+  </property>
+
+  <property>
+    <description>Provide local directory which includes the related jar file as well as all the dependencies’
+      jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all
+      jars under the dep directory.</description>
+    <name>yarn.nodemanager.aux-services.%s.classpath</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
+    <description>Normally this configuration shouldn't be manually set. The class would be loaded from customized
+      classpath if it does not belong to system-classes. By default, the package org.apache.hadoop is part of the
+      system-classes. If for example the class CustomAuxService is in the package org.apache.hadoop, it will not be
+      loaded from the customized classpath. To solve this, either the package of CustomAuxService could be changed,
+      or a separate system-classes could be configured which excludes the package org.apache.hadoop.</description>
+    <name>yarn.nodemanager.aux-services.%s.system-classes</name>
+    <value></value>
   </property>
 
   <property>
@@ -2202,6 +2740,18 @@
      it to 0.0.0.0 </description>
     <name>yarn.web-proxy.bind-host</name>
     <value/>
+  </property>
+
+  <property>
+    <description>Enable the web proxy connection timeout, default is enabled.</description>
+    <name>yarn.resourcemanager.proxy.timeout.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The web proxy connection timeout.</description>
+    <name>yarn.resourcemanager.proxy.connection.timeout</name>
+    <value>60000</value>
   </property>
 
   <!-- Applications' Configuration -->
@@ -2990,13 +3540,42 @@
   <property>
     <description>
     When "yarn.node-labels.configuration-type" is configured with
-    "delegated-centralized", then periodically node labels are retrieved
-    from the node labels provider. This configuration is to define the
-    interval. If -1 is configured then node labels are retrieved from
-    provider only once for each node after it registers. Defaults to 30 mins.
+    "delegated-centralized", then node labels of all nodes
+    are updated by periodically retrieving node labels from the
+    provider. If -1 is configured then node labels are retrieved
+    from provider only once for each node after it registers.
+    Defaults to 30 mins.
     </description>
     <name>yarn.resourcemanager.node-labels.provider.fetch-interval-ms</name>
     <value>1800000</value>
+  </property>
+
+  <property>
+    <description>
+    When "yarn.node-labels.configuration-type" is configured with
+    "delegated-centralized", then node labels of newly registered
+    nodes are updated by periodically retrieving node labels from
+    the provider. Defaults to 30 secs.
+    </description>
+    <name>yarn.resourcemanager.node-labels.provider.update-newly-registered-nodes-interval-ms</name>
+    <value>30000</value>
+  </property>
+
+  <property>
+    <description>
+      Overwrites default-node-label-expression only for the ApplicationMaster
+      container. It is disabled by default.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.default-node-label-expression</name>
+  </property>
+
+  <property>
+    <description>
+      Flag to indicate whether the AM can be allocated to non-exclusive nodes or not.
+      Default is false.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.allow-non-exclusive-allocation</name>
+    <value>false</value>
   </property>
 
   <!-- Distributed Node Attributes Configuration -->
@@ -3089,6 +3668,51 @@
   </property>
 
   <property>
+    <description>
+    Used to specify custom web services for Resourcemanager. Value can be
+    classnames separated by comma.
+    Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,
+    org.apache.hadoop.yarn.server.resourcemanager.webapp.DummyClass
+    </description>
+    <name>yarn.http.rmwebapp.external.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom scheduler page
+    </description>
+    <name>yarn.http.rmwebapp.scheduler.page.class</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services.
+    </description>
+    <name>yarn.http.rmwebapp.custom.dao.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services which requires
+    root unwrapping.
+    </description>
+    <name>yarn.http.rmwebapp.custom.unwrapped.dao.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom WebServices class to bind with RMWebApp overriding
+    the default RMWebServices.
+    </description>
+    <name>yarn.webapp.custom.webservice.class</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The Node Label script to run. Script output Line starting with
      "NODE_PARTITION:" will be considered as Node Label Partition. In case of
      multiple lines have this pattern, then last one will be considered
@@ -3108,6 +3732,16 @@
     </description>
     <name>yarn.federation.enabled</name>
     <value>false</value>
+  </property>
+  <property>
+    <description>
+      Initial delay for federation state-store heartbeat service. Value is followed by a unit
+      specifier: ns, us, ms, s, m, h, d for nanoseconds, microseconds, milliseconds, seconds,
+      minutes, hours, days respectively. Values should provide units,
+      but seconds are assumed
+    </description>
+    <name>yarn.federation.state-store.heartbeat.initial-delay</name>
+    <value>30s</value>
   </property>
   <property>
     <description>
@@ -3144,6 +3778,26 @@
     <description>The registry base directory for federation.</description>
     <name>yarn.federation.registry.base-dir</name>
     <value>yarnfederation/</value>
+  </property>
+
+  <property>
+    <description>
+      The number of retries to clear the app in the FederationStateStore,
+      the default value is 1, that is, after the app fails to clean up, it will retry the cleanup again.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-count</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Clear the sleep time of App retry in FederationStateStore.
+      When the app fails to clean up,
+      it will sleep for a period of time and then try to clean up.
+      The default value is 1s.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-sleep-time</name>
+    <value>1s</value>
   </property>
 
   <!-- Other Configuration -->
@@ -3474,6 +4128,14 @@
   </property>
 
   <property>
+    <description>The replication factor for the FS store
+     files. Default value is 0, means it will use file system
+      default replication.</description>
+    <name>yarn.fs-store.file.replication</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>
       Enable the CSRF filter for the RM web app
     </description>
@@ -3773,6 +4435,15 @@
   </property>
 
   <property>
+    <name>yarn.webapp.filter-invalid-xml-chars</name>
+    <value>false</value>
+    <description>
+      Flag to enable filter of invalid xml 1.0 characters present in the
+      value of diagnostics field of apps output from RM WebService.
+    </description>
+  </property>
+
+  <property>
     <description>
       The type of configuration store to use for scheduler configurations.
       Default is "file", which uses file based capacity-scheduler.xml to
@@ -3907,6 +4578,17 @@
       Acceptable values: { "yarn.io/gpu", "yarn.io/fpga"}.
     </description>
     <name>yarn.nodemanager.resource-plugins</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specifies whether the initialization of the Node Manager should continue
+      if a certain device (GPU, FPGA, etc) was not found in the system. If set
+      to "true", then an exception will be thrown if a device is missing or
+      an error occurred during discovery.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fail-fast</name>
     <value></value>
   </property>
 
@@ -4222,4 +4904,806 @@
     <name>yarn.resourcemanager.activities-manager.app-activities.max-queue-length</name>
     <value>100</value>
   </property>
+
+  <property>
+    <description>
+      Containers launcher implementation for determining how containers
+      are launched within NodeManagers.
+    </description>
+    <name>yarn.nodemanager.containers-launcher.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the Pre processing of Application Submission context with server side configuration
+    </description>
+    <name>yarn.resourcemanager.submission-preprocessor.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Path to file with hosts for the submission processor to handle.</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Submission processor refresh interval</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-refresh-interval-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      Comma-separated list of partitions. If a label P is in this list,
+      then the RM will enforce that an app has resource requests with label
+      P iff that app's node label expression is P.
+    </description>
+    <name>yarn.node-labels.exclusive-enforced-partitions</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Prefix used to identify the YARN tag which contains workflow ID. If a tag coming in application
+      submission context has this prefix, whatever follows the prefix will be considered as workflow ID
+      associated with the application. This configuration is used by features such as workflow priority
+      for identifying the workflow associated with an application.
+    </description>
+    <name>yarn.workflow-id.tag-prefix</name>
+    <value>workflowid:</value>
+  </property>
+
+  <property>
+    <description>Whether or not to allow application submissions via REST. Default is true.</description>
+    <name>yarn.webapp.enable-rest-app-submissions</name>
+    <value>true</value>
+  </property>
+
+   <property>
+    <description>
+      The maximum number of application attempts. It's a global
+      setting for all application masters. Each application master can specify
+      its individual maximum number of application attempts via the API, but the
+      individual number cannot be more than the global upper bound. If it is,
+      the resourcemanager will override it. The default number value is set to
+      yarn.resourcemanager.am.max-attempts.
+    </description>
+    <name>yarn.resourcemanager.am.global.max-attempts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Max number of application tags set by user in ApplicationSubmissionContext
+      while submitting application</description>
+    <name>yarn.resourcemanager.application.max-tags</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>Max length of each application tag set by user in ApplicationSubmissionContext
+      while submitting application.</description>
+    <name>yarn.resourcemanager.application.max-tag.length</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>Specifies whether application tags should be converted to lowercase or not.</description>
+    <name>yarn.resourcemanager.application-tag-based-placement.force-lowercase</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable RM to mark inactive nodes as untracked after the timeout
+      specified by yarn.resourcemanager.node-removal-untracked.timeout-ms and
+      then remove them from nodes list for the YARN cluster without configured
+      include path, which means RM can periodically clear inactive nodes to
+      avoid increasing memory to store these data when enabled, most desired by
+      elastic cloud environment with frequent auto-scaling operations.
+      It works only when the YARN cluster doesn't utilize include file, the key
+      configurations are as follows:
+          yarn.resourcemanager.nodes.exclude-path=/path-to-exclude-file
+          yarn.resourcemanager.nodes.include-path=
+          yarn.resourcemanager.node-removal-untracked.timeout-ms=60000
+      In this situation, the inactive nodes will never be marked as untracked
+      and removed from the nodes list unless this configuration is enabled:
+          yarn.resourcemanager.enable-node-untracked-without-include-path=true
+    </description>
+    <name>yarn.resourcemanager.enable-node-untracked-without-include-path</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.app-placement-allocator.class</name>
+    <value></value>
+    <description>
+      In the absence of APPLICATION_PLACEMENT_TYPE_CLASS from the RM
+      application scheduling environments, the value of this config
+      is used to determine the default implementation of AppPlacementAllocator.
+      If APPLICATION_PLACEMENT_TYPE_CLASS is absent from the application
+      scheduling env and this config also has no value present, then
+      default implementation LocalityAppPlacementAllocator is used.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.keytab.file</name>
+    <value></value>
+    <description>
+       The keytab file used by router to login as its
+       service principal. The principal name is configured with
+       dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Router service principal. This is typically set to
+      router/_HOST@REALM.TLD. Each Router will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both Router setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-enabled</name>
+    <value>false</value>
+    <description>
+      This configuration is used to enable the cache of AppsInfo.
+      If it is set to true, the cache is enabled.
+      If it is set to false, the cache is not enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-cached-count</name>
+    <value>100</value>
+    <description>
+      When yarn.router.appsinfo-enabled is set to true,
+      the number of cached appsInfo.
+      Default is 100
+    </description>
+  </property>
+  
+  <property>
+    <name>yarn.router.webapp.cross-origin.enabled</name>
+    <value>false</value>
+    <description>
+      Flag to enable cross-origin (CORS) support for Yarn Router.
+      For Yarn Router, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+  </property>
+  
+  <property>
+    <name>yarn.federation.state-store.max-applications</name>
+    <value>1000</value>
+    <description>
+      Yarn federation state-store supports querying the maximum number of apps.
+      Default is 1000.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.dispatcher.metric.enable</name>
+    <value>false</value>
+    <description>
+      Yarn NodeManager enables Dispatcher Metric.
+      if true, will enable dispatcher metric; if false, will not enable dispatcher metric;
+      Default is false.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configurable is used to set the corePoolSize(minimumPoolSize)
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configuration is used to set the default value of maximumPoolSize
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
+    <value>0s</value>
+    <description>
+      This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+      Default is 0s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.allow-partial-result.enable</name>
+    <value>false</value>
+    <description>
+      This configuration represents whether to allow the interceptor to
+      return partial SubCluster results.
+      If true, we will ignore the exception to some subClusters during the calling process,
+      and return result.
+      If false, if an exception occurs in a subCluster during the calling process,
+      an exception will be thrown directly.
+      Default is false.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.asc-interceptor-max-size</name>
+    <value>1MB</value>
+    <description>
+      We define the size limit of ApplicationSubmissionContext.
+      If the size of the ApplicationSubmissionContext is larger than this value,
+      We will throw an exception. the default value is 1MB.
+    </description>
+  </property>
+
+  <property>
+    <description>
+      The number of threads to use for the Router scheduled executor service.
+    </description>
+    <name>yarn.router.scheduled.executor.threads</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subClusterCleaner runs. Default is 60s.
+    </description>
+    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster heartbeat timeout. Default is 30mins.
+    </description>
+    <name>yarn.router.subcluster.heartbeat.expiration.time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable deregisterSubCluster. Default is true.
+    </description>
+    <name>yarn.router.deregister.subcluster.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      Number of Router Scheduler Threads.
+    </description>
+    <name>yarn.router.scheduled.executor.threads</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Number of Retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.num-retries</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Interval in ms between retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>The property controls the minimum number of idle connections that
+      HikariCP tries to maintain in the pool.</description>
+    <name>yarn.federation.state-store.sql.minimum-idle</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the name of the connection pool used by the FederationSQLStateStore.
+    </description>
+    <name>yarn.federation.state-store.sql.pool-name</name>
+    <value>YARN-Federation-DataBasePool</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum lifetime of a connection in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.max-life-time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum amount of time
+      that a connection is allowed to sit idle in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.idle-time-out</name>
+    <value>10m</value>
+  </property>
+
+  <property>
+    <description>Set the maximum amount of time
+      that a client will wait for a connection from the pool.</description>
+    <name>yarn.federation.state-store.sql.conn-time-out</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the class name of the cache implementation in YARN FederationCache.
+      By default, this property is org.apache.hadoop.yarn.server.federation.cache.FederationJCache.
+    </description>
+    <name>yarn.federation.cache.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.cache.FederationJCache</value>
+  </property>
+
+  <property>
+    <description>
+      After enabling YARN Federation mode,
+      clients can be allowed to randomly choose a Router and support FailOver.
+      By default, the configuration is set to false,
+      and clients start attempting from the first Router.
+    </description>
+    <name>yarn.federation.failover.random.order</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable proxy service in router. Default is true.
+    </description>
+    <name>yarn.router.webapp.proxy.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The number of threads to use for the GPG scheduled executor service.
+      default is 10.
+    </description>
+    <name>yarn.federation.gpg.scheduled.executor.threads</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subcluster cleaner runs, -1 means disabled.
+      default is -1.
+    </description>
+    <name>yarn.federation.gpg.subcluster.cleaner.interval-ms</name>
+    <value>-1ms</value>
+  </property>
+
+  <property>
+    <description>
+      The expiration time for a subcluster heartbeat, default is 30 minutes.
+    </description>
+    <name>yarn.federation.gpg.subcluster.heartbeat.expiration-ms</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.enable</name>
+    <value>false</value>
+    <description>
+      Optional.
+      To enable cache for RMWebServices.getApps
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.size</name>
+    <value>1000</value>
+    <description>
+      Optional.
+      The size of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 1000
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.expire</name>
+    <value>30s</value>
+    <description>
+      Optional.
+      The expire time of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 30s
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.trigger.delete.by-size.enabled</name>
+    <value>false</value>
+    <description>
+      Optional.
+      Enabled trigger log-dir deletion by size for NonAggregatingLogHandler
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.delete.threshold</name>
+    <value>100g</value>
+    <description>
+      Optional.
+      Trigger log-dir deletion when the total log size of an app is greater than
+      yarn.nodemanager.log.delete.threshold and
+      yarn.nodemanager.log.trigger.delete.by-size.enabled = true.
+      You can use the following suffix (case insensitive): k(kilo), m(mega), g(giga), t(tera), p(peta),
+      e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
+      Or provide complete size in bytes (such as 134217728 for 128 MB).
+    </description>
+  </property>
+
+  <property>
+    <description>
+      If Yarn untracked removal is enabled, then this config can control what all
+      node states can be removed. If the untracked node is not having one of these
+      states, then node will skipped for removal. If this config value is set to
+      empty, all node states, will be eligible for removal
+      NodeState is an ENUM: org.apache.hadoop.yarn.api.records.NodeState
+    </description>
+    <name>yarn.resourcemanager.node-removal-untracked.node-selective-states-to-remove</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Whether we wait for uam registration to complete.
+      The default value is false. If we set it to true,
+      the UAM needs to be registered before attempting to allocate a container.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.wait.uam-register.done</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      YARN Federation supports Non-HA mode.
+      If the cluster is not configured with HA but wants to use YARN Federation,
+      this option can be used.
+      Setting it to true enables Non-HA mode, while false disables Non-HA mode.
+      The default value is false.
+    </description>
+    <name>yarn.federation.non-ha.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by gpg to login as its
+      service principal. The principal name is configured with
+      dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal</name>
+    <value></value>
+    <description>
+      The GPG service principal. This is typically set to
+      gpg/_HOST@REALM.TLD. Each GPG will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both GPG setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <description>
+      The number of retry for Register UAM.
+      The default value is 3.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.retry-count</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      Interval between retry for Register UAM.
+      The default value is 100ms.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.interval</name>
+    <value>100ms</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the policy generator runs, default is one hour
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the policy generator runs, default is one hour.
+      This is an deprecated property, We better set it
+      `yarn.federation.gpg.policy.generator.interval`.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval-ms</name>
+    <value>3600000</value>
+  </property>
+
+  <property>
+    <description>
+      The configured policy generator class, runs NoOpGlobalPolicy by default
+    </description>
+    <name>yarn.federation.gpg.policy.generator.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.NoOpGlobalPolicy</value>
+  </property>
+
+  <property>
+    <description>
+      Whether or not the policy generator is running in read only (won't modify policies), default is false
+    </description>
+    <name>yarn.federation.gpg.policy.generator.readonly</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Which subclusters the gpg should blacklist, default is none
+    </description>
+    <name>yarn.federation.gpg.policy.generator.blacklist</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the minimum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.minimum</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the maximum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.maximum</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the subCluster minimum weight,
+      If a subCluster has a very high load, we will assign this value to the subCluster.
+      The default value is 0, which means that we no longer assign appliaction to this subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.weight.minimum</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We choose the subCluster computing load of TopN.
+      This value represents the number of subClusters we want to calculate.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.edit.maximum</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We provide 4 calculation methods: NONE, LINEAR, QUADRATIC, LOG.
+
+      Note, this calculation method is when the number of Pending Applications in
+      the subCluster is less than yarn.federation.gpg.policy.generator.load-based.pending.maximum.
+
+      maxPendingVal = yarn.federation.gpg.policy.generator.load-based.pending.maximum -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+      curPendingVal = Pending Applications in the subCluster -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+
+      1. NONE: No calculation is required, and the weight is 1 at this time.
+      2. LINEAR: For linear computation, we will use (maxPendingVal - curPendingVal) / (maxPendingVal).
+      3. QUADRATIC: Calculated using quadratic,
+      We will calculate quadratic for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+      4. LOG(LOGARITHM): Calculated using logarithm,
+      We will calculate logarithm for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+      LINEAR is used by default.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.scaling</name>
+    <value>LINEAR</value>
+  </property>
+
+  <property>
+    <description>
+      The Application Cleaner implementation class for GPG to use.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
+  </property>
+
+  <property>
+    <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
+      requires the CORS filter initializer to be added to the filter initializers
+      list in core-site.xml.</description>
+    <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the application cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
+    <value>-1s</value>
+  </property>
+
+  <property>
+    <description>
+      The http address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name>yarn.federation.gpg.webapp.address</name>
+    <value>0.0.0.0:8069</value>
+  </property>
+
+  <property>
+    <description>
+      Specifications on how (many times) to contact Router for apps. We need to
+      do this because Router might return partial application list because some
+      sub-cluster RM is not responsive (e.g. failing over).
+      Should have three values separated by comma: minimal success retries,
+      maximum total retry, retry interval (ms).
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
+    <value>3,10,600000</value>
+  </property>
+
+  <property>
+    <description>
+      The https address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name> yarn.federation.gpg.webapp.https.address</name>
+    <value>0.0.0.0:8070</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will enable request rerouting according to the load of the subCluster.
+      If it is true, it will reroute the request according to the load of the subCluster.
+      The default configuration is false.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster pending container threshold. The default value is 10000.
+      This configuration will determine the load weight of a subCluster.
+      For SC with pending containers count bigger than container threshold / 2,
+      use threshold / pending as weight.
+      For SC with pending containers count less than threshold / 2, we cap the weight at 2.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.pending-container.threshold</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to consider the configured vcores when calculating the subCluster load.
+      The default value is false, we only consider the number of cluster pending containers.
+      If this configuration item is set to true, This configuration item needs to be used together
+      with yarn.nodemanager.least-load-policy-selector.multiplier. We will use the following formula
+      when calculating subCluster pending.
+      pendingContainersCountNormalize = (totalPendingContainersCount * multiplier) / totalActiveCores.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.use-active-core</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to fail directly if activeSubCluster is less than 1.
+      The default is true.
+      If We set to false, We will try to re-fetch activeSubCluster list.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.fail-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The subCluster configured in the blacklist will not be forwarded requests.
+      The default value is empty.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.blacklist-subclusters</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will be used
+      when yarn.nodemanager.least-load-policy-selector.use-active-core is set to true.
+      The purpose of this value is to help normalize the pendingContainersCount.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
+    <value>50000</value>
+  </property>
+
 </configuration>

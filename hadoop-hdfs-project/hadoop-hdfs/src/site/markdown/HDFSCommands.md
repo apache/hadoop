@@ -30,7 +30,7 @@ Hadoop has an option parsing framework that employs parsing generic options as w
 |:---- |:---- |
 | SHELL\_OPTIONS | The common set of shell options. These are documented on the [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Shell_Options) page. |
 | GENERIC\_OPTIONS | The common set of options supported by multiple commands. See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options) for more information. |
-| COMMAND COMMAND\_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands). |
+| COMMAND\_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands). |
 
 User Commands
 -------------
@@ -102,7 +102,7 @@ Usage:
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
-| `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
+| `-showprogress` | Deprecated. A dot is print every 100 files processed with or without this switch. |
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
 | `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
@@ -157,6 +157,16 @@ Usage: `hdfs lsSnapshottableDir [-help]`
 | `-help` | print help |
 
 Get the list of snapshottable directories. When this is run as a super user, it returns all snapshottable directories. Otherwise it returns those directories that are owned by the current user.
+
+### `lsSnapshot`
+
+Usage: `hdfs lsSnapshot [-help]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-help` | print help |
+
+Get the list of snapshots for a snapshottable directory.
 
 ### `jmxget`
 
@@ -217,6 +227,9 @@ Usage: `hdfs oiv [OPTIONS] -i INPUT_FILE`
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
 | `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
+| `-sp` | Whether to print Storage policy(default is false). This option is used with Delimited processor only. |
+| `-ec` | Whether to print Erasure coding policy(default is false). This option is used with Delimited processor only. |
+| `-m`,`--multiThread` *arg* | Specify multiThread to process sub-sections. This option is used with Delimited processor only. |
 | `-t`,`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`,`--help` | Display the tool usage and help information and exit. |
 
@@ -278,6 +291,9 @@ Usage:
               [-blockpools <comma-separated list of blockpool ids>]
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
+              [-asService]
+              [-sortTopNodes]
+              [-hotBlockTimeInterval <specified time interval>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -289,13 +305,18 @@ Usage:
 | `-blockpools` \<comma-separated list of blockpool ids\> | The balancer will only run on blockpools included in this list. |
 | `-idleiterations` \<iterations\> | Maximum number of idle iterations before exit. This overwrites the default idleiterations(5). |
 | `-runDuringUpgrade` | Whether to run the balancer during an ongoing HDFS upgrade. This is usually not desired since it will not affect used space on over-utilized machines. |
+| `-asService` | Run Balancer as a long running service. |
+| `-sortTopNodes` | Sort datanodes based on the utilization so that highly utilized datanodes get scheduled first. |
+| `-hotBlockTimeInterval` | Prefer moving cold blocks i.e blocks associated with files accessed or modified before the specified time interval. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 
 Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the rebalancing process. See [Balancer](./HdfsUserGuide.html#Balancer) for more details.
 
-Note that the `blockpool` policy is more strict than the `datanode` policy.
+Note that the `blockpool` policy is stricter than the `datanode` policy.
 
 Besides the above command options, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
+
+If you want to run Balancer as a long-running service, please start Balancer using `-asService` parameter with daemon-mode. You can do this by using the following command: `hdfs --daemon start balancer -asService`, or just use sbin/start-balancer.sh script with parameter `-asService`.
 
 ### `cacheadmin`
 
@@ -341,7 +362,7 @@ Runs a HDFS datanode.
 
 Usage:
 
-        hdfs dfsadmin [-report [-live] [-dead] [-decommissioning] [-enteringmaintenance] [-inmaintenance]]
+        hdfs dfsadmin [-report [-live] [-dead] [-decommissioning] [-enteringmaintenance] [-inmaintenance] [-slownodes]]
         hdfs dfsadmin [-safemode enter | leave | get | wait | forceExit]
         hdfs dfsadmin [-saveNamespace [-beforeShutdown]]
         hdfs dfsadmin [-rollEdits]
@@ -359,7 +380,7 @@ Usage:
         hdfs dfsadmin [-refreshSuperUserGroupsConfiguration]
         hdfs dfsadmin [-refreshCallQueue]
         hdfs dfsadmin [-refresh <host:ipc_port> <key> [arg1..argn]]
-        hdfs dfsadmin [-reconfig <namenode|datanode> <host:ipc_port> <start |status |properties>]
+        hdfs dfsadmin [-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start |status |properties>]
         hdfs dfsadmin [-printTopology]
         hdfs dfsadmin [-refreshNamenodes datanodehost:port]
         hdfs dfsadmin [-getVolumeReport datanodehost:port]
@@ -369,17 +390,18 @@ Usage:
         hdfs dfsadmin [-fetchImage <local directory>]
         hdfs dfsadmin [-allowSnapshot <snapshotDir>]
         hdfs dfsadmin [-disallowSnapshot <snapshotDir>]
+        hdfs dfsadmin [-provisionSnapshotTrash <snapshotDir> [-all]]
         hdfs dfsadmin [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
         hdfs dfsadmin [-evictWriters <datanode_host:ipc_port>]
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
         hdfs dfsadmin [-metasave filename]
-        hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
+        hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]]
         hdfs dfsadmin [-listOpenFiles [-blockingDecommission] [-path <path>]]
         hdfs dfsadmin [-help [cmd]]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-report` `[-live]` `[-dead]` `[-decommissioning]` `[-enteringmaintenance]` `[-inmaintenance]` | Reports basic filesystem information and statistics, The dfs usage can be different from "du" usage, because it measures raw space used by replication, checksums, snapshots and etc. on all the DNs. Optional flags may be used to filter the list of displayed DataNodes. |
+| `-report` `[-live]` `[-dead]` `[-decommissioning]` `[-enteringmaintenance]` `[-inmaintenance]` `[-slownodes]` | Reports basic filesystem information and statistics, The dfs usage can be different from "du" usage, because it measures raw space used by replication, checksums, snapshots and etc. on all the DNs. Optional flags may be used to filter the list of displayed DataNodes. Filters are either based on the DN state (e.g. live, dead, decommissioning) or the nature of the DN (e.g. slow nodes - nodes with higher latency than their peers). |
 | `-safemode` enter\|leave\|get\|wait\|forceExit | Safe mode maintenance command. Safe mode is a Namenode state in which it <br/>1. does not accept changes to the name space (read-only) <br/>2. does not replicate or delete blocks. <br/>Safe mode is entered automatically at Namenode startup, and leaves safe mode automatically when the configured minimum percentage of blocks satisfies the minimum replication condition. If Namenode detects any anomaly then it will linger in safe mode till that issue is resolved. If that anomaly is the consequence of a deliberate action, then administrator can use -safemode forceExit to exit safe mode. The cases where forceExit may be required are<br/> 1. Namenode metadata is not consistent. If Namenode detects that metadata has been modified out of band and can cause data loss, then Namenode will enter forceExit state. At that point user can either restart Namenode with correct metadata files or forceExit (if data loss is acceptable).<br/>2. Rollback causes metadata to be replaced and rarely it can trigger safe mode forceExit state in Namenode. In that case you may proceed by issuing -safemode forceExit.<br/> Safe mode can also be entered manually, but then it can only be turned off manually as well. |
 | `-saveNamespace` `[-beforeShutdown]` | Save current namespace into storage directories and reset edits log. Requires safe mode. If the "beforeShutdown" option is given, the NameNode does a checkpoint if and only if no checkpoint has been done during a time window (a configurable number of checkpoint periods). This is usually used before shutting down the NameNode to prevent potential fsimage/editlog corruption. |
 | `-rollEdits` | Rolls the edit log on the active NameNode. |
@@ -397,7 +419,7 @@ Usage:
 | `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings |
 | `-refreshCallQueue` | Reload the call queue from config. |
 | `-refresh` \<host:ipc\_port\> \<key\> [arg1..argn] | Triggers a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. All other args after are sent to the host. |
-| `-reconfig` \<datanode \|namenode\> \<host:ipc\_port\> \<start\|status\|properties\> | Starts reconfiguration or gets the status of an ongoing reconfiguration, or gets a list of reconfigurable properties. The second parameter specifies the node type. |
+| `-reconfig` \<datanode \|namenode\> \<host:ipc\_port\|livenodes> \<start\|status\|properties\> | Starts reconfiguration or gets the status of an ongoing reconfiguration, or gets a list of reconfigurable properties. The second parameter specifies the node type. The third parameter specifies host address. For start or status, datanode supports livenodes as third parameter, which will start or retrieve reconfiguration on all live datanodes. |
 | `-printTopology` | Print a tree of the racks and their nodes as reported by the Namenode |
 | `-refreshNamenodes` datanodehost:port | For the given datanode, reloads the configuration files, stops serving the removed block-pools and starts serving new block-pools. |
 | `-getVolumeReport` datanodehost:port | For the given datanode, get the volume report. |
@@ -407,11 +429,12 @@ Usage:
 | `-fetchImage` \<local directory\> | Downloads the most recent fsimage from the NameNode and saves it in the specified local directory. |
 | `-allowSnapshot` \<snapshotDir\> | Allowing snapshots of a directory to be created. If the operation completes successfully, the directory becomes snapshottable. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-disallowSnapshot` \<snapshotDir\> | Disallowing snapshots of a directory to be created. All snapshots of the directory must be deleted before disallowing snapshots. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
+| `-provisionSnapshotTrash` \<snapshotDir\> [-all] | Provision trash root in one or all snapshottable directories. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-shutdownDatanode` \<datanode\_host:ipc\_port\> [upgrade] | Submit a shutdown request for the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-shutdownDatanode) for the detail. |
 | `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
 | `-metasave` filename | Save Namenode's primary data structures to *filename* in the directory specified by hadoop.log.dir property. *filename* is overwritten if it exists. *filename* will contain one line for each of the following<br/>1. Datanodes heart beating with Namenode<br/>2. Blocks waiting to be replicated<br/>3. Blocks currently being replicated<br/>4. Blocks waiting to be deleted |
-| `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. |
+| `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> `[-namenode <namenode_host:ipc_port>]` | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. If '-namenode \<namenode\_host:ipc\_port\>' is given, it only sends block report to a specified namenode. |
 | `-listOpenFiles` `[-blockingDecommission]` `[-path <path>]` | List all open files currently managed by the NameNode along with client name and client machine accessing them. Open files list will be filtered by given type and path. Add -blockingDecommission option if you only want to list open files that are blocking the DataNode decommissioning. |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
@@ -429,32 +452,42 @@ Usage:
 
       hdfs dfsrouteradmin
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-addAll <source1> <nameservice1,nameservice2,...> <destination1> [-readonly] [-faulttolerant][-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner1> -group <group1> -mode <mode1> , <source2> <nameservice1,nameservice2,...> <destination2> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner2> -group <group2> -mode <mode2> , ...]
           [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
-          [-ls <path>]
+          [-ls [-d] <path>]
           [-getDestination <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
+          [-setStorageTypeQuota <path> -storageType <storage type> <quota in bytes or quota size string>]
           [-clrQuota <path>]
+          [-clrStorageTypeQuota <path>]
+          [-dumpState]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
           [-refresh]
           [-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]
+          [-refreshSuperUserGroupsConfiguration]
+          [-refreshCallQueue]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
-| `-update` *source* *nameservices* *destination* | Update a mount table entry attribures. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry attributes. |
 | `-rm` *source* | Remove mount point of specified path. |
-| `-ls` *path* | List mount points under specified path. |
+| `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|
 | `-getDestination` *path* | Get the subcluster where a file is or should be created. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
+| `-setStorageTypeQuota` *path* `-storageType` *storageType* *stQuota* | Set storage type quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-clrQuota` *path* | Clear quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
+| `-clrStorageTypeQuota` *path* | Clear storage type quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
 | `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
 | `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
 | `-refresh` | Update mount table cache of the connected router. |
 | `refreshRouterArgs` \<host:ipc\_port\> \<key\> [arg1..argn] | To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server. |
+| `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings on Router. |
+| `-refreshCallQueue` | Reload the call queue from config for Router. |
 
 The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 
@@ -473,7 +506,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-|-plan| Creates a disbalancer plan|
+|-plan| Creates a diskbalancer plan|
 |-execute| Executes a given plan on a datanode|
 |-query| Gets the current diskbalancer status from a datanode|
 |-cancel| Cancels a running plan|
@@ -486,7 +519,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policyName> -path <path> [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
@@ -494,6 +527,7 @@ Usage:
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
          [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 
@@ -507,6 +541,7 @@ Usage:
 |-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 |-enablePolicy| Enable an ErasureCoding policy in system|
 |-disablePolicy| Disable an ErasureCoding policy in system|
+|-removePolicy| Remove an ErasureCoding policy from system|
 |-verifyClusterSetup| Verify if the cluster setup can support a list of erasure coding policies|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
@@ -542,7 +577,7 @@ See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_command
 
 Usage: `hdfs journalnode`
 
-This comamnd starts a journalnode for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
+This command starts a journalnode for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
 
 ### `mover`
 
@@ -597,13 +632,13 @@ Runs the namenode. More info about the upgrade and rollback is at [Upgrade Rollb
 
 Usage: `hdfs nfs3`
 
-This comamnd starts the NFS3 gateway for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
+This command starts the NFS3 gateway for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
 
 ### `portmap`
 
 Usage: `hdfs portmap`
 
-This comamnd starts the RPC portmap for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
+This command starts the RPC portmap for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
 
 ### `secondarynamenode`
 
@@ -641,7 +676,7 @@ Usage: `hdfs zkfc [-formatZK [-force] [-nonInteractive]]`
 | `-formatZK` | Format the Zookeeper instance. -force: formats the znode if the znode exists. -nonInteractive: formats the znode aborts if the znode exists, unless -force option is specified. |
 | `-h` | Display help |
 
-This comamnd starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
+This command starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
 
 Debug Commands
 --------------
@@ -681,4 +716,54 @@ Usage: `hdfs debug recoverLease -path <path> [-retries <num-retries>]`
 | [`-path` *path*] | HDFS path for which to recover the lease. |
 | [`-retries` *num-retries*] | Number of times the client will retry calling recoverLease. The default number of retries is 1. |
 
-Recover the lease on the specified path. The path must reside on an HDFS filesystem. The default number of retries is 1.
+Recover the lease on the specified path. The path must reside on an HDFS file system. The default number of retries is 1.
+
+### `verifyEC`
+
+Usage: `hdfs debug verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| [`-file` *EC-file*] | HDFS EC file to be verified. |
+| [`-blockId` *blk_Id*] | Specify the blk_Id to verify a block group of the file. |
+| [`-skipFailureBlocks`] | Specify will skip any block group failures during verify and continues verify all block groups of the file, the default is not to skip failure blocks . |
+
+Verify the correctness of erasure coding on an erasure coded file.
+
+dfsadmin with ViewFsOverloadScheme
+----------------------------------
+
+Usage: `hdfs dfsadmin -fs <child fs mount link URI> <dfsadmin command options>`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-fs` *child fs mount link URI* | Its a logical mount link path to child file system in ViewFS world. This uri typically formed as src mount link prefixed with fs.defaultFS. Please note, this is not an actual child file system uri, instead its a logical mount link uri pointing to actual child file system|
+
+Example command usage:
+   `hdfs dfsadmin -fs hdfs://nn1 -safemode enter`
+
+In ViewFsOverloadScheme, we may have multiple child file systems as mount point mappings as shown in [ViewFsOverloadScheme Guide](./ViewFsOverloadScheme.html). Here -fs option is an optional generic parameter supported by dfsadmin. When users want to execute commands on one of the child file system, they need to pass that file system mount mapping link uri to -fs option. Let's take an example mount link configuration and dfsadmin command below.
+
+Mount link:
+
+```xml
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://MyCluster1</value>
+</property>
+
+<property>
+  <name>fs.viewfs.mounttable.MyCluster1./user</name>
+  <value>hdfs://MyCluster2/user</value>
+  <!-- mount table name : MyCluster1
+       mount link mapping: hdfs://MyCluster1/user --> hdfs://MyCluster2/user
+       mount link path: /user
+       mount link uri: hdfs://MyCluster1/user
+       mount target uri for /user: hdfs://MyCluster2/user -->
+</property>
+```
+
+If user wants to talk to `hdfs://MyCluster2/`, then they can pass -fs option (`-fs hdfs://MyCluster1/user`)
+Since /user was mapped to a cluster `hdfs://MyCluster2/user`, dfsadmin resolve the passed (`-fs hdfs://MyCluster1/user`) to target fs (`hdfs://MyCluster2/user`).
+This way users can get the access to all hdfs child file systems in ViewFsOverloadScheme.
+If there is no `-fs` option provided, then it will try to connect to the configured fs.defaultFS cluster if a cluster running with the fs.defaultFS uri.

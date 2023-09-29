@@ -26,9 +26,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
@@ -52,7 +52,7 @@ public class TestProtoBufRpcServerHandoff {
         TestProtobufRpcHandoffProto.newReflectiveBlockingService(serverImpl);
 
     RPC.setProtocolEngine(conf, TestProtoBufRpcServerHandoffProtocol.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     RPC.Server server = new RPC.Builder(conf)
         .setProtocol(TestProtoBufRpcServerHandoffProtocol.class)
         .setInstance(blockingService)
@@ -144,8 +144,8 @@ public class TestProtoBufRpcServerHandoff {
          TestProtos.SleepRequestProto2 request) throws
         ServiceException {
       final long startTime = System.currentTimeMillis();
-      final ProtobufRpcEngineCallback callback =
-          ProtobufRpcEngine.Server.registerForDeferredResponse();
+      final ProtobufRpcEngineCallback2 callback =
+          ProtobufRpcEngine2.Server.registerForDeferredResponse2();
       final long sleepTime = request.getSleepTime();
       new Thread() {
         @Override

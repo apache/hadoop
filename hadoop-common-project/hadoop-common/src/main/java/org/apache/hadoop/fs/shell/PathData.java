@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -38,6 +39,12 @@ import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.RemoteIterator;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
@@ -287,20 +294,8 @@ public class PathData implements Comparable<PathData> {
       throws IOException {
     checkIfExists(FileTypeRequirement.SHOULD_BE_DIRECTORY);
     final RemoteIterator<FileStatus> stats = this.fs.listStatusIterator(path);
-    return new RemoteIterator<PathData>() {
-
-      @Override
-      public boolean hasNext() throws IOException {
-        return stats.hasNext();
-      }
-
-      @Override
-      public PathData next() throws IOException {
-        FileStatus file = stats.next();
-        String child = getStringForChildPath(file.getPath());
-        return new PathData(fs, child, file);
-      }
-    };
+    return mappingRemoteIterator(stats,
+        file -> new PathData(fs, getStringForChildPath(file.getPath()), file));
   }
 
   /**
@@ -610,5 +605,36 @@ public class PathData implements Comparable<PathData> {
   @Override
   public int hashCode() {
     return path.hashCode();
+  }
+
+
+  /**
+   * Open a file for sequential IO.
+   * <p>
+   * This uses FileSystem.openFile() to request sequential IO;
+   * the file status is also passed in.
+   * Filesystems may use to optimize their IO.
+   * </p>
+   * @return an input stream
+   * @throws IOException failure
+   */
+  protected FSDataInputStream openForSequentialIO()
+      throws IOException {
+    return openFile(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL);
+  }
+
+  /**
+   * Open a file.
+   * @param policy fadvise policy.
+   * @return an input stream
+   * @throws IOException failure
+   */
+  protected FSDataInputStream openFile(final String policy) throws IOException {
+    return awaitFuture(fs.openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            policy)
+        .optLong(FS_OPTION_OPENFILE_LENGTH,
+            stat.getLen())   // file length hint for object stores
+        .build());
   }
 }

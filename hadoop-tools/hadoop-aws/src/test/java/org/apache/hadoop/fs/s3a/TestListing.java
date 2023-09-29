@@ -18,82 +18,20 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
+import java.util.NoSuchElementException;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
-import static org.apache.hadoop.fs.s3a.Listing.ProvidedFileStatusIterator;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
  */
 public class TestListing extends AbstractS3AMockTest {
-
-  private static class MockRemoteIterator<S3AFileStatus> implements
-      RemoteIterator<S3AFileStatus> {
-    private Iterator<S3AFileStatus> iterator;
-
-    MockRemoteIterator(Collection<S3AFileStatus> source) {
-      iterator = source.iterator();
-    }
-
-    public boolean hasNext() {
-      return iterator.hasNext();
-    }
-
-    public S3AFileStatus next() {
-      return iterator.next();
-    }
-  }
-
-  private S3AFileStatus blankFileStatus(Path path) {
-    return new S3AFileStatus(Tristate.UNKNOWN, path, null);
-  }
-
-  @Test
-  public void testTombstoneReconcilingIterator() throws Exception {
-    Path parent = new Path("/parent");
-    Path liveChild = new Path(parent, "/liveChild");
-    Path deletedChild = new Path(parent, "/deletedChild");
-    Path[] allFiles = {parent, liveChild, deletedChild};
-    Path[] liveFiles = {parent, liveChild};
-
-    Listing listing = new Listing(fs);
-    Collection<FileStatus> statuses = new ArrayList<>();
-    statuses.add(blankFileStatus(parent));
-    statuses.add(blankFileStatus(liveChild));
-    statuses.add(blankFileStatus(deletedChild));
-
-    Set<Path> tombstones = new HashSet<>();
-    tombstones.add(deletedChild);
-
-    RemoteIterator<S3AFileStatus> sourceIterator = new MockRemoteIterator(
-        statuses);
-    RemoteIterator<S3ALocatedFileStatus> locatedIterator =
-        listing.createLocatedFileStatusIterator(sourceIterator);
-    RemoteIterator<S3ALocatedFileStatus> reconcilingIterator =
-        listing.createTombstoneReconcilingIterator(locatedIterator, tombstones);
-
-    Set<Path> expectedPaths = new HashSet<>();
-    expectedPaths.add(parent);
-    expectedPaths.add(liveChild);
-
-    Set<Path> actualPaths = new HashSet<>();
-    while (reconcilingIterator.hasNext()) {
-      actualPaths.add(reconcilingIterator.next().getPath());
-    }
-    Assert.assertTrue(actualPaths.equals(expectedPaths));
-  }
 
   @Test
   public void testProvidedFileStatusIteratorEnd() throws Exception {
@@ -104,18 +42,13 @@ public class TestListing extends AbstractS3AMockTest {
     S3AFileStatus[] statuses = {
         s3aStatus
     };
-    ProvidedFileStatusIterator it = new ProvidedFileStatusIterator(statuses,
-        ACCEPT_ALL, new Listing.AcceptAllButS3nDirs());
+    RemoteIterator<S3AFileStatus> it = Listing.toProvidedFileStatusIterator(
+        statuses);
 
     Assert.assertTrue("hasNext() should return true first time", it.hasNext());
-    Assert.assertNotNull("first element should not be null", it.next());
+    Assert.assertEquals("first element from iterator",
+        s3aStatus, it.next());
     Assert.assertFalse("hasNext() should now be false", it.hasNext());
-    try {
-      it.next();
-      Assert.fail("next() should have thrown exception");
-    } catch (NoSuchElementException e) {
-      // Correct behavior.  Any other exceptions are propagated as failure.
-      return;
-    }
+    intercept(NoSuchElementException.class, it::next);
   }
 }

@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -82,7 +84,15 @@ public class TestIncreaseAllocationExpirer {
     rm1.start();
     // Submit an application
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 20 * GB);
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     // Report AM container status RUNNING to remove it from expirer
     nm1.nodeHeartbeat(
@@ -166,7 +176,15 @@ public class TestIncreaseAllocationExpirer {
     };
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 20 * GB);
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(
         app1.getCurrentAppAttempt()
@@ -209,6 +227,7 @@ public class TestIncreaseAllocationExpirer {
     Thread.sleep(10000);
     // Verify container size is 1G
     am1.allocate(null, null);
+    rm1.drainEvents();
     Assert.assertEquals(
         1 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
@@ -242,7 +261,15 @@ public class TestIncreaseAllocationExpirer {
     rm1.start();
     // Submit an application
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 20 * GB);
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(
         app1.getCurrentAppAttempt()
@@ -359,7 +386,15 @@ public class TestIncreaseAllocationExpirer {
     rm1.start();
     // Submit an application
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 20 * GB);
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(
         app1.getCurrentAppAttempt()
@@ -433,6 +468,7 @@ public class TestIncreaseAllocationExpirer {
 
     am1.allocate(null, null);
 
+    rm1.drainEvents();
     Assert.assertEquals(
         2 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());

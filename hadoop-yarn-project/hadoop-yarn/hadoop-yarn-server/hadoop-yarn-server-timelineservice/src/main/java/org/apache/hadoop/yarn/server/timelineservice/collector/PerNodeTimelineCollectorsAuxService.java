@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,8 +193,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
         synchronized (appIdToContainerId) {
           Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
           if (masterContainers == null) {
-            LOG.info("Stop container for " + containerId
-                + " is called before initializing container.");
+            LOG.info("Stop container for {}"
+                + " is called before initializing container.", containerId);
             return;
           }
           masterContainers.remove(containerId);

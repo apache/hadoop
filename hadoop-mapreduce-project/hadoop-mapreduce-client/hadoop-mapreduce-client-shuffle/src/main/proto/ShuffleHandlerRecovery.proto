@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+syntax = "proto2";
 option java_package = "org.apache.hadoop.mapred.proto";
 option java_outer_classname = "ShuffleHandlerRecoveryProtos";
 option java_generic_services = true;

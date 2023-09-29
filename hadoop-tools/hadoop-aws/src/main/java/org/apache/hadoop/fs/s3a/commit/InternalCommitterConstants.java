@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 
 /**
  * These are internal constants not intended for public use.
@@ -34,6 +34,12 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class InternalCommitterConstants {
+
+  /**
+   * How long threads in the thread pool stay alive when
+   * idle. Value in seconds: {@value}.
+   */
+  public static final long THREAD_KEEP_ALIVE_TIME = 60L;
 
   private InternalCommitterConstants() {
   }
@@ -46,8 +52,14 @@ public final class InternalCommitterConstants {
   /**
    * A unique identifier to use for this work: {@value}.
    */
-  public static final String FS_S3A_COMMITTER_STAGING_UUID =
-      "fs.s3a.committer.staging.uuid";
+  public static final String FS_S3A_COMMITTER_UUID =
+      "fs.s3a.committer.uuid";
+
+  /**
+   * Where did the UUID come from? {@value}.
+   */
+  public static final String FS_S3A_COMMITTER_UUID_SOURCE =
+      "fs.s3a.committer.uuid.source";
 
   /**
    * Directory committer factory: {@value}.
@@ -96,5 +108,32 @@ public final class InternalCommitterConstants {
 
   /** Error message for a path without a magic element in the list: {@value}. */
   public static final String E_NO_MAGIC_PATH_ELEMENT
-      = "No " + MAGIC + " element in path";
+      = "No " + MAGIC_PATH_PREFIX + " element in path";
+
+  /**
+   * The UUID for jobs: {@value}.
+   * This was historically created in Spark 1.x's SQL queries, but "went away".
+   */
+  public static final String SPARK_WRITE_UUID =
+      "spark.sql.sources.writeJobUUID";
+
+  /**
+   * Java temp dir: {@value}.
+   */
+  public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
+
+  /**
+   * Incoming Job/task configuration didn't contain any option
+   * {@link #SPARK_WRITE_UUID}.
+   */
+  public static final String E_NO_SPARK_UUID =
+      "Job/task context does not contain a unique ID in "
+          + SPARK_WRITE_UUID;
+
+  /**
+   * The MR job ID; copies from MRJobConfig so that it can be
+   * referred to without needing hadoop-mapreduce on the classpath.
+   */
+  public static final String MR_JOB_ID = "mapreduce.job.id";
+
 }

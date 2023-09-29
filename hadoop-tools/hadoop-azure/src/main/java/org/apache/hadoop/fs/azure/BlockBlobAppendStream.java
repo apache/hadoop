@@ -27,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -42,8 +41,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -551,13 +551,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
     if (!compactionEnabled) {
       return false;
     }
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.HFLUSH:
-      return true;
-    default:
-      return false;
-    }
+    return StoreImplementationUtils.isProbeForSyncable(capability);
   }
 
   /**

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
@@ -36,7 +35,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,7 +196,7 @@ public class CrossOriginFilter implements Filter {
     LOG.info("Allowed Origins: " + StringUtils.join(allowedOrigins, ','));
     LOG.info("Allow All Origins: " + allowAllOrigins);
     List<String> discouragedAllowedOrigins = allowedOrigins.stream()
-            .filter(s -> s.length() > 1 && s.contains("*"))
+            .filter(s -> s.length() > 1 && s.contains("*") && !(s.startsWith(ALLOWED_ORIGINS_REGEX_PREFIX)))
             .collect(Collectors.toList());
     for (String discouragedAllowedOrigin : discouragedAllowedOrigins) {
         LOG.warn("Allowed Origin pattern '" + discouragedAllowedOrigin + "' is discouraged, use the 'regex:' prefix and use a Java regular expression instead.");

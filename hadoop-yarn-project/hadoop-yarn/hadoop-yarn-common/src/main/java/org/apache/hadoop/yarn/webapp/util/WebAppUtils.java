@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.webapp.util;
 import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -94,27 +95,27 @@ public class WebAppUtils {
    * Runs a certain function against the active RM. The function's first
    * argument is expected to be a string which contains the address of
    * the RM being tried.
+   * @param conf configuration.
+   * @param func throwing bi function.
+   * @param arg T arg.
+   * @param <T> Generic T.
+   * @param <R> Generic R.
+   * @throws Exception exception occurs.
+   * @return instance of Generic R.
    */
   public static <T, R> R execOnActiveRM(Configuration conf,
       ThrowingBiFunction<String, T, R> func, T arg) throws Exception {
-    String rm1Address = getRMWebAppURLWithScheme(conf, 0);
-    try {
-      return func.apply(rm1Address, arg);
-    } catch (Exception e) {
-      if (HAUtil.isHAEnabled(conf)) {
-        int rms = HAUtil.getRMHAIds(conf).size();
-        for (int i=1; i<rms; i++) {
-          try {
-            rm1Address = getRMWebAppURLWithScheme(conf, i);
-            return func.apply(rm1Address, arg);
-          } catch (Exception e1) {
-            // ignore and try next one when RM is down
-            e = e1;
-          }
-        }
+    int haIndex = 0;
+    if (HAUtil.isHAEnabled(conf)) {
+      String activeRMId = RMHAUtils.findActiveRMHAId(conf);
+      if (activeRMId != null) {
+        haIndex = new ArrayList<>(HAUtil.getRMHAIds(conf)).indexOf(activeRMId);
+      } else {
+        throw new ConnectException("No Active RM available");
       }
-      throw e;
     }
+    String rm1Address = getRMWebAppURLWithScheme(conf, haIndex);
+    return func.apply(rm1Address, arg);
   }
 
   /** A BiFunction which throws on Exception. */
@@ -179,6 +180,16 @@ public class WebAppUtils {
     } else {
       return conf.get(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ADDRESS);
+    }
+  }
+
+  public static String getGPGWebAppURLWithoutScheme(Configuration conf) {
+    if (YarnConfiguration.useHttps(conf)) {
+      return conf.get(YarnConfiguration.GPG_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.GPG_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_GPG_WEBAPP_ADDRESS);
     }
   }
 
@@ -395,7 +406,7 @@ public class WebAppUtils {
    * if url has scheme then it will be returned as it is else it will return
    * url with scheme.
    * @param schemePrefix eg. http:// or https://
-   * @param url
+   * @param url url.
    * @return url with scheme
    */
   public static String getURLWithScheme(String schemePrefix, String url) {
@@ -434,7 +445,8 @@ public class WebAppUtils {
   /**
    * Choose which scheme (HTTP or HTTPS) to use when generating a URL based on
    * the configuration.
-   * 
+   *
+   * @param conf configuration.
    * @return the scheme (HTTP / HTTPS)
    */
   public static String getHttpSchemePrefix(Configuration conf) {
@@ -444,6 +456,8 @@ public class WebAppUtils {
   /**
    * Load the SSL keystore / truststore into the HttpServer builder.
    * @param builder the HttpServer2.Builder to populate with ssl config
+   * @return HttpServer2.Builder instance (passed in as the first parameter)
+   *         after loading SSL stores
    */
   public static HttpServer2.Builder loadSslConfiguration(
       HttpServer2.Builder builder) {

@@ -24,7 +24,7 @@
 
 namespace hdfs {
 
-static std::string format_endpoints(const std::vector<::asio::ip::tcp::endpoint> &pts) {
+static std::string format_endpoints(const std::vector<boost::asio::ip::tcp::endpoint> &pts) {
   std::stringstream ss;
   for(unsigned int i=0; i<pts.size(); i++)
     if(i == pts.size() - 1)
@@ -66,7 +66,7 @@ HANamenodeTracker::HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &se
 
 HANamenodeTracker::~HANamenodeTracker() {}
 
-bool HANamenodeTracker::GetFailoverAndUpdate(const std::vector<::asio::ip::tcp::endpoint>& current_endpoints,
+bool HANamenodeTracker::GetFailoverAndUpdate(const std::vector<boost::asio::ip::tcp::endpoint>& current_endpoints,
                                              ResolvedNamenodeInfo& out)
 {
   mutex_guard swap_lock(swap_lock_);
@@ -117,7 +117,7 @@ bool HANamenodeTracker::GetFailoverAndUpdate(const std::vector<::asio::ip::tcp::
 }
 
 
-bool HANamenodeTracker::IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &ep) const {
+bool HANamenodeTracker::IsCurrentActive_locked(const boost::asio::ip::tcp::endpoint &ep) const {
   for(unsigned int i=0;i<active_info_.endpoints.size();i++) {
     if(ep.address() == active_info_.endpoints[i].address()) {
       if(ep.port() != active_info_.endpoints[i].port())
@@ -128,7 +128,7 @@ bool HANamenodeTracker::IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &
   return false;
 }
 
-bool HANamenodeTracker::IsCurrentStandby_locked(const ::asio::ip::tcp::endpoint &ep) const {
+bool HANamenodeTracker::IsCurrentStandby_locked(const boost::asio::ip::tcp::endpoint &ep) const {
   for(unsigned int i=0;i<standby_info_.endpoints.size();i++) {
     if(ep.address() == standby_info_.endpoints[i].address()) {
       if(ep.port() != standby_info_.endpoints[i].port())

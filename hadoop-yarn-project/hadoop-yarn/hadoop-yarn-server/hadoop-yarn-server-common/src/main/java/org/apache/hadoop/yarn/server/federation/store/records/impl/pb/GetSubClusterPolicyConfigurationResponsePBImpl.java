@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of
@@ -126,8 +126,10 @@ public class GetSubClusterPolicyConfigurationResponsePBImpl
     maybeInitBuilder();
     if (policyConfiguration == null) {
       builder.clearPolicyConfiguration();
+      return;
     }
     this.subClusterPolicy = policyConfiguration;
+    this.builder.setPolicyConfiguration(convertToProtoFormat(policyConfiguration));
   }
 
   private SubClusterPolicyConfiguration convertFromProtoFormat(

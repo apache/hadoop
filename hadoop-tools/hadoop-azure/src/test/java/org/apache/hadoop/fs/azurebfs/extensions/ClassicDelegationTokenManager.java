@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

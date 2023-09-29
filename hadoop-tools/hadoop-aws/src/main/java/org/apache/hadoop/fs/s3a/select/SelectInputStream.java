@@ -23,12 +23,9 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.AbortedException;
-import com.amazonaws.services.s3.model.SelectObjectContentEvent;
-import com.amazonaws.services.s3.model.SelectObjectContentEventVisitor;
-import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.SelectRecordsInputStream;
-import com.google.common.base.Preconditions;
+import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.http.AbortableInputStream;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,12 +36,13 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.fs.s3a.S3AInputStream.validateReadahead;
@@ -93,7 +91,7 @@ public class SelectInputStream extends FSInputStream implements
    * Abortable response stream.
    * This is guaranteed to never be null.
    */
-  private final SelectRecordsInputStream wrappedStream;
+  private final AbortableInputStream wrappedStream;
 
   private final String bucket;
 
@@ -103,7 +101,7 @@ public class SelectInputStream extends FSInputStream implements
 
   private final S3AReadOpContext readContext;
 
-  private final S3AInstrumentation.InputStreamStatistics streamStatistics;
+  private final S3AInputStreamStatistics streamStatistics;
 
   private long readahead;
 
@@ -112,14 +110,14 @@ public class SelectInputStream extends FSInputStream implements
    * The read attempt is initiated immediately.
    * @param readContext read context
    * @param objectAttributes object attributes from a HEAD request
-   * @param selectResponse response from the already executed call
+   * @param selectPublisher event stream publisher from the already executed call
    * @throws IOException failure
    */
   @Retries.OnceTranslated
   public SelectInputStream(
       final S3AReadOpContext readContext,
       final S3ObjectAttributes objectAttributes,
-      final SelectObjectContentResult selectResponse) throws IOException {
+      final SelectEventStreamPublisher selectPublisher) throws IOException {
     Preconditions.checkArgument(isNotEmpty(objectAttributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(objectAttributes.getKey()),
@@ -130,19 +128,19 @@ public class SelectInputStream extends FSInputStream implements
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.readContext = readContext;
     this.readahead = readContext.getReadahead();
-    this.streamStatistics = readContext.getInstrumentation()
+    this.streamStatistics = readContext.getS3AStatisticsContext()
         .newInputStreamStatistics();
-    SelectRecordsInputStream stream = once(
+
+    AbortableInputStream stream = once(
         "S3 Select",
         uri,
-        () -> selectResponse.getPayload()
-            .getRecordsInputStream(new SelectObjectContentEventVisitor() {
-              @Override
-              public void visit(final SelectObjectContentEvent.EndEvent event) {
-                LOG.debug("Completed successful S3 select read from {}", uri);
-                completedSuccessfully.set(true);
-              }
-            }));
+        () -> {
+          return selectPublisher.toRecordsInputStream(e -> {
+            LOG.debug("Completed successful S3 select read from {}", uri);
+            completedSuccessfully.set(true);
+          });
+        });
+
     this.wrappedStream = checkNotNull(stream);
     // this stream is already opened, so mark as such in the statistics.
     streamStatistics.streamOpened();
@@ -204,7 +202,7 @@ public class SelectInputStream extends FSInputStream implements
     long skipped = once("skip", uri, () -> wrappedStream.skip(n));
     pos.addAndGet(skipped);
     // treat as a forward skip for stats
-    streamStatistics.seekForwards(skipped);
+    streamStatistics.seekForwards(skipped, skipped);
     return skipped;
   }
 
@@ -331,13 +329,13 @@ public class SelectInputStream extends FSInputStream implements
         bytesSkipped++;
       }
       // read has finished.
-      streamStatistics.seekForwards(bytesSkipped);
+      streamStatistics.seekForwards(bytesSkipped, bytesSkipped);
     }
   }
 
   /**
    * Build an exception to raise when an operation is not supported here.
-   * @param action action which is unsupported.
+   * @param action action which is Unsupported.
    * @return an exception to throw.
    */
   protected PathIOException unsupported(final String action) {
@@ -428,7 +426,7 @@ public class SelectInputStream extends FSInputStream implements
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public S3AInstrumentation.InputStreamStatistics getS3AStreamStatistics() {
+  public S3AInputStreamStatistics getS3AStreamStatistics() {
     return streamStatistics;
   }
 

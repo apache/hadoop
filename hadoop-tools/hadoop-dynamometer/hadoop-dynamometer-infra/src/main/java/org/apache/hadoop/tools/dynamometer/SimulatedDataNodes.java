@@ -109,8 +109,10 @@ public class SimulatedDataNodes extends Configured implements Tool {
     }
     System.out.println("DataNodes will connect to NameNode at " + nameNodeAdr);
 
-    System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA,
-        DataNode.getStorageLocations(getConf()).get(0).getUri().getPath());
+    String loc = DataNode.getStorageLocations(getConf()).get(0).toString();
+    loc = loc.substring(loc.indexOf("]") + 1); // delete storage type
+    String path = new URI(loc).getPath();
+    System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA, path);
     SimulatedFSDataset.setFactory(getConf());
     getConf().setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
         STORAGE_CAPACITY);
@@ -129,7 +131,7 @@ public class SimulatedDataNodes extends Configured implements Tool {
           + " block listing files; launching DataNodes accordingly.");
       mc.startDataNodes(getConf(), blockListFiles.size(), null, false,
           StartupOption.REGULAR, null, null, null, null, false, true, true,
-          null);
+          null, null, null);
       long startTime = Time.monotonicNow();
       System.out.println("Waiting for DataNodes to connect to NameNode and "
           + "init storage directories.");

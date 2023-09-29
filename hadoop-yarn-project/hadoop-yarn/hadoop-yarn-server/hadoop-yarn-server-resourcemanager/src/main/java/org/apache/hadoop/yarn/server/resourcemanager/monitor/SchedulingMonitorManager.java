@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
-import com.google.common.collect.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class SchedulingMonitorManager {
     }
 
     // When monitor is enabled, loading policies
-    String[] configuredPolicies = conf.getStrings(
+    String[] configuredPolicies = conf.getTrimmedStrings(
         YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES);
     if (configuredPolicies == null || configuredPolicies.length == 0) {
       return;

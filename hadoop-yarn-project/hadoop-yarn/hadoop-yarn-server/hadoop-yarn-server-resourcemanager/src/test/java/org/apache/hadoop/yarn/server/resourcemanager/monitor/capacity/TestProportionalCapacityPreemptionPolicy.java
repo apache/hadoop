@@ -81,6 +81,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -940,8 +941,8 @@ public class TestProportionalCapacityPreemptionPolicy {
         true);
     policy.editSchedule();
 
-    // 5 containers will be preempted here
-    verify(mDisp, times(5)).handle(argThat(new IsPreemptionRequestFor(appA)));
+    // 4 containers will be preempted here
+    verify(mDisp, times(4)).handle(argThat(new IsPreemptionRequestFor(appA)));
   }
 
   @Test
@@ -966,11 +967,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     // which is likely triggered since we use small numbers for readability
     //run with Logger.getRootLogger().setLevel(Level.DEBUG);
     verify(mDisp, times(9)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemorySize());
+    assertEquals(10, policy
+        .getQueuePartitions().get("root.queueA.queueC.queueE").get("")
+        .preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
     TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
-        "queueA").get("");
+        "root.queueA").get("");
     assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
     long extraForQueueA =
         tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
@@ -999,12 +1002,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     policy.editSchedule();
 
     verify(mDisp, times(9)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE")
+    assertEquals(10, policy
+        .getQueuePartitions().get("root.queueA.queueC.queueE")
         .get("").preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
     TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
-        "queueA").get("");
+        "root.queueA").get("");
     assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
     long extraForQueueA =
         tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
@@ -1068,6 +1072,47 @@ public class TestProportionalCapacityPreemptionPolicy {
     assertEquals(newObserveOnly, policy.isObserveOnly());
   }
 
+  @Test
+  public void testLeafQueueNameExtraction() throws Exception {
+    ProportionalCapacityPreemptionPolicy policy =
+        buildPolicy(Q_DATA_FOR_IGNORE);
+    ParentQueue root = (ParentQueue) mCS.getRootQueue();
+    root.addDynamicParentQueue("childlessFlexible");
+    List<CSQueue> queues = root.getChildQueues();
+    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
+    LinkedList<ParentQueue> pqs = new LinkedList<>();
+    ParentQueue dynamicParent = mockParentQueue(
+        null, 0, pqs);
+    when(dynamicParent.getQueuePath()).thenReturn("root.dynamicParent");
+    when(dynamicParent.getQueueCapacities()).thenReturn(
+        new QueueCapacities(false));
+    QueueResourceQuotas dynamicParentQr = new QueueResourceQuotas();
+    dynamicParentQr.setEffectiveMaxResource(Resource.newInstance(1, 1));
+    dynamicParentQr.setEffectiveMinResource(Resources.createResource(1));
+    dynamicParentQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(1, 1));
+    dynamicParentQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(1));
+    when(dynamicParent.getQueueResourceQuotas()).thenReturn(dynamicParentQr);
+    when(dynamicParent.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resources.createResource(1));
+    when(dynamicParent.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(1, 1));
+    ResourceUsage resUsage = new ResourceUsage();
+    resUsage.setUsed(Resources.createResource(1024));
+    resUsage.setReserved(Resources.createResource(1024));
+    when(dynamicParent.getQueueResourceUsage()).thenReturn(resUsage);
+    when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
+    extendedQueues.add(dynamicParent);
+    extendedQueues.addAll(queues);
+    when(root.getChildQueues()).thenReturn(extendedQueues);
+
+    policy.editSchedule();
+
+    assertFalse("dynamicParent should not be a LeafQueue " +
+        "candidate", policy.getLeafQueueNames().contains("root.dynamicParent"));
+  }
+
   static class IsPreemptionRequestFor
       implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
@@ -1094,7 +1139,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     ProportionalCapacityPreemptionPolicy policy = new ProportionalCapacityPreemptionPolicy(
         rmContext, mCS, mClock);
     clusterResources = Resource.newInstance(
-        leafAbsCapacities(qData[0], qData[7]), 0);
+        leafAbsCapacities(qData[0], qData[7]),
+        leafAbsCapacities(qData[0], qData[7]));
     ParentQueue mRoot = buildMockRootQueue(rand, qData);
     when(mCS.getRootQueue()).thenReturn(mRoot);
 
@@ -1173,7 +1219,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   Resource[] generateResourceList(int[] qData) {
     List<Resource> resourceList = new ArrayList<Resource>();
     for (int i = 0; i < qData.length; i++) {
-      resourceList.add(Resource.newInstance(qData[i], 0));
+      resourceList.add(Resource.newInstance(qData[i], qData[i]));
     }
     return resourceList.toArray(new Resource[resourceList.size()]);
   }
@@ -1188,7 +1234,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     ResourceUsage resUsage = new ResourceUsage();
     resUsage.setUsed(used[0]);
     resUsage.setReserved(reserved[0]);
-    when(root.getQueueName()).thenReturn(CapacitySchedulerConfiguration.ROOT);
+    when(root.getQueuePath()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     when(root.getAbsoluteUsedCapacity()).thenReturn(
         Resources.divide(rc, tot, used[0], tot));
     when(root.getAbsoluteCapacity()).thenReturn(
@@ -1205,16 +1251,16 @@ public class TestProportionalCapacityPreemptionPolicy {
     boolean preemptionDisabled = mockPreemptionStatus("root");
     when(root.getPreemptionDisabled()).thenReturn(preemptionDisabled);
     QueueResourceQuotas rootQr = new QueueResourceQuotas();
-    rootQr.setEffectiveMaxResource(Resource.newInstance(maxCap[0], 0));
+    rootQr.setEffectiveMaxResource(Resource.newInstance(maxCap[0], maxCap[0]));
     rootQr.setEffectiveMinResource(abs[0]);
     rootQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
-        Resource.newInstance(maxCap[0], 0));
+        Resource.newInstance(maxCap[0], maxCap[0]));
     rootQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[0]);
     when(root.getQueueResourceQuotas()).thenReturn(rootQr);
     when(root.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
         .thenReturn(abs[0]);
     when(root.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
-        .thenReturn(Resource.newInstance(maxCap[0], 0));
+        .thenReturn(Resource.newInstance(maxCap[0], maxCap[0]));
 
     for (int i = 1; i < queues.length; ++i) {
       final CSQueue q;
@@ -1230,7 +1276,7 @@ public class TestProportionalCapacityPreemptionPolicy {
         q = mockLeafQueue(p, tot, i, abs, used, pending, reserved, apps, gran);
       }
       when(q.getParent()).thenReturn(p);
-      when(q.getQueueName()).thenReturn(queueName);
+      when(q.getQueuePath()).thenReturn(queueName);
       when(q.getAbsoluteUsedCapacity()).thenReturn(
           Resources.divide(rc, tot, used[i], tot));
       when(q.getAbsoluteCapacity()).thenReturn(
@@ -1246,16 +1292,16 @@ public class TestProportionalCapacityPreemptionPolicy {
       when(q.getQueueCapacities()).thenReturn(qc);
 
       QueueResourceQuotas qr = new QueueResourceQuotas();
-      qr.setEffectiveMaxResource(Resource.newInstance(maxCap[i], 0));
+      qr.setEffectiveMaxResource(Resource.newInstance(maxCap[i], maxCap[i]));
       qr.setEffectiveMinResource(abs[i]);
       qr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
-          Resource.newInstance(maxCap[i], 0));
+          Resource.newInstance(maxCap[i], maxCap[i]));
       qr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[i]);
       when(q.getQueueResourceQuotas()).thenReturn(qr);
       when(q.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
           .thenReturn(abs[i]);
       when(q.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
-          .thenReturn(Resource.newInstance(maxCap[i], 0));
+          .thenReturn(Resource.newInstance(maxCap[i], maxCap[i]));
 
       String parentPathName = p.getQueuePath();
       parentPathName = (parentPathName == null) ? "root" : parentPathName;

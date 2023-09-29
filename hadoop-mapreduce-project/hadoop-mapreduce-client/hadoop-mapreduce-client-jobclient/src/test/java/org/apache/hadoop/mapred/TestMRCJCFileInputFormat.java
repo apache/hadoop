@@ -33,6 +33,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -196,7 +197,7 @@ public class TestMRCJCFileInputFormat {
     // Enable multi-level/recursive inputs
     job.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
     InputSplit[] splits = inFormat.getSplits(job, 1);
-    assertEquals(splits.length, 2);
+    assertThat(splits.length).isEqualTo(2);
   }
 
   @SuppressWarnings("rawtypes")

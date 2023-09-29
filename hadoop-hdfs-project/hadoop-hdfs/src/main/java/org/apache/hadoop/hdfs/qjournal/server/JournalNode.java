@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,10 +45,11 @@ import org.apache.hadoop.util.DiskChecker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import javax.management.ObjectName;
@@ -57,7 +60,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The JournalNode is a daemon which allows namenodes using
@@ -79,6 +84,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private String httpServerURI;
   private final ArrayList<File> localDir = Lists.newArrayList();
   Tracer tracer;
+  private long startTime = 0;
 
   static {
     HdfsConfiguration.init();
@@ -116,6 +122,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
 
     return journal;
+  }
+
+  @VisibleForTesting
+  public JournalNodeSyncer getJournalSyncer(String jid) {
+    return journalSyncersById.get(jid);
   }
 
   @VisibleForTesting
@@ -237,6 +248,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
       rpcServer = new JournalNodeRpcServer(conf, this);
       rpcServer.start();
+      startTime = now();
     } catch (IOException ioe) {
       //Shutdown JournalNode of JournalNodeRpcServer fails to start
       LOG.error("Failed to start JournalNode.", ioe);
@@ -392,7 +404,38 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
     return JSON.toString(status);
   }
-  
+
+  @Override // JournalNodeMXBean
+  public String getHostAndPort() {
+    return NetUtils.getHostPortString(rpcServer.getAddress());
+  }
+
+  @Override // JournalNodeMXBean
+  public List<String> getClusterIds() {
+    return journalsById.values().stream()
+        .map(j -> j.getStorage().getClusterID())
+        .filter(cid -> !Strings.isNullOrEmpty(cid))
+        .distinct().collect(Collectors.toList());
+  }
+
+  @Override // JournalNodeMXBean
+  public String getVersion() {
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+  }
+
+  @Override // JournalNodeMXBean
+  public long getJNStartedTimeInMillis() {
+    return this.startTime;
+  }
+
+  @Override
+  // JournalNodeMXBean
+  public List<String> getStorageInfos() {
+    return journalsById.values().stream()
+        .map(journal -> journal.getStorage().toMapString())
+        .collect(Collectors.toList());
+  }
+
   /**
    * Register JournalNodeMXBean
    */

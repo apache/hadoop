@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+
 /**
  * Show the first 1KB of the file.
  */
@@ -68,11 +70,9 @@ class Head extends FsCommand {
   }
 
   private void dumpToOffset(PathData item) throws IOException {
-    FSDataInputStream in = item.fs.open(item.path);
-    try {
+    try (FSDataInputStream in = item.openFile(
+        FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
       IOUtils.copyBytes(in, System.out, endingOffset, false);
-    } finally {
-      in.close();
     }
   }
 }

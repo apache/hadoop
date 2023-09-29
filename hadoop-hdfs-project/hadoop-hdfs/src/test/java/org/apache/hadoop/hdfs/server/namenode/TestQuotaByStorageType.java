@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-  import static org.junit.Assert.assertEquals;
-  import static org.junit.Assert.assertTrue;
-  import static org.junit.Assert.fail;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -41,10 +38,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestQuotaByStorageType {
 
@@ -723,9 +724,9 @@ public class TestQuotaByStorageType {
     assertEquals(file1Len, ssdConsumed);
 
     // Restart the namenode with checkpoint to make sure fsImage is correct
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    dfs.setSafeMode(SafeModeAction.ENTER);
     dfs.saveNamespace();
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    dfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     refreshClusterState();
 

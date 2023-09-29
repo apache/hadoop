@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 
 @Public
@@ -44,7 +44,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   private ClientToAMTokenIdentifierProto proto;
 
   // TODO: Add more information in the tokenID such that it is not
-  // transferrable, more secure etc.
+  // transferable, more secure etc.
 
   public ClientToAMTokenIdentifier() {
   }

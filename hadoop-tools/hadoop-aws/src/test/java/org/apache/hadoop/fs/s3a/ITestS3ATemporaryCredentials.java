@@ -25,10 +25,9 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.Credentials;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.Credentials;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -116,22 +115,23 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   public void testSTS() throws IOException {
     Configuration conf = getContract().getConf();
     S3AFileSystem testFS = getFileSystem();
-    credentials = testFS.shareCredentials("testSTS");
+    credentials = getS3AInternals().shareCredentials("testSTS");
 
     String bucket = testFS.getBucket();
-    AWSSecurityTokenServiceClientBuilder builder = STSClientFactory.builder(
+    StsClientBuilder builder = STSClientFactory.builder(
         conf,
         bucket,
         credentials,
         getStsEndpoint(conf),
         getStsRegion(conf));
-    STSClientFactory.STSClient clientConnection =
-        STSClientFactory.createClientConnection(
-            builder.build(),
-            new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT));
-    Credentials sessionCreds = clientConnection
-        .requestSessionCredentials(TEST_SESSION_TOKEN_DURATION_SECONDS,
-            TimeUnit.SECONDS);
+    Credentials sessionCreds;
+    try (STSClientFactory.STSClient clientConnection =
+        STSClientFactory.createClientConnection(builder.build(),
+            new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT))) {
+      sessionCreds = clientConnection
+          .requestSessionCredentials(
+              TEST_SESSION_TOKEN_DURATION_SECONDS, TimeUnit.SECONDS);
+    }
 
     // clone configuration so changes here do not affect the base FS.
     Configuration conf2 = new Configuration(conf);
@@ -152,7 +152,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
     // now create an invalid set of credentials by changing the session
     // token
-    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.getSessionToken());
+    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.sessionToken());
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf2)) {
       createAndVerifyFile(fs, path("testSTSInvalidToken"), TEST_FILE_SIZE);
       fail("Expected an access exception, but file access to "
@@ -180,7 +180,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     conf.set(SECRET_KEY, "secretkey");
     conf.set(SESSION_TOKEN, "");
     LambdaTestUtils.intercept(CredentialInitializationException.class,
-        () -> new TemporaryAWSCredentialsProvider(conf).getCredentials());
+        () -> new TemporaryAWSCredentialsProvider(conf).resolveCredentials());
   }
 
   /**
@@ -275,8 +275,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       // this is a failure path, so fail with a meaningful error
       fail("request to create a file should have failed");
     } catch (AWSBadRequestException expected){
-      // likely at two points in the operation, depending on
-      // S3Guard state
+      // could fail in fs creation or file IO
     } finally {
       IOUtils.closeStream(fs);
     }
@@ -364,27 +363,28 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       final String region,
       final String exceptionText) throws Exception {
     try(AWSCredentialProviderList parentCreds =
-            getFileSystem().shareCredentials("test");
+            getS3AInternals().shareCredentials("test");
         DurationInfo ignored = new DurationInfo(LOG, "requesting credentials")) {
       Configuration conf = new Configuration(getContract().getConf());
-      ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, null);
+
       return intercept(clazz, exceptionText,
           () -> {
-            AWSSecurityTokenService tokenService =
+            StsClient tokenService =
                 STSClientFactory.builder(parentCreds,
-                    awsConf,
+                    conf,
                     endpoint,
-                    region)
+                    region,
+                    getFileSystem().getBucket())
                     .build();
             Invoker invoker = new Invoker(new S3ARetryPolicy(conf),
                 LOG_AT_ERROR);
 
-            STSClientFactory.STSClient stsClient
-                = STSClientFactory.createClientConnection(tokenService,
-                invoker);
-
-            return stsClient.requestSessionCredentials(30, TimeUnit.MINUTES);
+            try (STSClientFactory.STSClient stsClient =
+                STSClientFactory.createClientConnection(
+                    tokenService, invoker)) {
+              return stsClient.requestSessionCredentials(
+                  30, TimeUnit.MINUTES);
+            }
           });
     }
   }
@@ -414,6 +414,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
           return sc.toString();
         });
   }
+
   @Test
   public void testEmptyTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();

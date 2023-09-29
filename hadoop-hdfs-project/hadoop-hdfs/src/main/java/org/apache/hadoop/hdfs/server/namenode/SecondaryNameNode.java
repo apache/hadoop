@@ -29,7 +29,6 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -74,11 +73,12 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.VersionInfo;
 
 import javax.management.ObjectName;
@@ -276,7 +276,7 @@ public class SecondaryNameNode implements Runnable,
   }
 
   /**
-   * Shut down this instance of the datanode.
+   * Shut down this instance of the secondary namenode.
    * Returns only after shutdown is complete.
    */
   public void shutdown() {
@@ -803,7 +803,7 @@ public class SecondaryNameNode implements Runnable,
       geteditsizeOpt = new Option("geteditsize",
         "return the number of uncheckpointed transactions on the NameNode");
       checkpointOpt = OptionBuilder.withArgName("force")
-        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");;
+        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");
       formatOpt = new Option("format", "format the local storage during startup");
       helpOpt = new Option("h", "help", false, "get help information");
       
@@ -1098,7 +1098,7 @@ public class SecondaryNameNode implements Runnable,
       try {
         dstImage.reloadFromImageFile(file, dstNamesystem);
       } finally {
-        dstNamesystem.writeUnlock();
+        dstNamesystem.writeUnlock("reloadFromImageFile");
       }
       dstNamesystem.imageLoadComplete();
     }

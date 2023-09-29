@@ -42,7 +42,7 @@
         <div class="panel-heading">
           Diagnostics
         </div>
-        <div class="panel-body">{{model.app.diagnostics}}</div>
+        <div class="panel-body" style="white-space: pre-wrap;">{{model.app.diagnostics}}</div>
       </div>
     {{else}}
       <div class="panel panel-default">
@@ -128,7 +128,7 @@
         <td>{{model.app.allocatedResource}}</td>
         <td>{{model.app.runningContainersNumber}}</td>
         <td>{{model.app.preemptedResource}}</td>
-        <td>{{model.app.numAMContainerPreempted}}</td>
+        <td>{{model.app.numNonAMContainerPreempted}}</td>
         <td>{{model.app.numAMContainerPreempted}}</td>
         <td>{{model.app.aggregatedResourceUsage}}</td>
       </tr>

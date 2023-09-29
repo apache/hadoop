@@ -27,16 +27,16 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.PeerServer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 
@@ -68,8 +68,7 @@ class DataXceiverServer implements Runnable {
    * Enforcing the limit is required in order to avoid data-node
    * running out of memory.
    */
-  int maxXceiverCount =
-    DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
+  volatile int maxXceiverCount;
 
   /**
    * A manager to make sure that cluster balancing does not take too much
@@ -169,6 +168,12 @@ class DataXceiverServer implements Runnable {
 
   final BlockBalanceThrottler balanceThrottler;
 
+  private volatile DataTransferThrottler transferThrottler;
+
+  private volatile DataTransferThrottler writeThrottler;
+
+  private volatile DataTransferThrottler readThrottler;
+
   /**
    * Stores an estimate for block size to check if the disk partition has enough
    * space. Newer clients pass the expected block size to the DataNode. For
@@ -184,6 +189,9 @@ class DataXceiverServer implements Runnable {
     this.maxXceiverCount =
       conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
                   DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
+    Preconditions.checkArgument(this.maxXceiverCount >= 1,
+        DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY +
+        " should not be less than 1.");
 
     this.estimateBlockSize = conf.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
@@ -194,6 +202,36 @@ class DataXceiverServer implements Runnable {
             DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
+    initBandwidthPerSec(conf);
+  }
+
+  private void initBandwidthPerSec(Configuration conf) {
+    long bandwidthPerSec = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT);
+    if (bandwidthPerSec > 0) {
+      this.transferThrottler = new DataTransferThrottler(bandwidthPerSec);
+    } else {
+      this.transferThrottler = null;
+    }
+
+    bandwidthPerSec = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT);
+    if (bandwidthPerSec > 0) {
+      this.writeThrottler = new DataTransferThrottler(bandwidthPerSec);
+    } else {
+      this.writeThrottler = null;
+    }
+
+    bandwidthPerSec = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT);
+    if (bandwidthPerSec > 0) {
+      this.readThrottler = new DataTransferThrottler(bandwidthPerSec);
+    } else {
+      this.readThrottler = null;
+    }
   }
 
   @Override
@@ -207,7 +245,7 @@ class DataXceiverServer implements Runnable {
         int curXceiverCount = datanode.getXceiverCount();
         if (curXceiverCount > maxXceiverCount) {
           throw new IOException("Xceiver count " + curXceiverCount
-              + " exceeds the limit of concurrent xcievers: "
+              + " exceeds the limit of concurrent xceivers: "
               + maxXceiverCount);
         }
 
@@ -223,10 +261,10 @@ class DataXceiverServer implements Runnable {
           LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ace);
         }
       } catch (IOException ie) {
-        IOUtils.closeQuietly(peer);
+        IOUtils.closeStream(peer);
         LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ie);
       } catch (OutOfMemoryError ie) {
-        IOUtils.closeQuietly(peer);
+        IOUtils.closeStream(peer);
         // DataNode can run out of memory if there is too many transfers.
         // Log the event, Sleep for 30 seconds, other transfers may complete by
         // then.
@@ -309,7 +347,7 @@ class DataXceiverServer implements Runnable {
       peers.remove(peer);
       peersXceiver.remove(peer);
       datanode.metrics.decrDataNodeActiveXceiversCount();
-      IOUtils.closeQuietly(peer);
+      IOUtils.closeStream(peer);
       if (peers.isEmpty()) {
         this.noPeers.signalAll();
       }
@@ -371,7 +409,7 @@ class DataXceiverServer implements Runnable {
     LOG.info("Closing all peers.");
     lock.lock();
     try {
-      peers.keySet().forEach(p -> IOUtils.closeQuietly(p));
+      peers.keySet().forEach(IOUtils::closeStream);
       peers.clear();
       peersXceiver.clear();
       datanode.metrics.setDataNodeActiveXceiversCount(0);
@@ -443,6 +481,18 @@ class DataXceiverServer implements Runnable {
     return peerServer;
   }
 
+  public DataTransferThrottler getTransferThrottler() {
+    return transferThrottler;
+  }
+
+  public DataTransferThrottler getWriteThrottler() {
+    return writeThrottler;
+  }
+
+  public DataTransferThrottler getReadThrottler() {
+    return readThrottler;
+  }
+
   /**
    * Release a peer.
    *
@@ -480,5 +530,28 @@ class DataXceiverServer implements Runnable {
   @VisibleForTesting
   void setMaxReconfigureWaitTime(int max) {
     this.maxReconfigureWaitTime = max;
+  }
+
+  public void setMaxXceiverCount(int xceiverCount) {
+    Preconditions.checkArgument(xceiverCount > 0,
+        "dfs.datanode.max.transfer.threads should be larger than 0");
+    maxXceiverCount = xceiverCount;
+  }
+
+  @VisibleForTesting
+  public int getMaxXceiverCount() {
+    return maxXceiverCount;
+  }
+
+  public void setTransferThrottler(DataTransferThrottler transferThrottler) {
+    this.transferThrottler = transferThrottler;
+  }
+
+  public void setWriteThrottler(DataTransferThrottler writeThrottler) {
+    this.writeThrottler = writeThrottler;
+  }
+
+  public void setReadThrottler(DataTransferThrottler readThrottler) {
+    this.readThrottler = readThrottler;
   }
 }

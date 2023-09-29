@@ -223,7 +223,10 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     int nFile;
     for (nFile = 0; nFile < 10000; nFile++) {
       char filename[PATH_MAX];
-      snprintf(filename, PATH_MAX, "%s/many_files_%d", listDirTest, nFile);
+      int szToWrite = snprintf(NULL, 0, "%s/many_files_%d", listDirTest, nFile);
+      EXPECT_INT_LT(szToWrite, PATH_MAX);
+      int szWritten = snprintf(filename, PATH_MAX, "%s/many_files_%d", listDirTest, nFile);
+      EXPECT_NONNEGATIVE(szWritten);
       file = hdfsOpenFile(fs, filename, O_WRONLY, 0, 0, 0);
       EXPECT_NONNULL(file);
       EXPECT_ZERO(hdfsCloseFile(fs, file));

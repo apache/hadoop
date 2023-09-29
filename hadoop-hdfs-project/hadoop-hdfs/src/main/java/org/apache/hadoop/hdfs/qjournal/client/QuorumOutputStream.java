@@ -36,17 +36,18 @@ class QuorumOutputStream extends EditLogOutputStream {
 
   public QuorumOutputStream(AsyncLoggerSet loggers,
       long txId, int outputBufferCapacity,
-      int writeTimeoutMs) throws IOException {
+      int writeTimeoutMs, int logVersion) throws IOException {
     super();
     this.buf = new EditsDoubleBuffer(outputBufferCapacity);
     this.loggers = loggers;
     this.segmentTxId = txId;
     this.writeTimeoutMs = writeTimeoutMs;
+    setCurrentLogVersion(logVersion);
   }
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    buf.writeOp(op);
+    buf.writeOp(op, getCurrentLogVersion());
   }
 
   @Override
@@ -77,6 +78,11 @@ class QuorumOutputStream extends EditLogOutputStream {
   @Override
   public void setReadyToFlush() throws IOException {
     buf.setReadyToFlush();
+  }
+
+  @Override
+  public boolean shouldForceSync() {
+    return buf.shouldForceSync();
   }
 
   @Override

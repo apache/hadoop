@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.security;
 
 
 
+import static org.apache.hadoop.security.authentication.util.KerberosName.setRules;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -28,6 +30,10 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +47,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -52,6 +59,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
 import org.junit.After;
@@ -153,7 +161,27 @@ public class TestDelegationToken {
       // PASS
     }
   }
-  
+
+  @Test
+  public void testDelegationTokenMetrics() throws Exception {
+    FSNamesystem namesystem = cluster.getNamesystem();
+    // should start with no token
+    assertEquals(0, namesystem.getCurrentTokensCount());
+
+    // get token
+    Token<DelegationTokenIdentifier> token = generateDelegationToken(
+        "SomeUser", "JobTracker");
+    assertEquals(1, namesystem.getCurrentTokensCount());
+
+    // Renew token shouldn't change the count of tokens
+    dtSecretManager.renewToken(token, "JobTracker");
+    assertEquals(1, namesystem.getCurrentTokensCount());
+
+    // Cancel token should remove the token from memory
+    dtSecretManager.cancelToken(token, "JobTracker");
+    assertEquals(0, namesystem.getCurrentTokensCount());
+  }
+
   @Test
   public void testAddDelegationTokensDFSApi() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("JobTracker");
@@ -353,5 +381,31 @@ public class TestDelegationToken {
     Assert.assertEquals("HDFS_DELEGATION_TOKEN token 0" +
         " for SomeUser with renewer JobTracker",
         dtId.toStringStable());
+  }
+
+  @Test
+  public void testLogExpireTokensWhenChangeRules() throws IOException {
+    setRules("RULE:[2:$1@$0](SomeUser.*)s/.*/SomeUser/");
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
+        new Text("SomeUser/HOST@EXAMPLE.COM"),
+        new Text("SomeUser/HOST@EXAMPLE.COM"),
+        new Text("SomeUser/HOST@EXAMPLE.COM"));
+    Set<DelegationTokenIdentifier> expiredTokens = new HashSet();
+    expiredTokens.add(dtId);
+    setRules("RULE:[2:$1@$0](OtherUser.*)s/.*/OtherUser/");
+    //rules was modified, causing the existing tokens
+    //(May be loaded from other storage systems like zookeeper) to fail to match the kerberos rules,
+    //return an exception that cannot be handled
+    new AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>(10 * 1000, 10 * 1000,
+        10 * 1000, 10 * 1000) {
+      @Override
+      public DelegationTokenIdentifier createIdentifier() {
+        return null;
+      }
+      public void logExpireTokens(Collection<DelegationTokenIdentifier> expiredTokens)
+          throws IOException {
+        super.logExpireTokens(expiredTokens);
+      }
+    }.logExpireTokens(expiredTokens);
   }
 }

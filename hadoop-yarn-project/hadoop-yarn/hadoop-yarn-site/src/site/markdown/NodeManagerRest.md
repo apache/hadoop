@@ -518,7 +518,7 @@ Use the following URI to obtain a Container Object, from a container identified 
 
 HTTP Request:
 
-      GET http://nm-http-address:port/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/node/containers/container_1326121700862_0007_01_000001
 
 Response Header:
 
@@ -680,4 +680,110 @@ Response Body:
     <startTime>2018-12-18 21:00:00</startTime>
   </service>
 </services>
+```
+
+Resources API
+-------------
+
+With Resources API, you can list the GPU resources present on the NodeManager.
+
+### URI
+
+Use the following URI to obtain resources on the NodeManager
+
+      * http://nm-http-address:port/ws/v1/node/resources/{resourcename}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *NMGpuResourceInfo* object
+
+The response to this request if any GPU device is present on the NodeManager.
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| gpuDeviceInformation | GpuDeviceInformation | Contains all GPU Device Information in the system |
+| totalGpuDevices | List of GpuDevice objects | Contains the representations of GPU devices |
+| assignedGpuDevices | List of AssignedGpuDevice objects | In addition to GpuDevice, AssignedGpuDevice includes container ID |
+
+### Elements of the *GpuDeviceInformation* object
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| gpus | List of PerGpuDeviceInformation objects | Information objects about specific GPU devices |
+| driverVersion | String | ... |
+
+### Elements of the *PerGpuDeviceInformation* object
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| productName | String | Name of the GPU device |
+| uuid | String | Universally unique identifier of the GPU device |
+| minorNumber | int | Secondary identifier of the GPU device |
+
+### Elements of the *GpuDevice* object
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| index | int | Main identifier of the GPU device |
+| minorNumber | int | Secondary identifier of the GPU device |
+
+### Elements of the *AssignedGpuDevice* object
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| index | int | Main identifier of the GPU device |
+| minorNumber | int | Secondary identifier of the GPU device |
+| containerId | String | Identifier of the container |
+
+### GET Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      GET http://nm-http-address:port/ws/v1/node/resources/yarn.io%2Fgpu
+
+Response Header:
+
+      Cache-Control: no-cache
+      Pragma: no-cache
+      X-Content-Type-Options: nosniff
+      X-XSS-Protection: 1; mode=block
+      X-Frame-Options: SAMEORIGIN
+      Content-Type: application/json;charset=utf-8
+      Vary: Accept-Encoding
+      Content-Encoding: gzip
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```json
+{
+    "gpuDeviceInformation": null,
+    "totalGpuDevices": [
+        {
+            "index": 0,
+            "minorNumber": 0
+        },
+        {
+            "index": 1,
+            "minorNumber": 1
+        },
+        {
+            "index": 2,
+            "minorNumber": 2
+        },
+        {
+            "index": 3,
+            "minorNumber": 4
+        }
+    ],
+    "assignedGpuDevices": []
+}
 ```

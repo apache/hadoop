@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -42,6 +43,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -88,9 +90,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -109,7 +114,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * unit test - 
@@ -191,6 +196,10 @@ public class TestDelegationTokenRenewer {
 
   private static Configuration conf;
   DelegationTokenRenewer delegationTokenRenewer;
+  private MockRM rm;
+  private MockRM rm1;
+  private MockRM rm2;
+  private DelegationTokenRenewer localDtr;
  
   @BeforeClass
   public static void setUpClass() throws Exception {
@@ -212,9 +221,12 @@ public class TestDelegationTokenRenewer {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     conf.set("override_token_expire_time", "3000");
+    conf.setBoolean(YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL,
+        false);
     UserGroupInformation.setConfiguration(conf);
     eventQueue = new LinkedBlockingQueue<Event>();
     dispatcher = new AsyncDispatcher(eventQueue);
+    dispatcher.init(conf);
     Renewer.reset();
     delegationTokenRenewer = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext =  mock(RMContext.class);
@@ -228,14 +240,37 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    delegationTokenRenewer.setDelegationTokenRenewerPoolTracker(false);
     delegationTokenRenewer.setRMContext(mockContext);
     delegationTokenRenewer.init(conf);
     delegationTokenRenewer.start();
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
+    try {
+      dispatcher.close();
+    } catch (IOException e) {
+      LOG.debug("Unable to close the dispatcher. " + e);
+    }
     delegationTokenRenewer.stop();
+
+    if (rm != null) {
+      rm.close();
+      rm = null;
+    }
+    if (rm1 != null) {
+      rm1.close();
+      rm1 = null;
+    }
+    if (rm2 != null) {
+      rm2.close();
+      rm2 = null;
+    }
+    if (localDtr != null) {
+      localDtr.close();
+      localDtr = null;
+    }
   }
   
   private static class MyDelegationTokenSecretManager extends DelegationTokenSecretManager {
@@ -355,6 +390,35 @@ public class TestDelegationTokenRenewer {
    
     token1.setService(new Text("localhost:0"));
     return token1;
+  }
+
+  private RMApp submitApp(MockRM mockrm,
+      Credentials cred, ByteBuffer tokensConf) throws Exception {
+    int maxAttempts = mockrm.getConfig().getInt(
+        YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder.create()
+        .withResource(Resource.newInstance(200, 1))
+        .withAppName("app1")
+        .withUser("user")
+        .withAcls(null)
+        .withUnmanagedAM(false)
+        .withQueue(null)
+        .withMaxAppAttempts(maxAttempts)
+        .withCredentials(cred)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(true)
+        .withKeepContainers(false)
+        .withApplicationId(null)
+        .withAttemptFailuresValidityInterval(0)
+        .withLogAggregationContext(null)
+        .withCancelTokensWhenComplete(true)
+        .withAppPriority(Priority.newInstance(0))
+        .withAmLabel(null)
+        .withApplicationTimeouts(null)
+        .withTokensConf(tokensConf)
+        .build();
+    return MockRMAppSubmitter.submit(mockrm, data);
   }
   
   
@@ -569,6 +633,76 @@ public class TestDelegationTokenRenewer {
   
   /**
    * Basic idea of the test:
+   * 1. Verify that YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL = true
+   * overrides shouldCancelAtEnd
+   * 2. register a token for 2 seconds with shouldCancelAtEnd = false
+   * 3. cancel it immediately
+   * 4. check that token was canceled
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test(timeout=60000)
+  public void testDTRenewalWithNoCancelAlwaysCancel() throws Exception {
+    Configuration lconf = new Configuration(conf);
+    lconf.setBoolean(YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL,
+        true);
+
+    localDtr = createNewDelegationTokenRenewer(lconf, counter);
+    RMContext mockContext = mock(RMContext.class);
+    when(mockContext.getSystemCredentialsForApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    ClientRMService mockClientRMService = mock(ClientRMService.class);
+    when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(
+        localDtr);
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
+    InetSocketAddress sockAddr =
+        InetSocketAddress.createUnresolved("localhost", 1234);
+    when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
+    localDtr.setRMContext(mockContext);
+    localDtr.init(lconf);
+    localDtr.start();
+
+    MyFS dfs = (MyFS)FileSystem.get(lconf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+lconf.hashCode());
+
+    Credentials ts = new Credentials();
+    MyToken token1 = dfs.getDelegationToken("user1");
+
+    //to cause this one to be set for renew in 2 secs
+    Renewer.tokenToRenewIn2Sec = token1;
+    LOG.info("token="+token1+" should be renewed for 2 secs");
+
+    String nn1 = DelegationTokenRenewer.SCHEME + "://host1:0";
+    ts.addToken(new Text(nn1), token1);
+
+    ApplicationId applicationId = BuilderUtils.newApplicationId(0, 1);
+    localDtr.addApplicationAsync(applicationId, ts, false, "user",
+        new Configuration());
+    waitForEventsToGetProcessed(localDtr);
+    localDtr.applicationFinished(applicationId);
+    waitForEventsToGetProcessed(localDtr);
+
+    int numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
+    try {
+      Thread.sleep(6*1000); // sleep 6 seconds, so it has time to renew
+    } catch (InterruptedException e) {}
+    LOG.info("Counter = " + Renewer.counter + ";t="+ Renewer.lastRenewed);
+
+    // counter and the token should still be the old ones
+    assertEquals("renew wasn't called as many times as expected",
+        numberOfExpectedRenewals, Renewer.counter);
+
+    // The token should have been cancelled at this point. Renewal will fail.
+    try {
+      token1.renew(lconf);
+      fail("Renewal of cancelled token should have failed");
+    } catch (InvalidToken ite) {}
+  }
+
+  /**
+   * Basic idea of the test:
    * 0. Setup token KEEP_ALIVE
    * 1. create tokens.
    * 2. register them for renewal - to be cancelled on app complete
@@ -588,8 +722,7 @@ public class TestDelegationTokenRenewer {
     lconf.setLong(
         YarnConfiguration.RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS,
         1000l);
-    DelegationTokenRenewer localDtr =
-        createNewDelegationTokenRenewer(lconf, counter);
+    localDtr = createNewDelegationTokenRenewer(lconf, counter);
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
@@ -601,6 +734,7 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
     localDtr.setRMContext(mockContext);
     localDtr.init(lconf);
     localDtr.start();
@@ -668,8 +802,7 @@ public class TestDelegationTokenRenewer {
     lconf.setLong(
         YarnConfiguration.RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS,
         1000l);
-    DelegationTokenRenewer localDtr =
-        createNewDelegationTokenRenewer(conf, counter);
+    localDtr = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
@@ -681,6 +814,7 @@ public class TestDelegationTokenRenewer {
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
     localDtr.setRMContext(mockContext);
     localDtr.init(lconf);
     localDtr.start();
@@ -773,23 +907,24 @@ public class TestDelegationTokenRenewer {
     doThrow(new IOException("boom"))
         .when(tokenx).renew(any(Configuration.class));
       // fire up the renewer
-    final DelegationTokenRenewer dtr =
-         createNewDelegationTokenRenewer(conf, counter);
+    localDtr = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
-    dtr.setRMContext(mockContext);
-    when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
-    dtr.init(conf);
-    dtr.start();
+    localDtr.setRMContext(mockContext);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(localDtr);
+    localDtr.init(conf);
+    localDtr.start();
 
     try {
-      dtr.addApplicationSync(mock(ApplicationId.class), credsx, false, "user");
+      localDtr.addApplicationSync(mock(ApplicationId.class),
+          credsx, false, "user");
       fail("Catch IOException on app submission");
     } catch (IOException e){
       Assert.assertTrue(e.getMessage().contains(tokenx.toString()));
@@ -832,34 +967,35 @@ public class TestDelegationTokenRenewer {
     doReturn(Long.MAX_VALUE).when(token2).renew(any(Configuration.class));     
                                                                                
     // fire up the renewer                                                     
-    final DelegationTokenRenewer dtr =
-        createNewDelegationTokenRenewer(conf, counter);           
+    localDtr = createNewDelegationTokenRenewer(conf, counter);
+
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);         
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);    
     InetSocketAddress sockAddr =                                               
         InetSocketAddress.createUnresolved("localhost", 1234);                 
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);           
-    dtr.setRMContext(mockContext);  
-    when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
-    dtr.init(conf);
-    dtr.start();                                                                           
+    localDtr.setRMContext(mockContext);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(localDtr);
+    localDtr.init(conf);
+    localDtr.start();
     // submit a job that blocks during renewal                                 
     Thread submitThread = new Thread() {                                       
       @Override                                                                
       public void run() {
-        dtr.addApplicationAsync(mock(ApplicationId.class), creds1, false, "user",
-            new Configuration());
+        localDtr.addApplicationAsync(mock(ApplicationId.class),
+            creds1, false, "user", new Configuration());
       }                                                                        
     };                                                                         
     submitThread.start();                                                      
                                                                                
     // wait till 1st submit blocks, then submit another
     startBarrier.await();                           
-    dtr.addApplicationAsync(mock(ApplicationId.class), creds2, false, "user",
-        new Configuration());
+    localDtr.addApplicationAsync(mock(ApplicationId.class),
+        creds2, false, "user", new Configuration());
     // signal 1st to complete                                                  
     endBarrier.await();                                                        
     submitThread.join(); 
@@ -872,7 +1008,7 @@ public class TestDelegationTokenRenewer {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    MockRM rm = new MockRM(conf) {
+    rm = new MockRM(conf) {
       @Override
       protected void doSecureLogin() throws IOException {
         // Skip the login.
@@ -928,7 +1064,7 @@ public class TestDelegationTokenRenewer {
         new Token<DelegationTokenIdentifier>(dtId2.getBytes(),
           "password2".getBytes(), dtId2.getKind(), new Text("service2"));
 
-    final MockRM rm = new TestSecurityMockRM(conf, null) {
+    rm = new TestSecurityMockRM(conf, null) {
       @Override
       protected DelegationTokenRenewer createDelegationTokenRenewer() {
         return new DelegationTokenRenewer() {
@@ -946,9 +1082,16 @@ public class TestDelegationTokenRenewer {
     credentials.addToken(userText1, token1);
 
     RMApp app =
-        rm.submitApp(200, "name", "user",
-          new HashMap<ApplicationAccessType, String>(), false, "default", 1,
-          credentials);
+        MockRMAppSubmitter.submit(rm,
+            MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+                .withAppName("name")
+                .withUser("user")
+                .withAcls(new HashMap<ApplicationAccessType, String>())
+                .withUnmanagedAM(false)
+                .withQueue("default")
+                .withMaxAppAttempts(1)
+                .withCredentials(credentials)
+                .build());
 
     // wait for the initial expiring hdfs token to be removed from allTokens
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1024,12 +1167,19 @@ public class TestDelegationTokenRenewer {
     Credentials credentials = new Credentials();
     credentials.addToken(userText1, originalToken);
 
-    MockRM rm1 = new TestSecurityMockRM(yarnConf);
+    rm1 = new TestSecurityMockRM(yarnConf);
     MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
-    RMApp app = rm1.submitApp(200, "name", "user",
-        new HashMap<ApplicationAccessType, String>(), false, "default", 1,
-        credentials);
+    RMApp app = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("name")
+            .withUser("user")
+            .withAcls(new HashMap<ApplicationAccessType, String>())
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(credentials)
+            .build());
 
     // create token2
     Text userText2 = new Text("user1");
@@ -1041,7 +1191,7 @@ public class TestDelegationTokenRenewer {
             "password2".getBytes(), dtId2.getKind(), new Text("service2"));
     AtomicBoolean firstRenewInvoked = new AtomicBoolean(false);
     AtomicBoolean secondRenewInvoked = new AtomicBoolean(false);
-    MockRM rm2 = new TestSecurityMockRM(yarnConf, memStore) {
+    rm2 = new TestSecurityMockRM(yarnConf, memStore) {
       @Override
       protected DelegationTokenRenewer createDelegationTokenRenewer() {
         return new DelegationTokenRenewer() {
@@ -1051,8 +1201,8 @@ public class TestDelegationTokenRenewer {
               throws IOException {
 
             if (dttr.token.equals(updatedToken)) {
-              secondRenewInvoked.set(true);
               super.renewToken(dttr);
+              secondRenewInvoked.set(true);
             } else if (dttr.token.equals(originalToken)){
               firstRenewInvoked.set(true);
               throw new InvalidToken("Failed to renew");
@@ -1078,6 +1228,9 @@ public class TestDelegationTokenRenewer {
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
     nm1.registerNode();
+
+    GenericTestUtils.waitFor(() -> secondRenewInvoked.get(), 100, 10000);
+
     NodeHeartbeatResponse response = nm1.nodeHeartbeat(true);
 
     NodeHeartbeatResponse proto = new NodeHeartbeatResponsePBImpl(
@@ -1109,7 +1262,7 @@ public class TestDelegationTokenRenewer {
     final Token<DelegationTokenIdentifier> token2 =
         new Token<DelegationTokenIdentifier>(dtId2.getBytes(),
           "password2".getBytes(), dtId2.getKind(), new Text("service2"));
-    final MockRM rm = new TestSecurityMockRM(conf, null) {
+    rm = new TestSecurityMockRM(conf, null) {
       @Override
       protected DelegationTokenRenewer createDelegationTokenRenewer() {
         return new DelegationTokenRenewer() {
@@ -1125,7 +1278,7 @@ public class TestDelegationTokenRenewer {
     rm.start();
 
     // submit an app without delegationToken
-    RMApp app = rm.submitApp(200);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     // wait for the new retrieved hdfs token.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1161,7 +1314,7 @@ public class TestDelegationTokenRenewer {
   // submitted application.
   @Test (timeout = 30000)
   public void testAppSubmissionWithPreviousToken() throws Exception{
-    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm = new TestSecurityMockRM(conf, null);
     rm.start();
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
@@ -1182,8 +1335,15 @@ public class TestDelegationTokenRenewer {
     // submit app1 with a token, set cancelTokenWhenComplete to false;
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(200);
-    RMApp app1 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, false, null);
+    MockRMAppSubmissionData data1 = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .withCancelTokensWhenComplete(false)
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
     DelegationTokenRenewer renewer =
@@ -1192,8 +1352,15 @@ public class TestDelegationTokenRenewer {
     Assert.assertNotNull(dttr);
 
     // submit app2 with the same token, set cancelTokenWhenComplete to true;
-    RMApp app2 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .withCancelTokensWhenComplete(true)
+        .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
     rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
     finishAMAndWaitForComplete(app2, rm, nm1, am2, dttr);
@@ -1223,7 +1390,7 @@ public class TestDelegationTokenRenewer {
   // complete
   @Test (timeout = 30000)
   public void testCancelWithMultipleAppSubmissions() throws Exception{
-    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm = new TestSecurityMockRM(conf, null);
     rm.start();
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
@@ -1248,17 +1415,29 @@ public class TestDelegationTokenRenewer {
 
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(200);
+    MockRMAppSubmissionData data2 = MockRMAppSubmissionData.Builder
+        .createWithResource(resource, rm).withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
     RMApp app1 =
-        rm.submitApp(resource, "name", "user", null, false, null, 2, credentials,
-          null, true, false, false, null, 0, null, true, null);
+        MockRMAppSubmitter.submit(rm, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
 
     DelegationTokenToRenew dttr = renewer.getAllTokens().get(token1);
     Assert.assertNotNull(dttr);
     Assert.assertTrue(dttr.referringAppIds.contains(app1.getApplicationId()));
-    RMApp app2 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+        .withResource(resource)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
     rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
@@ -1274,8 +1453,15 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(dttr.isTimerCancelled());
     Assert.assertFalse(Renewer.cancelled);
 
-    RMApp app3 = rm.submitApp(resource, "name", "user", null, false, null, 2,
-        credentials, null, true, false, false, null, 0, null, true, null);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+        .withResource(resource)
+        .withAppName("name")
+        .withUser("user")
+        .withMaxAppAttempts(2)
+        .withCredentials(credentials)
+        .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm, nm1);
     rm.waitForState(app3.getApplicationId(), RMAppState.RUNNING);
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
@@ -1319,10 +1505,10 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 
-  private void finishAMAndWaitForComplete(final RMApp app, MockRM rm,
-      MockNM nm, MockAM am, final DelegationTokenToRenew dttr)
+  private void finishAMAndWaitForComplete(final RMApp app, MockRM mockrm,
+      MockNM mocknm, MockAM mockam, final DelegationTokenToRenew dttr)
           throws Exception {
-    MockRM.finishAMAndVerifyAppState(app, rm, nm, am);
+    MockRM.finishAMAndVerifyAppState(app, mockrm, mocknm, mockam);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
         return !dttr.referringAppIds.contains(app.getApplicationId());
@@ -1338,7 +1524,7 @@ public class TestDelegationTokenRenewer {
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
-    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm = new TestSecurityMockRM(conf, null);
     rm.start();
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
@@ -1368,7 +1554,7 @@ public class TestDelegationTokenRenewer {
     final int confSize = appConf.size();
 
     // submit app
-    RMApp app = rm.submitApp(credentials, tokenConf);
+    RMApp app = submitApp(rm, credentials, tokenConf);
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
@@ -1393,7 +1579,7 @@ public class TestDelegationTokenRenewer {
     UserGroupInformation.setConfiguration(conf);
     // limit 100 bytes
     conf.setInt(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE, 100);
-    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm = new TestSecurityMockRM(conf, null);
     rm.start();
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
@@ -1423,7 +1609,7 @@ public class TestDelegationTokenRenewer {
     ByteBuffer tokenConf = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
     try {
-      rm.submitApp(credentials, tokenConf);
+      submitApp(rm, credentials, tokenConf);
       Assert.fail();
     } catch (Exception e) {
       e.printStackTrace();
@@ -1456,19 +1642,20 @@ public class TestDelegationTokenRenewer {
    */
   @Test
   public void testShutDown() {
-    DelegationTokenRenewer dtr = createNewDelegationTokenRenewer(conf, counter);
+    localDtr = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
-    dtr.setRMContext(mockContext);
-    when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
-    dtr.init(conf);
-    dtr.start();
+    localDtr.setRMContext(mockContext);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(localDtr);
+    localDtr.init(conf);
+    localDtr.start();
     delegationTokenRenewer.stop();
     delegationTokenRenewer.applicationFinished(
         BuilderUtils.newApplicationId(0, 1));
@@ -1490,7 +1677,7 @@ public class TestDelegationTokenRenewer {
             "password2".getBytes(), dtId1.getKind(), new Text("service2"));
 
     // fire up the renewer
-    final DelegationTokenRenewer dtr = new DelegationTokenRenewer() {
+    localDtr = new DelegationTokenRenewer() {
       @Override
       protected Token<?>[] obtainSystemTokensForUser(String user,
           final Credentials credentials) throws IOException {
@@ -1502,32 +1689,216 @@ public class TestDelegationTokenRenewer {
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
-    dtr.setRMContext(mockContext);
-    when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
-    dtr.init(conf);
-    dtr.start();
+    localDtr.setRMContext(mockContext);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(localDtr);
+    localDtr.init(conf);
+    localDtr.start();
 
     final ApplicationId appId1 = ApplicationId.newInstance(1234, 1);
 
     Collection<ApplicationId> appIds = new ArrayList<ApplicationId>(1);
     appIds.add(appId1);
 
-    dtr.addApplicationSync(appId1, credsx, false, "user1");
+    localDtr.addApplicationSync(appId1, credsx, false, "user1");
 
     // Ensure incrTokenSequenceNo has been called for new token request
     Mockito.verify(mockContext, Mockito.times(1)).incrTokenSequenceNo();
 
-    DelegationTokenToRenew dttr = new DelegationTokenToRenew(appIds,
+    DelegationTokenToRenew dttr = localDtr.new DelegationTokenToRenew(appIds,
         expectedToken, conf, 1000, false, "user1");
 
-    dtr.requestNewHdfsDelegationTokenIfNeeded(dttr);
+    localDtr.requestNewHdfsDelegationTokenIfNeeded(dttr);
 
     // Ensure incrTokenSequenceNo has been called for token renewal as well.
     Mockito.verify(mockContext, Mockito.times(2)).incrTokenSequenceNo();
+  }
+
+  /**
+   * Test case to ensure token renewer threads are timed out by inducing
+   * artificial delay.
+   *
+   * Because of time out, retries would be attempted till it reaches max retry
+   * attempt and finally asserted using used threads count.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testTokenThreadTimeout() throws Exception {
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.set("override_token_expire_time", "30000");
+    yarnConf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
+        true);
+    yarnConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    yarnConf.setClass(YarnConfiguration.RM_STORE, MemoryRMStateStore.class,
+        RMStateStore.class);
+    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 2,
+        TimeUnit.SECONDS);
+    yarnConf.setTimeDuration(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 0,
+        TimeUnit.SECONDS);
+    yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        3);
+    UserGroupInformation.setConfiguration(yarnConf);
+
+    Text userText = new Text("user1");
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
+        new Text("renewer1"), userText);
+    final Token<DelegationTokenIdentifier> originalToken =
+        new Token<>(dtId.getBytes(), "password1".getBytes(), dtId.getKind(),
+            new Text("service1"));
+
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText, originalToken);
+
+    AtomicBoolean renewDelay = new AtomicBoolean(false);
+
+    // -1 is because of thread allocated to pool tracker runnable tasks
+    AtomicInteger threadCounter = new AtomicInteger(-1);
+    renewDelay.set(true);
+    DelegationTokenRenewer renewer = createNewDelegationTokenRenewerForTimeout(
+        yarnConf, threadCounter, renewDelay);
+
+    rm = new TestSecurityMockRM(yarnConf) {
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return renewer;
+      }
+    };
+
+    rm.start();
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+            .withAppName("name")
+            .withUser("user")
+            .withAcls(new HashMap<ApplicationAccessType, String>())
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(credentials)
+            .build());
+
+    int attempts = yarnConf.getInt(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS);
+
+    GenericTestUtils.waitFor(() -> threadCounter.get() >= attempts, 100, 20000);
+
+    // Ensure no. of threads has been used in renewer service thread pool is
+    // higher than the configured max retry attempts
+    assertTrue(threadCounter.get() >= attempts);
+    rm.close();
+  }
+
+  /**
+   * Test case to ensure token renewer threads are running as usual and finally
+   * asserted only 1 thread has been used.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testTokenThreadTimeoutWithoutDelay() throws Exception {
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
+        true);
+    yarnConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    yarnConf.set(YarnConfiguration.RM_STORE,
+        MemoryRMStateStore.class.getName());
+    yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 3,
+        TimeUnit.SECONDS);
+    yarnConf.setTimeDuration(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 3,
+        TimeUnit.SECONDS);
+    yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+        3);
+    UserGroupInformation.setConfiguration(yarnConf);
+
+    Text userText = new Text("user1");
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
+        new Text("renewer1"), userText);
+    final Token<DelegationTokenIdentifier> originalToken =
+        new Token<>(dtId.getBytes(), "password1".getBytes(), dtId.getKind(),
+            new Text("service1"));
+
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText, originalToken);
+
+    AtomicBoolean renewDelay = new AtomicBoolean(false);
+
+    // -1 is because of thread allocated to pool tracker runnable tasks
+    AtomicInteger threadCounter = new AtomicInteger(-1);
+    DelegationTokenRenewer renwer = createNewDelegationTokenRenewerForTimeout(
+        yarnConf, threadCounter, renewDelay);
+
+    rm = new TestSecurityMockRM(yarnConf) {
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return renwer;
+      }
+    };
+
+    rm.start();
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+            .withAppName("name")
+            .withUser("user")
+            .withAcls(new HashMap<ApplicationAccessType, String>())
+            .withUnmanagedAM(false)
+            .withQueue("default")
+            .withMaxAppAttempts(1)
+            .withCredentials(credentials)
+            .build());
+
+    GenericTestUtils.waitFor(() -> threadCounter.get() == 1, 2000, 40000);
+
+    // Ensure only one thread has been used in renewer service thread pool.
+    assertEquals(threadCounter.get(), 1);
+    rm.close();
+  }
+
+  private DelegationTokenRenewer createNewDelegationTokenRenewerForTimeout(
+      Configuration config, final AtomicInteger renewerCounter,
+      final AtomicBoolean renewDelay) {
+    DelegationTokenRenewer renew = new DelegationTokenRenewer() {
+      @Override
+      protected ThreadPoolExecutor createNewThreadPoolService(
+          Configuration configuration) {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(5, 5, 3L,
+            TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>()) {
+          @Override
+          public Future<?> submit(Runnable r) {
+            renewerCounter.incrementAndGet();
+            return super.submit(r);
+          }
+        };
+        return pool;
+      }
+
+      @Override
+      protected void renewToken(final DelegationTokenToRenew dttr)
+          throws IOException {
+        try {
+          if (renewDelay.get()) {
+            // Delay for 2 times than the configured timeout
+            Thread.sleep(config.getTimeDuration(
+                YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT,
+                YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT,
+                TimeUnit.MILLISECONDS) * 2);
+          }
+          super.renewToken(dttr);
+        } catch (InterruptedException e) {
+          LOG.info("Sleep Interrupted", e);
+        }
+      }
+    };
+    renew.setDelegationTokenRenewerPoolTracker(true);
+    return renew;
   }
 }

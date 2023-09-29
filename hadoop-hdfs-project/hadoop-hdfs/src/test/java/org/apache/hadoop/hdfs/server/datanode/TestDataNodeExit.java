@@ -82,6 +82,17 @@ public class TestDataNodeExit {
         dn.getBpOsCount());
   }
 
+  @Test
+  public void testBPServiceState() {
+    List<DataNode> dataNodes = cluster.getDataNodes();
+    for (DataNode dataNode : dataNodes) {
+      List<BPOfferService> bposList = dataNode.getAllBpOs();
+      for (BPOfferService bpOfferService : bposList) {
+        assertTrue(bpOfferService.isAlive());
+      }
+    }
+  }
+
   /**
    * Test BPService Thread Exit
    */

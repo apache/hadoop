@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class QueueConfigurationsPBImpl extends QueueConfigurations {
 
@@ -72,11 +72,11 @@ public class QueueConfigurationsPBImpl extends QueueConfigurations {
           .setEffectiveMaxCapacity(convertToProtoFormat(this.effMaxResource));
     }
     if (this.configuredMinResource != null) {
-      builder.setEffectiveMinCapacity(
+      builder.setConfiguredMinCapacity(
           convertToProtoFormat(this.configuredMinResource));
     }
     if (this.configuredMaxResource != null) {
-      builder.setEffectiveMaxCapacity(
+      builder.setConfiguredMaxCapacity(
           convertToProtoFormat(this.configuredMaxResource));
     }
   }

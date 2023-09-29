@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

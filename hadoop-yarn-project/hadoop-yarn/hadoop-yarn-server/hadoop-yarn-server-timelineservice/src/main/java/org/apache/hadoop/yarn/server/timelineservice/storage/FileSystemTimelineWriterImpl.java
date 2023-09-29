@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -41,7 +42,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,7 +142,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
               .append("\n").toString().getBytes("UTF-8");
       writeFileWithRetries(filePath, record);
     } catch (Exception ioe) {
-      LOG.warn("Interrupted operation:" + ioe.getMessage());
+      LOG.warn("Interrupted operation:{}", ioe.getMessage());
       TimelineWriteError error = createTimelineWriteError(entity);
       /*
        * TODO: set an appropriate error code after PoC could possibly be:
@@ -192,6 +193,20 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   @Override
   public void flush() throws IOException {
     // no op
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    try {
+      fs.exists(rootPath);
+    } catch (IOException e) {
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
+          e.getMessage()
+      );
+    }
+    return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+        "");
   }
 
   private void mkdirs(Path... paths) throws IOException, InterruptedException {
@@ -259,8 +274,8 @@ public class FileSystemTimelineWriterImpl extends AbstractService
             LOG.info("Maxed out FS retries. Giving up!");
             throw e;
           }
-          LOG.info("Will retry operation on FS. Retry no. " + retry +
-              " after sleeping for " + fsRetryInterval + " seconds");
+          LOG.info("Will retry operation on FS. Retry no. {}" +
+              " after sleeping for {} seconds", retry, fsRetryInterval);
           Thread.sleep(fsRetryInterval);
         }
       }

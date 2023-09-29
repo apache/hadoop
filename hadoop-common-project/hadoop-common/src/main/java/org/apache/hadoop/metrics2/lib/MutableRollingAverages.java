@@ -31,16 +31,16 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
-
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Time;
 
 import javax.annotation.Nullable;
 
@@ -77,13 +77,26 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   private final String avgInfoDescTemplate;
   private int numWindows;
 
+  /**
+   * This class maintains sub-sum and sub-total of SampleStat.
+   */
   private static class SumAndCount {
     private final double sum;
     private final long count;
+    private final long snapshotTimeStamp;
 
-    SumAndCount(final double sum, final long count) {
+    /**
+     * Constructor for {@link SumAndCount}.
+     *
+     * @param sum sub-sum in sliding windows
+     * @param count sub-total in sliding windows
+     * @param snapshotTimeStamp when is a new SampleStat snapshot.
+     */
+    SumAndCount(final double sum, final long count,
+        final long snapshotTimeStamp) {
       this.sum = sum;
       this.count = count;
+      this.snapshotTimeStamp = snapshotTimeStamp;
     }
 
     public double getSum() {
@@ -92,6 +105,10 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
     public long getCount() {
       return count;
+    }
+
+    public long getSnapshotTimeStamp() {
+      return snapshotTimeStamp;
     }
   }
 
@@ -111,8 +128,18 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   private static final int NUM_WINDOWS_DEFAULT = 36;
 
   /**
+   * Time duration after which a record is considered stale.
+   * {@link MutableRollingAverages} should be time-sensitive, and it should use
+   * the time window length(i.e. NUM_WINDOWS_DEFAULT * WINDOW_SIZE_MS_DEFAULT)
+   * as the valid time to make sure some too old record won't be use to compute
+   * average.
+   */
+  private long recordValidityMs =
+      NUM_WINDOWS_DEFAULT * WINDOW_SIZE_MS_DEFAULT;
+
+  /**
    * Constructor for {@link MutableRollingAverages}.
-   * @param metricValueName
+   * @param metricValueName input metricValueName.
    */
   public MutableRollingAverages(String metricValueName) {
     if (metricValueName == null) {
@@ -140,7 +167,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   @Override
-  public void snapshot(MetricsRecordBuilder builder, boolean all) {
+  public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       for (final Entry<String, LinkedBlockingDeque<SumAndCount>> entry
           : averages.entrySet()) {
@@ -152,8 +179,11 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
         long totalCount = 0;
 
         for (final SumAndCount sumAndCount : entry.getValue()) {
-          totalCount += sumAndCount.getCount();
-          totalSum += sumAndCount.getSum();
+          if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
+              < recordValidityMs) {
+            totalCount += sumAndCount.getCount();
+            totalSum += sumAndCount.getSum();
+          }
         }
 
         if (totalCount != 0) {
@@ -231,7 +261,8 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
           });
       final SumAndCount sumAndCount = new SumAndCount(
           rate.lastStat().total(),
-          rate.lastStat().numSamples());
+          rate.lastStat().numSamples(),
+          rate.getSnapshotTimeStamp());
       /* put newest sum and count to the end */
       if (!deque.offerLast(sumAndCount)) {
         deque.pollFirst();
@@ -254,6 +285,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
    * Retrieve a map of metric name {@literal ->} (aggregate).
    * Filter out entries that don't have at least minSamples.
    *
+   * @param minSamples input minSamples.
    * @return a map of peer DataNode Id to the average latency to that
    *         node seen over the measurement period.
    */
@@ -267,8 +299,11 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
       long totalCount = 0;
 
       for (final SumAndCount sumAndCount : entry.getValue()) {
-        totalCount += sumAndCount.getCount();
-        totalSum += sumAndCount.getSum();
+        if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
+            < recordValidityMs) {
+          totalCount += sumAndCount.getCount();
+          totalSum += sumAndCount.getSum();
+        }
       }
 
       if (totalCount > minSamples) {
@@ -276,5 +311,14 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
       }
     }
     return stats;
+  }
+
+  /**
+   * Use for test only.
+   * @param value input value.
+   */
+  @VisibleForTesting
+  public synchronized void setRecordValidityMs(long value) {
+    this.recordValidityMs = value;
   }
 }

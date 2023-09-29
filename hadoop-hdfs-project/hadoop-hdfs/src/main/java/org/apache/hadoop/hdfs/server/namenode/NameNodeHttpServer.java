@@ -23,10 +23,11 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_RES
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.HashMap;
 
 import javax.servlet.ServletContext;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -46,6 +47,8 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
+
+import com.sun.jersey.api.core.ResourceConfig;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -73,10 +76,8 @@ public class NameNodeHttpServer {
     this.bindAddress = bindAddress;
   }
 
-  public static void initWebHdfs(Configuration conf, String hostname,
-      String httpKeytab,
-      HttpServer2 httpServer2, String jerseyResourcePackage)
-      throws IOException {
+  public static void initWebHdfs(Configuration conf, HttpServer2 httpServer2,
+      String jerseyResourcePackage) throws IOException {
     // set user pattern based on configuration file
     UserParam.setUserPattern(conf.get(
         HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
@@ -99,9 +100,11 @@ public class NameNodeHttpServer {
     }
 
     // add webhdfs packages
+    final Map<String, String> params = new HashMap<>();
+    params.put(ResourceConfig.FEATURE_MATCH_MATRIX_PARAMS, "true");
     httpServer2.addJerseyResourcePackage(
         jerseyResourcePackage + ";" + Param.class.getPackage().getName(),
-        pathSpec);
+        pathSpec, params);
   }
 
   /**
@@ -154,14 +157,12 @@ public class NameNodeHttpServer {
       httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
           datanodeSslPort.getPort());
     }
-    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-    initWebHdfs(conf, bindAddress.getHostName(), httpKeytab, httpServer,
-        NamenodeWebHdfsMethods.class.getPackage().getName());
+
+    initWebHdfs(conf, httpServer, NamenodeWebHdfsMethods.class.getPackage().getName());
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    setupServlets(httpServer, conf);
+    setupServlets(httpServer);
     httpServer.start();
 
     int connIdx = 0;
@@ -238,7 +239,7 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(ALIASMAP_ATTRIBUTE_KEY, aliasMap);
   }
 
-  private static void setupServlets(HttpServer2 httpServer, Configuration conf) {
+  private static void setupServlets(HttpServer2 httpServer) {
     httpServer.addInternalServlet("startupProgress",
         StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
     httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
@@ -248,6 +249,8 @@ public class NameNodeHttpServer {
     httpServer.addInternalServlet(IsNameNodeActiveServlet.SERVLET_NAME,
         IsNameNodeActiveServlet.PATH_SPEC,
         IsNameNodeActiveServlet.class);
+    httpServer.addInternalServlet(NetworkTopologyServlet.SERVLET_NAME,
+        NetworkTopologyServlet.PATH_SPEC, NetworkTopologyServlet.class);
   }
 
   static FSImage getFsImageFromContext(ServletContext context) {

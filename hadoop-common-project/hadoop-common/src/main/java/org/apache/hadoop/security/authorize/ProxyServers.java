@@ -33,7 +33,7 @@ public class ProxyServers {
   }
 
   public static void refresh(Configuration conf){
-    Collection<String> tempServers = new HashSet<String>();
+    Collection<String> tempServers = new HashSet<>();
     // trusted proxy servers such as http proxies
     for (String host : conf.getTrimmedStrings(CONF_HADOOP_PROXYSERVERS)) {
       InetSocketAddress addr = new InetSocketAddress(host, 0);

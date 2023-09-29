@@ -24,8 +24,8 @@ import java.util.Queue;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.util.Lists;
 
 /**
  * In the Standby Node, we can receive messages about blocks
@@ -95,9 +95,16 @@ class PendingDataNodeMessages {
   
   void enqueueReportedBlock(DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState) {
-    block = new Block(block);
-    getBlockQueue(block).add(
-        new ReportedBlockInfo(storageInfo, block, reportedState));
+    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      Block blkId = new Block(BlockIdManager.convertToStripedID(block
+          .getBlockId()));
+      getBlockQueue(blkId).add(
+          new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
+    } else {
+      block = new Block(block);
+      getBlockQueue(block).add(
+          new ReportedBlockInfo(storageInfo, block, reportedState));
+    }
     count++;
   }
   

@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.net.InetAddress;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import java.net.InetAddress;
 
 /**
  * Extension of {@link AuditLogger}.
@@ -61,13 +61,10 @@ public abstract class HdfsAuditLogger implements AuditLogger {
    * @param dtSecretManager The token secret manager, or null if not logging
    *          token tracking information
    */
-  public void logAuditEvent(boolean succeeded, String userName,
+  public abstract void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus stat, CallerContext callerContext, UserGroupInformation ugi,
-      DelegationTokenSecretManager dtSecretManager) {
-    logAuditEvent(succeeded, userName, addr, cmd, src, dst, stat,
-                  ugi, dtSecretManager);
-  }
+      DelegationTokenSecretManager dtSecretManager);
 
   /**
    * Same as

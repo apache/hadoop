@@ -37,6 +37,8 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -58,7 +60,12 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     Arrays.asList("hello08","hello10");
   
   private List<String> input;
-  
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    setupClassBase(TestBadRecords.class);
+  }
+
   public TestBadRecords() {
     input = new ArrayList<String>();
     for(int i=1;i<=10;i++) {

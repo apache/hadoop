@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import com.google.common.collect.Lists;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +29,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -53,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -88,12 +87,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -109,6 +112,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -483,6 +487,17 @@ public class TestRMAppTransitions {
         any(ApplicationStateData.class));
   }
 
+  private void assertAppStateLaunchTimeSaved(long expectedLaunchTime) {
+    ArgumentCaptor<ApplicationStateData> state =
+        ArgumentCaptor.forClass(ApplicationStateData.class);
+    ArgumentCaptor<Boolean> notifyApp =
+        ArgumentCaptor.forClass(Boolean.class);
+    verify(store, times(1)).updateApplicationState(state.capture(),
+        notifyApp.capture());
+    assertEquals(expectedLaunchTime, state.getValue().getLaunchTime());
+    assertFalse(notifyApp.getValue());
+  }
+
   private void assertKilled(RMApp application) {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
@@ -646,6 +661,7 @@ public class TestRMAppTransitions {
     RMAppEvent finishedEvent = new RMAppEvent(application.getApplicationId(),
         RMAppEventType.ATTEMPT_FINISHED, diagnostics);
     application.handle(finishedEvent);
+    rmDispatcher.await();
 
     //only run this verification if we created a finishing app
     if (submissionContext == null) {
@@ -930,6 +946,32 @@ public class TestRMAppTransitions {
     verifyApplicationFinished(RMAppState.KILLED);
     verifyAppRemovedSchedulerEvent(application, RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
+  }
+
+  @Test
+  public void testAppAcceptedAccepted() throws IOException {
+    LOG.info("--- START: testAppAcceptedAccepted ---");
+
+    RMApp application = testCreateAppAccepted(null);
+    // ACCEPTED => ACCEPTED event RMAppEventType.ATTEMPT_LAUNCHED
+    RMAppEvent appAttemptLaunched =
+        new RMAppEvent(application.getApplicationId(),
+            RMAppEventType.ATTEMPT_LAUNCHED, 1234L);
+    application.handle(appAttemptLaunched);
+    rmDispatcher.await();
+    assertAppState(RMAppState.ACCEPTED, application);
+    assertAppStateLaunchTimeSaved(1234L);
+  }
+
+  @Test
+  public void testAcquiredReleased() throws IOException {
+    RMApp application = testCreateAppSubmittedNoRecovery(null);
+    NodeId nodeId = NodeId.newInstance("host", 1234);
+    application.handle(
+        new RMAppRunningOnNodeEvent(application.getApplicationId(), nodeId, true));
+    Map<NodeId, LogAggregationReport> logAggregationReportsForApp =
+        application.getLogAggregationReportsForApp();
+    assertEquals(0, logAggregationReportsForApp.size());
   }
 
   @Test

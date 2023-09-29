@@ -156,7 +156,7 @@ public final class ECSchema implements Serializable {
   }
 
   /**
-   * Get extra options specific to a erasure code.
+   * Get extra options specific to an erasure code.
    * @return extra options
    */
   public Map<String, String> getExtraOptions() {

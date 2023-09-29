@@ -539,4 +539,17 @@ public abstract class ApplicationReport {
   @Unstable
   public abstract void setApplicationTimeouts(
       Map<ApplicationTimeoutType, ApplicationTimeout> timeouts);
+
+  /**
+   * Get RM ClusterId.
+   *
+   * @return RM ClusterId
+   */
+  @Public
+  @Stable
+  public abstract String getRMClusterId();
+
+  @Public
+  @Stable
+  public abstract void setRMClusterId(String rmClusterId);
 }

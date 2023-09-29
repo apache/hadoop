@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -28,13 +29,15 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.ArrayList;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.StorageType.DISK;
 import static org.apache.hadoop.fs.StorageType.SSD;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.anyByte;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,4 +97,75 @@ public class TestFileWithSnapshotFeature {
     Assert.assertEquals(-BLOCK_SIZE, counts.getTypeSpaces().get(SSD));
   }
 
+  /**
+   * Test update quota with same blocks.
+   */
+  @Test
+  public void testUpdateQuotaDistinctBlocks() {
+    BlockStoragePolicySuite bsps = mock(BlockStoragePolicySuite.class);
+    BlockStoragePolicy bsp = mock(BlockStoragePolicy.class);
+    BlockInfo[] blocks = new BlockInfo[] {
+        new BlockInfoContiguous(new Block(1, BLOCK_SIZE, 1), REPL_3) };
+
+    INodeFile file = mock(INodeFile.class);
+    when(file.getBlocks()).thenReturn(blocks);
+    when(file.getStoragePolicyID()).thenReturn((byte) 1);
+    when(file.getPreferredBlockReplication()).thenReturn((short) 3);
+
+    when(bsps.getPolicy(anyByte())).thenReturn(bsp);
+    INode.BlocksMapUpdateInfo collectedBlocks =
+        mock(INode.BlocksMapUpdateInfo.class);
+    ArrayList<INode> removedINodes = new ArrayList<>();
+    INode.ReclaimContext ctx =
+        new INode.ReclaimContext(bsps, collectedBlocks, removedINodes, null);
+    QuotaCounts counts = ctx.quotaDelta().getCountsCopy();
+    INodeFile snapshotINode = mock(INodeFile.class);
+
+    // add same blocks in file diff
+    FileDiff diff1 = new FileDiff(0, snapshotINode, null, 0);
+    FileDiff diff = Mockito.spy(diff1);
+    Mockito.doReturn(blocks).when(diff).getBlocks();
+
+    // removed file diff
+    FileDiff removed = new FileDiff(0, snapshotINode, null, 0);
+
+    // remaining file diffs
+    FileDiffList diffs = new FileDiffList();
+    diffs.addFirst(diff);
+    FileWithSnapshotFeature sf = new FileWithSnapshotFeature(diffs);
+
+    // update quota and collect same blocks in file and file diff
+    when(file.getFileWithSnapshotFeature()).thenReturn(sf);
+    sf.updateQuotaAndCollectBlocks(ctx, file, removed);
+    counts = ctx.quotaDelta().getCountsCopy();
+    assertEquals(0, counts.getStorageSpace());
+
+    // different blocks in file and file's diff and in removed diff
+    BlockInfo[] blocks1 = new BlockInfo[] {
+        new BlockInfoContiguous(new Block(2, BLOCK_SIZE, 1), REPL_3) };
+    Mockito.doReturn(blocks1).when(diff).getBlocks();
+    // remaining file diffs
+    FileDiffList diffs1 = new FileDiffList();
+    diffs1.addFirst(diff);
+    FileWithSnapshotFeature sf1 = new FileWithSnapshotFeature(diffs1);
+    when(file.getFileWithSnapshotFeature()).thenReturn(sf1);
+    BlockInfo[] removedBlocks = new BlockInfo[] {
+        new BlockInfoContiguous(new Block(3, BLOCK_SIZE, 1), REPL_3) };
+    FileDiff removed1 = new FileDiff(0, snapshotINode, null, 1024);
+    removed1.setBlocks(removedBlocks);
+    INode.ReclaimContext ctx1 =
+        new INode.ReclaimContext(bsps, collectedBlocks, removedINodes, null);
+    sf1.updateQuotaAndCollectBlocks(ctx1, file, removed1);
+    counts = ctx1.quotaDelta().getCountsCopy();
+    assertEquals(3072, counts.getStorageSpace());
+
+    // same blocks in file and removed diff
+    removed1 = new FileDiff(0, snapshotINode, null, 1024);
+    removed1.setBlocks(blocks);
+    INode.ReclaimContext ctx2 =
+        new INode.ReclaimContext(bsps, collectedBlocks, removedINodes, null);
+    sf1.updateQuotaAndCollectBlocks(ctx2, file, removed1);
+    counts = ctx2.quotaDelta().getCountsCopy();
+    assertEquals(0, counts.getStorageSpace());
+  }
 }

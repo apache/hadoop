@@ -27,6 +27,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -73,12 +74,32 @@ public class TestNNBench extends HadoopTestCase {
         getFileSystem().exists(renamedPath));
   }
 
-  private void runNNBench(Configuration conf, String operation)
+  @Test(timeout = 30000)
+  public void testNNBenchCrossCluster() throws Exception {
+    MiniDFSCluster dfsCluster = new MiniDFSCluster.Builder(new JobConf())
+            .numDataNodes(1).build();
+    dfsCluster.waitClusterUp();
+    String nnAddress = dfsCluster.getNameNode(0).getHostAndPort();
+    String baseDir = "hdfs://" + nnAddress + BASE_DIR;
+    runNNBench(createJobConf(), "create_write", baseDir);
+
+    Path path = new Path(BASE_DIR + "/data/file_0_0");
+    assertTrue("create_write should create the file",
+            dfsCluster.getFileSystem().exists(path));
+    dfsCluster.shutdown();
+  }
+
+  private void runNNBench(Configuration conf, String operation, String baseDir)
       throws Exception {
-    String[] genArgs = { "-operation", operation, "-baseDir", BASE_DIR,
-        "-startTime", "" + (Time.now() / 1000 + 3) };
+    String[] genArgs = {"-operation", operation, "-baseDir", baseDir,
+        "-startTime", "" + (Time.now() / 1000 + 3), "-blockSize", "1024"};
 
     assertEquals(0, ToolRunner.run(conf, new NNBench(), genArgs));
+  }
+
+  private void runNNBench(Configuration conf, String operation)
+      throws Exception {
+    runNNBench(conf, operation, BASE_DIR);
   }
 
 }

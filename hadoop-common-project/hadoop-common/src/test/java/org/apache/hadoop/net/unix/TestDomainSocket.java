@@ -49,7 +49,7 @@ import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestDomainSocket {
   private static TemporarySocketDirectory sockDir;
@@ -759,6 +759,6 @@ public class TestDomainSocket {
     readerThread.join();
     Assert.assertFalse(failed.get());
     Assert.assertEquals(3, bytesRead.get());
-    IOUtils.cleanup(null, socks);
+    IOUtils.cleanupWithLogger(null, socks);
   }
 }

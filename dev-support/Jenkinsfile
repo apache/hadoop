@@ -1,0 +1,338 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+def getGithubCreds() {
+    return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                passwordVariable: 'GITHUB_TOKEN',
+                                usernameVariable: 'GITHUB_USER')]
+}
+
+// Publish JUnit results only if there are XML files under surefire-reports
+def publishJUnitResults() {
+    def findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+    boolean surefireReportsExist = findCmdExitCode == 0
+    if (surefireReportsExist) {
+        echo "XML files found under surefire-reports, running junit"
+        // The path should be relative to WORKSPACE for the junit.
+        SRC = "${SOURCEDIR}/**/target/surefire-reports/*.xml".replace("$WORKSPACE/","")
+        try {
+            junit "${SRC}"
+        } catch(e) {
+            echo 'junit processing: ' + e.toString()
+        }
+    } else {
+        echo "No XML files found under surefire-reports, skipping junit"
+    }
+}
+
+pipeline {
+
+    agent {
+        label 'Hadoop'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        timeout (time: 48, unit: 'HOURS')
+        timestamps()
+        checkoutToSubdirectory('src')
+    }
+
+    environment {
+        YETUS='yetus'
+        // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
+        YETUS_VERSION='rel/0.14.0'
+    }
+
+    parameters {
+        string(name: 'JIRA_ISSUE_KEY',
+               defaultValue: '',
+               description: 'The JIRA issue that has a patch needing pre-commit testing. Example: HADOOP-1234')
+    }
+
+    stages {
+        stage ('install yetus') {
+            steps {
+                dir("${WORKSPACE}/${YETUS}") {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "${env.YETUS_VERSION}"]],
+                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                    )
+                }
+            }
+        }
+
+        // Setup codebase so that each platform's build happens in its own exclusive copy of the
+        // codebase.
+        // Primarily because YETUS messes up the git branch information and affects the subsequent
+        // optional stages after the first one.
+        stage ('setup sources') {
+            steps {
+                dir("${WORKSPACE}/centos-7") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-7
+                    '''
+                }
+
+                dir("${WORKSPACE}/centos-8") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-8
+                    '''
+                }
+
+                dir("${WORKSPACE}/debian-10") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-10
+                    '''
+                }
+
+                dir("${WORKSPACE}/ubuntu-focal") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-focal
+                    '''
+                }
+            }
+        }
+
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Centos 7.
+        stage ('precommit-run Centos 7') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/centos-7/src"
+                PATCHDIR = "${WORKSPACE}/centos-7/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_7"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                    '''
+                }
+            }
+
+            post {
+                // Since this is an optional platform, we want to copy the artifacts
+                // and archive it only if the build fails, to help with debugging.
+                failure {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp "${WORKSPACE}/centos-7/out" "${WORKSPACE}"
+                    '''
+                    archiveArtifacts "out/**"
+                }
+
+                cleanup() {
+                    script {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+                        '''
+                    }
+                }
+            }
+        }
+
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Centos 8.
+        stage ('precommit-run Centos 8') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/centos-8/src"
+                PATCHDIR = "${WORKSPACE}/centos-8/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                        '''
+                }
+            }
+
+            post {
+                // Since this is an optional platform, we want to copy the artifacts
+                // and archive it only if the build fails, to help with debugging.
+                failure {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp "${WORKSPACE}/centos-8/out" "${WORKSPACE}"
+                    '''
+                    archiveArtifacts "out/**"
+                }
+
+                cleanup() {
+                    script {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+                        '''
+                    }
+                }
+            }
+        }
+
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Debian 10.
+        stage ('precommit-run Debian 10') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/debian-10/src"
+                PATCHDIR = "${WORKSPACE}/debian-10/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                    '''
+                }
+            }
+
+            post {
+                // Since this is an optional platform, we want to copy the artifacts
+                // and archive it only if the build fails, to help with debugging.
+                failure {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp "${WORKSPACE}/debian-10/out" "${WORKSPACE}"
+                    '''
+                    archiveArtifacts "out/**"
+                }
+
+                cleanup() {
+                    script {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+                        '''
+                    }
+                }
+            }
+        }
+
+        // We want to use Ubuntu Focal as our main CI and thus, this stage
+        // isn't optional (runs for all the PRs).
+        stage ('precommit-run Ubuntu focal') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/ubuntu-focal/src"
+                PATCHDIR = "${WORKSPACE}/ubuntu-focal/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                IS_OPTIONAL = 0
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                    '''
+                }
+            }
+
+            post {
+                always {
+                    script {
+                        // Publish status if it was missed (YETUS-1059)
+                        withCredentials(
+                            [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                                              passwordVariable: 'GITHUB_TOKEN',
+                                              usernameVariable: 'GITHUB_USER')]) {
+                            sh '''#!/usr/bin/env bash
+
+                            # Copy the artifacts of Ubuntu focal build to workspace
+                            cp -Rp "${WORKSPACE}/ubuntu-focal/out" "${WORKSPACE}"
+
+                            # Send Github status
+                            chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                            "${SOURCEDIR}/dev-support/jenkins.sh" github_status_recovery
+                            '''
+                        }
+
+                        // YETUS output
+                        archiveArtifacts "out/**"
+
+                        // Publish the HTML report so that it can be looked at
+                        // Has to be relative to WORKSPACE.
+                        publishHTML (target: [
+                                      allowMissing: true,
+                                      keepAll: true,
+                                      alwaysLinkToLastBuild: true,
+                                      // Has to be relative to WORKSPACE
+                                      reportDir: "out",
+                                      reportFiles: 'report.html',
+                                      reportName: 'Yetus Report'
+                        ])
+
+                        publishJUnitResults()
+                    }
+                }
+
+                cleanup() {
+                    script {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        // Jenkins pipeline jobs fill slaves on PRs without this :(
+        cleanup() {
+            script {
+                sh '''#!/usr/bin/env bash
+
+                # See HADOOP-13951
+                chmod -R u+rxw "${WORKSPACE}"
+                '''
+                deleteDir()
+            }
+        }
+    }
+}

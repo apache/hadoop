@@ -22,6 +22,8 @@ import com.microsoft.azure.datalake.store.ADLFileOutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
 import java.io.IOException;
@@ -42,7 +44,8 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.WRITE_BUFFER_SIZE_KEY;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class AdlFsOutputStream extends OutputStream implements Syncable {
+public final class AdlFsOutputStream extends OutputStream
+    implements Syncable, StreamCapabilities {
   private final ADLFileOutputStream out;
 
   public AdlFsOutputStream(ADLFileOutputStream out, Configuration configuration)
@@ -78,5 +81,10 @@ public final class AdlFsOutputStream extends OutputStream implements Syncable {
 
   public synchronized void hsync() throws IOException {
     out.flush();
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    return StoreImplementationUtils.isProbeForSyncable(capability);
   }
 }

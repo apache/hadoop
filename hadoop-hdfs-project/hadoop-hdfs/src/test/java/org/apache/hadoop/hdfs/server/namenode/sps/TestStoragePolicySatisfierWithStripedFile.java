@@ -52,7 +52,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Tests that StoragePolicySatisfier daemon is able to check the striped blocks
@@ -186,7 +186,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE}},
-          true, null, null, null, capacities, null, false, false, false, null);
+          true, null, null, null, capacities, null, false, false, false, null, null, null);
       cluster.triggerHeartbeats();
 
       // move file to ARCHIVE
@@ -294,7 +294,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           new StorageType[][]{
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE}},
-          true, null, null, null, capacities, null, false, false, false, null);
+          true, null, null, null, capacities, null, false, false, false, null, null, null);
       cluster.triggerHeartbeats();
 
       // Move file to ARCHIVE. Only 5 datanodes are available with ARCHIVE

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -40,10 +41,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -156,7 +157,7 @@ public class TestSnapshotDeletion {
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
+        .getSnapshottableDirs().size());
 
     // delete /foo
     hdfs.delete(foo, true);
@@ -165,10 +166,10 @@ public class TestSnapshotDeletion {
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        .getSnapshottableDirs().size());
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(0);
   }
 
@@ -527,7 +528,7 @@ public class TestSnapshotDeletion {
     assertEquals(snapshot1.getId(), diffList.getLast().getSnapshotId());
     diffList = fsdir.getINode(metaChangeDir.toString()).asDirectory()
         .getDiffs();
-    assertEquals(0, diffList.asList().size());
+    assertEquals(null, diffList);
     
     // check 2. noChangeDir and noChangeFile are still there
     final INodeDirectory noChangeDirNode = 
@@ -1128,7 +1129,8 @@ public class TestSnapshotDeletion {
   }
 
   @Test
-  public void testCorrectNumberOfBlocksAfterRestart() throws IOException {
+  public void testCorrectNumberOfBlocksAfterRestart()
+      throws IOException, InterruptedException {
     final Path foo = new Path("/foo");
     final Path bar = new Path(foo, "bar");
     final Path file = new Path(foo, "file");
@@ -1141,17 +1143,18 @@ public class TestSnapshotDeletion {
     hdfs.allowSnapshot(foo);
 
     hdfs.createSnapshot(foo, snapshotName);
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     hdfs.deleteSnapshot(foo, snapshotName);
     hdfs.delete(bar, true);
     hdfs.delete(foo, true);
 
-    long numberOfBlocks = cluster.getNamesystem().getBlocksTotal();
     cluster.restartNameNode(0);
-    assertEquals(numberOfBlocks, cluster.getNamesystem().getBlocksTotal());
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
+    assertEquals(0, cluster.getNamesystem().getBlocksTotal());
   }
 
   /*
@@ -1185,9 +1188,9 @@ public class TestSnapshotDeletion {
     hdfs.deleteSnapshot(st, "s1");
     hdfs.deleteSnapshot(st, "s2");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1270,9 +1273,9 @@ public class TestSnapshotDeletion {
     exception.expectMessage(error);
     hdfs.concat(dest, files);
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1307,9 +1310,9 @@ public class TestSnapshotDeletion {
 
     hdfs.deleteSnapshot(st, "s1");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1351,9 +1354,9 @@ public class TestSnapshotDeletion {
 
     hdfs.deleteSnapshot(st, "s1");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }

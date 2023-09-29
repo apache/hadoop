@@ -20,12 +20,16 @@ package org.apache.hadoop.oncrpc;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,36 +43,45 @@ public class SimpleUdpServer {
   private final int RECEIVE_BUFFER_SIZE = 65536;
 
   protected final int port;
-  protected final SimpleChannelUpstreamHandler rpcProgram;
+  protected final ChannelInboundHandlerAdapter rpcProgram;
   protected final int workerCount;
   protected int boundPort = -1; // Will be set after server starts
-  private ConnectionlessBootstrap server;
+  private Bootstrap server;
   private Channel ch;
+  private EventLoopGroup workerGroup;
 
-  public SimpleUdpServer(int port, SimpleChannelUpstreamHandler program,
+  public SimpleUdpServer(int port, ChannelInboundHandlerAdapter program,
       int workerCount) {
     this.port = port;
     this.rpcProgram = program;
     this.workerCount = workerCount;
   }
 
-  public void run() {
-    // Configure the client.
-    DatagramChannelFactory f = new NioDatagramChannelFactory(
-        Executors.newCachedThreadPool(), workerCount);
+  public void run() throws InterruptedException {
+    workerGroup = new NioEventLoopGroup(workerCount, Executors.newCachedThreadPool());
 
-    server = new ConnectionlessBootstrap(f);
-    server.setPipeline(Channels.pipeline(RpcUtil.STAGE_RPC_MESSAGE_PARSER,
-        rpcProgram, RpcUtil.STAGE_RPC_UDP_RESPONSE));
-
-    server.setOption("broadcast", "false");
-    server.setOption("sendBufferSize", SEND_BUFFER_SIZE);
-    server.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
-    server.setOption("reuseAddress", true);
+    server = new Bootstrap();
+    server.group(workerGroup)
+        .channel(NioDatagramChannel.class)
+        .option(ChannelOption.SO_BROADCAST, true)
+        .option(ChannelOption.SO_SNDBUF, SEND_BUFFER_SIZE)
+        .option(ChannelOption.SO_RCVBUF, RECEIVE_BUFFER_SIZE)
+        .option(ChannelOption.SO_REUSEADDR, true)
+        .handler(new ChannelInitializer<NioDatagramChannel>() {
+          @Override protected void initChannel(NioDatagramChannel ch)
+              throws Exception {
+            ChannelPipeline p = ch.pipeline();
+            p.addLast(
+                RpcUtil.STAGE_RPC_MESSAGE_PARSER,
+                rpcProgram,
+                RpcUtil.STAGE_RPC_UDP_RESPONSE);
+          }
+        });
 
     // Listen to the UDP port
-    ch = server.bind(new InetSocketAddress(port));
-    InetSocketAddress socketAddr = (InetSocketAddress) ch.getLocalAddress();
+    ChannelFuture f = server.bind(new InetSocketAddress(port)).sync();
+    ch = f.channel();
+    InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();
 
     LOG.info("Started listening to UDP requests at port " + boundPort + " for "
@@ -83,9 +96,11 @@ public class SimpleUdpServer {
   public void shutdown() {
     if (ch != null) {
       ch.close().awaitUninterruptibly();
+      ch = null;
     }
-    if (server != null) {
-      server.releaseExternalResources();
+    if (workerGroup != null) {
+      workerGroup.shutdownGracefully();
+      workerGroup = null;
     }
   }
 }

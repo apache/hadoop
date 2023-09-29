@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-project-dist</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Project Dist POM</description>
   <name>Apache Hadoop Project Dist POM</name>
   <packaging>pom</packaging>
@@ -40,7 +40,6 @@
     <hadoop.component>UNDEF</hadoop.component>
     <snappy.lib></snappy.lib>
     <bundle.snappy>false</bundle.snappy>
-    <bundle.snappy.in.bin>false</bundle.snappy.in.bin>
     <zstd.lib></zstd.lib>
     <bundle.zstd>false</bundle.zstd>
     <bundle.zstd.in.bin>false</bundle.zstd.in.bin>
@@ -90,11 +89,10 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
-          <fork>true</fork>
           <maxHeap>2048</maxHeap>
         </configuration>
       </plugin>
@@ -108,7 +106,7 @@
           <source>${maven.compile.source}</source>
           <charset>${maven.compile.encoding}</charset>
           <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
-          <destDir>${project.build.directory}/api</destDir>
+          <destDir>${destDirPath}</destDir>
           <groups>
             <group>
               <title>${project.name} API</title>
@@ -136,7 +134,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>3.2.0</jdiff.stable.api>
+        <jdiff.stable.api>3.3.6</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -158,7 +156,7 @@
             <executions>
              <execution>
                 <goals>
-                  <goal>javadoc</goal>
+                  <goal>javadoc-no-fork</goal>
                 </goals>
                 <phase>prepare-package</phase>
               </execution>
@@ -209,6 +207,36 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
+              <execution>
+                <id>choose-javadoc-dest-dir</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <exportAntProperties>true</exportAntProperties>
+                  <target>
+                    <!-- destDirPath is where the generated Javadocs will be located.
+                     The value of destDirPath obtained below is used for the "destDir" attribute
+                     in the maven-javadoc-plugin in this pom.xml.
+                     As per HADOOP-8500 and HADOOP-13784, we wanted to dump the javadoc into an
+                     "api" directory that was outside the "site" directory.
+                     Unfortunately, maven-javadoc-plugin doesn't give us a way to do that since
+                     "destDir" is always appended to "reportOutputDirectory". While we can achieve
+                     this using the relative path "../api", it only works for Windows. But it fails
+                     on Linux since the parent directory of "../api" wouldn't yet exist and the
+                     path resolution fails.
+                     Thus, we're going to leverage this approach for Windows and leave the
+                     behaviour on Linux intact.-->
+                    <condition property="destDirPath" value="../api" else="${project.build.directory}/api">
+                      <and>
+                        <os family="windows"/>
+                      </and>
+                    </condition>
+                    <echo>destDirPath to use for maven-javadoc-plugin = ${destDirPath}</echo>
+                  </target>
+                </configuration>
+              </execution>
 
               <!-- Pre site -->
               <execution>
@@ -330,7 +358,6 @@
                 <configuration>
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}</workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</argument>
                     <argument>--version=${project.version}</argument>
@@ -341,7 +368,6 @@
                     <argument>--openssllib=${openssl.lib}</argument>
                     <argument>--opensslbinbundle=${bundle.openssl.in.bin}</argument>
                     <argument>--openssllibbundle=${bundle.openssl}</argument>
-                    <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
                     <argument>--snappylib=${snappy.lib}</argument>
                     <argument>--snappylibbundle=${bundle.snappy}</argument>
                     <argument>--zstdbinbundle=${bundle.zstd.in.bin}</argument>

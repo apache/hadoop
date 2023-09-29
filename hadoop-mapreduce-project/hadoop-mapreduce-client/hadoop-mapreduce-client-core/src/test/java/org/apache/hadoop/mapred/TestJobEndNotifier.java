@@ -80,7 +80,7 @@ public class TestJobEndNotifier {
       calledTimes++;
       try {
         // Sleep for a long time
-        Thread.sleep(1000000);
+        Thread.sleep(3000);
       } catch (InterruptedException e) {
         timedOut = true;
       }
@@ -139,7 +139,7 @@ public class TestJobEndNotifier {
         baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobEndNotifier.localRunnerNotification(jobConf, jobStatus);
 
-    // No need to wait for the notification to go thru since calls are
+    // No need to wait for the notification to go through since calls are
     // synchronous
 
     // Validate params

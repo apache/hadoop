@@ -44,8 +44,13 @@ public class YarnServiceConf {
 
   public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
   public static final int DEFAULT_AM_RESTART_MAX = 20;
+  public static final String AM_FAILURES_VALIDITY_INTERVAL =
+      "yarn.service.am-failure.validity-interval-ms";
+  public static final long DEFAULT_AM_FAILURES_VALIDITY_INTERVAL = -1;
   public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";
   public static final long DEFAULT_KEY_AM_RESOURCE_MEM = 1024;
+  public static final String YARN_SERVICE_AM_CLIENT_PORT_RANGE =
+      YARN_SERVICE_PREFIX + "am.client.port-range";
 
   public static final String YARN_QUEUE = "yarn.service.queue";
   public static final String DEFAULT_YARN_QUEUE = "default";

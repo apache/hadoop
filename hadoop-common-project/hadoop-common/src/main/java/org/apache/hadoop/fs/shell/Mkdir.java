@@ -73,6 +73,13 @@ class Mkdir extends FsCommand {
       // we want a/b
       final Path itemPath = new Path(item.path.toString());
       final Path itemParentPath = itemPath.getParent();
+
+      if(itemParentPath == null) {
+        throw new PathNotFoundException(String.format(
+            "Item: %s parent's path is null. This can happen if mkdir is " +
+                "called on root, so there's no parent.", itemPath.toString()));
+      }
+
       if (!item.fs.exists(itemParentPath)) {
         throw new PathNotFoundException(itemParentPath.toString());
       }

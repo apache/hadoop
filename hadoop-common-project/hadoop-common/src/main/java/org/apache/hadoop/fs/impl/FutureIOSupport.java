@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -31,12 +31,21 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 
 /**
  * Support for future IO and the FS Builder subclasses.
+ * All methods in this class have been superceded by those in
+ * {@link FutureIO}.
+ * The methods here are retained but all marked as deprecated.
+ * This is to ensure that any external
+ * filesystem implementations can still use these methods
+ * without linkage problems surfacing.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public final class FutureIOSupport {
 
   private FutureIOSupport() {
@@ -45,6 +54,7 @@ public final class FutureIOSupport {
   /**
    * Given a future, evaluate it. Raised exceptions are
    * extracted and handled.
+   * See {@link FutureIO#awaitFuture(Future, long, TimeUnit)}.
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.
@@ -52,54 +62,40 @@ public final class FutureIOSupport {
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
+  @Deprecated
   public static <T> T awaitFuture(final Future<T> future)
       throws InterruptedIOException, IOException, RuntimeException {
-    try {
-      return future.get();
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      return raiseInnerCause(e);
-    }
+    return FutureIO.awaitFuture(future);
   }
 
 
   /**
    * Given a future, evaluate it. Raised exceptions are
    * extracted and handled.
+   * See {@link FutureIO#awaitFuture(Future, long, TimeUnit)}.
    * @param future future to evaluate
    * @param <T> type of the result.
+   * @param timeout timeout.
+   * @param unit unit.
    * @return the result, if all went well.
    * @throws InterruptedIOException future was interrupted
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    * @throws TimeoutException the future timed out.
    */
+  @Deprecated
   public static <T> T awaitFuture(final Future<T> future,
       final long timeout,
       final TimeUnit unit)
       throws InterruptedIOException, IOException, RuntimeException,
       TimeoutException {
-
-    try {
-      return future.get(timeout, unit);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      return raiseInnerCause(e);
-    }
+    return FutureIO.awaitFuture(future, timeout, unit);
   }
-
 
   /**
    * From the inner cause of an execution exception, extract the inner cause
    * if it is an IOE or RTE.
-   * This will always raise an exception, either the inner IOException,
-   * an inner RuntimeException, or a new IOException wrapping the raised
-   * exception.
-   *
+   * See {@link FutureIO#raiseInnerCause(ExecutionException)}.
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -107,14 +103,16 @@ public final class FutureIOSupport {
    * any non-Runtime-Exception
    * @throws RuntimeException if that is the inner cause.
    */
+  @Deprecated
   public static <T> T raiseInnerCause(final ExecutionException e)
       throws IOException {
-    throw unwrapInnerException(e);
+    return FutureIO.raiseInnerCause(e);
   }
 
   /**
    * Extract the cause of a completion failure and rethrow it if an IOE
    * or RTE.
+   * See {@link FutureIO#raiseInnerCause(CompletionException)}.
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -122,54 +120,15 @@ public final class FutureIOSupport {
    * any non-Runtime-Exception
    * @throws RuntimeException if that is the inner cause.
    */
+  @Deprecated
   public static <T> T raiseInnerCause(final CompletionException e)
       throws IOException {
-    throw unwrapInnerException(e);
+    return FutureIO.raiseInnerCause(e);
   }
 
   /**
-   * From the inner cause of an execution exception, extract the inner cause.
-   * If it is an RTE: throw immediately.
-   * If it is an IOE: Return.
-   * If it is a WrappedIOException: Unwrap and return
-   * Else: create a new IOException.
-   *
-   * Recursively handles wrapped Execution and Completion Exceptions in
-   * case something very complicated has happened.
-   * @param e exception.
-   * @return an IOException extracted or built from the cause.
-   * @throws RuntimeException if that is the inner cause.
-   */
-  private static IOException unwrapInnerException(final Throwable e) {
-    Throwable cause = e.getCause();
-    if (cause instanceof IOException) {
-      return (IOException) cause;
-    } else if (cause instanceof WrappedIOException){
-      return ((WrappedIOException) cause).getCause();
-    } else if (cause instanceof CompletionException){
-      return unwrapInnerException(cause);
-    } else if (cause instanceof ExecutionException){
-      return unwrapInnerException(cause);
-    } else if (cause instanceof RuntimeException){
-      throw (RuntimeException) cause;
-    } else if (cause != null) {
-      // other type: wrap with a new IOE
-      return new IOException(cause);
-    } else {
-      // this only happens if there was no cause.
-      return new IOException(e);
-    }
-  }
-
-  /**
-   * Propagate options to any builder, converting everything with the
-   * prefix to an option where, if there were 2+ dot-separated elements,
-   * it is converted to a schema.
-   * <pre>
-   *   fs.example.s3a.option => s3a:option
-   *   fs.example.fs.io.policy => s3a.io.policy
-   *   fs.example.something => something
-   * </pre>
+   * Propagate options to any builder.
+   * {@link FutureIO#propagateOptions(FSBuilder, Configuration, String, String)}
    * @param builder builder to modify
    * @param conf configuration to read
    * @param optionalPrefix prefix for optional settings
@@ -178,50 +137,47 @@ public final class FutureIOSupport {
    * @param <U> type of builder
    * @return the builder passed in.
    */
+  @Deprecated
   public static <T, U extends FSBuilder<T, U>>
         FSBuilder<T, U> propagateOptions(
       final FSBuilder<T, U> builder,
       final Configuration conf,
       final String optionalPrefix,
       final String mandatoryPrefix) {
-    propagateOptions(builder, conf,
-        optionalPrefix, false);
-    propagateOptions(builder, conf,
-        mandatoryPrefix, true);
-    return builder;
+    return FutureIO.propagateOptions(builder,
+        conf, optionalPrefix, mandatoryPrefix);
   }
 
   /**
-   * Propagate options to any builder, converting everything with the
-   * prefix to an option where, if there were 2+ dot-separated elements,
-   * it is converted to a schema.
-   * <pre>
-   *   fs.example.s3a.option => s3a:option
-   *   fs.example.fs.io.policy => s3a.io.policy
-   *   fs.example.something => something
-   * </pre>
+   * Propagate options to any builder.
+   * {@link FutureIO#propagateOptions(FSBuilder, Configuration, String, boolean)}
    * @param builder builder to modify
    * @param conf configuration to read
    * @param prefix prefix to scan/strip
    * @param mandatory are the options to be mandatory or optional?
    */
+  @Deprecated
   public static void propagateOptions(
       final FSBuilder<?, ?> builder,
       final Configuration conf,
       final String prefix,
       final boolean mandatory) {
+    FutureIO.propagateOptions(builder, conf, prefix, mandatory);
+  }
 
-    final String p = prefix.endsWith(".") ? prefix : (prefix + ".");
-    final Map<String, String> propsWithPrefix = conf.getPropsWithPrefix(p);
-    for (Map.Entry<String, String> entry : propsWithPrefix.entrySet()) {
-      // change the schema off each entry
-      String key = entry.getKey();
-      String val = entry.getValue();
-      if (mandatory) {
-        builder.must(key, val);
-      } else {
-        builder.opt(key, val);
-      }
-    }
+  /**
+   * Evaluate a CallableRaisingIOE in the current thread,
+   * converting IOEs to RTEs and propagating.
+   * See {@link FutureIO#eval(CallableRaisingIOE)}.
+   *
+   * @param callable callable to invoke
+   * @param <T> Return type.
+   * @return the evaluated result.
+   * @throws UnsupportedOperationException fail fast if unsupported
+   * @throws IllegalArgumentException invalid argument
+   */
+  public static <T> CompletableFuture<T> eval(
+      CallableRaisingIOE<T> callable) {
+    return FutureIO.eval(callable);
   }
 }

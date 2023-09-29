@@ -20,17 +20,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalityAppPlacementAllocator;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,10 +48,12 @@ public class TestAppSchedulingInfo {
         ApplicationAttemptId.newInstance(appIdImpl, 1);
 
     FSLeafQueue queue = mock(FSLeafQueue.class);
+    RMContext rmContext = mock(RMContext.class);
     doReturn("test").when(queue).getQueueName();
+    doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(appAttemptId,
         "test", queue, null, 0, new ResourceUsage(),
-        new HashMap<String, String>(), null);
+        new HashMap<String, String>(), rmContext, false);
 
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
@@ -117,9 +123,11 @@ public class TestAppSchedulingInfo {
 
     Queue queue = mock(Queue.class);
     doReturn(mock(QueueMetrics.class)).when(queue).getMetrics();
+    RMContext rmContext = mock(RMContext.class);
+    doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo  info = new AppSchedulingInfo(
         appAttemptId, "test", queue, mock(ActiveUsersManager.class), 0,
-        new ResourceUsage(), new HashMap<>(), mock(RMContext.class));
+        new ResourceUsage(), new HashMap<>(), rmContext, false);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     Priority pri1 = Priority.newInstance(1);
@@ -169,5 +177,53 @@ public class TestAppSchedulingInfo {
     reqs.add(req1);
     info.updateResourceRequests(reqs, false);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
+  }
+
+  @Test
+  public void testApplicationPlacementType() {
+    String DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS =
+        LocalityAppPlacementAllocator.class.getName();
+    Configuration conf = new Configuration();
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    ApplicationId appIdImpl = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appIdImpl, 1);
+    Queue queue = mock(Queue.class);
+    AppSchedulingInfo info = new AppSchedulingInfo(appAttemptId, "test", queue,
+        mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
+        rmContext, false);
+    Assert.assertEquals(info.getApplicationSchedulingEnvs(), new HashMap<>());
+    // This should return null as nothing is set in the conf.
+    Assert.assertNull(info.getDefaultResourceRequestAppPlacementType());
+    conf = new Configuration();
+    conf.set(YarnConfiguration.APPLICATION_PLACEMENT_TYPE_CLASS,
+        DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    info = new AppSchedulingInfo(appAttemptId, "test", queue,
+        mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
+        rmContext, false);
+    Assert.assertEquals(info.getDefaultResourceRequestAppPlacementType(),
+        DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
+  }
+
+  @Test
+  public void testApplicationPlacementTypeNotConfigured() {
+    Configuration conf = new Configuration();
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    ApplicationId appIdImpl = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appIdImpl, 1);
+    Queue queue = mock(Queue.class);
+    HashMap<String, String> applicationSchedulingEnvs = new HashMap<>();
+    applicationSchedulingEnvs.put("APPLICATION_PLACEMENT_TYPE_CLASS",
+        LocalityAppPlacementAllocator.class.getName());
+    AppSchedulingInfo info = new AppSchedulingInfo(appAttemptId, "test", queue,
+        mock(ActiveUsersManager.class), 0, new ResourceUsage(),
+        applicationSchedulingEnvs, rmContext, false);
+    // This should be set from applicationSchedulingEnvs
+    Assert.assertEquals(info.getDefaultResourceRequestAppPlacementType(),
+        LocalityAppPlacementAllocator.class.getName());
   }
 }

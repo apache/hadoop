@@ -29,7 +29,7 @@ import org.apache.hadoop.io.serializer.DeserializerComparator;
  * A {@link Comparator} that operates directly on byte representations of
  * objects.
  * </p>
- * @param <T>
+ * @param <T> generic type.
  * @see DeserializerComparator
  */
 @InterfaceAudience.Public

@@ -25,15 +25,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -44,37 +48,72 @@ import org.apache.hadoop.util.JsonSerialization;
  * <ol>
  *   <li>File length == 0: classic {@code FileOutputCommitter}.</li>
  *   <li>Loadable as {@link SuccessData}:
- *   A s3guard committer with name in in {@link #committer} field.</li>
+ *   An S3A committer with name in in {@link #committer} field.</li>
  *   <li>Not loadable? Something else.</li>
  * </ol>
  *
- * This is an unstable structure intended for diagnostics and testing.
- * Applications reading this data should use/check the {@link #name} field
- * to differentiate from any other JSON-based manifest and to identify
- * changes in the output format.
+ * This should be considered public, and MUST stay compatible
+ * at the JSON format level with that of
+ * {@code org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData}
+ * <p>
+ * The JSON format SHOULD be considered public and evolving
+ * with compatibility across versions.
+ * <p>
+ * All the Java serialization data is different and may change
+ * across versions with no stability guarantees other than
+ * "manifest summaries MAY be serialized between processes with
+ * the exact same version of this binary on their classpaths."
+ * That is sufficient for testing in Spark.
+ * <p>
+ * To aid with Java serialization, the maps and lists are
+ * exclusively those which serialize well.
+ * IOStatisticsSnapshot has a lot of complexity in marshalling
+ * there; this class doesn't worry about concurrent access
+ * so is simpler.
+ *
+ * Note: to deal with scale issues, the S3A committers do not include any
+ * more than the number of objects listed in
+ * {@link org.apache.hadoop.fs.s3a.commit.CommitConstants#SUCCESS_MARKER_FILE_LIMIT}.
+ * This is intended to suffice for basic integration tests.
+ * Larger tests should examine the generated files themselves.
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SuccessData extends PersistentCommitData {
+public class SuccessData extends PersistentCommitData<SuccessData> {
+
   private static final Logger LOG = LoggerFactory.getLogger(SuccessData.class);
+
+  /**
+   * Supported version value: {@value}.
+   * If this is changed the value of {@link #serialVersionUID} will change,
+   * to avoid deserialization problems.
+   */
+  public static final int VERSION = 1;
 
   /**
    * Serialization ID: {@value}.
    */
-  private static final long serialVersionUID = 507133045258460084L;
+  private static final long serialVersionUID = 507133045258460084L + VERSION;
 
   /**
    * Name to include in persisted data, so as to differentiate from
    * any other manifests: {@value}.
    */
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
+      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/" + VERSION;
 
   /**
    * Name of file; includes version marker.
    */
-  private String name;
+  private String name = NAME;
+
+  /**
+   * Did this succeed?
+   * It is implicitly true in a _SUCCESS file, but if the file
+   * is also saved to a log dir, then it depends on the outcome
+   */
+  private boolean success = true;
 
   /** Timestamp of creation. */
   private long timestamp;
@@ -97,6 +136,14 @@ public class SuccessData extends PersistentCommitData {
    */
   private String description;
 
+  /** Job ID, if known. */
+  private String jobId = "";
+
+  /**
+   * Source of the job ID.
+   */
+  private String jobIdSource = "";
+
   /**
    * Metrics.
    */
@@ -112,6 +159,22 @@ public class SuccessData extends PersistentCommitData {
    */
   private List<String> filenames = new ArrayList<>(0);
 
+  /**
+   * IOStatistics.
+   */
+  @JsonProperty("iostatistics")
+  private IOStatisticsSnapshot iostatistics = new IOStatisticsSnapshot();
+
+  /**
+   * State (committed, aborted).
+   */
+  private String state;
+
+  /**
+   * Stage: last stage executed.
+   */
+  private String stage;
+
   @Override
   public void validate() throws ValidationFailure {
     ValidationFailure.verify(name != null,
@@ -121,16 +184,17 @@ public class SuccessData extends PersistentCommitData {
   }
 
   @Override
-  public byte[] toBytes() throws IOException {
-    return serializer().toBytes(this);
+  public byte[] toBytes(JsonSerialization<SuccessData> serializer) throws IOException {
+    return serializer.toBytes(this);
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
-      throws IOException {
+  public IOStatistics save(final FileSystem fs,
+      final Path path,
+      final JsonSerialization<SuccessData> serializer) throws IOException {
     // always set the name field before being saved.
     name = NAME;
-    serializer().save(fs, path, this, overwrite);
+    return saveFile(fs, path, this, serializer, true);
   }
 
   @Override
@@ -218,8 +282,8 @@ public class SuccessData extends PersistentCommitData {
    * Get a JSON serializer for this class.
    * @return a serializer.
    */
-  private static JsonSerialization<SuccessData> serializer() {
-    return new JsonSerialization<>(SuccessData.class, false, true);
+  public static JsonSerialization<SuccessData> serializer() {
+    return new JsonSerialization<>(SuccessData.class, false, false);
   }
 
   public String getName() {
@@ -318,5 +382,80 @@ public class SuccessData extends PersistentCommitData {
    */
   public void addDiagnostic(String key, String value) {
     diagnostics.put(key, value);
+  }
+
+  /** @return Job ID, if known. */
+  public String getJobId() {
+    return jobId;
+  }
+
+  public void setJobId(String jobId) {
+    this.jobId = jobId;
+  }
+
+  public String getJobIdSource() {
+    return jobIdSource;
+  }
+
+  public void setJobIdSource(final String jobIdSource) {
+    this.jobIdSource = jobIdSource;
+  }
+
+  @Override
+  public IOStatisticsSnapshot getIOStatistics() {
+    return iostatistics;
+  }
+
+  public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
+    this.iostatistics = ioStatistics;
+  }
+
+  /**
+   * Set the success flag.
+   * @param success did the job succeed?
+   */
+  public void setSuccess(boolean success) {
+    this.success = success;
+  }
+
+  /**
+   * Get the success flag.
+   * @return did the job succeed?
+   */
+  public boolean getSuccess() {
+    return success;
+  }
+
+  public String getState() {
+    return state;
+  }
+
+  public void setState(String state) {
+    this.state = state;
+  }
+
+  public String getStage() {
+    return stage;
+  }
+
+  /**
+   * Add a diagnostics entry.
+   * @param key name
+   * @param value value
+   */
+  public void putDiagnostic(String key, String value) {
+    diagnostics.put(key, value);
+  }
+
+  /**
+   * Note a failure by setting success flag to false,
+   * then add the exception to the diagnostics.
+   * @param thrown throwable
+   */
+  public void recordJobFailure(Throwable thrown) {
+    setSuccess(false);
+    String stacktrace = ExceptionUtils.getStackTrace(thrown);
+    diagnostics.put("exception", thrown.toString());
+    diagnostics.put("stacktrace", stacktrace);
   }
 }

@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-project</artifactId>
-        <version>3.3.0-SNAPSHOT</version>
+        <version>3.4.0-SNAPSHOT</version>
         <relativePath>../../hadoop-project</relativePath>
     </parent>
     <artifactId>hadoop-resourceestimator</artifactId>
@@ -79,8 +79,26 @@
             <artifactId>jersey-server</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.sun.jersey</groupId>
+            <groupId>com.github.pjfanning</groupId>
             <artifactId>jersey-json</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-json-provider</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.jettison</groupId>
+                    <artifactId>jettison</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

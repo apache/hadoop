@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.MembershipStatePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Protobuf implementation of the state store API object

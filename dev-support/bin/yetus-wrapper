@@ -77,7 +77,7 @@ WANTED="$1"
 shift
 ARGV=("$@")
 
-HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.8.0}
+HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.14.0}
 BIN=$(yetus_abs "${BASH_SOURCE-$0}")
 BINDIR=$(dirname "${BIN}")
 
@@ -144,7 +144,7 @@ else
   exit 1
 fi
 
-if [[ -n "${GPGBIN}" ]]; then
+if [[ -n "${GPGBIN}" && ! "${HADOOP_SKIP_YETUS_VERIFICATION}" = true ]]; then
   if ! mkdir -p .gpg; then
     yetus_error "ERROR: yetus-dl: Unable to create ${HADOOP_PATCHPROCESS}/.gpg"
     exit 1
@@ -171,7 +171,17 @@ if [[ -n "${GPGBIN}" ]]; then
    fi
 fi
 
-if ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
+if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+  gunzip -c "${TARBALL}.gz" | tar xpf -
+
+  # One of the entries in the Yetus tarball unzips a symlink qbt.sh.
+  # The symlink creation fails on Windows, unless this CI is run as Admin or Developer mode is
+  # enabled.
+  # Thus, we create the qbt.sh symlink ourselves and move it to the target.
+  YETUS_PRECOMMIT_DIR="${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/lib/precommit"
+  ln -s "${YETUS_PRECOMMIT_DIR}/test-patch.sh" qbt.sh
+  mv qbt.sh "${YETUS_PRECOMMIT_DIR}"
+elif ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
   yetus_error "ERROR: ${TARBALL}.gz is corrupt. Investigate and then remove ${HADOOP_PATCHPROCESS} to try again."
   exit 1
 fi

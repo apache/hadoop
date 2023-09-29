@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashBasedTable;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Table;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

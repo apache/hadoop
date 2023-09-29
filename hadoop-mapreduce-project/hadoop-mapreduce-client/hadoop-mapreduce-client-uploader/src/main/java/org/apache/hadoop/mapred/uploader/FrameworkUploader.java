@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.mapred.uploader;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -175,7 +175,6 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   void beginUpload() throws IOException, UploaderException {
     if (targetStream == null) {
-      validateTargetPath();
       int lastIndex = target.indexOf('#');
       targetPath =
           new Path(
@@ -205,7 +204,7 @@ public class FrameworkUploader implements Runnable {
       } else {
         LOG.warn("Cannot set replication to " +
             initialReplication + " for path: " + targetPath +
-            " on a non-distributed fileystem " +
+            " on a non-distributed filesystem " +
             fileSystem.getClass().getName());
       }
       if (targetStream == null) {
@@ -298,25 +297,29 @@ public class FrameworkUploader implements Runnable {
       fileSystem.setReplication(targetPath, finalReplication);
       LOG.info("Set replication to " +
           finalReplication + " for path: " + targetPath);
-      long startTime = System.currentTimeMillis();
-      long endTime = startTime;
-      long currentReplication = 0;
-      while(endTime - startTime < timeout * 1000 &&
-           currentReplication < acceptableReplication) {
-        Thread.sleep(1000);
-        endTime = System.currentTimeMillis();
-        currentReplication = getSmallestReplicatedBlockCount();
-      }
-      if (endTime - startTime >= timeout * 1000) {
-        LOG.error(String.format(
-            "Timed out after %d seconds while waiting for acceptable" +
-                " replication of %d (current replication is %d)",
-            timeout, acceptableReplication, currentReplication));
+      if (timeout == 0) {
+        LOG.info("Timeout is set to 0. Skipping replication check.");
+      } else {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime;
+        long currentReplication = 0;
+        while(endTime - startTime < timeout * 1000 &&
+             currentReplication < acceptableReplication) {
+          Thread.sleep(1000);
+          endTime = System.currentTimeMillis();
+          currentReplication = getSmallestReplicatedBlockCount();
+        }
+        if (endTime - startTime >= timeout * 1000) {
+          LOG.error(String.format(
+              "Timed out after %d seconds while waiting for acceptable" +
+                  " replication of %d (current replication is %d)",
+              timeout, acceptableReplication, currentReplication));
+        }
       }
     } else {
       LOG.info("Cannot set replication to " +
           finalReplication + " for path: " + targetPath +
-          " on a non-distributed fileystem " +
+          " on a non-distributed filesystem " +
           fileSystem.getClass().getName());
     }
   }
@@ -328,6 +331,8 @@ public class FrameworkUploader implements Runnable {
     LOG.info("Compressing tarball");
     try (TarArchiveOutputStream out = new TarArchiveOutputStream(
         targetStream)) {
+      // Workaround for the compress issue present from 1.21: COMPRESS-587
+      out.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR);
       for (String fullPath : filteredInputFiles) {
         LOG.info("Adding " + fullPath);
         File file = new File(fullPath);
@@ -476,63 +481,56 @@ public class FrameworkUploader implements Runnable {
     return false;
   }
 
-  private void validateTargetPath() throws UploaderException {
-    if (!target.startsWith("hdfs:/") &&
-        !target.startsWith("file:/")) {
-      throw new UploaderException("Target path is not hdfs or local " + target);
-    }
-  }
-
   @VisibleForTesting
   boolean parseArguments(String[] args) throws IOException {
     Options opts = new Options();
-    opts.addOption(OptionBuilder.create("h"));
-    opts.addOption(OptionBuilder.create("help"));
-    opts.addOption(OptionBuilder
-        .withDescription("Input class path. Defaults to the default classpath.")
-        .hasArg().create("input"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+    opts.addOption(Option.builder("h").build());
+    opts.addOption(Option.builder("help").build());
+    opts.addOption(Option.builder("input")
+        .desc("Input class path. Defaults to the default classpath.")
+        .hasArg().build());
+    opts.addOption(Option.builder("whitelist")
+        .desc(
             "Regex specifying the full path of jars to include in the" +
                 " framework tarball. Default is a hardcoded set of jars" +
                 " considered necessary to include")
-        .hasArg().create("whitelist"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("blacklist")
+        .desc(
             "Regex specifying the full path of jars to exclude in the" +
                 " framework tarball. Default is a hardcoded set of jars" +
                 " considered unnecessary to include")
-        .hasArg().create("blacklist"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("fs")
+        .desc(
             "Target file system to upload to." +
             " Example: hdfs://foo.com:8020")
-        .hasArg().create("fs"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("target")
+        .desc(
             "Target file to upload to with a reference name." +
                 " Example: /usr/mr-framework.tar.gz#mr-framework")
-        .hasArg().create("target"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("initialReplication")
+        .desc(
             "Desired initial replication count. Default 3.")
-        .hasArg().create("initialReplication"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("finalReplication")
+        .desc(
             "Desired final replication count. Default 10.")
-        .hasArg().create("finalReplication"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("acceptableReplication")
+        .desc(
             "Desired acceptable replication count. Default 9.")
-        .hasArg().create("acceptableReplication"));
-    opts.addOption(OptionBuilder
-        .withDescription(
+        .hasArg().build());
+    opts.addOption(Option.builder("timeout")
+        .desc(
             "Desired timeout for the acceptable" +
                 " replication in seconds. Default 10")
-        .hasArg().create("timeout"));
-    opts.addOption(OptionBuilder
-        .withDescription("Ignore symlinks into the same directory")
-        .create("nosymlink"));
+        .hasArg().build());
+    opts.addOption(Option.builder("nosymlink")
+        .desc("Ignore symlinks into the same directory")
+        .build());
     GenericOptionsParser parser = new GenericOptionsParser(opts, args);
     if (parser.getCommandLine().hasOption("help") ||
         parser.getCommandLine().hasOption("h")) {
@@ -570,7 +568,7 @@ public class FrameworkUploader implements Runnable {
         path.startsWith("file://");
 
     if (fs == null) {
-      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      fs = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
       if (fs == null && !isFullPath) {
         LOG.error("No filesystem specified in either fs or target.");
         printHelp(opts);

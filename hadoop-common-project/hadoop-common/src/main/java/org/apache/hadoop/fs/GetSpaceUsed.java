@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.TimeUnit;
 
 public interface GetSpaceUsed {
 
@@ -36,13 +35,8 @@ public interface GetSpaceUsed {
   /**
    * The builder class
    */
-  final class Builder {
+  class Builder {
     static final Logger LOG = LoggerFactory.getLogger(Builder.class);
-
-    static final String CLASSNAME_KEY = "fs.getspaceused.classname";
-    static final String JITTER_KEY = "fs.getspaceused.jitterMillis";
-    static final long DEFAULT_JITTER = TimeUnit.MINUTES.toMillis(1);
-
 
     private Configuration conf;
     private Class<? extends GetSpaceUsed> klass = null;
@@ -50,6 +44,7 @@ public interface GetSpaceUsed {
     private Long interval = null;
     private Long jitter = null;
     private Long initialUsed = null;
+    private Constructor<? extends GetSpaceUsed> cons;
 
     public Configuration getConf() {
       return conf;
@@ -89,7 +84,8 @@ public interface GetSpaceUsed {
       if (conf == null) {
         return result;
       }
-      return conf.getClass(CLASSNAME_KEY, result, GetSpaceUsed.class);
+      return conf.getClass(CommonConfigurationKeys.FS_GETSPACEUSED_CLASSNAME,
+          result, GetSpaceUsed.class);
     }
 
     public Builder setKlass(Class<? extends GetSpaceUsed> klass) {
@@ -124,9 +120,10 @@ public interface GetSpaceUsed {
         Configuration configuration = this.conf;
 
         if (configuration == null) {
-          return DEFAULT_JITTER;
+          return CommonConfigurationKeys.FS_GETSPACEUSED_JITTER_DEFAULT;
         }
-        return configuration.getLong(JITTER_KEY, DEFAULT_JITTER);
+        return configuration.getLong(CommonConfigurationKeys.FS_GETSPACEUSED_JITTER_KEY,
+                CommonConfigurationKeys.FS_GETSPACEUSED_JITTER_DEFAULT);
       }
       return jitter;
     }
@@ -136,11 +133,21 @@ public interface GetSpaceUsed {
       return this;
     }
 
+    public Constructor<? extends GetSpaceUsed> getCons() {
+      return cons;
+    }
+
+    public void setCons(Constructor<? extends GetSpaceUsed> cons) {
+      this.cons = cons;
+    }
+
     public GetSpaceUsed build() throws IOException {
       GetSpaceUsed getSpaceUsed = null;
       try {
-        Constructor<? extends GetSpaceUsed> cons =
-            getKlass().getConstructor(Builder.class);
+        if (cons == null) {
+          cons = getKlass().getConstructor(Builder.class);
+        }
+
         getSpaceUsed = cons.newInstance(this);
       } catch (InstantiationException e) {
         LOG.warn("Error trying to create an instance of " + getKlass(), e);

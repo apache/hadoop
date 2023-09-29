@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -34,6 +36,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -43,6 +47,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * This test serves a prototype to demo the idea proposed so far. It creates two
@@ -50,6 +56,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE
  * layout. For simple, it assumes 6 data blocks in both files and the block size
  * are the same.
  */
+@RunWith(Parameterized.class)
 public class TestFileChecksum {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestFileChecksum.class);
@@ -77,6 +84,19 @@ public class TestFileChecksum {
   private String stripedFile2 = ecDir + "/stripedFileChecksum2";
   private String replicatedFile = "/replicatedFileChecksum";
 
+  private String checksumCombineMode;
+
+  public TestFileChecksum(String checksumCombineMode) {
+    this.checksumCombineMode = checksumCombineMode;
+  }
+
+  @Parameterized.Parameters
+  public static Object[] getParameters() {
+    return new Object[] {
+        ChecksumCombineMode.MD5MD5CRC.name(),
+        ChecksumCombineMode.COMPOSITE_CRC.name()};
+  }
+
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -85,11 +105,10 @@ public class TestFileChecksum {
     int numDNs = dataBlocks + parityBlocks + 2;
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    customizeConf(conf);
+    conf.set(HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY,
+        checksumCombineMode);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
@@ -111,39 +130,6 @@ public class TestFileChecksum {
       cluster.shutdown();
       cluster = null;
     }
-  }
-
-  /**
-   * Subclasses may customize the conf to run the full set of tests under
-   * different conditions.
-   */
-  protected void customizeConf(Configuration preparedConf) {
-  }
-
-  /**
-   * Subclasses may override this method to indicate whether equivalent files
-   * in striped and replicated formats are expected to have the same
-   * overall FileChecksum.
-   */
-  protected boolean expectComparableStripedAndReplicatedFiles() {
-    return false;
-  }
-
-  /**
-   * Subclasses may override this method to indicate whether equivalent files
-   * in replicated formats with different block sizes are expected to have the
-   * same overall FileChecksum.
-   */
-  protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
-    return false;
-  }
-
-  /**
-   * Subclasses may override this method to indicate whether checksums are
-   * supported for files where different blocks have different bytesPerCRC.
-   */
-  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
-    return false;
   }
 
   @Test(timeout = 90000)
@@ -222,10 +208,43 @@ public class TestFileChecksum {
     FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
         10, false);
 
-    if (expectComparableStripedAndReplicatedFiles()) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
     } else {
       Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+    }
+  }
+
+  /**
+   * Test the corner case of the COMPOSITE_CRC.
+   * For Stripe File, last block size in the file is (int)(blockSize * 0.5),
+   *    but the last block size in the check length is (int)(blockSize * 0.6).
+   * For Replicate File, the last block size in the file is (int)(blockSize * 0.5),
+   *    but the last block size in the check length is ((dataBlocks - 1) * blockSize
+   *    + (int) (blockSize * 0.6))
+   */
+  @Test(timeout = 90000)
+  public void testStripedAndReplicatedFileChecksum2() throws Exception {
+    final int lastBlockSize = (int) (blockSize * 0.5);
+    final int fullStripeLength = dataBlocks * blockSize;
+    final int testFileSize = fullStripeLength + lastBlockSize;
+    prepareTestFiles(testFileSize, new String[] {stripedFile1, replicatedFile});
+
+    final int specialLength = (dataBlocks - 1) * blockSize
+        + (int) (blockSize * 0.6);
+
+    Assert.assertTrue(specialLength % blockSize > lastBlockSize);
+    Assert.assertTrue(specialLength % fullStripeLength > lastBlockSize);
+
+    FileChecksum stripedFileChecksum = getFileChecksum(stripedFile1,
+        specialLength, false);
+    FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
+        specialLength, false);
+
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
+      Assert.assertEquals(replicatedFileChecksum, stripedFileChecksum);
+    } else {
+      Assert.assertNotEquals(replicatedFileChecksum, stripedFileChecksum);
     }
   }
 
@@ -241,7 +260,7 @@ public class TestFileChecksum {
     FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
     FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
 
-    if (expectComparableDifferentBlockSizeReplicatedFiles()) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       Assert.assertEquals(checksum1, checksum2);
     } else {
       Assert.assertNotEquals(checksum1, checksum2);
@@ -535,6 +554,37 @@ public class TestFileChecksum {
   }
 
   @Test(timeout = 90000)
+  public void testStripedFileChecksumWithReconstructFail()
+      throws Exception {
+    String stripedFile4 = ecDir + "/stripedFileChecksum4";
+    prepareTestFiles(fileSize, new String[] {stripedFile4});
+
+    // get checksum
+    FileChecksum fileChecksum = getFileChecksum(stripedFile4, -1, false);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector newInjector = mock(DataNodeFaultInjector.class);
+    doThrow(new IOException())
+        .doNothing()
+        .when(newInjector)
+        .stripedBlockChecksumReconstruction();
+    DataNodeFaultInjector.set(newInjector);
+
+    try {
+      // Get checksum again with reconstruction.
+      // If the reconstruction task fails, a client try to get checksum from
+      // another DN which has a block of the block group because of a failure of
+      // getting result.
+      FileChecksum fileChecksum1 = getFileChecksum(stripedFile4, -1, true);
+
+      Assert.assertEquals("checksum should be same", fileChecksum,
+          fileChecksum1);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  @Test(timeout = 90000)
   public void testMixedBytesPerChecksum() throws Exception {
     int fileLength = bytesPerCRC * 3;
     byte[] fileData = StripedFileTestUtil.generateBytes(fileLength);
@@ -556,7 +606,7 @@ public class TestFileChecksum {
         ((DistributedFileSystem) FileSystem.newInstance(conf)),
         new Path(replicatedFile1), fileDataPart2);
 
-    if (expectSupportForSingleFileMixedBytesPerChecksum()) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       String replicatedFile2 = "/replicatedFile2";
       DFSTestUtil.writeFile(fs, new Path(replicatedFile2), fileData);
       FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);

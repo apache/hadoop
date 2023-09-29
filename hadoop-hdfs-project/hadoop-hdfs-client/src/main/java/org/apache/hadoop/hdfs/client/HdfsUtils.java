@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.client;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +46,7 @@ public class HdfsUtils {
    * @param uri the HDFS URI.  Note that the URI path is ignored.
    * @return true if HDFS is healthy; false, otherwise.
    */
+  @SuppressWarnings("deprecation")
   public static boolean isHealthy(URI uri) {
     //check scheme
     final String scheme = uri.getScheme();
@@ -63,24 +63,18 @@ public class HdfsUtils {
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
 
-    DistributedFileSystem fs = null;
-    try {
-      fs = (DistributedFileSystem)FileSystem.get(uri, conf);
+    try (DistributedFileSystem fs =
+             (DistributedFileSystem) FileSystem.get(uri, conf)) {
       final boolean safemode = fs.setSafeMode(SafeModeAction.SAFEMODE_GET);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Is namenode in safemode? " + safemode + "; uri=" + uri);
+        LOG.debug("Is namenode in safemode? {}; uri={}", safemode, uri);
       }
-
-      fs.close();
-      fs = null;
       return !safemode;
-    } catch(IOException e) {
+    } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Got an exception for uri=" + uri, e);
+        LOG.debug("Got an exception for uri={}", uri, e);
       }
       return false;
-    } finally {
-      IOUtils.closeQuietly(fs);
     }
   }
 }

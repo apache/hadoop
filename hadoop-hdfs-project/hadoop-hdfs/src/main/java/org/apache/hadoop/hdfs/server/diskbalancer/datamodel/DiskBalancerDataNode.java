@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;

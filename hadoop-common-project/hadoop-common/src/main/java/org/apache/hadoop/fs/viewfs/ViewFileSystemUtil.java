@@ -44,11 +44,22 @@ public final class ViewFileSystemUtil {
   /**
    * Check if the FileSystem is a ViewFileSystem.
    *
-   * @param fileSystem
+   * @param fileSystem file system.
    * @return true if the fileSystem is ViewFileSystem
    */
   public static boolean isViewFileSystem(final FileSystem fileSystem) {
     return fileSystem.getScheme().equals(FsConstants.VIEWFS_SCHEME);
+  }
+
+  /**
+   * Check if the FileSystem is a ViewFileSystemOverloadScheme.
+   *
+   * @param fileSystem file system.
+   * @return true if the fileSystem is ViewFileSystemOverloadScheme
+   */
+  public static boolean isViewFileSystemOverloadScheme(
+      final FileSystem fileSystem) {
+    return fileSystem instanceof ViewFileSystemOverloadScheme;
   }
 
   /**
@@ -90,10 +101,12 @@ public final class ViewFileSystemUtil {
    * @param fileSystem - ViewFileSystem on which mount point exists
    * @param path - URI for which FsStatus is requested
    * @return Map of ViewFsMountPoint and FsStatus
+   * @throws IOException raised on errors performing I/O.
    */
   public static Map<MountPoint, FsStatus> getStatus(
       FileSystem fileSystem, Path path) throws IOException {
-    if (!isViewFileSystem(fileSystem)) {
+    if (!(isViewFileSystem(fileSystem)
+        || isViewFileSystemOverloadScheme(fileSystem))) {
       throw new UnsupportedFileSystemException("FileSystem '"
           + fileSystem.getUri() + "'is not a ViewFileSystem.");
     }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
@@ -129,7 +129,7 @@ public class ServiceMaster extends CompositeService {
     DefaultMetricsSystem.initialize("ServiceAppMaster");
 
     context.secretManager = new ClientToAMTokenSecretManager(attemptId, null);
-    ClientAMService clientAMService = new ClientAMService(context);
+    ClientAMService clientAMService = createClientAMService();
     context.clientAMService = clientAMService;
     addService(clientAMService);
 
@@ -141,6 +141,11 @@ public class ServiceMaster extends CompositeService {
     addService(monitor);
 
     super.serviceInit(conf);
+  }
+
+  @VisibleForTesting
+  protected ClientAMService createClientAMService() {
+    return new ClientAMService(context);
   }
 
   // Record the tokens and use them for launching containers.

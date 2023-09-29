@@ -20,11 +20,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-ui</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN UI</name>
   <packaging>${packagingType}</packaging>
 
@@ -38,6 +38,34 @@
 
   <build>
     <plugins>
+      <!-- Pkck the appropriate ember build script to use in src/package.json based on the OS -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <!-- Set the Maven property emberBuildScript to build:mvn:windows if this is
+                 running on Windows. Set it to build:mvn otherwise. -->
+                <condition property="emberBuildScript" value="build:mvn:windows" else="build:mvn">
+                  <and>
+                    <os family="windows"/>
+                  </and>
+                </condition>
+                <echo>Ember build script to use = ${emberBuildScript}</echo>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Apache RAT -->
       <plugin>
         <groupId>org.apache.rat</groupId>
@@ -65,7 +93,6 @@
 
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
-        <version>3.0.0</version>
         <configuration>
           <skip>${keepUIBuildCache}</skip>
           <followSymLinks>false</followSymLinks>
@@ -185,8 +212,8 @@
                   <goal>install-node-and-yarn</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v5.12.0</nodeVersion>
-                  <yarnVersion>v0.21.3</yarnVersion>
+                  <nodeVersion>${nodejs.version}</nodeVersion>
+                  <yarnVersion>${yarnpkg.version}</yarnVersion>
                 </configuration>
               </execution>
               <execution>
@@ -203,7 +230,7 @@
                 <phase>generate-resources</phase>
                 <id>bower install</id>
                 <configuration>
-                  <arguments>install</arguments>
+                  <arguments>install --allow-root</arguments>
                 </configuration>
                 <goals>
                   <goal>bower</goal>
@@ -230,7 +257,7 @@
                   <arguments>
                     <argument>${packageManagerScript}</argument>
                     <argument>run</argument>
-                    <argument>build:mvn</argument>
+                    <argument>${emberBuildScript}</argument>
                   </arguments>
                 </configuration>
               </execution>

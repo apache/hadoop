@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.utils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +64,26 @@ public class SliderFileSystem extends CoreFileSystem {
         serviceVersion + "/" + compName);
   }
 
+  public Path getBasePath() {
+    String tmpDir = configuration.get("hadoop.tmp.dir");
+    String basePath = YarnServiceConstants.SERVICE_BASE_DIRECTORY
+        + "/" + YarnServiceConstants.SERVICES_DIRECTORY;
+    return new Path(tmpDir, basePath);
+  }
+
+  /**
+   * Returns the component public resource directory path.
+   *
+   * @param serviceVersion service version
+   * @param compName       component name
+   * @return component public resource directory
+   */
+  public Path getComponentPublicResourceDir(String serviceVersion,
+      String compName) {
+    return new Path(new Path(getBasePath(), getAppDir().getName() + "/"
+        + "components"), serviceVersion + "/" + compName);
+  }
+
   /**
    * Deletes the component directory.
    *
@@ -76,6 +97,12 @@ public class SliderFileSystem extends CoreFileSystem {
     if (fileSystem.exists(path)) {
       fileSystem.delete(path, true);
       LOG.debug("deleted dir {}", path);
+    }
+    Path publicResourceDir = getComponentPublicResourceDir(serviceVersion,
+        compName);
+    if (fileSystem.exists(publicResourceDir)) {
+      fileSystem.delete(publicResourceDir, true);
+      LOG.debug("deleted public resource dir {}", publicResourceDir);
     }
   }
 
@@ -91,6 +118,13 @@ public class SliderFileSystem extends CoreFileSystem {
     if (fileSystem.exists(path) && fileSystem.listStatus(path).length == 0) {
       fileSystem.delete(path, true);
       LOG.info("deleted dir {}", path);
+    }
+    Path publicResourceDir = new Path(new Path(getBasePath(),
+        getAppDir().getName() + "/" + "components"), serviceVersion);
+    if (fileSystem.exists(publicResourceDir)
+        && fileSystem.listStatus(publicResourceDir).length == 0) {
+      fileSystem.delete(publicResourceDir, true);
+      LOG.info("deleted public resource dir {}", publicResourceDir);
     }
   }
 

@@ -47,7 +47,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestOfflineEditsViewer {
   private static final Logger LOG = LoggerFactory
@@ -164,7 +164,7 @@ public class TestOfflineEditsViewer {
   public void testStored() throws IOException {
     // reference edits stored with source code (see build.xml)
     final String cacheDir = System.getProperty("test.cache.data",
-        "build/test/cache");
+        "target/test-classes");
     // binary, XML, reparsed binary
     String editsStored = cacheDir + "/editsStored";
     String editsStoredParsedXml = cacheDir + "/editsStoredParsed.xml";

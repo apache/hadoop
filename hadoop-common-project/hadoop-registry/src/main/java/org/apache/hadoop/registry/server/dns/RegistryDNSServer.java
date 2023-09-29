@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.DNSOperationsFactory;
@@ -106,7 +106,7 @@ public class RegistryDNSServer extends CompositeService {
   private void manageRegistryDNS() {
 
     try {
-      registryOperations.monitorRegistryEntries();
+      registryOperations.instantiateCacheForRegistry();
       registryOperations.registerPathListener(new PathListener() {
         private String registryRoot = getConfig().
             get(RegistryConstants.KEY_REGISTRY_ZK_ROOT,
@@ -157,6 +157,7 @@ public class RegistryDNSServer extends CompositeService {
         }
 
       });
+      registryOperations.startCache();
 
       // create listener for record deletions
 

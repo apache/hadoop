@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
@@ -73,13 +74,16 @@ public interface NamenodeProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @param minBlockSize each block should be of this minimum Block Size
+   * @param hotBlockTimeInterval prefer to get blocks which are belong to
+   * the cold files accessed before the time interval
    * @return BlocksWithLocations a list of blocks &amp; their locations
    * @throws IOException if size is less than or equal to 0 or
   datanode does not exist
    */
   @Idempotent
+  @ReadOnly
   BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize) throws IOException;
+      minBlockSize, long hotBlockTimeInterval) throws IOException;
 
   /**
    * Get the current block keys

@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -405,9 +405,10 @@ public class AllocationTagsManager {
 
   /**
    * Helper method to just remove the tags associated with a container.
-   * @param nodeId
-   * @param applicationId
-   * @param allocationTags
+   *
+   * @param nodeId nodeId.
+   * @param applicationId application Id
+   * @param allocationTags application Tags.
    */
   public void removeTags(NodeId nodeId, ApplicationId applicationId,
       Set<String> allocationTags) {
@@ -644,7 +645,7 @@ public class AllocationTagsManager {
    * Returns a map whose key is the allocation tag and value is the
    * count of allocations with this tag.
    *
-   * @param nodeId
+   * @param nodeId nodeId.
    * @return allocation tag to count mapping
    */
   public Map<String, Long> getAllocationTagsWithCount(NodeId nodeId) {

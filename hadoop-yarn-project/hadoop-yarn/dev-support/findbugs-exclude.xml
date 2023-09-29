@@ -209,6 +209,10 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.RecoveryComparator" />
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.LoadBasedGlobalPolicy$SortByDescendingLoad" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
   <!-- Ignore some irrelevant class name warning -->
   <Match>
     <Class name="org.apache.hadoop.yarn.api.records.SerializedException" />
@@ -387,6 +391,11 @@
     <Method name="initAndStartNodeManager" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator" />
+    <Medhod name="startGPG" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
  
   <!-- Ignore heartbeat exception when killing localizer -->
   <Match>
@@ -402,6 +411,10 @@
   </Match>
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
 
@@ -700,5 +713,16 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.com.nec.NECVEPlugin"/>
     <Method name="getDevices" />
     <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+  </Match>
+
+  <!-- Suppress warning about anonymous class for mocking. -->
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.timelineservice\.reader\.TestTimelineReaderWebServicesHBaseStorage.*" />
+    <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS" />
+  </Match>
+
+  <!-- Generated files from JSON schema -->
+  <Match>
+    <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
 </FindBugsFilter>

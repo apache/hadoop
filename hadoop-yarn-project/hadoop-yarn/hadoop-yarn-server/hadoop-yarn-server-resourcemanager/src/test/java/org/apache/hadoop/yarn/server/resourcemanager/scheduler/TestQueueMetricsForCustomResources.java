@@ -16,8 +16,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
@@ -71,6 +72,17 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetrics.queueSource;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -82,8 +94,8 @@ public class TestQueueMetricsForCustomResources {
 
   public static final long GB = 1024; // MB
   private static final Configuration CONF = new Configuration();
-  private static final String CUSTOM_RES_1 = "custom_res_1";
-  private static final String CUSTOM_RES_2 = "custom_res_2";
+  public static final String CUSTOM_RES_1 = "custom_res_1";
+  public static final String CUSTOM_RES_2 = "custom_res_2";
   public static final String USER = "alice";
   private Resource defaultResource;
   private MetricsSystem ms;
@@ -204,7 +216,11 @@ public class TestQueueMetricsForCustomResources {
         .gaugeLong(PENDING_MB, containers *
             testData.resource.getMemorySize())
         .gaugeInt(PENDING_V_CORES, containers *
-            testData.resource.getVirtualCores());
+              testData.resource.getVirtualCores())
+        .gaugeLong(PENDING_CUSTOM_RES1,
+            containers * testData.customResourceValues.get(CUSTOM_RES_1))
+        .gaugeLong(PENDING_CUSTOM_RES2,
+            containers * testData.customResourceValues.get(CUSTOM_RES_2));
     assertAllMetrics(testData.leafQueue, checker,
         QueueMetrics::getPendingResources,
         MetricsForCustomResource.PENDING, computeExpectedCustomResourceValues(
@@ -227,6 +243,12 @@ public class TestQueueMetricsForCustomResources {
         .gaugeInt(PENDING_CONTAINERS, 0)
         .gaugeLong(PENDING_MB, 0)
         .gaugeInt(PENDING_V_CORES, 0)
+        .gaugeLong(ALLOCATED_CUSTOM_RES1,
+            testData.containers
+                * testData.customResourceValues.get(CUSTOM_RES_1))
+        .gaugeLong(ALLOCATED_CUSTOM_RES2,
+            testData.containers
+                * testData.customResourceValues.get(CUSTOM_RES_2))
         .checkAgainst(testData.leafQueue.queueSource);
     if (decreasePending) {
       assertAllMetrics(testData.leafQueue, checker,
@@ -258,7 +280,11 @@ public class TestQueueMetricsForCustomResources {
         .counter(AGGREGATE_MEMORY_MB_SECONDS_PREEMPTED,
             testData.resource.getMemorySize() * seconds)
         .counter(AGGREGATE_VCORE_SECONDS_PREEMPTED,
-            testData.resource.getVirtualCores() * seconds);
+            testData.resource.getVirtualCores() * seconds)
+        .gaugeLong(AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1,
+            testData.customResourceValues.get(CUSTOM_RES_1) * seconds)
+        .gaugeLong(AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2,
+            testData.customResourceValues.get(CUSTOM_RES_2) * seconds);
 
     assertQueueMetricsOnly(testData.leafQueue, checker,
         this::convertPreemptedSecondsToResource,
@@ -268,7 +294,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   private Resource convertPreemptedSecondsToResource(QueueMetrics qm) {
-    QueueMetricsCustomResource customValues = qm
+    CustomResourceMetricValue customValues = qm
         .getAggregatedPreemptedSecondsResources();
     MutableCounterLong vcoreSeconds = qm
         .getAggregateVcoreSecondsPreempted();
@@ -288,6 +314,10 @@ public class TestQueueMetricsForCustomResources {
         .gaugeInt(RESERVED_CONTAINERS, 1)
         .gaugeLong(RESERVED_MB, testData.resource.getMemorySize())
         .gaugeInt(RESERVED_V_CORES, testData.resource.getVirtualCores())
+        .gaugeLong(RESERVED_CUSTOM_RES1,
+            testData.customResourceValues.get(CUSTOM_RES_1))
+        .gaugeLong(RESERVED_CUSTOM_RES2,
+            testData.customResourceValues.get(CUSTOM_RES_2))
         .checkAgainst(testData.leafQueue.queueSource);
     assertAllMetrics(testData.leafQueue, checker,
         QueueMetrics::getReservedResources,
@@ -380,6 +410,8 @@ public class TestQueueMetricsForCustomResources {
     ResourceMetricsChecker.create()
         .gaugeLong(AVAILABLE_MB, GB)
         .gaugeInt(AVAILABLE_V_CORES, 4)
+        .gaugeLong(AVAILABLE_CUSTOM_RES1, 5 * GB)
+        .gaugeLong(AVAILABLE_CUSTOM_RES2, 6 * GB)
         .checkAgainst(queueSource);
 
     assertCustomResourceValue(metrics,
@@ -406,6 +438,8 @@ public class TestQueueMetricsForCustomResources {
     ResourceMetricsChecker.create()
         .gaugeLong(AVAILABLE_MB, GB)
         .gaugeInt(AVAILABLE_V_CORES, 4)
+        .gaugeLong(AVAILABLE_CUSTOM_RES1, 15 * GB)
+        .gaugeLong(AVAILABLE_CUSTOM_RES2, 20 * GB)
         .checkAgainst(queueSource);
 
     assertCustomResourceValue(metrics,
@@ -445,12 +479,23 @@ public class TestQueueMetricsForCustomResources {
     final int vCoresToDecrease = resourceToDecrease.getVirtualCores();
     final long memoryMBToDecrease = resourceToDecrease.getMemorySize();
     final int containersAfterDecrease = containers - containersToDecrease;
+    final long customRes1ToDecrease =
+      resourceToDecrease.getResourceValue(CUSTOM_RES_1);
+    final long customRes2ToDecrease =
+      resourceToDecrease.getResourceValue(CUSTOM_RES_2);
+
     final int vcoresAfterDecrease =
         (defaultResource.getVirtualCores() * containers)
             - (vCoresToDecrease * containersToDecrease);
     final long memoryAfterDecrease =
         (defaultResource.getMemorySize() * containers)
             - (memoryMBToDecrease * containersToDecrease);
+    final long customResource1AfterDecrease =
+      (testData.customResourceValues.get(CUSTOM_RES_1) * containers)
+          - (customRes1ToDecrease * containersToDecrease);
+    final long customResource2AfterDecrease =
+      (testData.customResourceValues.get(CUSTOM_RES_2) * containers)
+          - (customRes2ToDecrease * containersToDecrease);
 
     //first, increase resources to be able to decrease some
     testIncreasePendingResources(testData);
@@ -468,6 +513,8 @@ public class TestQueueMetricsForCustomResources {
         .gaugeInt(PENDING_CONTAINERS, containersAfterDecrease)
         .gaugeLong(PENDING_MB, memoryAfterDecrease)
         .gaugeInt(PENDING_V_CORES, vcoresAfterDecrease)
+        .gaugeLong(PENDING_CUSTOM_RES1, customResource1AfterDecrease)
+        .gaugeLong(PENDING_CUSTOM_RES2, customResource2AfterDecrease)
         .checkAgainst(testData.leafQueue.queueSource);
 
     assertAllMetrics(testData.leafQueue, checker,
@@ -522,7 +569,11 @@ public class TestQueueMetricsForCustomResources {
         .gaugeLong(ALLOCATED_MB, resource.getMemorySize())
         .gaugeInt(ALLOCATED_V_CORES, resource.getVirtualCores())
         .gaugeInt(PENDING_CONTAINERS, 1).gaugeLong(PENDING_MB, 0)
-        .gaugeInt(PENDING_V_CORES, 0);
+        .gaugeInt(PENDING_V_CORES, 0)
+        .gaugeLong(ALLOCATED_CUSTOM_RES1,
+            testData.customResourceValues.get(CUSTOM_RES_1))
+        .gaugeLong(ALLOCATED_CUSTOM_RES2,
+            testData.customResourceValues.get(CUSTOM_RES_2));
 
     checker.checkAgainst(testData.leafQueue.queueSource);
     checker.checkAgainst(testData.leafQueue.getRoot().queueSource);
@@ -613,6 +664,7 @@ public class TestQueueMetricsForCustomResources {
         .gaugeInt(RESERVED_CONTAINERS, 0)
         .gaugeLong(RESERVED_MB, 0)
         .gaugeInt(RESERVED_V_CORES, 0)
+        .gaugeLong(RESERVED_CUSTOM_RES1, 0).gaugeLong(RESERVED_CUSTOM_RES2, 0)
         .checkAgainst(testData.leafQueue.queueSource);
     assertAllMetrics(testData.leafQueue, checker,
         QueueMetrics::getReservedResources,

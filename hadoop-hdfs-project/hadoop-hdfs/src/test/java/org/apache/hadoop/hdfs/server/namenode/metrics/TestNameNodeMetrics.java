@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.GcTimePercentage;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
@@ -47,7 +48,10 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
-import com.google.common.collect.ImmutableList;
+
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +107,7 @@ public class TestNameNodeMetrics {
     new Path("/testNameNodeMetrics");
   private static final String NN_METRICS = "NameNodeActivity";
   private static final String NS_METRICS = "FSNamesystem";
+  private static final String JVM_METRICS = "JvmMetrics";
   private static final int BLOCK_SIZE = 1024 * 1024;
   private static final ErasureCodingPolicy EC_POLICY =
       SystemErasureCodingPolicies.getByID(
@@ -221,6 +226,15 @@ public class TestNameNodeMetrics {
     // considered.
     assert (capacityUsed + capacityRemaining + capacityUsedNonDFS <=
         capacityTotal);
+  }
+
+  /**
+   * Test the GcTimePercentage could be got successfully.
+   */
+  @Test
+  public void testGcTimePercentageMetrics() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(JVM_METRICS);
+    MetricsAsserts.getIntGauge(GcTimePercentage.name(), rb);
   }
 
   /** Test metrics indicating the number of stale DataNodes */
@@ -650,6 +664,8 @@ public class TestNameNodeMetrics {
     // verify ExcessBlocks metric is decremented and
     // excessReplicateMap is cleared after deleting a file
     fs.delete(file, true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", 0L, rb);
     assertEquals(0L, bm.getExcessBlocksCount());
@@ -1114,5 +1130,15 @@ public class TestNameNodeMetrics {
       }
     }
 
+  }
+
+  @Test
+  public void testNNRPCMetricIntegrity() {
+    RpcDetailedMetrics metrics =
+        ((NameNodeRpcServer) cluster.getNameNode()
+            .getRpcServer()).getClientRpcServer().getRpcDetailedMetrics();
+    MetricsRecordBuilder rb = getMetrics(metrics.name());
+    // CommitBlockSynchronizationNumOps should exist.
+    assertCounter("CommitBlockSynchronizationNumOps", 0L, rb);
   }
 }

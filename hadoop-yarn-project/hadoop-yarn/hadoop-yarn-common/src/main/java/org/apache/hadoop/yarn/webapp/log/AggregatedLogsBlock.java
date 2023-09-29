@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationWebUtils;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import com.google.inject.Inject;
 
@@ -104,8 +105,9 @@ public class AggregatedLogsBlock extends HtmlBlock {
     } catch (Exception fnf) {
       html.h1()
           .__("Logs not available for " + logEntity
-              + ". Aggregation may not be complete, "
-              + "Check back later or try the nodemanager at " + nodeId).__();
+              + ". Aggregation may not be complete, Check back later or "
+              + "try to find the container logs in the local directory of "
+              + "nodemanager " + nodeId).__();
       if(nmApplicationLogUrl != null)  {
         html.h1()
             .__("Or see application log at " + nmApplicationLogUrl)
@@ -129,6 +131,14 @@ public class AggregatedLogsBlock extends HtmlBlock {
     StringBuilder sb = new StringBuilder();
     String scheme = YarnConfiguration.useHttps(this.conf) ? "https://":
         "http://";
+
+    String webAppURLWithoutScheme =
+        WebAppUtils.getNMWebAppURLWithoutScheme(conf);
+    if (webAppURLWithoutScheme.contains(":")) {
+      String httpPort = webAppURLWithoutScheme.split(":")[1];
+      nodeId = NodeId.fromString(nodeId).getHost() + ":" + httpPort;
+    }
+
     sb.append(scheme).append(nodeId).append("/node/application/").append(appId);
     return sb.toString();
   }

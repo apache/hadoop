@@ -35,7 +35,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Static functions for dealing with files of the same format
@@ -68,7 +68,7 @@ public abstract class MD5FileUtils {
   /**
    * Read the md5 file stored alongside the given data file
    * and match the md5 file content.
-   * @param dataFile the file containing data
+   * @param md5File the file containing md5 data
    * @return a matcher with two matched groups
    *   where group(1) is the md5 string and group(2) is the data file path.
    */

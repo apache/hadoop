@@ -116,7 +116,7 @@ public class ZStandardCodec implements
    *
    * @param out the location for the final output stream
    * @return a stream the user can write uncompressed data to have compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -132,7 +132,7 @@ public class ZStandardCodec implements
    * @param out        the location for the final output stream
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to have compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
@@ -173,7 +173,7 @@ public class ZStandardCodec implements
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -189,7 +189,7 @@ public class ZStandardCodec implements
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
@@ -230,7 +230,7 @@ public class ZStandardCodec implements
    */
   @Override
   public String getDefaultExtension() {
-    return ".zst";
+    return CodecConstants.ZSTANDARD_CODEC_EXTENSION;
   }
 
   @Override

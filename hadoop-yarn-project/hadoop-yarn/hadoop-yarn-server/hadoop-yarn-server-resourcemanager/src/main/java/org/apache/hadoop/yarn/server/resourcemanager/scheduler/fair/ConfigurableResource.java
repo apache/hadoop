@@ -137,4 +137,9 @@ public class ConfigurableResource {
       }
     }
   }
+
+  public double[] getPercentages() {
+    return percentages == null ? null :
+      Arrays.copyOf(percentages, percentages.length);
+  }
 }

@@ -22,6 +22,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -63,6 +64,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -553,7 +555,7 @@ public class TestWebDelegationToken {
           HttpURLConnection conn = aUrl.openConnection(url, token);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          List<String> ret = IOUtils.readLines(conn.getInputStream());
+          List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals(FOO_USER, ret.get(0));
 
@@ -623,7 +625,7 @@ public class TestWebDelegationToken {
           HttpURLConnection conn = aUrl.openConnection(url, token);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          List<String> ret = IOUtils.readLines(conn.getInputStream());
+          List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals(FOO_USER, ret.get(0));
 
@@ -743,12 +745,6 @@ public class TestWebDelegationToken {
       final boolean doAs) throws Exception {
     final String doAsUser = doAs ? OK_USER : null;
 
-    // setting hadoop security to kerberos
-    org.apache.hadoop.conf.Configuration conf =
-        new org.apache.hadoop.conf.Configuration();
-    conf.set("hadoop.security.authentication", "kerberos");
-    UserGroupInformation.setConfiguration(conf);
-
     File testDir = new File("target/" + UUID.randomUUID().toString());
     Assert.assertTrue(testDir.mkdirs());
     MiniKdc kdc = new MiniKdc(MiniKdc.createConf(), testDir);
@@ -759,6 +755,10 @@ public class TestWebDelegationToken {
     context.addFilter(new FilterHolder(KDTAFilter.class), "/*",
         EnumSet.of(DispatcherType.REQUEST));
     context.addServlet(new ServletHolder(UserServlet.class), "/bar");
+    org.apache.hadoop.conf.Configuration conf =
+        new org.apache.hadoop.conf.Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    conf.set("java.security.krb5.realm", KerberosTestUtils.getRealm());
     try {
       kdc.start();
       File keytabFile = new File(testDir, "test.keytab");
@@ -849,14 +849,14 @@ public class TestWebDelegationToken {
       HttpURLConnection conn = 
           (HttpURLConnection) new URL(strUrl).openConnection();
       Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-      List<String> ret = IOUtils.readLines(conn.getInputStream());
+      List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
       Assert.assertEquals(1, ret.size());
       Assert.assertEquals(OK_USER, ret.get(0));
       strUrl = String.format("%s?user.name=%s&DOAS=%s", url.toExternalForm(), 
           FOO_USER, OK_USER);
       conn = (HttpURLConnection) new URL(strUrl).openConnection();
       Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-      ret = IOUtils.readLines(conn.getInputStream());
+      ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
       Assert.assertEquals(1, ret.size());
       Assert.assertEquals(OK_USER, ret.get(0));
 
@@ -873,7 +873,8 @@ public class TestWebDelegationToken {
           HttpURLConnection conn = aUrl.openConnection(url, token, OK_USER);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          List<String> ret = IOUtils.readLines(conn.getInputStream());
+          List<String> ret = IOUtils
+              .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals(OK_USER, ret.get(0));
 
@@ -893,7 +894,8 @@ public class TestWebDelegationToken {
           conn = aUrl.openConnection(url, token, OK_USER);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          ret = IOUtils.readLines(conn.getInputStream());
+          ret = IOUtils
+              .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals(FOO_USER, ret.get(0));
 
@@ -954,7 +956,8 @@ public class TestWebDelegationToken {
           HttpURLConnection conn = aUrl.openConnection(url, token);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          List<String> ret = IOUtils.readLines(conn.getInputStream());
+          List<String> ret = IOUtils
+              .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals("remoteuser=" + FOO_USER+ ":ugi=" + FOO_USER, 
               ret.get(0));
@@ -963,7 +966,7 @@ public class TestWebDelegationToken {
           conn = aUrl.openConnection(url, token, OK_USER);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
-          ret = IOUtils.readLines(conn.getInputStream());
+          ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals("realugi=" + FOO_USER +":remoteuser=" + OK_USER + 
                   ":ugi=" + OK_USER, ret.get(0));
@@ -1015,7 +1018,7 @@ public class TestWebDelegationToken {
           HttpURLConnection conn = aUrl.openConnection(url, token, OK_USER);
           Assert.assertEquals(HttpURLConnection.HTTP_OK,
                   conn.getResponseCode());
-          List<String> ret = IOUtils.readLines(conn.getInputStream());
+          List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
           Assert.assertEquals(1, ret.size());
           Assert.assertEquals("realugi=" + FOO_USER +":remoteuser=" + OK_USER +
                   ":ugi=" + OK_USER, ret.get(0));

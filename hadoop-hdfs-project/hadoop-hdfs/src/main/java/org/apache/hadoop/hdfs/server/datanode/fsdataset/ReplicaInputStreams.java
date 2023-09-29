@@ -130,7 +130,7 @@ public class ReplicaInputStreams implements Closeable {
       dataInFd = null;
     }
     if (volumeRef != null) {
-      IOUtils.cleanup(null, volumeRef);
+      IOUtils.cleanupWithLogger(null, volumeRef);
       volumeRef = null;
     }
     // throw IOException if there is any
@@ -146,7 +146,7 @@ public class ReplicaInputStreams implements Closeable {
     dataInFd = null;
     IOUtils.closeStream(checksumIn);
     checksumIn = null;
-    IOUtils.cleanup(null, volumeRef);
+    IOUtils.cleanupWithLogger(null, volumeRef);
     volumeRef = null;
   }
 }

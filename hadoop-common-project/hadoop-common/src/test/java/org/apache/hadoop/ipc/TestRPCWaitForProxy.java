@@ -44,7 +44,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
   @Before
   public void setupProtocolEngine() {
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
   }
 
   /**

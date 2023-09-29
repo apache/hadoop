@@ -18,6 +18,7 @@
 
 #include "hdfspp_mini_dfs.h"
 #include "hdfspp/hdfs_ext.h"
+#include "x-platform/syscall.h"
 
 #include <cstring>
 #include <chrono>
@@ -453,11 +454,11 @@ TEST_F(HdfsExtTest, TestHosts) {
   EXPECT_EQ(0, errno);
 
   //Test invalid arguments
-  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::max()+1));
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::min()));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
 
   //Test invalid arguments
-  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), std::numeric_limits<int64_t>::max()+1, std::numeric_limits<int64_t>::max()));
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max()));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
 }
 
@@ -475,7 +476,7 @@ TEST_F(HdfsExtTest, TestReadStats) {
   hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
   EXPECT_NE(nullptr, file);
   void * buf = malloc(size);
-  bzero(buf, size);
+  XPlatform::Syscall::ClearBufferSafely(buf, size);
   EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
   free(buf);
   EXPECT_EQ(0, hdfsCloseFile(fs, file));

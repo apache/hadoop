@@ -30,13 +30,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Lists;
-
-import org.junit.Assert;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,9 +40,14 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDatanodeRegister { 
   public static final Logger LOG =
@@ -78,7 +76,7 @@ public class TestDatanodeRegister {
     actor = new BPServiceActor("test", "test", INVALID_ADDR, null, mockBPOS);
 
     fakeNsInfo = mock(NamespaceInfo.class);
-    // Return a a good software version.
+    // Return a good software version.
     doReturn(VersionInfo.getVersion()).when(fakeNsInfo).getSoftwareVersion();
     // Return a good layout version for now.
     doReturn(HdfsServerConstants.NAMENODE_LAYOUT_VERSION).when(fakeNsInfo)
@@ -146,7 +144,7 @@ public class TestDatanodeRegister {
     DataNode dn = new DataNode(conf, locations, null, null);
     BPOfferService bpos = new BPOfferService("test_ns",
         Lists.newArrayList("nn0"), Lists.newArrayList(nnADDR),
-        Collections.<InetSocketAddress>nCopies(1, null), dn);
+        Collections.nCopies(1, null), dn);
     DatanodeProtocolClientSideTranslatorPB fakeDnProt =
         mock(DatanodeProtocolClientSideTranslatorPB.class);
     when(fakeDnProt.versionRequest()).thenReturn(fakeNsInfo);

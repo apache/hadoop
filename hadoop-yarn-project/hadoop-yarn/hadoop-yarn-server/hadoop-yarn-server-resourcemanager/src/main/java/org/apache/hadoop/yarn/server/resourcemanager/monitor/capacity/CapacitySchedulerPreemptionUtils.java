@@ -83,7 +83,8 @@ public class CapacitySchedulerPreemptionUtils {
 
         String partition = schedulerNode.getPartition();
         String queue = c.getQueueName();
-        TempQueuePerPartition tq = context.getQueueByPartition(queue,
+        TempQueuePerPartition tq = context.getQueueByPartition(
+            context.getScheduler().normalizeQueueName(queue),
             partition);
 
         Resource res = c.getReservedResource();
@@ -143,6 +144,7 @@ public class CapacitySchedulerPreemptionUtils {
    *            stop preempt container when: all major resource type
    *            {@literal <=} 0 for to-preempt.
    *            This is default preemption behavior of inter-queue preemption
+   * @param curCandidates RMContainer Set.
    * @return should we preempt rmContainer. If we should, deduct from
    *         <code>resourceToObtainByPartition</code>
    */

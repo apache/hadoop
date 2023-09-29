@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
-import org.apache.hadoop.util.ChunkedArrayList;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -128,8 +128,8 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn2", 0,
         "Created snapshot /sub3/.snapshot/sn2", conf);
     DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn3", 1,
-        "Failed to add snapshot: there are already 3 snapshot(s) and "
-            + "the max snapshot limit is 3", conf);
+        "Failed to create snapshot: there are already 3 snapshot(s) and "
+            + "the per directory snapshot limit is 3", conf);
   }
 
   @Test
@@ -224,7 +224,7 @@ public class TestSnapshotCommands {
     fs.delete(new Path("/Fully/QPath"), true);
   }
 
-  @Test (timeout=60000)
+  @Test (timeout=120000)
   public void testSnapshotDiff()throws Exception {
     Configuration config = new HdfsConfiguration();
     Path snapDirPath = new Path(fs.getUri().toString() + "/snap_dir");

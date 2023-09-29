@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NO
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
@@ -30,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
@@ -69,19 +71,23 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
+import org.apache.hadoop.hdfs.server.datanode.VolumeScanner;
+import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -141,10 +147,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -170,9 +174,20 @@ public class MiniDFSCluster implements AutoCloseable {
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
   public static final String  DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY
       = DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY + ".testing";
+  /**
+   * For the Junit tests, this is the default value of the The amount of time
+   * in milliseconds that the BlockScanner times out waiting for the
+   * {@link VolumeScanner} thread to join during a shutdown call.
+   */
+  public static final long DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC =
+      TimeUnit.SECONDS.toMillis(30);
 
   // Changing this default may break some tests that assume it is 2.
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
+
+  // do not consider load factor when selecting a datanode.
+  private static final boolean DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD =
+      false;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -188,6 +203,8 @@ public class MiniDFSCluster implements AutoCloseable {
     private int nameNodeHttpPort = 0;
     private final Configuration conf;
     private int numDataNodes = 1;
+    private int[] dnHttpPorts = null;
+    private int[] dnIpcPorts = null;
     private StorageType[][] storageTypes = null;
     private StorageType[] storageTypes1D = null;
     private int storagesPerDatanode = DEFAULT_STORAGES_PER_DATANODE;
@@ -216,8 +233,7 @@ public class MiniDFSCluster implements AutoCloseable {
 
     public Builder(Configuration conf) {
       this.conf = conf;
-      this.storagesPerDatanode =
-          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      initDefaultConfigurations();
       if (null == conf.get(HDFS_MINIDFS_BASEDIR)) {
         conf.set(HDFS_MINIDFS_BASEDIR,
             new File(getBaseDirectory()).getAbsolutePath());
@@ -226,8 +242,7 @@ public class MiniDFSCluster implements AutoCloseable {
 
     public Builder(Configuration conf, File basedir) {
       this.conf = conf;
-      this.storagesPerDatanode =
-          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      initDefaultConfigurations();
       if (null == basedir) {
         throw new IllegalArgumentException(
             "MiniDFSCluster base directory cannot be null");
@@ -261,6 +276,16 @@ public class MiniDFSCluster implements AutoCloseable {
      */
     public Builder numDataNodes(int val) {
       this.numDataNodes = val;
+      return this;
+    }
+
+    public Builder setDnHttpPorts(int... ports) {
+      this.dnHttpPorts = ports;
+      return this;
+    }
+
+    public Builder setDnIpcPorts(int... ports) {
+      this.dnIpcPorts = ports;
       return this;
     }
 
@@ -486,10 +511,43 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     /**
+     * set the value of DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY in the config
+     * file.
+     *
+     * @param val passed to the flag. This allows overriding the default value
+     *            {@link #DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD}.
+     * @return the builder object.
+     */
+    public Builder setNNRedundancyConsiderLoad(final boolean val) {
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, val);
+      return this;
+    }
+
+    /**
      * Construct the actual MiniDFSCluster
      */
     public MiniDFSCluster build() throws IOException {
       return new MiniDFSCluster(this);
+    }
+
+    /**
+     * Initializes default values for the cluster.
+     */
+    private void initDefaultConfigurations() {
+      long defaultScannerVolumeTimeOut =
+          conf.getLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
+              DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC);
+      conf.setLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
+          defaultScannerVolumeTimeOut);
+      // default is false. do not consider load factor when selecting a
+      // datanode.
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+          DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
+      this.storagesPerDatanode =
+          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      conf.setLong(DFSConfigKeys
+          .DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY,
+          0);
     }
   }
   
@@ -553,10 +611,12 @@ public class MiniDFSCluster implements AutoCloseable {
                        builder.checkDataNodeHostConfig,
                        builder.dnConfOverlays,
                        builder.skipFsyncForTesting,
-                       builder.useConfiguredTopologyMappingClass);
+                       builder.useConfiguredTopologyMappingClass,
+                       builder.dnHttpPorts,
+                       builder.dnIpcPorts);
   }
   
-  public class DataNodeProperties {
+  public static class DataNodeProperties {
     final DataNode datanode;
     final Configuration conf;
     String[] dnArgs;
@@ -593,7 +653,7 @@ public class MiniDFSCluster implements AutoCloseable {
   private boolean federation;
   private boolean checkExitOnShutdown = true;
   protected final int storagesPerDatanode;
-  private Set<FileSystem> fileSystems = Sets.newHashSet();
+  private Set<FileSystem> fileSystems = new HashSet<>();
 
   private List<long[]> storageCap = Lists.newLinkedList();
 
@@ -620,6 +680,10 @@ public class MiniDFSCluster implements AutoCloseable {
       this.nameserviceId = nameserviceId;
       this.nnId = nnId;
       this.startOpt = startOpt;
+      this.conf = conf;
+    }
+
+    public void setConf(Configuration conf) {
       this.conf = conf;
     }
     
@@ -823,7 +887,7 @@ public class MiniDFSCluster implements AutoCloseable {
                        operation, null, racks, hosts,
                        null, simulatedCapacities, null, true, false,
                        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0),
-                       true, false, false, null, true, false);
+                       true, false, false, null, true, false, null, null);
   }
 
   private void initMiniDFSCluster(
@@ -841,7 +905,9 @@ public class MiniDFSCluster implements AutoCloseable {
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays,
       boolean skipFsyncForTesting,
-      boolean useConfiguredTopologyMappingClass)
+      boolean useConfiguredTopologyMappingClass,
+      int[] dnHttpPorts,
+      int[] dnIpcPorts)
   throws IOException {
     boolean success = false;
     try {
@@ -924,9 +990,9 @@ public class MiniDFSCluster implements AutoCloseable {
 
       // Start the DataNodes
       startDataNodes(conf, numDataNodes, storageTypes, manageDataDfsDirs,
-          dnStartOpt != null ? dnStartOpt : startOpt,
-          racks, hosts, storageCapacities, simulatedCapacities, setupHostsFile,
-          checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
+          dnStartOpt != null ? dnStartOpt : startOpt, racks, hosts, storageCapacities,
+          simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, checkDataNodeHostConfig,
+          dnConfOverlays, dnHttpPorts, dnIpcPorts);
       waitClusterUp();
       //make sure ProxyUsers uses the latest conf
       ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
@@ -984,6 +1050,8 @@ public class MiniDFSCluster implements AutoCloseable {
         }
        copyKeys(conf, nnConf, nnInfo.nameserviceId, nnInfo.nnId);
       }
+      nn.nameNode.getHttpServer()
+          .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     }
   }
 
@@ -1016,7 +1084,7 @@ public class MiniDFSCluster implements AutoCloseable {
    * Do the rest of the NN configuration for things like shared edits,
    * as well as directory formatting, etc. for a single nameservice
    * @param nnCounter the count of the number of namenodes already configured/started. Also,
-   *                  acts as the <i>index</i> to the next NN to start (since indicies start at 0).
+   *                  acts as the <i>index</i> to the next NN to start (since indices start at 0).
    * @throws IOException
    */
   private void configureNameService(MiniDFSNNTopology.NSConf nameservice, int nsCounter,
@@ -1546,8 +1614,8 @@ public class MiniDFSCluster implements AutoCloseable {
                              String[] racks, String[] hosts,
                              long[] simulatedCapacities,
                              boolean setupHostsFile) throws IOException {
-    startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts,
-        null, simulatedCapacities, setupHostsFile, false, false, null);
+    startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts, null,
+        simulatedCapacities, setupHostsFile, false, false, null, null, null);
   }
 
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
@@ -1556,14 +1624,14 @@ public class MiniDFSCluster implements AutoCloseable {
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig) throws IOException {
-    startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts,
-        null, simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false, null);
+    startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts, null,
+        simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false, null, null, null);
   }
 
   /**
    * Modify the config and start up additional DataNodes.  The info port for
    * DataNodes is guaranteed to use a free port.
-   *  
+   *
    *  Data nodes can run with the name node in the mini cluster or
    *  a real name node. For example, running with a real name node is useful
    *  when running simulated data nodes with a real name node.
@@ -1573,6 +1641,7 @@ public class MiniDFSCluster implements AutoCloseable {
    * @param conf the base configuration to use in starting the DataNodes.  This
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
+   * @param storageTypes Storage Types for DataNodes.
    * @param manageDfsDirs if true, the data directories for DataNodes will be
    *          created and {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be
    *          set in the conf
@@ -1580,13 +1649,16 @@ public class MiniDFSCluster implements AutoCloseable {
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    * @param racks array of strings indicating the rack that each DataNode is on
    * @param hosts array of strings indicating the hostnames for each DataNode
+   * @param storageCapacities array of Storage Capacities to be used while testing.
    * @param simulatedCapacities array of capacities of the simulated data nodes
    * @param setupHostsFile add new nodes to dfs hosts files
    * @param checkDataNodeAddrConfig if true, only set DataNode port addresses if not already set in config
    * @param checkDataNodeHostConfig if true, only set DataNode hostname key if not already set in config
    * @param dnConfOverlays An array of {@link Configuration} objects that will overlay the
    *              global MiniDFSCluster Configuration for the corresponding DataNode.
-   * @throws IllegalStateException if NameNode has been shutdown
+   * @param dnHttpPorts An array of Http ports if present, to be used for DataNodes.
+   * @param dnIpcPorts An array of Ipc ports if present, to be used for DataNodes.
+   * @throws IOException If the DFS daemons experience some issues.
    */
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
       StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
@@ -1596,7 +1668,9 @@ public class MiniDFSCluster implements AutoCloseable {
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
-      Configuration[] dnConfOverlays) throws IOException {
+      Configuration[] dnConfOverlays,
+      int[] dnHttpPorts,
+      int[] dnIpcPorts) throws IOException {
     assert storageCapacities == null || simulatedCapacities == null;
     assert storageTypes == null || storageTypes.length == numDataNodes;
     assert storageCapacities == null || storageCapacities.length == numDataNodes;
@@ -1604,6 +1678,19 @@ public class MiniDFSCluster implements AutoCloseable {
     if (operation == StartupOption.RECOVER) {
       return;
     }
+
+    if (dnHttpPorts != null && dnHttpPorts.length != numDataNodes) {
+      throw new IllegalArgumentException(
+          "Num of http ports (" + dnHttpPorts.length + ") should match num of DataNodes ("
+              + numDataNodes + ")");
+    }
+
+    if (dnIpcPorts != null && dnIpcPorts.length != numDataNodes) {
+      throw new IllegalArgumentException(
+          "Num of ipc ports (" + dnIpcPorts.length + ") should match num of DataNodes ("
+              + numDataNodes + ")");
+    }
+
     if (checkDataNodeHostConfig) {
       conf.setIfUnset(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
     } else {
@@ -1659,7 +1746,15 @@ public class MiniDFSCluster implements AutoCloseable {
         dnConf.addResource(dnConfOverlays[i]);
       }
       // Set up datanode address
-      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
+      int httpPort = 0;
+      int ipcPort = 0;
+      if(dnHttpPorts != null) {
+        httpPort = dnHttpPorts[i - curDatanodesNum];
+      }
+      if(dnIpcPorts != null) {
+        ipcPort = dnIpcPorts[i - curDatanodesNum];
+      }
+      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig, httpPort, ipcPort);
       if (manageDfsDirs) {
         String dirs = makeDataNodeDirs(i, storageTypes == null ?
           null : storageTypes[i - curDatanodesNum]);
@@ -2064,10 +2159,11 @@ public class MiniDFSCluster implements AutoCloseable {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
-        LOG.error("Test resulted in an unexpected exit",
-            ExitUtil.getFirstExitException());
+        Exception cause = ExitUtil.getFirstExitException();
+        LOG.error("Test resulted in an unexpected exit", cause);
         ExitUtil.resetFirstExitException();
-        throw new AssertionError("Test resulted in an unexpected exit");
+        throw new AssertionError("Test resulted in an unexpected exit: " +
+            cause.toString(), cause);
       }
     }
     if (closeFileSystem) {
@@ -2183,6 +2279,17 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /**
+   * Update an existing NameNode's configuration.
+   */
+  public void setNameNodeConf(int nnIndex, Configuration nnConf) {
+    NameNodeInfo info = getNN(nnIndex);
+    if (info == null) {
+      throw new RuntimeException("Invalid nnIndex!");
+    }
+    info.setConf(nnConf);
+  }
+
+  /**
    * Restart the namenode at a given index. Optionally wait for the cluster
    * to become active.
    */
@@ -2199,12 +2306,18 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     NameNode nn = NameNode.createNameNode(args, info.conf);
+    nn.getHttpServer()
+        .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     info.nameNode = nn;
+    info.nameserviceId = info.conf.get(DFS_NAMESERVICE_ID);
+    info.nnId = info.conf.get(DFS_HA_NAMENODE_ID_KEY);
     info.setStartOpt(startOpt);
     if (waitActive) {
-      waitClusterUp();
+      if (numDataNodes > 0) {
+        waitNameNodeUp(nnIndex);
+      }
       LOG.info("Restarted the namenode");
-      waitActive();
+      waitActive(nnIndex);
     }
   }
 
@@ -2416,14 +2529,28 @@ public class MiniDFSCluster implements AutoCloseable {
     return restartDataNode(dnprop, false);
   }
 
+  /**
+   * Wait for the datanode to be fully functional i.e. all the BP service threads are alive,
+   * all block pools initiated and also connected to active namenode.
+   *
+   * @param dn Datanode instance.
+   * @param timeout Timeout in millis until when we should wait for datanode to be fully
+   * operational.
+   * @throws InterruptedException If the thread wait is interrupted.
+   * @throws TimeoutException If times out while awaiting the fully operational capability of
+   * datanode.
+   */
+  public void waitDatanodeConnectedToActive(DataNode dn, int timeout)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> dn.isDatanodeFullyStarted(true),
+        100, timeout, "Datanode is not connected to active namenode even after "
+            + timeout + " ms of waiting");
+  }
+
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return dn.isDatanodeFullyStarted();
-      }
-    }, 100, timeout);
+    GenericTestUtils.waitFor(dn::isDatanodeFullyStarted, 100, timeout,
+        "Datanode is not started even after " + timeout + " ms of waiting");
   }
 
   private void waitDataNodeFullyStarted(final DataNode dn)
@@ -2674,7 +2801,8 @@ public class MiniDFSCluster implements AutoCloseable {
   public void rollEditLogAndTail(int nnIndex) throws Exception {
     getNameNode(nnIndex).getRpcServer().rollEditLog();
     for (int i = 2; i < getNumNameNodes(); i++) {
-      getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      long el = getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      LOG.info("editsLoaded {}", el);
     }
   }
 
@@ -2713,11 +2841,25 @@ public class MiniDFSCluster implements AutoCloseable {
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+    int failedCount = 0;
+    while (true) {
       try {
-        LOG.info("Waiting for cluster to become active");
-        Thread.sleep(100);
+        while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+          LOG.info("Waiting for cluster to become active");
+          Thread.sleep(100);
+        }
+        break;
+      } catch (IOException e) {
+        failedCount++;
+        // Cached RPC connection to namenode, if any, is expected to fail once
+        if (failedCount > 1) {
+          LOG.warn("Tried waitActive() " + failedCount
+              + " time(s) and failed, giving up.  " + StringUtils
+              .stringifyException(e));
+          throw e;
+        }
       } catch (InterruptedException e) {
+        throw new IOException(e);
       }
     }
 
@@ -2753,22 +2895,7 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public void waitActive() throws IOException {
     for (int index = 0; index < namenodes.size(); index++) {
-      int failedCount = 0;
-      while (true) {
-        try {
-          waitActive(index);
-          break;
-        } catch (IOException e) {
-          failedCount++;
-          // Cached RPC connection to namenode, if any, is expected to fail once
-          if (failedCount > 1) {
-            LOG.warn("Tried waitActive() " + failedCount
-                + " time(s) and failed, giving up.  "
-                + StringUtils.stringifyException(e));
-            throw e;
-          }
-        }
-      }
+      waitActive(index);
     }
     LOG.info("Cluster is active");
   }
@@ -3300,9 +3427,9 @@ public class MiniDFSCluster implements AutoCloseable {
           timeout);
     }
   }
-  
+
   protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
-                           boolean checkDataNodeAddrConfig) throws IOException {
+      boolean checkDataNodeAddrConfig, int httpPort, int ipcPort) throws IOException {
     if (setupHostsFile) {
       String hostsFile = conf.get(DFS_HOSTS, "").trim();
       if (hostsFile.length() == 0) {
@@ -3325,11 +3452,11 @@ public class MiniDFSCluster implements AutoCloseable {
       }
     }
     if (checkDataNodeAddrConfig) {
-      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + httpPort);
+      conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:" + ipcPort);
     } else {
-      conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + httpPort);
+      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:" + ipcPort);
     }
   }
   

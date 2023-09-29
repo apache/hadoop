@@ -24379,7 +24379,7 @@ to databases, and to files.]]>
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
       <doc>
-      <![CDATA[Get extra options specific to a erasure code.
+      <![CDATA[Get extra options specific to an erasure code.
  @return extra options]]>
       </doc>
     </method>

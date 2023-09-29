@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -51,6 +51,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1887,6 +1888,52 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * Returns the class to be invoked in order to send a notification
+   * after the job has completed (success/failure).
+   *
+   * @return the fully-qualified name of the class which implements
+   * {@link org.apache.hadoop.mapreduce.CustomJobEndNotifier} set through the
+   * {@link org.apache.hadoop.mapreduce.MRJobConfig#MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS}
+   * property
+   *
+   * @see JobConf#setJobEndNotificationCustomNotifierClass(java.lang.String)
+   * @see org.apache.hadoop.mapreduce.MRJobConfig#MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS
+   */
+  public String getJobEndNotificationCustomNotifierClass() {
+    return get(JobContext.MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS);
+  }
+
+  /**
+   * Sets the class to be invoked in order to send a notification after the job
+   * has completed (success/failure).
+   *
+   * A notification url still has to be set which will be passed to
+   * {@link org.apache.hadoop.mapreduce.CustomJobEndNotifier#notifyOnce(
+   * java.net.URL, org.apache.hadoop.conf.Configuration)}
+   * along with the Job's conf.
+   *
+   * If this is set instead of using a simple HttpURLConnection
+   * we'll create a new instance of this class
+   * which should be an implementation of
+   * {@link org.apache.hadoop.mapreduce.CustomJobEndNotifier},
+   * and we'll invoke that.
+   *
+   * @param customNotifierClassName the fully-qualified name of the class
+   *     which implements
+   *     {@link org.apache.hadoop.mapreduce.CustomJobEndNotifier}
+   *
+   * @see JobConf#setJobEndNotificationURI(java.lang.String)
+   * @see
+   * org.apache.hadoop.mapreduce.MRJobConfig#MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS
+   */
+  public void setJobEndNotificationCustomNotifierClass(
+          String customNotifierClassName) {
+
+    set(JobContext.MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS,
+            customNotifierClassName);
+  }
+
+  /**
    * Get job-specific shared directory for use as scratch space
    * 
    * <p>
@@ -2159,6 +2206,13 @@ public class JobConf extends Configuration {
           " jvm max heap size to " + xmxArg);
 
       javaOpts += " " + xmxArg;
+    }
+
+    // JDK17 support: automatically add --add-opens=java.base/java.lang=ALL-UNNAMED
+    // so the tasks can launch on a JDK17 node.
+    if (getBoolean(MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT,
+            MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT)) {
+      javaOpts += " " + ApplicationConstants.JVM_ADD_OPENS_VAR;
     }
 
     return javaOpts;

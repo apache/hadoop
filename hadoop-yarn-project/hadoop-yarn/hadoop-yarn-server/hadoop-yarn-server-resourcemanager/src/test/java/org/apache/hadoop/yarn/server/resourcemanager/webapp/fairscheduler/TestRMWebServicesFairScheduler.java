@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -132,7 +133,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     JSONArray subQueueInfo = json.getJSONObject("scheduler")
         .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
-        .getJSONObject("childQueues").getJSONArray("queue").getJSONObject(1)
+        .getJSONObject("childQueues").getJSONArray("queue").getJSONObject(0)
         .getJSONObject("childQueues").getJSONArray("queue");
     // subQueueInfo is consist of subqueue1 and subqueue2 info
     assertEquals(2, subQueueInfo.length());
@@ -157,4 +158,15 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     assertEquals("root", rootQueue.getString("queueName"));
   }
 
+  @Test
+  public void testClusterSchedulerOverviewFair() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    TestRMWebServices.verifyClusterSchedulerOverView(json, "Fair Scheduler");
+  }
 }

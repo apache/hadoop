@@ -109,34 +109,34 @@ In the below mount table configuration, namespace `/data` is linked to the files
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./data</name>
+    <name>fs.viewfs.mounttable.clusterX.link./data</name>
     <value>hdfs://nn1-clusterx.example.com:8020/data</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./project</name>
+    <name>fs.viewfs.mounttable.clusterX.link./project</name>
     <value>hdfs://nn2-clusterx.example.com:8020/project</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./user</name>
+    <name>fs.viewfs.mounttable.clusterX.link./user</name>
     <value>hdfs://nn3-clusterx.example.com:8020/user</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <name>fs.viewfs.mounttable.clusterX.link./tmp</name>
     <value>hdfs://nn4-clusterx.example.com:8020/tmp</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.linkFallback</name>
+    <name>fs.viewfs.mounttable.clusterX.linkFallback</name>
     <value>hdfs://nn5-clusterx.example.com:8020/home</value>
   </property>
 </configuration>
 ```
 
-Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, ClusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
+Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, clusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
 
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterY.linkMergeSlash</name>
+    <name>fs.viewfs.mounttable.clusterY.linkMergeSlash</name>
     <value>hdfs://nn1-clustery.example.com:8020/</value>
   </property>
 </configuration>
@@ -361,6 +361,75 @@ resume its work, it's a good idea to provision some sort of cron job to purge su
 
     Delegation tokens for the cluster to which you are submitting the job (including all mounted volumes for that cluster’s mount table), and for input and output paths to your map-reduce job (including all volumes mounted via mount tables for the specified input and output paths) are all handled automatically. In addition, there is a way to add additional delegation tokens to the base cluster configuration for special circumstances.
 
+Don't want to change scheme or difficult to copy mount-table configurations to all clients?
+-------------------------------------------------------------------------------------------
+
+Please refer to the [View File System Overload Scheme Guide](./ViewFsOverloadScheme.html)
+
+Regex Pattern Based Mount Points
+--------------------------------
+
+The view file system mount points were a Key-Value based mapping system. It is not friendly for user cases which mapping config could be abstracted to rules. E.g. Users want to provide a GCS bucket per user and there might be thousands of users in total. The old key-value based approach won't work well for several reasons:
+
+1. The mount table is used by FileSystem clients. There's a cost to spread the config to all clients and we should avoid it if possible. The [View File System Overload Scheme Guide](./ViewFsOverloadScheme.html) could help the distribution by central mount table management. But the mount table still have to be updated on every change. The change could be greatly avoided if provide a rule-based mount table.
+
+2. The client have to understand all the KVs in the mount table. This is not ideal when the mountable grows to thousands of items. E.g. thousands of file systems might be initialized even users only need one. And the config itself will become bloated at scale.
+
+### Understand the Difference
+
+In the key-value based mount table, view file system treats every mount point as a partition. There's several file system APIs which will lead to operation on all partitions. E.g. there's an HDFS cluster with multiple mount. Users want to run “hadoop fs -put file viewfs://hdfs.namenode.apache.org/tmp/” cmd to copy data from local disk to our HDFS cluster. The cmd will trigger ViewFileSystem to call setVerifyChecksum() method which will initialize the file system for every mount point.
+For a regex rule based mount table entry, we couldn't know what's corresponding path until parsing. So the regex based mount table entry will be ignored on such cases. The file system (ChRootedFileSystem) will be created upon accessing. But the underlying file system will be cached by inner cache of ViewFileSystem.
+```xml
+<property>
+    <name>fs.viewfs.rename.strategy</name>
+    <value>SAME_FILESYSTEM_ACROSS_MOUNTPOINT</value>
+</property>
+```
+
+### Basic Regex Link Mapping Config
+Here's an example of base regex mount point config. ${username} is the named capture group in Java Regex.
+```xml
+<property>
+    <name>fs.viewfs.mounttable.hadoop-nn.linkRegx./^(?<username>\\w+)</name>
+    <value>gs://${username}.hadoop.apache.org/</value>
+</property>
+```
+Parsing example.
+```bash
+viewfs://hadoop-nn/user1/dir1 => gs://user1.hadoop.apache.org/dir1
+viewfs://hadoop-nn/user2 => gs://user2.hadoop.apache.org/
+```
+The src/key’s format are
+```bash
+fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${REGEX_STR}
+```
+
+### Regex Link Mapping With Interceptors
+Interceptor is one mechanism introduced to modify source or target in the resolution process. It’s optional and could be used to satisfy user cases such as replace specific character or replace some word. Interceptor will only work for regex mount point. RegexMountPointResolvedDstPathReplaceInterceptor is the only build-in interceptor now.
+
+Here’s an example regex mount point entry with RegexMountPointResolvedDstPathReplaceInterceptor set.
+
+```xml
+<property>
+    <name>fs.viewfs.mounttable.hadoop-nn.linkRegx.replaceresolveddstpath:_:-#./^(?<username>\\w+)</name>
+    <value>gs://${username}.hadoop.apache.org/</value>
+</property>
+```
+The ```replaceresolveddstpath:_:-``` is an interceptor setting. “replaceresolveddstpath” is the interceptor type, “_” is the string to replace and “-” is the string after replace.
+
+Parsing example.
+```bash
+viewfs://hadoop-nn/user_ad/dir1 => gs://user-ad.hadoop.apache.org/dir1
+viewfs://hadoop-nn/user_ad_click => gs://user-ad-click.hadoop.apache.org/
+```
+The src/key’s format are
+```bash
+fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${REGEX_STR}
+fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${interceptorSettings}#.${srcRegex}
+```
+
+
+
 Appendix: A Mount Table Configuration Example
 ---------------------------------------------
 
@@ -374,7 +443,7 @@ The mount tables can be described in `core-site.xml` but it is better to use ind
 </configuration> 
 ```
 
-In the file `mountTable.xml`, there is a definition of the mount table "ClusterX" for the hypothetical cluster that is a federation of the three namespace volumes managed by the three namenodes
+In the file `mountTable.xml`, there is a definition of the mount table "clusterX" for the hypothetical cluster that is a federation of the three namespace volumes managed by the three namenodes
 
 1.  nn1-clusterx.example.com:8020,
 2.  nn2-clusterx.example.com:8020, and
@@ -385,23 +454,23 @@ Here `/home` and `/tmp` are in the namespace managed by namenode nn1-clusterx.ex
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.homedir</name>
+    <name>fs.viewfs.mounttable.clusterX.homedir</name>
     <value>/home</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./home</name>
+    <name>fs.viewfs.mounttable.clusterX.link./home</name>
     <value>hdfs://nn1-clusterx.example.com:8020/home</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <name>fs.viewfs.mounttable.clusterX.link./tmp</name>
     <value>hdfs://nn1-clusterx.example.com:8020/tmp</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./projects/foo</name>
+    <name>fs.viewfs.mounttable.clusterX.link./projects/foo</name>
     <value>hdfs://nn2-clusterx.example.com:8020/projects/foo</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./projects/bar</name>
+    <name>fs.viewfs.mounttable.clusterX.link./projects/bar</name>
     <value>hdfs://nn3-clusterx.example.com:8020/projects/bar</value>
   </property>
 </configuration>

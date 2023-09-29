@@ -184,8 +184,8 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
                                   "Builder::numDataNodes");
             goto error;
         }
+        (*env)->DeleteLocalRef(env, val.l);
     }
-    (*env)->DeleteLocalRef(env, val.l);
     jthr = findClassAndInvokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
             "build", "()L" MINIDFS_CLUSTER ";");
     if (jthr) {

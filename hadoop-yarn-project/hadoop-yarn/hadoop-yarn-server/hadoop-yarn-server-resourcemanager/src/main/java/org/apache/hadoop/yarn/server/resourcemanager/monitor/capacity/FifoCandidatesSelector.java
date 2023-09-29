@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -86,7 +86,7 @@ public class FifoCandidatesSelector
       }
 
       // compute resToObtainByPartition considered inter-queue preemption
-      LeafQueue leafQueue = preemptionContext.getQueueByPartition(queueName,
+      AbstractLeafQueue leafQueue = preemptionContext.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).leafQueue;
 
       Map<String, Resource> resToObtainByPartition =
@@ -116,7 +116,9 @@ public class FifoCandidatesSelector
                   .tryPreemptContainerAndDeductResToObtain(rc,
                       preemptionContext, resToObtainByPartition, c,
                       clusterResource, selectedCandidates, curCandidates,
-                      totalPreemptionAllowed, false);
+                      totalPreemptionAllowed,
+                      preemptionContext.getCrossQueuePreemptionConservativeDRF()
+                      );
               if (!preempted) {
                 continue;
               }
@@ -193,7 +195,8 @@ public class FifoCandidatesSelector
       boolean preempted = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, preemptMap,
-              curCandidates, totalPreemptionAllowed, false);
+              curCandidates, totalPreemptionAllowed,
+              preemptionContext.getCrossQueuePreemptionConservativeDRF());
       if (preempted) {
         Resources.subtractFrom(skippedAMSize, c.getAllocatedResource());
       }
@@ -229,7 +232,8 @@ public class FifoCandidatesSelector
      CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, selectedContainers,
-              curCandidates, totalPreemptionAllowed, false);
+              curCandidates, totalPreemptionAllowed,
+              preemptionContext.getCrossQueuePreemptionConservativeDRF());
 
       if (!preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
@@ -273,7 +277,8 @@ public class FifoCandidatesSelector
       CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, selectedContainers,
-              curCandidates, totalPreemptionAllowed, false);
+              curCandidates, totalPreemptionAllowed,
+              preemptionContext.getCrossQueuePreemptionConservativeDRF());
     }
   }
 

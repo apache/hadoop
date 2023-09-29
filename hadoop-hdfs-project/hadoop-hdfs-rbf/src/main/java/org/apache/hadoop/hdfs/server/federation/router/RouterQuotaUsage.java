@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -67,6 +68,24 @@ public final class RouterQuotaUsage extends QuotaUsage {
       super.spaceQuota(spaceQuota);
       return this;
     }
+
+    @Override
+    public Builder typeConsumed(long[] typeConsumed) {
+      super.typeConsumed(typeConsumed);
+      return this;
+    }
+
+    @Override
+    public Builder typeQuota(long[] typeQuota) {
+      super.typeQuota(typeQuota);
+      return this;
+    }
+
+    @Override
+    public Builder typeQuota(StorageType type, long quota) {
+      super.typeQuota(type, quota);
+      return this;
+    }
   }
 
   /**
@@ -92,6 +111,24 @@ public final class RouterQuotaUsage extends QuotaUsage {
     long spaceConsumed = getSpaceConsumed();
     if (Quota.isViolated(spaceQuota, spaceConsumed)) {
       throw new DSQuotaExceededException(spaceQuota, spaceConsumed);
+    }
+  }
+
+  /**
+   * Verify space quota by storage type is violated once quota is set. Relevant
+   * method {@link DirectoryWithQuotaFeature#verifyQuotaByStorageType}.
+   * @throws DSQuotaExceededException If the quota is exceeded.
+   */
+  public void verifyQuotaByStorageType() throws DSQuotaExceededException {
+    for (StorageType t: StorageType.getTypesSupportingQuota()) {
+      long typeQuota = getTypeQuota(t);
+      if (typeQuota == HdfsConstants.QUOTA_RESET) {
+        continue;
+      }
+      long typeConsumed = getTypeConsumed(t);
+      if (Quota.isViolated(typeQuota, typeConsumed)) {
+        throw new DSQuotaExceededException(typeQuota, typeConsumed);
+      }
     }
   }
 

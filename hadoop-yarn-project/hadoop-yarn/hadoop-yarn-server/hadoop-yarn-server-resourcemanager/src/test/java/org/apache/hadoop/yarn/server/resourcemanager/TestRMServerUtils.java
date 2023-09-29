@@ -43,10 +43,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
@@ -408,6 +410,30 @@ public class TestRMServerUtils {
     node2Req.setRelaxLocality(false);
     Assert.assertEquals(15,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
+  }
+  @Test
+  public void testConvertRmAppAttemptStateToYarnApplicationAttemptState() {
+    Assert.assertEquals(
+        YarnApplicationAttemptState.FAILED,
+        RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+            RMAppAttemptState.FINAL_SAVING,
+            RMAppAttemptState.FAILED
+        )
+    );
+    Assert.assertEquals(
+        YarnApplicationAttemptState.SCHEDULED,
+        RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+            RMAppAttemptState.FINAL_SAVING,
+            RMAppAttemptState.SCHEDULED
+        )
+    );
+    Assert.assertEquals(
+        YarnApplicationAttemptState.NEW,
+        RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+            RMAppAttemptState.NEW,
+            null
+        )
+    );
   }
 
   private ResourceRequest createResourceRequest(String resource,

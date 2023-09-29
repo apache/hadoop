@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
-import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
 /**
  * Implement this interface to be used for RPC scheduling and backoff.
@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit;
  */
 public interface RpcScheduler {
   /**
-   * Returns priority level greater than zero as a hint for scheduling.
+   * @return Returns priority level greater than zero as a hint for scheduling.
+   * @param obj input obj.
    */
   int getPriorityLevel(Schedulable obj);
 
@@ -37,6 +38,12 @@ public interface RpcScheduler {
    * implementations. It will not be called by any Hadoop code, and should not
    * be implemented by new implementations.
    *
+   * @param name input name.
+   * @param priorityLevel input priorityLevel.
+   * @param queueTime input queueTime.
+   * @param processingTime input processingTime.
+   * @throws UnsupportedOperationException
+   *         the requested operation is not supported.
    * @deprecated Use
    * {@link #addResponseTime(String, Schedulable, ProcessingDetails)} instead.
    */
@@ -62,12 +69,12 @@ public interface RpcScheduler {
     // this interface, a default implementation is supplied which uses the old
     // method. All new implementations MUST override this interface and should
     // NOT use the other addResponseTime method.
-    int queueTimeMs = (int)
-        details.get(ProcessingDetails.Timing.QUEUE, TimeUnit.MILLISECONDS);
-    int processingTimeMs = (int)
-        details.get(ProcessingDetails.Timing.PROCESSING, TimeUnit.MILLISECONDS);
+    int queueTime = (int) details.get(ProcessingDetails.Timing.QUEUE,
+        RpcMetrics.DEFAULT_METRIC_TIME_UNIT);
+    int processingTime = (int) details.get(ProcessingDetails.Timing.PROCESSING,
+        RpcMetrics.DEFAULT_METRIC_TIME_UNIT);
     addResponseTime(callName, schedulable.getPriorityLevel(),
-        queueTimeMs, processingTimeMs);
+        queueTime, processingTime);
   }
 
   void stop();

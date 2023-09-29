@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
@@ -99,8 +99,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
     Credentials creds = new Credentials();
     Token<?> tokens[] = fs.addDelegationTokens(renewer, creds);
-    DistributedFileSystem.LOG.debug("Delegation tokens: " +
-        Arrays.asList(tokens));
+    LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(2, creds.numberOfTokens());
     

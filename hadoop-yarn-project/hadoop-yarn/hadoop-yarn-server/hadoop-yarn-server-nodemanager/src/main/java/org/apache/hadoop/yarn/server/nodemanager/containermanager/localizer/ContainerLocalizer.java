@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.apache.hadoop.util.Shell.getAllShells;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,8 +84,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceSta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.util.FSDownload;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ContainerLocalizer {
 
@@ -102,6 +102,14 @@ public class ContainerLocalizer {
   private static final FsPermission USERCACHE_FOLDER_PERMS =
       new FsPermission((short) 0755);
   public static final String CSI_VOLIUME_MOUNTS_ROOT = "csivolumes";
+
+  /*
+   * Testing discovered that these Java options are needed for Spark service
+   * running on JDK17 and Isilon clusters.
+   */
+  private static final String ADDITIONAL_JDK17_PLUS_OPTIONS =
+    "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+    "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
 
   private final String user;
   private final String appId;
@@ -218,7 +226,7 @@ public class ContainerLocalizer {
 
   ExecutorService createDownloadThreadPool() {
     return HadoopExecutors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-      .setNameFormat("ContainerLocalizer Downloader").build());
+      .setNameFormat("ContainerLocalizer Downloader-" + localizerId).build());
   }
 
   CompletionService<Path> createCompletionService(ExecutorService exec) {
@@ -400,6 +408,13 @@ public class ContainerLocalizer {
   public static List<String> getJavaOpts(Configuration conf) {
     String opts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
         YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT);
+    boolean isExtraJDK17OptionsConfigured =
+        conf.getBoolean(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT);
+
+    if (Shell.isJavaVersionAtLeast(17) && isExtraJDK17OptionsConfigured) {
+      opts = opts.trim().concat(" " + ADDITIONAL_JDK17_PLUS_OPTIONS);
+    }
     return Arrays.asList(opts.split(" "));
   }
 

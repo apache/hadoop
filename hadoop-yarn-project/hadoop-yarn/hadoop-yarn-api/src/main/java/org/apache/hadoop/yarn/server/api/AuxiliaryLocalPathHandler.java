@@ -55,4 +55,12 @@ public interface AuxiliaryLocalPathHandler {
    * @throws IOException if the path creations fails
    */
   Path getLocalPathForWrite(String path, long size) throws IOException;
+
+  /**
+   * Get all paths from the local FS for reading for a given Auxiliary Service.
+   * @param path the requested path
+   * @return the complete path list to the file on a local disk as an Iterable
+   * @throws IOException if the file read encounters a problem
+   */
+  Iterable<Path> getAllLocalPathsForRead(String path) throws IOException;
 }

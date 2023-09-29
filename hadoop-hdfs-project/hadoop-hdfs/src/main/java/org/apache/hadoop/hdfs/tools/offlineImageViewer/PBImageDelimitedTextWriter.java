@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeFile;
@@ -44,6 +48,9 @@ import java.text.SimpleDateFormat;
  */
 public class PBImageDelimitedTextWriter extends PBImageTextWriter {
   private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm";
+  private boolean printStoragePolicy;
+  private boolean printECPolicy;
+  private ErasureCodingPolicyManager ecManager;
 
   static class OutputEntryBuilder {
     private final SimpleDateFormat dateFormatter =
@@ -59,6 +66,8 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     private long fileSize = 0;
     private long nsQuota = 0;
     private long dsQuota = 0;
+    private int storagePolicy = 0;
+    private String ecPolicy = "-";
 
     private String dirPermission = "-";
     private PermissionStatus permissionStatus;
@@ -79,6 +88,14 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
         if (file.hasAcl() && file.getAcl().getEntriesCount() > 0){
           aclPermission = "+";
         }
+        storagePolicy = file.getStoragePolicyID();
+        if (writer.printECPolicy && file.hasErasureCodingPolicyID()) {
+          ErasureCodingPolicy policy = writer.ecManager.
+              getByID((byte) file.getErasureCodingPolicyID());
+          if (policy != null) {
+            ecPolicy = policy.getName();
+          }
+        }
         break;
       case DIRECTORY:
         INodeDirectory dir = inode.getDirectory();
@@ -87,8 +104,15 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
         dsQuota = dir.getDsQuota();
         dirPermission = "d";
         permissionStatus = writer.getPermission(dir.getPermission());
-        if (dir.hasAcl() && dir.getAcl().getEntriesCount() > 0){
+        if (dir.hasAcl() && dir.getAcl().getEntriesCount() > 0) {
           aclPermission = "+";
+        }
+        storagePolicy = writer.getStoragePolicy(dir.getXAttrs());
+        if (writer.printECPolicy) {
+          String name= writer.getErasureCodingPolicyName(dir.getXAttrs());
+          if (name != null) {
+            ecPolicy = name;
+          }
         }
         break;
       case SYMLINK:
@@ -96,6 +120,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
         modificationTime = s.getModificationTime();
         accessTime = s.getAccessTime();
         permissionStatus = writer.getPermission(s.getPermission());
+        storagePolicy = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
         break;
       default:
         break;
@@ -125,13 +150,39 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
           permissionStatus.getPermission().toString() + aclPermission);
       writer.append(buffer, permissionStatus.getUserName());
       writer.append(buffer, permissionStatus.getGroupName());
+      if (writer.printStoragePolicy) {
+        writer.append(buffer, storagePolicy);
+      }
+      if (writer.printECPolicy) {
+        writer.append(buffer, ecPolicy);
+      }
       return buffer.substring(1);
     }
   }
 
   PBImageDelimitedTextWriter(PrintStream out, String delimiter, String tempPath)
       throws IOException {
-    super(out, delimiter, tempPath);
+    this(out, delimiter, tempPath, false);
+  }
+
+  PBImageDelimitedTextWriter(PrintStream out, String delimiter,
+                             String tempPath, boolean printStoragePolicy)
+      throws IOException {
+    this(out, delimiter, tempPath, printStoragePolicy, false, 1, "-", null);
+  }
+
+  PBImageDelimitedTextWriter(PrintStream out, String delimiter,
+                             String tempPath, boolean printStoragePolicy,
+                             boolean printECPolicy, int threads,
+                             String parallelOut, Configuration conf)
+      throws IOException {
+    super(out, delimiter, tempPath, threads, parallelOut);
+    this.printStoragePolicy = printStoragePolicy;
+    if (printECPolicy && conf != null) {
+      this.printECPolicy = true;
+      ecManager = ErasureCodingPolicyManager.getInstance();
+      ecManager.init(conf);
+    }
   }
 
   @Override
@@ -162,6 +213,12 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, "Permission");
     append(buffer, "UserName");
     append(buffer, "GroupName");
+    if (printStoragePolicy) {
+      append(buffer, "StoragePolicyId");
+    }
+    if (printECPolicy) {
+      append(buffer, "ErasureCodingPolicy");
+    }
     return buffer.toString();
   }
 

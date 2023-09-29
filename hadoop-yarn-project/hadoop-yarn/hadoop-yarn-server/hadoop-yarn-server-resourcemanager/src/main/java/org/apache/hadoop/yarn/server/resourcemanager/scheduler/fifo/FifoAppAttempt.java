@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -39,8 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 
 
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-
-import java.util.List;
 
 public class FifoAppAttempt extends FiCaSchedulerApp {
   private static final Logger LOG =
@@ -83,7 +80,7 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
 
       // Update consumption and track allocations
       ContainerRequest containerRequest = appSchedulingInfo.allocate(
-          type, node, schedulerKey, container);
+            type, node, schedulerKey, rmContainer);
 
       attemptResourceUsage.incUsed(node.getPartition(),
           container.getResource());

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
@@ -48,8 +50,8 @@ public final class ProxyCombiner {
    * all of the methods of the combined proxy interface, delegating calls
    * to which proxy implements that method. If multiple proxies implement the
    * same method, the first in the list will be used for delegation.
-   *
-   * <p/>This will check that every method on the combined interface is
+   * <p>
+   * This will check that every method on the combined interface is
    * implemented by at least one of the supplied proxy objects.
    *
    * @param combinedProxyInterface The interface of the combined proxy.
@@ -74,7 +76,8 @@ public final class ProxyCombiner {
           + combinedProxyInterface + " do not cover method " + m);
     }
 
-    InvocationHandler handler = new CombinedProxyInvocationHandler(proxies);
+    InvocationHandler handler =
+        new CombinedProxyInvocationHandler(combinedProxyInterface, proxies);
     return (T) Proxy.newProxyInstance(combinedProxyInterface.getClassLoader(),
         new Class[] {combinedProxyInterface}, handler);
   }
@@ -82,9 +85,12 @@ public final class ProxyCombiner {
   private static final class CombinedProxyInvocationHandler
       implements RpcInvocationHandler {
 
+    private final Class<?> proxyInterface;
     private final Object[] proxies;
 
-    private CombinedProxyInvocationHandler(Object[] proxies) {
+    private CombinedProxyInvocationHandler(Class<?> proxyInterface,
+        Object[] proxies) {
+      this.proxyInterface = proxyInterface;
       this.proxies = proxies;
     }
 
@@ -97,6 +103,8 @@ public final class ProxyCombiner {
           return method.invoke(underlyingProxy, args);
         } catch (IllegalAccessException|IllegalArgumentException e) {
           lastException = e;
+        } catch (InvocationTargetException ite) {
+          throw ite.getCause();
         }
       }
       // This shouldn't happen since the method coverage was verified in build()
@@ -114,6 +122,12 @@ public final class ProxyCombiner {
     @Override
     public ConnectionId getConnectionId() {
       return RPC.getConnectionIdForProxy(proxies[0]);
+    }
+
+    @Override
+    public String toString() {
+      return "CombinedProxy[" + proxyInterface.getSimpleName() + "]["
+          + Joiner.on(",").join(proxies) + "]";
     }
 
     @Override

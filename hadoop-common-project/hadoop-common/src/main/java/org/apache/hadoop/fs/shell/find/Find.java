@@ -96,7 +96,7 @@ public class Find extends FsCommand {
   private Expression rootExpression;
 
   /** Set of path items returning a {@link Result#STOP} result. */
-  private HashSet<Path> stopPaths = new HashSet<Path>();
+  private HashSet<Path> stopPaths = new HashSet<>();
 
   /** Register the expressions with the expression factory. */
   private static void registerExpressions(ExpressionFactory factory) {

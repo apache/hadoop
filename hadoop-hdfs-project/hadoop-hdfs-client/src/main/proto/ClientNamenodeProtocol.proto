@@ -18,10 +18,10 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "ClientNamenodeProtocolProtos";
 option java_generic_services = true;
@@ -285,10 +285,30 @@ message GetListingResponseProto {
   optional DirectoryListingProto dirList = 1;
 }
 
+message GetBatchedListingRequestProto {
+  repeated string paths = 1;
+  required bytes startAfter = 2;
+  required bool needLocation = 3;
+}
+
+message GetBatchedListingResponseProto {
+  repeated BatchedDirectoryListingProto listings = 1;
+  required bool hasMore = 2;
+  required bytes startAfter = 3;
+}
+
 message GetSnapshottableDirListingRequestProto { // no input parameters
 }
 message GetSnapshottableDirListingResponseProto {
   optional SnapshottableDirectoryListingProto snapshottableDirList = 1;
+}
+
+message GetSnapshotListingRequestProto {
+  required string snapshotRoot = 1;
+}
+
+message GetSnapshotListingResponseProto {
+  optional SnapshotListingProto snapshotList = 1;
 }
 
 message GetSnapshotDiffReportRequestProto {
@@ -312,6 +332,7 @@ message GetSnapshotDiffReportListingResponseProto {
 }
 message RenewLeaseRequestProto {
   required string clientName = 1;
+  repeated string namespaces = 2;
 }
 
 message RenewLeaseResponseProto { //void response
@@ -402,6 +423,13 @@ message GetPreferredBlockSizeRequestProto {
 
 message GetPreferredBlockSizeResponseProto {
   required uint64 bsize = 1;
+}
+
+message GetSlowDatanodeReportRequestProto {
+}
+
+message GetSlowDatanodeReportResponseProto {
+  repeated DatanodeInfoProto datanodeInfoProto = 1;
 }
 
 enum SafeModeActionProto {
@@ -887,6 +915,7 @@ service ClientNamenodeProtocol {
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);
   rpc mkdirs(MkdirsRequestProto) returns(MkdirsResponseProto);
   rpc getListing(GetListingRequestProto) returns(GetListingResponseProto);
+  rpc getBatchedListing (GetBatchedListingRequestProto) returns (GetBatchedListingResponseProto);
   rpc renewLease(RenewLeaseRequestProto) returns(RenewLeaseResponseProto);
   rpc recoverLease(RecoverLeaseRequestProto)
       returns(RecoverLeaseResponseProto);
@@ -973,6 +1002,8 @@ service ClientNamenodeProtocol {
       returns(DisallowSnapshotResponseProto);   
   rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
       returns(GetSnapshottableDirListingResponseProto);
+  rpc getSnapshotListing(GetSnapshotListingRequestProto)
+      returns(GetSnapshotListingResponseProto);
   rpc deleteSnapshot(DeleteSnapshotRequestProto)
       returns(DeleteSnapshotResponseProto);
   rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)
@@ -1017,6 +1048,8 @@ service ClientNamenodeProtocol {
       returns(SetErasureCodingPolicyResponseProto);
   rpc unsetErasureCodingPolicy(UnsetErasureCodingPolicyRequestProto)
       returns(UnsetErasureCodingPolicyResponseProto);
+  rpc getECTopologyResultForPolicies(GetECTopologyResultForPoliciesRequestProto)
+      returns(GetECTopologyResultForPoliciesResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
@@ -1045,4 +1078,6 @@ service ClientNamenodeProtocol {
       returns(SatisfyStoragePolicyResponseProto);
   rpc getHAServiceState(HAServiceStateRequestProto)
       returns(HAServiceStateResponseProto);
+  rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
+      returns(GetSlowDatanodeReportResponseProto);
 }

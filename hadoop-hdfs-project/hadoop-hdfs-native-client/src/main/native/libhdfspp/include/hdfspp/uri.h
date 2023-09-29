@@ -103,7 +103,7 @@ public:
 
   std::string str(bool encoded_output=true) const;
 
-  // Get a string with each URI field printed on a seperate line
+  // Get a string with each URI field printed on a separate line
   std::string GetDebugString() const;
 private:
   // These are stored in encoded form

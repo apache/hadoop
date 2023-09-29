@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsUtils;
@@ -69,7 +70,6 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -90,7 +90,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,6 +97,7 @@ import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.event.Level;
 
 
 /**
@@ -384,16 +384,17 @@ public class TestDFSClientRetries {
       cluster.waitActive();
       NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
       Mockito.doThrow(new SocketTimeoutException()).when(spyNN).renewLease(
-          Mockito.anyString());
+          Mockito.anyString(), any());
       DFSClient client = new DFSClient(null, spyNN, conf, null);
       // Get hold of the lease renewer instance used by the client
-      LeaseRenewer leaseRenewer = client.getLeaseRenewer();
-      leaseRenewer.setRenewalTime(100);
+      final LeaseRenewer leaseRenewer1 = client.getLeaseRenewer();
+      leaseRenewer1.setRenewalTime(100);
       OutputStream out1 = client.create(file1, false);
 
       Mockito.verify(spyNN, timeout(10000).times(1)).renewLease(
-          Mockito.anyString());
-      verifyEmptyLease(leaseRenewer);
+          Mockito.anyString(), any());
+      verifyEmptyLease(leaseRenewer1);
+      GenericTestUtils.waitFor(() -> !(leaseRenewer1.isRunning()), 100, 10000);
       try {
         out1.write(new byte[256]);
         fail("existing output stream should be aborted");
@@ -405,15 +406,15 @@ public class TestDFSClientRetries {
       // Verify DFSClient can do write operation after renewLease no longer
       // throws SocketTimeoutException.
       Mockito.doNothing().when(spyNN).renewLease(
-          Mockito.anyString());
-      leaseRenewer = client.getLeaseRenewer();
-      leaseRenewer.setRenewalTime(100);
+          Mockito.anyString(), any());
+      final LeaseRenewer leaseRenewer2 = client.getLeaseRenewer();
+      leaseRenewer2.setRenewalTime(100);
       OutputStream out2 = client.create(file2, false);
       Mockito.verify(spyNN, timeout(10000).times(2)).renewLease(
-          Mockito.anyString());
+          Mockito.anyString(), any());
       out2.write(new byte[256]);
       out2.close();
-      verifyEmptyLease(leaseRenewer);
+      verifyEmptyLease(leaseRenewer2);
     } finally {
       cluster.shutdown();
     }
@@ -758,11 +759,7 @@ public class TestDFSClientRetries {
   }
 
   private void verifyEmptyLease(LeaseRenewer leaseRenewer) throws Exception {
-    int sleepCount = 0;
-    while (!leaseRenewer.isEmpty() && sleepCount++ < 20) {
-      Thread.sleep(500);
-    }
-    assertTrue("Lease should be empty.", leaseRenewer.isEmpty());
+    GenericTestUtils.waitFor(() -> leaseRenewer.isEmpty(), 100, 10000);
   }
 
   class DFSClientReader implements Runnable {
@@ -842,14 +839,16 @@ public class TestDFSClientRetries {
   public void testGetFileChecksum() throws Exception {
     final String f = "/testGetFileChecksum";
     final Path p = new Path(f);
-
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    final int numReplicas = 3;
+    final int numDatanodes = numReplicas;
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     try {
       cluster.waitActive();
 
-      //create a file
+      // create a file
       final FileSystem fs = cluster.getFileSystem();
-      DFSTestUtil.createFile(fs, p, 1L << 20, (short)3, 20100402L);
+      DFSTestUtil.createFile(fs, p, 1L << 20, (short) numReplicas, 20100402L);
 
       //get checksum
       final FileChecksum cs1 = fs.getFileChecksum(p);
@@ -884,7 +883,7 @@ public class TestDFSClientRetries {
     DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
     
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
-    LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);
+    LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
 
     ClientDatanodeProtocol proxy = null;
 
@@ -960,7 +959,7 @@ public class TestDFSClientRetries {
 
   public static void namenodeRestartTest(final Configuration conf,
       final boolean isWebHDFS) throws Exception {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
 
     final List<Exception> exceptions = new ArrayList<Exception>();
 
@@ -1121,7 +1120,7 @@ public class TestDFSClientRetries {
 
       //enter safe mode
       assertTrue(HdfsUtils.isHealthy(uri));
-      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       assertFalse(HdfsUtils.isHealthy(uri));
       
       //leave safe mode in a new thread
@@ -1132,7 +1131,7 @@ public class TestDFSClientRetries {
             //sleep and then leave safe mode
             TimeUnit.SECONDS.sleep(30);
             assertFalse(HdfsUtils.isHealthy(uri));
-            dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+            dfs.setSafeMode(SafeModeAction.LEAVE);
             assertTrue(HdfsUtils.isHealthy(uri));
           } catch (Exception e) {
             exceptions.add(e);
@@ -1310,7 +1309,7 @@ public class TestDFSClientRetries {
           try {
             //1. trigger get LeaseRenewer lock
             Mockito.doThrow(new SocketTimeoutException()).when(spyNN)
-                .renewLease(Mockito.anyString());
+                .renewLease(Mockito.anyString(), any());
           } catch (IOException e) {
             e.printStackTrace();
           }

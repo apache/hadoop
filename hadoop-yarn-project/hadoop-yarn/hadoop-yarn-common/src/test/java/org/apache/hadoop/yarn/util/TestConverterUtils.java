@@ -17,23 +17,25 @@
 */
 package org.apache.hadoop.yarn.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.net.URISyntaxException;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.TestContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.junit.Test;
+import org.apache.hadoop.yarn.api.records.URL;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestConverterUtils {
-  
+
   @Test
-  public void testConvertUrlWithNoPort() throws URISyntaxException {
+  void testConvertUrlWithNoPort() throws URISyntaxException {
     Path expectedPath = new Path("hdfs://foo.com");
     URL url = URL.fromPath(expectedPath);
     Path actualPath = url.toPath();
@@ -41,15 +43,15 @@ public class TestConverterUtils {
   }
 
   @Test
-  public void testConvertUrlWithUserinfo() throws URISyntaxException {
+  void testConvertUrlWithUserinfo() throws URISyntaxException {
     Path expectedPath = new Path("foo://username:password@example.com:8042");
     URL url = URL.fromPath(expectedPath);
     Path actualPath = url.toPath();
     assertEquals(expectedPath, actualPath);
   }
-  
+
   @Test
-  public void testContainerId() throws URISyntaxException {
+  void testContainerId() throws URISyntaxException {
     ContainerId id = TestContainerId.newContainerId(0, 0, 0, 0);
     String cid = id.toString();
     assertEquals("container_0_0000_00_000000", cid);
@@ -58,7 +60,7 @@ public class TestConverterUtils {
   }
 
   @Test
-  public void testContainerIdWithEpoch() throws URISyntaxException {
+  void testContainerIdWithEpoch() throws URISyntaxException {
     ContainerId id = TestContainerId.newContainerId(0, 0, 0, 25645811);
     String cid = id.toString();
     assertEquals("container_0_0000_00_25645811", cid);
@@ -85,38 +87,44 @@ public class TestConverterUtils {
 
   @Test
   @SuppressWarnings("deprecation")
-  public void testContainerIdNull() throws URISyntaxException {
-    assertNull(ConverterUtils.toString((ContainerId)null));
-  }  
-  
+  void testContainerIdNull() throws URISyntaxException {
+    assertNull(ConverterUtils.toString((ContainerId) null));
+  }
+
   @Test
-  public void testNodeIdWithDefaultPort() throws URISyntaxException {
+  void testNodeIdWithDefaultPort() throws URISyntaxException {
     NodeId nid;
-    
+
     nid = ConverterUtils.toNodeIdWithDefaultPort("node:10");
     assertThat(nid.getPort()).isEqualTo(10);
     assertThat(nid.getHost()).isEqualTo("node");
-    
+
     nid = ConverterUtils.toNodeIdWithDefaultPort("node");
     assertThat(nid.getPort()).isEqualTo(0);
     assertThat(nid.getHost()).isEqualTo("node");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   @SuppressWarnings("deprecation")
-  public void testInvalidContainerId() {
-    ContainerId.fromString("container_e20_1423221031460_0003_01");
+  void testInvalidContainerId() {
+    assertThrows(IllegalArgumentException.class, () -> {
+      ContainerId.fromString("container_e20_1423221031460_0003_01");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   @SuppressWarnings("deprecation")
-  public void testInvalidAppattemptId() {
-    ConverterUtils.toApplicationAttemptId("appattempt_1423221031460");
+  void testInvalidAppattemptId() {
+    assertThrows(IllegalArgumentException.class, () -> {
+      ConverterUtils.toApplicationAttemptId("appattempt_1423221031460");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   @SuppressWarnings("deprecation")
-  public void testApplicationId() {
-    ConverterUtils.toApplicationId("application_1423221031460");
+  void testApplicationId() {
+    assertThrows(IllegalArgumentException.class, () -> {
+      ConverterUtils.toApplicationId("application_1423221031460");
+    });
   }
 }

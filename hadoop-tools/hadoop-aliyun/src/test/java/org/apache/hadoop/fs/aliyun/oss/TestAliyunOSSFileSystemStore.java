@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectMetadata;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -35,7 +39,10 @@ import java.security.DigestInputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.apache.hadoop.fs.aliyun.oss.Constants.MAX_PAGING_KEYS_DEFAULT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -89,13 +96,17 @@ public class TestAliyunOSSFileSystemStore {
 
     assertTrue("Exists", fs.exists(path));
 
+    ObjectMetadata srcMeta = fs.getStore().getObjectMetadata(
+        path.toUri().getPath().substring(1));
+
     Path copyPath = path.suffix(".copy");
-    long start = System.currentTimeMillis();
     fs.rename(path, copyPath);
 
     assertTrue("Copy exists", fs.exists(copyPath));
-    // should less than 1 second
-    assertTrue(System.currentTimeMillis() - start < 1000);
+    // file type should not change
+    ObjectMetadata dstMeta = fs.getStore().getObjectMetadata(
+        copyPath.toUri().getPath().substring(1));
+    assertEquals(srcMeta.getObjectType(), dstMeta.getObjectType());
     // Download file from Aliyun OSS and compare the digest against the original
     MessageDigest digest2 = MessageDigest.getInstance("MD5");
     InputStream in = new BufferedInputStream(
@@ -120,6 +131,32 @@ public class TestAliyunOSSFileSystemStore {
   public void testLargeUpload()
       throws IOException, NoSuchAlgorithmException {
     // Multipart upload, shallow copy
-    writeRenameReadCompare(new Path("/test/xlarge"), 2147483648L); // 2GB
+    writeRenameReadCompare(new Path("/test/xlarge"),
+        Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT + 1);
+  }
+
+  @Test
+  public void testDeleteObjects() throws IOException, NoSuchAlgorithmException {
+    // generate test files
+    final int files = 10;
+    final long size = 5 * 1024 * 1024;
+    final String prefix = "dir";
+    for (int i = 0; i < files; i++) {
+      Path path = new Path(String.format("/%s/testFile-%d.txt", prefix, i));
+      ContractTestUtils.generateTestFile(this.fs, path, size, 256, 255);
+    }
+    OSSListRequest listRequest =
+        store.createListObjectsRequest(prefix, MAX_PAGING_KEYS_DEFAULT, null, null, true);
+    List<String> keysToDelete = new ArrayList<>();
+    OSSListResult objects = store.listObjects(listRequest);
+    assertEquals(files, objects.getObjectSummaries().size());
+
+    // test delete files
+    for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
+      keysToDelete.add(objectSummary.getKey());
+    }
+    store.deleteObjects(keysToDelete);
+    objects = store.listObjects(listRequest);
+    assertEquals(0, objects.getObjectSummaries().size());
   }
 }

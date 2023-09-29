@@ -21,14 +21,14 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCredentials;
 
 /**
@@ -84,7 +84,7 @@ public class MarshalledCredentialProvider extends
    * @throws IOException on a failure
    */
   @Override
-  protected AWSCredentials createCredentials(final Configuration config)
+  protected AwsCredentials createCredentials(final Configuration config)
       throws IOException {
     return toAWSCredentials(credentials, typeRequired, component);
   }

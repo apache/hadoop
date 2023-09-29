@@ -28,12 +28,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
@@ -59,7 +62,9 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.mapred.pipes.Application.PingSocketCleaner;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -137,7 +142,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
 
@@ -231,7 +236,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }
@@ -328,7 +333,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }
@@ -428,7 +433,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }
@@ -453,6 +458,84 @@ public class TestPipeApplication {
     PipesPartitioner.setNextPartition(3);
     // get data from cache
     assertEquals(3, partitioner.getPartition(iw, new Text("test"), 2));
+  }
+
+  @Test
+  public void testSocketCleaner() throws Exception {
+    ServerSocket serverSocket = setupServerSocket();
+    SocketCleaner cleaner = setupCleaner(serverSocket);
+    // mock ping thread, connect to server socket per second.
+    int expectedClosedCount = 5;
+    for (int i = 0; i < expectedClosedCount; i++) {
+      try {
+        Thread.sleep(1000);
+        Socket clientSocket = new Socket(serverSocket.getInetAddress(),
+                                         serverSocket.getLocalPort());
+        clientSocket.close();
+      } catch (Exception exception) {
+        // ignored...
+        exception.printStackTrace();
+      }
+    }
+    GenericTestUtils.waitFor(
+        () -> expectedClosedCount == cleaner.getCloseSocketCount(), 100, 5000);
+  }
+
+  @Test
+  public void testSocketTimeout() throws Exception {
+    ServerSocket serverSocket = setupServerSocket();
+    SocketCleaner cleaner = setupCleaner(serverSocket, 100);
+    try {
+      new Socket(serverSocket.getInetAddress(), serverSocket.getLocalPort());
+      Thread.sleep(1000);
+    } catch (Exception exception) {
+      // ignored...
+    }
+    GenericTestUtils.waitFor(() -> 1 == cleaner.getCloseSocketCount(), 100,
+        5000);
+  }
+
+  private SocketCleaner setupCleaner(ServerSocket serverSocket) {
+    return setupCleaner(serverSocket,
+                        CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
+  }
+
+  private SocketCleaner setupCleaner(ServerSocket serverSocket, int soTimeout) {
+    // start socket cleaner.
+    SocketCleaner cleaner = new SocketCleaner("test-ping-socket-cleaner",
+                                              serverSocket, soTimeout);
+    cleaner.setDaemon(true);
+    cleaner.start();
+
+    return cleaner;
+  }
+
+  private static class SocketCleaner extends PingSocketCleaner {
+    private int closeSocketCount = 0;
+
+    SocketCleaner(String name, ServerSocket serverSocket, int soTimeout) {
+      super(name, serverSocket, soTimeout);
+    }
+
+    @Override
+    public void run() {
+      super.run();
+    }
+
+    protected void closeSocketInternal(Socket clientSocket) {
+      if (!clientSocket.isClosed()) {
+        closeSocketCount++;
+      }
+      super.closeSocketInternal(clientSocket);
+    }
+
+    public int getCloseSocketCount() {
+      return closeSocketCount;
+    }
+  }
+
+  private ServerSocket setupServerSocket() throws Exception {
+    return new ServerSocket(0, 1);
   }
 
   /**

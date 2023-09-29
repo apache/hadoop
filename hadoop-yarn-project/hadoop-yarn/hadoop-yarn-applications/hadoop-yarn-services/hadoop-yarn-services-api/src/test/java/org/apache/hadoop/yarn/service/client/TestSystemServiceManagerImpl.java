@@ -18,6 +18,10 @@
 package org.apache.hadoop.yarn.service.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -25,14 +29,16 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,7 +62,7 @@ public class TestSystemServiceManagerImpl {
   private static Map<String, Set<String>> savedServices = new HashMap<>();
   private static Map<String, Set<String>> submittedServices = new HashMap<>();
 
-  @Before
+  @BeforeEach
   public void setup() {
     File file = new File(
         getClass().getClassLoader().getResource(resourcePath).getFile());
@@ -74,30 +80,30 @@ public class TestSystemServiceManagerImpl {
     constructUserService(users[1], "example-app1", "example-app2");
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     systemService.stop();
   }
 
   @Test
-  public void testSystemServiceSubmission() throws Exception {
+  void testSystemServiceSubmission() throws Exception {
     systemService.start();
 
     /* verify for ignored sevices count */
     Map<String, Integer> ignoredUserServices =
         systemService.getIgnoredUserServices();
-    Assert.assertEquals(1, ignoredUserServices.size());
-    Assert.assertTrue("User user1 doesn't exist.",
-        ignoredUserServices.containsKey(users[0]));
+    assertEquals(1, ignoredUserServices.size());
+    assertTrue(ignoredUserServices.containsKey(users[0]),
+        "User user1 doesn't exist.");
     int count = ignoredUserServices.get(users[0]);
-    Assert.assertEquals(1, count);
-    Assert.assertEquals(1,
+    assertEquals(1, count);
+    assertEquals(1,
         systemService.getBadFileNameExtensionSkipCounter());
-    Assert.assertEquals(1, systemService.getBadDirSkipCounter());
+    assertEquals(1, systemService.getBadDirSkipCounter());
 
     Map<String, Set<Service>> userServices =
         systemService.getSyncUserServices();
-    Assert.assertEquals(loadedServices.size(), userServices.size());
+    assertEquals(loadedServices.size(), userServices.size());
     verifyForScannedUserServices(userServices);
 
     verifyForLaunchedUserServices();
@@ -117,13 +123,12 @@ public class TestSystemServiceManagerImpl {
     for (String user : users) {
       Set<Service> services = userServices.get(user);
       Set<String> serviceNames = loadedServices.get(user);
-      Assert.assertEquals(serviceNames.size(), services.size());
+      assertEquals(serviceNames.size(), services.size());
       Iterator<Service> iterator = services.iterator();
       while (iterator.hasNext()) {
         Service next = iterator.next();
-        Assert.assertTrue(
-            "Service name doesn't exist in expected userService "
-                + serviceNames, serviceNames.contains(next.getName()));
+        assertTrue(serviceNames.contains(next.getName()),
+            "Service name doesn't exist in expected userService " + serviceNames);
       }
     }
   }
@@ -197,14 +202,63 @@ public class TestSystemServiceManagerImpl {
   }
 
   private void verifyForLaunchedUserServices() {
-    Assert.assertEquals(loadedServices.size(), submittedServices.size());
+    assertEquals(loadedServices.size(), submittedServices.size());
     for (Map.Entry<String, Set<String>> entry : submittedServices.entrySet()) {
       String user = entry.getKey();
       Set<String> serviceSet = entry.getValue();
-      Assert.assertTrue(loadedServices.containsKey(user));
+      assertTrue(loadedServices.containsKey(user));
       Set<String> services = loadedServices.get(user);
-      Assert.assertEquals(services.size(), serviceSet.size());
-      Assert.assertTrue(services.containsAll(serviceSet));
+      assertEquals(services.size(), serviceSet.size());
+      assertTrue(services.containsAll(serviceSet));
+    }
+  }
+
+  @Test
+  void testFileSystemCloseWhenCleanUpService() throws Exception {
+    FileSystem fs = null;
+    Path path = new Path("/tmp/servicedir");
+
+    HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+    MiniDFSCluster hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+        .numDataNodes(1).build();
+
+    fs = hdfsCluster.getFileSystem();
+    if (!fs.exists(path)) {
+      fs.mkdirs(path);
+    }
+
+    SystemServiceManagerImpl serviceManager = new SystemServiceManagerImpl();
+
+    hdfsConfig.set(YarnServiceConf.YARN_SERVICES_SYSTEM_SERVICE_DIRECTORY,
+        path.toString());
+    serviceManager.init(hdfsConfig);
+
+    // the FileSystem object owned by SystemServiceManager must not be closed
+    // when cleanup a service
+    hdfsConfig.set("hadoop.registry.zk.connection.timeout.ms", "100");
+    hdfsConfig.set("hadoop.registry.zk.retry.times", "1");
+    ApiServiceClient asc = new ApiServiceClient();
+    asc.serviceInit(hdfsConfig);
+    asc.actionCleanUp("testapp", "testuser");
+
+    try {
+      serviceManager.start();
+    } catch (Exception e) {
+      if (e.getMessage().contains("Filesystem closed")) {
+        fail("SystemServiceManagerImpl failed to handle " +
+            "FileSystem close");
+      } else {
+        fail("Should not get any exceptions");
+      }
+    } finally {
+      serviceManager.stop();
+      fs = hdfsCluster.getFileSystem();
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
     }
   }
 }

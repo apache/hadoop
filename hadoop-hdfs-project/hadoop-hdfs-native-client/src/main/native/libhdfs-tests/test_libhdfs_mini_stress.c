@@ -18,22 +18,26 @@
 
 #include "common/util_c.h"
 #include "expect.h"
-#include "hdfs/hdfs.h"
 #include "hdfspp/hdfs_ext.h"
 #include "native_mini_dfs.h"
 #include "os/thread.h"
+#include "x-platform/c-api/syscall.h"
+#include "hdfs/hdfs.h"
 
 #include <errno.h>
 #include <inttypes.h>
-#include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
+
+#ifndef WIN32
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <pwd.h>
+#endif
 
 #define TO_STR_HELPER(X) #X
 #define TO_STR(X) TO_STR_HELPER(X)
@@ -126,7 +130,8 @@ static int hdfsCurlData(const char *host, const tPort port, const char *dirNm,
   EXPECT_NONNULL(pw = getpwuid(uid));
 
   int fd = -1;
-  EXPECT_NONNEGATIVE(fd = mkstemp(tmpFile));
+  EXPECT_NONNEGATIVE(fd = x_platform_syscall_create_and_open_temp_file(
+                         tmpFile, sizeof tmpFile));
 
   tSize sz = 0;
   while (sz < fileSz) {
@@ -195,7 +200,7 @@ static int fileEventCallback1(const char * event, const char * cluster, const ch
   if (randomErrRatioStr) randomErrRatio = (int64_t)atoi(randomErrRatioStr);
   if (randomErrRatio == 0) return DEBUG_SIMULATE_ERROR;
   else if (randomErrRatio < 0) return LIBHDFSPP_EVENT_OK;
-  return random() % randomErrRatio == 0 ? DEBUG_SIMULATE_ERROR : LIBHDFSPP_EVENT_OK;
+  return rand() % randomErrRatio == 0 ? DEBUG_SIMULATE_ERROR : LIBHDFSPP_EVENT_OK;
 }
 
 static int fileEventCallback2(const char * event, const char * cluster, const char * file, int64_t value, int64_t cookie)
@@ -233,7 +238,7 @@ static int doTestHdfsMiniStress(struct tlhThreadInfo *ti, int randomErr)
     EXPECT_ZERO(hdfsCloseFile(ti->hdfs, file));
     file = hdfsOpenFile(ti->hdfs, ti->fileNm, O_RDONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
-    seekPos = (((double)random()) / RAND_MAX) * (fileInfo->mSize - expected);
+    seekPos = (((double)rand()) / RAND_MAX) * (fileInfo->mSize - expected);
     seekPos = (seekPos / expected) * expected;
     ret = hdfsSeek(ti->hdfs, file, seekPos);
     if (ret < 0) {
@@ -279,7 +284,7 @@ static int testHdfsMiniStressImpl(struct tlhThreadInfo *ti)
   EXPECT_NONNULL(ti->hdfs);
   // Error injection on, some failures are expected in the read path.
   // The expectation is that any memory stomps will cascade and cause
-  // the following test to fail.  Ideally RPC errors would be seperated
+  // the following test to fail.  Ideally RPC errors would be separated
   // from BlockReader errors (RPC is expected to recover from disconnects).
   doTestHdfsMiniStress(ti, 1);
   // No error injection
