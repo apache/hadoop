@@ -1277,6 +1277,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         () -> createQueue("invalidQueue"));
   }
 
+  @Test(expected = SchedulerDynamicEditException.class)
+  public void testAutoCreateQueueShouldFailWhenLeafEmptyString()
+          throws Exception {
+    startScheduler();
+    createQueue("root.a.");
+  }
+
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     return autoQueueHandler.createQueue(new QueuePath(queuePath));

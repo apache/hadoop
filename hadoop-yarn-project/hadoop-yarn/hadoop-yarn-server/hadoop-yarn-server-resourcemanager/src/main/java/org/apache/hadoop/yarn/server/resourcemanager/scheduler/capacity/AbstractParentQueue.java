@@ -490,6 +490,12 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
       String queueShortName = childQueuePath.substring(
           childQueuePath.lastIndexOf(".") + 1);
 
+      if (StringUtils.isEmpty(queueShortName)) {
+        throw new SchedulerDynamicEditException(
+                "Trying to create new queue=" + childQueuePath
+                  + ", which has empty leaf shortname.");
+      }
+
       if (isLeaf) {
         childQueue = new LeafQueue(queueContext,
             queueShortName, this, null, true);
