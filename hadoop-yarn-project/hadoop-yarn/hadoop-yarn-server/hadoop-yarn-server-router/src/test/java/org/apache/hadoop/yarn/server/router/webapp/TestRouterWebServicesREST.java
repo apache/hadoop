@@ -1311,7 +1311,7 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of {@link WebServices#getContainers}
    * inside Router.
    */
-  @Test
+  @Test(timeout = 2000)
   public void testGetContainersXML() throws Exception {
 
     String appId = submitApplication();
@@ -1330,7 +1330,6 @@ public class TestRouterWebServicesREST {
     assertEquals(
         rmResponse.getContainers().size(),
         routerResponse.getContainers().size());
-    Thread.sleep(200000000);
   }
 
   @Test(timeout = 60000)

@@ -94,11 +94,13 @@ public class AppsBlock extends RouterBlock {
   }
 
   private AppsInfo getYarnFederationAppsInfo(boolean isEnabled) {
+    String webAddress = null;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.conf);
-      return getSubClusterAppsInfoByWebAddress(webAddress, StringUtils.EMPTY);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.conf);
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(this.conf);
     }
-    return null;
+    return getSubClusterAppsInfoByWebAddress(webAddress, StringUtils.EMPTY);
   }
 
   private AppsInfo getSubClusterAppsInfo(String subCluster, String states) {
@@ -110,7 +112,7 @@ public class AppsBlock extends RouterBlock {
       if (subClusterInfo != null) {
         // Prepare webAddress
         String webAddress = subClusterInfo.getRMWebServiceAddress();
-        String herfWebAppAddress = "";
+        String herfWebAppAddress;
         if (webAddress != null && !webAddress.isEmpty()) {
           herfWebAppAddress = WebAppUtils.getHttpSchemePrefix(conf) + webAddress;
           return getSubClusterAppsInfoByWebAddress(herfWebAppAddress, states);
