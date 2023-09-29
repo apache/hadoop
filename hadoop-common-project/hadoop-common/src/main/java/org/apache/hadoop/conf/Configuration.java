@@ -883,7 +883,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   public static synchronized void setConfigurationRegistryEnabled(boolean enable) {
     if (enable) {
-      REGISTRY = new WeakHashMap<Configuration, Object>();
+      if (REGISTRY == null) {
+        REGISTRY = new WeakHashMap<Configuration, Object>();
+      }
     } else {
       REGISTRY = null;
     }
