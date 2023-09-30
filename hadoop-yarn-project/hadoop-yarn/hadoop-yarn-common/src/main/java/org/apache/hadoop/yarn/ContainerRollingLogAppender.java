@@ -31,8 +31,7 @@ import java.io.Flushable;
  */
 @Public
 @Unstable
-public class ContainerRollingLogAppender extends RollingFileAppender
-  implements Flushable {
+public class ContainerRollingLogAppender extends RollingFileAppender implements Flushable {
   private String containerLogDir;
   private String containerLogFile;
 
