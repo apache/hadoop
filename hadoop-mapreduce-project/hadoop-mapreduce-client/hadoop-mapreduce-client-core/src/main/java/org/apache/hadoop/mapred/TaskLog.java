@@ -466,8 +466,7 @@ public class TaskLog {
   }
 
   public static long getTaskLogLimitBytes(Configuration conf) {
-    return conf.getLong(JobContext.TASK_USERLOG_LIMIT, JobContext.DEFAULT_TASK_USERLOG_LIMIT) *
-        1024;
+    return conf.getLong(JobContext.TASK_USERLOG_LIMIT, 0) * 1024;
   }
 
   
