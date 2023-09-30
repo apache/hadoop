@@ -65,7 +65,7 @@ public class NodesBlock extends RouterBlock {
     // We will try to get the subClusterName.
     // If the subClusterName is not empty,
     // it means that we need to get the Node list of a subCluster.
-    NodesInfo nodesInfo = null;
+    NodesInfo nodesInfo;
     if (subClusterName != null && !subClusterName.isEmpty()) {
       initSubClusterMetricsOverviewTable(html, subClusterName);
       nodesInfo = getSubClusterNodesInfo(subClusterName);

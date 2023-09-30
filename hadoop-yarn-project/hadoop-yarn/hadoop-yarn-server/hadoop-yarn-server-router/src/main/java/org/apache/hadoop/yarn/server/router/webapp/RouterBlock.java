@@ -105,7 +105,6 @@ public abstract class RouterBlock extends HtmlBlock {
    * Get a list of subclusters.
    *
    * @return subcluster List.
-   * @throws YarnException if the call to the getSubClusters is unsuccessful.
    */
   protected List<SubClusterInfo> getSubClusterInfoList() {
     List<SubClusterInfo> subClusters = new ArrayList<>();
@@ -194,6 +193,12 @@ public abstract class RouterBlock extends HtmlBlock {
     return null;
   }
 
+  /**
+   * Get SubClusterInfo based on subclusterId.
+   *
+   * @param subclusterId subCluster Id
+   * @return SubClusterInfo Collection
+   */
   protected Collection<SubClusterInfo> getSubClusterInfoList(String subclusterId) {
     try {
       SubClusterId subClusterId = SubClusterId.newInstance(subclusterId);
@@ -334,8 +339,8 @@ public abstract class RouterBlock extends HtmlBlock {
       // Step4. Generate SubClusterInfo.
       SubClusterId subClusterId = SubClusterId.newInstance(localClusterName);
       SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
-          rmWebAppURLWithoutScheme, SubClusterState.SC_RUNNING, clusterInfo.getStartedOn(), Time.now(), capability);
-      client.destroy();
+          rmWebAppURLWithoutScheme, SubClusterState.SC_RUNNING, clusterInfo.getStartedOn(),
+          Time.now(), capability);
 
       return subClusterInfo;
     } catch (Exception e) {

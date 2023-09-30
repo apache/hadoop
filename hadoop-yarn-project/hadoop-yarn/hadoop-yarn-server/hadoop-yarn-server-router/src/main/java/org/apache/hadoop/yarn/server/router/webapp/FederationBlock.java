@@ -28,7 +28,6 @@ import java.util.Date;
 import com.google.gson.Gson;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
@@ -144,6 +143,12 @@ class FederationBlock extends RouterBlock {
         .__("*The application counts are local per subcluster").__().__();
   }
 
+  /**
+   * Initialize the Federation page of the local-cluster.
+   *
+   * @param tbody HTML tbody.
+   * @param lists subCluster page data list.
+   */
   private void initLocalClusterPage(TBODY<TABLE<Hamlet>> tbody, List<Map<String, String>> lists) {
     Configuration config = this.router.getConfig();
     SubClusterInfo localCluster = getSubClusterInfoByLocalCluster(config);
@@ -156,6 +161,12 @@ class FederationBlock extends RouterBlock {
     }
   }
 
+  /**
+   * Initialize the Federation page of the sub-cluster.
+   *
+   * @param tbody HTML tbody.
+   * @param lists subCluster page data list.
+   */
   private void initSubClusterPage(TBODY<TABLE<Hamlet>> tbody, List<Map<String, String>> lists) {
     // Sort the SubClusters
     List<SubClusterInfo> subClusters = getSubClusterInfoList();
