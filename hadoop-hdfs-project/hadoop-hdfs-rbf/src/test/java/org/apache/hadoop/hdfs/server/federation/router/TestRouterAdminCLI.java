@@ -1925,6 +1925,42 @@ public class TestRouterAdminCLI {
         err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
   }
 
+  @Test
+  public void testGetUsage() throws Exception {
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    assertEquals(-1, ToolRunner.run(admin, new String[]{}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-helloworld"}));
+
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-add", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-addAll", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-update", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-rm"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-ls", "/a", "b", "/c"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-getDestination"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-setQuota", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin,
+            new String[]{"-setStorageTypeQuota", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-clrQuota", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin,
+            new String[]{"-clrStorageTypeQuota", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-safemode", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-nameservice", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-refreshRouterArgs"}));
+    assertEquals(-1, ToolRunner.run(admin,
+            new String[]{"-refreshSuperUserGroupsConfiguration", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin,
+            new String[]{"-refreshCallQueue", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin, new String[]{"-dumpState", "-err"}));
+    assertEquals(-1, ToolRunner.run(admin,
+            new String[]{"-getDisabledNameservices", "-err"}));
+
+    assertEquals(0, ToolRunner.run(admin, new String[]{"-refresh"}));
+    assertEquals(0, ToolRunner.run(admin, new String[]{"-ls", "/"}));
+    assertEquals(0, ToolRunner.run(admin, new String[]{"-getDestination", "/"}));
+  }
+
   private void addMountTable(String src, String nsId, String dst)
       throws Exception {
     String[] argv = new String[] {"-add", src, nsId, dst};
