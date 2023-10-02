@@ -480,7 +480,7 @@ public abstract class LogAggregationFileController {
           + " it does not support this {}", remoteFS.getScheme());
     } catch (IOException e) {
       LOG.warn("Failed to check if FileSystem supports permissions on "
-          + "remoteLogDir [" + logDir + "]", e);
+          + "remoteLogDir [{}]", logDir, e);
     } finally {
       try {
         remoteFS.delete(permissionCheckFile, false);
