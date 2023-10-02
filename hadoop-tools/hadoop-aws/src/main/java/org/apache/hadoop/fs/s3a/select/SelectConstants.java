@@ -25,13 +25,18 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Options related to S3 Select.
  *
  * These options are set for the entire filesystem unless overridden
- * as an option in the URI
+ * as an option in the URI.
+ *
+ * The S3 Select API is no longer supported -however this class is retained
+ * so that any application which imports the dependencies will still link.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class SelectConstants {
 
-  public static final String SELECT_UNSUPPORTED = "S3 Select is not supported";
+  public static final String SELECT_UNSUPPORTED = "S3 Select is no longer supported";
+
+  public static final String NAME = "select";
 
   private SelectConstants() {
   }

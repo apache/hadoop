@@ -83,8 +83,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
@@ -194,8 +192,6 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
-import org.apache.hadoop.fs.s3a.select.SelectBinding;
-import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -299,7 +295,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private S3Client s3Client;
 
-  /** Async client is used for transfer manager and s3 select. */
+  /** Async client is used for transfer manager. */
   private S3AsyncClient s3AsyncClient;
 
   // initial callback policy is fail-once; it's there just to assist
@@ -1725,8 +1721,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * The {@code fileInformation} parameter controls how the file
-   * is opened, whether it is normal vs. an S3 select call,
-   * can a HEAD be skipped, etc.
+   * is opened, can a HEAD be skipped, etc.
    * @param path the file to open
    * @param fileInformation information about the file to open
    * @throws IOException IO failure.
@@ -1854,13 +1849,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       implements WriteOperationHelper.WriteOperationHelperCallbacks {
 
     @Override
-    public CompletableFuture<Void> selectObjectContent(
-        SelectObjectContentRequest request,
-        SelectObjectContentResponseHandler responseHandler) {
-      return getS3AsyncClient().selectObjectContent(request, responseHandler);
-    }
-
-    @Override
     public CompleteMultipartUploadResponse completeMultipartUpload(
         CompleteMultipartUploadRequest request) {
       return s3Client.completeMultipartUpload(request);
@@ -1872,7 +1860,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * using FS state as well as the status.
    * @param fileStatus file status.
    * @param auditSpan audit span.
-   * @return a context for read and select operations.
+   * @return a context for read operations.
    */
   @VisibleForTesting
   protected S3AReadOpContext createReadContext(
@@ -5452,13 +5440,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // capability depends on FS configuration
       return isMagicCommitEnabled();
 
-    case SelectConstants.S3_SELECT_CAPABILITY:
-      // select is only supported if enabled and client side encryption is
-      // disabled.
-      return !isCSEEnabled
-          && SelectBinding.isSelectEnabled(getConf())
-          && !s3ExpressStore;
-
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
@@ -5573,85 +5554,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * This is a proof of concept of a select API.
-   * @param source path to source data
-   * @param options request configuration from the builder.
-   * @param fileInformation any passed in information.
-   * @return the stream of the results
-   * @throws IOException IO failure
-   */
-  @Retries.RetryTranslated
-  @AuditEntryPoint
-  private FSDataInputStream select(final Path source,
-      final Configuration options,
-      final OpenFileSupport.OpenFileInformation fileInformation)
-      throws IOException {
-    requireSelectSupport(source);
-    final AuditSpan auditSpan = entryPoint(OBJECT_SELECT_REQUESTS, source);
-    final Path path = makeQualified(source);
-    String expression = fileInformation.getSql();
-    final S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        fileInformation);
-
-    // readahead range can be dynamically set
-    S3ObjectAttributes objectAttributes = createObjectAttributes(
-        path, fileStatus);
-    ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
-    S3AReadOpContext readContext = createReadContext(
-        fileStatus,
-        auditSpan);
-    fileInformation.applyOptions(readContext);
-
-    if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
-        && fileStatus.getEtag() != null) {
-      // if there is change detection, and the status includes at least an
-      // etag,
-      // check that the object metadata lines up with what is expected
-      // based on the object attributes (which may contain an eTag or
-      // versionId).
-      // This is because the select API doesn't offer this.
-      // (note: this is trouble for version checking as cannot force the old
-      // version in the final read; nor can we check the etag match)
-      ChangeTracker changeTracker =
-          new ChangeTracker(uri.toString(),
-              changePolicy,
-              readContext.getS3AStatisticsContext()
-                  .newInputStreamStatistics()
-                  .getChangeTrackerStatistics(),
-              objectAttributes);
-
-      // will retry internally if wrong version detected
-      Invoker readInvoker = readContext.getReadInvoker();
-      getObjectMetadata(path, changeTracker, readInvoker, "select");
-    }
-    // instantiate S3 Select support using the current span
-    // as the active span for operations.
-    SelectBinding selectBinding = new SelectBinding(
-        createWriteOperationHelper(auditSpan));
-
-    // build and execute the request
-    return selectBinding.select(
-        readContext,
-        expression,
-        options,
-        objectAttributes);
-  }
-
-  /**
-   * Verify the FS supports S3 Select.
-   * @param source source file.
-   * @throws UnsupportedOperationException if not.
-   */
-  private void requireSelectSupport(final Path source) throws
-      UnsupportedOperationException {
-    if (!isCSEEnabled && !SelectBinding.isSelectEnabled(getConf())) {
-
-      throw new UnsupportedOperationException(
-          SelectConstants.SELECT_UNSUPPORTED);
-    }
-  }
-
-  /**
    * Get the file status of the source file.
    * If in the fileInformation parameter return that
    * if not found, issue a HEAD request, looking for a
@@ -5681,16 +5583,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Initiate the open() or select() operation.
+   * Initiate the open() operation.
    * This is invoked from both the FileSystem and FileContext APIs.
    * It's declared as an audit entry point but the span creation is pushed
-   * down into the open/select methods it ultimately calls.
+   * down into the open operation s it ultimately calls.
    * @param rawPath path to the file
    * @param parameters open file parameters from the builder.
-   * @return a future which will evaluate to the opened/selected file.
+   * @return a future which will evaluate to the opened file.
    * @throws IOException failure to resolve the link.
-   * @throws PathIOException operation is a select request but S3 select is
-   * disabled
    * @throws IllegalArgumentException unknown mandatory key
    */
   @Override
@@ -5706,20 +5606,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             parameters,
             getDefaultBlockSize());
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
-    if (!fileInformation.isS3Select()) {
-      // normal path.
-      unboundedThreadPool.submit(() ->
-          LambdaUtils.eval(result,
-              () -> executeOpen(path, fileInformation)));
-    } else {
-      // it is a select statement.
-      // fail fast if the operation is not available
-      requireSelectSupport(path);
-      // submit the query
-      unboundedThreadPool.submit(() ->
-          LambdaUtils.eval(result,
-              () -> select(path, parameters.getOptions(), fileInformation)));
-    }
+    unboundedThreadPool.submit(() ->
+        LambdaUtils.eval(result,
+            () -> executeOpen(path, fileInformation)));
     return result;
   }
 

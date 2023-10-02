@@ -686,7 +686,6 @@ clients where S3-CSE has not been enabled.
 - Writing files may be slower, as only a single block can be encrypted and
  uploaded at a time.
 - Multipart Uploader API disabled.
-- S3 Select is not supported.
 - Multipart uploads would be serial, and partSize must be a multiple of 16
  bytes.
 - maximum message size in bytes that can be encrypted under this mode is

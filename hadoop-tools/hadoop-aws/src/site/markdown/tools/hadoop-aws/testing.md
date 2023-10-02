@@ -573,10 +573,6 @@ on third party stores.
     <value>false</value>
   </property>
   <property>
-    <name>fs.s3a.select.enabled</name>
-    <value>false</value>
-  </property>
-  <property>
     <name>test.fs.s3a.sts.enabled</name>
     <value>false</value>
   </property>
@@ -643,23 +639,10 @@ the `fs.s3a.scale.test.csvfile` option set to its path.
 (yes, the space is necessary. The Hadoop `Configuration` class treats an empty
 value as "do not override the default").
 
-### Turning off S3 Select
+### <a name="enabling-prefetch"></a> Enabling prefetch for all tests
 
-The S3 select tests are skipped when the S3 endpoint doesn't support S3 Select.
-
-```xml
-<property>
-  <name>fs.s3a.select.enabled</name>
-  <value>false</value>
-</property>
-```
-
-If your endpoint doesn't support that feature, this option should be in
-your `core-site.xml` file, so that trying to use S3 select fails fast with
-a meaningful error ("S3 Select not supported") rather than a generic Bad Request
-exception.
-
-### Disabling V1 List API tests
+The tests are run with prefetch if the `prefetch` property is set in the
+maven build. This can be combined with the scale tests as well.
 
 
 If `ITestS3AContractGetFileStatusV1List` fails with any error about unsupported API.
@@ -1295,19 +1278,6 @@ bin/hadoop fs -du -h -s $BUCKET/
 
 mkdir tmp
 time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
-
-# ---------------------------------------------------
-# S3 Select on Landsat
-# this will fail with a ClassNotFoundException unless
-# eventstore JAR is added to the classpath
-# ---------------------------------------------------
-
-export LANDSATGZ=s3a://landsat-pds/scene_list.gz
-
-
-bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
- "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
-
 
 # ---------------------------------------------------
 # Cloudstore
