@@ -39,6 +39,8 @@ public final class EncryptionTestUtils {
 
   public static final String AWS_KMS_SSE_ALGORITHM = "aws:kms";
 
+  public static final String AWS_KMS_DSSE_ALGORITHM = "aws:kms:dsse";
+
   public static final String SSE_C_ALGORITHM = "AES256";
 
   /**
@@ -93,6 +95,13 @@ public final class EncryptionTestUtils {
       assertEquals("Wrong KMS key in " + details,
               kmsKeyArn,
               md.ssekmsKeyId());
+      break;
+    case DSSE_KMS:
+      assertEquals("Wrong algorithm in " + details,
+          AWS_KMS_DSSE_ALGORITHM, md.serverSideEncryptionAsString());
+      assertEquals("Wrong KMS key in " + details,
+          kmsKeyArn,
+          md.ssekmsKeyId());
       break;
     default:
       assertEquals("AES256", md.serverSideEncryptionAsString());

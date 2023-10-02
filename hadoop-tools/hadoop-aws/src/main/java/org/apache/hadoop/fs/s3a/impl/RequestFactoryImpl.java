@@ -279,6 +279,10 @@ public class RequestFactoryImpl implements RequestFactory {
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
           .ifPresent(kmsKey -> copyObjectRequestBuilder.ssekmsKeyId(kmsKey));
+    } else if (S3AEncryptionMethods.DSSE_KMS == algorithm) {
+      copyObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(copyObjectRequestBuilder::ssekmsKeyId);
     } else if (S3AEncryptionMethods.SSE_C == algorithm) {
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
           .ifPresent(base64customerKey -> {
@@ -354,6 +358,10 @@ public class RequestFactoryImpl implements RequestFactory {
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
           .ifPresent(kmsKey -> putObjectRequestBuilder.ssekmsKeyId(kmsKey));
+    } else if (S3AEncryptionMethods.DSSE_KMS == algorithm) {
+      putObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(putObjectRequestBuilder::ssekmsKeyId);
     } else if (S3AEncryptionMethods.SSE_C == algorithm) {
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
           .ifPresent(base64customerKey -> {
@@ -415,6 +423,10 @@ public class RequestFactoryImpl implements RequestFactory {
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
           .ifPresent(kmsKey -> mpuRequestBuilder.ssekmsKeyId(kmsKey));
+    } else if (S3AEncryptionMethods.DSSE_KMS == algorithm) {
+      mpuRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(mpuRequestBuilder::ssekmsKeyId);
     } else if (S3AEncryptionMethods.SSE_C == algorithm) {
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
           .ifPresent(base64customerKey -> {
