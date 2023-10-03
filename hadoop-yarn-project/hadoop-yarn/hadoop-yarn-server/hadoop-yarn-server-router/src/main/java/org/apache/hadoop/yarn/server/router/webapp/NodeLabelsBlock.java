@@ -93,14 +93,34 @@ public class NodeLabelsBlock extends RouterBlock {
     return null;
   }
 
+  /**
+   * We will obtain the NodeLabel information of multiple sub-clusters.
+   *
+   * If Federation mode is enabled, get the NodeLabels of multiple sub-clusters,
+   * otherwise get the NodeLabels of the local cluster.
+   *
+   * @param isEnabled Whether to enable Federation mode,
+   * true, Federation mode; false, Non-Federation mode.
+   *
+   * @return NodeLabelsInfo.
+   */
   private NodeLabelsInfo getYarnFederationNodeLabelsInfo(boolean isEnabled) {
+    Configuration config = this.router.getConfig();
+    String webAddress;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
-      return getSubClusterNodeLabelsByWebAddress(webAddress);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(config);
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
     }
-    return null;
+    return getSubClusterNodeLabelsByWebAddress(webAddress);
   }
 
+  /**
+   * Get NodeLabels based on WebAddress.
+   *
+   * @param webAddress RM WebAddress.
+   * @return NodeLabelsInfo.
+   */
   private NodeLabelsInfo getSubClusterNodeLabelsByWebAddress(String webAddress) {
     Configuration conf = this.router.getConfig();
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
@@ -112,6 +132,12 @@ public class NodeLabelsBlock extends RouterBlock {
     return nodes;
   }
 
+  /**
+   * Initialize the Router page based on NodeLabels.
+   *
+   * @param nodeLabelsInfo NodeLabelsInfo.
+   * @param html html Block.
+   */
   private void initYarnFederationNodeLabelsOfCluster(NodeLabelsInfo nodeLabelsInfo, Block html) {
 
     Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.table("#nodelabels").
