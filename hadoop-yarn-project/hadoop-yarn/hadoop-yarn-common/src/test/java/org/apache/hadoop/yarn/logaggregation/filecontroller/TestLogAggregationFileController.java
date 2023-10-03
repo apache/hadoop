@@ -64,7 +64,7 @@ public class TestLogAggregationFileController {
     assertPermissionFileWasUsedOneTime(fs);
     Assert.assertTrue(controller.fsSupportsChmod);
 
-    doThrow(UnsupportedOperationException.class).when(fs).setPermission(any(), any());
+    doThrow(new UnsupportedOperationException()).when(fs).setPermission(any(), any());
     controller.verifyAndCreateRemoteLogDir();
     assertPermissionFileWasUsedOneTime(fs); // still once -> cached
     Assert.assertTrue(controller.fsSupportsChmod);
@@ -81,7 +81,7 @@ public class TestLogAggregationFileController {
         LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
     FileSystem fs = mock(FileSystem.class);
     setupCustomUserMocks(controller, fs, "/tmp/logs2");
-    doThrow(UnsupportedOperationException.class).when(fs).setPermission(any(), any());
+    doThrow(new UnsupportedOperationException()).when(fs).setPermission(any(), any());
 
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, "/tmp/logs2");
