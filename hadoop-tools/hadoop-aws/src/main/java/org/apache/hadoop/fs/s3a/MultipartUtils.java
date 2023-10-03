@@ -237,7 +237,7 @@ public final class MultipartUtils {
      * @param s3 s3 client
      * @param maxKeys max # of keys to list per batch
      * @param prefix prefix
-     * @throws IOException
+     * @throws IOException listing failure.
      */
     @Retries.RetryTranslated
     public UploadIterator(

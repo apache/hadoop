@@ -48,7 +48,7 @@ full details.
 * [S3A Delegation Token Architecture](delegation_token_architecture.html).
 * [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
-* [S3Guard](./s3guard.html) 
+* [S3Guard](./s3guard.html)
 
 ## <a name="overview"></a> Overview
 

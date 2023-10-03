@@ -20,7 +20,7 @@ The S3A connector works well worth a third-party S3 stores if the following requ
 * The store supports the AWS V4 signing API *or* a custom signer is switched to.
   This release does not support the legacy v2 signing API.
 * Errors are reported with the same HTTPS status codes as the S3 store. Error messages do not
-  need to be consistent.  
+  need to be consistent.
 * The store is consistent.
 
 There are also specific deployment requirements:
@@ -63,7 +63,7 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
     <name>fs.s3a.endpoint</name>
     <value>https://storeendpoint.example.com</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.path.style.access</name>
     <value>true</value>
@@ -86,7 +86,7 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
 
 ```
 
-If per-bucket settings are used here, then third-party stores and credentials may be used alongside an AWS store. 
+If per-bucket settings are used here, then third-party stores and credentials may be used alongside an AWS store.
 
 # Troubleshooting
 
@@ -141,7 +141,7 @@ as they keep trying to reconnect to ports which are never going to be available.
    <name>fs.s3a.bucket.nonexistent-bucket-example.retry.limit</name>
    <value>1</value>
   </property>
-    
+
   <property>
     <name>fs.s3a.bucket.nonexistent-bucket-example.connection.timeout</name>
     <value>500</value>
@@ -170,7 +170,7 @@ third-party code then they can download and build it themselves.
 
 This is the most common initial problem, as it happens by default.
 
-To fix, set `fs.s3a.endpoint` to the URL of the internal store 
+To fix, set `fs.s3a.endpoint` to the URL of the internal store.
 
 ### `org.apache.hadoop.fs.s3a.UnknownStoreException: `s3a://nonexistent-bucket-example/':  Bucket does not exist`
 
@@ -183,8 +183,8 @@ The hadoop filesystem commands don't log stack traces on failure -adding this ad
 of breaking scripts, and the output is very uninformative
 
 ```
-stat: nonexistent-bucket-example: getS3Region on nonexistent-bucket-example: 
-software.amazon.awssdk.services.s3.model.S3Exception: null 
+stat: nonexistent-bucket-example: getS3Region on nonexistent-bucket-example:
+software.amazon.awssdk.services.s3.model.S3Exception: null
 (Service: S3, Status Code: 403, Request ID: X26NWV0RJ1697SXF, Extended Request ID: bqq0rRm5Bdwt1oHSfmWaDXTfSOXoYvNhQxkhjjNAOpxhRaDvWArKCFAdL2hDIzgec6nJk1BVpJE=):null
 ```
 
@@ -230,7 +230,7 @@ hadoop fs -stat s3a://nonexistent-bucket-example
 
 
 ```
-stat: nonexistent-bucket-example: getS3Region on nonexistent-bucket-example: 
+stat: nonexistent-bucket-example: getS3Region on nonexistent-bucket-example:
 software.amazon.awssdk.services.s3.model.S3Exception: null (Service: S3, Status Code: 403,
  Request ID: X26NWV0RJ1697SXF, Extended Request ID: bqq0rRm5Bdwt1oHSfmWaDXTfSOXoYvNhQxkhjjNAOpxhRaDvWArKCFAdL2hDIzgec6nJk1BVpJE=):null
 ```
@@ -318,7 +318,7 @@ And except for some very unusual cases, that is the connector to use.
 The S3A connector binding works through the Google Cloud [S3 Storage API](https://cloud.google.com/distributed-cloud/hosted/docs/ga/gdch/apis/storage-s3-rest-api),
 which is a subset of the AWS API.
 
-Here are the basic settings to use. In particular, the multiobject delete option must be disabled; 
+Here are the basic settings to use. In particular, the multiobject delete option must be disabled;
 this makes renaming and deleting significantly slower.
 
 ```xml
@@ -333,12 +333,12 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.secret.key</name>
     <value>+XXXX</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.endpoint</name>
     <value>https://storage.googleapis.com</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.bucket.probe</name>
     <value>0</value>
@@ -348,7 +348,7 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.list.version</name>
     <value>1</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.multiobjectdelete.enable</name>
     <value>false</value>
@@ -365,7 +365,7 @@ this makes renaming and deleting significantly slower.
 This is a very rarely used configuration -however, it can be done, possibly as a way to interact with Google Cloud Storage in a deployment
 which lacks the GCS connector.
 
-It is also a way to regression test foundational S3A third-party store compatibility if you lack access to to any alternative. 
+It is also a way to regression test foundational S3A third-party store compatibility if you lack access to to any alternative.
 
 ```xml
 <configuration>
