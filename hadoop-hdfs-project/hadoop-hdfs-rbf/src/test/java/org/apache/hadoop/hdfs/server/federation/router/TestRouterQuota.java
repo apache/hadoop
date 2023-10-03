@@ -1184,15 +1184,17 @@ public class TestRouterQuota {
 
     assertTrue(Quota.andByStorageType(predicate));
 
-    typeQuota[0] = 2023;
+    // This is a value to test for,
+    // as long as it is not equal to HdfsConstants.QUOTA_DONT_SET
+    typeQuota[0] = HdfsConstants.QUOTA_RESET;
     assertFalse(Quota.andByStorageType(predicate));
 
     Arrays.fill(typeQuota, HdfsConstants.QUOTA_DONT_SET);
-    typeQuota[1] = 2023;
+    typeQuota[1] = HdfsConstants.QUOTA_RESET;
     assertFalse(Quota.andByStorageType(predicate));
 
     Arrays.fill(typeQuota, HdfsConstants.QUOTA_DONT_SET);
-    typeQuota[typeQuota.length-1] = 2023;
+    typeQuota[typeQuota.length-1] = HdfsConstants.QUOTA_RESET;
     assertFalse(Quota.andByStorageType(predicate));
   }
 
