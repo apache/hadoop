@@ -24,14 +24,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Map;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * This will implement different tests on S3AAuditLogMergerAndParser class.
@@ -170,12 +173,14 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
   public void testParseAuditLogEmptyAndNull() {
     Map<String, String> parseAuditLogResultEmpty =
         s3AAuditLogMergerAndParser.parseAuditLog("");
-    assertTrue("the returned list should be empty for this test",
-        parseAuditLogResultEmpty.isEmpty());
+    Assertions.assertThat(parseAuditLogResultEmpty)
+        .describedAs("Audit log map should be empty")
+        .isEmpty();
     Map<String, String> parseAuditLogResultNull =
         s3AAuditLogMergerAndParser.parseAuditLog(null);
-    assertTrue("the returned list should be empty for this test",
-        parseAuditLogResultNull.isEmpty());
+    Assertions.assertThat(parseAuditLogResultEmpty)
+        .describedAs("Audit log map should be empty")
+        .isEmpty();
   }
 
   /**
@@ -220,21 +225,30 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
    */
   @Test
   public void testMergeAndParseAuditLogFiles() throws IOException {
-    sampleDir = Files.createTempDirectory("sampleDir").toFile();
-    sampleFile = File.createTempFile("sampleFile", ".txt", sampleDir);
-    try (FileWriter fw = new FileWriter(sampleFile)) {
-      fw.write(SAMPLE_LOG_ENTRY);
-      fw.write(SAMPLE_LOG_ENTRY_1);
-      fw.flush();
-    }
+    // Getting the audit dir and file path from test/resources/
+    String auditLogDir = this.getClass().getClassLoader().getResource(
+        "TestAuditLogs").toString();
+    String auditSingleFile = this.getClass().getClassLoader().getResource(
+        "TestAuditLogs/sampleLog1").toString();
+
+    Preconditions.checkArgument(!StringUtils.isAnyBlank(auditLogDir,
+        auditSingleFile), String.format("Audit path should not be empty. Check "
+        + "test/resources. auditLogDir : %s, auditLogSingleFile :%s",
+        auditLogDir, auditSingleFile));
+    Path auditDirPath = new Path(auditLogDir);
+    Path auditFilePath = new Path(auditSingleFile);
+
     sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
-    Path logsPath = new Path(sampleDir.toURI());
     Path destPath = new Path(sampleDestDir.toURI());
-    FileSystem fileSystem = logsPath.getFileSystem(getConfiguration());
+    FileSystem fileSystem = auditFilePath.getFileSystem(getConfiguration());
     boolean mergeAndParseResult =
         s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
-            logsPath, destPath);
-    assertTrue("the result should be true", mergeAndParseResult);
+            auditDirPath, destPath);
+    assertTrue("The merge and parse failed for the audit log",
+        mergeAndParseResult);
+    // 35 audit logs with referrer in each of the 2 sample files.
+    assertEquals("", s3AAuditLogMergerAndParser.getAuditLogsParsed(), 36 + 36);
+    assertEquals("", s3AAuditLogMergerAndParser.getReferrerHeaderLogParsed(), 36 + 36);
   }
 
   /**

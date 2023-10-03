@@ -96,6 +96,7 @@ public class S3AAuditLogMergerAndParser {
         }
       }
     }
+    LOG.info("MMT audit map: {}", auditLogMap);
     return auditLogMap;
   }
 
@@ -123,7 +124,7 @@ public class S3AAuditLogMergerAndParser {
 
     int lengthOfReferrer = httpReferrer.length();
     int start = 0;
-    LOG.debug("HttpReferrer headers string: {}", httpReferrer);
+    LOG.info("HttpReferrer headers string: {}", httpReferrer);
     while (start < lengthOfReferrer) {
       // splits "key" and "value" of each header
       int equals = httpReferrer.indexOf("=", start);
@@ -146,7 +147,7 @@ public class S3AAuditLogMergerAndParser {
       start = end + 1;
     }
 
-    LOG.debug("HttpReferrer headers map:{}", referrerHeaderMap);
+    LOG.info("HttpReferrer headers map:{}", referrerHeaderMap);
     return referrerHeaderMap;
   }
 
@@ -221,7 +222,7 @@ public class S3AAuditLogMergerAndParser {
 
               // Get the referrer header value from the audit logs.
               String referrerHeader = auditLogMap.get(REFERRER_HEADER_KEY);
-              LOG.debug("Parsed referrer header : {}", referrerHeader);
+              LOG.info("Parsed referrer header : {}", referrerHeader);
               // referrer header value isn't parse-able.
               if (StringUtils.isBlank(referrerHeader) || referrerHeader
                   .equals("-")) {
@@ -279,5 +280,9 @@ public class S3AAuditLogMergerAndParser {
 
   public long getAuditLogsParsed() {
     return auditLogsParsed;
+  }
+
+  public long getReferrerHeaderLogParsed() {
+    return referrerHeaderLogParsed;
   }
 }

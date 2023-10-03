@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -76,7 +75,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
   private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
 
   private static final String USAGE =
-      "bin/hadoop " + AUDIT_TOOL +
+      "hadoop " + AUDIT_TOOL +
           " s3a://<bucket_name>/<destination_dir_path>/" +
           " s3a://<bucket_name>/<audit_logs_dir_path>/" + "\n";
 
