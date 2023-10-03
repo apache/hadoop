@@ -123,7 +123,7 @@ public class ITestS3ADSSEEncryptionWithDefaultS3Settings extends
    */
   private void skipIfBucketNotKmsEncrypted() throws IOException {
     S3AFileSystem fs = getFileSystem();
-    Path path = path(getMethodName() + "find-encryption-algo");
+    Path path = methodPath();
     ContractTestUtils.touch(fs, path);
     try {
       String sseAlgorithm =

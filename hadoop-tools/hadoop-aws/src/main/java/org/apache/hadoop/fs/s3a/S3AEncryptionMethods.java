@@ -40,7 +40,7 @@ public enum S3AEncryptionMethods {
    * Error string when {@link #getMethod(String)} fails.
    * Used in tests.
    */
-  static final String UNKNOWN_ALGORITHM
+  public static final String UNKNOWN_ALGORITHM
       = "Unknown encryption algorithm ";
 
   /**
