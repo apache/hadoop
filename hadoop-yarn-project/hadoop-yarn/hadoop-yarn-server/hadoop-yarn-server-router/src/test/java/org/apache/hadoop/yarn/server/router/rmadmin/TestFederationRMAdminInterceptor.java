@@ -965,5 +965,28 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     List<FederationQueueWeight> federationQueueWeights6 = response6.getFederationQueueWeights();
     assertNotNull(federationQueueWeights6);
     assertEquals(1, federationQueueWeights6.size());
+
+    // Queue7: We design such a test case, we do not set any filter conditions,
+    // but we need to get the return results
+    QueryFederationQueuePoliciesRequest request7 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, null, null);
+    QueryFederationQueuePoliciesResponse response7 =
+        interceptor.listFederationQueuePolicies(request7);
+    assertNotNull(response7);
+    assertEquals(1, response7.getCurrentPage());
+    assertEquals(10, response7.getPageSize());
+    assertEquals(3, response7.getTotalPage());
+    assertEquals(26, response7.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights7 = response7.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights7);
+    assertEquals(10, federationQueueWeights7.size());
+
+    // Queue8: We are designing a unit test where the number of records
+    // we need to retrieve exceeds the maximum number of Policies available.
+    QueryFederationQueuePoliciesRequest request8 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 10, null, null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "The index of the records to be retrieved has exceeded the maximum index.",
+        () -> interceptor.listFederationQueuePolicies(request8));
   }
 }

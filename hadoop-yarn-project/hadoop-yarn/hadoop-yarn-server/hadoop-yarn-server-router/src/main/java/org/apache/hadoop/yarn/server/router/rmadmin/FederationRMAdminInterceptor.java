@@ -130,7 +130,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router RMAdminClient-" + userName + "-%d ").build();
 
-    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>();
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
         0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
@@ -1032,7 +1032,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      QueryFederationQueuePoliciesResponse response = null;
+      QueryFederationQueuePoliciesResponse response;
 
       long startTime = clock.getTime();
       String queue = request.getQueue();
@@ -1056,9 +1056,15 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         // We filter by pagination.
         response = filterPoliciesConfigurationsByQueues(queues, policiesConfigurations,
             pageSize, currentPage);
+      } else {
+        // If we don't have any filtering criteria, we should also support paginating the results.
+        response = filterPoliciesConfigurations(policiesConfigurations, pageSize, currentPage);
       }
       long stopTime = clock.getTime();
       routerMetrics.succeededListFederationQueuePoliciesRetrieved(stopTime - startTime);
+      if (response == null) {
+        response = QueryFederationQueuePoliciesResponse.newInstance();
+      }
       return response;
     } catch (Exception e) {
       routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
@@ -1137,12 +1143,75 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     }
 
-    int startIndex = (currentPage - 1) * pageSize;
-    int endIndex = Math.min(startIndex + pageSize, federationQueueWeights.size());
-    List<FederationQueueWeight> subFederationQueueWeights =
-        federationQueueWeights.subList(startIndex, endIndex);
+    // Step3. To paginate the returned results.
+    return queryFederationQueuePoliciesPagination(federationQueueWeights, pageSize, currentPage);
+  }
 
-    int totalSize = federationQueueWeights.size();
+  /**
+   * Filter PoliciesConfigurations, and we paginate Policies within this method.
+   *
+   * @param policiesConfigurations policy configurations.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurations(
+      Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+      int pageSize, int currentPage) throws YarnException {
+
+    // Step1. Check the parameters, if the policy list is empty, return empty directly.
+    if (MapUtils.isEmpty(policiesConfigurations)) {
+      return null;
+    }
+
+    // Step2. Traverse policiesConfigurations and obtain the FederationQueueWeight list.
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    for (Map.Entry<String, SubClusterPolicyConfiguration> entry :
+        policiesConfigurations.entrySet()) {
+      String queue = entry.getKey();
+      SubClusterPolicyConfiguration policyConf = entry.getValue();
+      if (policyConf == null) {
+        continue;
+      }
+      FederationQueueWeight federationQueueWeight = parseFederationQueueWeight(queue, policyConf);
+      if (federationQueueWeight != null) {
+        federationQueueWeights.add(federationQueueWeight);
+      }
+    }
+
+    // Step3. To paginate the returned results.
+    return queryFederationQueuePoliciesPagination(federationQueueWeights, pageSize, currentPage);
+  }
+
+  /**
+   * Pagination for FederationQueuePolicies.
+   *
+   * @param queueWeights List Of FederationQueueWeight.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private QueryFederationQueuePoliciesResponse queryFederationQueuePoliciesPagination(
+      List<FederationQueueWeight> queueWeights, int pageSize, int currentPage)
+      throws YarnException {
+    if (CollectionUtils.isEmpty(queueWeights)) {
+      return null;
+    }
+
+    int startIndex = (currentPage - 1) * pageSize;
+    int endIndex = Math.min(startIndex + pageSize, queueWeights.size());
+
+    if (startIndex > endIndex) {
+      throw new YarnException("The index of the records to be retrieved " +
+          "has exceeded the maximum index.");
+    }
+
+    List<FederationQueueWeight> subFederationQueueWeights =
+        queueWeights.subList(startIndex, endIndex);
+
+    int totalSize = queueWeights.size();
     int totalPage =
         (totalSize % pageSize == 0) ? totalSize / pageSize : (totalSize / pageSize) + 1;
 

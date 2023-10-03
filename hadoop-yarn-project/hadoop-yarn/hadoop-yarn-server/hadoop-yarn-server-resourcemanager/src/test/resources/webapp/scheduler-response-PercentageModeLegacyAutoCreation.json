@@ -7,6 +7,16 @@
       "maxCapacity" : 100,
       "weight" : -1,
       "normalizedWeight" : 0,
+      "queueCapacityVectorInfo" : {
+        "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+        "capacityVectorEntries" : [ {
+          "resourceName" : "memory-mb",
+          "resourceValue" : "100.0%"
+        }, {
+          "resourceName" : "vcores",
+          "resourceValue" : "100.0%"
+        } ]
+      },
       "queueName" : "root",
       "queuePath" : "root",
       "maxParallelApps" : 2147483647,
@@ -59,6 +69,16 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=25.0%,vcores=25.0%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "25.0%"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "25.0%"
+                } ]
+              },
               "capacity" : 25,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
@@ -528,6 +548,16 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=75.0%,vcores=75.0%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "75.0%"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "75.0%"
+                } ]
+              },
               "capacity" : 75,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
@@ -802,6 +832,16 @@
       "capacities" : {
         "queueCapacitiesByPartition" : [ {
           "partitionName" : "",
+          "queueCapacityVectorInfo" : {
+            "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+            "capacityVectorEntries" : [ {
+              "resourceName" : "memory-mb",
+              "resourceValue" : "100.0%"
+            }, {
+              "resourceName" : "vcores",
+              "resourceValue" : "100.0%"
+            } ]
+          },
           "capacity" : 100,
           "usedCapacity" : 0,
           "maxCapacity" : 100,

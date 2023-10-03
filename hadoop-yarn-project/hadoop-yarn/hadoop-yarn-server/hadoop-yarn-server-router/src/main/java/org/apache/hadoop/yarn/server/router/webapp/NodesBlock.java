@@ -65,7 +65,7 @@ public class NodesBlock extends RouterBlock {
     // We will try to get the subClusterName.
     // If the subClusterName is not empty,
     // it means that we need to get the Node list of a subCluster.
-    NodesInfo nodesInfo = null;
+    NodesInfo nodesInfo;
     if (subClusterName != null && !subClusterName.isEmpty()) {
       initSubClusterMetricsOverviewTable(html, subClusterName);
       nodesInfo = getSubClusterNodesInfo(subClusterName);
@@ -80,11 +80,14 @@ public class NodesBlock extends RouterBlock {
   }
 
   private NodesInfo getYarnFederationNodesInfo(boolean isEnabled) {
+    Configuration config = this.router.getConfig();
+    String webAddress;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
-      return getSubClusterNodesInfoByWebAddress(webAddress);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
     }
-    return null;
+    return getSubClusterNodesInfoByWebAddress(webAddress);
   }
 
   private NodesInfo getSubClusterNodesInfo(String subCluster) {

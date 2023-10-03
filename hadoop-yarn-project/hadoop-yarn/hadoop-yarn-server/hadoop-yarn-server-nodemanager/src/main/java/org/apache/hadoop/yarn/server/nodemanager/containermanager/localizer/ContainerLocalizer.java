@@ -103,6 +103,14 @@ public class ContainerLocalizer {
       new FsPermission((short) 0755);
   public static final String CSI_VOLIUME_MOUNTS_ROOT = "csivolumes";
 
+  /*
+   * Testing discovered that these Java options are needed for Spark service
+   * running on JDK17 and Isilon clusters.
+   */
+  private static final String ADDITIONAL_JDK17_PLUS_OPTIONS =
+    "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+    "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
+
   private final String user;
   private final String appId;
   private final List<Path> localDirs;
@@ -400,6 +408,13 @@ public class ContainerLocalizer {
   public static List<String> getJavaOpts(Configuration conf) {
     String opts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
         YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT);
+    boolean isExtraJDK17OptionsConfigured =
+        conf.getBoolean(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT);
+
+    if (Shell.isJavaVersionAtLeast(17) && isExtraJDK17OptionsConfigured) {
+      opts = opts.trim().concat(" " + ADDITIONAL_JDK17_PLUS_OPTIONS);
+    }
     return Arrays.asList(opts.split(" "));
   }
 
