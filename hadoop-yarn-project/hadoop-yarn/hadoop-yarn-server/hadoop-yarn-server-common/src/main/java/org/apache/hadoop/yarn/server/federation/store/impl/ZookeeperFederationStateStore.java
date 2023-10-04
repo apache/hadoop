@@ -213,6 +213,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String routerRMMasterKeyIdPath;
 
   private int appIdNodeSplitIndex = 0;
+  private final int HIERARCHIES_LEVEL = 4;
 
   @VisibleForTesting
   public static final String ROUTER_APP_ROOT_HIERARCHIES = "HIERARCHIES";
@@ -275,14 +276,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     String hierarchiesPath = getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES);
     routerAppRootHierarchies = new HashMap<>();
     routerAppRootHierarchies.put(0, appsZNode);
-    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+    for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
       routerAppRootHierarchies.put(splitIndex,
           getNodePath(hierarchiesPath, Integer.toString(splitIndex)));
     }
 
     appIdNodeSplitIndex = conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
          YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
-    if (appIdNodeSplitIndex < 1 || appIdNodeSplitIndex > 4) {
+    if (appIdNodeSplitIndex < 1 || appIdNodeSplitIndex > HIERARCHIES_LEVEL) {
       LOG.info("Invalid value {} for config {} specified. Resetting it to {}",
           appIdNodeSplitIndex, YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
           YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
@@ -307,7 +308,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
       zkManager.createRootDirRecursively(
           getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
-      for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
         zkManager.createRootDirRecursively(
             routerAppRootHierarchies.get(splitIndex));
       }
@@ -896,8 +897,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       if (alternatePathInfo != null) {
         nodeUpdatePath = alternatePathInfo.path;
       } else if (appIdNodeSplitIndex != 0) {
-          // No alternate path exists. Create path as per configured split index.
-          String rootNode = getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
+        // No alternate path exists. Create path as per configured split index.
+        String rootNode = getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
         if (!exists(rootNode)) {
           zkManager.create(rootNode);
         }
@@ -1951,15 +1952,19 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     byte[] data = get(appNodePath);
     LOG.debug("Loading application from znode: {}", appNodePath);
     ApplicationHomeSubCluster appHomeSubCluster = null;
-    if (data != null) {
-      try {
-        appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
-            ApplicationHomeSubClusterProto.parseFrom(data));
-      } catch (InvalidProtocolBufferException e) {
-        String errMsg = "Cannot parse application at " + appNodePath;
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
-      }
+
+    if (data == null) {
+      return appHomeSubCluster;
     }
+
+    try {
+      appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
+          ApplicationHomeSubClusterProto.parseFrom(data));
+    } catch (InvalidProtocolBufferException e) {
+      String errMsg = "Cannot parse application at " + appNodePath;
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
     return appHomeSubCluster;
   }
 
