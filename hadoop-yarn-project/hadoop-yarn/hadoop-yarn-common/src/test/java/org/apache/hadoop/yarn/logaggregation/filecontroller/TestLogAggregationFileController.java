@@ -36,6 +36,7 @@ import org.junit.Test;
 
 
 import static org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController.TLDIR_PERMISSIONS;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -109,6 +110,7 @@ public class TestLogAggregationFileController {
         "not_yarn_user", "yarn_group", new Path(path))).when(fs)
         .getFileStatus(any(Path.class));
     doReturn(fs).when(controller).getFileSystem(any(Configuration.class));
+    doNothing().when(controller).initInternal(any(Configuration.class));
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         "yarn_user", new String[]{"yarn_group", "other_group"});
