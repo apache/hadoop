@@ -160,13 +160,19 @@ public class MetricsOverviewTable extends RouterBlock {
         // Initialize table data information
         tbody().$class("ui-widget-content").
         tr().
-        td(String.valueOf(metrics.getActiveNodes())).
-        td(String.valueOf(metrics.getDecommissioningNodes())).
-        td(String.valueOf(metrics.getDecommissionedNodes())).
-        td(String.valueOf(metrics.getLostNodes())).
-        td(String.valueOf(metrics.getUnhealthyNodes())).
-        td(String.valueOf(metrics.getRebootedNodes())).
-        td(String.valueOf(metrics.getShutdownNodes())).
+        td().a(url("nodes"), String.valueOf(metrics.getActiveNodes())).__().
+        td().a(url("nodes/router/?node.state=decommissioning"),
+            String.valueOf(metrics.getDecommissioningNodes())).__().
+        td().a(url("nodes/router/?node.state=decommissioned"),
+            String.valueOf(metrics.getDecommissionedNodes())).__().
+        td().a(url("nodes/router/?node.state=lost"),
+            String.valueOf(metrics.getLostNodes())).__().
+        td().a(url("nodes/router/?node.state=unhealthy"),
+            String.valueOf(metrics.getUnhealthyNodes())).__().
+        td().a(url("nodes/router/?node.state=rebooted"),
+            String.valueOf(metrics.getRebootedNodes())).__().
+        td().a(url("nodes/router/?node.state=shutdown"),
+            String.valueOf(metrics.getShutdownNodes())).__().
         __().
         __().__();
   }
