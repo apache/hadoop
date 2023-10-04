@@ -355,6 +355,7 @@ public class TestProtoBufRpc extends TestRpcBase {
       TimeoutException, InterruptedException {
     //No test with legacy
     assumeFalse(testWithLegacy);
+    server.setLogSlowRPCThresholdMs(SLEEP_DURATION);
     TestRpcService2 client = getClient2();
     // make 10 K fast calls
     for (int x = 0; x < 10000; x++) {

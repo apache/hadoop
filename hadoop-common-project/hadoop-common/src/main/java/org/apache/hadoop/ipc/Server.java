@@ -516,14 +516,20 @@ public abstract class Server {
   private final long metricsUpdaterInterval;
   private final ScheduledExecutorService scheduledExecutorService;
 
-  private boolean logSlowRPC = false;
+  private volatile boolean logSlowRPC = false;
+  /** Threshold (ms) for log slow rpc. */
+  private volatile long logSlowRPCThresholdMs;
 
   /**
    * Checks if LogSlowRPC is set true.
    * @return true, if LogSlowRPC is set true, false, otherwise.
    */
-  protected boolean isLogSlowRPC() {
+  public boolean isLogSlowRPC() {
     return logSlowRPC;
+  }
+
+  public long getLogSlowRPCThresholdMs() {
+    return logSlowRPCThresholdMs;
   }
 
   public int getNumInProcessHandler() {
@@ -543,8 +549,13 @@ public abstract class Server {
    * @param logSlowRPCFlag input logSlowRPCFlag.
    */
   @VisibleForTesting
-  protected void setLogSlowRPC(boolean logSlowRPCFlag) {
+  public void setLogSlowRPC(boolean logSlowRPCFlag) {
     this.logSlowRPC = logSlowRPCFlag;
+  }
+
+  @VisibleForTesting
+  public void setLogSlowRPCThresholdMs(long logSlowRPCThresholdMs) {
+    this.logSlowRPCThresholdMs = logSlowRPCThresholdMs;
   }
 
   private void setPurgeIntervalNanos(int purgeInterval) {
@@ -568,29 +579,15 @@ public abstract class Server {
    * @param methodName - RPC Request method name
    * @param details - Processing Detail.
    *
-   * if this request took too much time relative to other requests
-   * we consider that as a slow RPC. 3 is a magic number that comes
-   * from 3 sigma deviation. A very simple explanation can be found
-   * by searching for 68-95-99.7 rule. We flag an RPC as slow RPC
-   * if and only if it falls above 99.7% of requests. We start this logic
-   * only once we have enough sample size.
+   * if this request took time exceed `logSlowRPCThresholdMs`
+   * we consider that as a slow RPC.
    */
   void logSlowRpcCalls(String methodName, Call call,
       ProcessingDetails details) {
-    final int deviation = 3;
-
-    // 1024 for minSampleSize just a guess -- not a number computed based on
-    // sample size analysis. It is chosen with the hope that this
-    // number is high enough to avoid spurious logging, yet useful
-    // in practice.
-    final int minSampleSize = 1024;
-    final double threeSigma = rpcMetrics.getProcessingMean() +
-        (rpcMetrics.getProcessingStdDev() * deviation);
 
     long processingTime =
             details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
-    if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
-        (processingTime > threeSigma)) {
+    if (processingTime > getLogSlowRPCThresholdMs()) {
       LOG.warn(
           "Slow RPC : {} took {} {} to process from client {},"
               + " the processing detail is {}",
@@ -3358,6 +3355,10 @@ public abstract class Server {
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
+    this.setLogSlowRPCThresholdMs(conf.getLong(
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT));
 
     this.setPurgeIntervalNanos(conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
