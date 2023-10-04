@@ -511,6 +511,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateApplicationId(applicationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppsFailedSubmitted();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getMessage());
       return Response.status(Status.BAD_REQUEST).entity(e.getLocalizedMessage()).build();
     }
 
@@ -528,6 +530,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getMessage());
       return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
     }
 
@@ -535,6 +539,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String errMsg = String.format("Application %s with appId %s failed to be submitted.",
         newApp.getApplicationName(), newApp.getApplicationId());
     LOG.error(errMsg);
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+        TARGET_WEB_SERVICE, errMsg);
     return Response.status(Status.SERVICE_UNAVAILABLE).entity(errMsg).build();
   }
 
@@ -590,11 +596,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (response != null && response.getStatus() == HttpServletResponse.SC_ACCEPTED) {
         LOG.info("Application {} with appId {} submitted on {}.",
             context.getApplicationName(), applicationId, subClusterId);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
         return response;
       }
       String msg = String.format("application %s failed to be submitted.", applicationId);
       throw new YarnException(msg);
     } catch (Exception e) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
       LOG.warn("Unable to submit the application {} to SubCluster {}.", applicationId,
           subClusterId, e);
       if (subClusterId != null) {
