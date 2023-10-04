@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -59,8 +58,6 @@ import org.apache.hadoop.yarn.util.Records;
 
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -80,9 +77,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestNMClient {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestNMClient.class);
-
   private static final String IS_NOT_HANDLED_BY_THIS_NODEMANAGER =
       "is not handled by this NodeManager";
   private static final String UNKNOWN_NODEMANAGER =
@@ -98,8 +92,6 @@ public class TestNMClient {
   private List<NodeReport> nodeReports;
   private NMTokenCache nmTokenCache;
   private RMAppAttempt appAttempt;
-
-  private int earlyFinishCounter;
 
   /**
    * Container State transition listener to track the number of times
@@ -333,43 +325,52 @@ public class TestNMClient {
       );
       clc.setTokens(securityTokens);
       client.startContainer(container, clc);
+      List<Integer> exitStatuses = Arrays.asList(-1000, -105);
+
       // leave one container unclosed
       if (++i < size) {
-        testContainer(client, i, container, clc);
+        testContainer(client, i, container, clc, exitStatuses);
       }
     }
   }
 
-  private void testContainer(
-      NMClientImpl client, int i, Container container, ContainerLaunchContext clc
-  ) throws YarnException, IOException {
-    testContainerStatusRunning(container);
+  private void testContainer(NMClientImpl client, int i, Container container,
+                             ContainerLaunchContext clc, List<Integer> exitCode)
+          throws YarnException, IOException {
+    testGetContainerStatus(container, i, ContainerState.RUNNING, "",
+            exitCode);
     waitForContainerRunningTransitionCount(container, 1);
     testIncreaseContainerResource(container);
     testRestartContainer(container);
-    testContainerStatusRunning(container, "will be Restarted");
+    testGetContainerStatus(container, i, ContainerState.RUNNING,
+            "will be Restarted", exitCode);
     waitForContainerRunningTransitionCount(container, 2);
     if (i % 2 == 0) {
       testReInitializeContainer(container, clc, false);
-      testContainerStatusRunning(container,  "will be Re-initialized");
+      testGetContainerStatus(container, i, ContainerState.RUNNING,
+              "will be Re-initialized", exitCode);
       waitForContainerRunningTransitionCount(container, 3);
       testContainerRollback(container, true);
-      testContainerStatusRunning(container, "will be Rolled-back");
+      testGetContainerStatus(container, i, ContainerState.RUNNING,
+              "will be Rolled-back", exitCode);
       waitForContainerRunningTransitionCount(container, 4);
       testContainerCommit(container, false);
       testReInitializeContainer(container, clc, false);
-      testContainerStatusRunning(container, "will be Re-initialized");
+      testGetContainerStatus(container, i, ContainerState.RUNNING,
+              "will be Re-initialized", exitCode);
       waitForContainerRunningTransitionCount(container, 5);
       testContainerCommit(container, true);
     } else {
       testReInitializeContainer(container, clc, true);
-      testContainerStatusRunning(container, "will be Re-initialized");
+      testGetContainerStatus(container, i, ContainerState.RUNNING,
+              "will be Re-initialized", exitCode);
       waitForContainerRunningTransitionCount(container, 3);
       testContainerRollback(container, false);
       testContainerCommit(container, false);
     }
     client.stopContainer(container.getId(), container.getNodeId());
-    testContainerStatusCompleted(container, "killed by the ApplicationMaster");
+    testGetContainerStatus(container, i, ContainerState.COMPLETE,
+            "killed by the ApplicationMaster", exitCode);
   }
 
   private void waitForContainerRunningTransitionCount(Container container, long transitions) {
@@ -379,44 +380,27 @@ public class TestNMClient {
     }
   }
 
-  private void testContainerStatusRunning(
-      Container container, String... diagnostics
-  ) throws YarnException, IOException {
-    ContainerStatus actualStatus = nmClient
-        .getContainerStatus(container.getId(), container.getNodeId());
-    while (ContainerState.NEW == actualStatus.getState()) {
-      sleep(100);
-      actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
-    }
-    if (ContainerState.COMPLETE == actualStatus.getState()) {
-      LOG.warn("The container finished earlier than expected, EXIT_CODE[{}], DIAGNOSTIC[{}]",
-          actualStatus.getExitStatus(), actualStatus.getDiagnostics());
-      --earlyFinishCounter;
-      return;
-    }
-    assertEquals(container.getId(), actualStatus.getContainerId());
-    assertEquals(actualStatus.getExitStatus(), ContainerExitStatus.INVALID);
-    for (String diagnostic : diagnostics) {
-      assertTrue(actualStatus.getDiagnostics().contains(diagnostic));
-    }
-  }
 
-  private void testContainerStatusCompleted(
-      Container container, String... diagnostics
-  ) throws YarnException, IOException {
-    ContainerStatus actualStatus = nmClient
-        .getContainerStatus(container.getId(), container.getNodeId());
-    while (ContainerState.COMPLETE != actualStatus.getState()) {
-      sleep(100);
-      actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
-    }
-    assertEquals(container.getId(), actualStatus.getContainerId());
-    assertTrue(Arrays.asList(
-        ContainerExitStatus.KILLED_BY_APPMASTER,
-        ContainerExitStatus.SUCCESS
-    ).contains(actualStatus.getExitStatus()));
-    for (String diagnostic : diagnostics) {
-      assertTrue(actualStatus.getDiagnostics().contains(diagnostic));
+  private void testGetContainerStatus(Container container, int index,
+                                      ContainerState state, String diagnostics, List<Integer> exitStatuses)
+          throws YarnException, IOException {
+    while (true) {
+      sleep(250);
+      ContainerStatus status = nmClient.getContainerStatus(
+              container.getId(), container.getNodeId());
+      // NodeManager may still need some time to get the stable
+      // container status
+      if (status.getState() == state) {
+        assertEquals(container.getId(), status.getContainerId());
+        assertTrue("" + index + ": " + status.getDiagnostics(),
+                status.getDiagnostics().contains(diagnostics));
+
+        assertTrue("Exit Statuses are supposed to be in: " + exitStatuses +
+                        ", but the actual exit status code is: " +
+                        status.getExitStatus(),
+                exitStatuses.contains(status.getExitStatus()));
+        break;
+      }
     }
   }
 
