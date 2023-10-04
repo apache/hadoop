@@ -70,7 +70,7 @@ public class NodesBlock extends RouterBlock {
     // it means that we need to get the Node list of a subCluster.
     NodesInfo nodesInfo;
     if (subClusterName != null && !subClusterName.isEmpty() &&
-        ROUTER.equalsIgnoreCase(subClusterName)) {
+        !ROUTER.equalsIgnoreCase(subClusterName)) {
       initSubClusterMetricsOverviewTable(html, subClusterName);
       nodesInfo = getSubClusterNodesInfo(subClusterName);
     } else {
