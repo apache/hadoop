@@ -64,13 +64,12 @@ public class TestYarnFederationWithFairScheduler {
     FederationClusterInfo federationClusterInfo =
         TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS, RM_WEB_SERVICE_PATH,
         FederationClusterInfo.class, null, null);
-    /*List<ClusterInfo> clusterInfos = federationClusterInfo.getList();
+    List<ClusterInfo> clusterInfos = federationClusterInfo.getList();
     assertNotNull(clusterInfos);
     assertEquals(2, clusterInfos.size());
     for (ClusterInfo clusterInfo : clusterInfos) {
       assertNotNull(clusterInfo);
       assertTrue(subClusters.contains(clusterInfo.getSubClusterId()));
-    }*/
-    Thread.sleep(2000000);
+    }
   }
 }
