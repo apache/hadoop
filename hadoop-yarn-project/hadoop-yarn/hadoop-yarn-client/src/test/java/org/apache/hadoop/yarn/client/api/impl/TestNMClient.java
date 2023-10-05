@@ -257,7 +257,7 @@ public class TestNMClient {
   ) throws YarnException, IOException {
     for (int i = 0; i < NUMBER_OF_CONTAINERS; ++i) {
       rmClient.addContainerRequest(new ContainerRequest(
-          Resource.newInstance(256, 0),
+          Resource.newInstance(1024, 0),
           new String[] {nodeReports.get(0).getNodeId().getHost()},
           new String[] {nodeReports.get(0).getRackName()},
           Priority.newInstance(0)
