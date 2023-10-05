@@ -1061,7 +1061,7 @@ public class TestCapacitySchedulerAutoQueueCreation
   public void testAutoCreateLeafQueueFailsWithSpecifiedEmptyStringLeafQueue()
           throws Exception {
 
-    final String INVALID_QUEUE = "";
+    final String INVALIDQUEUE = "";
 
     MockRM newMockRM = setupSchedulerInstance();
     CapacityScheduler newCS =
@@ -1073,7 +1073,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
     try {
       //submitting to root.c. should fail WITHOUT crashing the RM
-      submitApp(newCS, "app_user", INVALID_QUEUE, "root.c");
+      submitApp(newCS, "app_user", INVALIDQUEUE, "root.c");
 
       RMContext rmContext = mock(RMContext.class);
       when(rmContext.getDispatcher()).thenReturn(dispatcher);
@@ -1081,7 +1081,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
       SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
-              appId, "root.c." + INVALID_QUEUE, "app_user");
+              appId, "root.c." + INVALIDQUEUE, "app_user");
       newCS.handle(addAppEvent);
 
       RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
