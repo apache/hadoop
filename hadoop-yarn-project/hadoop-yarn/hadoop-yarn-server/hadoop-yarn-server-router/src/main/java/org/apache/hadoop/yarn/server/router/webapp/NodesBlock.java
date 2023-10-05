@@ -40,7 +40,9 @@ import com.google.inject.Inject;
 
 import java.util.Date;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.*;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 
 /**
  * Nodes block for the Router Web UI.

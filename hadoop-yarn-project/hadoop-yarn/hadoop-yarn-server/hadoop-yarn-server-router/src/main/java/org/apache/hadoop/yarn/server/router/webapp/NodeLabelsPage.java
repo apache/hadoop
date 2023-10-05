@@ -21,7 +21,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.*;
+import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.generateWebTitle;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 
 /**
@@ -35,10 +37,11 @@ public class NodeLabelsPage extends RouterView {
     String type = $(NODE_SC);
     String nodeLabel = $(NODE_LABEL);
     String title = "Node labels of the cluster";
-    if(nodeLabel != null && !nodeLabel.isEmpty()){
-      title = title + " (" + nodeLabel + ")";
+
+    if (nodeLabel != null && !nodeLabel.isEmpty()) {
+      title = generateWebTitle(title, nodeLabel);
     } else if (type != null && !type.isEmpty()) {
-      title = title + " (" + type + ")";
+      title = generateWebTitle(title, type);
     }
 
     setTitle(title);
