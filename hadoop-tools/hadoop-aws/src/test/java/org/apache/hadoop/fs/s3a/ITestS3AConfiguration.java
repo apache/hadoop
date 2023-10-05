@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
-import java.nio.file.AccessDeniedException;
 import java.security.PrivilegedExceptionAction;
 
 import org.assertj.core.api.Assertions;

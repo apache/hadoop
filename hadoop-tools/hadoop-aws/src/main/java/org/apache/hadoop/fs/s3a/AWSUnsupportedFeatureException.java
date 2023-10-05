@@ -20,8 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
-
 /**
  * A store returned an error indicating that it does not support a
  * specific S3 feature such as the chosen ChangeDetectionPolicy or

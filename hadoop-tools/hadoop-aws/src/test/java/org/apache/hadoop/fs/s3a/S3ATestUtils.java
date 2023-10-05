@@ -1543,4 +1543,15 @@ public final class S3ATestUtils {
   public static void disablePrefetching(Configuration conf) {
     removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
   }
+
+  /**
+   * Does this FS support multi object delete?
+   * @param fs filesystem
+   * @return true if multi-delete is enabled.
+   */
+
+  public static boolean isBulkDeleteEnabled(FileSystem fs) {
+    return fs.getConf().getBoolean(Constants.ENABLE_MULTI_DELETE,
+        true);
+  }
 }

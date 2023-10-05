@@ -659,7 +659,7 @@ your `core-site.xml` file, so that trying to use S3 select fails fast with
 a meaningful error ("S3 Select not supported") rather than a generic Bad Request
 exception.
 
-## Disabling V1 List API tests
+### Disabling V1 List API tests
 
 
 If `ITestS3AContractGetFileStatusV1List` fails with any error about unsupported API.
@@ -739,6 +739,15 @@ The default is ""; meaning "use the amazon default endpoint" (`sts.amazonaws.com
 Consult the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
 for the full list of locations.
 
+### Disabling Content Encoding tests
+
+Tests in `ITestS3AContentEncoding` may need disabling
+```xml
+  <property>
+    <name>test.fs.s3a.content.encoding.enabled</name>
+    <value>false</value>
+  </property>
+```
 ### Tests which may fail (and which you can ignore)
 
 * `ITestS3AContractMultipartUploader` tests `testMultipartUploadAbort` and `testSingleUpload` raising `FileNotFoundException`

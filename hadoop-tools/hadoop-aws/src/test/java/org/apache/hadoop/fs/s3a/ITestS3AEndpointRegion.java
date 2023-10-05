@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,11 +41,9 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.raiseAsAssumption;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
 import static org.apache.hadoop.io.IOUtils.closeStream;
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -94,8 +93,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     try {
       newFS.initialize(getFileSystem().getUri(), conf);
       newFS.getS3AInternals().getBucketMetadata();
-    } catch (UnknownHostException | UnknownStoreException allowed) {
-      // these are both ok
+    } catch (UnknownHostException | UnknownStoreException | AccessDeniedException allowed) {
+      // these are all valid failure modes from different test environments.
     }
     assertRegionProbeCount(1);
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 
@@ -27,13 +28,13 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.impl.ErrorHandling.maybeTranslateNetworkException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Unit tests related to the {@link ErrorHandling} class.
+ * Unit tests related to the {@link ErrorTranslation} class.
  */
-public class TestErrorHandling extends AbstractHadoopTestBase {
+public class TestErrorTranslation extends AbstractHadoopTestBase {
 
   /**
    * Create an sdk exception with the given cause.
@@ -57,7 +58,7 @@ public class TestErrorHandling extends AbstractHadoopTestBase {
             new UnknownHostException("bottom")));
     final IOException ioe = intercept(UnknownHostException.class, "top",
         () -> {
-          throw maybeTranslateNetworkException("", thrown);
+          throw maybeExtractNetworkException("", thrown);
         });
 
     // the wrapped exception is the top level one: no stack traces have
@@ -72,10 +73,21 @@ public class TestErrorHandling extends AbstractHadoopTestBase {
   public void testNoRouteToHostExceptionExtraction() throws Throwable {
     intercept(NoRouteToHostException.class, "top",
         () -> {
-          throw maybeTranslateNetworkException("",
+          throw maybeExtractNetworkException("",
               sdkException("top",
                   sdkException("middle",
                       new NoRouteToHostException("bottom"))));
+        });
+  }
+
+  @Test
+  public void testConnectExceptionExtraction() throws Throwable {
+    intercept(ConnectException.class, "top",
+        () -> {
+          throw maybeExtractNetworkException("",
+              sdkException("top",
+                  sdkException("middle",
+                      new ConnectException("bottom"))));
         });
   }
 }

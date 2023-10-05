@@ -182,14 +182,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    * non-null.
    */
   private void assumeNoDefaultEncryption() throws IOException {
-    try {
-      skipIfClientSideEncryption();
-      Assume.assumeThat(getDefaultEncryption(), nullValue());
-    } catch (AccessDeniedException e) {
-      // if the user can't check the default encryption, assume that it is
-      // null and keep going
-      LOG.warn("User does not have permission to call getBucketEncryption()");
-    }
+    skipIfClientSideEncryption();
+    Assume.assumeThat(getDefaultEncryption(), nullValue());
   }
 
   /**
@@ -418,7 +412,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
           () -> s3.getBucketEncryption(GetBucketEncryptionRequest.builder()
               .bucket(fs.getBucket())
               .build()));
-    } catch (FileNotFoundException e) {
+    } catch (FileNotFoundException | AccessDeniedException | AWSBadRequestException e) {
       return null;
     }
   }

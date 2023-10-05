@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.UnknownHostException;
+
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
@@ -64,6 +69,52 @@ public class ErrorTranslation {
    */
   public static boolean isObjectNotFound(AwsServiceException e) {
     return e.statusCode() == SC_404_NOT_FOUND && !isUnknownBucket(e);
+  }
+
+  /**
+   * Translate an exception if it or its inner exception is an
+   * IOException.
+   * If this condition is not met, null is returned.
+   * @param path path of operation.
+   * @param thrown exception
+   * @return a translated exception or null.
+   */
+  public static IOException maybeExtractNetworkException(String path, Throwable thrown) {
+
+    if (thrown == null) {
+      return null;
+    }
+
+    // look inside
+    Throwable cause = thrown.getCause();
+    while(cause != null && cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    if (!(cause instanceof IOException)) {
+      return null;
+    }
+
+    // the cause can be extracted to an IOE.
+    // rather than just return it, we try to preserve the stack trace
+    // of the outer exception.
+    IOException ioe = (IOException) cause;
+    // now examine any IOE
+    if (ioe instanceof UnknownHostException) {
+      return (IOException) new UnknownHostException(thrown + ": " + ioe.getMessage())
+          .initCause(thrown);
+    }
+    if (ioe instanceof NoRouteToHostException) {
+      return (IOException) new NoRouteToHostException(thrown + ": " + ioe.getMessage())
+          .initCause(thrown);
+    }
+    if (ioe instanceof ConnectException) {
+      return (IOException) new ConnectException(thrown + ": " + ioe.getMessage())
+          .initCause(thrown);
+    }
+
+    // currently not attempting to translate any other exception types.
+    return null;
+
   }
 
   /**

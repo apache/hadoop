@@ -235,6 +235,8 @@ public class S3ARetryPolicy implements RetryPolicy {
     // (out of disk space, etc).
     // by the time we get here, the aws sdk will have
     // already retried.
+    // there is specific handling for some 5XX codes (501, 503);
+    // this is for everything else
     policyMap.put(AWSStatus500Exception.class, fail);
 
     // server doesn't support a feature.

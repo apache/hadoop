@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.raiseAsAssumption;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 
@@ -46,6 +47,8 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfNotEnabled(conf, KEY_CONTENT_ENCODING_ENABLED,
+        "Skipping storage class ACL tests");
     removeBaseAndBucketOverrides(conf, CONTENT_ENCODING);
     conf.set(CONTENT_ENCODING, GZIP);
 

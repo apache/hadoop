@@ -135,9 +135,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     setupCostValidator();
 
     // determine bulk delete settings
-    final Configuration fsConf = getFileSystem().getConf();
-    isBulkDelete = fsConf.getBoolean(Constants.ENABLE_MULTI_DELETE,
-        true);
+    isBulkDelete = isBulkDeleteEnabled(getFileSystem());
     deleteMarkerStatistic = isBulkDelete()
         ? OBJECT_BULK_DELETE_REQUEST
         : OBJECT_DELETE_REQUEST;

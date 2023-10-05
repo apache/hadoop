@@ -53,7 +53,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -2898,7 +2897,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           trackDurationOfOperation(trackerFactory,
               OBJECT_LIST_REQUEST,
               () -> {
-                checkNotClosed();  // this listing is done in the thread pool, it may actually be closed
                 if (useListV1) {
                   return S3ListResult.v1(s3Client.listObjects(request.getV1()));
                 } else {
@@ -3004,7 +3002,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                  "deleting %s", key)) {
       invoker.retryUntranslated(String.format("Delete %s:/%s", bucket, key),
           DELETE_CONSIDERED_IDEMPOTENT,
-          ()-> {
+          () -> {
             incrementStatistic(OBJECT_DELETE_OBJECTS);
             trackDurationOfInvocation(getDurationTrackerFactory(),
                 OBJECT_DELETE_REQUEST.getSymbol(),
@@ -3013,6 +3011,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     .build()));
             return null;
           });
+    } catch (AwsServiceException ase) {
+      // 404 errors get swallowed; this can be raised by
+      // third party stores (GCS).
+      if (!isObjectNotFound(ase)) {
+        throw ase;
+      }
     }
   }
 
@@ -4298,11 +4302,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Verify that the input stream is open. Non blocking; this gives
+   * Verify that the filesystem has not been closed. Non blocking; this gives
    * the last state of the volatile {@link #closed} field.
-   * @throws IOException if the connection is closed.
+   * @throws PathIOException if the FS is closed.
    */
-  private void checkNotClosed() throws IOException {
+  private void checkNotClosed() throws PathIOException {
     if (isClosed) {
       throw new PathIOException(uri.toString(), E_FS_CLOSED);
     }

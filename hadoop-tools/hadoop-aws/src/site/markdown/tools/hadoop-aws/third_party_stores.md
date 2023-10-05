@@ -14,9 +14,9 @@
 
 # Working with Third-party S3 Stores
 
-The S3A connector works well worth a third-party S3 stores if the following requirements are met:
+The S3A connector works well with third-party S3 stores if the following requirements are met:
 
-* It correctly implements the core S3 REST API, including support for uploads clothes and the V2 listing API.
+* It correctly implements the core S3 REST API, including support for uploads and the V2 listing API.
 * The store supports the AWS V4 signing API *or* a custom signer is switched to.
   This release does not support the legacy v2 signing API.
 * Errors are reported with the same HTTPS status codes as the S3 store. Error messages do not
@@ -39,6 +39,7 @@ The features which may be unavailable include:
 * Optional Bucket Probes at startup (`fs.s3a.bucket.probe = 0`).
   This is now the default -do not change it.
 * List API to use (`fs.s3a.list.version = 1`)
+* 
 ## Configuring s3a to connect to a third party store
 
 
@@ -198,27 +199,27 @@ After which useful stack traces are logged.
 
 ```
 org.apache.hadoop.fs.s3a.UnknownStoreException: `s3a://nonexistent-bucket-example/':  Bucket does not exist
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$null$3(S3AFileSystem.java:1075)
-        at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
-        at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:376)
-        at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:468)
-        at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:372)
-        at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:347)
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$getS3Region$4(S3AFileSystem.java:1039)
-        at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration(IOStatisticsBinding.java:543)
-        at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.lambda$trackDurationOfOperation$5(IOStatisticsBinding.java:524)
-        at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration(IOStatisticsBinding.java:445)
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2631)
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.getS3Region(S3AFileSystem.java:1038)
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:982)
-        at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:622)
-        at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3452)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$null$3(S3AFileSystem.java:1075)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:376)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:468)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:372)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:347)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$getS3Region$4(S3AFileSystem.java:1039)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration(IOStatisticsBinding.java:543)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.lambda$trackDurationOfOperation$5(IOStatisticsBinding.java:524)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration(IOStatisticsBinding.java:445)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2631)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.getS3Region(S3AFileSystem.java:1038)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:982)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:622)
+    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3452)
 ```
 
 ### `S3Exception: null (Service: S3, Status Code: 403...` or `AccessDeniedException`
 
-* endpoint is default
-* no aws keys
+* Endpoint is default
+* Credentials were not issued by AWS .
 * `fs.s3a.endpoint.region` unset.
 
 If the client doesn't have any AWS credentials (from hadoop settings, environment variables or elsewhere) then
@@ -312,53 +313,77 @@ Fix: path style access
 
 It *is* possible to connect to google cloud storage through the S3A connector.
 However, Google provide their own [Cloud Storage connector](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage).
-This is a well maintained Hadoop filesystem client which uses their XML API,
+That is a well maintained Hadoop filesystem client which uses their XML API,
 And except for some very unusual cases, that is the connector to use.
+
+When interacting with a GCS container through the S3A connector may make sense
+* The installation doesn't have the gcs-connector JAR.
+* The different credential mechanism may be convenient.
+* There's a desired to use S3A Delegation Tokens to pass secrets with a job.
+* There's a desire to use an external S3A extension (delegation tokens etc.)
 
 The S3A connector binding works through the Google Cloud [S3 Storage API](https://cloud.google.com/distributed-cloud/hosted/docs/ga/gdch/apis/storage-s3-rest-api),
 which is a subset of the AWS API.
 
-Here are the basic settings to use. In particular, the multiobject delete option must be disabled;
+
+To get a compatible access and secret key, follow the instructions of
+[Simple migration from Amazon S3 to Cloud Storage](https://cloud.google.com/storage/docs/aws-simple-migration#defaultproj).
+
+Here are the per-bucket setings for an example bucket "gcs-container"
+in Google Cloud Storage. Note the multiobject delete option must be disabled;
 this makes renaming and deleting significantly slower.
+
 
 ```xml
 <configuration>
 
+  
   <property>
-    <name>fs.s3a.access.key</name>
-    <value>XXX</value>
+    <name>fs.s3a.bucket.gcs-container.access.key</name>
+    <value>GOOG1EZ....</value>
   </property>
 
   <property>
-    <name>fs.s3a.secret.key</name>
-    <value>+XXXX</value>
+    <name>fs.s3a.bucket.gcs-container.secret.key</name>
+    <value>SECRETS</value>
   </property>
-
+  
   <property>
-    <name>fs.s3a.endpoint</name>
+    <name>fs.s3a.bucket.gcs-container.endpoint</name>
     <value>https://storage.googleapis.com</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.probe</name>
+    <name>fs.s3a.bucket.gcs-container.bucket.probe</name>
     <value>0</value>
   </property>
 
   <property>
-    <name>fs.s3a.list.version</name>
+    <name>fs.s3a.bucket.gcs-container.list.version</name>
     <value>1</value>
   </property>
 
   <property>
-    <name>fs.s3a.multiobjectdelete.enable</name>
+    <name>fs.s3a.bucket.gcs-container.multiobjectdelete.enable</name>
     <value>false</value>
   </property>
 
   <property>
-    <name>fs.s3a.select.enabled</name>
+    <name>fs.s3a.bucket.gcs-container.select.enabled</name>
     <value>false</value>
   </property>
+  
+  <property>
+    <name>fs.s3a.bucket.gcs-container.path.style.access</name>
+    <value>true</value>
+  </property>
 
+  
+  <property>
+    <name>fs.s3a.bucket.gcs-container.endpoint.region</name>
+    <value>dummy</value>
+  </property>
+  
 </configuration>
 ```
 
@@ -381,6 +406,11 @@ It is also a way to regression test foundational S3A third-party store compatibi
     <name>test.fs.s3a.sts.enabled</name>
     <value>false</value>
   </property>
+  <property>
+    <name>test.fs.s3a.content.encoding.enabled</name>
+    <value>false</value>
+  </property>
+  
 </configuration>
 ```
 
