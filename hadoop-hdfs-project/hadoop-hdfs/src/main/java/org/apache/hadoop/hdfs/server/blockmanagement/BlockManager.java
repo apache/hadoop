@@ -5365,6 +5365,16 @@ public class BlockManager implements BlockStatsMXBean {
     blocksMap.close();
     MBeans.unregister(mxBeanName);
     mxBeanName = null;
+    BlockPlacementPolicy replicationPolicy =
+        placementPolicies.getPolicy(CONTIGUOUS);
+    if (replicationPolicy != null) {
+      replicationPolicy.clear();
+    }
+    BlockPlacementPolicy ecPolicy =
+        placementPolicies.getPolicy(STRIPED);
+    if (ecPolicy != null) {
+      ecPolicy.clear();
+    }
   }
   
   public void clear() {
