@@ -1015,6 +1015,10 @@ public class NameNode extends ReconfigurableBase implements
       LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
     }
+    if (rpcServer.getLifelineRpcAddress() != null) {
+      LOG.info(getRole() + " lifeline RPC up at: "
+          + rpcServer.getLifelineRpcAddress());
+    }
   }
   
   private void stopCommonServices() {
