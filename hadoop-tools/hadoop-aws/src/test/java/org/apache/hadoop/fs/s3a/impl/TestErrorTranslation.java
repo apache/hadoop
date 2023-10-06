@@ -26,6 +26,7 @@ import java.net.UnknownHostException;
 import org.junit.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
@@ -64,7 +65,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
     // the wrapped exception is the top level one: no stack traces have
     // been lost
     if (ioe.getCause() != thrown) {
-      throw ioe;
+      throw new AssertionError("Cause of " + ioe + " is not " + thrown, thrown);
     }
 
   }
@@ -73,7 +74,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
   public void testNoRouteToHostExceptionExtraction() throws Throwable {
     intercept(NoRouteToHostException.class, "top",
         () -> {
-          throw maybeExtractNetworkException("",
+          throw maybeExtractNetworkException("p2",
               sdkException("top",
                   sdkException("middle",
                       new NoRouteToHostException("bottom"))));
@@ -84,10 +85,31 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
   public void testConnectExceptionExtraction() throws Throwable {
     intercept(ConnectException.class, "top",
         () -> {
-          throw maybeExtractNetworkException("",
+          throw maybeExtractNetworkException("p1",
               sdkException("top",
                   sdkException("middle",
                       new ConnectException("bottom"))));
         });
   }
+  @Test
+  public void testNoConstructorExtraction() throws Throwable {
+    intercept(PathIOException.class, NoConstructorIOE.MESSAGE,
+        () -> {
+          throw maybeExtractNetworkException("p1",
+              sdkException("top",
+                  sdkException("middle",
+                      new NoConstructorIOE())));
+        });
+  }
+
+
+  public static final class NoConstructorIOE extends IOException {
+
+    public static final String MESSAGE = "no-arg constructor";
+
+    public NoConstructorIOE() {
+      super(MESSAGE);
+    }
+  }
+
 }

@@ -61,7 +61,7 @@ public final class MultipartUtils {
    *
    * @param storeContext store context
    * @param s3 AmazonS3 client to use.
-   * @param prefix optional key prefix to narrow search.  If null or "/" then whole
+   * @param prefix optional key prefix to narrow search.  If null then whole
    *               bucket will be searched.
    * @param maxKeys maximum batch size to request at a time from S3.
    * @return an iterator of matching uploads
@@ -122,17 +122,9 @@ public final class MultipartUtils {
       this.s3 = s3;
       this.requestFactory = storeContext.getRequestFactory();
       this.maxKeys = maxKeys;
+      this.prefix = prefix;
       this.invoker = storeContext.getInvoker();
       this.auditSpan = storeContext.getActiveAuditSpan();
-      String p;
-      if (prefix == null) {
-        p = "/";
-      } else if (!prefix.endsWith("/")) {
-        p = prefix + "/";
-      } else {
-        p = prefix;
-      }
-      this.prefix = p;
 
       // request the first listing.
       requestNextBatch();

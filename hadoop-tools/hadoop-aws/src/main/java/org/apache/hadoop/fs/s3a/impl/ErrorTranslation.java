@@ -19,11 +19,11 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.NoRouteToHostException;
-import java.net.UnknownHostException;
+import java.lang.reflect.Constructor;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+
+import org.apache.hadoop.fs.PathIOException;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 
@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
  * The existing code las been left in S3AUtils it is to avoid cherry-picking
  * problems on backports.
  */
-public class ErrorTranslation {
+public final class ErrorTranslation {
 
   /**
    * Private constructor for utility class.
@@ -87,7 +87,7 @@ public class ErrorTranslation {
 
     // look inside
     Throwable cause = thrown.getCause();
-    while(cause != null && cause.getCause() != null) {
+    while (cause != null && cause.getCause() != null) {
       cause = cause.getCause();
     }
     if (!(cause instanceof IOException)) {
@@ -97,24 +97,41 @@ public class ErrorTranslation {
     // the cause can be extracted to an IOE.
     // rather than just return it, we try to preserve the stack trace
     // of the outer exception.
-    IOException ioe = (IOException) cause;
-    // now examine any IOE
-    if (ioe instanceof UnknownHostException) {
-      return (IOException) new UnknownHostException(thrown + ": " + ioe.getMessage())
-          .initCause(thrown);
-    }
-    if (ioe instanceof NoRouteToHostException) {
-      return (IOException) new NoRouteToHostException(thrown + ": " + ioe.getMessage())
-          .initCause(thrown);
-    }
-    if (ioe instanceof ConnectException) {
-      return (IOException) new ConnectException(thrown + ": " + ioe.getMessage())
-          .initCause(thrown);
-    }
+    // as a new instance is created through reflection, the
+    // class of the returned instance will be that of the innermost,
+    // unless no suitable constructor is available.
+    return wrapWithInnerIOE(path, thrown, (IOException) cause);
 
-    // currently not attempting to translate any other exception types.
-    return null;
+  }
 
+  /**
+   * Given an outer and an inner exception, create a new IOE
+   * of the inner type, with the outer exception as the cause.
+   * The message is derived from both.
+   * This only works if the inner exception has a constructor which
+   * takes a string; if not a PathIOException is created.
+   * <p>
+   * See {@code NetUtils}.
+   * @param <T> type of inner exception.
+   * @param path path of the failure.
+   * @param outer outermost exception.
+   * @param inner inner exception.
+   * @return the new exception.
+   */
+  @SuppressWarnings("unchecked")
+  private static <T extends IOException> IOException wrapWithInnerIOE(
+      String path,
+      Throwable outer,
+      T inner) {
+    String msg = outer.toString() + ": " + inner.getMessage();
+    Class<? extends Throwable> clazz = inner.getClass();
+    try {
+      Constructor<? extends Throwable> ctor = clazz.getConstructor(String.class);
+      Throwable t = ctor.newInstance(msg);
+      return (T) (t.initCause(outer));
+    } catch (Throwable e) {
+      return new PathIOException(path, msg, outer);
+    }
   }
 
   /**

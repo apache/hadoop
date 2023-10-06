@@ -39,7 +39,7 @@ The features which may be unavailable include:
 * Optional Bucket Probes at startup (`fs.s3a.bucket.probe = 0`).
   This is now the default -do not change it.
 * List API to use (`fs.s3a.list.version = 1`)
-* 
+
 ## Configuring s3a to connect to a third party store
 
 
@@ -337,17 +337,16 @@ this makes renaming and deleting significantly slower.
 ```xml
 <configuration>
 
-  
   <property>
     <name>fs.s3a.bucket.gcs-container.access.key</name>
     <value>GOOG1EZ....</value>
   </property>
-
+  
   <property>
     <name>fs.s3a.bucket.gcs-container.secret.key</name>
     <value>SECRETS</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.bucket.gcs-container.endpoint</name>
     <value>https://storage.googleapis.com</value>
@@ -372,18 +371,17 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.bucket.gcs-container.select.enabled</name>
     <value>false</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.bucket.gcs-container.path.style.access</name>
     <value>true</value>
   </property>
 
-  
   <property>
     <name>fs.s3a.bucket.gcs-container.endpoint.region</name>
     <value>dummy</value>
   </property>
-  
+
 </configuration>
 ```
 
