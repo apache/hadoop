@@ -353,11 +353,11 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Test(timeout = 12000)
   public void testLogSlowRPC() throws IOException, ServiceException,
       TimeoutException, InterruptedException {
-    //No test with legacy
+    // No test with legacy.
     assumeFalse(testWithLegacy);
     server.setLogSlowRPCThresholdMs(SLEEP_DURATION);
     TestRpcService2 client = getClient2();
-    // make 10 K fast calls
+    // Make 10 K fast calls.
     for (int x = 0; x < 10000; x++) {
       try {
         client.ping2(null, newEmptyRequest());
@@ -366,12 +366,18 @@ public class TestProtoBufRpc extends TestRpcBase {
       }
     }
 
-    // Ensure RPC metrics are updated
+    // Ensure RPC metrics are updated.
     RpcMetrics rpcMetrics = server.getRpcMetrics();
     assertThat(rpcMetrics.getProcessingSampleCount()).isGreaterThan(999L);
     long before = rpcMetrics.getRpcSlowCalls();
 
-    // make a really slow call. Sleep sleeps for 1000ms
+    // Sleep sleeps for 500ms(less than `logSlowRPCThresholdMs`),
+    // make sure we never called into Log slow RPC routine.
+    client.sleep(null, newSleepRequest(SLEEP_DURATION / 2));
+    long after = rpcMetrics.getRpcSlowCalls();
+    assertThat(before).isEqualTo(after);
+
+    // Make a really slow call. Sleep sleeps for 3000ms.
     client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
 
     // Ensure slow call is logged.

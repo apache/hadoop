@@ -579,15 +579,31 @@ public abstract class Server {
    * @param methodName - RPC Request method name
    * @param details - Processing Detail.
    *
-   * if this request took time exceed `logSlowRPCThresholdMs`
-   * we consider that as a slow RPC.
+   * if this request took too much time relative to other requests,
+   * and it took time exceed `logSlowRPCThresholdMs` we consider that as a slow RPC.
+   *
+   * The definition rules for calculating whether the current request took too much time
+   * compared to other requests are as follows:
+   * 3 is a magic number that comes from 3 sigma deviation.
+   * A very simple explanation can be found by searching for 68-95-99.7 rule.
+   * We flag an RPC as slow RPC if and only if it falls above 99.7% of requests.
+   * We start this logic only once we have enough sample size.
    */
   void logSlowRpcCalls(String methodName, Call call,
       ProcessingDetails details) {
+    final int deviation = 3;
+    // 1024 for minSampleSize just a guess -- not a number computed based on
+    // sample size analysis. It is chosen with the hope that this
+    // number is high enough to avoid spurious logging, yet useful
+    // in practice.
+    final int minSampleSize = 1024;
+    final double threeSigma = rpcMetrics.getProcessingMean() +
+        (rpcMetrics.getProcessingStdDev() * deviation);
 
-    long processingTime =
-            details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
-    if (processingTime > getLogSlowRPCThresholdMs()) {
+    long processingTime = details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
+    if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
+        (processingTime > threeSigma) &&
+        (processingTime > getLogSlowRPCThresholdMs())) {
       LOG.warn(
           "Slow RPC : {} took {} {} to process from client {},"
               + " the processing detail is {}",
