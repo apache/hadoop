@@ -30,6 +30,8 @@ import org.junit.After;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY;
 import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
@@ -652,6 +654,43 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
     }
+  }
+
+
+  @Test
+  public void testReconfigureReadStrategyParameters() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager =
+        nameNode.namesystem.getBlockManager().getDatanodeManager();
+    Configuration conf = nameNode.getConf();
+    // expect the default value to be false
+    assertFalse(conf.getBoolean(DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+        true));
+    assertFalse(conf.getBoolean(DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+        true));
+
+    try {
+      nameNode.reconfigurePropertyImpl(DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+          "non-boolean");
+      fail("should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property dfs.namenode.read.considerLoad "
+              + "from 'false' to 'non-boolean'",
+          e.getMessage());
+    }
+
+
+    nameNode.reconfigurePropertyImpl(DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+        "true");
+    nameNode.reconfigurePropertyImpl(DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+        "TRUE");
+    assertTrue(datanodeManager.isReadConsiderLoad());
+    assertTrue(datanodeManager.isReadConsiderStorageType());
+
+    nameNode.reconfigurePropertyImpl(DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+        null);
+    assertFalse(datanodeManager.isReadConsiderStorageType());
   }
 
   @After

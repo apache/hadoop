@@ -135,6 +135,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_I
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -362,7 +366,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
           DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
-          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK));
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
+          DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+          DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2362,6 +2368,10 @@ public class NameNode extends ReconfigurableBase implements
         (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK))) {
       return reconfigureDecommissionBackoffMonitorParameters(datanodeManager, property,
           newVal);
+    } else if (property.equals(DFS_NAMENODE_READ_CONSIDERLOAD_KEY)
+        || property.equals(DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY)) {
+      return reconfigureReadStrategyParameters(datanodeManager, property,
+          newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2668,6 +2678,52 @@ public class NameNode extends ReconfigurableBase implements
       return newSetting;
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfigureReadStrategyParameters(
+      final DatanodeManager datanodeManager, final String property,
+      final String newVal) throws ReconfigurationException {
+    namesystem.writeLock();
+    String result;
+    try {
+      switch (property) {
+      case DFS_NAMENODE_READ_CONSIDERLOAD_KEY: {
+        if (newVal != null && !newVal.equalsIgnoreCase("true")
+            && !newVal.equalsIgnoreCase("false")) {
+          throw new IllegalArgumentException(newVal + " is not boolean value");
+        }
+        boolean enable = (newVal == null ?
+            DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        result = Boolean.toString(enable);
+        datanodeManager.setReadConsiderLoad(enable);
+        break;
+      }
+      case DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY: {
+        if (newVal != null && !newVal.equalsIgnoreCase("true")
+            && !newVal.equalsIgnoreCase("false")) {
+          throw new IllegalArgumentException(newVal + " is not boolean value");
+        }
+        boolean enable = (newVal == null ?
+            DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        result = Boolean.toString(enable);
+        datanodeManager.setReadConsiderStorageType(enable);
+        break;
+      }
+      default: {
+        throw new IllegalArgumentException("Unexpected property " + property
+            + " in reconfigureReadStrategyParameters");
+      }
+      }
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(
+          property), e);
+    } finally {
+      namesystem.writeUnlock("reconfigureReadStrategyParameters");
     }
   }
 
