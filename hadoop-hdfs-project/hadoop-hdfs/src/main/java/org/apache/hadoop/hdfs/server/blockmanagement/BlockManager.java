@@ -5689,4 +5689,14 @@ public class BlockManager implements BlockStatsMXBean {
   public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
   }
+
+  @VisibleForTesting
+  public void setPendingPeriodInMs(long newVal) {
+    invalidateBlocks.setPendingPeriodInMs(newVal);
+  }
+
+  @VisibleForTesting
+  public long getPendingPeriodInMs() {
+    return invalidateBlocks.getPendingPeriodInMs();
+  }
 }

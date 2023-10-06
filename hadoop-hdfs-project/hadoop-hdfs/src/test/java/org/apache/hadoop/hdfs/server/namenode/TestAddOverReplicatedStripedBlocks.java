@@ -214,6 +214,10 @@ public class TestAddOverReplicatedStripedBlocks {
     assertEquals(1, bm.countNodes(bm.getStoredBlock(blockInfo))
         .corruptReplicas());
 
+    // Set a larger value for delete invalidation delay time of a block and
+    // avoid the redundant internal blocks will be deleted.
+    long oldPendingPeriodInMs = bm.getPendingPeriodInMs();
+    bm.setPendingPeriodInMs(3600000);
     // let a internal block be over replicated with 2 redundant block.
     blk.setBlockId(groupId + 2);
     cluster.injectBlocks(numDNs - 3, Arrays.asList(blk), bpid);
@@ -240,6 +244,8 @@ public class TestAddOverReplicatedStripedBlocks {
     for (int i = 1; i < groupSize; i++) {
       assertTrue(set.get(i));
     }
+    // restore original settings.
+    bm.setPendingPeriodInMs(oldPendingPeriodInMs);
   }
 
   // This test is going to be rewritten in HDFS-10854. Ignoring this test
