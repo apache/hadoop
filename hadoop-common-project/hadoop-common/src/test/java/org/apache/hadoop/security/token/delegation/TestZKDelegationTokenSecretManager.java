@@ -620,7 +620,8 @@ public class TestZKDelegationTokenSecretManager {
       tm2.init();
       return true;
     };
-    List<Future<Boolean>> futures = executorService.invokeAll(Arrays.asList(tm1Callable, tm2Callable));
+    List<Future<Boolean>> futures = executorService.invokeAll(
+        Arrays.asList(tm1Callable, tm2Callable));
     for(Future<Boolean> future : futures) {
       Assert.assertTrue(future.get());
     }
