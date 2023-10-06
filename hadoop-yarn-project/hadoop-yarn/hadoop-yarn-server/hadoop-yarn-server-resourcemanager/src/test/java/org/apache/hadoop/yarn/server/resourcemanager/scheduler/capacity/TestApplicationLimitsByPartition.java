@@ -1027,4 +1027,7 @@ public class TestApplicationLimitsByPartition {
     rm.close();
 
   }
+  
+  // just test for yarn compile.
+   
 }
