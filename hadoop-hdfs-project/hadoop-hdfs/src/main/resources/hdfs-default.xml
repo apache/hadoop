@@ -342,6 +342,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.choosereplicatodelete.considerLoad</name>
+    <value>false</value>
+    <description>Decide if chooseReplicaToDelete considers the target's load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>

@@ -103,6 +103,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
   private boolean considerLoadByVolume = false;
+  private boolean considerLoad2chooseReplicaDeleting;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
   private volatile boolean excludeSlowNodesEnabled;
@@ -136,6 +137,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.considerLoadByVolume = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
+    );
+    this.considerLoad2chooseReplicaDeleting = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_CHOOSEREPLICATODELETE_CONSIDERLOAD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_CHOOSEREPLICATODELETE_CONSIDERLOAD_DEFAULT
     );
     this.stats = stats;
     this.clusterMap = clusterMap;
@@ -1217,6 +1222,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     DatanodeStorageInfo oldestHeartbeatStorage = null;
     long minSpace = Long.MAX_VALUE;
     DatanodeStorageInfo minSpaceStorage = null;
+    int minLoad = Integer.MAX_VALUE;
+    DatanodeStorageInfo minLoadStorage = null;
 
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all heartbeats are within the tolerable heartbeat interval
@@ -1229,6 +1236,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       long free = storage.getRemaining();
       long lastHeartbeat = node.getLastUpdateMonotonic();
+      final int nodeLoad = node.getXceiverCount();
+
       if (lastHeartbeat < oldestHeartbeat) {
         oldestHeartbeat = lastHeartbeat;
         oldestHeartbeatStorage = storage;
@@ -1237,11 +1246,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         minSpace = free;
         minSpaceStorage = storage;
       }
+      if (considerLoad2chooseReplicaDeleting && nodeLoad < minLoad) {
+        minLoad = nodeLoad;
+        minLoadStorage = storage;
+      }
     }
 
     final DatanodeStorageInfo storage;
     if (oldestHeartbeatStorage != null) {
       storage = oldestHeartbeatStorage;
+    } else if (minLoadStorage != null) {
+      storage = minLoadStorage;
     } else if (minSpaceStorage != null) {
       storage = minSpaceStorage;
     } else {
@@ -1385,5 +1400,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @Override
   public boolean getExcludeSlowNodesEnabled() {
     return excludeSlowNodesEnabled;
+  }
+
+  @VisibleForTesting
+  public void setConsiderLoad2chooseReplicaDeleting(boolean consider) {
+    this.considerLoad2chooseReplicaDeleting = consider;
   }
 }

@@ -280,6 +280,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
       = false;
+  public static final String DFS_NAMENODE_CHOOSEREPLICATODELETE_CONSIDERLOAD_KEY =
+      "dfs.namenode.choosereplicatodelete.considerLoad";
+  public static final boolean
+      DFS_NAMENODE_CHOOSEREPLICATODELETE_CONSIDERLOAD_DEFAULT = false;
   public static final String DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
   public static final int DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT = 3;
