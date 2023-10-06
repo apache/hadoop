@@ -592,6 +592,7 @@ public abstract class Server {
   void logSlowRpcCalls(String methodName, Call call,
       ProcessingDetails details) {
     final int deviation = 3;
+
     // 1024 for minSampleSize just a guess -- not a number computed based on
     // sample size analysis. It is chosen with the hope that this
     // number is high enough to avoid spurious logging, yet useful
