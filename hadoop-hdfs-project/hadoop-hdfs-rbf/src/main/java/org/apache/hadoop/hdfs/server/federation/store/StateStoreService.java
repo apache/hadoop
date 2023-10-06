@@ -427,7 +427,6 @@ public class StateStoreService extends CompositeService {
           result = cachedStore.loadCache(force);
         } catch (IOException e) {
           LOG.error("Error updating cache for {}", cacheName, e);
-          result = false;
         }
         if (!result) {
           success = false;
