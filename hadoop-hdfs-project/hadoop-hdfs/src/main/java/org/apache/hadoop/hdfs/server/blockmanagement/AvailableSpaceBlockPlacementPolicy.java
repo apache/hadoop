@@ -212,10 +212,10 @@ public class AvailableSpaceBlockPlacementPolicy extends
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b, boolean isBalanceLocal) {
 
-    boolean toleranceLimit = Math.min(a.getDfsUsedPercent(), b.getDfsUsedPercent())
-            >= balancedSpaceToleranceLimit;
+    boolean toleranceLimit = Math.max(a.getDfsUsedPercent(), b.getDfsUsedPercent())
+            < balancedSpaceToleranceLimit;
     if (a.equals(b)
-        || (!toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
+        || (toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
             < balancedSpaceTolerance) || ((
         isBalanceLocal && a.getDfsUsedPercent() < 50))) {
       return 0;
