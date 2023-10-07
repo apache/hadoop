@@ -620,7 +620,7 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
     double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
-    this.congestionRatio = congestionRationTmp > 0 ? 
+    this.congestionRatio = congestionRationTmp > 0 ?
         congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
