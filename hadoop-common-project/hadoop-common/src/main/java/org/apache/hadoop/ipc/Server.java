@@ -579,8 +579,8 @@ public abstract class Server {
    * @param methodName - RPC Request method name
    * @param details - Processing Detail.
    *
-   * if this request took too much time relative to other requests,
-   * and it took time exceed `logSlowRPCThresholdMs` we consider that as a slow RPC.
+   * If a request took significant more time than other requests,
+   * and its processing time is at least `logSlowRPCThresholdMs` we consider that as a slow RPC.
    *
    * The definition rules for calculating whether the current request took too much time
    * compared to other requests are as follows:
@@ -601,15 +601,15 @@ public abstract class Server {
     final double threeSigma = rpcMetrics.getProcessingMean() +
         (rpcMetrics.getProcessingStdDev() * deviation);
 
-    long processingTime = details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
+    final TimeUnit metricsTimeUnit = rpcMetrics.getMetricsTimeUnit();
+    long processingTime = details.get(Timing.PROCESSING, metricsTimeUnit);
+    long logSlowRPCThresholdTime =
+        metricsTimeUnit.convert(getLogSlowRPCThresholdMs(), TimeUnit.MILLISECONDS);
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma) &&
-        (processingTime > getLogSlowRPCThresholdMs())) {
-      LOG.warn(
-          "Slow RPC : {} took {} {} to process from client {},"
-              + " the processing detail is {}",
-          methodName, processingTime, rpcMetrics.getMetricsTimeUnit(), call,
-          details.toString());
+        (processingTime > logSlowRPCThresholdTime)) {
+      LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}",
+          methodName, processingTime, metricsTimeUnit, call, details.toString());
       rpcMetrics.incrSlowRpc();
     }
   }
