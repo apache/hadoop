@@ -515,8 +515,10 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
-    this.congestionRatio = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ?
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   /**
@@ -616,8 +618,10 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
     this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
-    this.congestionRatio = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ? 
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   @Override  // ReconfigurableBase
