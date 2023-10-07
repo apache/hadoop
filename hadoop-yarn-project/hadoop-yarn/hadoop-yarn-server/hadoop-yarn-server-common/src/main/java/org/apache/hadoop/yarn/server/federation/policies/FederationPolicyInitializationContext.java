@@ -32,6 +32,7 @@ public class FederationPolicyInitializationContext {
   private SubClusterResolver federationSubclusterResolver;
   private FederationStateStoreFacade federationStateStoreFacade;
   private SubClusterId homeSubcluster;
+  private String applicationTag;
 
   public FederationPolicyInitializationContext() {
     federationPolicyConfiguration = null;
@@ -42,10 +43,17 @@ public class FederationPolicyInitializationContext {
   public FederationPolicyInitializationContext(
       SubClusterPolicyConfiguration policy, SubClusterResolver resolver,
       FederationStateStoreFacade storeFacade, SubClusterId home) {
+    this(policy, resolver, storeFacade, home, null);
+  }
+
+  public FederationPolicyInitializationContext(
+      SubClusterPolicyConfiguration policy, SubClusterResolver resolver,
+      FederationStateStoreFacade storeFacade, SubClusterId home, String tag) {
     this.federationPolicyConfiguration = policy;
     this.federationSubclusterResolver = resolver;
     this.federationStateStoreFacade = storeFacade;
     this.homeSubcluster = home;
+    this.applicationTag = tag;
   }
 
   /**
@@ -127,4 +135,7 @@ public class FederationPolicyInitializationContext {
     this.homeSubcluster = homeSubcluster;
   }
 
+  public String getApplicationTag() {
+    return applicationTag;
+  }
 }

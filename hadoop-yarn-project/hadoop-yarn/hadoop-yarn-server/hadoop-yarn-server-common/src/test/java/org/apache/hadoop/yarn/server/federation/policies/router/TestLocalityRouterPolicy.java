@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,6 +43,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.FEDERATION_POLICY_LABEL_TAG_PREFIX;
 
 /**
  * Test class to validate the correctness of LocalityRouterPolicy.
@@ -241,7 +246,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     // Remember the current value of subcluster3
     Float value =
         getPolicyInfo().getRouterPolicyWeights().get(subClusterToBlacklist);
-    getPolicyInfo().getRouterPolicyWeights().remove(subClusterToBlacklist);
+    getPolicyInfo().getRouterPolicyWeights().remove(new SubClusterIdInfo(subClusterToBlacklist));
     initializePolicy(new YarnConfiguration());
 
     FederationPoliciesTestUtil
@@ -276,6 +281,73 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     // Set again the previous value for the other tests
     getPolicyInfo().getRouterPolicyWeights()
         .put(new SubClusterIdInfo(subClusterToBlacklist), value);
+  }
+
+  @Test
+  public void testChooseSubClusterByTag() throws YarnException {
+    // Case 1: Request is NODE level
+    List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
+    requests.add(ResourceRequest
+        .newInstance(Priority.UNDEFINED, "node1", Resource.newInstance(10, 1),
+            1));
+    requests.add(ResourceRequest
+        .newInstance(Priority.UNDEFINED, "rack1", Resource.newInstance(10, 1),
+            1));
+    requests.add(ResourceRequest
+        .newInstance(Priority.UNDEFINED, ResourceRequest.ANY,
+            Resource.newInstance(10, 1), 1));
+    ApplicationSubmissionContext asc = ApplicationSubmissionContext
+        .newInstance(null, null, null, null, null, false, false, 0,
+            Resources.none(), null, false, null, null);
+    asc.setAMContainerResourceRequests(requests);
+
+    SubClusterId chosen =
+        ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
+
+    // If node1 is active, we should choose the sub cluster with node1
+    Set<String> activeSubClusterSet =
+        getActiveSubclusters().keySet().stream().map(subClusterId -> subClusterId.getId())
+            .collect(Collectors.toSet());
+    if (activeSubClusterSet.contains(
+        getFederationPolicyContext().getFederationSubclusterResolver()
+            .getSubClusterForNode("node1").getId())) {
+      Assert.assertEquals(
+          getFederationPolicyContext().getFederationSubclusterResolver()
+              .getSubClusterForNode("node1"), chosen);
+    } else {
+      try {
+        // If node1 is inactive, we should choose the sub cluster where the rack located.
+        Set<SubClusterId> subClusterIdSet =
+            getFederationPolicyContext().getFederationSubclusterResolver()
+                .getSubClustersForRack("rack1");
+        Assert.assertEquals(2, subClusterIdSet.size());
+        subClusterIdSet.iterator().next().getId();
+        Assert.assertTrue(subClusterIdSet.contains(chosen));
+      } catch (YarnException ex) {
+        // If we can not reslove the rack, we will choose the sub cluster by tag
+        Assert.assertTrue(ex.getMessage().contains("Cannot resolve rack rack1"));
+        Assert.assertTrue(getActiveSubclusters().containsKey(chosen));
+        Assert.assertEquals("subcluster0", chosen.getId());
+      }
+    }
+
+    // Case 2: Request is ANY
+    for (int i = 0; i < 4; i ++) {
+      requests = new ArrayList<ResourceRequest>();
+      requests.add(ResourceRequest.newInstance(Priority.UNDEFINED, ResourceRequest.ANY,
+          Resource.newInstance(10, 1), 1));
+      asc = ApplicationSubmissionContext.newInstance(null, null, null, null, null, false, false, 0,
+          Resources.none(), null, false, null, null);
+      asc.setApplicationTags(
+          Sets.newHashSet(FEDERATION_POLICY_LABEL_TAG_PREFIX + ":choose_sc" + i));
+      asc.setAMContainerResourceRequests(requests);
+
+      chosen = ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
+      SubClusterId id = SubClusterId.newInstance("subcluster" + i);
+      if (getActiveSubclusters().containsKey(id)) {
+        Assert.assertEquals("subcluster" + i, chosen.getId());
+      }
+    }
   }
 }
 

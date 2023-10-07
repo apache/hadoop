@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.FEDERATION_POLICY_LABEL_TAG_PREFIX;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -64,7 +66,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
     // simulate N subclusters each with a 5% chance of being inactive
     for (int i = 0; i < numSubClusters; i++) {
-      SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
+      SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
         long now = Time.now();
@@ -83,6 +85,19 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
         routerWeights.put(sc, weight);
         amrmWeights.put(sc, weight);
       }
+
+      // Set weights by tag
+      Map<SubClusterIdInfo, Float> tagWeights = new HashMap<>();
+      for (int j = 0; j < numSubClusters; j ++) {
+        SubClusterIdInfo subClusterIdInfo = new SubClusterIdInfo("subcluster" + j);
+        if (i == j) {
+          tagWeights.put(subClusterIdInfo, 1F);
+        } else {
+          tagWeights.put(subClusterIdInfo, 0F);
+        }
+      }
+      getPolicyInfo().setRouterPolicyWeights("choose_sc" + i, tagWeights);
+      getPolicyInfo().setAMRMPolicyWeights("choose_sc" + i, tagWeights);
     }
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
@@ -139,6 +154,20 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
                     + actualWeight + " expected weight: " + expectedWeight,
                 actualWeight == 0);
 
+      }
+    }
+  }
+
+  @Test
+  public void testChooseSubClusterByTag() throws YarnException {
+    for (int i = 0; i < 20; i ++) {
+      SubClusterId id = SubClusterId.newInstance("subcluster" + i);
+      if (getActiveSubclusters().containsKey(id)) {
+        when(getApplicationSubmissionContext().getApplicationTags()).thenReturn(
+            Sets.newHashSet(FEDERATION_POLICY_LABEL_TAG_PREFIX + ":choose_sc" + i));
+        SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
+            .getHomeSubcluster(getApplicationSubmissionContext(), null);
+        Assert.assertEquals("subcluster" + i, chosen.getId());
       }
     }
   }

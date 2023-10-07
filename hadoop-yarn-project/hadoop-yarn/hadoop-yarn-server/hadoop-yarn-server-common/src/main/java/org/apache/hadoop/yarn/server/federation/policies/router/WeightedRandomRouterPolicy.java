@@ -34,14 +34,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  */
 public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
   @Override
-  protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+  protected SubClusterId chooseSubCluster(String queue, String tag,
+      Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
 
     // note: we cannot pre-compute the weights, as the set of activeSubCluster
     // changes dynamically (and this would unfairly spread the load to
     // sub-clusters adjacent to an inactive one), hence we need to count/scan
     // the list and based on weight pick the next sub-cluster.
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights(tag);
 
     ArrayList<Float> weightList = new ArrayList<>();
     ArrayList<SubClusterId> scIdList = new ArrayList<>();

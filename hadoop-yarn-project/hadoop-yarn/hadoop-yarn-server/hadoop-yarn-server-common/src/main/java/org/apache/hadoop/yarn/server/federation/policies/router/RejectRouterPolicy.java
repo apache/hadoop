@@ -44,8 +44,8 @@ public class RejectRouterPolicy extends AbstractRouterPolicy {
   }
 
   @Override
-  protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+  protected SubClusterId chooseSubCluster(String queue, String tag,
+      Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
     throw new FederationPolicyException(
         "The policy configured for this queue (" + queue + ") "
         + "reject all routing requests by construction. Application in "

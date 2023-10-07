@@ -17,10 +17,13 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.FEDERATION_POLICY_LABEL_TAG_PREFIX;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -69,6 +72,11 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
         routerWeights.put(sc, weight);
         amrmWeights.put(sc, weight);
       }
+
+      Map<SubClusterIdInfo, Float> tagWeights = new HashMap<>();
+      tagWeights.put(new SubClusterIdInfo("sc" + i), 1F);
+      getPolicyInfo().setRouterPolicyWeights("choose_sc" + i, tagWeights);
+      getPolicyInfo().setAMRMPolicyWeights("choose_sc" + i, tagWeights);
     }
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
@@ -109,5 +117,17 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
             .getHomeSubcluster(getApplicationSubmissionContext(), null));
   }
 
-
+  @Test
+  public void testChooseSubClusterByTag() throws YarnException {
+    for (int i = 0; i < 20; i ++) {
+      SubClusterId id = SubClusterId.newInstance("sc" + i);
+      if (getActiveSubclusters().containsKey(id)) {
+        when(getApplicationSubmissionContext().getApplicationTags()).thenReturn(
+            Sets.newHashSet(FEDERATION_POLICY_LABEL_TAG_PREFIX + ":choose_sc" + i));
+        SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
+            .getHomeSubcluster(getApplicationSubmissionContext(), null);
+        Assert.assertEquals("sc" + i, chosen.getId());
+      }
+    }
+  }
 }

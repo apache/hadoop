@@ -1,0 +1,35 @@
+{
+  "routerPolicyWeights": {
+    "entry": [
+      {
+        "key": {
+          "id": "SC-1"
+        },
+        "value": "0.1"
+      },
+      {
+        "key": {
+          "id": "SC-2"
+        },
+        "value": "0.9"
+      }
+    ]
+  },
+  "amrmPolicyWeights": {
+    "entry": [
+      {
+        "key": {
+          "id": "SC-1"
+        },
+        "value": "0.2"
+      },
+      {
+        "key": {
+          "id": "SC-2"
+        },
+        "value": "0.8"
+      }
+    ]
+  },
+  "headroomAlpha": "1.0"
+}

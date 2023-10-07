@@ -440,6 +440,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       String queue = this.amRegistrationResponse.getQueue();
       String homeSCId = this.homeSubClusterId.getId();
       String user = applicationContext.getUser();
+      ApplicationSubmissionContext originalSubmissionContext = null;
 
       for (Map.Entry<String, Token<AMRMTokenIdentifier>> entry : uamMap.entrySet()) {
         String keyScId = entry.getKey();
@@ -452,7 +453,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         FederationProxyProviderUtil.updateConfForFederation(config, keyScId);
 
         try {
-          ApplicationSubmissionContext originalSubmissionContext =
+          originalSubmissionContext =
               federationFacade.getApplicationSubmissionContext(applicationId);
 
           // ReAttachUAM
@@ -534,7 +535,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // Initialize the AMRMProxyPolicy
         queue = this.amRegistrationResponse.getQueue();
         this.policyInterpreter = FederationPolicyUtils.loadAMRMPolicy(queue, this.policyInterpreter,
-            getConf(), this.federationFacade, this.homeSubClusterId);
+            getConf(), this.federationFacade, this.homeSubClusterId, originalSubmissionContext);
       }
     } catch (IOException | YarnException e) {
       throw new YarnRuntimeException(e);
@@ -692,8 +693,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     // Initialize the AMRMProxyPolicy
     try {
+      ApplicationSubmissionContext originalSubmissionContext =
+          federationFacade.getApplicationSubmissionContext(appId);
       this.policyInterpreter = FederationPolicyUtils.loadAMRMPolicy(queue, this.policyInterpreter,
-          getConf(), this.federationFacade, this.homeSubClusterId);
+          getConf(), this.federationFacade, this.homeSubClusterId, originalSubmissionContext);
     } catch (FederationPolicyInitializationException e) {
       throw new YarnRuntimeException(e);
     }

@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.AbstractConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo.PolicyWeights;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -48,11 +49,15 @@ public abstract class AbstractRouterPolicy extends
   public void validate(WeightedPolicyInfo newPolicyInfo)
       throws FederationPolicyInitializationException {
     super.validate(newPolicyInfo);
-    Map<SubClusterIdInfo, Float> newWeights =
-        newPolicyInfo.getRouterPolicyWeights();
-    if (newWeights == null || newWeights.size() < 1) {
-      throw new FederationPolicyInitializationException(
-          "Weight vector cannot be null/empty.");
+    for (PolicyWeights policyWeights : newPolicyInfo.getRouterPolicyWeightsMap().values()) {
+      Map<SubClusterIdInfo, Float> weightMap = policyWeights.getWeigths();
+      if (weightMap == null || weightMap.size() < 1) {
+        throw new FederationPolicyInitializationException("Weight vector cannot be null/empty.");
+      }
+    }
+    if (!newPolicyInfo.getRouterPolicyWeightsMap()
+        .containsKey(FederationPolicyUtils.DEFAULT_POLICY_KEY)) {
+      throw new FederationPolicyInitializationException("Default policy must be set.");
     }
   }
 
@@ -83,7 +88,7 @@ public abstract class AbstractRouterPolicy extends
    *
    * @throws YarnException if the policy fails to choose a sub-cluster
    */
-  protected abstract SubClusterId chooseSubCluster(String queue,
+  protected abstract SubClusterId chooseSubCluster(String queue, String tag,
       Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException;
 
   /**
@@ -150,8 +155,10 @@ public abstract class AbstractRouterPolicy extends
       blackLists.forEach(filteredSubClusters::remove);
     }
 
+    String tag = FederationPolicyUtils.getApplicationPolicyTag(appContext);
+
     // pick the chosen subCluster from the active ones
-    return chooseSubCluster(appContext.getQueue(), filteredSubClusters);
+    return chooseSubCluster(appContext.getQueue(), tag, filteredSubClusters);
   }
 
   /**
@@ -182,6 +189,6 @@ public abstract class AbstractRouterPolicy extends
     Map<SubClusterId, SubClusterInfo> filteredSubClusters = getActiveSubclusters();
 
     // pick the chosen subCluster from the active ones
-    return chooseSubCluster(request.getQueue(), filteredSubClusters);
+    return chooseSubCluster(request.getQueue(), null, filteredSubClusters);
   }
 }

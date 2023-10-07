@@ -22,6 +22,7 @@ import java.util.Map;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo.PolicyWeights;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -48,22 +49,24 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
     super.reinitialize(policyContext);
 
     // check extra constraints
-    for (Float weight : getPolicyInfo().getRouterPolicyWeights().values()) {
-      if (weight != 0 && weight != 1) {
-        // reset to old policyInfo if check fails
-        setPolicyInfo(tempPolicy);
-        throw new FederationPolicyInitializationException(
-            this.getClass().getCanonicalName()
-                + " policy expects all weights to be either "
-                + "\"0\" or \"1\"");
+    for (PolicyWeights policyWeights : getPolicyInfo().getRouterPolicyWeightsMap().values()) {
+      Map<SubClusterIdInfo, Float> weightMap = policyWeights.getWeigths();
+      for (Float weight : weightMap.values()) {
+        if (weight != 0 && weight != 1) {
+          // reset to old policyInfo if check fails
+          setPolicyInfo(tempPolicy);
+          throw new FederationPolicyInitializationException(
+              this.getClass().getCanonicalName() + " policy expects all weights to be either " +
+                  "\"0\" or \"1\"");
+        }
       }
     }
   }
 
   @Override
-  protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
+  protected SubClusterId chooseSubCluster(String queue, String tag,
+      Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights(tag);
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
     for (Map.Entry<SubClusterId, SubClusterInfo> entry : preSelectSubclusters.entrySet()) {

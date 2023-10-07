@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo.PolicyWeights;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
@@ -70,19 +73,23 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
       LoggerFactory.getLogger(LocalityRouterPolicy.class);
 
   private SubClusterResolver resolver;
-  private List<SubClusterId> enabledSCs;
+  private Map<String, Set<SubClusterId>> enabledSCsByTag;
 
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
     super.reinitialize(policyContext);
     resolver = policyContext.getFederationSubclusterResolver();
-    Map<SubClusterIdInfo, Float> weights =
-        getPolicyInfo().getRouterPolicyWeights();
-    enabledSCs = new ArrayList<>();
-    for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
-      if (entry != null && entry.getValue() > 0) {
-        enabledSCs.add(entry.getKey().toId());
+    enabledSCsByTag = new HashMap();
+    for (Map.Entry<String, PolicyWeights> entry : getPolicyInfo().getRouterPolicyWeightsMap()
+        .entrySet()) {
+      String tag = entry.getKey();
+      Map<SubClusterIdInfo, Float> weights = entry.getValue().getWeigths();
+      enabledSCsByTag.putIfAbsent(tag, new HashSet<>());
+      for (Map.Entry<SubClusterIdInfo, Float> entry1 : weights.entrySet()) {
+        if (entry1 != null && entry1.getValue() > 0) {
+          enabledSCsByTag.get(tag).add(entry1.getKey().toId());
+        }
       }
     }
   }
@@ -164,8 +171,9 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           nodeRequest.getResourceName(), rackRequest.getResourceName(),
           anyRequest.getResourceName());
 
+      String tag = FederationPolicyUtils.getApplicationPolicyTag(appSubmissionContext);
       // Handle "node" requests
-      if (validSubClusters.contains(targetId) && enabledSCs
+      if (validSubClusters.contains(targetId) && enabledSCsByTag.get(tag)
           .contains(targetId)) {
         LOG.info("Node {} is in SubCluster: {}.", nodeRequest.getResourceName(), targetId);
         return targetId;
