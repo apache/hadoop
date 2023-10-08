@@ -386,7 +386,7 @@ public class QueueMetrics implements MetricsSource {
    * @param partition
    * @return QueueMetrics
    */
-  private QueueMetrics getPartitionMetrics(String partition) {
+  private synchronized QueueMetrics getPartitionMetrics(String partition) {
 
     String partitionJMXStr = partition;
     if ((partition == null)
