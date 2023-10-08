@@ -55,6 +55,8 @@ public abstract class RouterBlock extends HtmlBlock {
   private final FederationStateStoreFacade facade;
   private final Configuration conf;
 
+  public static final String ROUTER = "router";
+
   public RouterBlock(Router router, ViewContext ctx) {
     super(ctx);
     this.ctx = ctx;

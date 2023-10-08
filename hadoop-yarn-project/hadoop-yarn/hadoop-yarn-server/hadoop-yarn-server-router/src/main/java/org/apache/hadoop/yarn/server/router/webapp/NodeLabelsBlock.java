@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -158,6 +159,14 @@ public class NodeLabelsBlock extends RouterBlock {
         String type = (info.getExclusivity()) ? "Exclusive Partition" : "Non Exclusive Partition";
         row = row.td(type);
         int nActiveNMs = info.getActiveNMs();
+        if (nActiveNMs > 0) {
+          row = row.td().a(url("nodes",
+              "?" + YarnWebParams.NODE_LABEL + "=" + info.getName()), String.valueOf(nActiveNMs))
+              .__();
+        } else {
+          row = row.td(String.valueOf(nActiveNMs));
+        }
+
         row = row.td(String.valueOf(nActiveNMs));
         PartitionInfo partitionInfo = info.getPartitionInfo();
         ResourceInfo available = partitionInfo.getResourceAvailable();

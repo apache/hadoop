@@ -25,6 +25,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
@@ -40,6 +41,8 @@ import com.google.inject.Inject;
 import java.util.Date;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 
 /**
  * Nodes block for the Router Web UI.
@@ -61,12 +64,15 @@ public class NodesBlock extends RouterBlock {
 
     // Get subClusterName
     String subClusterName = $(NODE_SC);
+    String state = $(NODE_STATE);
+    String nodeLabel = $(NODE_LABEL);
 
     // We will try to get the subClusterName.
     // If the subClusterName is not empty,
     // it means that we need to get the Node list of a subCluster.
     NodesInfo nodesInfo;
-    if (subClusterName != null && !subClusterName.isEmpty()) {
+    if (subClusterName != null && !subClusterName.isEmpty() &&
+        !ROUTER.equalsIgnoreCase(subClusterName)) {
       initSubClusterMetricsOverviewTable(html, subClusterName);
       nodesInfo = getSubClusterNodesInfo(subClusterName);
     } else {
@@ -76,7 +82,7 @@ public class NodesBlock extends RouterBlock {
     }
 
     // Initialize NodeInfo List
-    initYarnFederationNodesOfCluster(nodesInfo, html);
+    initYarnFederationNodesOfCluster(nodesInfo, html, state, nodeLabel);
   }
 
   private NodesInfo getYarnFederationNodesInfo(boolean isEnabled) {
@@ -100,7 +106,7 @@ public class NodesBlock extends RouterBlock {
       if (subClusterInfo != null) {
         // Prepare webAddress
         String webAddress = subClusterInfo.getRMWebServiceAddress();
-        String herfWebAppAddress = "";
+        String herfWebAppAddress;
         if (webAddress != null && !webAddress.isEmpty()) {
           herfWebAppAddress =
               WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAddress;
@@ -124,7 +130,8 @@ public class NodesBlock extends RouterBlock {
     return nodes;
   }
 
-  private void initYarnFederationNodesOfCluster(NodesInfo nodesInfo, Block html) {
+  private void initYarnFederationNodesOfCluster(NodesInfo nodesInfo, Block html,
+      String filterState, String filterLabel) {
     TBODY<TABLE<Hamlet>> tbody = html.table("#nodes").thead().tr()
         .th(".nodelabels", "Node Labels")
         .th(".rack", "Rack")
@@ -143,6 +150,23 @@ public class NodesBlock extends RouterBlock {
 
     if (nodesInfo != null && CollectionUtils.isNotEmpty(nodesInfo.getNodes())) {
       for (NodeInfo info : nodesInfo.getNodes()) {
+        if (filterState != null && !filterState.isEmpty() && !filterState.equals(info.getState())) {
+          continue;
+        }
+
+        // Besides state, we need to filter label as well.
+        if (!filterLabel.equals(RMNodeLabelsManager.ANY)) {
+          if (filterLabel.isEmpty()) {
+            // Empty label filter means only shows nodes without label
+            if (!info.getNodeLabels().isEmpty()) {
+              continue;
+            }
+          } else if (!info.getNodeLabels().contains(filterLabel)) {
+            // Only nodes have given label can show on web page.
+            continue;
+          }
+        }
+
         int usedMemory = (int) info.getUsedMemory();
         int availableMemory = (int) info.getAvailableMemory();
         TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();

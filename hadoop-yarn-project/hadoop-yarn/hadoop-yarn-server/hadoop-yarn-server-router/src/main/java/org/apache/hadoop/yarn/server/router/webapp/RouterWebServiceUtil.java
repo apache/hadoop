@@ -764,4 +764,13 @@ public final class RouterWebServiceUtil {
     // return caller UGI
     return callerUGI;
   }
+
+  public static String generateWebTitle(String title, String msg) {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(title);
+    stringBuilder.append(" (");
+    stringBuilder.append(msg);
+    stringBuilder.append(")");
+    return stringBuilder.toString();
+  }
 }
