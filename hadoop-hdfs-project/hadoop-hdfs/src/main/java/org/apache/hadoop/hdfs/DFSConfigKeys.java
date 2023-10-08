@@ -2042,5 +2042,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  // Block Recovery Policy
+  public static final String DFS_BLOCK_RECOVERY_EOF_RETRY_KEY = "dfs.block-recovery.retry.max.attempts";
+  public static final int DFS_BLOCK_RECOVERY_EOF_RETRY_DEFAULT = 3;
 
 }
