@@ -83,6 +83,7 @@ public abstract class AbstractRouterPolicy extends
    * sub-clusters.
    *
    * @param queue the queue for this application/reservation
+   * @param tag the application tag which is start with "FEDERATION_POLICY_LABEL_TAG:"
    * @param preSelectSubClusters a pre-filter set of sub-clusters
    * @return the chosen sub-cluster
    *

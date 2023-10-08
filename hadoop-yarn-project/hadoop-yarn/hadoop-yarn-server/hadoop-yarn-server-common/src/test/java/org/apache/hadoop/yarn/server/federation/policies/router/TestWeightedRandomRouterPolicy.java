@@ -88,7 +88,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
       // Set weights by tag
       Map<SubClusterIdInfo, Float> tagWeights = new HashMap<>();
-      for (int j = 0; j < numSubClusters; j ++) {
+      for (int j = 0; j < numSubClusters; j++) {
         SubClusterIdInfo subClusterIdInfo = new SubClusterIdInfo("subcluster" + j);
         if (i == j) {
           tagWeights.put(subClusterIdInfo, 1F);
@@ -160,7 +160,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
   @Test
   public void testChooseSubClusterByTag() throws YarnException {
-    for (int i = 0; i < 20; i ++) {
+    for (int i = 0; i < 20; i++) {
       SubClusterId id = SubClusterId.newInstance("subcluster" + i);
       if (getActiveSubclusters().containsKey(id)) {
         when(getApplicationSubmissionContext().getApplicationTags()).thenReturn(

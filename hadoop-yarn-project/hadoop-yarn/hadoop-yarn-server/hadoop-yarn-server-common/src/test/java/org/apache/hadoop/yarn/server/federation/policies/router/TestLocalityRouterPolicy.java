@@ -332,7 +332,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     }
 
     // Case 2: Request is ANY
-    for (int i = 0; i < 4; i ++) {
+    for (int i = 0; i < 4; i++) {
       requests = new ArrayList<ResourceRequest>();
       requests.add(ResourceRequest.newInstance(Priority.UNDEFINED, ResourceRequest.ANY,
           Resource.newInstance(10, 1), 1));

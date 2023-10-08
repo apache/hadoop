@@ -42,10 +42,9 @@ public abstract class AbstractAMRMProxyPolicy extends
       throws FederationPolicyInitializationException {
     super.validate(newPolicyInfo);
     for (PolicyWeights policyWeights : newPolicyInfo.getAmrmPolicyWeightsMap().values()) {
-      Map<SubClusterIdInfo, Float> newWeights = policyWeights.getWeigths();
-      if (newWeights == null || newWeights.size() < 1) {
-        throw new FederationPolicyInitializationException(
-            "Weight vector cannot be null/empty.");
+      if (policyWeights == null || policyWeights.getWeigths() == null ||
+          policyWeights.getWeigths().size() < 1) {
+        throw new FederationPolicyInitializationException("Weight vector cannot be null/empty.");
       }
     }
     if (!newPolicyInfo.getAmrmPolicyWeightsMap()

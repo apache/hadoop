@@ -119,7 +119,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
 
   @Test
   public void testChooseSubClusterByTag() throws YarnException {
-    for (int i = 0; i < 20; i ++) {
+    for (int i = 0; i < 20; i++) {
       SubClusterId id = SubClusterId.newInstance("sc" + i);
       if (getActiveSubclusters().containsKey(id)) {
         when(getApplicationSubmissionContext().getApplicationTags()).thenReturn(

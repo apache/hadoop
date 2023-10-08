@@ -61,7 +61,7 @@ public class WeightedPolicyInfo {
 
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class PolicyWeights {
-    Map<SubClusterIdInfo, Float> weigths;
+    private Map<SubClusterIdInfo, Float> weigths;
 
     public PolicyWeights() {
     }

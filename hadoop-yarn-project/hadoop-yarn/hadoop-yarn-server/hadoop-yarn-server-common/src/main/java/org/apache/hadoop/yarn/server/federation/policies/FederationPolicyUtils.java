@@ -152,6 +152,7 @@ public final class FederationPolicyUtils {
    * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @param homeSubClusterId home sub-cluster id
+   * @param submissionContext application submission context
    * @return FederationAMRMProxyPolicy recreated
    * @throws FederationPolicyInitializationException if fails
    */
