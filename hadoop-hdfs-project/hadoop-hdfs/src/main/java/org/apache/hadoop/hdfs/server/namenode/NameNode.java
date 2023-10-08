@@ -1010,13 +1010,13 @@ public class NameNode extends ReconfigurableBase implements
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info("{} RPC up at: {}", getRole(), getNameNodeAddress());
+    LOG.info("{} RPC up at: {}.", getRole(), getNameNodeAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info("{} service RPC up at: {}", getRole(), rpcServer.getServiceRpcAddress());
+      LOG.info("{} service RPC up at: {}.", getRole(), rpcServer.getServiceRpcAddress());
 
     }
     if (rpcServer.getLifelineRpcAddress() != null) {
-      LOG.info("{} lifeline RPC up at: {}", getRole(), rpcServer.getLifelineRpcAddress());
+      LOG.info("{} lifeline RPC up at: {}.", getRole(), rpcServer.getLifelineRpcAddress());
     }
   }
   
