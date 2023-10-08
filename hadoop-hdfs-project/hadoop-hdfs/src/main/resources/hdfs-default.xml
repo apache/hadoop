@@ -5620,6 +5620,14 @@
 </property>
 
 <property>
+  <name>dfs.pipeline.congestion.ratio</name>
+  <value>1.5</value>
+  <description>
+    The ratio which is used to compute congestion load.
+  </description>
+</property>
+
+<property>
   <name>dfs.qjournal.accept-recovery.timeout.ms</name>
   <value>120000</value>
   <description>

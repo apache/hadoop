@@ -1573,6 +1573,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
   public static final String DFS_PIPELINE_SLOWNODE_ENABLED = "dfs.pipeline.slownode";
   public static final boolean DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT = false;
+  public static final String DFS_PIPELINE_CONGESTION_RATIO = "dfs.pipeline.congestion.ratio";
+  public static final double DFS_PIPELINE_CONGESTION_RATIO_DEFAULT = 1.5;
 
   // Key Provider Cache Expiry
   public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =
@@ -2041,6 +2043,5 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
-
 
 }
