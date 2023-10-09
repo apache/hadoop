@@ -494,7 +494,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final Hashtable<String, String> properties, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
-      LOG.debug("setPathProperties for filesystem: {} path: {} with properties: {}",
+      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
               client.getFileSystem(),
               path,
               properties);
