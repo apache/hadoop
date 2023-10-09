@@ -52,7 +52,7 @@ public class AvailableSpaceBlockPlacementPolicy extends
   private int balancedPreference =
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
   private int balancedSpaceTolerance =
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 
   private int balancedSpaceToleranceLimit =
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
@@ -95,6 +95,16 @@ public class AvailableSpaceBlockPlacementPolicy extends
           + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY
           + " is less than 0.5 so datanodes with more used percent will"
           + " receive  more block allocations.");
+    }
+
+    if (balancedSpaceToleranceLimit > 100 || balancedSpaceToleranceLimit < 0) {
+      LOG.warn("The value of "
+              + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY
+              + " is invalid, Current value is " + balancedSpaceToleranceLimit + ", Default value " +
+              DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT
+              + " will be used instead.");
+      balancedSpaceToleranceLimit =
+              DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
     }
 
     if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
@@ -213,7 +223,7 @@ public class AvailableSpaceBlockPlacementPolicy extends
       final DatanodeDescriptor b, boolean isBalanceLocal) {
 
     boolean toleranceLimit = Math.max(a.getDfsUsedPercent(), b.getDfsUsedPercent())
-            < balancedSpaceToleranceLimit;
+        < balancedSpaceToleranceLimit;
     if (a.equals(b)
         || (toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
             < balancedSpaceTolerance) || ((

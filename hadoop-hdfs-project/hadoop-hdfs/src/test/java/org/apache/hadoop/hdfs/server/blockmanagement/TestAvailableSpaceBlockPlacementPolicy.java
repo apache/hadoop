@@ -239,58 +239,59 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     Collections.addAll(allTolerateNodes, tolerateDataNodes);
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
     AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy =
-            (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
+        (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
 
     //96.6%
     updateHeartbeatWithUsage(tolerateDataNodes[0],
-            30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            29 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
-                    * blockSize, 0L, 0L, 0L, 0, 0);
+       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       29 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        * blockSize, 0L, 0L, 0L, 0, 0);
 
     //93.3%
     updateHeartbeatWithUsage(tolerateDataNodes[1],
-            30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            28 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
-                    * blockSize, 0L, 0L, 0L, 0, 0);
+       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       28 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        * blockSize, 0L, 0L, 0L, 0, 0);
 
     //90.0%
     updateHeartbeatWithUsage(tolerateDataNodes[2],
-            30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            27 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
-                    * blockSize, 0L, 0L, 0L, 0, 0);
+       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       27 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        * blockSize, 0L, 0L, 0L, 0, 0);
 
     //86.6%
     updateHeartbeatWithUsage(tolerateDataNodes[3],
-            30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            26 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
-                    * blockSize, 0L, 0L, 0L, 0, 0);
+       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       26 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        * blockSize, 0L, 0L, 0L, 0, 0);
+
     //83.3%
     updateHeartbeatWithUsage(tolerateDataNodes[4],
-            30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            25 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
-                    * blockSize, 0L, 0L, 0L, 0, 0);
+       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       25 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        * blockSize, 0L, 0L, 0L, 0, 0);
 
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
-            tolerateDataNodes[1], false) == 1);
+        tolerateDataNodes[1], false) == 1);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
-            tolerateDataNodes[0], false) == -1);
+        tolerateDataNodes[0], false) == -1);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
-            tolerateDataNodes[2], false) == 1);
+        tolerateDataNodes[2], false) == 1);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-            tolerateDataNodes[1], false) == -1);
+        tolerateDataNodes[1], false) == -1);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-            tolerateDataNodes[3], false) == 0);
+        tolerateDataNodes[3], false) == 0);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[3],
-            tolerateDataNodes[2], false) == 0);
+        tolerateDataNodes[2], false) == 0);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-            tolerateDataNodes[4], false) == 1);
+        tolerateDataNodes[4], false) == 1);
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[4],
-            tolerateDataNodes[2], false) == -1);
+        tolerateDataNodes[2], false) == -1);
   }
 
   @AfterClass
