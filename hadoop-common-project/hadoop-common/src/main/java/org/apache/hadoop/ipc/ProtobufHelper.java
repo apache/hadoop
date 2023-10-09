@@ -36,7 +36,7 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
  * JAR on the classpath during execution.
  * It MUST NOT be used internally; it is retained in case existing,
  * external applications already use it.
- * @Deprecated: hadoop code MUST use {@link ShadedProtobufHelper}.
+ * @deprecated hadoop code MUST use {@link ShadedProtobufHelper}.
  */
 @InterfaceAudience.Private
 @Deprecated

@@ -240,7 +240,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   public void shutdownDatanode(boolean forUpgrade) throws IOException {
     ShutdownDatanodeRequestProto request = ShutdownDatanodeRequestProto
         .newBuilder().setForUpgrade(forUpgrade).build();
-      ipc(() -> rpcProxy.shutdownDatanode(NULL_CONTROLLER, request));
+    ipc(() -> rpcProxy.shutdownDatanode(NULL_CONTROLLER, request));
   }
 
   @Override

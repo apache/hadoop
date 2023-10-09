@@ -59,11 +59,10 @@ public class GenericRefreshProtocolClientSideTranslatorPB implements
     List<String> argList = Arrays.asList(args);
 
     GenericRefreshRequestProto request = GenericRefreshRequestProto.newBuilder()
-      .setIdentifier(identifier)
-      .addAllArgs(argList)
-      .build();
+        .setIdentifier(identifier).addAllArgs(argList).build();
 
-    GenericRefreshResponseCollectionProto resp = ipc(() -> rpcProxy.refresh(NULL_CONTROLLER, request));
+    GenericRefreshResponseCollectionProto resp = ipc(() ->
+        rpcProxy.refresh(NULL_CONTROLLER, request));
     return unpack(resp);
 
   }
