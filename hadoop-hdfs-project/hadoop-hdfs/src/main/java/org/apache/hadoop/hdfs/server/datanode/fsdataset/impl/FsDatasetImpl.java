@@ -3825,7 +3825,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override
   public long getPendingAsyncDeletions() {
-    return this.asyncDiskService.countPendingDeletions();
+    return asyncDiskService.countPendingDeletions();
   }
 }
 
