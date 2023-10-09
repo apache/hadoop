@@ -213,7 +213,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String routerRMMasterKeyIdPath;
 
   private int appIdNodeSplitIndex = 0;
-  private final int HIERARCHIES_LEVEL = 4;
+  private final static int HIERARCHIES_LEVEL = 4;
 
   @VisibleForTesting
   public static final String ROUTER_APP_ROOT_HIERARCHIES = "HIERARCHIES";
