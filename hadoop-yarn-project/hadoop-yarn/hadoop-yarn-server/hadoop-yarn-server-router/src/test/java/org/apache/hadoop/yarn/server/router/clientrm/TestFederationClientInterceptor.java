@@ -1573,6 +1573,13 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   @Test
+  public void testThreadPoolWillTimeout() {
+    // Check if core threads are set to timeout if idle
+    boolean threadPoolTimeout = interceptor.executorService.allowsCoreThreadTimeOut();
+    Assert.assertTrue(threadPoolTimeout);
+  }
+
+  @Test
   public void testGetDelegationToken() throws IOException, YarnException {
 
     // We design such a unit test to check
