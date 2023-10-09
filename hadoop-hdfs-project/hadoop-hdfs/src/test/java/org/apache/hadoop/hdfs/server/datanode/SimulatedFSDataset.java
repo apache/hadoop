@@ -945,7 +945,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public long getPendingAsyncDiskOperations() {
+  public long getPendingAsyncDeletions() {
     return 0;
   }
 

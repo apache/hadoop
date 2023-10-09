@@ -1907,15 +1907,15 @@ public class TestFsDatasetImpl {
       assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
 
       assertEquals(1, ds.asyncDiskService.countPendingDeletions());
-      assertEquals(1, ds.getPendingAsyncDiskOperations());
+      assertEquals(1, ds.getPendingAsyncDeletions());
 
-      // Validate PendingAsyncDiskOperations metrics.
+      // Validate PendingAsyncDeletions metrics.
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName = new ObjectName(
           "Hadoop:service=DataNode,name=FSDatasetState-" + dn.getDatanodeUuid());
-      long pendingAsyncDiskOperations = (long) mbs.getAttribute(mxbeanName,
-          "PendingAsyncDiskOperations");
-      assertEquals(1, pendingAsyncDiskOperations);
+      long pendingAsyncDeletions = (long) mbs.getAttribute(mxbeanName,
+          "PendingAsyncDeletions");
+      assertEquals(1, pendingAsyncDeletions);
 
       // Make it resume the removeReplicaFromMem method.
       semaphore.release(1);
@@ -1924,11 +1924,11 @@ public class TestFsDatasetImpl {
       GenericTestUtils.waitFor(() ->
           ds.asyncDiskService.countPendingDeletions() == 0, 100, 1000);
 
-      assertEquals(0, ds.getPendingAsyncDiskOperations());
+      assertEquals(0, ds.getPendingAsyncDeletions());
 
-      pendingAsyncDiskOperations = (long) mbs.getAttribute(mxbeanName,
-          "PendingAsyncDiskOperations");
-      assertEquals(0, pendingAsyncDiskOperations);
+      pendingAsyncDeletions = (long) mbs.getAttribute(mxbeanName,
+          "PendingAsyncDeletions");
+      assertEquals(0, pendingAsyncDeletions);
 
       // Sleep for two heartbeat times.
       Thread.sleep(config.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,

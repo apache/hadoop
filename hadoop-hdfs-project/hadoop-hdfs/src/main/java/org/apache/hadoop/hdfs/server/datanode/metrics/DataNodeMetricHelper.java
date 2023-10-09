@@ -74,9 +74,9 @@ public class DataNodeMetricHelper {
         beanClass.getNumBlocksFailedToUncache())
         .addGauge(Interns.info("LastDirectoryScannerFinishTime",
         "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime())
-        .addGauge(Interns.info("PendingAsyncDiskOperations",
+        .addGauge(Interns.info("PendingAsyncDeletions",
             "The count of pending and running asynchronous disk operations"),
-            beanClass.getPendingAsyncDiskOperations());
+            beanClass.getPendingAsyncDeletions());
   }
 
 }

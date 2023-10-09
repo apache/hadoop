@@ -131,5 +131,5 @@ public interface FSDatasetMBean extends MetricsSource {
   /**
    * Returns the count of pending and running asynchronous disk operations.
    */
-  long getPendingAsyncDiskOperations();
+  long getPendingAsyncDeletions();
 }

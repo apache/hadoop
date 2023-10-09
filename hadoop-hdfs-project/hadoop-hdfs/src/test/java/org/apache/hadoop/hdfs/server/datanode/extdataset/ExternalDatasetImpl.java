@@ -484,7 +484,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public long getPendingAsyncDiskOperations() {
+  public long getPendingAsyncDeletions() {
     return 0;
   }
 }
