@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnyEncryptionSet;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
@@ -71,6 +72,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
   @Test
   public void testLandsatBucketRequireUnencrypted() throws Throwable {
     skipIfClientSideEncryption();
+    skipIfAnyEncryptionSet(getConfiguration());
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         getLandsatCSVFile(getConfiguration()));
