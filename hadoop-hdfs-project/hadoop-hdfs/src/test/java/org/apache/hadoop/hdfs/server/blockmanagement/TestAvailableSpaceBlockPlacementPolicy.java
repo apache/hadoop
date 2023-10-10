@@ -243,37 +243,37 @@ public class TestAvailableSpaceBlockPlacementPolicy {
 
     //96.6%
     updateHeartbeatWithUsage(tolerateDataNodes[0],
-       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       29 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        29 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
     //93.3%
     updateHeartbeatWithUsage(tolerateDataNodes[1],
-       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       28 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        28 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
     //90.0%
     updateHeartbeatWithUsage(tolerateDataNodes[2],
-       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       27 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        27 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
     //86.6%
     updateHeartbeatWithUsage(tolerateDataNodes[3],
-       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       26 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        26 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
     //83.3%
     updateHeartbeatWithUsage(tolerateDataNodes[4],
-       30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       25 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-       HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+        30 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        25 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
     assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],

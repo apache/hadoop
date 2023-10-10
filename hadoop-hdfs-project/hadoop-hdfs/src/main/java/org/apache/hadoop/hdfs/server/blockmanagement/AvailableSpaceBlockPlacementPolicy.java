@@ -64,8 +64,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
     super.initialize(conf, stats, clusterMap, host2datanodeMap);
     float balancedPreferencePercent =
         conf.getFloat(
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
+        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
 
     LOG.info("Available space block placement policy initialized: "
         + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY
@@ -99,12 +99,13 @@ public class AvailableSpaceBlockPlacementPolicy extends
 
     if (balancedSpaceToleranceLimit > 100 || balancedSpaceToleranceLimit < 0) {
       LOG.warn("The value of "
-              + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY
-              + " is invalid, Current value is " + balancedSpaceToleranceLimit + ", Default value " +
-              DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT
-              + " will be used instead.");
+          + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY
+          + " is invalid, Current value is " + balancedSpaceToleranceLimit + ", Default value "
+          + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT
+          + " will be used instead.");
+
       balancedSpaceToleranceLimit =
-              DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
     }
 
     if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
