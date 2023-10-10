@@ -759,6 +759,12 @@
                         <exclude>META-INF/versions/9/module-info.class</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>org.apache.commons:commons-compress</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
+                      </excludes>
+                    </filter>
 
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
