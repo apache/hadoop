@@ -248,7 +248,10 @@ public class MiniDFSCluster implements AutoCloseable {
             "MiniDFSCluster base directory cannot be null");
       }
       String cdir = conf.get(HDFS_MINIDFS_BASEDIR);
-      if (cdir != null) {
+      // There are tests which restart server, and we want to allow them to restart with the same
+      // configuration.  Although it is an error if the base directory is already set, we'll ignore
+      // cases where the base directory is the same.
+      if (cdir != null && !cdir.equals(basedir.getAbsolutePath())) {
         throw new IllegalArgumentException(
             "MiniDFSCluster base directory already defined (" + cdir + ")");
       }
