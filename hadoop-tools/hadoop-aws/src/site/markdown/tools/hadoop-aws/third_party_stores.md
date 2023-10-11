@@ -341,7 +341,7 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.bucket.gcs-container.access.key</name>
     <value>GOOG1EZ....</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.bucket.gcs-container.secret.key</name>
     <value>SECRETS</value>
@@ -408,7 +408,6 @@ It is also a way to regression test foundational S3A third-party store compatibi
     <name>test.fs.s3a.content.encoding.enabled</name>
     <value>false</value>
   </property>
-  
 </configuration>
 ```
 

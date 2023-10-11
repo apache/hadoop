@@ -499,7 +499,6 @@ Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
   MalformedPolicyDocument: Syntax errors in policy.
   (Service: AWSSecurityTokenService; Status Code: 400; Error Code: MalformedPolicyDocument;
   Request ID: 24a281e8-f553-11e7-aa91-a96becfb4d45)
-  
 ```
 
 ### <a name="recursive_auth"></a> `IOException`: "AssumedRoleCredentialProvider cannot be in fs.s3a.assumed.role.credentials.provider"
@@ -591,7 +590,6 @@ the permission for the S3 Operation invoked during the call.
 java.nio.file.AccessDeniedException: a: Writing Object on a:
  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied
  (Service: S3, Status Code: 403, Request ID: F08EV50F85AYKF1V, Extended Request ID: 75vMz9xWNP5/lYplPSZfm/i4yQ5q0G32SIwOwfaj6a8gNCRj9tLBAqcLaaexT/aNg2DhWZQPvDU=):AccessDenied
-
 ```
 
 This is the policy restriction behaving as intended: the caller is trying to
@@ -626,7 +624,7 @@ If the client does have write access to the bucket, verify that the caller has
 
 ```
 java.nio.file.AccessDeniedException: test/testDTFileSystemClient: Writing Object on test/testDTFileSystemClient:
-  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied (Service: Amazon S3; Status Code: 403; 
+  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied (Service: Amazon S3; Status Code: 403;
   Error Code: AccessDenied; Request ID: E86544FF1D029857)
 
 ```

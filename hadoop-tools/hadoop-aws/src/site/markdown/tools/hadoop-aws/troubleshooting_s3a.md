@@ -104,9 +104,6 @@ Fix: add it to classpath.
 Maven/Ivy/SBT/Gradle builds which import `hadoop-aws` or
 `hadoop-cloud-storage` artifacts should get the artifact automatically.
 
-However, it may 
-
-
 ### `ClassNotFoundException: com.amazonaws.auth.AWSCredentials`
 
 (or other `com.amazonaws` class.)
@@ -434,7 +431,7 @@ directory will _only_ be in the destination. And files for which the rename oper
 had yet to commence -they will only be in the source tree.
 
 The user has to recover from this themselves. Be assured: no data will have been deleted, it
-is just that the data may now be scattered across two directories. 
+is just that the data may now be scattered across two directories.
 Note: this is one reason why any application which tries to atomically commit work
 via rename (classic Hadoop output committers, distcp with the `-atomic` option) are
 not safe to use with S3. It is not a file system.
@@ -927,7 +924,6 @@ Possible causes:
 * the KMS key referenced by the ARN is in a different region than the S3 bucket
 being used.
 
-
 ### Using SSE-C "Bad Request"
 
 When performing file operations the user may run into an unexpected 400/403
@@ -1072,8 +1068,8 @@ If the value in `fs.s3a.encryption.key` property, does not exist
 
 ```
 Caused by: software.amazon.awssdk.services.kms.model.NotFoundException: Invalid keyId abc
-(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException; Request ID: 9d53552a-3d1b-47c8-984c-9a599d5c2391; Proxy: null)
-
+(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException; Request ID:
+ 9d53552a-3d1b-47c8-984c-9a599d5c2391; Proxy: null)
 ```
 
 Check if `fs.s3a.encryption.key` is set correctly and matches the
@@ -1084,9 +1080,10 @@ same on AWS console.
 User doesn't have authorization to the specific AWS KMS Key ID.
 ```
 Caused by: software.amazon.awssdk.services.kms.model.KmsException:
-User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:GenerateDataKey on resource: <key_ID>
-(Service: AWSKMS; Status Code: 400; Error Code: AccessDeniedException; Request ID: 4ded9f1f-b245-4213-87fc-16cba7a1c4b9; Proxy: null)
- 
+User: arn:aws:iam::152813717728:user/<user> is not authorized to perform:
+ kms:GenerateDataKey on resource: <key_ID>
+(Service: AWSKMS; Status Code: 400; Error Code: AccessDeniedException;
+  Request ID: 4ded9f1f-b245-4213-87fc-16cba7a1c4b9; Proxy: null)
 ```
 
 The user trying to use the KMS Key ID should have the right permissions to access
@@ -1490,7 +1487,7 @@ The number of retries and interval between each retry can be configured:
 ```
 
 Not all failures are retried *in the S3A Code* -though some may be retried within the
-AWS SDK. 
+AWS SDK.
 Specifically excluded are those considered unrecoverable:
 
 * Low-level networking: `UnknownHostException`, `NoRouteToHostException`.

@@ -76,18 +76,18 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
  * does this translation if an {@code SdkException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
- *
+ * <p>
  * Put differently: this retry policy aims to work for handlers of the
  * untranslated exceptions, as well as the translated ones.
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
- * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
- *
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html"> Amazon S3 Error Best Practices </a>
+ * <p>
  * Note that because delete is considered idempotent, all s3a operations currently
  * declare themselves idempotent.
  * This means the retry policy here is more complex than it needs to be -but it
  * does force us to consider when retrying operations would not be safe.
  */
-@SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
+@SuppressWarnings("visibilitymodifier")  // we want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
   private static final Logger LOG = LoggerFactory.getLogger(
