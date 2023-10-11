@@ -44,7 +44,7 @@ import java.util.Map;
  * {@code getPendingMutations}, and replay/confirm them via
  * {@code confirmMutation} as in the normal case.
  */
-public abstract class YarnConfigurationStore implements AutoCloseable{
+public abstract class YarnConfigurationStore implements AutoCloseable {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(YarnConfigurationStore.class);
