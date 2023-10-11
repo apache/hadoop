@@ -129,6 +129,8 @@ public class RouterPolicyFacade {
    *          {@link SubClusterId} to blackList from the selection of the home
    *          subCluster.
    *
+   * @param user the user who submit the application.
+   *
    * @return the {@link SubClusterId} that will be the "home" for this
    *         application.
    *
