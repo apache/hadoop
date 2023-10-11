@@ -54,7 +54,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * The S3A request retry policy.
- *
+ * <p>
  * This uses the retry options in the configuration file to determine retry
  * count and delays for "normal" retries and separately, for throttling;
  * the latter is best handled for longer with an exponential back-off.
@@ -69,7 +69,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * For non-idempotent operations, only failures due to throttling or
  * from failures which are known to only arise prior to talking to S3
  * are retried.
- *
+ * <p>
  * The retry policy is all built around that of the normal IO exceptions,
  * particularly those extracted from
  * {@link S3AUtils#translateException(String, Path, SdkException)}.
@@ -79,13 +79,13 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * <p>
  * Put differently: this retry policy aims to work for handlers of the
  * untranslated exceptions, as well as the translated ones.
- * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
- * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html"> Amazon S3 Error Best Practices </a>
  * <p>
  * Note that because delete is considered idempotent, all s3a operations currently
  * declare themselves idempotent.
  * This means the retry policy here is more complex than it needs to be -but it
  * does force us to consider when retrying operations would not be safe.
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html"> Amazon S3 Error Best Practices</a>
  */
 @SuppressWarnings("visibilitymodifier")  // we want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {

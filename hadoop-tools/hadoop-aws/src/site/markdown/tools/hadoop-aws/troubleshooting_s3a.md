@@ -915,7 +915,6 @@ org.apache.hadoop.fs.s3a.AWSS3IOException: innerMkdirs on /test:
    Request ID: CA89F276B3394565),
    S3 Extended Request ID: ncz0LWn8zor1cUO2fQ7gc5eyqOk3YfyQLDn2OQNoe5Zj/GqDLggUYz9QY7JhdZHdBaDTh+TL5ZQ=:
    Invalid arn (Service: Amazon S3; Status Code: 400; Error Code: KMS.NotFoundException; Request ID: CA89F276B3394565)
- 
 ```
 
 Possible causes:
@@ -1055,7 +1054,6 @@ able to generate unique data key for encryption.
 Caused by: software.amazon.awssdk.services.kms.mode.InvalidKeyUsageException:
 You cannot generate a data key with an asymmetric CMK
 (Service: AWSKMS; Status Code: 400; Error Code: InvalidKeyUsageException; Request ID: 93609c15-e490-4035-8390-f4396f0d90bf; Proxy: null)
-  
 ```
 
 Generate a Symmetric Key in the same region as your S3 storage for CSE-KMS to
@@ -1141,7 +1139,6 @@ org.apache.hadoop.fs.s3a.UnknownStoreException: `s3a://random-bucket-7d9217b0-b4
     (Service: S3, Status Code: 404, Request ID: RD254TC8EVDV98AK): null
     (Service: S3, Status Code: 404, Request ID: RD254TC8EVDV98AK, Extended Request ID: 49F5CO1IKavFsz+VBecf2uwZeNVar3InHkdIrONvAK5yQ73gqZ1hFoAEMo8/x5wRNe3OXO3aebvZkev2bS81kw==)
     (Service: S3, Status Code: 404, Request ID: RD254TC8EVDV98AK)
-
 ```
 
 Check the URI is correct, and that the bucket actually exists.
@@ -1368,15 +1365,12 @@ connections more frequently.
    The unspecified location constraint is incompatible for the region specific
     endpoint this request was sent to.
     (Service: Amazon S3; Status Code: 400; Error Code: IllegalLocationConstraintException;
-
-
   ...
   Cause: S3Exception:
    The unspecified location constraint is incompatible for the region specific endpoint
    this request was sent to. (Service: Amazon S3; Status Code: 400; Error Code: IllegalLocationConstraintException;
    Request ID: EEBC5A08BCB3A645)
 
-  ...
 ```
 
 Something has been trying to write data to "/".
