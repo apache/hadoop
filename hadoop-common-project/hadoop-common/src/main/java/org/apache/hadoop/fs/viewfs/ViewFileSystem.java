@@ -1376,7 +1376,7 @@ public class ViewFileSystem extends FileSystem {
     try {
       res = fsState.resolve(getUriPath(path), true);
     } catch (FileNotFoundException ex) {
-      throw new NotInMountpointException(path, "getEnclosingRoot");
+      throw new NotInMountpointException(path, String.format("getEnclosingRoot - %s", ex.getMessage()));
     }
     Path mountPath = new Path(res.resolvedPath);
     Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));
@@ -1940,11 +1940,13 @@ public class ViewFileSystem extends FileSystem {
       try {
         res = fsState.resolve((path.toString()), true);
       } catch (FileNotFoundException ex) {
-        throw new NotInMountpointException(path, "getEnclosingRoot");
+        throw new NotInMountpointException(path, String.format("getEnclosingRoot - %s", ex.getMessage()));
       }
       Path fullPath = new Path(res.resolvedPath);
       Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
-      return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
+      return enclosingPath.depth() > fullPath.depth()
+          ?  enclosingPath
+          : fullPath;
     }
   }
 

@@ -21,25 +21,24 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-
-public class TestGetEnclosingRoot {
+public class TestGetEnclosingRoot extends HadoopTestBase {
   @Test
   public void testEnclosingRootEquivalence() throws IOException {
     FileSystem fs = getFileSystem();
     Path root = path("/");
     Path foobar = path("/foo/bar");
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)), root);
-    assertEquals(fs.getEnclosingRoot(foobar), fs.getEnclosingRoot(root));
+    assertEquals(root, fs.getEnclosingRoot(root));
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
+    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
 
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
-    assertEquals(fs.getEnclosingRoot(fs.getEnclosingRoot(path(foobar.toString()))), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), fs.getEnclosingRoot(root));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
+    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(path(foobar.toString()))));
+    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -49,8 +48,8 @@ public class TestGetEnclosingRoot {
     Path foobar = path("/foo/bar");
     fs.mkdirs(foobar);
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -59,8 +58,8 @@ public class TestGetEnclosingRoot {
     Path foobar = path("/foo/bar");
     Path root = path("/");
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -68,14 +67,14 @@ public class TestGetEnclosingRoot {
     FileSystem fs = getFileSystem();
     Path root = path("/");
 
-    assertEquals(fs.getEnclosingRoot(new Path("/foo/bar")), root);
+    assertEquals(root, fs.getEnclosingRoot(new Path("/foo/bar")));
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
     Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
       FileSystem wFs = getFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });
-    assertEquals(p, root);
+    assertEquals(root, p);
   }
 
   private FileSystem getFileSystem() throws IOException {

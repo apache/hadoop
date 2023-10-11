@@ -111,29 +111,39 @@ public class TestEnclosingRoot extends AbstractHadoopTestBase {
     final Path zone1 = new Path(rootDir, "zone1");
 
     // Ensure that the root "/" returns the root without mount points or encryption zones
-    assertThat(rootDir.equals(fs.getEnclosingRoot(rootDir)));
+    assertThat(fs.getEnclosingRoot(rootDir))
+        .describedAs("enclosing root of %s", rootDir)
+        .isEqualTo(rootDir);
 
     // Ensure a dir returns the root without mount points or encryption zones
-    assertThat(rootDir.equals(fs.getEnclosingRoot(zone1)));
+    assertThat(fs.getEnclosingRoot(zone1))
+        .describedAs("enclosing root of %s", zone1)
+        .isEqualTo(rootDir);
 
     // create an encryption zone
     fs.mkdirs(zone1);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
 
     // Ensure that the root "/" returns the root with an encryption zone present
-    assertThat(rootDir.equals(fs.getEnclosingRoot(rootDir)));
+    assertThat(fs.getEnclosingRoot(rootDir))
+        .describedAs("enclosing root of %s", rootDir)
+        .isEqualTo(rootDir);
 
     // Ensure that the encryption zone path itself returns correctly as itself
-    assertThat(zone1.equals(fs.getEnclosingRoot(zone1)));
+    assertThat(fs.getEnclosingRoot(zone1))
+        .describedAs("enclosing root of %s", zone1)
+        .isEqualTo(zone1);
 
     // Ensure that a path where the file does not exist returns the encryption zone root path
     final Path zone1FileDNE = new Path(zone1, "newDNE.txt");
-    assertThat(zone1.equals(fs.getEnclosingRoot(zone1FileDNE)));
+    assertThat(fs.getEnclosingRoot(zone1FileDNE))
+        .describedAs("enclosing root of %s", zone1FileDNE)
+        .isEqualTo(zone1);
 
     // Ensure that a path where the dir does not exist returns the encryption zone root path
     final Path zone1DirDNE = new Path(zone1, "zone2/newDNE.txt");
-    assertThat(zone1.equals(fs.getEnclosingRoot(zone1DirDNE)));
-
+    assertThat(fs.getEnclosingRoot(zone1DirDNE))
+        .describedAs("enclosing root of %s", zone1DirDNE)
+        .isEqualTo(zone1);
   }
-
 }

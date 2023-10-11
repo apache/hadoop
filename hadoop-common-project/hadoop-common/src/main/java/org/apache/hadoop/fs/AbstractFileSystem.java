@@ -1652,8 +1652,8 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public Path getEnclosingRoot(Path path) throws IOException {
-    this.makeQualified(path);
-    return this.makeQualified(new Path("/"));
+    makeQualified(path);
+    return makeQualified(new Path("/"));
   }
 
   /**

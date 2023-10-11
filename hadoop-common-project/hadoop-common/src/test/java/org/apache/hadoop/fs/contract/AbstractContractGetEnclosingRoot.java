@@ -30,24 +30,19 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContractTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractContractGetEnclosingRoot.class);
 
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-  }
-
   @Test
   public void testEnclosingRootEquivalence() throws IOException {
     FileSystem fs = getFileSystem();
     Path root = path("/");
     Path foobar = path("/foo/bar");
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)), root);
-    assertEquals(fs.getEnclosingRoot(foobar), fs.getEnclosingRoot(root));
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
+    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
 
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
-    assertEquals(fs.getEnclosingRoot(fs.getEnclosingRoot(path(foobar.toString()))), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), fs.getEnclosingRoot(root));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
+    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(path(foobar.toString()))));
+    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -57,8 +52,8 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = path("/foo/bar");
     fs.mkdirs(foobar);
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -67,8 +62,8 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = path("/foo/bar");
     Path root = path("/");
 
-    assertEquals(fs.getEnclosingRoot(foobar), root);
-    assertEquals(fs.getEnclosingRoot(path(foobar.toString())), root);
+    assertEquals(root, fs.getEnclosingRoot(foobar));
+    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
   }
 
   @Test
@@ -76,14 +71,14 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     FileSystem fs = getFileSystem();
     Path root = path("/");
 
-    assertEquals(fs.getEnclosingRoot(new Path("/foo/bar")), root);
+    assertEquals(root, fs.getEnclosingRoot(new Path("/foo/bar")));
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
     Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
       FileSystem wFs = getContract().getTestFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });
-    assertEquals(p, root);
+    assertEquals(root, p);
   }
 
   /**

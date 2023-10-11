@@ -3942,7 +3942,15 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
-  /* HDFS only */
+  /**
+   * Return path of the enclosing root for a given path
+   * The enclosing root path is a common ancestor that should be used for temp and staging dirs
+   * as well as within encryption zones and other restricted directories.
+   *
+   * @param path file path to find the enclosing root path for
+   * @return a path to the enclosing root
+   * @throws IOException early checks like failure to resolve path cause IO failures
+   */
   public Path getEnclosingRoot(final Path path) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_ENCLOSING_ROOT);

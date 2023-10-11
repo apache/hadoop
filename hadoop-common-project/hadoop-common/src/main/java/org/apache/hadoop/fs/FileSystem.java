@@ -4913,7 +4913,7 @@ public abstract class FileSystem extends Configured
    *
    * @param path file path to find the enclosing root path for
    * @return a path to the enclosing root
-   * @throws IOException
+   * @throws IOException early checks like failure to resolve path cause IO failures
    */
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
