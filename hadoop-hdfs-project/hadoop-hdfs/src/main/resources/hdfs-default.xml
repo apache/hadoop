@@ -2446,6 +2446,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement.min-blocks-for.write</name>
+  <value>1</value>
+  <description>
+    Setting the minimum number of blocks for write operations is used to calculate the space required
+    for write operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max.slowpeer.collect.nodes</name>
   <value>5</value>
   <description>
@@ -5607,6 +5616,14 @@
   <value>false</value>
   <description>
     If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.congestion.ratio</name>
+  <value>1.5</value>
+  <description>
+    The ratio which is used to compute congestion load.
   </description>
 </property>
 

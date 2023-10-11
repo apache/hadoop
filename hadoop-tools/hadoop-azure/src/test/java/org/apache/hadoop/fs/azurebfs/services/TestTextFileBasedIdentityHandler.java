@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.NoSuchFileException;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -114,7 +114,7 @@ public class TestTextFileBasedIdentityHandler {
   public void testLookupForUserFileNotFound() throws Exception {
     TextFileBasedIdentityHandler handler =
         new TextFileBasedIdentityHandler(userMappingFile.getPath() + ".test", groupMappingFile.getPath());
-    intercept(FileNotFoundException.class, "FileNotFoundException",
+    intercept(NoSuchFileException.class, "NoSuchFileException",
         () -> handler.lookupForLocalUserIdentity(testUserDataLine3.split(":")[0]));
   }
 
@@ -143,7 +143,7 @@ public class TestTextFileBasedIdentityHandler {
   public void testLookupForGroupFileNotFound() throws Exception {
     TextFileBasedIdentityHandler handler =
         new TextFileBasedIdentityHandler(userMappingFile.getPath(), groupMappingFile.getPath() + ".test");
-    intercept(FileNotFoundException.class, "FileNotFoundException",
+    intercept(NoSuchFileException.class, "NoSuchFileException",
         () -> handler.lookupForLocalGroupIdentity(testGroupDataLine2.split(":")[0]));
   }
 }

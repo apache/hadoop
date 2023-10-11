@@ -35,7 +35,7 @@ public class RemoteParam {
 
   /**
    * Constructs a default remote parameter. Always maps the value to the
-   * destination of the provided RemoveLocationContext.
+   * destination of the provided RemoteLocationContext.
    */
   public RemoteParam() {
     this.paramMap = null;

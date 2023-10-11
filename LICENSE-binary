@@ -247,7 +247,7 @@ commons-cli:commons-cli:1.5.0
 commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
-commons-io:commons-io:2.8.0
+commons-io:commons-io:2.14.0
 commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
 io.grpc:grpc-api:1.26.0
