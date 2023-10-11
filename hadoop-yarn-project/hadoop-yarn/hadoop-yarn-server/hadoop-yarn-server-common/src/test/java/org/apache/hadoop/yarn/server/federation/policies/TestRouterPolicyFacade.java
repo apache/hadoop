@@ -94,7 +94,7 @@ public class TestRouterPolicyFacade {
 
     // first call runs using standard UniformRandomRouterPolicy
     SubClusterId chosen =
-        routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+        routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(subClusterIds.contains(chosen));
     Assert.assertTrue(routerFacade.globalPolicyMap
         .get(queue1) instanceof UniformRandomRouterPolicy);
@@ -106,7 +106,7 @@ public class TestRouterPolicyFacade {
         .newInstance(getPriorityPolicy(queue1)));
 
     // second call is routed by new policy PriorityRouterPolicy
-    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(chosen.equals(subClusterIds.get(0)));
     Assert.assertTrue(routerFacade.globalPolicyMap
         .get(queue1) instanceof PriorityRouterPolicy);
@@ -125,7 +125,7 @@ public class TestRouterPolicyFacade {
 
     // when invoked it returns the expected SubClusterId.
     SubClusterId chosen =
-        routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+        routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(subClusterIds.contains(chosen));
 
     // now the caching of policies must have added an entry for this queue
@@ -159,21 +159,50 @@ public class TestRouterPolicyFacade {
     String uninitQueue = "non-initialized-queue";
     when(applicationSubmissionContext.getQueue()).thenReturn(uninitQueue);
     SubClusterId chosen =
-        routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+        routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(subClusterIds.contains(chosen));
     Assert.assertFalse(routerFacade.globalPolicyMap.containsKey(uninitQueue));
 
     // empty string
     when(applicationSubmissionContext.getQueue()).thenReturn("");
-    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(subClusterIds.contains(chosen));
     Assert.assertFalse(routerFacade.globalPolicyMap.containsKey(uninitQueue));
 
     // null queue also falls back to default
     when(applicationSubmissionContext.getQueue()).thenReturn(null);
-    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null);
+    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null, null);
     Assert.assertTrue(subClusterIds.contains(chosen));
     Assert.assertFalse(routerFacade.globalPolicyMap.containsKey(uninitQueue));
+
+  }
+
+  @Test
+  public void testUserAsDefaultQueue() throws YarnException {
+
+    String user = "user1";
+
+    ApplicationSubmissionContext applicationSubmissionContext =
+            mock(ApplicationSubmissionContext.class);
+    when(applicationSubmissionContext.getQueue()).thenReturn(null);
+
+    store.setPolicyConfiguration(SetSubClusterPolicyConfigurationRequest
+            .newInstance(getPriorityPolicy(user)));
+
+    routerFacade.setUserAsDefaultQueue(false);
+
+    SubClusterId chosen =
+            routerFacade.getHomeSubcluster(applicationSubmissionContext, null, user);
+    Assert.assertTrue(subClusterIds.contains(chosen));
+    Assert.assertFalse(routerFacade.globalPolicyMap.containsKey(user));
+
+    routerFacade.setUserAsDefaultQueue(true);
+
+    chosen = routerFacade.getHomeSubcluster(applicationSubmissionContext, null, user);
+    Assert.assertTrue(chosen.equals(subClusterIds.get(0)));
+    Assert.assertTrue(routerFacade.globalPolicyMap.containsKey(user));
+    Assert.assertTrue(routerFacade.globalPolicyMap
+            .get(user) instanceof PriorityRouterPolicy);
 
   }
 
