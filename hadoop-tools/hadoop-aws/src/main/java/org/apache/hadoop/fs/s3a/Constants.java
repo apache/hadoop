@@ -161,6 +161,8 @@ public final class Constants {
 
   /**
    * Default value for {@code CONNECTION_TTL}: {@value}.
+   * Even this is a long, this is only to ensure the type doesn't change
+   * with older versions. It is cast to an int before use.
    */
   public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
 
@@ -267,11 +269,11 @@ public final class Constants {
   // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5000;
+  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5_000;
 
   // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
-  public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
+  public static final int DEFAULT_SOCKET_TIMEOUT = 200_000;
 
   // milliseconds until a request is timed-out
   public static final String REQUEST_TIMEOUT =

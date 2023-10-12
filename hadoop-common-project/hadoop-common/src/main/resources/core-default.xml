@@ -1608,14 +1608,15 @@
 
 <property>
   <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
+  <value>5s</value>
+  <description>Socket connection setup timeout in milliseconds; this will be retried
+    more than once.</description>
 </property>
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
+  <value>200s</value>
+  <description>Socket connection timeout.</description>
 </property>
 
 <property>
@@ -2091,7 +2092,7 @@
 
 <property>
   <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
+  <value>0ms</value>
   <description>
     Time out on HTTP requests to the AWS service; 0 means no timeout.
     Measured in seconds; the usual time suffixes are all supported

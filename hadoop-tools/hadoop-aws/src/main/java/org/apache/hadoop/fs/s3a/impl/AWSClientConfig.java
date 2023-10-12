@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
@@ -64,7 +65,6 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
 
 /**
  * Methods for configuring the S3 client.
@@ -113,18 +113,20 @@ public final class AWSClientConfig {
     httpClientBuilder.maxConnections(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
 
-    int connectionEstablishTimeout =
-        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
-    int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
+    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
 
-    httpClientBuilder.connectionTimeout(Duration.ofMillis(connectionEstablishTimeout));
-    httpClientBuilder.socketTimeout(Duration.ofMillis(socketTimeout));
+    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
+        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS);
 
     // set the connection TTL irrespective of whether the connection is in use or not.
     // this can balance requests over different S3 servers, and avoid failed
     // connections. See HADOOP-18845.
-    long ttl = longOption(conf, CONNECTION_TTL, DEFAULT_CONNECTION_TTL, -1);
-    httpClientBuilder.connectionTimeToLive(Duration.ofMillis(ttl));
+    Duration ttl = getDuration(conf, CONNECTION_TTL, (int)DEFAULT_CONNECTION_TTL, TimeUnit.SECONDS);
+
+    httpClientBuilder.connectionTimeout(connectionEstablishTimeout);
+    httpClientBuilder.socketTimeout(socketTimeout);
+    httpClientBuilder.connectionTimeToLive(ttl);
 
     NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
@@ -143,20 +145,21 @@ public final class AWSClientConfig {
 
     httpClientBuilder.maxConcurrency(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
+    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
 
-    int connectionEstablishTimeout =
-        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
-    int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
-
-    httpClientBuilder.connectionTimeout(Duration.ofMillis(connectionEstablishTimeout));
-    httpClientBuilder.readTimeout(Duration.ofMillis(socketTimeout));
-    httpClientBuilder.writeTimeout(Duration.ofMillis(socketTimeout));
+    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
+        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS);
 
     // set the connection TTL irrespective of whether the connection is in use or not.
     // this can balance requests over different S3 servers, and avoid failed
     // connections. See HADOOP-18845.
-    long ttl = longOption(conf, CONNECTION_TTL, DEFAULT_CONNECTION_TTL, -1);
-    httpClientBuilder.connectionTimeToLive(Duration.ofMillis(ttl));
+    Duration ttl = getDuration(conf, CONNECTION_TTL, (int)DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS);
+
+    httpClientBuilder.connectionTimeout(connectionEstablishTimeout);
+    httpClientBuilder.readTimeout(socketTimeout);
+    httpClientBuilder.writeTimeout(socketTimeout);
+    httpClientBuilder.connectionTimeToLive(ttl);
 
     // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
@@ -166,13 +169,19 @@ public final class AWSClientConfig {
 
   /**
    * Configures the retry policy.
+   * Retry policy is {@code RetryMode.ADAPTIVE}, which
+   * "dynamically limits the rate of AWS requests to maximize success rate",
+   * possibly at the expense of latency.
+   * Based on the ABFS experience, it is better to limit the rate requests are
+   * made rather than have to resort to exponential backoff after failures come
+   * in -especially as that backoff is per http connection.
    *
    * @param conf The Hadoop configuration
    * @return Retry policy builder
    */
   public static RetryPolicy.Builder createRetryPolicyBuilder(Configuration conf) {
 
-    RetryPolicy.Builder retryPolicyBuilder = RetryPolicy.builder();
+    RetryPolicy.Builder retryPolicyBuilder = RetryPolicy.builder(RetryMode.ADAPTIVE);
 
     retryPolicyBuilder.numRetries(S3AUtils.intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));
@@ -236,6 +245,7 @@ public final class AWSClientConfig {
     }
 
     return proxyConfigBuilder.build();
+
   }
 
   /**
@@ -248,7 +258,7 @@ public final class AWSClientConfig {
    */
   public static software.amazon.awssdk.http.nio.netty.ProxyConfiguration
       createAsyncProxyConfiguration(Configuration conf,
-      String bucket) throws IOException {
+          String bucket) throws IOException {
 
     software.amazon.awssdk.http.nio.netty.ProxyConfiguration.Builder proxyConfigBuilder =
         software.amazon.awssdk.http.nio.netty.ProxyConfiguration.builder();
@@ -378,17 +388,39 @@ public final class AWSClientConfig {
    */
   private static void initRequestTimeout(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
-    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    final Duration requestTimeoutMillis = getDuration(conf, REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS);
 
-    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+    if (requestTimeoutMillis.toMillis() > 0) {
+      clientConfig.apiCallAttemptTimeout(requestTimeoutMillis);
+    }
+  }
+
+  /**
+   * Get duration. This may be negative; callers must check.
+   * If the config option is greater than {@code Integer.MAX_VALUE} milliseconds,
+   * it is set to that max.
+   * Logs the value for diagnostics.
+   * @param conf config
+   * @param name option name
+   * @param defVal default value
+   * @param defaultUnit unit of default value
+   * @return duration. may be negative.
+   */
+  private static Duration getDuration(final Configuration conf,
+      final String name,
+      final int defVal,
+      final TimeUnit defaultUnit) {
+    long timeMillis = conf.getTimeDuration(name,
+        defVal, defaultUnit, TimeUnit.MILLISECONDS);
+
+    if (timeMillis > Integer.MAX_VALUE) {
       LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          requestTimeoutMillis, Integer.MAX_VALUE);
-      requestTimeoutMillis = Integer.MAX_VALUE;
+          timeMillis, Integer.MAX_VALUE);
+      timeMillis = Integer.MAX_VALUE;
     }
-
-    if(requestTimeoutMillis > 0) {
-      clientConfig.apiCallAttemptTimeout(Duration.ofMillis(requestTimeoutMillis));
-    }
+    final Duration duration = Duration.ofMillis(timeMillis);
+    LOG.debug("Duration of {} = {}", name, duration);
+    return duration;
   }
 }
