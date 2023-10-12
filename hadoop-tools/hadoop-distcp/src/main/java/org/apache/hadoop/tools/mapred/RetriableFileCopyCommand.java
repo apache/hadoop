@@ -21,12 +21,14 @@ package org.apache.hadoop.tools.mapred;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,7 +131,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private long doCopy(CopyListingFileStatus source, Path target,
       Mapper.Context context, EnumSet<FileAttribute> fileAttributes,
       FileStatus sourceStatus)
-      throws IOException {
+      throws Exception {
     LOG.info("Copying {} to {}", source.getPath(), target);
 
     final boolean toAppend = action == FileAction.APPEND;
@@ -151,8 +153,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
       long offset = (action == FileAction.APPEND) ?
           targetFS.getFileStatus(target).getLen() : source.getChunkOffset();
-      long bytesRead = copyToFile(targetPath, targetFS, source,
-          offset, context, fileAttributes, sourceChecksum, sourceStatus);
+      long bytesRead = copyToFile(targetPath, targetFS, source, offset, context,
+          fileAttributes, sourceChecksum, sourceStatus, sourceFS);
 
       if (!source.isSplit()) {
         DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
@@ -195,8 +197,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private long copyToFile(Path targetPath, FileSystem targetFS,
       CopyListingFileStatus source, long sourceOffset, Mapper.Context context,
       EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum,
-      FileStatus sourceStatus)
-      throws IOException {
+      FileStatus sourceStatus,FileSystem sourceFS)
+      throws IOException, NoSuchMethodException, IllegalAccessException,
+      InvocationTargetException {
     FsPermission permission = FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(targetFS.getConf()));
     int copyBufferSize = context.getConfiguration().getInt(
@@ -206,10 +209,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
 
     ErasureCodingPolicy ecPolicy = null;
-    if (preserveEC && sourceStatus.isErasureCoded()
-        && sourceStatus instanceof HdfsFileStatus
-        && targetFS instanceof DistributedFileSystem) {
-      ecPolicy = ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
+    if (preserveEC && sourceStatus.isErasureCoded()) {
+      if (sourceStatus instanceof HdfsFileStatus){
+        ecPolicy = ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
+      } else {
+        String ecPolicyName = (String) getErasureCodingPolicyMethod(sourceFS)
+            .invoke(sourceFS,sourceStatus);
+        ecPolicy = SystemErasureCodingPolicies.getByName(ecPolicyName);
+      }
     }
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
@@ -227,16 +234,22 @@ public class RetriableFileCopyCommand extends RetriableCommand {
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
             repl, blockSize, context, checksumOpt);
       } else {
-        DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
-        DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-            dfs.createFile(targetPath).permission(permission).create()
-                .overwrite(true).bufferSize(copyBufferSize).replication(repl)
-                .blockSize(blockSize).progress(context).recursive()
-                .ecPolicyName(ecPolicy.getName());
-        if (checksumOpt != null) {
-          builder.checksumOpt(checksumOpt);
+        if (targetFS instanceof DistributedFileSystem) {
+          DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
+          DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+              dfs.createFile(targetPath).permission(permission).create()
+                  .overwrite(true).bufferSize(copyBufferSize).replication(repl)
+                  .blockSize(blockSize).progress(context).recursive()
+                  .ecPolicyName(ecPolicy.getName());
+          if (checksumOpt != null) {
+            builder.checksumOpt(checksumOpt);
+          }
+          out = builder.build();
+        } else {
+          out = (FSDataOutputStream) createECOutputStreamMethod(targetFS).invoke(
+              targetFS, targetPath, permission, copyBufferSize, repl, blockSize,
+              checksumOpt, ecPolicy.getName());
         }
-        out = builder.build();
       }
       outStream = new BufferedOutputStream(out);
     } else {

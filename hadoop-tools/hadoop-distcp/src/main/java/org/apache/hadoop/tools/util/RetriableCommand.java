@@ -19,6 +19,11 @@
 
 package org.apache.hadoop.tools.util;
 
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -27,6 +32,10 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.util.ThreadUtil;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.security.CodeSource;
+import java.security.ProtectionDomain;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -111,4 +120,30 @@ public abstract class RetriableCommand {
     this.retryPolicy = retryHandler;
     return this;
   }
+
+  protected static Method getErasureCodingPolicyMethod(FileSystem fs)
+      throws NoSuchMethodException {
+    return fs.getClass().getMethod("getErasureCodingPolicy",
+        FileStatus.class);
+  }
+
+  protected static Method setErasureCodingPolicyMethod(FileSystem fs)
+      throws NoSuchMethodException {
+    ProtectionDomain protectionDomain = fs.getClass().getProtectionDomain();
+    CodeSource codeSource = protectionDomain.getCodeSource();
+    URL location = codeSource.getLocation();
+    System.out.println("Loaded from: " + location);
+    return fs.getClass()
+        .getMethod("setErasureCodingPolicy", Path.class, String.class,
+            int.class, int.class, int.class);
+  }
+
+  protected static Method createECOutputStreamMethod(FileSystem fs)
+      throws NoSuchMethodException {
+    return fs.getClass()
+        .getMethod("createECOutputStream", Path.class, FsPermission.class,
+            int.class, short.class, long.class, Options.ChecksumOpt.class,
+            String.class);
+  }
+
 }

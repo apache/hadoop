@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.fs.Path;
@@ -53,10 +54,11 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
    */
   @Override
   protected Object doExecute(Object... arguments) throws Exception {
-    assert arguments.length == 3 : "Unexpected argument list.";
+    assert arguments.length == 4 : "Unexpected argument list.";
     Path target = (Path)arguments[0];
     Mapper.Context context = (Mapper.Context)arguments[1];
     FileStatus sourceStatus = (FileStatus)arguments[2];
+    FileSystem sourceFs = (FileSystem)arguments[3];
 
     FileSystem targetFS = target.getFileSystem(context.getConfiguration());
     if(!targetFS.mkdirs(target)) {
@@ -65,12 +67,31 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
 
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
-    if (preserveEC && sourceStatus.isErasureCoded()
-        && targetFS instanceof DistributedFileSystem) {
-      ErasureCodingPolicy ecPolicy =
-          ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
-      DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
-      dfs.setErasureCodingPolicy(target, ecPolicy.getName());
+    if (preserveEC && sourceStatus.isErasureCoded()) {
+      ErasureCodingPolicy ecPolicy = null;
+      if (sourceFs instanceof DistributedFileSystem) {
+        ecPolicy = ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
+      } else {
+        try {
+          String ecPolicyName = (String) getErasureCodingPolicyMethod(
+              sourceFs).invoke(sourceFs,sourceStatus);
+          ecPolicy = SystemErasureCodingPolicies.getByName(ecPolicyName);
+        } catch (NoSuchMethodException exception){
+          return false;
+        }
+      }
+
+      if (targetFS instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
+        dfs.setErasureCodingPolicy(target, ecPolicy.getName());
+      } else {
+        try {
+          setErasureCodingPolicyMethod(targetFS).invoke(targetFS,
+              ecPolicy.getName());
+        } catch (NoSuchMethodException exception) {
+          return false;
+        }
+      }
     }
     return true;
   }
