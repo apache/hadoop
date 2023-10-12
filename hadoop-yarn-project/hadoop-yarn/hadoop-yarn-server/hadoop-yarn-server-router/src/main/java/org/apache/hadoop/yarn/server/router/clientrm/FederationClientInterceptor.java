@@ -230,6 +230,9 @@ public class FederationClientInterceptor
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
+    // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
+    this.executorService.allowCoreThreadTimeOut(true);
+
     final Configuration conf = this.getConf();
 
     try {
