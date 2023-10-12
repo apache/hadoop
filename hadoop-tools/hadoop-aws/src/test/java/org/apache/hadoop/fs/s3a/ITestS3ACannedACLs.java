@@ -40,7 +40,9 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.Constants.CANNED_ACL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfACLTestsDisabled;
 
 /**
  * Tests of ACL handling in the FS.
@@ -55,6 +57,8 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfACLTestsDisabled(conf);
+    disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf,
         CANNED_ACL);
     conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);

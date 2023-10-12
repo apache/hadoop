@@ -223,6 +223,14 @@ public final class MultipartUtils {
     /** Iterator over the current listing. */
     private ListIterator<MultipartUpload> batchIterator;
 
+    /**
+     * Construct an iterator to list uploads under a path.
+     * @param storeContext store context
+     * @param s3 s3 client
+     * @param maxKeys max # of keys to list per batch
+     * @param prefix prefix
+     * @throws IOException listing failure.
+     */
     @Retries.RetryTranslated
     public UploadIterator(
         final StoreContext storeContext,

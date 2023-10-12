@@ -29,12 +29,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.raiseAsAssumption;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 
 /**
  * Tests of content encoding object meta data.
+ * Some stores don't support gzip; rejection of the content encoding
+ * is downgraded to a skipped test.
  */
 public class ITestS3AContentEncoding extends AbstractS3ATestBase {
 
@@ -43,6 +47,8 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfNotEnabled(conf, KEY_CONTENT_ENCODING_ENABLED,
+        "Skipping storage class ACL tests");
     removeBaseAndBucketOverrides(conf, CONTENT_ENCODING);
     conf.set(CONTENT_ENCODING, GZIP);
 
@@ -51,20 +57,25 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
 
   @Test
   public void testCreatedObjectsHaveEncoding() throws Throwable {
-    S3AFileSystem fs = getFileSystem();
-    Path dir = methodPath();
-    fs.mkdirs(dir);
-    // even with content encoding enabled, directories do not have
-    // encoding.
-    Assertions.assertThat(getEncoding(dir))
-        .describedAs("Encoding of object %s", dir)
-        .isNull();
-    Path path = new Path(dir, "1");
-    ContractTestUtils.touch(fs, path);
-    assertObjectHasEncoding(path);
-    Path path2 = new Path(dir, "2");
-    fs.rename(path, path2);
-    assertObjectHasEncoding(path2);
+    try {
+      S3AFileSystem fs = getFileSystem();
+      Path dir = methodPath();
+      fs.mkdirs(dir);
+      // even with content encoding enabled, directories do not have
+      // encoding.
+      Assertions.assertThat(getEncoding(dir))
+          .describedAs("Encoding of object %s", dir)
+          .isNull();
+      Path path = new Path(dir, "1");
+      ContractTestUtils.touch(fs, path);
+      assertObjectHasEncoding(path);
+      Path path2 = new Path(dir, "2");
+      fs.rename(path, path2);
+      assertObjectHasEncoding(path2);
+    } catch (AWSUnsupportedFeatureException e) {
+      LOG.warn("Object store does not support {} content encoding", GZIP, e);
+      raiseAsAssumption(e);
+    }
   }
 
   /**
