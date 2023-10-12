@@ -153,25 +153,24 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
 
     List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
 
-    // First volume with 1MB free space
+    // first volume with 1MB free space
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(0).getAvailable()).thenReturn(1024L * 1024L);
 
-    // Second volume with 1MB + 1 byte free space
+    // Second volume with 1MB free space
     volumes.add(Mockito.mock(FsVolumeSpi.class));
-    Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L + 1);
+    Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L);
 
-    // Third volume with 3MB free space, which is a difference of 2MB, more
-    // than the threshold of 1MB.
+    // Third volume with 1MB free space
     volumes.add(Mockito.mock(FsVolumeSpi.class));
-    Mockito.when(volumes.get(2).getAvailable()).thenReturn(1024L * 1024L * 3);
+    Mockito.when(volumes.get(2).getAvailable()).thenReturn(1024L * 1024L);
 
-    // Fourth volume, again with 3MB free space.
+    // Fourth volume with 1MB free space
     volumes.add(Mockito.mock(FsVolumeSpi.class));
-    Mockito.when(volumes.get(3).getAvailable()).thenReturn(1024L * 1024L * 3);
+    Mockito.when(volumes.get(3).getAvailable()).thenReturn(1024L * 1024L);
 
-    // We should alternate assigning between the two volumes with a lot of free
-    // space.
+    // We should alternate assigning between all the above volumes
+    // for they have the same available space
     initPolicy(policy, 0, 1.0f);
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
             null));
@@ -182,8 +181,8 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
             null));
 
-    // We should alternate assigning between the two volumes with less free
-    // space.
+    // We should alternate assigning between all the above volumes
+    // for they have the same available space
     initPolicy(policy, 0, 0.0f);
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
             null));
