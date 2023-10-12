@@ -424,6 +424,4 @@ public interface S3ClientFactory {
       return region;
     }
   }
-
-
 }

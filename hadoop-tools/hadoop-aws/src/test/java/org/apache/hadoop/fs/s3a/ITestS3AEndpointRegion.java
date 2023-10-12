@@ -155,7 +155,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with a configured region");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, null, "eu-west-2",EU_WEST_2);
+    S3Client client = createS3Client(conf, null, EU_WEST_2, EU_WEST_2);
 
     intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
         HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
@@ -289,5 +289,4 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         parameters);
     return client;
   }
-
 }
