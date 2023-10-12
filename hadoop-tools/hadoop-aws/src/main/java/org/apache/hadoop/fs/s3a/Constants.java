@@ -228,6 +228,9 @@ public final class Constants {
   /**
    * Number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
+   * The S3A connector does its own selective retries; the only time the AWS
+   * SDK operations are not wrapped is during multipart copy via the AWS SDK
+   * transfer manager.
    */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
 
@@ -235,7 +238,7 @@ public final class Constants {
    * Default number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
    */
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 5;
 
   /**
    * Experimental/Unstable feature: should the AWS client library retry
@@ -264,7 +267,7 @@ public final class Constants {
   // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
+  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5000;
 
   // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";

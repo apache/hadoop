@@ -90,7 +90,7 @@ public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
   public String toString() {
     return "SimpleAWSCredentialsProvider{" +
         "accessKey.empty=" + accessKey.isEmpty() +
-        ", secretKey.empty'" + secretKey.isEmpty() +
+        ", secretKey.empty=" + secretKey.isEmpty() +
         '}';
   }
 

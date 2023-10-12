@@ -379,6 +379,19 @@ This adds extra overhead to every operation, but helps verify that the connector
 not keeping markers where it needs to be deleting them -and hence backwards compatibility
 is maintained.
 
+## <a name="enabling-prefetch"></a> Enabling prefetch for all tests
+
+The tests are run with prefetch if the `prefetch` property is set in the
+maven build. This can be combined with the scale tests as well.
+
+```bash
+mvn verify -Dprefetch
+
+mvn verify -Dparallel-tests -Dprefetch -DtestsThreadCount=8
+
+mvn verify -Dparallel-tests -Dprefetch -Dscale -DtestsThreadCount=8
+```
+
 ## <a name="scale"></a> Scale Tests
 
 There are a set of tests designed to measure the scalability and performance
@@ -521,7 +534,7 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
-## <a name="alternate_s3"></a> Load tests.
+## <a name="load"></a> Load tests.
 
 Some are designed to overload AWS services with more
 requests per second than an AWS account is permitted.
@@ -546,6 +559,32 @@ to it. We encourage testing against other filesystems and submissions of patches
 which address issues. In particular, we encourage testing of Hadoop release
 candidates, as these third-party endpoints get even less testing than the
 S3 endpoint itself.
+
+The core XML settings to turn off tests of features unavailable
+on third party stores.
+
+```xml
+  <property>
+    <name>test.fs.s3a.encryption.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>test.fs.s3a.create.storage.class.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>fs.s3a.select.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>test.fs.s3a.sts.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>test.fs.s3a.create.create.acl.enabled</name>
+    <value>false</value>
+ < /property>
+```
 
 ### Public datasets used in tests
 
@@ -587,7 +626,7 @@ S3 storage class, these tests might fail. They can be disabled.
 </property>
 ```
 
-### Configuring the CSV file read tests**
+### Configuring the CSV file read tests
 
 To test on alternate infrastructures supporting
 the same APIs, the option `fs.s3a.scale.test.csvfile` must either be
@@ -620,18 +659,19 @@ your `core-site.xml` file, so that trying to use S3 select fails fast with
 a meaningful error ("S3 Select not supported") rather than a generic Bad Request
 exception.
 
-### <a name="enabling-prefetch"></a> Enabling prefetch for all tests
+### Disabling V1 List API tests
 
-The tests are run with prefetch if the `prefetch` property is set in the
-maven build. This can be combined with the scale tests as well.
 
-```bash
-mvn verify -Dprefetch
-
-mvn verify -Dparallel-tests -Dprefetch -DtestsThreadCount=8
-
-mvn verify -Dparallel-tests -Dprefetch -Dscale -DtestsThreadCount=8
+If `ITestS3AContractGetFileStatusV1List` fails with any error about unsupported API.
+```xml
+  <property>
+    <name>test.fs.s3a.list.v1.enabled</name>
+    <value>false</value>
+  </property>
 ```
+
+Note: there's no equivalent for turning off v2 listing API, which all stores are now
+expected to support.
 
 
 ### Testing Requester Pays
@@ -698,6 +738,20 @@ The default is ""; meaning "use the amazon default endpoint" (`sts.amazonaws.com
 
 Consult the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
 for the full list of locations.
+
+### Disabling Content Encoding tests
+
+Tests in `ITestS3AContentEncoding` may need disabling
+```xml
+  <property>
+    <name>test.fs.s3a.content.encoding.enabled</name>
+    <value>false</value>
+  </property>
+```
+### Tests which may fail (and which you can ignore)
+
+* `ITestS3AContractMultipartUploader` tests `testMultipartUploadAbort` and `testSingleUpload` raising `FileNotFoundException`
+* `ITestS3AMiscOperations.testEmptyFileChecksums`: if the FS encrypts data always.
 
 ## <a name="debugging"></a> Debugging Test failures
 
@@ -945,7 +999,7 @@ sequential one afterwards. The IO heavy ones must also be subclasses of
 `S3AScaleTestBase` and so only run if the system/maven property
 `fs.s3a.scale.test.enabled` is true.
 
-## Individual test cases can be run in an IDE
+### Individual test cases can be run in an IDE
 
 This is invaluable for debugging test failures.
 

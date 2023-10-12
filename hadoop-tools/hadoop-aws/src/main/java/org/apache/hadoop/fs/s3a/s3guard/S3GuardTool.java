@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -400,9 +399,10 @@ public abstract class S3GuardTool extends Configured implements Tool,
       println(out, "Filesystem %s", fsUri);
       try {
         println(out, "Location: %s", fs.getBucketLocation());
-      } catch (AccessDeniedException e) {
+      } catch (IOException e) {
         // Caller cannot get the location of this bucket due to permissions
-        // in their role or the bucket itself.
+        // in their role or the bucket itself, or it is not an operation
+        // supported by this store.
         // Note and continue.
         LOG.debug("failed to get bucket location", e);
         println(out, LOCATION_UNKNOWN);

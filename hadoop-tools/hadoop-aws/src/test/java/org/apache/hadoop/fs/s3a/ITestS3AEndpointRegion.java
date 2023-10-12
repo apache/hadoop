@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +40,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
+import static org.apache.hadoop.io.IOUtils.closeStream;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -49,6 +54,26 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String AWS_ENDPOINT_TEST = "test-endpoint";
 
+  private static final String USW_2_BUCKET = "landsat-pds";
+
+  public static final String USW_2_STORE = "s3a://" + USW_2_BUCKET;
+
+  /**
+   * If anyone were ever to create a bucket with this UUID pair it would break the tests.
+   */
+  public static final String UNKNOWN_BUCKET = "23FA76D4-5F17-48B8-9D7D-9050269D0E40"
+      + "-8281BAF2-DBCF-47AA-8A27-F2FA3589656A";
+
+  /**
+   * New FS instance which will be closed in teardown.
+   */
+  private S3AFileSystem newFS;
+
+  @Override
+  public void teardown() throws Exception {
+    closeStream(newFS);
+    super.teardown();
+  }
 
   /**
    * Test to verify that not setting the region config, will lead to the client factory making
@@ -57,50 +82,80 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   @Test
   public void testWithoutRegionConfig() throws IOException {
+    describe("Verify that region lookup takes place");
+
     Configuration conf = getConfiguration();
-    String bucket = getFileSystem().getBucket();
-    conf.unset(String.format("fs.s3a.bucket.%s.endpoint.region", bucket));
-    conf.unset(AWS_REGION);
+    removeBaseAndBucketOverrides(conf, AWS_REGION, PATH_STYLE_ACCESS);
+    conf.setBoolean(PATH_STYLE_ACCESS, false);
 
-    S3AFileSystem fs = new S3AFileSystem();
-    fs.initialize(getFileSystem().getUri(), conf);
+    newFS = new S3AFileSystem();
 
-    fs.getS3AInternals().getBucketMetadata();
+    try {
+      newFS.initialize(getFileSystem().getUri(), conf);
+      newFS.getS3AInternals().getBucketMetadata();
+    } catch (UnknownHostException | UnknownStoreException | AccessDeniedException allowed) {
+      // these are all valid failure modes from different test environments.
+    }
+    assertRegionProbeCount(1);
+  }
 
-    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
-        .describedAs("Region is not configured, region probe should have been made").isEqualTo(1);
+  @Test
+  public void testUnknownBucket() throws Exception {
+    describe("Verify unknown bucket probe failure");
+    Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(UNKNOWN_BUCKET, conf, AWS_REGION, PATH_STYLE_ACCESS);
+
+    newFS = new S3AFileSystem();
+
+    try {
+      newFS.initialize(new URI("s3a://" + UNKNOWN_BUCKET), conf);
+      newFS.getS3AInternals().getBucketMetadata();
+      // expect a failure by here
+      fail("Expected failure, got " + newFS);
+    } catch (UnknownHostException | UnknownStoreException expected) {
+      // this is good.
+    }
+    assertRegionProbeCount(1);
   }
 
 
   @Test
   public void testWithRegionConfig() throws IOException, URISyntaxException {
+    describe("Verify that region lookup is skipped if the region property is set");
     Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf, AWS_REGION, PATH_STYLE_ACCESS);
+
     conf.set(AWS_REGION, "us-east-2");
 
-    S3AFileSystem fs = new S3AFileSystem();
-    fs.initialize(new URI("s3a://landsat-pds"), conf);
-
-    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
-        .describedAs("Region is configured, region probe should not have been made").isEqualTo(0);
+    newFS = new S3AFileSystem();
+    newFS.initialize(new URI(USW_2_STORE), conf);
+    assertRegionProbeCount(0);
   }
 
   @Test
   public void testRegionCache() throws IOException, URISyntaxException {
+    describe("Verify that region lookup is cached on the second attempt");
     Configuration conf = getConfiguration();
-    conf.unset(AWS_REGION);
-    conf.unset("fs.s3a.bucket.landsat-pds.endpoint.region");
-    S3AFileSystem fs = new S3AFileSystem();
+    removeBaseAndBucketOverrides(USW_2_BUCKET, conf, AWS_REGION, PATH_STYLE_ACCESS);
 
-    fs.initialize(new URI("s3a://landsat-pds"), conf);
+    newFS = new S3AFileSystem();
 
-    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
-        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(1);
+    newFS.initialize(new URI(USW_2_STORE), conf);
 
-    fs.initialize(new URI("s3a://landsat-pds"), conf);
+    assertRegionProbeCount(1);
+    closeStream(newFS);
+
+    // create a new instance
+    newFS = new S3AFileSystem();
+    newFS.initialize(new URI(USW_2_STORE), conf);
 
     // value should already be cached.
-    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
-        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(0);
+    assertRegionProbeCount(0);
+  }
+
+  private void assertRegionProbeCount(final int expected) {
+    Assertions.assertThat(newFS.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
+        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(expected);
   }
 
   @Test

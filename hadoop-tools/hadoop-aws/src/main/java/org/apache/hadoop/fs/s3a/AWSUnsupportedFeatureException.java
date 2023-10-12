@@ -20,25 +20,27 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
-
 /**
- * A 400 "Bad Request" exception was received.
- * This is the general "bad parameters, headers, whatever" failure.
+ * A store returned an error indicating that it does not support a
+ * specific S3 feature such as the chosen ChangeDetectionPolicy or
+ * other AWS-S3 feature that the third-party store does not support.
+ * The workaround is to disable use of the feature.
+ * Unrecoverable.
  */
-public class AWSBadRequestException extends AWSServiceIOException {
-  /**
-   * HTTP status code which signals this failure mode was triggered: {@value}.
-   */
-  public static final int STATUS_CODE = SC_400_BAD_REQUEST;
+public class AWSUnsupportedFeatureException extends AWSServiceIOException {
 
   /**
    * Instantiate.
    * @param operation operation which triggered this
    * @param cause the underlying cause
    */
-  public AWSBadRequestException(String operation,
+  public AWSUnsupportedFeatureException(String operation,
       AwsServiceException cause) {
     super(operation, cause);
+  }
+
+  @Override
+  public boolean retryable() {
+    return false;
   }
 }
