@@ -195,15 +195,6 @@ public class S3ARetryPolicy implements RetryPolicy {
     // inherit policies.
     Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
 
-    // socket exception subclass we consider unrecoverable
-    // though this is normally only found when opening a port for listening.
-    // which is never done in S3A.
-    policyMap.put(BindException.class, fail);
-
-    // connectivity problems are retried without worrying about idempotency
-    policyMap.put(ConnectTimeoutException.class, connectivityFailure);
-    policyMap.put(ConnectException.class, connectivityFailure);
-
     // Access denial and auth exceptions are not retried
     policyMap.put(AccessDeniedException.class, fail);
 
@@ -246,6 +237,15 @@ public class S3ARetryPolicy implements RetryPolicy {
     // third-party stores which only support a subset of AWS S3
     // operations.
     policyMap.put(AWSUnsupportedFeatureException.class, fail);
+
+    // socket exception subclass we consider unrecoverable
+    // though this is normally only found when opening a port for listening.
+    // which is never done in S3A.
+    policyMap.put(BindException.class, fail);
+
+    // connectivity problems are retried without worrying about idempotency
+    policyMap.put(ConnectTimeoutException.class, connectivityFailure);
+    policyMap.put(ConnectException.class, connectivityFailure);
 
     // this can be a sign of an HTTP connection breaking early.
     // which can be reacted to by another attempt if the request was idempotent.
