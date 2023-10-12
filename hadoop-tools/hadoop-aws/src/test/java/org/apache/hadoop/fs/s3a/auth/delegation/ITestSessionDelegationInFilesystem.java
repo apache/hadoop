@@ -596,8 +596,8 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         .withPathUri(new URI("s3a://localhost/"))
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withUserAgentSuffix("ITestSessionDelegationInFilesystem")
-        .withRegion(Region.US_WEST_2);
+        .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
+
     S3Client s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
