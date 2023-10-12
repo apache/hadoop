@@ -22,7 +22,10 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.BindException;
+import java.net.ConnectException;
 import java.net.NoRouteToHostException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
@@ -31,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import software.amazon.awssdk.core.exception.SdkException;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,13 +47,14 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
 
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
-
 import static org.apache.hadoop.fs.s3a.Constants.*;
+
 
 /**
  * The S3A request retry policy.
- *
+ * <p>
  * This uses the retry options in the configuration file to determine retry
  * count and delays for "normal" retries and separately, for throttling;
  * the latter is best handled for longer with an exponential back-off.
@@ -66,20 +69,25 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * For non-idempotent operations, only failures due to throttling or
  * from failures which are known to only arise prior to talking to S3
  * are retried.
- *
+ * <p>
  * The retry policy is all built around that of the normal IO exceptions,
  * particularly those extracted from
  * {@link S3AUtils#translateException(String, Path, SdkException)}.
  * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
  * does this translation if an {@code SdkException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
- *
+ * <p>
  * Put differently: this retry policy aims to work for handlers of the
  * untranslated exceptions, as well as the translated ones.
+ * <p>
+ * Note that because delete is considered idempotent, all s3a operations currently
+ * declare themselves idempotent.
+ * This means the retry policy here is more complex than it needs to be -but it
+ * does force us to consider when retrying operations would not be safe.
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
- * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html"> Amazon S3 Error Best Practices</a>
  */
-@SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
+@SuppressWarnings("visibilitymodifier")  // we want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -122,8 +130,7 @@ public class S3ARetryPolicy implements RetryPolicy {
    * @param conf configuration to read.
    */
   public S3ARetryPolicy(Configuration conf) {
-    Preconditions.checkArgument(conf != null, "Null configuration");
-    this.configuration = conf;
+    this.configuration = requireNonNull(conf, "Null configuration");
 
     // base policy from configuration
     int limit = conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT);
@@ -188,35 +195,57 @@ public class S3ARetryPolicy implements RetryPolicy {
     // inherit policies.
     Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
 
-    // failfast exceptions which we consider unrecoverable
-    policyMap.put(UnknownHostException.class, fail);
-    policyMap.put(NoRouteToHostException.class, fail);
-    policyMap.put(InterruptedException.class, fail);
-    // note this does not pick up subclasses (like socket timeout)
-    policyMap.put(InterruptedIOException.class, fail);
     // Access denial and auth exceptions are not retried
     policyMap.put(AccessDeniedException.class, fail);
-    policyMap.put(NoAuthWithAWSException.class, fail);
-    policyMap.put(FileNotFoundException.class, fail);
-    policyMap.put(UnknownStoreException.class, fail);
-    policyMap.put(InvalidRequestException.class, fail);
 
-    // once the file has changed, trying again is not going to help
-    policyMap.put(RemoteFileChangedException.class, fail);
+    // Treated as an immediate failure
+    policyMap.put(AWSBadRequestException.class, fail);
 
-    // likely only recovered by changing the policy configuration or s3
-    // implementation
-    policyMap.put(NoVersionAttributeException.class, fail);
+    // use specific retry policy for aws client exceptions
+    // nested IOExceptions will already have been extracted and used
+    // in this map.
+    policyMap.put(AWSClientIOException.class, retryAwsClientExceptions);
+
+    // server didn't respond.
+    policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);
 
     // should really be handled by resubmitting to new location;
     // that's beyond the scope of this retry policy
     policyMap.put(AWSRedirectException.class, fail);
 
+    // generic exception from the service
+    policyMap.put(AWSServiceIOException.class, retryAwsClientExceptions);
+
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
 
+    // Status 5xx error code is an immediate failure
+    // this is sign of a server-side problem, and while
+    // rare in AWS S3, it does happen on third party stores.
+    // (out of disk space, etc).
+    // by the time we get here, the aws sdk will have
+    // already retried.
+    // there is specific handling for some 5XX codes (501, 503);
+    // this is for everything else
+    policyMap.put(AWSStatus500Exception.class, fail);
+
+    // subclass of AWSServiceIOException whose cause is always S3Exception
+    policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
+
+    // server doesn't support a feature.
+    // raised from a number of HTTP error codes -mostly from
+    // third-party stores which only support a subset of AWS S3
+    // operations.
+    policyMap.put(AWSUnsupportedFeatureException.class, fail);
+
+    // socket exception subclass we consider unrecoverable
+    // though this is normally only found when opening a port for listening.
+    // which is never done in S3A.
+    policyMap.put(BindException.class, fail);
+
     // connectivity problems are retried without worrying about idempotency
     policyMap.put(ConnectTimeoutException.class, connectivityFailure);
+    policyMap.put(ConnectException.class, connectivityFailure);
 
     // this can be a sign of an HTTP connection breaking early.
     // which can be reacted to by another attempt if the request was idempotent.
@@ -224,26 +253,37 @@ public class S3ARetryPolicy implements RetryPolicy {
     // which isn't going to be recovered from
     policyMap.put(EOFException.class, retryIdempotentCalls);
 
-    // policy on a 400/bad request still ambiguous.
-    // Treated as an immediate failure
-    policyMap.put(AWSBadRequestException.class, fail);
+    // object not found. 404 when not unknown bucket; 410 "gone"
+    policyMap.put(FileNotFoundException.class, fail);
 
-    // Status 500 error code is also treated as a connectivity problem
-    policyMap.put(AWSStatus500Exception.class, connectivityFailure);
+    // Interrupted, usually by other threads
+    policyMap.put(InterruptedException.class, fail);
+    // note this does not pick up subclasses (like socket timeout)
+    policyMap.put(InterruptedIOException.class, fail);
+    policyMap.put(InvalidRequestException.class, fail);
 
-    // server didn't respond.
-    policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);
+    // auth failure. Possibly recoverable by reattempting with
+    // the credential provider, but not covered here.
+    policyMap.put(NoAuthWithAWSException.class, fail);
 
-    // use specific retry policy for aws client exceptions
-    policyMap.put(AWSClientIOException.class, retryAwsClientExceptions);
-    policyMap.put(AWSServiceIOException.class, retryAwsClientExceptions);
+    // network routing.
+    policyMap.put(NoRouteToHostException.class, fail);
 
-    // other operations
-    policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
-    policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
+    // likely only recovered by changing the policy configuration or s3
+    // implementation
+    policyMap.put(NoVersionAttributeException.class, fail);
+    // once the file has changed, trying again is not going to help
+    policyMap.put(RemoteFileChangedException.class, fail);
+    // general socket exceptions
+    policyMap.put(SocketException.class, connectivityFailure);
+    policyMap.put(SocketTimeoutException.class, connectivityFailure);
 
+    // assume that DNS wil not recover; SDK is likely to have retried.
+    policyMap.put(UnknownHostException.class, fail);
+    policyMap.put(UnknownStoreException.class, fail);
     // Unsupported requests do not work, however many times you try
     policyMap.put(UnsupportedRequestException.class, fail);
+
 
     return policyMap;
   }
@@ -253,14 +293,19 @@ public class S3ARetryPolicy implements RetryPolicy {
       int retries,
       int failovers,
       boolean idempotent) throws Exception {
-    Preconditions.checkArgument(exception != null, "Null exception");
-    Exception ex = exception;
+    Exception ex = requireNonNull(exception, "Null exception");
     if (exception instanceof SdkException) {
       // update the sdk exception for the purpose of exception
       // processing.
       ex = S3AUtils.translateException("", "", (SdkException) exception);
     }
-    return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
+    LOG.debug("Retry probe for {} with {} retries and {} failovers,"
+            + " idempotent={}, due to {}",
+        ex.getClass().getSimpleName(), retries, failovers, idempotent, ex, ex);
+    // look in the retry policy map
+    final RetryAction action = retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
+    LOG.debug("Retry action is {}", action);
+    return action;
   }
 
   /**

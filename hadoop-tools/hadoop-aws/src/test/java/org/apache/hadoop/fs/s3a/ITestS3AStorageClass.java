@@ -74,17 +74,12 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
     disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS, FAST_UPLOAD_BUFFER);
     conf.set(FAST_UPLOAD_BUFFER, fastUploadBufferType);
 
     return conf;
-  }
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfStorageClassTestsDisabled(getConfiguration());
   }
 
   /*

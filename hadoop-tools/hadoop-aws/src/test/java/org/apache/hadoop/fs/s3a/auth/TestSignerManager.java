@@ -24,7 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
@@ -32,26 +31,27 @@ import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.TestSignerManager.SignerInitializerForTest.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
+import static org.apache.hadoop.fs.s3a.auth.SignerFactory.S3_V2_SIGNER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests for the SignerManager.
  */
-public class TestSignerManager {
+public class TestSignerManager extends AbstractHadoopTestBase {
 
   private static final Text TEST_TOKEN_KIND = new Text("TestTokenKind");
   private static final Text TEST_TOKEN_SERVICE = new Text("TestTokenService");
@@ -60,9 +60,6 @@ public class TestSignerManager {
   private static final String BUCKET2 = "bucket2";
   private static final String TESTUSER1 = "testuser1";
   private static final String TESTUSER2 = "testuser2";
-
-  @Rule public Timeout testTimeout = new Timeout(10_000L,
-      TimeUnit.MILLISECONDS);
 
   @Before
   public void beforeTest() {
@@ -95,11 +92,8 @@ public class TestSignerManager {
     // Make sure the config is respected.
     signerManager.initCustomSigners();
     // Simulate a call from the AWS SDK to create the signer.
-    LambdaTestUtils.intercept(Exception.class,
+    intercept(InstantiationIOException.class,
         () -> SignerFactory.createSigner("testsignerUnregistered", null));
-    // Expecting generic Exception.class to handle future implementation
-    // changes.
-    // For now, this is an NPE
   }
 
   @Test
@@ -588,4 +582,17 @@ public class TestSignerManager {
     return SdkHttpFullRequest.builder().host(host).protocol("https").method(SdkHttpMethod.GET)
         .build();
   }
+
+  @Test
+  public void testV2SignerRejected() throws Throwable {
+    intercept(InstantiationIOException.class, "no longer supported",
+        () -> SignerFactory.createSigner(S3_V2_SIGNER, "key"));
+  }
+
+  @Test
+  public void testUnknownSignerRejected() throws Throwable {
+    intercept(InstantiationIOException.class, "unknownSigner",
+        () -> SignerFactory.createSigner("unknownSigner", "key"));
+  }
+
 }

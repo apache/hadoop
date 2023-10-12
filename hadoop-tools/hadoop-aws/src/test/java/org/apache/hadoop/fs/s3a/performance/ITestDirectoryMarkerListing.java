@@ -455,6 +455,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     Path src = basePath;
     Path dest = new Path(methodPath(), "dest");
+    getFileSystem().delete(dest, true);
     assertRenamed(src, dest);
 
     assertPathDoesNotExist("source", src);
@@ -610,15 +611,18 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
             RequestBody.fromString(content)));
   }
   /**
-   * Delete an object.
+   * Delete an object; exceptions are swallowed.
    * @param key key
-   * @param content string
    */
   private void deleteObject(final String key) throws Exception {
-    exec("DELETE " + key, () -> {
-      s3client.deleteObject(b -> b.bucket(bucket).key(key));
-      return "deleted " + key;
-    });
+    try {
+      exec("DELETE " + key, () -> {
+        s3client.deleteObject(b -> b.bucket(bucket).key(key));
+        return "deleted " + key;
+      });
+    } catch (IOException ignored) {
+
+    }
   }
 
   /**

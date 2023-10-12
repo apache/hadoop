@@ -189,6 +189,18 @@
     <value>10s</value>
   </property>
 
+  <property>
+    <name>fs.s3a.attempts.maximum</name>
+    <value>1</value>
+    <description>How many times should the SDK retry commands on (probably) transient errors.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.retry.limit</name>
+    <value>3</value>
+    <description>Fail fairly fast</description>
+  </property>
+
   <!--
   To run these tests.
 

@@ -148,8 +148,14 @@ public final class InternalConstants {
   /** 412 status code: Precondition Failed. */
   public static final int SC_412_PRECONDITION_FAILED = 412;
 
+  /** 415 status code: Content type unsupported by this store. */
+  public static final int SC_415_UNSUPPORTED_MEDIA_TYPE = 415;
+
   /** 416 status code: Range Not Satisfiable. */
   public static final int SC_416_RANGE_NOT_SATISFIABLE = 416;
+
+  /** 429 status code: This is the google GCS throttle message. */
+  public static final int SC_429_TOO_MANY_REQUESTS_GCS = 429;
 
   /** 443 status code: No Response (unofficial). */
   public static final int SC_443_NO_RESPONSE = 443;
@@ -160,7 +166,10 @@ public final class InternalConstants {
   /** 500 status code: Internal Server Error. */
   public static final int SC_500_INTERNAL_SERVER_ERROR = 500;
 
-  /** 503 status code: Service Unavailable. */
+  /** 501 status code: method not implemented. */
+  public static final int SC_501_NOT_IMPLEMENTED = 501;
+
+  /** 503 status code: Service Unavailable. on AWS S3: throttle response. */
   public static final int SC_503_SERVICE_UNAVAILABLE = 503;
 
   /** Name of the log for throttling events. Value: {@value}. */

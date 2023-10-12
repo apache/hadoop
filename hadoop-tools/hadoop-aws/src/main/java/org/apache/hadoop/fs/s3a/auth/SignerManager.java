@@ -109,17 +109,20 @@ public class SignerManager implements Closeable {
     }
   }
 
-  /*
-   * Make sure the signer class is registered once with the AWS SDK
+  /**
+   * Make sure the signer class is registered once with the AWS SDK.
+   * @param signerName signer name
+   * @param signerClassName classname
+   * @param conf source configuration
+   * @throws RuntimeException if the class is not found
    */
   private static void maybeRegisterSigner(String signerName,
       String signerClassName, Configuration conf) {
-    try {
-      SignerFactory.verifySignerRegistered(signerName);
-    } catch (IllegalArgumentException e) {
+
+    if (!SignerFactory.isSignerRegistered(signerName)) {
       // Signer is not registered with the AWS SDK.
       // Load the class and register the signer.
-      Class<? extends Signer> clazz = null;
+      Class<? extends Signer> clazz;
       try {
         clazz = (Class<? extends Signer>) conf.getClassByName(signerClassName);
       } catch (ClassNotFoundException cnfe) {

@@ -199,5 +199,13 @@ public final class MultipartTestUtils {
     public int hashCode() {
       return Objects.hash(key, uploadId);
     }
+
+    @Override
+    public String toString() {
+      return "IdKey{" +
+          "key='" + key + '\'' +
+          ", uploadId='" + uploadId + '\'' +
+          '}';
+    }
   }
 }

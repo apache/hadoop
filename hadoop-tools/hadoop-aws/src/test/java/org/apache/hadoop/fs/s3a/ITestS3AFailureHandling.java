@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
@@ -89,7 +90,22 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     S3AFileSystem fs =  getFileSystem();
     Path path = path("largeDir");
     mkdirs(path);
-    createFiles(fs, path, 1, 1005, 0);
+    final boolean bulkDeleteEnabled = isBulkDeleteEnabled(getFileSystem());
+
+    // with single object delete, only create a few files for a faster
+    // test run.
+    int filesToCreate;
+    int pages;
+    if (bulkDeleteEnabled) {
+      filesToCreate = 1005;
+      pages = 5;
+    } else {
+      filesToCreate = 250;
+      pages = 0;
+    }
+
+
+    createFiles(fs, path, 1, filesToCreate, 0);
     RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
             fs.listFiles(path, false);
     List<String> keys  = toList(mappingRemoteIterator(locatedFileStatusRemoteIterator,
@@ -102,9 +118,10 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     }
     Long bulkDeleteReqAfter = getNumberOfBulkDeleteRequestsMadeTillNow(fs);
     // number of delete requests is 5 as we have default page size of 250.
+
     Assertions.assertThat(bulkDeleteReqAfter - bulkDeleteReqBefore)
             .describedAs("Number of batched bulk delete requests")
-            .isEqualTo(5);
+            .isEqualTo(pages);
   }
 
   private Long getNumberOfBulkDeleteRequestsMadeTillNow(S3AFileSystem fs) {

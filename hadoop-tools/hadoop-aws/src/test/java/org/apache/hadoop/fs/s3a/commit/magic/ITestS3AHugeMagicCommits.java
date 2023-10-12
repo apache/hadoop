@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,8 +40,10 @@ import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongValue;
 
@@ -116,6 +119,19 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   @Override
   protected Path getPathOfFileToCreate() {
     return magicOutputFile;
+  }
+
+  @Test
+  public void test_000_CleanupPendingUploads() throws IOException {
+    describe("Cleanup any existing pending uploads");
+    final S3AFileSystem fs = getFileSystem();
+    final String key = fs.pathToKey(finalDirectory);
+    final AuditSpan span = fs.getAuditSpanSource().createSpan(
+        MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED.getSymbol(),
+        key, null);
+    final int count = fs.createWriteOperationHelper(span)
+        .abortMultipartUploadsUnderPath(key + "/");
+    LOG.info("Aborted {} uploads under {}", count, key);
   }
 
   @Override
