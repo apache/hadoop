@@ -48,6 +48,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createAsyncHttpClientBuilder;
+import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createAsyncProxyConfiguration;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
@@ -100,9 +102,10 @@ public class DefaultS3ClientFactory extends Configured
     Configuration conf = getConf();
     String bucket = uri.getHost();
 
-    NettyNioAsyncHttpClient.Builder httpClientBuilder = AWSClientConfig
-        .createAsyncHttpClientBuilder(conf)
-        .proxyConfiguration(AWSClientConfig.createAsyncProxyConfiguration(conf, bucket));
+    NettyNioAsyncHttpClient.Builder httpClientBuilder = createAsyncHttpClientBuilder(conf);
+
+    createAsyncProxyConfiguration(conf, bucket)
+        .ifPresent(httpClientBuilder::proxyConfiguration);
 
     MultipartConfiguration multipartConfiguration = MultipartConfiguration.builder()
         .minimumPartSizeInBytes(parameters.getMinimumPartSize())

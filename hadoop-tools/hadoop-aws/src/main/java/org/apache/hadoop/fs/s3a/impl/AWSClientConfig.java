@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
@@ -36,6 +38,7 @@ import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.SignerFactory;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -64,7 +67,6 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
 
 /**
  * Methods for configuring the S3 client.
@@ -73,6 +75,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
  */
 public final class AWSClientConfig {
   private static final Logger LOG = LoggerFactory.getLogger(AWSClientConfig.class);
+  public static final LogExactlyOnce LOG_PROXY_WARNING =
+      new LogExactlyOnce(LOG);
 
   private AWSClientConfig() {
   }
@@ -113,9 +117,8 @@ public final class AWSClientConfig {
     httpClientBuilder.maxConnections(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
 
-    int connectionEstablishTimeout =
-        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
-    int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
+    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
 
     httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
     httpClientBuilder.socketTimeout(Duration.ofSeconds(socketTimeout));
@@ -143,6 +146,8 @@ public final class AWSClientConfig {
 
     httpClientBuilder.maxConcurrency(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
+    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
 
     int connectionEstablishTimeout =
         S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
@@ -166,13 +171,19 @@ public final class AWSClientConfig {
 
   /**
    * Configures the retry policy.
+   * Retry policy is {@code RetryMode.ADAPTIVE}, which
+   * "dynamically limits the rate of AWS requests to maximize success rate",
+   * possibly at the expense of latency.
+   * Based on the ABFS experience, it is better to limit the rate requests are
+   * made rather than have to resort to exponential backoff after failures come
+   * in -especially as that backoff is per http connection.
    *
    * @param conf The Hadoop configuration
    * @return Retry policy builder
    */
   public static RetryPolicy.Builder createRetryPolicyBuilder(Configuration conf) {
 
-    RetryPolicy.Builder retryPolicyBuilder = RetryPolicy.builder();
+    RetryPolicy.Builder retryPolicyBuilder = RetryPolicy.builder(RetryMode.ADAPTIVE);
 
     retryPolicyBuilder.numRetries(S3AUtils.intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));
@@ -181,32 +192,86 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures the proxy.
+   * Proxy settings as read from hadoop config and used to configure the
+   * s3 clients.
+   */
+  private static final class ProxySettings {
+    final String proxyHost;
+    final int proxyPort;
+    final String scheme;
+    final String proxyUsername;
+    final String proxyPassword;
+
+    private final String ntlmDomain;
+
+    private final String ntlmWorkstation;
+
+    private ProxySettings(final String proxyHost,
+        final int proxyPort,
+        final String scheme,
+        final String proxyUsername,
+        final String proxyPassword,
+        final String ntlmDomain,
+        final String ntlmWorkstation) {
+      this.proxyHost = proxyHost;
+      this.proxyPort = proxyPort;
+      this.scheme = scheme;
+      this.proxyUsername = proxyUsername;
+      this.proxyPassword = proxyPassword;
+      this.ntlmDomain = ntlmDomain;
+      this.ntlmWorkstation = ntlmWorkstation;
+    }
+
+    /**
+     * Build a URI from the proxy settings.
+     * @return endpoint URI
+     */
+    private URI endpoint() {
+      return buildURI(scheme, proxyHost, proxyPort);
+    }
+
+    @Override
+    public String toString() {
+      return "ProxySettings{" +
+          "proxyHost='" + proxyHost + '\'' +
+          ", proxyPort=" + proxyPort +
+          ", scheme='" + scheme + '\'' +
+          ", proxyUsername='" + proxyUsername + '\'' +
+          ", proxyPassword='" + proxyPassword + '\'' +
+          ", ntlmDomain='" + ntlmDomain + '\'' +
+          ", ntlmWorkstation='" + ntlmWorkstation + '\'' +
+          ", endpont='" + endpoint() + '\'' +
+          '}';
+    }
+  }
+
+  /**
+   * Loads proxy settings from the hadoop configuration.
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return Proxy configuration
-   * @throws IOException on any IO problem
+   * @throws IOException problem reading passwords
+   * @throws IllegalArgumentException if the proxy settings are invalid
    */
-  public static ProxyConfiguration createProxyConfiguration(Configuration conf,
-      String bucket) throws IOException {
-
-    ProxyConfiguration.Builder proxyConfigBuilder = ProxyConfiguration.builder();
-
+  private static Optional<ProxySettings> loadProxySettings(Configuration conf, String bucket)
+      throws IOException {
     String proxyHost = conf.getTrimmed(PROXY_HOST, "");
     int proxyPort = conf.getInt(PROXY_PORT, -1);
 
     if (!proxyHost.isEmpty()) {
+      String scheme;
       if (proxyPort >= 0) {
-        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
-        proxyConfigBuilder.endpoint(buildURI(scheme, proxyHost, proxyPort));
+        scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
       } else {
         if (conf.getBoolean(PROXY_SECURED, false)) {
-          LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          proxyConfigBuilder.endpoint(buildURI("https", proxyHost, 443));
+          LOG_PROXY_WARNING.warn("Proxy host set without port. Using HTTPS default 443");
+          proxyPort = 443;
+          scheme = "https";
         } else {
-          LOG.warn("Proxy host set without port. Using HTTP default 80");
-          proxyConfigBuilder.endpoint(buildURI("http", proxyHost, 80));
+          LOG_PROXY_WARNING.warn("Proxy host set without port. Using HTTP default 80");
+          proxyPort = 80;
+          scheme = "http";
         }
       }
       final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
@@ -219,23 +284,46 @@ public final class AWSClientConfig {
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
-      proxyConfigBuilder.username(proxyUsername);
-      proxyConfigBuilder.password(proxyPassword);
-      proxyConfigBuilder.ntlmDomain(conf.getTrimmed(PROXY_DOMAIN));
-      proxyConfigBuilder.ntlmWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}:{} as user {} with password {} on "
-                + "domain {} as workstation {}", proxyHost, proxyPort, proxyUsername, proxyPassword,
-            PROXY_DOMAIN, PROXY_WORKSTATION);
-      }
+      String ntlmDomain = conf.getTrimmed(PROXY_DOMAIN);
+      String ntlmWorkstation = conf.getTrimmed(PROXY_WORKSTATION);
+      final ProxySettings proxySettings =
+          new ProxySettings(proxyHost, proxyPort, scheme, proxyUsername, proxyPassword,
+              ntlmDomain, ntlmWorkstation);
+      LOG.debug("Proxy settings: {}", proxySettings);
+      return Optional.of(proxySettings);
     } else if (proxyPort >= 0) {
       String msg =
           "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
       LOG.error(msg);
       throw new IllegalArgumentException(msg);
+    } else {
+      return Optional.empty();
     }
+  }
 
+
+  /**
+   * Configures the proxy.
+   *
+   * @param conf The Hadoop configuration
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @return Proxy configuration
+   * @throws IOException problem reading passwords
+   * @throws IllegalArgumentException if the proxy settings are invalid
+   */
+  public static ProxyConfiguration createProxyConfiguration(Configuration conf,
+      String bucket) throws IOException {
+
+
+    ProxyConfiguration.Builder proxyConfigBuilder = ProxyConfiguration.builder();
+    loadProxySettings(conf, bucket).ifPresent(s ->
+            proxyConfigBuilder.endpoint(s.endpoint())
+                .username(s.proxyUsername)
+                .password(s.proxyPassword)
+                .ntlmDomain(s.ntlmDomain)
+                .ntlmWorkstation(s.ntlmWorkstation));
     return proxyConfigBuilder.build();
+
   }
 
   /**
@@ -243,68 +331,25 @@ public final class AWSClientConfig {
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @return Proxy configuration
-   * @throws IOException on any IO problem
+   * @return optional Proxy configuration
+   * @throws IOException problem reading passwords
+   * @throws IllegalArgumentException if the proxy settings are invalid
    */
-  public static software.amazon.awssdk.http.nio.netty.ProxyConfiguration
-      createAsyncProxyConfiguration(Configuration conf,
-      String bucket) throws IOException {
+  public static Optional<software.amazon.awssdk.http.nio.netty.ProxyConfiguration>
+      createAsyncProxyConfiguration(
+          Configuration conf,
+          String bucket) throws IOException {
 
-    software.amazon.awssdk.http.nio.netty.ProxyConfiguration.Builder proxyConfigBuilder =
-        software.amazon.awssdk.http.nio.netty.ProxyConfiguration.builder();
+    return loadProxySettings(conf, bucket).map(s ->
+      software.amazon.awssdk.http.nio.netty.ProxyConfiguration.builder()
+          .useSystemPropertyValues(false)
+          .scheme(s.scheme)
+          .host(s.proxyHost)
+          .port(s.proxyPort)
+          .username(s.proxyUsername)
+          .password(s.proxyPassword)
+          .build());
 
-    String proxyHost = conf.getTrimmed(PROXY_HOST, "");
-    int proxyPort = conf.getInt(PROXY_PORT, -1);
-
-    if (!proxyHost.isEmpty()) {
-      if (proxyPort >= 0) {
-        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
-        proxyConfigBuilder.host(proxyHost);
-        proxyConfigBuilder.port(proxyPort);
-        proxyConfigBuilder.scheme(scheme);
-      } else {
-        if (conf.getBoolean(PROXY_SECURED, false)) {
-          LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          proxyConfigBuilder.host(proxyHost);
-          proxyConfigBuilder.port(443);
-          proxyConfigBuilder.scheme("https");
-        } else {
-          LOG.warn("Proxy host set without port. Using HTTP default 80");
-          proxyConfigBuilder.host(proxyHost);
-          proxyConfigBuilder.port(80);
-          proxyConfigBuilder.scheme("http");
-        }
-      }
-      final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
-          null, null);
-      final String proxyPassword = S3AUtils.lookupPassword(bucket, conf, PROXY_PASSWORD,
-          null, null);
-      if ((proxyUsername == null) != (proxyPassword == null)) {
-        String msg = "Proxy error: " + PROXY_USERNAME + " or " +
-            PROXY_PASSWORD + " set without the other.";
-        LOG.error(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      proxyConfigBuilder.username(proxyUsername);
-      proxyConfigBuilder.password(proxyPassword);
-      // TODO: check NTLM support
-      // proxyConfigBuilder.ntlmDomain(conf.getTrimmed(PROXY_DOMAIN));
-      // proxyConfigBuilder.ntlmWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}:{} as user {} with password {} on "
-                + "domain {} as workstation {}", proxyHost, proxyPort, proxyUsername, proxyPassword,
-            PROXY_DOMAIN, PROXY_WORKSTATION);
-      }
-    } else if (proxyPort >= 0) {
-      String msg =
-          "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
-      LOG.error(msg);
-      throw new IllegalArgumentException(msg);
-    } else {
-      return null;
-    }
-
-    return proxyConfigBuilder.build();
   }
 
   /***
@@ -378,17 +423,39 @@ public final class AWSClientConfig {
    */
   private static void initRequestTimeout(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
-    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    final Duration requestTimeoutMillis = getDuration(conf, REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS);
 
-    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+    if (requestTimeoutMillis.toMillis() > 0) {
+      clientConfig.apiCallAttemptTimeout(requestTimeoutMillis);
+    }
+  }
+
+  /**
+   * Get duration. This may be negative; callers must check.
+   * If the config option is greater than {@code Integer.MAX_VALUE} milliseconds,
+   * it is set to that max.
+   * Logs the value for diagnostics.
+   * @param conf config
+   * @param name option name
+   * @param defVal default value
+   * @param defaultUnit unit of default value
+   * @return duration. may be negative.
+   */
+  private static Duration getDuration(final Configuration conf,
+      final String name,
+      final int defVal,
+      final TimeUnit defaultUnit) {
+    long timeMillis = conf.getTimeDuration(name,
+        defVal, defaultUnit, TimeUnit.MILLISECONDS);
+
+    if (timeMillis > Integer.MAX_VALUE) {
       LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          requestTimeoutMillis, Integer.MAX_VALUE);
-      requestTimeoutMillis = Integer.MAX_VALUE;
+          timeMillis, Integer.MAX_VALUE);
+      timeMillis = Integer.MAX_VALUE;
     }
-
-    if(requestTimeoutMillis > 0) {
-      clientConfig.apiCallAttemptTimeout(Duration.ofMillis(requestTimeoutMillis));
-    }
+    final Duration duration = Duration.ofMillis(timeMillis);
+    LOG.debug("Duration of {} = {}", name, duration);
+    return duration;
   }
 }
