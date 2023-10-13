@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
@@ -235,9 +236,11 @@ public class DefaultS3ClientFactory extends Configured
 
     String configuredRegion = parameters.getRegion();
     Region region = null;
+    String origin = "";
 
     // If the region was configured, set it.
     if (configuredRegion != null && !configuredRegion.isEmpty()) {
+      origin = AWS_REGION;
       region = Region.of(configuredRegion);
     }
 
@@ -246,6 +249,9 @@ public class DefaultS3ClientFactory extends Configured
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {
         region = getS3RegionFromEndpoint(parameters.getEndpoint());
+        if (region != null) {
+          origin = "endpoint";
+        }
       }
       LOG.debug("Setting endpoint to {}", endpoint);
     }
@@ -258,15 +264,17 @@ public class DefaultS3ClientFactory extends Configured
       region = Region.of(AWS_S3_DEFAULT_REGION);
       builder.crossRegionAccessEnabled(true);
       builder.region(region);
+      origin = "cross region access fallback";
     } else if (configuredRegion.isEmpty()) {
       // region configuration was set to empty string.
       // allow this if people really want it; it is OK to rely on this
       // when deployed in EC2.
       WARN_OF_DEFAULT_REGION_CHAIN.warn(SDK_REGION_CHAIN_IN_USE);
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
+      origin = "SDK region chain";
     }
 
-    LOG.debug("Setting region to {}", region);
+    LOG.debug("Setting region to {} from {}", region, origin);
   }
 
   /**
