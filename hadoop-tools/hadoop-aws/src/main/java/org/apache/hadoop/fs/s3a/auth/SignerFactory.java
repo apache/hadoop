@@ -84,16 +84,6 @@ public final class SignerFactory {
   /**
    * Check if the signer has already been registered.
    * @param signerType signer to get
-   * @throws IllegalArgumentException if the signer type is unknown.
-   */
-  public static void verifySignerRegistered(String signerType) {
-    checkArgument(isSignerRegistered(signerType),
-        "unknown signer type: %s", signerType);
-  }
-
-  /**
-   * Check if the signer has already been registered.
-   * @param signerType signer to get
    * @return true if the signer is registered.
    */
   public static boolean isSignerRegistered(String signerType) {
