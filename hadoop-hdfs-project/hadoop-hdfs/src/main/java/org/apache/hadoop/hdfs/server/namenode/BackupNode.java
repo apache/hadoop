@@ -246,7 +246,7 @@ public class BackupNode extends NameNode {
           new JournalProtocolServerSideTranslatorPB(this);
       BlockingService service = JournalProtocolService
           .newReflectiveBlockingService(journalProtocolTranslator);
-      DFSUtil.addPBProtocol(conf, JournalProtocolPB.class, service,
+      DFSUtil.addInternalPBProtocol(conf, JournalProtocolPB.class, service,
           this.clientRpcServer);
     }
     

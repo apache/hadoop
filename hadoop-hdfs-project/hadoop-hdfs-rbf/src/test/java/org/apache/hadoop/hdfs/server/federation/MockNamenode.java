@@ -199,7 +199,7 @@ public class MockNamenode {
     BlockingService nnProtoPbService =
         NamenodeProtocolService.newReflectiveBlockingService(
             nnProtoXlator);
-    DFSUtil.addPBProtocol(
+    DFSUtil.addInternalPBProtocol(
         conf, NamenodeProtocolPB.class, nnProtoPbService, rpcServer);
 
     DatanodeProtocolServerSideTranslatorPB dnProtoPbXlator =
@@ -207,7 +207,7 @@ public class MockNamenode {
     BlockingService dnProtoPbService =
         DatanodeProtocolService.newReflectiveBlockingService(
             dnProtoPbXlator);
-    DFSUtil.addPBProtocol(
+    DFSUtil.addInternalPBProtocol(
         conf, DatanodeProtocolPB.class, dnProtoPbService, rpcServer);
 
     HAServiceProtocolServerSideTranslatorPB haServiceProtoXlator =
@@ -215,7 +215,7 @@ public class MockNamenode {
     BlockingService haProtoPbService =
         HAServiceProtocolService.newReflectiveBlockingService(
             haServiceProtoXlator);
-    DFSUtil.addPBProtocol(
+    DFSUtil.addInternalPBProtocol(
         conf, HAServiceProtocolPB.class, haProtoPbService, rpcServer);
 
     this.rpcServer.addTerseExceptions(
