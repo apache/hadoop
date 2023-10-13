@@ -311,6 +311,30 @@ Maven build goals:
     package. This option requires that -Dpmdk.lib is specified. With -Dbundle.pmdk provided,
     the build will fail if -Dpmdk.lib is not specified.
 
+Controlling the redistribution of the protobuf-2.5 dependency
+
+    The protobuf 2.5.0 library is used at compile time to compile the class
+    org.apache.hadoop.ipc.ProtobufHelper; this class known to have been used by
+    external projects in the past. Protobuf 2.5 is not used elsewhere in
+    the Hadoop codebase; alongside the move to Protobuf 3.x a private successor
+    class, org.apache.hadoop.ipc.internal.ShadedProtobufHelper is now used.
+
+    The hadoop-common JAR still declares a dependency on protobuf-2.5, but this
+    is likely to change in the future. The maven scope of the dependency can be
+    set with the common.protobuf2.scope option.
+    It can be set to "provided" in a build:
+       -Dcommon.protobuf2.scope=provided
+    If this is done then protobuf-2.5.0.jar will no longer be exported as a dependency,
+    and will then be omitted from the share/hadoop/common/lib/ directory of
+    any Hadoop distribution built. Any application declaring a dependency on hadoop-commmon
+    will no longer get the dependency; if they need it then they must explicitly declare it:
+
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>2.5.0</version>
+      </dependency>
+
 ----------------------------------------------------------------------------------
 Building components separately
 
