@@ -156,18 +156,6 @@ public abstract class ApplicationCleaner implements Runnable {
         + " success Router queries after " + totalAttemptCount + " retries");
   }
 
-  protected void cleanupAppRecordInRegistry(Set<ApplicationId> knownApps) {
-    List<String> allApps = this.registryClient.getAllApplications();
-    LOG.info("Got {} existing apps in registry.", allApps.size());
-    for (String app : allApps) {
-      ApplicationId appId = ApplicationId.fromString(app);
-      if (!knownApps.contains(appId)) {
-        LOG.info("removing finished application entry for {}", app);
-        this.registryClient.removeAppFromRegistry(appId, true);
-      }
-    }
-  }
-
   @Override
   public abstract void run();
 }
