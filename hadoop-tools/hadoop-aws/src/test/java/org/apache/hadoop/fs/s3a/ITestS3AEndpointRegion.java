@@ -133,7 +133,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with a configured endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST, null,US_EAST_2);
+    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST, null, US_EAST_2);
 
     intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
         HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
@@ -144,7 +144,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null,US_EAST_1);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_1);
 
     intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
         HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
@@ -243,9 +243,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
             .describedAs("Endpoint is overridden").isEqualTo(null);
       }
 
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
-            .describedAs("Incorrect region set").isEqualTo(region);
+      Assertions.assertThat(
+              executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
+          .describedAs("Incorrect region set").isEqualTo(region);
 
       // We don't actually want to make a request, so exit early.
       throw AwsServiceException.builder().message("Exception thrown by interceptor").build();
