@@ -21,12 +21,12 @@ Purpose
 -------
 YARN is known to scale to thousands of nodes. The scalability of [YARN](./YARN.html) is determined by the Resource Manager, and is proportional to number of nodes, active applications, active containers, and frequency of heartbeat (of both nodes and applications). Lowering heartbeat can provide scalability increase, but is detrimental to utilization (see old Hadoop 1.x experience).
 This document described a federation-based approach to scale a single YARN cluster to tens of thousands of nodes, by federating multiple YARN sub-clusters.  The proposed approach is to divide a large (10-100k nodes) cluster into smaller units called sub-clusters, each with its own YARN RM and compute nodes. The federation system will stitch these sub-clusters together and make them appear as one large YARN cluster to the applications.
-The applications running in this federated environment will see a single massive YARN cluster and will be able to schedule tasks on any node of the federated cluster. Under the hood, the federation system will negotiate with sub-clusters resource managers and provide resources to the application. The goal is to allow an individual job to “span” sub-clusters seamlessly.
+The applications running in this federated environment will see a single massive YARN cluster and will be able to schedule tasks on any node of the federated cluster. Under the hood, the federation system will negotiate with sub-clusters resource managers and provide resources to the application. The goal is to allow an individual job to "span" sub-clusters seamlessly.
 
 This design is structurally scalable, as we bound the number of nodes each RM is responsible for, and appropriate policies, will try to ensure that the majority of applications will reside within a single sub-cluster, thus the number of applications each RM will see is also bounded. This means we could almost linearly scale, by simply adding sub-clusters (as very little coordination is needed across them).
 This architecture can provide very tight enforcement of scheduling invariants within each sub-cluster (simply inherits from YARN), while continuous rebalancing across subcluster will enforce (less strictly) that these properties are also respected at a global level (e.g., if a sub-cluster loses a large number of nodes, we could re-map queues to other sub-clusters to ensure users running on the impaired sub-cluster are not unfairly affected).
 
-Federation is designed as a “layer” atop of existing YARN codebase, with limited changes in the core YARN mechanisms.
+Federation is designed as a "layer" atop of existing YARN codebase, with limited changes in the core YARN mechanisms.
 
 Assumptions:
 
@@ -51,12 +51,12 @@ If the entire sub-cluster is compromised, external mechanisms will ensure that j
 Sub-cluster is also the scalability unit in a federated environment. We can scale out the federated environment by adding one or more sub-clusters.
 
 *Note*: by design each sub-cluster is a fully functional YARN RM, and its contribution to the federation can be set to be only a fraction of its overall capacity,
-i.e. a sub-cluster can have a “partial” commitment to the federation, while retaining the ability to give out part of its capacity in a completely local way.
+i.e. a sub-cluster can have a "partial" commitment to the federation, while retaining the ability to give out part of its capacity in a completely local way.
 
 ###Router
 YARN applications are submitted to one of the Routers, which in turn applies a routing policy (obtained from the Policy Store), queries the State Store for the sub-cluster
-URL and redirects the application submission request to the appropriate sub-cluster RM. We call the sub-cluster where the job is started the “home sub-cluster”, and we call
-“secondary sub-clusters” all other sub-cluster a job is spanning on.
+URL and redirects the application submission request to the appropriate sub-cluster RM. We call the sub-cluster where the job is started the "home sub-cluster", and we call
+"secondary sub-clusters" all other sub-cluster a job is spanning on.
 The Router exposes the ApplicationClientProtocol to the outside world, transparently hiding the presence of multiple RMs. To achieve this the Router also persists the mapping
 between the application and its home sub-cluster into the State Store. This allows Routers to be soft-state while supporting user requests cheaply, as any Router can recover
 this application to home sub-cluster mapping and direct requests to the right RM without broadcasting them. For performance caching and session stickiness might be advisable.
@@ -97,11 +97,11 @@ The Federation State defines the additional state that needs to be maintained to
 ####Sub-cluster Membership
 The member YARN RMs continuously heartbeat to the state store to keep alive and publish their current capability/load information.  This information is used by the
 Global Policy Generator (GPG) to make proper policy decisions. Also this information can be used by routers to select the best home sub-cluster.  This mechanism allows
-us to dynamically grow/shrink the “cluster fleet” by adding or removing sub-clusters.  This also allows for easy maintenance of each sub-cluster. This is new functionality
+us to dynamically grow/shrink the "cluster fleet" by adding or removing sub-clusters.  This also allows for easy maintenance of each sub-cluster. This is new functionality
 that needs to be added to the YARN RM but the mechanisms are well understood as it’s similar to individual YARN RM HA.
 
 ####Application’s Home Sub-cluster
-The sub-cluster on which the Application Master (AM) runs is called the Application’s “home sub-cluster”. The AM is not limited to resources from the home sub-cluster
+The sub-cluster on which the Application Master (AM) runs is called the Application’s "home sub-cluster". The AM is not limited to resources from the home sub-cluster
 but can also request resources from other sub-clusters, referred to as secondary sub-clusters.
 The federated environment will be configured and tuned periodically such that when an AM is placed on a sub-cluster, it should be able to find most of the resources
 on the home sub-cluster. Only in certain cases it should need to ask for resources from other sub-clusters.
@@ -133,7 +133,7 @@ AMRMProxy, Global Policy Generator (GPG) and Router work together to make this h
 The figure shows a sequence diagram for the following job execution flow:
 
 1. The Router receives an application submission request that is compliant with the YARN Application Client Protocol.
-2. The router interrogates a routing table / policy to choose the “home RM” for the job (the policy configuration is received from the state-store on heartbeat).
+2. The router interrogates a routing table / policy to choose the "home RM" for the job (the policy configuration is received from the state-store on heartbeat).
 3. The router queries the membership state to determine the endpoint of the home RM.
 4. The router then redirects the application submission request to the home RM.
 5. The router updates the application state with the home sub-cluster identifier.
