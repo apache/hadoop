@@ -229,8 +229,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
    */
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT>
-  void configureEndpointAndRegion(
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
 
