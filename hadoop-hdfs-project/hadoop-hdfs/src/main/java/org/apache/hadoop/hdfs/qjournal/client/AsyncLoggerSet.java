@@ -53,9 +53,15 @@ class AsyncLoggerSet {
   
   private static final long INVALID_EPOCH = -1;
   private long myEpoch = INVALID_EPOCH;
+  private final int majoritySize;
   
-  public AsyncLoggerSet(List<AsyncLogger> loggers) {
+  AsyncLoggerSet(List<AsyncLogger> loggers) {
+    this(loggers, loggers.size());
+  }
+
+  AsyncLoggerSet(List<AsyncLogger> loggers, int quorumJournalCount) {
     this.loggers = ImmutableList.copyOf(loggers);
+    this.majoritySize = quorumJournalCount / 2 + 1;
   }
   
   void setEpoch(long e) {
@@ -151,7 +157,7 @@ class AsyncLoggerSet {
    * @return the number of nodes which are required to obtain a quorum.
    */
   int getMajoritySize() {
-    return loggers.size() / 2 + 1;
+    return this.majoritySize;
   }
   
   /**
@@ -159,6 +165,11 @@ class AsyncLoggerSet {
    */
   String getMajorityString() {
     return getMajoritySize() + "/" + loggers.size();
+  }
+
+  @VisibleForTesting
+  List<AsyncLogger> getLoggerListForTests() {
+    return loggers;
   }
 
   /**

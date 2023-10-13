@@ -95,6 +95,7 @@ public class TestQuorumJournalManagerUnit {
     qjm = new QuorumJournalManager(conf, new URI("qjournal://host/jid"), FAKE_NSINFO) {
       @Override
       protected List<AsyncLogger> createLoggers(AsyncLogger.Factory factory) {
+        setQuorumJournalCount(spyLoggers.size());
         return spyLoggers;
       }
     };
