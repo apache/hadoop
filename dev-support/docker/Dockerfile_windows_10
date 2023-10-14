@@ -112,12 +112,14 @@ RUN setx classpath ""
 
 RUN git config --global core.longpaths true
 
+RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires
+
 RUN powershell secedit /export /cfg "C:\secpol.cfg"
-RUN powershell "(Get-Content C:\secpol.cfg).Replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = User Manager\ContainerUser,') | Out-File C:\secpol.cfg"
+RUN powershell "(Get-Content C:\secpol.cfg).Replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = HadoopBuilder,') | Out-File C:\secpol.cfg"
 RUN powershell secedit /configure /db "C:\windows\security\local.sdb" /cfg "C:\secpol.cfg"
 RUN powershell Remove-Item -Force "C:\secpol.cfg" -Confirm:$false
 
-USER ContainerUser
+USER HadoopBuilder
 ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
 ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
 ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
