@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -130,7 +131,8 @@ public final class GPGUtils {
     return weights;
   }
 
-  protected static Client createJerseyClient(Configuration conf) {
+  @VisibleForTesting
+  public static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_CONNECT_TIMEOUT,
         YarnConfiguration.DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
