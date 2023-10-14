@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -679,8 +680,30 @@ public final class MarkerTool extends S3GuardTool {
 
     int count = 0;
     boolean result = true;
-    RemoteIterator<S3AFileStatus> listing = operations
-        .listObjects(path, storeContext.pathToKey(path));
+
+    // the path/key stuff loses any trailing / passed in.
+    // but this may actually be needed.
+    RemoteIterator<S3AFileStatus> listing = null;
+    String listkey = storeContext.pathToKey(path);
+    if (listkey.isEmpty()) {
+      // root. always give it a path to keep ranger happy.
+      listkey = "/";
+    }
+
+    try {
+      listing = operations.listObjects(path, listkey);
+    } catch (AWSBadRequestException e) {
+      // endpoint was unhappy. this is generally unrecoverable, but some
+      // third party stores do insist on a / here.
+      LOG.debug("Failed to list \"{}\"", listkey, e);
+      // now retry with a trailing / in case that works
+      if (listkey.endsWith("/")) {
+        // already has a trailing /, so fail
+        throw e;
+      }
+      // try again.
+      listing = operations.listObjects(path, listkey + "/");
+    }
     while (listing.hasNext()) {
       count++;
       S3AFileStatus status = listing.next();

@@ -59,6 +59,21 @@ public interface S3ATestConstants {
   String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 
   /**
+   * A property set to true if ACL tests are enabled: {@value}.
+   */
+  String KEY_ACL_TESTS_ENABLED = TEST_FS_S3A + "create.acl.enabled";
+
+  /**
+   * A property set to true if V1 tests are enabled: {@value}.
+   */
+  String KEY_LIST_V1_ENABLED = TEST_FS_S3A + "list.v1.enabled";
+
+  /**
+   * A property set to true if content encoding tests are enabled: {@value}.
+   */
+  String KEY_CONTENT_ENCODING_ENABLED = TEST_FS_S3A + "content.encoding.enabled";
+
+  /**
    * Tell tests that they are being executed in parallel: {@value}.
    */
   String KEY_PARALLEL_TEST_EXECUTION = "test.parallel.execution";

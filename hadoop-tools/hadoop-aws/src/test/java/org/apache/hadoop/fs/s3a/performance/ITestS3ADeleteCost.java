@@ -99,16 +99,17 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     // still be there
     Path simpleFile = file(new Path(dir, "simple.txt"));
 
-    boolean rawAndKeeping = !isDeleting();
-    boolean rawAndDeleting = isDeleting();
+    boolean keeping = !isDeleting();
+    boolean deleting = isDeleting();
+    boolean bulkDelete = isBulkDelete();
     verifyMetrics(() -> {
           fs.delete(simpleFile, false);
           return "after fs.delete(simpleFile) " + getMetricSummary();
         },
-        probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
+        probe(keeping, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
         // if deleting markers, look for the parent too
-        probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
+        probe(deleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
         with(OBJECT_LIST_REQUEST,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
@@ -116,7 +117,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         with(FILES_DELETED, 1),
 
         // a single DELETE call is made to delete the object
-        with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
+        probe(bulkDelete, OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
+        probe(!bulkDelete, OBJECT_DELETE_REQUEST,
+            DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
 
         // keeping: create no parent dirs or delete parents
         withWhenKeeping(DIRECTORIES_CREATED, 0),
@@ -127,7 +130,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // a bulk delete for all parents is issued.
         // the number of objects in it depends on the depth of the tree;
         // don't worry about that
-        withWhenDeleting(OBJECT_BULK_DELETE_REQUEST, DELETE_MARKER_REQUEST)
+        probe(deleting && bulkDelete, OBJECT_BULK_DELETE_REQUEST,
+            DELETE_MARKER_REQUEST)
     );
 
     // there is an empty dir for a parent

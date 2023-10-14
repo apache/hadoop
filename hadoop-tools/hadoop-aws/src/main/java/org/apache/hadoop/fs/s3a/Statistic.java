@@ -582,7 +582,7 @@ public enum Statistic {
       TYPE_COUNTER),
   MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
       StoreStatisticNames.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
-      "Multipart Upload Abort Unner Path Invoked",
+      "Multipart Upload Abort Under Path Invoked",
       TYPE_COUNTER),
   MULTIPART_UPLOAD_COMPLETED(
       StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,

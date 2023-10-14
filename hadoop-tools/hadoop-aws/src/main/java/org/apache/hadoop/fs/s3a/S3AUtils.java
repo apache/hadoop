@@ -80,6 +80,7 @@ import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unsupportedConstructor;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
@@ -191,10 +192,14 @@ public final class S3AUtils {
       ioe = maybeTranslateCredentialException(path, exception);
       if (ioe != null) {
         return ioe;
-      } else {
-        // no custom handling.
-        return new AWSClientIOException(message, exception);
       }
+      // network problems covered by an IOE inside the exception chain.
+      ioe = maybeExtractNetworkException(path, exception);
+      if (ioe != null) {
+        return ioe;
+      }
+      // no custom handling.
+      return new AWSClientIOException(message, exception);
     } else {
       // "error response returned by an S3 or other service."
       // These contain more details and should be translated based
@@ -209,6 +214,8 @@ public final class S3AUtils {
       if (ase.awsErrorDetails() != null) {
         message = message + ":" + ase.awsErrorDetails().errorCode();
       }
+
+      // big switch on the HTTP status code.
       switch (status) {
 
       case SC_301_MOVED_PERMANENTLY:
@@ -242,7 +249,8 @@ public final class S3AUtils {
           // this is a missing bucket
           ioe = new UnknownStoreException(path, message, ase);
         } else {
-          // a normal unknown object
+          // a normal unknown object.
+          // Can also be raised by third-party stores when aborting an unknown multipart upload
           ioe = new FileNotFoundException(message);
           ioe.initCause(ase);
         }
@@ -255,10 +263,13 @@ public final class S3AUtils {
         ioe.initCause(ase);
         break;
 
-      // method not allowed; seen on S3 Select.
-      // treated as a bad request
+      // errors which stores can return from requests which
+      // the store does not support.
       case SC_405_METHOD_NOT_ALLOWED:
-        ioe = new AWSBadRequestException(message, s3Exception);
+      case SC_412_PRECONDITION_FAILED:
+      case SC_415_UNSUPPORTED_MEDIA_TYPE:
+      case SC_501_NOT_IMPLEMENTED:
+        ioe = new AWSUnsupportedFeatureException(message, s3Exception);
         break;
 
       // out of range. This may happen if an object is overwritten with
@@ -277,7 +288,8 @@ public final class S3AUtils {
         break;
 
       // throttling
-      case SC_503_SERVICE_UNAVAILABLE:
+      case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
+      case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
         break;
 
@@ -295,8 +307,15 @@ public final class S3AUtils {
         // other 200: FALL THROUGH
 
       default:
-        // no specific exit code. Choose an IOE subclass based on the class
-        // of the caught exception
+        // no specifically handled exit code.
+
+        // convert all unknown 500+ errors to a 500 exception
+        if (status > SC_500_INTERNAL_SERVER_ERROR) {
+          ioe = new AWSStatus500Exception(message, ase);
+          break;
+        }
+
+        // Choose an IOE subclass based on the class of the caught exception
         ioe = s3Exception != null
             ? new AWSS3IOException(message, s3Exception)
             : new AWSServiceIOException(message, ase);

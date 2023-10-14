@@ -451,8 +451,7 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.ipc.ProtobufHelper" />
-    <Method name="getFixedByteString" />
+    <Class name="org.apache.hadoop.ipc.internal.ShadedProtobufHelper" />
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
   </Match>
 </FindBugsFilter>

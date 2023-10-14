@@ -21,13 +21,13 @@ package org.apache.hadoop.fs.s3a;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 /**
- * A 500 response came back from a service.
- * This is considered <i>probably</i> retriable, That is, we assume
- * <ol>
- *   <li>whatever error happened in the service itself to have happened
- *    before the infrastructure committed the operation.</li>
- *    <li>Nothing else got through either.</li>
- * </ol>
+ * A 5xx response came back from a service.
+ * The 500 error considered retriable by the AWS SDK, which will have already
+ * tried it {@code fs.s3a.attempts.maximum} times before reaching s3a
+ * code.
+ * How it handles other 5xx errors is unknown: S3A FS code will treat them
+ * as unrecoverable on the basis that they indicate some third-party store
+ * or gateway problem.
  */
 public class AWSStatus500Exception extends AWSServiceIOException {
   public AWSStatus500Exception(String operation,
@@ -37,6 +37,6 @@ public class AWSStatus500Exception extends AWSServiceIOException {
 
   @Override
   public boolean retryable() {
-    return true;
+    return false;
   }
 }

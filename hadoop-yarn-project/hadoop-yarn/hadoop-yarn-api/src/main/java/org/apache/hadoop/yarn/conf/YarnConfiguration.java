@@ -857,6 +857,10 @@ public class YarnConfiguration extends Configuration {
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
+  /** Enable Zookeeper SSL/TLS communication. */
+  public static final String RM_ZK_CLIENT_SSL_ENABLED = RM_ZK_PREFIX + "client-ssl.enabled";
+  public static final boolean DEFAULT_RM_ZK_CLIENT_SSL_ENABLED = false;
+
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
@@ -2227,6 +2231,14 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-localizer.java.opts";
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
+
+  /*
+   * Flag to indicate whether JDK17's required add-exports flags should be added to
+   * container localizers regardless of the user specified JAVA_OPTS.
+   */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
+  public static final boolean NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT = true;
 
   /** The log level of container localizer process. */
   public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=

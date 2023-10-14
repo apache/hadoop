@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -146,6 +148,26 @@ public class ITestAzureBlobFileSystemCreate extends
     assertIsFile(fs, testFile);
   }
 
+  @Test
+  public void testCreateOnRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testFile = path(AbfsHttpConstants.ROOT_PATH);
+    AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () ->
+        fs.create(testFile, true));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
+    }
+
+    ex = intercept(AbfsRestOperationException.class, () ->
+        fs.createNonRecursive(testFile, FsPermission.getDefault(),
+            false, 1024, (short) 1, 1024, null));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
+    }
+  }
+
   /**
    * Attempts to use to the ABFS stream after it is closed.
    */
@@ -190,7 +212,8 @@ public class ITestAzureBlobFileSystemCreate extends
         // the exception raised in close() must be in the caught exception's
         // suppressed list
         Throwable[] suppressed = fnfe.getSuppressed();
-        assertEquals("suppressed count", 1, suppressed.length);
+        Assertions.assertThat(suppressed.length)
+            .describedAs("suppressed count should be 1").isEqualTo(1);
         Throwable inner = suppressed[0];
         if (!(inner instanceof IOException)) {
           throw inner;

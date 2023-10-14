@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminMonitorInterface;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
@@ -652,6 +653,52 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
     }
+  }
+
+  @Test
+  public void testReconfigureMinBlocksForWrite() throws Exception {
+    final NameNode nameNode = cluster.getNameNode(0);
+    final BlockManager bm = nameNode.getNamesystem().getBlockManager();
+    String key = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY;
+    int defaultVal = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT;
+
+    // Ensure we cannot set any of the parameters negative
+    ReconfigurationException reconfigurationException =
+        LambdaTestUtils.intercept(ReconfigurationException.class,
+            () -> nameNode.reconfigurePropertyImpl(key, "-20"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '-20' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "0"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '0' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+
+    // Ensure none of the parameters can be set to a string value
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "str"));
+    assertTrue(reconfigurationException.getCause() instanceof NumberFormatException);
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    nameNode.reconfigurePropertyImpl(key, "3");
+
+    // Ensure none of the values were updated from the new value.
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.STRIPED));
   }
 
   @After

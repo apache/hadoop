@@ -427,7 +427,8 @@ public class ResourceManager extends CompositeService
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos);
+    manager.start(authInfos, config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+        YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
     return manager;
   }
 

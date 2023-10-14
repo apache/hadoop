@@ -63,6 +63,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static software.amazon.awssdk.services.s3.model.StorageClass.UNKNOWN_TO_SDK_VERSION;
 
 /**
  * The standard implementation of the request factory.
@@ -242,7 +243,7 @@ public class RequestFactoryImpl implements RequestFactory {
         .metadataDirective(MetadataDirective.REPLACE)
         .acl(cannedACL);
 
-    if (srcom.storageClass() != null) {
+    if (srcom.storageClass() != null && srcom.storageClass() != UNKNOWN_TO_SDK_VERSION) {
       copyObjectRequestBuilder.storageClass(srcom.storageClass());
     }
 

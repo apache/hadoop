@@ -4201,6 +4201,12 @@ public class BlockManager implements BlockStatsMXBean {
       storage2index.put(storage, index);
     }
 
+    if (duplicated.isEmpty()) {
+      LOG.debug("Found no duplicated internal blocks for {}. Maybe it's " +
+          "because there are stale storages.", storedBlock);
+      return;
+    }
+
     // use delHint only if delHint is duplicated
     final DatanodeStorageInfo delStorageHint =
         DatanodeStorageInfo.getDatanodeStorageInfo(nonExcess, delNodeHint);
@@ -5682,5 +5688,17 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
+  }
+
+  public void setMinBlocksForWrite(int minBlocksForWrite) {
+    ensurePositiveInt(minBlocksForWrite,
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY);
+    placementPolicies.getPolicy(CONTIGUOUS).setMinBlocksForWrite(minBlocksForWrite);
+    placementPolicies.getPolicy(STRIPED).setMinBlocksForWrite(minBlocksForWrite);
+  }
+
+  @VisibleForTesting
+  public int getMinBlocksForWrite(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
   }
 }

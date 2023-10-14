@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.generateWebTitle;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
@@ -32,9 +34,12 @@ class NodesPage extends RouterView {
   protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String type = $(NODE_SC);
+    String state = $(NODE_STATE);
     String title = "Nodes of the cluster";
-    if (type != null && !type.isEmpty()) {
-      title = title + " (" + type + ")";
+    if (state != null && !state.isEmpty()) {
+      title = generateWebTitle(title, state);
+    } else if (type != null && !type.isEmpty()) {
+      title = generateWebTitle(title, type);
     }
     setTitle(title);
     set(DATATABLES_ID, "nodes");

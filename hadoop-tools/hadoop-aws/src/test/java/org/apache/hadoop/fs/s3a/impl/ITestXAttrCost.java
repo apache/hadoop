@@ -37,7 +37,6 @@ import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_OP_XATTR_LIST;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_APPLICATION_XML;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_X_DIRECTORY;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_TYPE;
@@ -74,15 +73,12 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
             fs.listXAttrs(root),
         with(INVOCATION_OP_XATTR_LIST, GET_METADATA_ON_OBJECT));
 
-    // verify this contains all the standard markers,
-    // but not the magic marker header
+    // don't make any assertions on the headers entries
+    // as different S3 providers may have different headers
+    // and they may even change over time.
     Assertions.assertThat(headerList)
         .describedAs("Headers on root object")
-        .containsOnly(
-            XA_CONTENT_LENGTH,
-            XA_CONTENT_TYPE);
-    assertHeaderEntry(xAttrs, XA_CONTENT_TYPE)
-        .isEqualTo(CONTENT_TYPE_APPLICATION_XML);
+        .hasSize(xAttrs.size());
   }
 
   /**

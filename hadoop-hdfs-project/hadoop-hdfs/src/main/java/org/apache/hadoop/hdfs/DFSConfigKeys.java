@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
@@ -1270,6 +1271,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT =
       false;
 
+  public static final String DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY =
+      "dfs.namenode.block-placement.min-blocks-for.write";
+  public static final int DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT =
+      HdfsServerConstants.MIN_BLOCKS_FOR_WRITE;
+
   public static final String DFS_NAMENODE_GC_TIME_MONITOR_ENABLE =
       "dfs.namenode.gc.time.monitor.enable";
   public static final boolean DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT =
@@ -1567,6 +1573,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
   public static final String DFS_PIPELINE_SLOWNODE_ENABLED = "dfs.pipeline.slownode";
   public static final boolean DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT = false;
+  public static final String DFS_PIPELINE_CONGESTION_RATIO = "dfs.pipeline.congestion.ratio";
+  public static final double DFS_PIPELINE_CONGESTION_RATIO_DEFAULT = 1.5;
 
   // Key Provider Cache Expiry
   public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =
@@ -2035,6 +2043,5 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
-
 
 }
