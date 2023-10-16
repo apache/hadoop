@@ -44,6 +44,8 @@ RUN powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object Sys
 # Install git.
 RUN choco install git.install -y
 RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\Git
+RUN git config --system core.autocrlf true
+RUN git config --system core.longpaths true
 
 # Install vcpkg.
 # hadolint ignore=DL3003
@@ -109,8 +111,6 @@ RUN powershell New-Item -ItemType HardLink -Value "C:\Python3\python.exe" -Path 
 
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
-
-RUN git config --global core.longpaths true
 
 RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires
 
