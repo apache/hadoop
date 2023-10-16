@@ -45,7 +45,7 @@ RUN powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object Sys
 RUN choco install git.install -y
 RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\Git
 RUN git config --system core.autocrlf true
-RUN git config --system core.longpaths true
+RUN git config --global core.longpaths true
 
 # Install vcpkg.
 # hadolint ignore=DL3003
