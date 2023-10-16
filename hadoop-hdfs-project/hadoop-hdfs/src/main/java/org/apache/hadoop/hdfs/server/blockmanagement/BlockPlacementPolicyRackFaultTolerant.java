@@ -172,25 +172,20 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
     while (results.size() != totalReplicaExpected &&
         bestEffortMaxNodesPerRack < totalReplicaExpected) {
       // Exclude the chosen nodes
-      final Set<Node> newExcludeNodes = new HashSet<>();
       for (DatanodeStorageInfo resultStorage : results) {
-        addToExcludedNodes(resultStorage.getDatanodeDescriptor(),
-            newExcludeNodes);
+        addToExcludedNodes(resultStorage.getDatanodeDescriptor(), excludedNodes);
       }
 
       LOG.trace("Chosen nodes: {}", results);
       LOG.trace("Excluded nodes: {}", excludedNodes);
-      LOG.trace("New Excluded nodes: {}", newExcludeNodes);
       final int numOfReplicas = totalReplicaExpected - results.size();
       numResultsOflastChoose = results.size();
       try {
-        chooseOnce(numOfReplicas, writer, newExcludeNodes, blocksize,
+        chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
             ++bestEffortMaxNodesPerRack, results, avoidStaleNodes,
             storageTypes);
       } catch (NotEnoughReplicasException nere) {
         lastException = nere;
-      } finally {
-        excludedNodes.addAll(newExcludeNodes);
       }
       // To improve performance, the maximum value of 'bestEffortMaxNodesPerRack'
       // is calculated only when it is not possible to select a node.
