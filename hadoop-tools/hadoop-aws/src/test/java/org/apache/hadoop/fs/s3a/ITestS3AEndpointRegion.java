@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -206,6 +207,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
+  @Ignore("Pending HADOOP-18938. S3A region logic to handle vpce and non standard endpoints")
   public void testWithVPCE() throws Throwable {
     describe("Test with vpc endpoint");
     Configuration conf = getConfiguration();
