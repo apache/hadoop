@@ -40,7 +40,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecut
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -551,7 +550,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             outputStreamStatistics.uploadSuccessful(bytesLength);
             return null;
           } finally {
-            IOUtils.close(blockUploadData, blockToUpload);
+            cleanupWithLogger(LOG, blockUploadData, blockToUpload);
           }
         });
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
