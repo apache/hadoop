@@ -28,7 +28,6 @@ import java.util.concurrent.Executor;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -169,7 +168,7 @@ public interface S3ClientFactory {
     /**
      * Region of the S3 bucket.
      */
-    private Region region;
+    private String region;
 
 
     /**
@@ -386,26 +385,6 @@ public interface S3ClientFactory {
     }
 
     /**
-     * Set region.
-     *
-     * @param value new value
-     * @return the builder
-     */
-    public S3ClientCreationParameters withRegion(
-        final Region value) {
-      region = value;
-      return this;
-    }
-
-    /**
-     * Get the region.
-     * @return invoker
-     */
-    public Region getRegion() {
-      return region;
-    }
-
-    /**
      * Set the multipart flag..
      *
      * @param value new value
@@ -422,6 +401,26 @@ public interface S3ClientFactory {
      */
     public boolean isMultipartCopy() {
       return multipartCopy;
+    }
+
+    /**
+     * Set region.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withRegion(
+        final String value) {
+      region = value;
+      return this;
+    }
+
+    /**
+     * Get the region.
+     * @return invoker
+     */
+    public String getRegion() {
+      return region;
     }
   }
 }
