@@ -711,7 +711,7 @@ public class TestNameNodeReconfigure {
     // verify default value.
     assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
     assertEquals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT,
-        nnrs.getClientRpcServer().getLogSlowRPCThresholdMs());
+        nnrs.getClientRpcServer().getLogSlowRPCThresholdTime());
 
     // try invalid logSlowRPC.
     try {
@@ -731,20 +731,20 @@ public class TestNameNodeReconfigure {
     nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, null);
     assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
 
-    // try invalid logSlowRPCThresholdMs.
+    // try invalid logSlowRPCThresholdTime.
     try {
       nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
           "non-numeric");
       fail("Should not reach here");
     } catch (ReconfigurationException e) {
       assertEquals("Could not change property " +
-          "ipc.server.log.slow.rpc-threshold-ms' to 'non-numeric'", e.getMessage());
+          "ipc.server.log.slow.rpc-threshold-ms from '0' to 'non-numeric'", e.getMessage());
     }
 
-    // try correct logSlowRPCThresholdMs.
+    // try correct logSlowRPCThresholdTime.
     nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
         "20000");
-    assertEquals(nnrs.getClientRpcServer().getLogSlowRPCThresholdMs(), 20000);
+    assertEquals(nnrs.getClientRpcServer().getLogSlowRPCThresholdTime(), 20000);
   }
 
   @After

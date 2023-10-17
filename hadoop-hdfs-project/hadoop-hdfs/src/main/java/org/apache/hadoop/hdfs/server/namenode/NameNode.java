@@ -2537,16 +2537,16 @@ public class NameNode extends ReconfigurableBase implements
         }
         result = Boolean.toString(logSlowRPC);
       } else if (property.equals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY)) {
-        long logSlowRPCThresholdMs = (newVal == null ?
+        long logSlowRPCThresholdTime = (newVal == null ?
             IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT : Long.parseLong(newVal));
-        rpcServer.getClientRpcServer().setLogSlowRPCThresholdMs(logSlowRPCThresholdMs);
+        rpcServer.getClientRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
         if (rpcServer.getServiceRpcServer() != null) {
-          rpcServer.getServiceRpcServer().setLogSlowRPCThresholdMs(logSlowRPCThresholdMs);
+          rpcServer.getServiceRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
         }
         if (rpcServer.getLifelineRpcServer() != null) {
-          rpcServer.getLifelineRpcServer().setLogSlowRPCThresholdMs(logSlowRPCThresholdMs);
+          rpcServer.getLifelineRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
         }
-        result = Long.toString(logSlowRPCThresholdMs);
+        result = Long.toString(logSlowRPCThresholdTime);
       }
       LOG.info("RECONFIGURE* changed reconfigureLogSlowRPC {} to {}", property, result);
       return result;

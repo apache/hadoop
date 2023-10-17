@@ -517,8 +517,8 @@ public abstract class Server {
   private final ScheduledExecutorService scheduledExecutorService;
 
   private volatile boolean logSlowRPC = false;
-  /** Threshold (ms) for log slow rpc. */
-  private volatile long logSlowRPCThresholdMs;
+  /** Threshold time for log slow rpc. */
+  private volatile long logSlowRPCThresholdTime;
 
   /**
    * Checks if LogSlowRPC is set true.
@@ -528,8 +528,8 @@ public abstract class Server {
     return logSlowRPC;
   }
 
-  public long getLogSlowRPCThresholdMs() {
-    return logSlowRPCThresholdMs;
+  public long getLogSlowRPCThresholdTime() {
+    return logSlowRPCThresholdTime;
   }
 
   public int getNumInProcessHandler() {
@@ -554,8 +554,9 @@ public abstract class Server {
   }
 
   @VisibleForTesting
-  public void setLogSlowRPCThresholdMs(long logSlowRPCThresholdMs) {
-    this.logSlowRPCThresholdMs = logSlowRPCThresholdMs;
+  public void setLogSlowRPCThresholdTime(long logSlowRPCThresholdMs) {
+    this.logSlowRPCThresholdTime = rpcMetrics.getMetricsTimeUnit().
+        convert(logSlowRPCThresholdMs, TimeUnit.MILLISECONDS);
   }
 
   private void setPurgeIntervalNanos(int purgeInterval) {
@@ -603,13 +604,12 @@ public abstract class Server {
 
     final TimeUnit metricsTimeUnit = rpcMetrics.getMetricsTimeUnit();
     long processingTime = details.get(Timing.PROCESSING, metricsTimeUnit);
-    long logSlowRPCThresholdTime =
-        metricsTimeUnit.convert(getLogSlowRPCThresholdMs(), TimeUnit.MILLISECONDS);
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma) &&
-        (processingTime > logSlowRPCThresholdTime)) {
-      LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}",
-          methodName, processingTime, metricsTimeUnit, call, details.toString());
+        (processingTime > getLogSlowRPCThresholdTime())) {
+      LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}," +
+              " and the threshold time is {} {}.", methodName, processingTime, metricsTimeUnit,
+          call, details.toString(), getLogSlowRPCThresholdTime(), metricsTimeUnit);
       rpcMetrics.incrSlowRpc();
     }
   }
@@ -3373,7 +3373,7 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
 
-    this.setLogSlowRPCThresholdMs(conf.getLong(
+    this.setLogSlowRPCThresholdTime(conf.getLong(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT));
 
