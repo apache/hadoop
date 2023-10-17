@@ -461,10 +461,12 @@ public class RouterRpcClient {
    * @throws NoNamenodesAvailableException Exception that the retry policy
    *         generates for no available namenodes.
    */
-  private RetryDecision shouldRetry(final IOException ioe, final int retryCount,
-      final String nsId) throws IOException {
+  private RetryDecision shouldRetry(
+      final IOException ioe, final int retryCount, final String nsId,
+      final FederationNamenodeContext namenode,
+      final boolean listObserverFirst) throws IOException {
     // check for the case of cluster unavailable state
-    if (isClusterUnAvailable(nsId)) {
+    if (isClusterUnAvailable(nsId, namenode, listObserverFirst)) {
       // we allow to retry once if cluster is unavailable
       if (retryCount == 0) {
         return RetryDecision.RETRY;
@@ -538,7 +540,7 @@ public class RouterRpcClient {
         ProxyAndInfo<?> client = connection.getClient();
         final Object proxy = client.getProxy();
 
-        ret = invoke(nsId, 0, method, proxy, params);
+        ret = invoke(nsId, namenode, useObserver, 0, method, proxy, params);
         if (failover &&
             FederationNamenodeServiceState.OBSERVER != namenode.getState()) {
           // Success on alternate server, update
@@ -594,13 +596,16 @@ public class RouterRpcClient {
           se.initCause(ioe);
           throw se;
         } else if (ioe instanceof NoNamenodesAvailableException) {
+          IOException cause = (IOException) ioe.getCause();
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpNoNamenodes(nsId);
           }
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
           // Rotate cache so that client can retry the next namenode in the cache
-          this.namenodeResolver.rotateCache(nsId, namenode, shouldUseObserver);
+          if (shouldRotateCache(cause)) {
+            this.namenodeResolver.rotateCache(nsId, namenode, useObserver);
+          }
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);
         } else {
@@ -708,7 +713,9 @@ public class RouterRpcClient {
    * @return Response from the remote server
    * @throws IOException If error occurs.
    */
-  private Object invoke(String nsId, int retryCount, final Method method,
+  private Object invoke(
+      String nsId, FederationNamenodeContext namenode, Boolean listObserverFirst,
+      int retryCount, final Method method,
       final Object obj, final Object... params) throws IOException {
     try {
       return method.invoke(obj, params);
@@ -721,14 +728,14 @@ public class RouterRpcClient {
         IOException ioe = (IOException) cause;
 
         // Check if we should retry.
-        RetryDecision decision = shouldRetry(ioe, retryCount, nsId);
+        RetryDecision decision = shouldRetry(ioe, retryCount, nsId, namenode, listObserverFirst);
         if (decision == RetryDecision.RETRY) {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpRetries();
           }
 
           // retry
-          return invoke(nsId, ++retryCount, method, obj, params);
+          return invoke(nsId, namenode, listObserverFirst, ++retryCount, method, obj, params);
         } else if (decision == RetryDecision.FAILOVER_AND_RETRY) {
           // failover, invoker looks for standby exceptions for failover.
           if (ioe instanceof StandbyException) {
@@ -772,13 +779,22 @@ public class RouterRpcClient {
    * Check if the cluster of given nameservice id is available.
    *
    * @param nsId nameservice ID.
+   * @param namenode
+   * @param listObserverFirst
    * @return true if the cluster with given nameservice id is available.
    * @throws IOException if error occurs.
    */
-  private boolean isClusterUnAvailable(String nsId) throws IOException {
+  private boolean isClusterUnAvailable(
+      String nsId, FederationNamenodeContext namenode,
+      boolean listObserverFirst) throws IOException {
+    // Use observer and the namenode that causes the exception is an observer,
+    // false is returned so that the oberver can be marked as unavailable,so other observers
+    // or active namenode which is standby in the cache of the router can be retried.
+    if (listObserverFirst && namenode.getState() == FederationNamenodeServiceState.OBSERVER) {
+      return false;
+    }
     List<? extends FederationNamenodeContext> nnState = this.namenodeResolver
-        .getNamenodesForNameserviceId(nsId, false);
-
+        .getNamenodesForNameserviceId(nsId, listObserverFirst);
     if (nnState != null) {
       for (FederationNamenodeContext nnContext : nnState) {
         // Once we find one NN is in active state, we assume this
@@ -1829,5 +1845,25 @@ public class RouterRpcClient {
   private LongAccumulator getTimeOfLastCallToActive(String namespaceId) {
     return lastActiveNNRefreshTimes
         .computeIfAbsent(namespaceId, key -> new LongAccumulator(Math::max, 0));
+  }
+
+  /**
+   * Determine whether router rotated cache is required when NoNamenodesAvailableException occurs.
+   *
+   * @param ioe cause of the NoNamenodesAvailableException.
+   * @return true if NoNamenodesAvailableException occurs due to
+   * {@link RouterRpcClient#isUnavailableException(IOException) unavailable exception},
+   * otherwise false.
+   */
+  private boolean shouldRotateCache(IOException ioe) {
+    if (isUnavailableException(ioe)) {
+      return true;
+    }
+    if (ioe instanceof  RemoteException) {
+      RemoteException re = (RemoteException) ioe;
+      ioe = re.unwrapRemoteException();
+      ioe = getCleanException(ioe);
+    }
+    return isUnavailableException(ioe);
   }
 }

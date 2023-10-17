@@ -132,9 +132,9 @@ public class MiniRouterDFSCluster {
   /** Mini cluster. */
   private MiniDFSCluster cluster;
 
-  protected static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
+  public static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
-  protected static final long DEFAULT_CACHE_INTERVAL_MS =
+  public static final long DEFAULT_CACHE_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
   /** Heartbeat interval in milliseconds. */
   private long heartbeatInterval;
@@ -251,6 +251,19 @@ public class MiniRouterDFSCluster {
       DistributedFileSystem.setDefaultUri(observerReadConf, "hdfs://router-service");
 
       return DistributedFileSystem.get(observerReadConf);
+    }
+
+    public FileSystem getFileSystemWithConfiguredFailoverProxyProvider() throws IOException {
+      conf.set(DFS_NAMESERVICES,
+          conf.get(DFS_NAMESERVICES)+ ",router-service");
+      conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
+      conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
+          getFileSystemURI().toString());
+      conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+          + "." + "router-service", ConfiguredFailoverProxyProvider.class.getName());
+      DistributedFileSystem.setDefaultUri(conf, "hdfs://router-service");
+
+      return DistributedFileSystem.get(conf);
     }
 
     public DFSClient getClient(UserGroupInformation user)
