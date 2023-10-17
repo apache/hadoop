@@ -150,10 +150,10 @@ import org.slf4j.LoggerFactory;
  * redundancy.
  *
  * For regular replication, # of min live replicas for maintenance is determined
- * by DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY. This number has to &lt;=
- * DFS_NAMENODE_REPLICATION_MIN_KEY.
+ * by {@link DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY}. This number has to &lt;=
+ * {@link DFS_NAMENODE_REPLICATION_MIN_KEY}.
  * For erasure encoding, # of min live replicas for maintenance is
- * BlockInfoStriped#getRealDataBlockNum.
+ * {@link BlockInfoStriped#getRealDataBlockNum}.
  *
  * Another safety property is to satisfy the block placement policy. While the
  * policy is configurable, the replicas the policy is applied to are the live
