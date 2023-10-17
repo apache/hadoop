@@ -53,6 +53,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.naming.ConfigurationException;
 
+import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
+
 /**
  * 
  * This class implements a simple library to perform leader election on top of
@@ -175,7 +177,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private final int zkSessionTimeout;
   private final List<ACL> zkAcl;
   private final List<ZKAuthInfo> zkAuthInfo;
-  private boolean sslEnabled;
+  private TruststoreKeystore truststoreKeystore;
   private byte[] appData;
   private final String zkLockFilePath;
   private final String zkBreadCrumbPath;
@@ -224,10 +226,10 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
-      int maxRetryNum, boolean sslEnabled) throws IOException, HadoopIllegalArgumentException,
+      int maxRetryNum, TruststoreKeystore truststoreKeystore) throws IOException, HadoopIllegalArgumentException,
       KeeperException {
     this(zookeeperHostPorts, zookeeperSessionTimeout, parentZnodeName, acl,
-      authInfo, app, maxRetryNum, true, sslEnabled);
+      authInfo, app, maxRetryNum, true, truststoreKeystore);
   }
 
   /**
@@ -270,7 +272,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
-      int maxRetryNum, boolean failFast, boolean sslEnabled) throws IOException,
+      int maxRetryNum, boolean failFast, TruststoreKeystore truststoreKeystore) throws IOException,
       HadoopIllegalArgumentException, KeeperException {
     if (app == null || acl == null || parentZnodeName == null
         || zookeeperHostPorts == null || zookeeperSessionTimeout <= 0) {
@@ -285,7 +287,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     zkLockFilePath = znodeWorkingDir + "/" + LOCK_FILENAME;
     zkBreadCrumbPath = znodeWorkingDir + "/" + BREADCRUMB_FILENAME;
     this.maxRetryNum = maxRetryNum;
-    this.sslEnabled = sslEnabled;
+    this.truststoreKeystore = truststoreKeystore;
 
     // establish the ZK Connection for future API calls
     if (failFast) {
@@ -748,17 +750,18 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    */
   protected ZooKeeper createZooKeeper() throws IOException {
     ZKClientConfig zkClientConfig = new ZKClientConfig();
-    SecurityUtil.TruststoreKeystore truststoreKeystore
-        = new SecurityUtil.TruststoreKeystore(new Configuration());
-    if (sslEnabled) {
+    if (truststoreKeystore != null) {
       try {
         SecurityUtil.setSslConfiguration(zkClientConfig, truststoreKeystore);
       } catch (ConfigurationException ce) {
-        throw ce;
+        throw new IOException(ce);
       }
-      return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher, zkClientConfig);
     }
-    return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher);
+    return initiateZookeeper(zkClientConfig);
+  }
+
+  protected ZooKeeper initiateZookeeper(ZKClientConfig zkClientConfig) throws IOException {
+    return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher, zkClientConfig);
   }
 
   private void fatalError(String errorMessage) {

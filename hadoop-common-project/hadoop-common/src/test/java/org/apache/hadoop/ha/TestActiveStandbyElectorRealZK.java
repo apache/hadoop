@@ -24,9 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.UUID;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.CreateMode;
@@ -70,7 +72,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
       appDatas[i] = Ints.toByteArray(i);
       electors[i] = new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
           Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), cbs[i],
-          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, false);
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, new SecurityUtil.TruststoreKeystore(new Configuration()));
     }
   }
   
@@ -270,7 +272,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     ActiveStandbyElector elector =
         new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
             Ids.READ_ACL_UNSAFE, Collections.<ZKAuthInfo>emptyList(), cb,
-            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, false);
+            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, new SecurityUtil.TruststoreKeystore(new Configuration()));
 
     // Simulate the case by pre-creating znode 'parentZnodeName'. Then updates
     // znode's data so that data version will be increased to 1. Here znode's
