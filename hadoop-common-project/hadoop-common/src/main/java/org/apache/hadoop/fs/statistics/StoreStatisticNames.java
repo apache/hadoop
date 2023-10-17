@@ -407,10 +407,6 @@ public final class StoreStatisticNames {
   public static final String MULTIPART_UPLOAD_LIST
       = "multipart_upload_list";
 
-  /** Probe for store region: {@value}. */
-  public static final String STORE_REGION_PROBE
-      = "store_region_probe";
-
   private StoreStatisticNames() {
   }
 
