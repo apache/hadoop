@@ -40,7 +40,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
@@ -49,7 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.Preconditions;
 
-import javax.naming.ConfigurationException;
+import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
 
 /**
  * Helper class that provides utility methods specific to ZK operations.
@@ -185,7 +184,7 @@ public final class ZKCuratorManager {
             new HadoopZookeeperFactory(conf.get(CommonConfigurationKeys.ZK_SERVER_PRINCIPAL),
                 conf.get(CommonConfigurationKeys.ZK_KERBEROS_PRINCIPAL),
                 conf.get(CommonConfigurationKeys.ZK_KERBEROS_KEYTAB), sslEnabled,
-                new SecurityUtil.TruststoreKeystore(conf))).zkClientConfig(zkClientConfig)
+                new TruststoreKeystore(conf))).zkClientConfig(zkClientConfig)
         .sessionTimeoutMs(zkSessionTimeout).retryPolicy(retryPolicy)
         .authorization(authInfos).build();
     client.start();
@@ -502,7 +501,7 @@ public final class ZKCuratorManager {
     private final String kerberosPrincipal;
     private final String kerberosKeytab;
     private final Boolean sslEnabled;
-    private final SecurityUtil.TruststoreKeystore truststoreKeystore;
+    private final TruststoreKeystore truststoreKeystore;
 
     /**
      * Constructor for the helper class to configure the ZooKeeper client connection.
@@ -521,7 +520,7 @@ public final class ZKCuratorManager {
     public HadoopZookeeperFactory(String zkPrincipal, String kerberosPrincipal,
         String kerberosKeytab) {
       this(zkPrincipal, kerberosPrincipal, kerberosKeytab, false,
-          new SecurityUtil.TruststoreKeystore(new Configuration()));
+          new TruststoreKeystore(new Configuration()));
     }
 
     /**
@@ -537,7 +536,7 @@ public final class ZKCuratorManager {
      *                           SSL/TLS connection when sslEnabled is set to true.
      */
     public HadoopZookeeperFactory(String zkPrincipal, String kerberosPrincipal,
-        String kerberosKeytab, boolean sslEnabled, SecurityUtil.TruststoreKeystore truststoreKeystore) {
+        String kerberosKeytab, boolean sslEnabled, TruststoreKeystore truststoreKeystore) {
       this.zkPrincipal = zkPrincipal;
       this.kerberosPrincipal = kerberosPrincipal;
       this.kerberosKeytab = kerberosKeytab;
