@@ -22,15 +22,20 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
+import java.util.Collections;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import software.amazon.awssdk.awscore.retry.conditions.RetryOnErrorCodeCondition;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.retry.RetryPolicyContext;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests related to the {@link ErrorTranslation} class.
@@ -112,4 +117,21 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
     }
   }
 
+
+  @Test
+  public void testMultiObjectExceptionFilledIn() throws Throwable {
+
+    MultiObjectDeleteException ase =
+        new MultiObjectDeleteException(Collections.emptyList());
+    RetryPolicyContext context = RetryPolicyContext.builder()
+        .exception(ase)
+        .build();
+    RetryOnErrorCodeCondition retry = RetryOnErrorCodeCondition.create("");
+    assertTrue("retry policy of MultiObjectException",
+        retry.shouldRetry(context));
+
+    Assertions.assertThat(retry.shouldRetry(context))
+        .describedAs("retry policy of MultiObjectException")
+        .isFalse();
+  }
 }

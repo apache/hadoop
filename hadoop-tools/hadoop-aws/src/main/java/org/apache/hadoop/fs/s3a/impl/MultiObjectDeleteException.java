@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import org.slf4j.Logger;
@@ -55,10 +57,39 @@ public class MultiObjectDeleteException extends S3Exception {
    */
   public static final String ACCESS_DENIED = "AccessDenied";
 
+  /**
+   * Field value for the superclass builder: {@value}.
+   */
+  private static final int STATUS_CODE = SC_200_OK;
+
+  /**
+   * Field value for the superclass builder: {@value}.
+   */
+  private static final String ERROR_CODE = "MultiObjectDeleteException";
+
+  /**
+   * Field value for the superclass builder: {@value}.
+   */
+  private static final String SERVICE_NAME = "Amazon S3";
+
+  /**
+   * Extracted error list.
+   */
   private final List<S3Error> errors;
 
   public MultiObjectDeleteException(List<S3Error> errors) {
-    super(builder().message(errors.toString()).statusCode(SC_200_OK));
+    super(builder()
+        .message(errors.toString())
+        .awsErrorDetails(
+            AwsErrorDetails.builder()
+                .errorCode(ERROR_CODE)
+                .errorMessage(ERROR_CODE)
+                .serviceName(SERVICE_NAME)
+                .sdkHttpResponse(SdkHttpResponse.builder()
+                    .statusCode(STATUS_CODE)
+                    .build())
+                .build())
+        .statusCode(STATUS_CODE));
     this.errors = errors;
   }
 
