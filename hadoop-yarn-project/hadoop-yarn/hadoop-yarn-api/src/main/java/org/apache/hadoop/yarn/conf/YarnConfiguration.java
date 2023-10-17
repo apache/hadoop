@@ -4267,7 +4267,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String ROUTER_CLIENTRM_SUBMIT_RETRY =
       ROUTER_PREFIX + "submit.retry";
-  public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
+  public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 1;
 
   /**
    * GetNewApplication and SubmitApplication request retry interval time.
@@ -4367,7 +4367,7 @@ public class YarnConfiguration extends Configuration {
    * the default value is 0s.
    */
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
-      TimeUnit.SECONDS.toMillis(0); // 0s
+      TimeUnit.SECONDS.toMillis(30); // 0s
 
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
