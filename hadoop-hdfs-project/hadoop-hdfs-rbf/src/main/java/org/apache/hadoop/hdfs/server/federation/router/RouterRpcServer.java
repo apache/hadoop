@@ -74,6 +74,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
@@ -1608,6 +1609,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // ClientProtocol
   public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
     return clientProto.getSlowDatanodeReport();
+  }
+
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src) throws IOException {
+    return clientProto.getEnclosingRoot(src);
   }
 
   @Override // NamenodeProtocol
