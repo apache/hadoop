@@ -109,7 +109,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
     BlockingService interQJournalProtocolService = InterQJournalProtocolService
         .newReflectiveBlockingService(qJournalProtocolServerSideTranslatorPB);
 
-    DFSUtil.addPBProtocol(confCopy, InterQJournalProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(confCopy, InterQJournalProtocolPB.class,
         interQJournalProtocolService, server);
 
 

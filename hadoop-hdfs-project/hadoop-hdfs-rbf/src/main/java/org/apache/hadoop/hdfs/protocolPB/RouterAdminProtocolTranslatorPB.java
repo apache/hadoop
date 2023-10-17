@@ -97,13 +97,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMou
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryResponsePBImpl;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.getRemoteException;
 
 /**
  * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
@@ -150,7 +151,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.addMountTableEntry(null, proto);
       return new AddMountTableEntryResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -165,7 +167,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.updateMountTableEntry(null, proto);
       return new UpdateMountTableEntryResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -180,7 +183,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.removeMountTableEntry(null, proto);
       return new RemoveMountTableEntryResponsePBImpl(responseProto);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -195,7 +199,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.getMountTableEntries(null, proto);
       return new GetMountTableEntriesResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -209,7 +214,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.enterSafeMode(null, proto);
       return new EnterSafeModeResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -223,7 +229,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.leaveSafeMode(null, proto);
       return new LeaveSafeModeResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -237,7 +244,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.getSafeMode(null, proto);
       return new GetSafeModeResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -252,7 +260,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.disableNameservice(null, proto);
       return new DisableNameserviceResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -267,7 +276,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.enableNameservice(null, proto);
       return new EnableNameserviceResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -281,7 +291,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.getDisabledNameservices(null, proto);
       return new GetDisabledNameservicesResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -296,7 +307,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.refreshMountTableEntries(null, proto);
       return new RefreshMountTableEntriesResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -311,7 +323,8 @@ public class RouterAdminProtocolTranslatorPB
           rpcProxy.getDestination(null, proto);
       return new GetDestinationResponsePBImpl(response);
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 
@@ -325,7 +338,8 @@ public class RouterAdminProtocolTranslatorPB
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(response)
           .getStatus();
     } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
+
+      throw new IOException(getRemoteException(e).getMessage());
     }
   }
 }
