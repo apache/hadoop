@@ -151,7 +151,7 @@ public class TestServer {
 
     // Nothing should be logged for a suppressed exception.
     server.logException(logger, new TestException1(), dummyCall);
-    verifyZeroInteractions(logger);
+    verifyNoInteractions(logger);
 
     // No stack trace should be logged for a terse exception.
     server.logException(logger, new TestException2(), dummyCall);
