@@ -548,11 +548,6 @@ public enum Statistic {
       StoreStatisticNames.STORE_IO_THROTTLE_RATE,
       "Rate of S3 request throttling",
       TYPE_QUANTILE),
-  STORE_REGION_PROBE(
-      StoreStatisticNames.STORE_REGION_PROBE,
-      "Store Region Probe",
-      TYPE_DURATION
-  ),
 
   /*
    * Delegation Token Operations.
