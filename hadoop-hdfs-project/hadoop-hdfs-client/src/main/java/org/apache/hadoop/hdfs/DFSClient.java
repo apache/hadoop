@@ -3442,4 +3442,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  public Path getEnclosingRoot(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getEnclosingRoot", src)) {
+      return namenode.getEnclosingRoot(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
 }

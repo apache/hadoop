@@ -2672,4 +2672,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
   }
+
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src)
+      throws IOException {
+    checkNNStartup();
+    return namesystem.getEnclosingRoot(src);
+  }
 }

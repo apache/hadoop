@@ -1881,6 +1881,33 @@ public class DFSTestUtil {
   }
 
   /**
+   * Helper function to delete a key in the Key Provider. Defaults
+   * to the first indexed NameNode's Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   */
+  public static void deleteKey(String keyName, MiniDFSCluster cluster)
+      throws NoSuchAlgorithmException, IOException {
+    deleteKey(keyName, cluster, 0);
+  }
+
+  /**
+   * Helper function to delete a key in the Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   * @param idx The NameNode index
+   */
+  public static void deleteKey(String keyName, MiniDFSCluster cluster, int idx)
+      throws NoSuchAlgorithmException, IOException {
+    NameNode nn = cluster.getNameNode(idx);
+    KeyProvider provider = nn.getNamesystem().getProvider();
+    provider.deleteKey(keyName);
+    provider.flush();
+  }
+
+  /**
    * @return the node which is expected to run the recovery of the
    * given block, which is known to be under construction inside the
    * given NameNOde.
