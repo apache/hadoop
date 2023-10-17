@@ -44,8 +44,6 @@ RUN powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object Sys
 # Install git.
 RUN choco install git.install -y
 RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\Git
-RUN git config --system core.autocrlf true
-RUN git config --global core.longpaths true
 
 # Install vcpkg.
 # hadolint ignore=DL3003
@@ -130,6 +128,9 @@ RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx path "%PATH%;C:\Python3"
 RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
+
+RUN git config --global core.autocrlf true
+RUN git config --global core.longpaths true
 
 # Define the entry point for the docker container.
 ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe"]
