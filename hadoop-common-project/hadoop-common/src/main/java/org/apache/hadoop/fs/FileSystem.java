@@ -3575,8 +3575,15 @@ public abstract class FileSystem extends Configured
       throw new UnsupportedFileSystemException("No FileSystem for scheme "
           + "\"" + scheme + "\"");
     }
-    LOGGER.debug("FS for {} is {}", scheme, clazz);
-    LOGGER.debug("Jar location for class {} : {}", clazz, ClassUtil.findContainingJar(clazz));
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("FS for {} is {}", scheme, clazz);
+      final String jarLocation = ClassUtil.findContainingJar(clazz);
+      if (jarLocation != null) {
+        LOGGER.debug("Jar location for {} : {}", clazz, jarLocation);
+      } else {
+        LOGGER.debug("Class location for {} : {}", clazz, ClassUtil.findClassLocation(clazz));
+      }
+    }
     return clazz;
   }
 
