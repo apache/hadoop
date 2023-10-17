@@ -3757,10 +3757,10 @@
 </property>
 
 <property>
-  <name>hadoop.zk.client.ssl.enabled</name>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
   <value>false</value>
   <description>
-    Enable SSL/TLS encryption for the ZooKeeper communication.
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
   </description>
 </property>
 
