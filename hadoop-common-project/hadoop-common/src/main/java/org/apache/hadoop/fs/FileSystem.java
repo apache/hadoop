@@ -3576,6 +3576,7 @@ public abstract class FileSystem extends Configured
           + "\"" + scheme + "\"");
     }
     LOGGER.debug("FS for {} is {}", scheme, clazz);
+    LOGGER.debug("Jar location for class {} : {}", clazz, ClassUtil.findContainingJar(clazz));
     return clazz;
   }
 
