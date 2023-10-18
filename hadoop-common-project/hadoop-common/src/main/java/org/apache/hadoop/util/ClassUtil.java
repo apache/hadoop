@@ -52,7 +52,7 @@ public class ClassUtil {
   private static String findContainingResource(ClassLoader loader, String clazz1, String resource) {
     String classFile = clazz1.replaceAll("\\.", "/") + ".class";
     try {
-      for (final Enumeration<URL> itr = loader.getResources(classFile); itr.hasMoreElements(); ) {
+      for (final Enumeration<URL> itr = loader.getResources(classFile); itr.hasMoreElements();) {
         final URL url = itr.nextElement();
         if (resource.equals(url.getProtocol())) {
           String toReturn = url.getPath();
