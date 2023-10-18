@@ -583,7 +583,7 @@ public final class S3AUtils {
    * @param uri URI of the FS
    * @param interfaceImplemented interface that this class implements
    * @param methodName name of factory method to be invoked
-   * @param configKey config key under which this class is specified; used for exception text
+   * @param configKey config key under which this class is specified
    * @param <InstanceT> Instance of class
    * @return instance of the specified class
    * @throws IOException on any problem

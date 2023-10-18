@@ -78,6 +78,9 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
         Assertions.assertThat(credentials.accessKeyId())
             .describedAs("Access key from IMDS")
             .isNotBlank();
+
+        // and if we get here, so does a second call
+        final AwsCredentials credentials2 = provider.resolveCredentials();
       } catch (NoAwsCredentialsException expected) {
         // this is expected if the test is not running in a container/EC2
         LOG.info("Not running in a container/EC2");

@@ -41,12 +41,18 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOExcep
  * to provide credentials when the S3A connector is instantiated on AWS EC2
  * or the AWS container services.
  * <p>
- * When it fails to authenticate, it raises a
- * {@link NoAwsCredentialsException} which can be recognized by retry handlers
+ * The provider is initialized with async credential refresh enabled to be less
+ * brittle against transient network issues.
+ * <p>
+ * If the ContainerCredentialsProvider fails to authenticate, then an instance of
+ * {@link InstanceProfileCredentialsProvider} is created and attemped to
+ * be used instead, again with async credential refresh enabled.
+ * <p>
+ * If both credential providers fail, a {@link NoAwsCredentialsException}
+ * is thrown, which can be recognized by retry handlers
  * as a non-recoverable failure.
  * <p>
  * It is implicitly public; marked evolving as we can change its semantics.
- *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -56,10 +62,23 @@ public class IAMInstanceCredentialsProvider
   private static final Logger LOG =
       LoggerFactory.getLogger(IAMInstanceCredentialsProvider.class);
 
-  private HttpCredentialsProvider iamCredentialsProvider = null;
+  /**
+   * The credentials provider.
+   * Initially a container credentials provider, but if that fails
+   * fall back to the instance profile provider.
+   */
+  private HttpCredentialsProvider iamCredentialsProvider;
 
+  /**
+   * Is the container credentials provider in use?
+   */
   private boolean isContainerCredentialsProvider;
 
+  /**
+   * Constructor.
+   * Build credentials provider with async refresh,
+   * mark {@link #isContainerCredentialsProvider} as true.
+   */
   public IAMInstanceCredentialsProvider() {
     isContainerCredentialsProvider = true;
     iamCredentialsProvider = ContainerCredentialsProvider.builder()
