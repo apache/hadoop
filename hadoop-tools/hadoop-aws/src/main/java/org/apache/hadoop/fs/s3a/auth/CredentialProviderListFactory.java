@@ -287,12 +287,13 @@ public final class CredentialProviderListFactory {
    * @param conf configuration
    * @param className credential class name
    * @param uri URI of the FS
-   * @param key configuration key to use
+   * @param key configuration key used; used for exception text
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    * @see S3AUtils#getInstanceFromReflection
    */
-  private static AwsCredentialsProvider createAWSV2CredentialProvider(Configuration conf,
+  @VisibleForTesting
+  public static AwsCredentialsProvider createAWSV2CredentialProvider(Configuration conf,
       String className,
       @Nullable URI uri, final String key) throws IOException {
     LOG.debug("Credential provider class is {}", className);
