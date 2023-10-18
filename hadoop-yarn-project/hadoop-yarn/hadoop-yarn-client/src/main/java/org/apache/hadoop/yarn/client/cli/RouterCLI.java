@@ -98,12 +98,13 @@ public class RouterCLI extends Configured implements Tool {
       .build());
 
   protected final static UsageInfo POLICY_SAVE_USAGE = new UsageInfo(
-      "<-s|--save [queue;router weight;amrm weight;headroomalpha]>",
+      "-s|--save (<queue;router weight;amrm weight;headroomalpha>)",
       "We will save the policy information of the queue, including queue and weight information.");
   protected final static UsageInfo POLICY_BATCH_SAVE_USAGE = new UsageInfo(
-      "<-bs|--batch-save [--format xml] [-f|--input-file fileName]]>",
+      "-bs|--batch-save (--format <xml>) (-f|--input-file <fileName>)",
       "We will save queue policies in bulk, where users can provide XML files containing the policies.");
-  protected final static UsageInfo POLICY_LIST_USAGE = new UsageInfo("<-l|--list [--pageSize][--currentPage][--queue][--queues]>",
+  protected final static UsageInfo POLICY_LIST_USAGE = new UsageInfo(
+      "-l|--list [--pageSize][--currentPage][--queue][--queues]",
       "We can display the configured queue policies.");
 
   protected final static String PEXAMPLE_1 = "yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
@@ -138,9 +139,9 @@ public class RouterCLI extends Configured implements Tool {
       new RouterUsageInfos(Arrays.asList(POLICY_SAVE_USAGE, POLICY_BATCH_SAVE_USAGE, POLICY_LIST_USAGE),
       Arrays.asList("We provide a set of commands for Policy Include list policies, save policies, batch save policies."),
       ImmutableMap.<String, RouterExampleUsageInfos>builder()
-          .put("<-s|--save>", PEXAMPLEUSAGEINFOS_1)
-          .put("<-bs|--batch-save>", PEXAMPLEUSAGEINFOS_2)
-          .put("<-l|--list>", PEXAMPLEUSAGEINFOS_3)
+          .put("-s|--save (<queue;router weight;amrm weight;headroomalpha>) ", PEXAMPLEUSAGEINFOS_1)
+          .put("-bs|--batch-save (--format <xml>) (-f|--input-file <fileName>)", PEXAMPLEUSAGEINFOS_2)
+          .put("-l|--list [--pageSize][--currentPage][--queue][--queues]", PEXAMPLEUSAGEINFOS_3)
           .build());
 
   // Common Constant

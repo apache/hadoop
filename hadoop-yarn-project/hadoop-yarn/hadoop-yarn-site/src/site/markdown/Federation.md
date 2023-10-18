@@ -465,9 +465,34 @@ If we want to use JCache, we can configure `yarn.federation.cache.class` to `org
 This is a Cache implemented based on the Guava framework.
 If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
+Router command line:
+
+- deregisterSubCluster
+
+This command is used to `deregister subCluster`, If the interval between the heartbeat time of the subCluster, and the current time exceeds the timeout period, set the state of the subCluster to `SC_LOST`.
+
+Uasge:
+
+`yarn routeradmin -deregisterSubCluster [-sc|--subClusterId <subCluster Id>]`
+
+Options:
+
+| Property                            | Example                                                                                                                                                     |
+|:------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -sc, --subClusterId <subCluster Id> | '-sc' option allows you to specify the sub-cluster to operate on, while the '--subClusterId' option is the long format of -sc and serves the same purpose." |
+
+Examples:
+
+If we want to deregisterSubCluster `SC-1`
+
+- yarn routeradmin -deregisterSubCluster -sc SC-1
+- yarn routeradmin -deregisterSubCluster --subClusterId SC-1
+
+- policy
+
 ### ON GPG:
 
-GlobalPolicyGenerator, abbreviated as "GPG," is used for the automatic generation of global policies for subClusters.
+GlobalPolicyGenerator, abbreviated as "GPG", is used for the automatic generation of global policies for subClusters.
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** for GPG. We allow only one GPG.
 
