@@ -83,6 +83,10 @@ public final class RouterAuditLogger {
     public static final String GET_ATTRIBUTESTONODES = "Get AttributesToNodes";
     public static final String GET_CLUSTERNODEATTRIBUTES = "Get ClusterNodeAttributes";
     public static final String GET_NODESTOATTRIBUTES = "Get NodesToAttributes";
+    public static final String GET_CLUSTERINFO = "Get ClusterInfo";
+    public static final String GET_CLUSTERUSERINFO = "Get ClusterUserInfo";
+    public static final String GET_SCHEDULERINFO = "Get SchedulerInfo";
+    public static final String DUMP_SCHEDULERLOGS = "Dump SchedulerLogs";
   }
 
   public static void logSuccess(String user, String operation, String target) {

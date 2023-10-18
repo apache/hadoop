@@ -152,7 +152,14 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade.getRandomActiveSubCluster;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.*;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERUSERINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_SCHEDULERINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.DUMP_SCHEDULERLOGS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_WEB_SERVICE;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
@@ -597,14 +604,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         LOG.info("Application {} with appId {} submitted on {}.",
             context.getApplicationName(), applicationId, subClusterId);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_NEW_APP,
-            TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
+            TARGET_WEB_SERVICE, applicationId, subClusterId);
         return response;
       }
       String msg = String.format("application %s failed to be submitted.", applicationId);
       throw new YarnException(msg);
     } catch (Exception e) {
       RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
+          TARGET_WEB_SERVICE, e.getMessage(), applicationId, subClusterId);
       LOG.warn("Unable to submit the application {} to SubCluster {}.", applicationId,
           subClusterId, e);
       if (subClusterId != null) {
@@ -1126,16 +1133,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         federationClusterInfo.getList().add(clusterInfo);
       });
       long stopTime = Time.now();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CLUSTERINFO,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededGetClusterInfoRetrieved(stopTime - startTime);
       return federationClusterInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
       routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getClusterInfo error.", e);
     }
     routerMetrics.incrGetClusterInfoFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERINFO, UNKNOWN,
+        TARGET_WEB_SERVICE, "getClusterInfo error.");
     throw new RuntimeException("getClusterInfo error.");
   }
 
@@ -1167,16 +1182,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         federationClusterUserInfo.getList().add(clusterUserInfo);
       });
       long stopTime = Time.now();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CLUSTERUSERINFO,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededGetClusterUserInfoRetrieved(stopTime - startTime);
       return federationClusterUserInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERUSERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
       routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERUSERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getClusterUserInfo error.", e);
     }
     routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTERUSERINFO, UNKNOWN,
+        TARGET_WEB_SERVICE, "getClusterUserInfo error.");
     throw new RuntimeException("getClusterUserInfo error.");
   }
 
@@ -1205,16 +1228,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         federationSchedulerTypeInfo.getList().add(schedulerTypeInfo);
       });
       long stopTime = Time.now();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_SCHEDULERINFO,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededGetSchedulerInfoRetrieved(stopTime - startTime);
       return federationSchedulerTypeInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
       routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULERINFO, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getSchedulerInfo error.", e);
     }
     routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULERINFO, UNKNOWN,
+        TARGET_WEB_SERVICE, "getSchedulerInfo error.");
     throw new RuntimeException("getSchedulerInfo error.");
   }
 
@@ -1236,6 +1267,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (StringUtils.isBlank(time)) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, the time is empty or null.");
       throw new IllegalArgumentException("Parameter error, the time is empty or null.");
     }
 
@@ -1246,9 +1279,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     } catch (NumberFormatException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw new IllegalArgumentException("time must be a number.");
     } catch (IllegalArgumentException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -1269,19 +1306,27 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .append(subClusterId).append(" : ").append(msg).append("; ");
       });
       long stopTime = clock.getTime();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), DUMP_SCHEDULERLOGS,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
       return stringBuilder.toString();
     } catch (IllegalArgumentException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to dump SchedulerLogs by time: %s.", time);
     } catch (YarnException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "dumpSchedulerLogs by time = %s error .", time);
     }
 
     routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), DUMP_SCHEDULERLOGS, UNKNOWN,
+        TARGET_WEB_SERVICE, "dumpSchedulerLogs Failed.");
     throw new RuntimeException("dumpSchedulerLogs Failed.");
   }
 
