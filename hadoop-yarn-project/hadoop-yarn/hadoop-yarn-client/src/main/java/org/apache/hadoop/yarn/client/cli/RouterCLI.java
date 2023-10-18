@@ -79,75 +79,69 @@ public class RouterCLI extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RouterCLI.class);
 
-  protected final static UsageInfo subClusterId = new UsageInfo("<-sc|--subClusterId>",
+  protected final static UsageInfo SUBCLUSTER_ID = new UsageInfo("<-sc|--subClusterId>",
       "'-sc' option allows you to specify the sub-cluster to operate on, " +
       "while the '--subClusterId' option is the long format of -sc and serves the same purpose.");
-  protected final static String dsExample_1 = "yarn routeradmin -deregisterSubCluster -sc SC-1";
-  protected final static String dsExample_2 = "yarn routeradmin -deregisterSubCluster --subClusterId SC-1";
+  protected final static String DSEXAMPLE_1 = "yarn routeradmin -deregisterSubCluster -sc SC-1";
+  protected final static String DSEXAMPLE_2 = "yarn routeradmin -deregisterSubCluster --subClusterId SC-1";
 
-  protected final static RouterExampleUsageInfos dsExampleUsageInfos_1 = new RouterExampleUsageInfos(
-          Arrays.asList(dsExample_1, dsExample_2),
+  protected final static RouterExampleUsageInfos DSEXAMPLEUSAGEINFOS_1 = new RouterExampleUsageInfos(
+          Arrays.asList(DSEXAMPLE_1, DSEXAMPLE_2),
           Arrays.asList("At this point we can use the following command:"));
-  protected final static RouterUsageInfos deregisterSubCluster =
-      new RouterUsageInfos(Arrays.asList(subClusterId),
-      Arrays.asList("deregister subCluster, If the interval between the heartbeat time of the subCluster" +
+  protected final static RouterUsageInfos DEREGISTER_SUBCLUSTER =
+      new RouterUsageInfos(Arrays.asList(SUBCLUSTER_ID),
+      Arrays.asList("deregister subCluster, " +
+      "If the interval between the heartbeat time of the subCluster" +
       "and the current time exceeds the timeout period, set the state of the subCluster to SC_LOST."),
       ImmutableMap.<String, RouterExampleUsageInfos>builder()
-      .put("<--deregisterSubCluster>", dsExampleUsageInfos_1)
+      .put("<--deregisterSubCluster>", DSEXAMPLEUSAGEINFOS_1)
       .build());
 
-  protected final static UsageInfo policySaveUsage = new UsageInfo(
+  protected final static UsageInfo POLICY_SAVE_USAGE = new UsageInfo(
       "<-s|--save [queue;router weight;amrm weight;headroomalpha]>",
       "We will save the policy information of the queue, including queue and weight information.");
-  protected final static UsageInfo policyBatchSaveUsage = new UsageInfo(
+  protected final static UsageInfo POLICY_BATCH_SAVE_USAGE = new UsageInfo(
       "<-bs|--batch-save [--format xml] [-f|--input-file fileName]]>",
       "We will save queue policies in bulk, where users can provide XML files containing the policies.");
-  protected final static UsageInfo policyListUsage = new UsageInfo("<-l|--list [--pageSize][--currentPage][--queue][--queues]>",
+  protected final static UsageInfo POLICY_LIST_USAGE = new UsageInfo("<-l|--list [--pageSize][--currentPage][--queue][--queues]>",
       "We can display the configured queue policies.");
 
-  protected final static String pExample_1 = "yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
-  protected final static String pExample_2 = "yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
-  protected final static RouterExampleUsageInfos pExampleUsageInfos_1 = new RouterExampleUsageInfos(
-      Arrays.asList(pExample_1, pExample_2),
-      Arrays.asList("We have two subClusters, SC-1 and SC-2. For queue root.a, we want the ratio to be set to SC-1:SC-2=0.7:0.3 when routing.",
+  protected final static String PEXAMPLE_1 = "yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
+  protected final static String PEXAMPLE_2 = "yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0";
+  protected final static RouterExampleUsageInfos PEXAMPLEUSAGEINFOS_1 = new RouterExampleUsageInfos(
+      Arrays.asList(PEXAMPLE_1, PEXAMPLE_2),
+      Arrays.asList("We have two subClusters, SC-1 and SC-2. " +
+      "For queue root.a, we want the ratio to be set to SC-1:SC-2=0.7:0.3 when routing.",
       "Additionally, when AM applies containers, we want the allocation ratio to be SC-1:SC-2=0.6:0.4.",
       "Headroomalpha can be set to the default value of 1.0.",
       "At this point we can use the following command:"));
 
-  protected final static String pExample_3 = "yarn routeradmin -policy -bs --format xml -f queue.xml";
-  protected final static String pExample_4 = "yarn routeradmin -policy --batch-save --format xml -f queue.xml";
-  protected final static RouterExampleUsageInfos pExampleUsageInfos_2 = new RouterExampleUsageInfos(
-      Arrays.asList(pExample_3, pExample_4),
+  protected final static String PEXAMPLE_3 = "yarn routeradmin -policy -bs --format xml -f queue.xml";
+  protected final static String PEXAMPLE_4 = "yarn routeradmin -policy --batch-save --format xml -f queue.xml";
+  protected final static RouterExampleUsageInfos PEXAMPLEUSAGEINFOS_2 = new RouterExampleUsageInfos(
+      Arrays.asList(PEXAMPLE_3, PEXAMPLE_4),
       Arrays.asList("We offer the capability to batch input queue policies. ",
       "Currently, this is supported exclusively through XML. " +
       "(We can find federationWeights.xml in the Federation.md on the website.) ",
       "We can use the batch-save command to input proportion information. ",
       "At this point we can use the following command:"));
 
-  protected final static String pExample_5 = "yarn routeradmin -policy -l --pageSize 20 --currentPage 1 --queue root.a";
-  protected final static String pExample_6 = "yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b";
-  protected final static RouterExampleUsageInfos pExampleUsageInfos_3 = new RouterExampleUsageInfos(
-      Arrays.asList(pExample_5, pExample_6),
+  protected final static String PEXAMPLE_5 = "yarn routeradmin -policy -l --pageSize 20 --currentPage 1 --queue root.a";
+  protected final static String PEXAMPLE_6 = "yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b";
+  protected final static RouterExampleUsageInfos PEXAMPLEUSAGEINFOS_3 = new RouterExampleUsageInfos(
+      Arrays.asList(PEXAMPLE_5, PEXAMPLE_6),
       Arrays.asList("We can print the Configured Queue Policies on the command line. ",
       "We can specify a queue through --queue, and we can specify a queue list through --queues.",
       "At this point we can use the following command:"));
 
-  protected final static RouterUsageInfos policy =
-      new RouterUsageInfos(Arrays.asList(policySaveUsage, policyBatchSaveUsage, policyListUsage),
+  protected final static RouterUsageInfos POLICY =
+      new RouterUsageInfos(Arrays.asList(POLICY_SAVE_USAGE, POLICY_BATCH_SAVE_USAGE, POLICY_LIST_USAGE),
       Arrays.asList("We provide a set of commands for Policy Include list policies, save policies, batch save policies."),
       ImmutableMap.<String, RouterExampleUsageInfos>builder()
-          .put("<-s|--save>", pExampleUsageInfos_1)
-          .put("<-bs|--batch-save>", pExampleUsageInfos_2)
-          .put("<-l|--list>", pExampleUsageInfos_3)
+          .put("<-s|--save>", PEXAMPLEUSAGEINFOS_1)
+          .put("<-bs|--batch-save>", PEXAMPLEUSAGEINFOS_2)
+          .put("<-l|--list>", PEXAMPLEUSAGEINFOS_3)
           .build());
-
-  protected final static Map<String, RouterUsageInfos> ADMIN_USAGE =
-      ImmutableMap.<String, RouterUsageInfos>builder()
-      // Command1: deregisterSubCluster
-      .put("-deregisterSubCluster", deregisterSubCluster)
-      // Command2: policy
-      .put("-policy", policy)
-      .build();
 
   // Common Constant
   private static final String SEMICOLON = ";";
@@ -202,6 +196,14 @@ public class RouterCLI extends Configured implements Tool {
   private static final List<String> LIST_POLICIES_HEADER = Arrays.asList(
       "Queue Name", "AMRM Weight", "Router Weight");
 
+  protected final static Map<String, RouterUsageInfos> ADMIN_USAGE =
+       ImmutableMap.<String, RouterUsageInfos>builder()
+       // Command1: deregisterSubCluster
+       .put(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER)
+       // Command2: policy
+       .put(CMD_POLICY, POLICY)
+       .build();
+
   public RouterCLI() {
     super();
   }
@@ -216,19 +218,19 @@ public class RouterCLI extends Configured implements Tool {
     if (routerUsageInfo == null) {
       return;
     }
-    builder.append("[" + cmd + "]\n");
+    builder.append("[").append(cmd).append("]\n");
 
     if (!routerUsageInfo.helpInfos.isEmpty()) {
       builder.append("\t Description: \n");
       for (String helpInfo : routerUsageInfo.helpInfos) {
-        builder.append("\t\t" + helpInfo).append("\n\n");
+        builder.append("\t\t").append(helpInfo).append("\n\n");
       }
     }
 
     if (!routerUsageInfo.usageInfos.isEmpty()) {
       builder.append("\t UsageInfos: \n");
       for (UsageInfo usageInfo : routerUsageInfo.usageInfos) {
-        builder.append("\t\t"+usageInfo.args)
+        builder.append("\t\t").append(usageInfo.args)
             .append(": ")
             .append("\n\t\t")
             .append(usageInfo.help).append("\n\n");
@@ -241,7 +243,7 @@ public class RouterCLI extends Configured implements Tool {
       for (Map.Entry<String, RouterExampleUsageInfos> example :
          routerUsageInfo.examples.entrySet()) {
         String key = example.getKey();
-        builder.append("\t\t").append("Cmd:" + count + ". ").append(key).append(": \n\n");
+        builder.append("\t\t").append("Cmd:").append(count).append(". ").append(key).append(": \n\n");
         RouterExampleUsageInfos values = example.getValue();
         if (values == null) {
           return;
