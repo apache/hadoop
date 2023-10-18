@@ -49,8 +49,8 @@ public class ClassUtil {
     return findContainingResource(clazz.getClassLoader(), clazz.getName(), "file");
   }
 
-  private static String findContainingResource(ClassLoader loader, String clazz1, String resource) {
-    String classFile = clazz1.replaceAll("\\.", "/") + ".class";
+  private static String findContainingResource(ClassLoader loader, String clazz, String resource) {
+    String classFile = clazz.replaceAll("\\.", "/") + ".class";
     try {
       for (final Enumeration<URL> itr = loader.getResources(classFile); itr.hasMoreElements();) {
         final URL url = itr.nextElement();
