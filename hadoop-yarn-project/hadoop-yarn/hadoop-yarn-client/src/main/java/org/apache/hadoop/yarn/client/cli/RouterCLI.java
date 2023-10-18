@@ -117,13 +117,13 @@ public class RouterCLI extends Configured implements Tool {
       "Headroomalpha can be set to the default value of 1.0.",
       "At this point we can use the following command:"));
 
-  protected final static String PEXAMPLE_3 = "yarn routeradmin -policy -bs --format xml -f queue.xml";
-  protected final static String PEXAMPLE_4 = "yarn routeradmin -policy --batch-save --format xml -f queue.xml";
+  protected final static String PEXAMPLE_3 = "yarn routeradmin -policy -bs --format xml -f federation-weights.xml";
+  protected final static String PEXAMPLE_4 = "yarn routeradmin -policy --batch-save --format xml -f federation-weights.xml";
   protected final static RouterExampleUsageInfos PEXAMPLEUSAGEINFOS_2 = new RouterExampleUsageInfos(
       Arrays.asList(PEXAMPLE_3, PEXAMPLE_4),
       Arrays.asList("We offer the capability to batch input queue policies. ",
       "Currently, this is supported exclusively through XML. " +
-      "(We can find federationWeights.xml in the Federation.md on the website.) ",
+      "(We can find federation-weights.xml in the Federation.md on the website.) ",
       "We can use the batch-save command to input proportion information. ",
       "At this point we can use the following command:"));
 
@@ -139,9 +139,9 @@ public class RouterCLI extends Configured implements Tool {
       new RouterUsageInfos(Arrays.asList(POLICY_SAVE_USAGE, POLICY_BATCH_SAVE_USAGE, POLICY_LIST_USAGE),
       Arrays.asList("We provide a set of commands for Policy Include list policies, save policies, batch save policies."),
       ImmutableMap.<String, RouterExampleUsageInfos>builder()
-          .put("-s|--save (<queue;router weight;amrm weight;headroomalpha>) ", PEXAMPLEUSAGEINFOS_1)
+          .put("-s|--save (<queue;router weight;amrm weight;headroomalpha>)", PEXAMPLEUSAGEINFOS_1)
           .put("-bs|--batch-save (--format <xml>) (-f|--input-file <fileName>)", PEXAMPLEUSAGEINFOS_2)
-          .put("-l|--list [--pageSize][--currentPage][--queue][--queues]", PEXAMPLEUSAGEINFOS_3)
+          .put("-l|--list ([--pageSize][--currentPage][--queue][--queues])", PEXAMPLEUSAGEINFOS_3)
           .build());
 
   // Common Constant
