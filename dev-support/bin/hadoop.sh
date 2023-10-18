@@ -598,7 +598,7 @@ function shadedclient_rebuild
 
     # shellcheck disable=SC2086
     echo_and_redirect "${logfile}" \
-      "${MAVEN}" "${MAVEN_ARGS[@]}" package -fae --batch-mode \
+      "${MAVEN}" "${MAVEN_ARGS[@]}" install -fae --batch-mode \
         -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
 
     echo "ls-ing ${SOURCEDIR}/hadoop-dist"
