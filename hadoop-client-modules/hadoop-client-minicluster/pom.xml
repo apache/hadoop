@@ -757,12 +757,6 @@
                         <exclude>META-INF/versions/11/module-info.class</exclude>
                       </excludes>
                     </filter>
-                    <filter>
-                      <artifact>com.nimbusds:nimbus-jose-jwt</artifact>
-                      <excludes>
-                        <exclude>META-INF/versions/9/module-info.class</exclude>
-                      </excludes>
-                    </filter>
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
                       <artifact>org.mockito:mockito-core</artifact>
@@ -1111,5 +1105,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>
