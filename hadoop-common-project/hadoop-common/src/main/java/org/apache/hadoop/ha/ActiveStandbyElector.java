@@ -216,6 +216,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * @param app
    *          reference to callback interface object
    * @param maxRetryNum maxRetryNum.
+   * @param truststoreKeystore truststore keystore, that we will use for ZK if SSL/TLS is enabled
    * @throws IOException raised on errors performing I/O.
    * @throws HadoopIllegalArgumentException
    *         if valid data is not supplied.
@@ -261,6 +262,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * @param failFast
    *          whether need to add the retry when establishing ZK connection.
    * @param maxRetryNum max Retry Num
+   * @param truststoreKeystore truststore keystore, that we will use for ZK if SSL/TLS is enabled
    * @throws IOException
    *          raised on errors performing I/O.
    * @throws HadoopIllegalArgumentException

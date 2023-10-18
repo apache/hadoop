@@ -812,6 +812,8 @@ public final class SecurityUtil {
   /**
    * Configure ZooKeeper Client with SSL/TLS connection.
    * @param zkClientConfig ZooKeeper Client configuration
+   * @param truststoreKeystore truststore keystore, that we use to set the SSL configurations
+   * @throws ConfigurationException if the SSL configs are empty
    */
   public static void setSslConfiguration(ZKClientConfig zkClientConfig, TruststoreKeystore truststoreKeystore) throws ConfigurationException {
     setSslConfiguration(zkClientConfig, truststoreKeystore, new ClientX509Util());
