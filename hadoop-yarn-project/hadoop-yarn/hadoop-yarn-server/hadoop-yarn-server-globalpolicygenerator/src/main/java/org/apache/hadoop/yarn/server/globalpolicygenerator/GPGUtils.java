@@ -131,7 +131,6 @@ public final class GPGUtils {
     return weights;
   }
 
-  @VisibleForTesting
   public static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_CONNECT_TIMEOUT,
