@@ -886,7 +886,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES,
               StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
-              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
+              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
+              StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
@@ -899,7 +900,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
               StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
               StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
-              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
+              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ,
+              StreamStatisticNames.STREAM_FILE_CACHE_EVICTION)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -1393,6 +1395,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void blockRemovedFromFileCache() {
       incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, -1);
+    }
+
+    @Override
+    public void blockEvictedFromFileCache() {
+      increment(StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE);
     }
 
     @Override
