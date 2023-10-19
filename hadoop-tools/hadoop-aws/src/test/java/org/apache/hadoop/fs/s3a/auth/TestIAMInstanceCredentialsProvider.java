@@ -41,7 +41,7 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
   /**
    * Error string from
    * software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider,
-   * if IAM resolution has been disabled.
+   * if IAM resolution has been disabled: {@value}.
    */
   public static final String DISABLED =
       "IMDS credentials have been disabled by environment variable or system property";
@@ -58,12 +58,14 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
    * Test instantiation.
    * Multiple outcomes depending on host setup.
    * <ol>
-   *   <li> In EC2: credentials resolved
-   *        Assert comes with a key.</li>
-   *   <li> Not in EC2: network error trying to talk to the service.
+   *   <li> In EC2: credentials resolved.
+   *        Assert the credentials comes with a key.</li>
+   *   <li> Not in EC2: NoAwsCredentialsException wraps network error trying
+   *        to talk to the service.
    *        Assert wrapped exception is an IOE.</li>
    *   <li> IMDS resolution disabled by env var/sysprop.
-   *        Expect the message to contain the "disabled" text.</li>
+   *        NoAwsCredentialsException raised doesn't contain an IOE.
+   *        Require the message to contain the {@link #DISABLED} text.</li>j
    * </ol>
    */
   @Test
@@ -85,9 +87,9 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
         // this is expected if the test is not running in a container/EC2
         LOG.info("Not running in a container/EC2");
         LOG.info("Exception raised", expected);
-        // and we expect to have fallen back to the EC2 provider
+        // and we expect to have fallen back to InstanceProfileCredentialsProvider
         Assertions.assertThat(provider.isContainerCredentialsProvider())
-            .describedAs("%s: shoud be using IAM credentials provider")
+            .describedAs("%s: shoud be using InstanceProfileCredentialsProvider")
             .isFalse();
         final Throwable cause = expected.getCause();
         if (cause == null) {
