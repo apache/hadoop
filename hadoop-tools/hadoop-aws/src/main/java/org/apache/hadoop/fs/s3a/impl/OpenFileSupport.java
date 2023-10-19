@@ -285,7 +285,7 @@ public class OpenFileSupport {
         .withSql(sql)
         .withAsyncDrainThreshold(
             builderSupport.getPositiveLong(ASYNC_DRAIN_THRESHOLD,
-                defaultReadAhead))
+                defaultAsyncDrainThreshold))
         .withBufferSize(
             (int)builderSupport.getPositiveLong(
                 FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
