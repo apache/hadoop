@@ -26,6 +26,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ha.HAAdmin.UsageInfo;
@@ -130,12 +131,14 @@ public class RouterCLI extends Configured implements Tool {
   // save policy
   private static final String OPTION_S = "s";
   private static final String OPTION_SAVE = "save";
+  // batch save policy
   private static final String OPTION_BATCH_S = "bs";
   private static final String OPTION_BATCH_SAVE = "batch-save";
   private static final String OPTION_FORMAT = "format";
   private static final String FORMAT_XML = "xml";
   private static final String OPTION_FILE = "f";
   private static final String OPTION_INPUT_FILE = "input-file";
+  // list policy
   private static final String OPTION_L = "l";
   private static final String OPTION_LIST = "list";
   private static final String OPTION_PAGE_SIZE = "pageSize";
@@ -844,7 +847,11 @@ public class RouterCLI extends Configured implements Tool {
     return EXIT_SUCCESS;
   }
 
-  private static class RouterCmdUsageInfos {
+  public static UsageInfo getPolicyBatchSaveUsage() {
+    return POLICY_BATCH_SAVE_USAGE;
+  }
+
+  static class RouterCmdUsageInfos {
     public List<UsageInfo> usageInfos;
     public List<String> helpInfos;
     public Map<String, List<String>> examples;
@@ -885,5 +892,10 @@ public class RouterCLI extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     int result = ToolRunner.run(new RouterCLI(), args);
     System.exit(result);
+  }
+
+  @VisibleForTesting
+  public Map<String, RouterCmdUsageInfos> getAdminUsage(){
+    return ADMIN_USAGE;
   }
 }
