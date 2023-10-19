@@ -226,8 +226,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
-      int maxRetryNum, TruststoreKeystore truststoreKeystore) throws IOException, HadoopIllegalArgumentException,
-      KeeperException {
+      int maxRetryNum, TruststoreKeystore truststoreKeystore)
+          throws IOException, HadoopIllegalArgumentException, KeeperException {
     this(zookeeperHostPorts, zookeeperSessionTimeout, parentZnodeName, acl,
       authInfo, app, maxRetryNum, true, truststoreKeystore);
   }

@@ -790,7 +790,8 @@ public final class SecurityUtil {
     }
   }
 
-  public static void validateSslConfiguration(TruststoreKeystore truststoreKeystore) throws ConfigurationException {
+  public static void validateSslConfiguration(TruststoreKeystore truststoreKeystore)
+          throws ConfigurationException {
     if (org.apache.commons.lang3.StringUtils.isEmpty(truststoreKeystore.keystoreLocation)) {
       throw new ConfigurationException(
           "The keystore location parameter is empty for the ZooKeeper client connection.");
@@ -815,12 +816,16 @@ public final class SecurityUtil {
    * @param truststoreKeystore truststore keystore, that we use to set the SSL configurations
    * @throws ConfigurationException if the SSL configs are empty
    */
-  public static void setSslConfiguration(ZKClientConfig zkClientConfig, TruststoreKeystore truststoreKeystore) throws ConfigurationException {
+  public static void setSslConfiguration(ZKClientConfig zkClientConfig,
+                                         TruststoreKeystore truststoreKeystore)
+          throws ConfigurationException {
     setSslConfiguration(zkClientConfig, truststoreKeystore, new ClientX509Util());
   }
 
-  public static void setSslConfiguration(ZKClientConfig zkClientConfig, TruststoreKeystore truststoreKeystore, ClientX509Util x509Util)
-      throws ConfigurationException {
+  public static void setSslConfiguration(ZKClientConfig zkClientConfig,
+                                         TruststoreKeystore truststoreKeystore,
+                                         ClientX509Util x509Util)
+          throws ConfigurationException {
     validateSslConfiguration(truststoreKeystore);
     LOG.info("Configuring the ZooKeeper client to use SSL/TLS encryption for connecting to the "
         + "ZooKeeper server.");
