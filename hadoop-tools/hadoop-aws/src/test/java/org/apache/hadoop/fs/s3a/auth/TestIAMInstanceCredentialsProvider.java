@@ -82,7 +82,7 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
             .isNotBlank();
 
         // and if we get here, so does a second call
-        final AwsCredentials credentials2 = provider.resolveCredentials();
+        provider.resolveCredentials();
       } catch (NoAwsCredentialsException expected) {
         // this is expected if the test is not running in a container/EC2
         LOG.info("Not running in a container/EC2");
