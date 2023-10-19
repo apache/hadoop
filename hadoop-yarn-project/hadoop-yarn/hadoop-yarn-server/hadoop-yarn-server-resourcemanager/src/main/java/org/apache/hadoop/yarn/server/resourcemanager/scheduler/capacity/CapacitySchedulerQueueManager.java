@@ -509,12 +509,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     String leafQueueName = queue.getLeafName();
     String parentQueueName = queue.getParent();
 
-    if (StringUtils.isEmpty(leafQueueName)) {
-      throw new SchedulerDynamicEditException(
-              "Trying to create new queue=" + queue.getFullPath()
-                      + ", which has empty leaf shortname.");
-    }
-
     if (!StringUtils.isEmpty(parentQueueName)) {
       CSQueue parentQueue = getQueue(parentQueueName);
 
