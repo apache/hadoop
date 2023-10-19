@@ -504,7 +504,7 @@ Uasge:
 
 This command is used to save the policy information of the queue, including queue and weight information.
 
-How to configure `queue;router weight;amrm weight;headroomalpha` 
+How to configure `queue;router weight;amrm weight;headroomalpha`
 
 the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
 
