@@ -109,7 +109,7 @@ public class ActiveStandbyElectorBasedElectorService extends AbstractService
             YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED);
     SecurityUtil.TruststoreKeystore truststoreKeystore = isSSLEnabled ? new SecurityUtil.TruststoreKeystore(conf) : null;
     elector = new ActiveStandbyElector(zkQuorum, (int) zkSessionTimeout,
-        electionZNode, zkAcls, zkAuths, this, maxRetryNum, truststoreKeystore);
+        electionZNode, zkAcls, zkAuths, this, maxRetryNum, false, truststoreKeystore);
 
     elector.ensureParentZNode();
     if (!isParentZnodeSafe(clusterId)) {
