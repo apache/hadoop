@@ -1472,20 +1472,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if any encryption algorithm is used.
-   *
-   * @param configuration configuration to probe.
-   */
-  public static void skipIfAnyEncryptionSet(Configuration configuration) throws IOException {
-    String bucket = getTestBucketName(configuration);
-    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
-    final String encryptionMethod = secrets.getEncryptionMethod().getMethod();
-    if (!S3AEncryptionMethods.NONE.getMethod().equals(encryptionMethod)) {
-      skip(encryptionMethod + " encryption is used");
-    }
-  }
-
-  /**
    * Get the input stream statistics of an input stream.
    * Raises an exception if the inner stream is not an S3A input stream
    * or prefetching input stream
