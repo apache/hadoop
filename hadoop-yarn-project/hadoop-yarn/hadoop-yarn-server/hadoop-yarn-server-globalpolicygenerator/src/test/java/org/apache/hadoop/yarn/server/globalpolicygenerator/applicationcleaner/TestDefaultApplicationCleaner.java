@@ -192,8 +192,11 @@ public class TestDefaultApplicationCleaner {
          GetApplicationsHomeSubClusterRequest.newInstance();
     GetApplicationsHomeSubClusterResponse applicationsHomeSubCluster =
         stateStore.getApplicationsHomeSubCluster(appHomeSubClusterRequest);
-    int size = applicationsHomeSubCluster.getAppsHomeSubClusters().size();
-    Assert.assertEquals(1, size);
+    Assert.assertNotNull(applicationsHomeSubCluster);
+    List<ApplicationHomeSubCluster> appsHomeSubClusters =
+        applicationsHomeSubCluster.getAppsHomeSubClusters();
+    Assert.assertNotNull(appsHomeSubClusters);
+    Assert.assertEquals(1, appsHomeSubClusters.size());
 
     // The concurrently added app should be still there
     Assert.assertEquals(1, registryClient.getAllApplications().size());
