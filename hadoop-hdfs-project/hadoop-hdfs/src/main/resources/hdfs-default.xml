@@ -397,7 +397,7 @@
   <name>dfs.datanode.du.reserved</name>
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
-      Specific directory based reservation is supported.The property can be followed with directory
+      Specific directory based reservation is supported. The property can be followed with directory
       name which is set at 'dfs.datanode.data.dir'. For example, reserved space for /data/hdfs1/data
       can be configured using property 'dfs.datanode.du.reserved./data/hdfs1/data'. If specific directory
       reservation is not configured then dfs.datanode.du.reserved will be used.
@@ -422,7 +422,7 @@
   <description>Reserved space in percentage. Read dfs.datanode.du.reserved.calculator to see
     when this takes effect. The actual number of bytes reserved will be calculated by using the
     total capacity of the data directory in question. Specific directory based reservation is
-    supported.The property can be followed with directory name which is set at 'dfs.datanode.data.dir'.
+    supported. The property can be followed with directory name which is set at 'dfs.datanode.data.dir'.
     For example, reserved percentage space for /data/hdfs1/data can be configured using property
     'dfs.datanode.du.reserved.pct./data/hdfs1/data'. If specific directory reservation is not
     configured then dfs.datanode.du.reserved.pct will be used. Specific storage type based reservation

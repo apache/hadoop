@@ -191,6 +191,32 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.DISK, 10000, 4500, dir3);
   }
 
+  @Test
+  public void testReservedSpacePercentagePerDir() {
+    conf.setClass(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY,
+            ReservedSpaceCalculatorPercentage.class,
+            ReservedSpaceCalculator.class);
+
+    String dir1 = "/data/hdfs1/data";
+    String dir2 = "/data/hdfs2/data";
+    String dir3 = "/data/hdfs3/data";
+
+    // Set percentage reserved values for different directories
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir1 + ".ssd", 20);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir1, 10);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir2, 25);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".ssd", 30);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY, 40);
+
+    // Verify reserved space calculations for different directories and storage types
+    checkReserved(StorageType.SSD, 10000, 2000, dir1);
+    checkReserved(StorageType.DISK, 10000, 1000, dir1);
+    checkReserved(StorageType.SSD, 10000, 2500, dir2);
+    checkReserved(StorageType.DISK, 10000, 2500, dir2);
+    checkReserved(StorageType.SSD, 10000, 3000, dir3);
+    checkReserved(StorageType.DISK, 10000, 4000, dir3);
+  }
+
   @Test(expected = IllegalStateException.class)
   public void testInvalidCalculator() {
     conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
