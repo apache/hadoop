@@ -1180,6 +1180,12 @@ public final class Constants {
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
   /**
+   * The default S3 region when using cross region client.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";

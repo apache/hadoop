@@ -406,6 +406,13 @@ public abstract class S3GuardTool extends Configured implements Tool,
         // Note and continue.
         LOG.debug("failed to get bucket location", e);
         println(out, LOCATION_UNKNOWN);
+
+        // it may be the bucket is not found; we can't differentiate
+        // that and handle third party store issues where the API may
+        // not work.
+        // Fallback to looking for bucket root attributes.
+        println(out, "Probing for bucket existence");
+        fs.listXAttrs(new Path("/"));
       }
 
       // print any auth paths for directory marker info

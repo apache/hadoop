@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -54,7 +53,6 @@ import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -83,7 +81,6 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
@@ -98,7 +95,6 @@ import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,7 +242,6 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403_FORBIDDEN;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
@@ -332,8 +327,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
-  /** Exactly once log to warn about setting the region in config to avoid probe. */
-  private static final LogExactlyOnce SET_REGION_WARNING = new LogExactlyOnce(LOG);
 
   /** Log to warn of storage class configuration problems. */
   private static final LogExactlyOnce STORAGE_CLASS_WARNING = new LogExactlyOnce(LOG);
@@ -460,8 +453,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Scheme for the current filesystem.
    */
   private String scheme = FS_S3A;
-
-  private final static Map<String, Region> BUCKET_REGIONS = new HashMap<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -870,9 +861,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         STORE_EXISTS_PROBE, bucket, null, () ->
             invoker.retry("doesBucketExist", bucket, true, () -> {
               try {
-                if (BUCKET_REGIONS.containsKey(bucket)) {
-                  return true;
-                }
                 s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
                 return true;
               } catch (AwsServiceException ex) {
@@ -982,8 +970,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ? conf.getTrimmed(AWS_REGION)
         : accessPoint.getRegion();
 
-    Region region = getS3Region(configuredRegion);
-
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
@@ -998,7 +984,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartCopyEnabled(isMultipartCopyEnabled)
         .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
-        .withRegion(region);
+        .withRegion(configuredRegion);
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
@@ -1017,75 +1003,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void createS3AsyncClient(S3ClientFactory clientFactory,
       S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
-  }
-
-  /**
-   * Get the bucket region.
-   *
-   * @param region AWS S3 Region set in the config. This property may not be set, in which case
-   *               ask S3 for the region.
-   * @return region of the bucket.
-   */
-  private Region getS3Region(String region) throws IOException {
-
-    if (!StringUtils.isBlank(region)) {
-      return Region.of(region);
-    }
-
-    Region cachedRegion = BUCKET_REGIONS.get(bucket);
-
-    if (cachedRegion != null) {
-      LOG.debug("Got region {} for bucket {} from cache", cachedRegion, bucket);
-      return cachedRegion;
-    }
-
-    Region s3Region = trackDurationAndSpan(STORE_REGION_PROBE, bucket, null,
-        () -> invoker.retry("getS3Region", bucket, true, () -> {
-          try {
-
-            SET_REGION_WARNING.warn(
-                "Getting region for bucket {} from S3, this will slow down FS initialisation. "
-                    + "To avoid this, set the region using property {}", bucket,
-                FS_S3A_BUCKET_PREFIX + bucket + ".endpoint.region");
-
-            // build a s3 client with region eu-west-1 that can be used to get the region of the
-            // bucket. Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
-            // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com
-            // to the actual region the bucket is in. As the request is signed with us-east-1 and
-            // not the bucket's region, it fails.
-            S3Client getRegionS3Client =
-                S3Client.builder().region(Region.EU_WEST_1).credentialsProvider(credentials)
-                    .build();
-
-            HeadBucketResponse headBucketResponse =
-                getRegionS3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
-
-            Region bucketRegion = Region.of(
-                headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
-            BUCKET_REGIONS.put(bucket, bucketRegion);
-
-            return bucketRegion;
-          } catch (S3Exception exception) {
-            if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
-              Region bucketRegion = Region.of(
-                  exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER)
-                      .get(0));
-              BUCKET_REGIONS.put(bucket, bucketRegion);
-
-              return bucketRegion;
-            }
-
-            if (exception.statusCode() == SC_404_NOT_FOUND) {
-              throw new UnknownStoreException("s3a://" + bucket + "/",
-                  " Bucket does not exist: " + exception,
-                  exception);
-            }
-
-            throw exception;
-          }
-        }));
-
-    return s3Region;
   }
 
   /**

@@ -59,6 +59,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.EU_WEST_1;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -366,6 +367,7 @@ public class ITestS3AConfiguration {
       throws Exception {
 
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
     assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
 
@@ -404,6 +406,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testDefaultUserAgent() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     S3Client s3 = getS3Client("User Agent");
@@ -417,6 +420,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testCustomUserAgent() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
@@ -431,6 +435,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testRequestTimeout() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
     S3Client s3 = getS3Client("Request timeout (ms)");
@@ -608,6 +613,18 @@ public class ITestS3AConfiguration {
 
     public static boolean isSTSSignerCalled() {
       return stsSignerCalled;
+    }
+  }
+
+  /**
+   * Skip a test if client created is cross region.
+   * @param configuration configuration to probe
+   */
+  private static void skipIfCrossRegionClient(
+      Configuration configuration) {
+    if (configuration.get(ENDPOINT, null) == null
+        && configuration.get(AWS_REGION, null) == null) {
+      skip("Skipping test as cross region client is in use ");
     }
   }
 }
