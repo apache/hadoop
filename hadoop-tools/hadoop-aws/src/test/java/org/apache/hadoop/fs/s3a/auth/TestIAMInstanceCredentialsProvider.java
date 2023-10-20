@@ -28,10 +28,10 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-
 /**
  * Unit tests for IAMInstanceCredentials provider.
- * This is a bit tricky as don't want to
+ * This is a bit tricky as we don't want to require running in EC2,
+ * but nor do we want a test which doesn't work in EC2.
  */
 public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
 
