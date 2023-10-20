@@ -517,8 +517,8 @@ the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
 
 Example:
 
-We have two subClusters, `SC-1` and `SC-2`. For queue `root.a`, we want the ratio to be set to `SC-1:SC-2=0.7:0.3` when routing.,
-Additionally, when AM applies containers, we want the allocation ratio to be `SC-1:SC-2=0.6:0.4.`, headroomalpha can be set to the default value of `1.0`.
+We have two sub-clusters, `SC-1` and `SC-2`. We want to configure a weight policy for the `root.a` queue. The Router Weight is set to `SC-1` with a weight of `0.7` and `SC-2` with a weight of `0.3`.
+The AMRM Weight is set `SC-1` to `0.6` and `SC-2` to `0.4`. We are using the default value of `0.1` for `headroomalpha`.
 
 yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
 
@@ -593,6 +593,9 @@ How to configure `federation-weights.xml`
 
 Example:
 
+We have two sub-clusters, `SC-1` and `SC-2`. We would like to configure weights for `root.a` and `root.b` queues. We can set the weights for `root.a` and `root.b` in the `federation-weights.xml` file.
+and then use the batch-save command to save the configurations in bulk.
+
 The file name can be any file name, but it is recommended to use `federation-weights.xml`
 
 yarn routeradmin -policy -bs --format xml -f /path/federation-weights.xml
@@ -611,6 +614,8 @@ This command is used to display the configured queue weight information.
 | `--queues`      | `list of queues to filter. example: root.a,root.b,root.c`    |
 
 Example:
+
+We can display the list of already configured queue weight information. We can use the `--queue` option to query the weight information for a specific queue or use the `--queues` option to query the weight information for multiple queues.
 
 yarn routeradmin -policy -l --pageSize 20 --currentPage 1 --queue root.a
 

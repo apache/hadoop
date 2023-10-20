@@ -199,7 +199,7 @@ public class RouterCLI extends Configured implements Tool {
       "-l|--list [--pageSize][--currentPage][--queue][--queues]",
       "This command is used to display the configured queue weight information.");
 
-  protected final static String POLICY_LIST_USAGE_DESC =
+  protected final static String POLICY_LIST_USAGE_EXAMPLE_DESC =
       "We can display the list of already configured queue weight information. \\" +
       "We can use the --queue option to query the weight information for a specific queue \\" +
       " or use the --queues option to query the weight information for multiple queues. \\";
@@ -223,7 +223,7 @@ public class RouterCLI extends Configured implements Tool {
       .addExample(POLICY_BATCH_SAVE_USAGE.args, POLICY_BATCH_SAVE_USAGE_EXAMPLE_2)
        // Policy List Save
       .addUsageInfo(POLICY_LIST_USAGE)
-      .addExampleDescs(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_DESC)
+      .addExampleDescs(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_DESC)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_1)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2);
 
@@ -852,12 +852,12 @@ public class RouterCLI extends Configured implements Tool {
   }
 
   static class RouterCmdUsageInfos {
-    public List<UsageInfo> usageInfos;
-    public List<String> helpInfos;
-    public Map<String, List<String>> examples;
-    public Map<String, List<String>> exampleDescs;
+    protected List<UsageInfo> usageInfos;
+    protected List<String> helpInfos;
+    protected Map<String, List<String>> examples;
+    protected Map<String, List<String>> exampleDescs;
 
-    public RouterCmdUsageInfos() {
+    RouterCmdUsageInfos() {
       this.usageInfos = new ArrayList<>();
       this.helpInfos = new ArrayList<>();
       this.examples = new LinkedHashMap<>();
