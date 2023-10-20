@@ -135,8 +135,8 @@ public class TestRouterCLI {
   public void testHelp() throws Exception {
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
-    // System.setOut(new PrintStream(dataOut));
-    // System.setErr(new PrintStream(dataErr));
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
 
     String[] args = {"-help"};
     rmAdminCLI.run(args);
