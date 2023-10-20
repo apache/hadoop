@@ -554,6 +554,10 @@ export YARN_ROUTER_HEAPSIZE=
 export YARN_ROUTER_OPTS="-Drouter.audit.logger=INFO,ROUTERAUDIT"
 ```
 
+How to configure the client to randomly Select a Router
+
+By default, the client will try from the first router in the configured router list. If the connection is successful, the router will not be replaced. We can set `yarn.federation.failover.random.order` to true to allow clients to randomly select Routers.
+
 ### ON GPG:
 
 GlobalPolicyGenerator, abbreviated as "GPG," is used for the automatic generation of global policies for subClusters.
