@@ -26,7 +26,6 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import org.junit.AfterClass;
@@ -596,8 +595,8 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         .withPathUri(new URI("s3a://localhost/"))
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withUserAgentSuffix("ITestSessionDelegationInFilesystem")
-        .withRegion(Region.US_WEST_2);
+        .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
+
     S3Client s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,

@@ -748,21 +748,10 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>com.fasterxml.jackson.*:*</artifact>
+                      <artifact>*:*</artifact>
                       <excludes>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
                         <exclude>META-INF/versions/11/module-info.class</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>com.google.code.gson:gson</artifact>
-                      <excludes>
-                        <exclude>META-INF/versions/9/module-info.class</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>org.apache.commons:commons-compress</artifact>
-                      <excludes>
-                        <exclude>META-INF/versions/9/module-info.class</exclude>
                       </excludes>
                     </filter>
 

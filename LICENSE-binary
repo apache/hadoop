@@ -360,7 +360,7 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:1.1.3.Final
-software.amazon.awssdk:bundle:jar:2.20.128
+software.amazon.awssdk:bundle:jar:2.20.160
 
 
 --------------------------------------------------------------------------------

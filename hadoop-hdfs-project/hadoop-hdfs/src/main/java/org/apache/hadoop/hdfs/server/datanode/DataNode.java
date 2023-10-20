@@ -1528,14 +1528,14 @@ public class DataNode extends ReconfigurableBase
         = new ReconfigurationProtocolServerSideTranslatorPB(this);
     service = ReconfigurationProtocolService
         .newReflectiveBlockingService(reconfigurationProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
         ipcServer);
 
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
     service = InterDatanodeProtocolService
         .newReflectiveBlockingService(interDatanodeProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
     LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());

@@ -84,8 +84,14 @@
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
 
-    <!--Protobuf version for backward compatibility-->
+    <!-- Protobuf version for backward compatibility -->
+    <!-- This is used in hadoop-common for compilation only -->
     <protobuf.version>2.5.0</protobuf.version>
+    <!-- Protobuf scope in hadoop common -->
+    <!-- set to "provided" and protobuf2 will no longer be exported as a dependency  -->
+    <common.protobuf2.scope>compile</common.protobuf2.scope>
+    <!-- Protobuf scope in other modules which explicitly import the libarary -->
+    <transient.protobuf2.scope>${common.protobuf2.scope}</transient.protobuf2.scope>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
     <hadoop.protobuf.version>3.7.1</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
@@ -97,7 +103,7 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.6.3</zookeeper.version>
+    <zookeeper.version>3.7.2</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.4.0</dnsjava.version>
@@ -180,10 +186,10 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.499</aws-java-sdk.version>
-    <hsqldb.version>2.7.1</hsqldb.version>
-    <aws-java-sdk-v2.version>2.20.128</aws-java-sdk-v2.version>
+    <aws-java-sdk.version>1.12.565</aws-java-sdk.version>
+    <aws-java-sdk-v2.version>2.20.160</aws-java-sdk-v2.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
+    <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
@@ -1428,6 +1434,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1455,6 +1465,10 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-epoll</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1724,6 +1738,10 @@
             <artifactId>jdk.tools</artifactId>
             <groupId>jdk.tools</groupId>
           </exclusion>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1742,6 +1760,10 @@
           <exclusion>
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1765,6 +1787,10 @@
           <exclusion>
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

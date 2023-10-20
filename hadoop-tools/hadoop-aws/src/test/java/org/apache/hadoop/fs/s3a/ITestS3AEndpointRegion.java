@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -42,8 +43,9 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
 import static org.apache.hadoop.io.IOUtils.closeStream;
+import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -54,15 +56,31 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String AWS_ENDPOINT_TEST = "test-endpoint";
 
-  private static final String USW_2_BUCKET = "landsat-pds";
+  private static final String US_EAST_1 = "us-east-1";
 
-  public static final String USW_2_STORE = "s3a://" + USW_2_BUCKET;
+  private static final String US_EAST_2 = "us-east-2";
+
+  private static final String US_WEST_2 = "us-west-2";
+
+  private static final String EU_WEST_2 = "eu-west-2";
+
+  private static final String CN_NORTHWEST_1 = "cn-northwest-1";
+
+  private static final String US_GOV_EAST_1 = "us-gov-east-1";
 
   /**
    * If anyone were ever to create a bucket with this UUID pair it would break the tests.
    */
   public static final String UNKNOWN_BUCKET = "23FA76D4-5F17-48B8-9D7D-9050269D0E40"
       + "-8281BAF2-DBCF-47AA-8A27-F2FA3589656A";
+
+  private static final String EU_WEST_2_ENDPOINT = "s3.eu-west-2.amazonaws.com";
+
+  private static final String CN_ENDPOINT = "s3.cn-northwest-1.amazonaws.com.cn";
+
+  private static final String GOV_ENDPOINT = "s3-fips.us-gov-east-1.amazonaws.com";
+
+  private static final String VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.us-west-2.vpce.amazonaws.com";
 
   /**
    * New FS instance which will be closed in teardown.
@@ -75,11 +93,6 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     super.teardown();
   }
 
-  /**
-   * Test to verify that not setting the region config, will lead to the client factory making
-   * a HEAD bucket call to configure the correct region. If an incorrect region is set, the HEAD
-   * bucket call in this test will raise an exception.
-   */
   @Test
   public void testWithoutRegionConfig() throws IOException {
     describe("Verify that region lookup takes place");
@@ -96,7 +109,6 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     } catch (UnknownHostException | UnknownStoreException | AccessDeniedException allowed) {
       // these are all valid failure modes from different test environments.
     }
-    assertRegionProbeCount(1);
   }
 
   @Test
@@ -115,81 +127,127 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     } catch (UnknownHostException | UnknownStoreException expected) {
       // this is good.
     }
-    assertRegionProbeCount(1);
-  }
-
-
-  @Test
-  public void testWithRegionConfig() throws IOException, URISyntaxException {
-    describe("Verify that region lookup is skipped if the region property is set");
-    Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf, AWS_REGION, PATH_STYLE_ACCESS);
-
-    conf.set(AWS_REGION, "us-east-2");
-
-    newFS = new S3AFileSystem();
-    newFS.initialize(new URI(USW_2_STORE), conf);
-    assertRegionProbeCount(0);
-  }
-
-  @Test
-  public void testRegionCache() throws IOException, URISyntaxException {
-    describe("Verify that region lookup is cached on the second attempt");
-    Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(USW_2_BUCKET, conf, AWS_REGION, PATH_STYLE_ACCESS);
-
-    newFS = new S3AFileSystem();
-
-    newFS.initialize(new URI(USW_2_STORE), conf);
-
-    assertRegionProbeCount(1);
-    closeStream(newFS);
-
-    // create a new instance
-    newFS = new S3AFileSystem();
-    newFS.initialize(new URI(USW_2_STORE), conf);
-
-    // value should already be cached.
-    assertRegionProbeCount(0);
-  }
-
-  private void assertRegionProbeCount(final int expected) {
-    Assertions.assertThat(newFS.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
-        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(expected);
   }
 
   @Test
   public void testEndpointOverride() throws Throwable {
-    describe("Create a client with no region and the default endpoint");
+    describe("Create a client with a configured endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST);
+    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST, null, US_EAST_2);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  public void testCentralEndpoint() throws Throwable {
+    describe("Create a client with the central endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_1);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  public void testWithRegionConfig() throws Throwable {
+    describe("Create a client with a configured region");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, null, EU_WEST_2, EU_WEST_2);
 
     intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
         HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
   }
 
 
-  class RegionInterceptor implements ExecutionInterceptor {
-    private boolean endpointOverridden;
+  public void testEUWest2Endpoint() throws Throwable {
+    describe("Create a client with the eu west 2 endpoint");
+    Configuration conf = getConfiguration();
 
-    RegionInterceptor(boolean endpointOverridden) {
-      this.endpointOverridden = endpointOverridden;
+    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, null, EU_WEST_2);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  public void testWithRegionAndEndpointConfig() throws Throwable {
+    describe("Test that when both region and endpoint are configured, region takes precedence");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, US_WEST_2, US_WEST_2);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  public void testWithChinaEndpoint() throws Throwable {
+    describe("Test with a china endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CN_ENDPOINT, null, CN_NORTHWEST_1);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  public void testWithGovCloudEndpoint() throws Throwable {
+    describe("Test with a gov cloud endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, GOV_ENDPOINT, null, US_GOV_EAST_1);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  @Test
+  @Ignore("Pending HADOOP-18938. S3A region logic to handle vpce and non standard endpoints")
+  public void testWithVPCE() throws Throwable {
+    describe("Test with vpc endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2);
+
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+  }
+
+  class RegionInterceptor implements ExecutionInterceptor {
+    private String endpoint;
+    private String region;
+
+    RegionInterceptor(String endpoint, String region) {
+      this.endpoint = endpoint;
+      this.region = region;
     }
 
     @Override
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpointOverridden) {
+      if (endpoint != null) {
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
             .describedAs("Endpoint not overridden").isTrue();
 
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString())
-            .describedAs("There is an endpoint mismatch").isEqualTo("https://" + AWS_ENDPOINT_TEST);
+            .describedAs("There is an endpoint mismatch").isEqualTo("https://" + endpoint);
+      } else {
+        Assertions.assertThat(
+                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
+            .describedAs("Endpoint is overridden").isEqualTo(null);
       }
+
+      Assertions.assertThat(
+              executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
+          .describedAs("Incorrect region set").isEqualTo(region);
 
       // We don't actually want to make a request, so exit early.
       throw AwsServiceException.builder().message("Exception thrown by interceptor").build();
@@ -202,23 +260,18 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * value.
    * @param conf configuration to use.
    * @param endpoint endpoint.
+   * @param expectedRegion the region that should be set in the client.
    * @return the client.
    * @throws URISyntaxException parse problems.
    * @throws IOException IO problems
    */
   @SuppressWarnings("deprecation")
   private S3Client createS3Client(Configuration conf,
-      String endpoint)
+      String endpoint, String configuredRegion, String expectedRegion)
       throws IOException {
 
-    boolean endpointOverridden = false;
-
-    if (endpoint != null && !endpoint.isEmpty()) {
-      endpointOverridden = true;
-    }
-
     List<ExecutionInterceptor> interceptors = new ArrayList<>();
-    interceptors.add(new RegionInterceptor(endpointOverridden));
+    interceptors.add(new RegionInterceptor(endpoint, expectedRegion));
 
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
@@ -229,7 +282,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .withEndpoint(endpoint)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withExecutionInterceptors(interceptors);
+        .withExecutionInterceptors(interceptors)
+        .withRegion(configuredRegion);
+
 
     S3Client client = factory.createS3Client(
         getFileSystem().getUri(),
