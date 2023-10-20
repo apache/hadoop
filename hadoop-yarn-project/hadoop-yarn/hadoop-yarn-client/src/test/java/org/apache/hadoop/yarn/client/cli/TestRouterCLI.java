@@ -276,7 +276,7 @@ public class TestRouterCLI {
     RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
         adminUsage.get("-deregisterSubCluster");
     assertNotNull(deregisterSubClusterUsageInfos);
-    Map<String, List<String>> dsExamplesMap = deregisterSubClusterUsageInfos.examples;
+    Map<String, List<String>> dsExamplesMap = deregisterSubClusterUsageInfos.getExamples();
     assertNotNull(dsExamplesMap);
     assertEquals(1, dsExamplesMap.size());
     List<String> dsExamples = dsExamplesMap.get("-deregisterSubCluster");
@@ -285,7 +285,7 @@ public class TestRouterCLI {
 
     RouterCLI.RouterCmdUsageInfos policyUsageInfos = adminUsage.get("-policy");
     assertNotNull(policyUsageInfos);
-    Map<String, List<String>> policyExamplesMap = policyUsageInfos.examples;
+    Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
     assertNotNull(policyExamplesMap);
     assertEquals(3, policyExamplesMap.size());
     policyExamplesMap.forEach((cmd, cmdExamples) -> {

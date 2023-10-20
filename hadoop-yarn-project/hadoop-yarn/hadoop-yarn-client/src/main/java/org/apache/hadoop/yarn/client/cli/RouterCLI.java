@@ -852,9 +852,9 @@ public class RouterCLI extends Configured implements Tool {
   }
 
   static class RouterCmdUsageInfos {
-    protected List<UsageInfo> usageInfos;
-    protected List<String> helpInfos;
-    protected Map<String, List<String>> examples;
+    private List<UsageInfo> usageInfos;
+    private List<String> helpInfos;
+    private Map<String, List<String>> examples;
     protected Map<String, List<String>> exampleDescs;
 
     RouterCmdUsageInfos() {
@@ -886,6 +886,10 @@ public class RouterCLI extends Configured implements Tool {
       exampleDescList.add(exampleDesc);
       this.exampleDescs.put(cmd, exampleDescList);
       return this;
+    }
+
+    public Map<String, List<String>> getExamples() {
+      return examples;
     }
   }
 
