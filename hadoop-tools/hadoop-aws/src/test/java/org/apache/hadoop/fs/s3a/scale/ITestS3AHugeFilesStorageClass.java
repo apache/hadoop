@@ -47,14 +47,9 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AHugeFilesStorageClass.class);
 
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfStorageClassTestsDisabled(getConfiguration());
-  }
-
-  @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
     disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS);
 
@@ -125,8 +120,8 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
   }
 
   protected void assertStorageClass(Path hugeFile) throws IOException {
-    S3AFileSystem fs = getFileSystem();
-    String actual = fs.getObjectMetadata(hugeFile).getStorageClass();
+
+    String actual = getS3AInternals().getObjectMetadata(hugeFile).storageClassAsString();
 
     assertTrue(
         "Storage class of object is " + actual + ", expected " + STORAGE_CLASS_REDUCED_REDUNDANCY,

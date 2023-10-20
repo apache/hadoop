@@ -57,6 +57,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT;
@@ -368,7 +370,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DISK_BALANCER_ENABLED,
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -459,7 +462,7 @@ public class DataNode extends ReconfigurableBase
   private final Tracer tracer;
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
-  private static final double CONGESTION_RATIO = 1.5;
+  private final double congestionRatio;
   private DiskBalancer diskBalancer;
   private DataSetLockManager dataSetLockManager;
 
@@ -512,6 +515,10 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+        DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ?
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   /**
@@ -611,6 +618,10 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
     this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+        DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ?
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   @Override  // ReconfigurableBase
@@ -702,6 +713,7 @@ public class DataNode extends ReconfigurableBase
     case DFS_DATANODE_MAX_RECEIVER_THREADS_KEY:
     case DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY:
     case DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY:
+    case DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY:
       return reconfDataXceiverParameters(property, newVal);
     case DFS_CACHEREPORT_INTERVAL_MSEC_KEY:
       return reconfCacheReportParameters(property, newVal);
@@ -765,6 +777,18 @@ public class DataNode extends ReconfigurableBase
         }
         result = Long.toString(bandwidthPerSec);
         getXferServer().setWriteThrottler(writeThrottler);
+      } else if (property.equals(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY)) {
+        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+        long bandwidthPerSec = (newVal == null ? DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_DEFAULT :
+            Long.parseLong(newVal));
+        DataTransferThrottler readThrottler = null;
+        if (bandwidthPerSec > 0) {
+          readThrottler = new DataTransferThrottler(bandwidthPerSec);
+        } else {
+          bandwidthPerSec = 0;
+        }
+        result = Long.toString(bandwidthPerSec);
+        getXferServer().setReadThrottler(readThrottler);
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
@@ -1054,7 +1078,7 @@ public class DataNode extends ReconfigurableBase
     }
     double load = ManagementFactory.getOperatingSystemMXBean()
         .getSystemLoadAverage();
-    return load > NUM_CORES * CONGESTION_RATIO ? PipelineAck.ECN.CONGESTED :
+    return load > NUM_CORES * congestionRatio ? PipelineAck.ECN.CONGESTED :
         PipelineAck.ECN.SUPPORTED;
   }
 
@@ -1504,14 +1528,14 @@ public class DataNode extends ReconfigurableBase
         = new ReconfigurationProtocolServerSideTranslatorPB(this);
     service = ReconfigurationProtocolService
         .newReflectiveBlockingService(reconfigurationProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
         ipcServer);
 
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
     service = InterDatanodeProtocolService
         .newReflectiveBlockingService(interDatanodeProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
     LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
@@ -2553,7 +2577,7 @@ public class DataNode extends ReconfigurableBase
     if (this.threadGroup != null) {
       int sleepMs = 2;
       while (true) {
-        // When shutting down for restart, wait 2.5 seconds before forcing
+        // When shutting down for restart, wait 1 second before forcing
         // termination of receiver threads.
         if (!this.shutdownForUpgrade ||
             (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified

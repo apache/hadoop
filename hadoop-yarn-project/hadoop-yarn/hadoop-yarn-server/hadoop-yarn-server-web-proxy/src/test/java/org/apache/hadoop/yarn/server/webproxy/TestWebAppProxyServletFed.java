@@ -192,7 +192,7 @@ public class TestWebAppProxyServletFed {
             .newInstance(newApplicationReport(appId4, YarnApplicationState.FINISHED, null)));
 
     // Initial federation store.
-    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(conf);
     facade.getStateStore()
         .registerSubCluster(SubClusterRegisterRequest.newInstance(subClusterInfo1));
     facade.getStateStore()

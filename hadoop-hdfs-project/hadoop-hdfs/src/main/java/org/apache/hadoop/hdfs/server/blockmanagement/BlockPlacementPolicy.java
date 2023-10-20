@@ -274,4 +274,14 @@ public abstract class BlockPlacementPolicy {
   public abstract void setExcludeSlowNodesEnabled(boolean enable);
 
   public abstract boolean getExcludeSlowNodesEnabled();
+
+  /**
+   * Updates the value used for minBlocksForWrite, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY}.
+   *
+   * @param minBlocksForWrite the minimum number of blocks required for write operations.
+   */
+  public abstract void setMinBlocksForWrite(int minBlocksForWrite);
+
+  public abstract int getMinBlocksForWrite();
 }

@@ -742,6 +742,12 @@
   </property>
 
   <property>
+    <description>Enable SSL/TLS encryption for the ZooKeeper communication.</description>
+    <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
@@ -1479,6 +1485,17 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
+    <value>true</value>
+    <description>Since on JDK17 it is no longer possible to use the reflection API to
+      access public fields and methods, add-exports flags should be added to container
+      localizers regardless of the user specified JAVA_OPTS. Setting this to true will
+      add the flags to the container localizer on nodes with JDK17 or higher.
+      Defaults to true, but the setting has no effect on nodes using JDK16 and before.
+    </description>
+  </property>
+
+  <property>
     <description>
       The log level for container localizer while it is an independent process.
     </description>
@@ -1654,6 +1671,21 @@
     </description>
     <name>yarn.nodemanager.log-container-debug-info.enabled</name>
     <value>true</value>
+  </property>
+
+  <property>
+    <description>Generate additional logs about container launches,
+      if container returned with non-zero exit code.
+      Currently, this creates a copy of the launch script and lists the
+      directory contents of the container work dir. When listing directory
+      contents, we follow symlinks to a max-depth of 5(including symlinks
+      which point to outside the container work dir) which may lead to a
+      slowness in launching containers.
+      If yarn.nodemanager.log-container-debug-info.enabled is true,
+      it does not have effect on the behavior.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info-on-error.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -5153,7 +5185,7 @@
     <description>
       The number of threads to use for the Router scheduled executor service.
     </description>
-    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <name>yarn.router.scheduled.executor.threads</name>
     <value>1</value>
   </property>
 
@@ -5262,6 +5294,14 @@
     </description>
     <name>yarn.federation.failover.random.order</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable proxy service in router. Default is true.
+    </description>
+    <name>yarn.router.webapp.proxy.enable</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -5531,11 +5571,27 @@
   </property>
 
   <property>
+    <description>
+      The Application Cleaner implementation class for GPG to use.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
+  </property>
+
+  <property>
     <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
       requires the CORS filter initializer to be added to the filter initializers
       list in core-site.xml.</description>
     <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the application cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
+    <value>-1s</value>
   </property>
 
   <property>
@@ -5550,12 +5606,104 @@
 
   <property>
     <description>
+      Specifications on how (many times) to contact Router for apps. We need to
+      do this because Router might return partial application list because some
+      sub-cluster RM is not responsive (e.g. failing over).
+      Should have three values separated by comma: minimal success retries,
+      maximum total retry, retry interval (ms).
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
+    <value>3,10,600000</value>
+  </property>
+
+  <property>
+    <description>
       The https address of the GPG web application.
       If only a host is provided as the value,
       the webapp will be served on a random port.
     </description>
     <name> yarn.federation.gpg.webapp.https.address</name>
     <value>0.0.0.0:8070</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will enable request rerouting according to the load of the subCluster.
+      If it is true, it will reroute the request according to the load of the subCluster.
+      The default configuration is false.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster pending container threshold. The default value is 10000.
+      This configuration will determine the load weight of a subCluster.
+      For SC with pending containers count bigger than container threshold / 2,
+      use threshold / pending as weight.
+      For SC with pending containers count less than threshold / 2, we cap the weight at 2.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.pending-container.threshold</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to consider the configured vcores when calculating the subCluster load.
+      The default value is false, we only consider the number of cluster pending containers.
+      If this configuration item is set to true, This configuration item needs to be used together
+      with yarn.nodemanager.least-load-policy-selector.multiplier. We will use the following formula
+      when calculating subCluster pending.
+      pendingContainersCountNormalize = (totalPendingContainersCount * multiplier) / totalActiveCores.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.use-active-core</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to fail directly if activeSubCluster is less than 1.
+      The default is true.
+      If We set to false, We will try to re-fetch activeSubCluster list.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.fail-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The subCluster configured in the blacklist will not be forwarded requests.
+      The default value is empty.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.blacklist-subclusters</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will be used
+      when yarn.nodemanager.least-load-policy-selector.use-active-core is set to true.
+      The purpose of this value is to help normalize the pendingContainersCount.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
+    <value>50000</value>
   </property>
 
 </configuration>

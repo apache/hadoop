@@ -140,7 +140,6 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
-  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -153,6 +152,17 @@ public final class Constants {
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
+
+  /**
+   * Configuration option to configure expiration time of
+   * s3 http connection from the connection pool in milliseconds: {@value}.
+   */
+  public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
+
+  /**
+   * Default value for {@code CONNECTION_TTL}: {@value}.
+   */
+  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -218,6 +228,9 @@ public final class Constants {
   /**
    * Number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
+   * The S3A connector does its own selective retries; the only time the AWS
+   * SDK operations are not wrapped is during multipart copy via the AWS SDK
+   * transfer manager.
    */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
 
@@ -225,7 +238,7 @@ public final class Constants {
    * Default number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
    */
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 5;
 
   /**
    * Experimental/Unstable feature: should the AWS client library retry
@@ -254,7 +267,7 @@ public final class Constants {
   // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
+  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5000;
 
   // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
@@ -586,7 +599,7 @@ public final class Constants {
 
   public static final String SIGNING_ALGORITHM_STS =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + "signing-algorithm";
+          + ".signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -728,14 +741,21 @@ public final class Constants {
   public static final String STREAM_READ_GAUGE_INPUT_POLICY =
       "stream_read_gauge_input_policy";
 
+  /**
+   * S3 Client Factory implementation class: {@value}.
+   * Unstable and incompatible between v1 and v2 SDK versions.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =
       "fs.s3a.s3.client.factory.impl";
 
+  /**
+   * Default factory:
+   * {@code org.apache.hadoop.fs.s3a.DefaultS3ClientFactory}.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1160,6 +1180,12 @@ public final class Constants {
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
   /**
+   * The default S3 region when using cross region client.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
@@ -1288,4 +1314,8 @@ public final class Constants {
    */
   public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
 }

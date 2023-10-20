@@ -661,6 +661,7 @@ public final class RouterServerUtil {
    * - if its size is within limits.
    *
    * @param appContext the app context to check.
+   * @param conf Configuration.
    * @throws IOException if an IO error occurred.
    * @throws YarnException yarn exception.
    */
@@ -800,5 +801,10 @@ public final class RouterServerUtil {
     trimmedContext.setApplicationTimeouts(actualContext.getApplicationTimeouts());
 
     return trimmedContext;
+  }
+
+  public static boolean isRouterWebProxyEnable(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE);
   }
 }

@@ -83,6 +83,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRespo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
@@ -105,8 +108,7 @@ public final class FederationStateStoreFacade {
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationStateStoreFacade.class);
 
-  private static final FederationStateStoreFacade FACADE =
-      new FederationStateStoreFacade();
+  private static volatile FederationStateStoreFacade facade;
 
   private static Random rand = new Random(System.currentTimeMillis());
 
@@ -115,8 +117,8 @@ public final class FederationStateStoreFacade {
   private SubClusterResolver subclusterResolver;
   private FederationCache federationCache;
 
-  private FederationStateStoreFacade() {
-    initializeFacadeInternal(new Configuration());
+  private FederationStateStoreFacade(Configuration conf) {
+    initializeFacadeInternal(conf);
   }
 
   private void initializeFacadeInternal(Configuration config) {
@@ -199,7 +201,50 @@ public final class FederationStateStoreFacade {
    * @return the singleton {@link FederationStateStoreFacade} instance
    */
   public static FederationStateStoreFacade getInstance() {
-    return FACADE;
+    return getInstanceInternal(new Configuration());
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  public static FederationStateStoreFacade getInstance(Configuration conf) {
+    return getInstanceInternal(conf);
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  private static FederationStateStoreFacade getInstanceInternal(Configuration conf){
+    if (facade != null) {
+      return facade;
+    }
+    generateStateStoreFacade(conf);
+    return facade;
+  }
+
+  /**
+   * Generate the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   */
+  private static void generateStateStoreFacade(Configuration conf){
+    if (facade == null) {
+      synchronized (FederationStateStoreFacade.class) {
+        if (facade == null) {
+          Configuration yarnConf = new Configuration();
+          if (conf != null) {
+            yarnConf = conf;
+          }
+          facade = new FederationStateStoreFacade(yarnConf);
+        }
+      }
+    }
   }
 
   /**
@@ -840,6 +885,33 @@ public final class FederationStateStoreFacade {
           "Unable to insert the ApplicationId %s into the FederationStateStore.", applicationId);
       throw new YarnException(msg, e);
     }
+  }
+
+  /**
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
+   *
+   * @return the mapping of all submitted application to it's home sub-cluster
+   * @throws YarnException if the request is invalid/fails
+   */
+  public List<ApplicationHomeSubCluster> getApplicationsHomeSubCluster() throws YarnException {
+    GetApplicationsHomeSubClusterResponse response = stateStore.getApplicationsHomeSubCluster(
+        GetApplicationsHomeSubClusterRequest.newInstance());
+    return response.getAppsHomeSubClusters();
+  }
+
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation is
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param applicationId the application to delete the home sub-cluster of
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void deleteApplicationHomeSubCluster(ApplicationId applicationId)
+      throws YarnException {
+    stateStore.deleteApplicationHomeSubCluster(
+        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
   }
 
   /**

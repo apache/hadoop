@@ -150,10 +150,10 @@ import org.slf4j.LoggerFactory;
  * redundancy.
  *
  * For regular replication, # of min live replicas for maintenance is determined
- * by DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY. This number has to &lt;=
- * DFS_NAMENODE_REPLICATION_MIN_KEY.
+ * by {@link DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY}. This number has to &lt;=
+ * {@link DFS_NAMENODE_REPLICATION_MIN_KEY}.
  * For erasure encoding, # of min live replicas for maintenance is
- * BlockInfoStriped#getRealDataBlockNum.
+ * {@link BlockInfoStriped#getRealDataBlockNum}.
  *
  * Another safety property is to satisfy the block placement policy. While the
  * policy is configurable, the replicas the policy is applied to are the live
@@ -2909,7 +2909,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
             strBlockReportId, fullBrLeaseId, nodeID);
-        blockReportLeaseManager.removeLease(node);
+        removeDNLeaseIfNeeded(node);
         return !node.hasStaleStorages();
       }
 
@@ -2955,6 +2955,23 @@ public class BlockManager implements BlockStatsMXBean {
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
+  }
+
+  /**
+   * Remove the DN lease only when we have received block reports,
+   * for all storages for a particular DN.
+   */
+  void removeDNLeaseIfNeeded(DatanodeDescriptor node) {
+    boolean needRemoveLease = true;
+    for (DatanodeStorageInfo sInfo : node.getStorageInfos()) {
+      if (sInfo.getBlockReportCount() == 0) {
+        needRemoveLease = false;
+        break;
+      }
+    }
+    if (needRemoveLease) {
+      blockReportLeaseManager.removeLease(node);
+    }
   }
 
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
@@ -4182,6 +4199,12 @@ public class BlockManager implements BlockStatsMXBean {
       }
       found.set(index);
       storage2index.put(storage, index);
+    }
+
+    if (duplicated.isEmpty()) {
+      LOG.debug("Found no duplicated internal blocks for {}. Maybe it's " +
+          "because there are stale storages.", storedBlock);
+      return;
     }
 
     // use delHint only if delHint is duplicated
@@ -5665,5 +5688,17 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
+  }
+
+  public void setMinBlocksForWrite(int minBlocksForWrite) {
+    ensurePositiveInt(minBlocksForWrite,
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY);
+    placementPolicies.getPolicy(CONTIGUOUS).setMinBlocksForWrite(minBlocksForWrite);
+    placementPolicies.getPolicy(STRIPED).setMinBlocksForWrite(minBlocksForWrite);
+  }
+
+  @VisibleForTesting
+  public int getMinBlocksForWrite(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
   }
 }

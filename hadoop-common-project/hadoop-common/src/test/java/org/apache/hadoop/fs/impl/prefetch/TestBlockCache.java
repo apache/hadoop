@@ -45,7 +45,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   public void testArgChecks() throws Exception {
     // Should not throw.
     BlockCache cache =
-        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2);
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2, null);
 
     ByteBuffer buffer = ByteBuffer.allocate(16);
 
@@ -55,7 +55,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
 
 
     intercept(NullPointerException.class, null,
-        () -> new SingleFilePerBlockCache(null, 2));
+        () -> new SingleFilePerBlockCache(null, 2, null));
 
   }
 
@@ -63,7 +63,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   @Test
   public void testPutAndGet() throws Exception {
     BlockCache cache =
-        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2);
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2, null);
 
     ByteBuffer buffer1 = ByteBuffer.allocate(BUFFER_SIZE);
     for (byte i = 0; i < BUFFER_SIZE; i++) {

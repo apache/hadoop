@@ -212,7 +212,7 @@ public class FederationClientInterceptor
   public void init(String userName) {
     super.init(userName);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(getConf());
     rand = new Random(System.currentTimeMillis());
 
     int numMinThreads = getNumMinThreads(getConf());
@@ -229,6 +229,9 @@ public class FederationClientInterceptor
     BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+
+    // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
+    this.executorService.allowCoreThreadTimeOut(true);
 
     final Configuration conf = this.getConf();
 

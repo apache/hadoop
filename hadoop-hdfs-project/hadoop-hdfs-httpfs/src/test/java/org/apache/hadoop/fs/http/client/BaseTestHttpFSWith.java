@@ -1219,7 +1219,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
     SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
-    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES, GETECCODECS
+    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES, GETECCODECS, GETTRASHROOTS
   }
   @SuppressWarnings("methodlength")
   private void operation(Operation op) throws Exception {
@@ -1373,6 +1373,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETECCODECS:
       testGetECCodecs();
+      break;
+    case GETTRASHROOTS:
+      testGetTrashRoots();
       break;
     }
   }
@@ -2198,6 +2201,45 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       String value = entry.getValue();
       Assert.assertTrue(diffErasureCodingCodecs.containsKey(key));
       Assert.assertEquals(value, diffErasureCodingCodecs.get(key));
+    }
+  }
+
+  private void testGetTrashRoots() throws Exception {
+    if (isLocalFS()) {
+      // do not test the getAllEEPolicies for local FS.
+      return;
+    }
+    final Path path = new Path("/");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
+
+      // Create trash root for user0
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user0");
+      String user0HomeStr = DFSUtilClient.getHomeDirectory(this.getProxiedFSConf(), ugi);
+      Path user0Trash = new Path(user0HomeStr, FileSystem.TRASH_PREFIX);
+      dfs.mkdirs(user0Trash);
+
+      Collection<FileStatus> dfsTrashRoots = dfs.getTrashRoots(true);
+      Collection<FileStatus> diffTrashRoots = null;
+
+      if (httpFs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) httpFs;
+        diffTrashRoots = httpFS.getTrashRoots(true);
+      } else if (httpFs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
+        diffTrashRoots = webHdfsFileSystem.getTrashRoots(true);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " is not of type HttpFSFileSystem or WebHdfsFileSystem");
+      }
+
+      // Validate getTrashRoots are the same as DistributedFileSystem
+      assertEquals(dfsTrashRoots.size(), diffTrashRoots.size());
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }
   }
 

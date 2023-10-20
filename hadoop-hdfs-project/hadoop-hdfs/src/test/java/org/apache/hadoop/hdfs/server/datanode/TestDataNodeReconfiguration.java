@@ -31,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
@@ -459,6 +460,13 @@ public class TestDataNodeReconfiguration {
         assertTrue("expecting NumberFormatException",
             expected.getCause() instanceof NumberFormatException);
       }
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
 
       // Change properties and verify change.
       dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, String.valueOf(123));
@@ -476,6 +484,12 @@ public class TestDataNodeReconfiguration {
       assertEquals(String.format("%s has wrong value",
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY),
           1000, dn.getXferServer().getWriteThrottler().getBandwidth());
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+          String.valueOf(1000));
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          1000, dn.getXferServer().getReadThrottler().getBandwidth());
 
       // Revert to default.
       dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, null);
@@ -500,6 +514,14 @@ public class TestDataNodeReconfiguration {
       assertNull(String.format("expect %s is not configured",
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY),
           dn.getConf().get(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY, null);
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          null, dn.getXferServer().getReadThrottler());
+      assertNull(String.format("expect %s is not configured",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          dn.getConf().get(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
     }
   }
 
