@@ -62,11 +62,11 @@ import org.junit.function.ThrowingRunnable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
@@ -74,7 +74,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TestNMClient {
   private static final String IS_NOT_HANDLED_BY_THIS_NODEMANAGER =
@@ -82,7 +81,6 @@ public class TestNMClient {
   private static final String UNKNOWN_NODEMANAGER =
       "Unknown container";
 
-  private static final int MAX_EARLY_FINISH = 3;
   private static final int NUMBER_OF_CONTAINERS = 5;
   private Configuration conf;
   private MiniYARNCluster yarnCluster;
@@ -98,7 +96,7 @@ public class TestNMClient {
    * a container has transitioned into a state.
    */
   public static class DebugSumContainerStateListener implements ContainerStateTransitionListener {
-    public static final Map<ContainerId, Integer> RUNNING_TRANSITIONS = new HashMap<>();
+    public static final Map<ContainerId, Integer> RUNNING_TRANSITIONS = new ConcurrentHashMap<>();
 
     public void init(Context context) {
     }
@@ -118,8 +116,9 @@ public class TestNMClient {
             .ContainerState afterState,
         ContainerEvent processedEvent) {
       if (beforeState != afterState &&
-        afterState == org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+          afterState == org.apache.hadoop.yarn.server.nodemanager.containermanager.container
             .ContainerState.RUNNING) {
+        System.out.println("tomi postTransaction " + Thread.currentThread());
         RUNNING_TRANSITIONS.compute(op.getContainerId(),
             (containerId, counter) -> counter == null ? 1 : ++counter);
       }
@@ -133,7 +132,7 @@ public class TestNMClient {
     startYarnCluster();
     startYarnClient();
     UserGroupInformation.setLoginUser(UserGroupInformation
-      .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+        .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
     nmTokenCache = new NMTokenCache();
     startRMClient();
@@ -199,7 +198,7 @@ public class TestNMClient {
     yarnCluster.asyncStop(this);
   }
 
-  @Test (timeout = 180_000 * MAX_EARLY_FINISH)
+  @Test (timeout = 180_000)
   public void testNMClientNoCleanupOnStop()
       throws YarnException, IOException, InterruptedException, TimeoutException {
     runTest(() -> {
@@ -210,7 +209,7 @@ public class TestNMClient {
     });
   }
 
-  @Test (timeout = 200_000 * MAX_EARLY_FINISH)
+  @Test (timeout = 200_000)
   public void testNMClient()
       throws YarnException, IOException, InterruptedException, TimeoutException {
     runTest(() -> {
@@ -225,20 +224,12 @@ public class TestNMClient {
   public void runTest(
       Runnable test
   ) throws IOException, InterruptedException, YarnException, TimeoutException {
-    int earlyFinishCounter = MAX_EARLY_FINISH;
-    int earlyFinishCounterWhenTestWasStarted;
-    do {
-      earlyFinishCounterWhenTestWasStarted = earlyFinishCounter;
-      setup();
-      rmClient.registerApplicationMaster("Host", 10_000, "");
-      testContainerManagement(nmClient, allocateContainers(rmClient));
-      rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
-      test.run();
-      tearDown();
-    } while (earlyFinishCounter != 0 && earlyFinishCounter != earlyFinishCounterWhenTestWasStarted);
-    if (earlyFinishCounter == 0) {
-      fail("Too many early finish exception happened");
-    }
+    setup();
+    rmClient.registerApplicationMaster("Host", 10_000, "");
+    testContainerManagement(nmClient, allocateContainers(rmClient));
+    rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
+    test.run();
+    tearDown();
   }
 
   private void stopNmClient() {
@@ -253,10 +244,10 @@ public class TestNMClient {
   }
 
   private Set<Container> allocateContainers(
-      AMRMClientImpl<ContainerRequest> rmClient
+      AMRMClientImpl<ContainerRequest> client
   ) throws YarnException, IOException {
     for (int i = 0; i < NUMBER_OF_CONTAINERS; ++i) {
-      rmClient.addContainerRequest(new ContainerRequest(
+      client.addContainerRequest(new ContainerRequest(
           Resource.newInstance(1024, 0),
           new String[] {nodeReports.get(0).getNodeId().getHost()},
           new String[] {nodeReports.get(0).getRackName()},
@@ -265,10 +256,10 @@ public class TestNMClient {
     }
     Set<Container> allocatedContainers = new TreeSet<>();
     while (allocatedContainers.size() < NUMBER_OF_CONTAINERS) {
-      AllocateResponse allocResponse = rmClient.allocate(0.1f);
+      AllocateResponse allocResponse = client.allocate(0.1f);
       allocatedContainers.addAll(allocResponse.getAllocatedContainers());
       for (NMToken token : allocResponse.getNMTokens()) {
-        rmClient.getNMTokenCache().setToken(token.getNodeId().toString(), token.getToken());
+        client.getNMTokenCache().setToken(token.getNodeId().toString(), token.getToken());
       }
       if (allocatedContainers.size() < NUMBER_OF_CONTAINERS) {
         sleep(100);
@@ -374,6 +365,7 @@ public class TestNMClient {
   }
 
   private void waitForContainerRunningTransitionCount(Container container, long transitions) {
+    System.out.println("tomi waitForContainerRunningTransitionCount " + Thread.currentThread());
     while (DebugSumContainerStateListener.RUNNING_TRANSITIONS
         .getOrDefault(container.getId(), 0) != transitions) {
       sleep(500);
@@ -382,7 +374,8 @@ public class TestNMClient {
 
 
   private void testGetContainerStatus(Container container, int index,
-                                      ContainerState state, String diagnostics, List<Integer> exitStatuses)
+                                      ContainerState state, String diagnostics,
+                                      List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
       sleep(250);
@@ -392,7 +385,7 @@ public class TestNMClient {
       // container status
       if (status.getState() == state) {
         assertEquals(container.getId(), status.getContainerId());
-        assertTrue("" + index + ": " + status.getDiagnostics(),
+        assertTrue(index + ": " + status.getDiagnostics(),
                 status.getDiagnostics().contains(diagnostics));
 
         assertTrue("Exit Statuses are supposed to be in: " + exitStatuses +
