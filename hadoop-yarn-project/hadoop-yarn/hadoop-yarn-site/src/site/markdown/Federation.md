@@ -447,7 +447,7 @@ The role of the interceptor is to forward client Rest requests to RM.
 How to enable ApplicationSubmissionContextInterceptor
 
 - If the `FederationStateStore` is configured with `Zookpeer` storage, the app information will be stored in `Zookpeer`. If the size of the app information exceeds `1MB`, `Zookpeer` may fail. `ApplicationSubmissionContextInterceptor` will check the size of `ApplicationSubmissionContext`, if the size exceeds the limit(default 1MB), an exception will be thrown.
- 
+
 - The size of the ApplicationSubmissionContext of the application `application_123456789_0001` is above the limit. Size = 1.02 MB.
 
 - The required configuration is as follows:
