@@ -107,7 +107,8 @@ public class ActiveStandbyElectorBasedElectorService extends AbstractService
             CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT));
     boolean isSSLEnabled = conf.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
             YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED);
-    SecurityUtil.TruststoreKeystore truststoreKeystore = isSSLEnabled ? new SecurityUtil.TruststoreKeystore(conf) : null;
+    SecurityUtil.TruststoreKeystore truststoreKeystore
+            = isSSLEnabled ? new SecurityUtil.TruststoreKeystore(conf) : null;
     elector = new ActiveStandbyElector(zkQuorum, (int) zkSessionTimeout,
         electionZNode, zkAcls, zkAuths, this, maxRetryNum, false, truststoreKeystore);
 

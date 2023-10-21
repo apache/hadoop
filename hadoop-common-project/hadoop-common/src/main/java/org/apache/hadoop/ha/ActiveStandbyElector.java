@@ -229,7 +229,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       int maxRetryNum, TruststoreKeystore truststoreKeystore)
           throws IOException, HadoopIllegalArgumentException, KeeperException {
     this(zookeeperHostPorts, zookeeperSessionTimeout, parentZnodeName, acl,
-      authInfo, app, maxRetryNum, true, truststoreKeystore);
+            authInfo, app, maxRetryNum, true, truststoreKeystore);
   }
 
   /**
