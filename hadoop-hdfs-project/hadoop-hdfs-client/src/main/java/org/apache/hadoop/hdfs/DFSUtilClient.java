@@ -661,10 +661,6 @@ public class DFSUtilClient {
     String[] components = StringUtils.split(src, '/');
     for (int i = 0; i < components.length; i++) {
       String element = components[i];
-      if (Shell.WINDOWS) {
-        LOG.info("Ok, i = {}. IsWindows = {}, element = {}, element contains : = {}", i,
-            Shell.WINDOWS, element, element.contains(":"));
-      }
       if (element.equals(".")  ||
           // For Windows, we must allow the : in the drive letter
           (!Shell.WINDOWS && i == 1 && element.contains(":"))  ||
