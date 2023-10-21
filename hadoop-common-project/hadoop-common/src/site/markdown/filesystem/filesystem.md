@@ -612,8 +612,16 @@ renames are allowed to atomically occur (ex. across hdfs volumes or across encry
 For any two paths p1 and p2 that do not have the same enclosing root, `rename(p1, p2)` is expected to fail or will not
 be atomic.
 
+For object stores, even with the same enclosing root, there is no guarantee file or directory rename is atomic
+
 The following statement is always true:
 `getEnclosingRoot(p) == getEnclosingRoot(getEnclosingRoot(p))`
+
+
+```python
+path in ancestors(FS, p) or path == p:
+isDir(FS, p)
+```
 
 #### Preconditions
 

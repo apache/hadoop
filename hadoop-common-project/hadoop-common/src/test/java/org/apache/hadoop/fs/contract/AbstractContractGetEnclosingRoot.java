@@ -36,14 +36,25 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path root = path("/");
     Path foobar = path("/foo/bar");
 
+    // Ensure getEnclosingRoot on the root directory returns the root directory.
     assertEquals(root, fs.getEnclosingRoot(foobar));
+
+    // Ensure getEnclosingRoot called on itself returns the root directory.
     assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
+
+    // Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path.
     assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
 
-    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
-    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(path(foobar.toString()))));
-    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(path(foobar.toString())));
+    // Ensure getEnclosingRoot on a path returns the root directory.
+    assertEquals(root, fs.getEnclosingRoot(methodPath()));
+
+    // Ensure getEnclosingRoot called on itself on a path returns the root directory.
+    assertEquals(root, fs.getEnclosingRoot(fs.getEnclosingRoot(methodPath())));
+
+    // Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path.
+    assertEquals(fs.getEnclosingRoot(root), fs.getEnclosingRoot(methodPath()));
   }
+
 
   @Test
   public void testEnclosingRootPathExists() throws Exception {
@@ -52,8 +63,9 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = path("/foo/bar");
     fs.mkdirs(foobar);
 
+    // Ensure getEnclosingRoot returns the root directory when the path exists.
     assertEquals(root, fs.getEnclosingRoot(foobar));
-    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
+    assertEquals(root, fs.getEnclosingRoot(methodPath()));
   }
 
   @Test
@@ -62,8 +74,9 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = path("/foo/bar");
     Path root = path("/");
 
+    // Ensure getEnclosingRoot returns the root directory even when the path does not exist.
     assertEquals(root, fs.getEnclosingRoot(foobar));
-    assertEquals(root, fs.getEnclosingRoot(path(foobar.toString())));
+    assertEquals(root, fs.getEnclosingRoot(methodPath()));
   }
 
   @Test
@@ -78,18 +91,7 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
       FileSystem wFs = getContract().getTestFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });
+    // Ensure getEnclosingRoot works correctly within a wrapped FileSystem
     assertEquals(root, p);
-  }
-
-  /**
-   * Create a path under the test path provided by
-   * the FS contract.
-   * @param filepath path string in
-   * @return a path qualified by the test filesystem
-   * @throws IOException IO problems
-   */
-  protected Path path(String filepath) throws IOException {
-    return getFileSystem().makeQualified(
-        new Path(getContract().getTestPath(), filepath));
   }
 }

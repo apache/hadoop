@@ -1484,7 +1484,7 @@ public class ViewFs extends AbstractFileSystem {
       try {
         res = fsState.resolve((path.toString()), true);
       } catch (FileNotFoundException ex) {
-        throw new NotInMountpointException(path, "getEnclosingRoot");
+        throw new NotInMountpointException(path, String.format("getEnclosingRoot - %s", ex.getMessage()));
       }
       Path fullPath = new Path(res.resolvedPath);
       Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
