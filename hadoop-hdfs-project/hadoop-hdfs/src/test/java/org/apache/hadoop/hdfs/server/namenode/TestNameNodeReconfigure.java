@@ -738,7 +738,7 @@ public class TestNameNodeReconfigure {
       fail("Should not reach here");
     } catch (ReconfigurationException e) {
       assertEquals("Could not change property " +
-          "ipc.server.log.slow.rpc-threshold-ms from '0' to 'non-numeric'", e.getMessage());
+          "ipc.server.log.slow.rpc.threshold.ms from '0' to 'non-numeric'", e.getMessage());
     }
 
     // try correct logSlowRPCThresholdTime.
