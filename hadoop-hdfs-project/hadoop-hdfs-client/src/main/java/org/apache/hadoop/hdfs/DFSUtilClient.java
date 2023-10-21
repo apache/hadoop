@@ -662,7 +662,7 @@ public class DFSUtilClient {
     for (int i = 0; i < components.length; i++) {
       String element = components[i];
       if (element.equals(".")  ||
-          // For Windows, we must allow the : in the drive letter
+          // For Windows, we must allow the : in the drive letter.
           (!Shell.WINDOWS && i == 1 && element.contains(":"))  ||
           (element.contains("/"))) {
         return false;
