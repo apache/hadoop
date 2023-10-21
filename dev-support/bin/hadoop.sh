@@ -559,8 +559,6 @@ function shadedclient_rebuild
   declare module
   declare -a modules=()
 
-  echo "Going to build shaded client. OS is ${OSTYPE}"
-
   yetus_debug "hadoop personality: seeing if we need the test of client artifacts."
   for module in hadoop-client-modules/hadoop-client-check-invariants \
                 hadoop-client-modules/hadoop-client-check-test-invariants \
@@ -593,23 +591,10 @@ function shadedclient_rebuild
       "${MAVEN}" "${MAVEN_ARGS[@]}" install -fae --batch-mode \
         -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
 
-    echo "ls-ing ${SOURCEDIR}/hadoop-dist"
-    ls "${SOURCEDIR}/hadoop-dist"
-    echo "ls-ing ${SOURCEDIR}/hadoop-dist/target"
-    ls "${SOURCEDIR}/hadoop-dist/target"
-    echo "ls-ing ${SOURCEDIR}/hadoop-project-dist"
-    ls "${SOURCEDIR}/hadoop-project-dist"
-    echo "ls-ing ${SOURCEDIR}/hadoop-project-dist/target"
-    ls "${SOURCEDIR}/hadoop-project-dist/target"
-    echo "finding hadoop.lib"
-    find "${SOURCEDIR}" -name hadoop.lib
-
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
       WIN_HADOOP_HOME=$(cygpath -w -a "${HADOOP_HOME}")
-      echo "WIN_HADOOP_HOME = ${WIN_HADOOP_HOME}"
       export PATH="${PATH};${WIN_HADOOP_HOME}\bin"
-      echo "PATH = ${PATH}"
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
