@@ -586,11 +586,15 @@ function shadedclient_rebuild
     # shellcheck disable=SC2206
     extra+=(${WINDOWS_FLAGS[*]})
 
+    # The shaded client integration tests require the Hadoop jars that were just built to be
+    # installed in the local maven repository.
     # shellcheck disable=SC2086
     echo_and_redirect "${logfile}" \
       "${MAVEN}" "${MAVEN_ARGS[@]}" install -fae --batch-mode \
         -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
 
+    # The shaded client integration tests spawn a MiniDFS and MiniYARN cluster for testing. Both of
+    # them require winutils.exe to be found in the PATH and HADOOP_HOME to be set.
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
       WIN_HADOOP_HOME=$(cygpath -w -a "${HADOOP_HOME}")
