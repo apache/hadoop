@@ -666,7 +666,7 @@ public class DFSUtilClient {
             Shell.WINDOWS, element, element.contains(":"));
       }
       if (element.equals(".")  ||
-          (!Shell.WINDOWS && element.contains(":"))  ||
+          (!Shell.WINDOWS && i == 1 && element.contains(":"))  ||
           (element.contains("/"))) {
         return false;
       }
