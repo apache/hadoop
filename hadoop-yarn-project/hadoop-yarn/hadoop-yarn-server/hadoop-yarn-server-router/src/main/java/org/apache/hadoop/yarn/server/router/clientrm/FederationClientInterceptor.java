@@ -24,13 +24,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -231,7 +231,9 @@ public class FederationClientInterceptor
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
-    this.executorService.allowCoreThreadTimeOut(true);
+    if (keepAliveTime > 0) {
+      this.executorService.allowCoreThreadTimeOut(true);
+    }
 
     final Configuration conf = this.getConf();
 
@@ -810,9 +812,9 @@ public class FederationClientInterceptor
       clusterMetrics = invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      String msg = "Unable to get cluster metrics due to exception.";
+      String msg = "Unable to get cluster metrics due to exception. ";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, msg);
+          TARGET_CLIENT_RM_SERVICE, msg + ex.getMessage());
       RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
@@ -831,18 +833,28 @@ public class FederationClientInterceptor
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
-    Map<SubClusterId, Exception> exceptions = new TreeMap<>();
+    List<String> exceptions = new ArrayList<>();
 
     // Generate parallel Callable tasks
     for (SubClusterId subClusterId : subClusterIds) {
       callables.add(() -> {
-        ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
-        String methodName = request.getMethodName();
-        Class<?>[] types = request.getTypes();
-        Object[] params = request.getParams();
-        Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
-        Object result = method.invoke(protocol, params);
-        return Pair.of(subClusterId, result);
+        try {
+          ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
+          String methodName = request.getMethodName();
+          Class<?>[] types = request.getTypes();
+          Object[] params = request.getParams();
+          Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
+          Object result = method.invoke(protocol, params);
+          return Pair.of(subClusterId, result);
+        } catch (Exception e) {
+          Throwable cause = e.getCause();
+          if (cause != null && cause instanceof InvocationTargetException) {
+            cause = cause.getCause();
+          }
+          String errMsg = (cause.getMessage() != null) ? cause.getMessage() : "UNKNOWN";
+          throw new YarnException(String.format("subClusterId %s exec %s error %s.",
+              subClusterId, request.getMethodName(), errMsg), e);
+        }
       });
     }
 
@@ -859,9 +871,8 @@ public class FederationClientInterceptor
           results.put(subClusterId, clazz.cast(result));
         } catch (InterruptedException | ExecutionException e) {
           Throwable cause = e.getCause();
-          LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
-              subClusterId.getId(), cause.getMessage());
-          exceptions.put(subClusterId, e);
+          LOG.error(cause.getMessage(), e);
+          exceptions.add(cause.getMessage());
         }
       });
     } catch (InterruptedException e) {
@@ -871,9 +882,7 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      Set<SubClusterId> subClusterIdSets = exceptions.keySet();
-      throw new YarnException("invokeConcurrent Failed, An exception occurred in subClusterIds = " +
-          StringUtils.join(subClusterIdSets, ","));
+      throw new YarnException("invokeConcurrent Failed = " + StringUtils.join(exceptions, ","));
     }
 
     // return result
