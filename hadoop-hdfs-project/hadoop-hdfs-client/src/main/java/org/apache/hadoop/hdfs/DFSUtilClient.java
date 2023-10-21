@@ -666,6 +666,7 @@ public class DFSUtilClient {
             Shell.WINDOWS, element, element.contains(":"));
       }
       if (element.equals(".")  ||
+          // For Windows, we must allow the : in the drive letter
           (!Shell.WINDOWS && i == 1 && element.contains(":"))  ||
           (element.contains("/"))) {
         return false;
