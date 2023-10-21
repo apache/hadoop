@@ -559,14 +559,6 @@ function shadedclient_rebuild
   declare module
   declare -a modules=()
 
-  if [[ ${OSTYPE} = Windows_NT ||
-        ${OSTYPE} =~ ^CYGWIN.* ||
-        ${OSTYPE} =~ ^MINGW32.* ||
-        ${OSTYPE} =~ ^MSYS.* ]]; then
-    echo "hadoop personality: building on windows, skipping check of client artifacts."
-    return 0
-  fi
-
   echo "Going to build shaded client. OS is ${OSTYPE}"
 
   yetus_debug "hadoop personality: seeing if we need the test of client artifacts."
