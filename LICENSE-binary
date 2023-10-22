@@ -341,6 +341,7 @@ org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
 org.apache.yetus:audience-annotations:0.5.0
+org.apache.zookeeper:zookeeper:3.7.2
 org.codehaus.jettison:jettison:1.5.4
 org.eclipse.jetty:jetty-annotations:9.4.51.v20230217
 org.eclipse.jetty:jetty-http:9.4.51.v20230217
@@ -356,7 +357,6 @@ org.eclipse.jetty:jetty-webapp:9.4.51.v20230217
 org.eclipse.jetty:jetty-xml:9.4.51.v20230217
 org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.51.v20230217
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.51.v20230217
-org.apache.zookeeper:zookeeper:3.6.3
 org.ehcache:ehcache:3.3.1
 org.ini4j:ini4j:0.5.4
 org.lz4:lz4-java:1.7.1
