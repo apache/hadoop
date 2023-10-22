@@ -87,6 +87,11 @@ public final class RouterAuditLogger {
     public static final String GET_CLUSTERUSERINFO = "Get ClusterUserInfo";
     public static final String GET_SCHEDULERINFO = "Get SchedulerInfo";
     public static final String DUMP_SCHEDULERLOGS = "Dump SchedulerLogs";
+    public static final String GET_ACTIVITIES = "Get Activities";
+    public static final String GET_BULKACTIVITIES = "Get BulkActivities";
+    public static final String GET_APPACTIVITIES = "Get AppActivities";
+    public static final String GET_APPSTATISTICS = "Get AppStatistics";
+    public static final String GET_RMNODELABELS = "Get RMNodeLabels";
   }
 
   public static void logSuccess(String user, String operation, String target) {

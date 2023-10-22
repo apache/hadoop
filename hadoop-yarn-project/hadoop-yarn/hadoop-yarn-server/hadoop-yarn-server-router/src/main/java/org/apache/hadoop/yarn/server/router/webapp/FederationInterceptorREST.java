@@ -158,6 +158,13 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERUSERINFO;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_SCHEDULERINFO;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.DUMP_SCHEDULERLOGS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_ACTIVITIES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_BULKACTIVITIES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPACTIVITIES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPSTATISTICS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODETOLABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_RMNODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELSTONODES;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_WEB_SERVICE;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
@@ -1358,14 +1365,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ActivitiesInfo activitiesInfo = interceptor.getActivities(hsrCopy, nodeId, groupBy);
       if (activitiesInfo != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_ACTIVITIES,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
         return activitiesInfo;
       }
     } catch (IllegalArgumentException | NotFoundException e) {
       routerMetrics.incrGetActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_ACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
-
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_ACTIVITIES, UNKNOWN,
+        TARGET_WEB_SERVICE, "getActivities Failed.");
     routerMetrics.incrGetActivitiesFailedRetrieved();
     throw new RuntimeException("getActivities Failed.");
   }
@@ -1405,28 +1417,40 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         bulkActivitiesInfo.setSubClusterId(subClusterId.getId());
         fedBulkActivitiesInfo.getList().add(bulkActivitiesInfo);
       });
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_BULKACTIVITIES,
+          TARGET_WEB_SERVICE);
       long stopTime = clock.getTime();
       routerMetrics.succeededGetBulkActivitiesRetrieved(stopTime - startTime);
       return fedBulkActivitiesInfo;
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_BULKACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     } catch (NotFoundException e) {
       routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_BULKACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
     } catch (IOException e) {
       routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_BULKACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getBulkActivities by groupBy = %s, activitiesCount = %s with io error.",
           groupBy, String.valueOf(activitiesCount));
     } catch (YarnException e) {
       routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_BULKACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getBulkActivities by groupBy = %s, activitiesCount = %s with yarn error.",
           groupBy, String.valueOf(activitiesCount));
     }
 
     routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_BULKACTIVITIES, UNKNOWN,
+        TARGET_WEB_SERVICE, "getBulkActivities Failed.");
     throw new RuntimeException("getBulkActivities Failed.");
   }
 
@@ -1445,17 +1469,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (appActivitiesInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetAppActivitiesRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APPACTIVITIES,
+            TARGET_WEB_SERVICE);
         return appActivitiesInfo;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get subCluster by appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPACTIVITIES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getAppActivities by appId = %s error .", appId);
     }
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPACTIVITIES, UNKNOWN,
+        TARGET_WEB_SERVICE, "getAppActivities Failed.");
     routerMetrics.incrGetAppActivitiesFailedRetrieved();
     throw new RuntimeException("getAppActivities Failed.");
   }
@@ -1477,23 +1509,33 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (applicationStatisticsInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetAppStatisticsRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APPSTATISTICS,
+            TARGET_WEB_SERVICE);
         return applicationStatisticsInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPSTATISTICS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
     } catch (IOException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPSTATISTICS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getAppStatistics error by stateQueries = %s, typeQueries = %s with io error.",
           StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
     } catch (YarnException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPSTATISTICS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getAppStatistics by stateQueries = %s, typeQueries = %s with yarn error.",
           StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
     }
     routerMetrics.incrGetAppStatisticsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPSTATISTICS, UNKNOWN,
+        TARGET_WEB_SERVICE, "getAppStatistics Failed.");
     throw RouterServerUtil.logAndReturnRunTimeException(
         "getAppStatistics by stateQueries = %s, typeQueries = %s Failed.",
         StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
@@ -1516,16 +1558,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (nodeToLabelsInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NODETOLABELS,
+            TARGET_WEB_SERVICE);
         return nodeToLabelsInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("getNodeToLabels error.", e);
     }
     routerMetrics.incrNodeToLabelsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+        TARGET_WEB_SERVICE, "getNodeToLabels Failed.");
     throw new RuntimeException("getNodeToLabels Failed.");
   }
 
@@ -1545,16 +1595,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (nodeToLabelsInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetRMNodeLabelsRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_RMNODELABELS,
+            TARGET_WEB_SERVICE);
         return nodeToLabelsInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_RMNODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_RMNODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("getRMNodeLabels error.", e);
     }
     routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_RMNODELABELS, UNKNOWN,
+        TARGET_WEB_SERVICE, "getRMNodeLabels Failed.");
     throw new RuntimeException("getRMNodeLabels Failed.");
   }
 
@@ -1583,18 +1641,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       LabelsToNodesInfo labelsToNodesInfo = new LabelsToNodesInfo(labelToNodesMap);
       if (labelsToNodesInfo != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_LABELSTONODES,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
         return labelsToNodesInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException(
           e, "getLabelsToNodes by labels = %s with yarn error.", StringUtils.join(labels, ","));
     }
     routerMetrics.incrLabelsToNodesFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+        TARGET_WEB_SERVICE, "getLabelsToNodes Failed.");
     throw RouterServerUtil.logAndReturnRunTimeException(
         "getLabelsToNodes by labels = %s Failed.", StringUtils.join(labels, ","));
   }
