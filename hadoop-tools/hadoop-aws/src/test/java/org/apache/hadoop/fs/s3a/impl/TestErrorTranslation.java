@@ -127,8 +127,6 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
         .exception(ase)
         .build();
     RetryOnErrorCodeCondition retry = RetryOnErrorCodeCondition.create("");
-    assertTrue("retry policy of MultiObjectException",
-        retry.shouldRetry(context));
 
     Assertions.assertThat(retry.shouldRetry(context))
         .describedAs("retry policy of MultiObjectException")
