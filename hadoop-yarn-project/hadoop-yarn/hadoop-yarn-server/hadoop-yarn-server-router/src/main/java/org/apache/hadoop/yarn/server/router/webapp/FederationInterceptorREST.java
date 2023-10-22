@@ -167,6 +167,20 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELSTONODES;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_WEB_SERVICE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.REPLACE_LABELSONNODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.REPLACE_LABELSONNODE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTER_NODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.ADD_TO_CLUSTER_NODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.REMOVE_FROM_CLUSTERNODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELS_ON_NODE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_PRIORITY;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUEINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_APPLICATIONPRIORITY;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_APP_QUEUE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.POST_DELEGATION_TOKEN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.POST_DELEGATION_TOKEN_EXPIRATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.CANCEL_DELEGATIONTOKEN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_RESERVATION;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
@@ -1687,6 +1701,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
     if (CollectionUtils.isEmpty(nodeToLabelsEntries)) {
       routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REPLACE_LABELSONNODES, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, " +
+          "nodeToLabelsEntries must not be empty.");
       throw new IllegalArgumentException("Parameter error, " +
          "nodeToLabelsEntries must not be empty.");
     }
@@ -1728,12 +1745,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         }
       });
       long stopTime = clock.getTime();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), REPLACE_LABELSONNODES,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededReplaceLabelsOnNodesRetrieved(stopTime - startTime);
 
       // Step5. return call result.
       return Response.status(Status.OK).entity(builder.toString()).build();
     } catch (Exception e) {
       routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REPLACE_LABELSONNODES, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
   }
@@ -1757,10 +1778,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Step1. Check the parameters to ensure that the parameters are not empty.
     if (StringUtils.isBlank(nodeId)) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REPLACE_LABELSONNODE, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, nodeId must not be null or empty.");
       throw new IllegalArgumentException("Parameter error, nodeId must not be null or empty.");
     }
     if (CollectionUtils.isEmpty(newNodeLabelsName)) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REPLACE_LABELSONNODE, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, newNodeLabelsName must not be empty.");
       throw new IllegalArgumentException("Parameter error, newNodeLabelsName must not be empty.");
     }
 
@@ -1775,11 +1800,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Step3. Return the response result.
       long stopTime = clock.getTime();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), REPLACE_LABELSONNODE,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
       String msg = "subCluster#" + subClusterInfo.getSubClusterId().getId() + ":Success;";
       return Response.status(Status.OK).entity(msg).build();
     } catch (Exception e) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REPLACE_LABELSONNODE, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
   }
@@ -1802,16 +1831,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (nodeLabelsInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CLUSTER_NODELABELS,
+            TARGET_WEB_SERVICE);
         return nodeLabelsInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("getClusterNodeLabels with yarn error.", e);
     }
     routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CLUSTER_NODELABELS, UNKNOWN,
+        TARGET_WEB_SERVICE, "getClusterNodeLabels Failed.");
     throw new RuntimeException("getClusterNodeLabels Failed.");
   }
 
@@ -1831,12 +1868,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (newNodeLabels == null) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, the newNodeLabels is null.");
       throw new IllegalArgumentException("Parameter error, the newNodeLabels is null.");
     }
 
     List<NodeLabelInfo> nodeLabelInfos = newNodeLabels.getNodeLabelsInfo();
     if (CollectionUtils.isEmpty(nodeLabelInfos)) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, the nodeLabelsInfo is null or empty.");
       throw new IllegalArgumentException("Parameter error, the nodeLabelsInfo is null or empty.");
     }
 
@@ -1854,17 +1895,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
       long stopTime = clock.getTime();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
       return Response.status(Status.OK).entity(buffer.toString()).build();
     } catch (NotFoundException e) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("addToClusterNodeLabels with yarn error.", e);
     }
 
     routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS, UNKNOWN,
+        TARGET_WEB_SERVICE, "addToClusterNodeLabels Failed.");
     throw new RuntimeException("addToClusterNodeLabels Failed.");
   }
 
@@ -1884,6 +1933,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (CollectionUtils.isEmpty(oldNodeLabels)) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, "Parameter error, the oldNodeLabels is null or empty.");
       throw new IllegalArgumentException("Parameter error, the oldNodeLabels is null or empty.");
     }
 
@@ -1902,13 +1953,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
       long stopTime = clock.getTime();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
       return Response.status(Status.OK).entity(buffer.toString()).build();
     } catch (NotFoundException e) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("removeFromClusterNodeLabels with yarn error.", e);
     }
 
@@ -1953,17 +2010,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (nodeLabelsInfo != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_LABELS_ON_NODE,
+            TARGET_WEB_SERVICE);
         return nodeLabelsInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELS_ON_NODE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELS_ON_NODE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException(
           e, "getLabelsOnNode nodeId = %s with yarn error.", nodeId);
     }
     routerMetrics.incrLabelsToNodesFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_LABELS_ON_NODE,
+        UNKNOWN, TARGET_WEB_SERVICE, "getLabelsOnNode by nodeId = " + nodeId + " Failed.");
     throw RouterServerUtil.logAndReturnRunTimeException(
         "getLabelsOnNode by nodeId = %s Failed.", nodeId);
   }
@@ -1979,17 +2044,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (appPriority != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetAppPriorityRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_PRIORITY,
+            TARGET_WEB_SERVICE);
         return appPriority;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppPriorityFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_PRIORITY,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppPriority appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppPriorityFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_PRIORITY,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getAppPriority error.", e);
     }
     routerMetrics.incrGetAppPriorityFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_PRIORITY,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppPriority Failed.");
     throw new RuntimeException("getAppPriority Failed.");
   }
 
@@ -2000,6 +2073,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (targetPriority == null) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the targetPriority is empty or null.");
       throw new IllegalArgumentException("Parameter error, the targetPriority is empty or null.");
     }
 
@@ -2010,16 +2085,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+            TARGET_WEB_SERVICE);
         return response;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the updateApplicationPriority appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("updateApplicationPriority error.", e);
     }
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppPriority Failed.");
     routerMetrics.incrUpdateAppPriorityFailedRetrieved();
     throw new RuntimeException("updateApplicationPriority Failed.");
   }
@@ -2035,15 +2118,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (queue != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededGetAppQueueRetrieved((stopTime - startTime));
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_QUEUEINFO,
+            TARGET_WEB_SERVICE);
         return queue;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_QUEUEINFO,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get queue by appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_QUEUEINFO,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getAppQueue error.", e);
     }
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_QUEUEINFO,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppQueue Failed.");
     routerMetrics.incrGetAppQueueFailedRetrieved();
     throw new RuntimeException("getAppQueue Failed.");
   }
@@ -2055,6 +2146,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (targetQueue == null) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APP_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the targetQueue is null.");
       throw new IllegalArgumentException("Parameter error, the targetQueue is null.");
     }
 
@@ -2065,16 +2158,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededUpdateAppQueueRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APP_QUEUE,
+            TARGET_WEB_SERVICE);
         return response;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APP_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to update app queue by appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APP_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("updateAppQueue error.", e);
     }
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APP_QUEUE,
+        UNKNOWN, TARGET_WEB_SERVICE, "updateAppQueue Failed.");
     routerMetrics.incrUpdateAppQueueFailedRetrieved();
     throw new RuntimeException("updateAppQueue Failed.");
   }
@@ -2095,6 +2196,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException, IOException, InterruptedException, Exception {
 
     if (tokenData == null || hsr == null) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), POST_DELEGATION_TOKEN,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the tokenData or hsr is null.");
       throw new IllegalArgumentException("Parameter error, the tokenData or hsr is null.");
     }
 
@@ -2107,6 +2210,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return createDelegationToken(tokenData, callerUGI);
     } catch (YarnException e) {
       LOG.error("Create delegation token request failed.", e);
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), POST_DELEGATION_TOKEN,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
     }
   }
@@ -2131,6 +2236,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
 
     DelegationToken respToken = getDelegationToken(renewer, resp);
+    RouterAuditLogger.logSuccess(getUser().getShortUserName(), POST_DELEGATION_TOKEN,
+        TARGET_WEB_SERVICE);
     return Response.status(Status.OK).entity(respToken).build();
   }
 
@@ -2195,6 +2302,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException, IOException, InterruptedException, Exception {
 
     if (hsr == null) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), POST_DELEGATION_TOKEN_EXPIRATION,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the hsr is null.");
       throw new IllegalArgumentException("Parameter error, the hsr is null.");
     }
 
@@ -2205,6 +2314,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return renewDelegationToken(hsr, callerUGI);
     } catch (YarnException e) {
       LOG.error("Renew delegation token request failed.", e);
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), POST_DELEGATION_TOKEN_EXPIRATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
     }
   }
@@ -2243,6 +2354,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     long renewTime = resp.getNextExpirationTime();
     DelegationToken respToken = new DelegationToken();
     respToken.setNextExpirationTime(renewTime);
+    RouterAuditLogger.logSuccess(getUser().getShortUserName(), POST_DELEGATION_TOKEN_EXPIRATION,
+        TARGET_WEB_SERVICE);
     return Response.status(Status.OK).entity(respToken).build();
   }
 
@@ -2276,9 +2389,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         return this.getRouterClientRMService().cancelDelegationToken(req);
       });
 
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), CANCEL_DELEGATIONTOKEN,
+          TARGET_WEB_SERVICE);
       return Response.status(Status.OK).build();
     } catch (YarnException e) {
       LOG.error("Cancel delegation token request failed.", e);
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CANCEL_DELEGATIONTOKEN,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
     }
   }
@@ -2300,15 +2417,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // this request can be returned directly.
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_RESERVATION,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
         return response;
       }
     } catch (FederationPolicyException e) {
       // If a FederationPolicyException is thrown, the service is unavailable.
       routerMetrics.incrGetNewReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
     } catch (Exception e) {
       routerMetrics.incrGetNewReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e.getLocalizedMessage()).build();
     }
 
@@ -2316,6 +2439,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String errMsg = "Fail to create a new reservation.";
     LOG.error(errMsg);
     routerMetrics.incrGetNewReservationFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_RESERVATION,
+        UNKNOWN, TARGET_WEB_SERVICE, errMsg);
     return Response.status(Status.INTERNAL_SERVER_ERROR).entity(errMsg).build();
   }
 

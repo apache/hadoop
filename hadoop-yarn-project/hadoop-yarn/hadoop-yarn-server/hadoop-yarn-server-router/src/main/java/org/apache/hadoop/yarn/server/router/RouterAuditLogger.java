@@ -92,6 +92,16 @@ public final class RouterAuditLogger {
     public static final String GET_APPACTIVITIES = "Get AppActivities";
     public static final String GET_APPSTATISTICS = "Get AppStatistics";
     public static final String GET_RMNODELABELS = "Get RMNodeLabels";
+    public static final String REPLACE_LABELSONNODES = "Replace LabelsOnNodes";
+    public static final String REPLACE_LABELSONNODE = "Replace LabelsOnNode";
+    public static final String GET_CLUSTER_NODELABELS = "Get ClusterNodeLabels";
+    public static final String ADD_TO_CLUSTER_NODELABELS = "Add To ClusterNodeLabels";
+    public static final String REMOVE_FROM_CLUSTERNODELABELS = "Remove From ClusterNodeLabels";
+    public static final String GET_LABELS_ON_NODE = "Get LabelsOnNode";
+    public static final String GET_APP_PRIORITY = "Get AppPriority";
+    public static final String UPDATE_APP_QUEUE = "Update AppQueue";
+    public static final String POST_DELEGATION_TOKEN = "Post DelegationToken";
+    public static final String POST_DELEGATION_TOKEN_EXPIRATION = "Post DelegationTokenExpiration";
   }
 
   public static void logSuccess(String user, String operation, String target) {
