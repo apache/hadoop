@@ -102,6 +102,13 @@ public final class RouterAuditLogger {
     public static final String UPDATE_APP_QUEUE = "Update AppQueue";
     public static final String POST_DELEGATION_TOKEN = "Post DelegationToken";
     public static final String POST_DELEGATION_TOKEN_EXPIRATION = "Post DelegationTokenExpiration";
+    public static final String GET_APP_TIMEOUT = "Get App Timeout";
+    public static final String GET_APP_TIMEOUTS = "Get App Timeouts";
+    public static final String CHECK_USER_ACCESS_TO_QUEUE = "Check User AccessToQueue";
+    public static final String GET_APP_ATTEMPT = "Get AppAttempt";
+    public static final String GET_CONTAINER = "Get Container";
+    public static final String UPDATE_SCHEDULER_CONFIGURATION = "Update SchedulerConfiguration";
+    public static final String GET_SCHEDULER_CONFIGURATION = "Get SchedulerConfiguration";
   }
 
   public static void logSuccess(String user, String operation, String target) {

@@ -181,6 +181,21 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.POST_DELEGATION_TOKEN_EXPIRATION;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.CANCEL_DELEGATIONTOKEN;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.DELETE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.LIST_RESERVATIONS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_TIMEOUT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_TIMEOUTS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_APPLICATIONTIMEOUTS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATION_ATTEMPTS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.CHECK_USER_ACCESS_TO_QUEUE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_ATTEMPT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CONTAINERS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CONTAINER;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_SCHEDULER_CONFIGURATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_SCHEDULER_CONFIGURATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SIGNAL_TOCONTAINER;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
@@ -2476,6 +2491,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrSubmitReservationFailedRetrieved();
       String errMsg = "Missing submitReservation resContext or reservationId " +
           "or reservation definition or queue.";
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, errMsg);
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
 
@@ -2485,6 +2502,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateReservationId(resId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrSubmitReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2497,16 +2516,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           runWithRetries(actualRetryNums, submitIntervalTime);
       if (response != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_RESERVATION,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
         return response;
       }
     } catch (Exception e) {
       routerMetrics.incrSubmitReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
     }
 
     routerMetrics.incrSubmitReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be submitted.", resId);
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), SUBMIT_RESERVATION,
+        UNKNOWN, TARGET_WEB_SERVICE, msg);
     return Response.status(Status.SERVICE_UNAVAILABLE).entity(msg).build();
   }
 
@@ -2570,6 +2595,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrUpdateReservationFailedRetrieved();
       String errMsg = "Missing updateReservation resContext or reservationId " +
           "or reservation definition.";
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, errMsg);
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
 
@@ -2581,6 +2608,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateReservationId(reservationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2591,15 +2620,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsrCopy = clone(hsr);
       Response response = interceptor.updateReservation(resContext, hsrCopy);
       if (response != null) {
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_RESERVATION,
+            TARGET_WEB_SERVICE);
         return response;
       }
     } catch (Exception e) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("updateReservation Failed.", e);
     }
 
     // throw an exception
     routerMetrics.incrUpdateReservationFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_RESERVATION,
+        UNKNOWN, TARGET_WEB_SERVICE, "updateReservation Failed, reservationId = " + reservationId);
     throw new YarnRuntimeException("updateReservation Failed, reservationId = " + reservationId);
   }
 
@@ -2612,6 +2647,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (resContext == null || resContext.getReservationId() == null) {
       routerMetrics.incrDeleteReservationFailedRetrieved();
       String errMsg = "Missing deleteReservation request or reservationId.";
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DELETE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, errMsg);
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
 
@@ -2623,6 +2660,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateReservationId(reservationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrDeleteReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DELETE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2633,15 +2672,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsrCopy = clone(hsr);
       Response response = interceptor.deleteReservation(resContext, hsrCopy);
       if (response != null) {
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), DELETE_RESERVATION,
+            TARGET_WEB_SERVICE);
         return response;
       }
     } catch (Exception e) {
       routerMetrics.incrDeleteReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), DELETE_RESERVATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("deleteReservation Failed.", e);
     }
 
     // throw an exception
     routerMetrics.incrDeleteReservationFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), DELETE_RESERVATION,
+        UNKNOWN, TARGET_WEB_SERVICE, "deleteReservation Failed, reservationId = " + reservationId);
     throw new YarnRuntimeException("deleteReservation Failed, reservationId = " + reservationId);
   }
 
@@ -2652,11 +2697,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (queue == null || queue.isEmpty()) {
       routerMetrics.incrListReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), LIST_RESERVATIONS,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the queue is empty or null.");
       throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
     }
 
     if (reservationId == null || reservationId.isEmpty()) {
       routerMetrics.incrListReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), LIST_RESERVATIONS,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the reservationId is empty or null.");
       throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
@@ -2665,6 +2714,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateReservationId(reservationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrListReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), LIST_RESERVATIONS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2678,15 +2729,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           includeResourceAllocations, hsrCopy);
       if (response != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), LIST_RESERVATIONS,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededListReservationRetrieved(stopTime - startTime1);
         return response;
       }
     } catch (YarnException e) {
       routerMetrics.incrListReservationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), LIST_RESERVATIONS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("listReservation error.", e);
     }
 
     routerMetrics.incrListReservationFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), LIST_RESERVATIONS,
+        UNKNOWN, TARGET_WEB_SERVICE, "listReservation Failed.");
     throw new YarnException("listReservation Failed.");
   }
 
@@ -2696,6 +2753,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (type == null || type.isEmpty()) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUT,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the type is empty or null.");
       throw new IllegalArgumentException("Parameter error, the type is empty or null.");
     }
 
@@ -2705,18 +2764,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       AppTimeoutInfo appTimeoutInfo = interceptor.getAppTimeout(hsr, appId, type);
       if (appTimeoutInfo != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_TIMEOUT,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetAppTimeoutRetrieved((stopTime - startTime));
         return appTimeoutInfo;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUT,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppTimeout appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUT,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getAppTimeout error.", e);
     }
     routerMetrics.incrGetAppTimeoutFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUT,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppTimeout Failed.");
     throw new RuntimeException("getAppTimeout Failed.");
   }
 
@@ -2730,19 +2797,27 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(hsr, appId);
       if (appTimeoutsInfo != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_TIMEOUTS,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetAppTimeoutsRetrieved((stopTime - startTime));
         return appTimeoutsInfo;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppTimeouts appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getAppTimeouts error.", e);
     }
 
     routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_TIMEOUTS,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppTimeouts Failed.");
     throw new RuntimeException("getAppTimeouts Failed.");
   }
 
@@ -2753,6 +2828,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (appTimeout == null) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the appTimeout is null.");
       throw new IllegalArgumentException("Parameter error, the appTimeout is null.");
     }
 
@@ -2762,19 +2839,27 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
       if (response != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededUpdateAppTimeoutsRetrieved((stopTime - startTime));
         return response;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the updateApplicationTimeout appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("updateApplicationTimeout error.", e);
     }
 
     routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+        UNKNOWN, TARGET_WEB_SERVICE, "updateApplicationTimeout Failed.");
     throw new RuntimeException("updateApplicationTimeout Failed.");
   }
 
@@ -2788,18 +2873,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (appAttemptsInfo != null) {
         long stopTime = Time.now();
         routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APPLICATION_ATTEMPTS,
+            TARGET_WEB_SERVICE);
         return appAttemptsInfo;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPLICATION_ATTEMPTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the AppAttempt appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPLICATION_ATTEMPTS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getAppAttempts error.", e);
     }
 
     routerMetrics.incrAppAttemptsFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APPLICATION_ATTEMPTS,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppAttempts Failed.");
     throw new RuntimeException("getAppAttempts Failed.");
   }
 
@@ -2810,16 +2903,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Parameter Verification
     if (queue == null || queue.isEmpty()) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the queue is empty or null.");
       throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
     }
 
     if (username == null || username.isEmpty()) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the username is empty or null.");
       throw new IllegalArgumentException("Parameter error, the username is empty or null.");
     }
 
     if (queueAclType == null || queueAclType.isEmpty()) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the queueAclType is empty or null.");
       throw new IllegalArgumentException("Parameter error, the queueAclType is empty or null.");
     }
 
@@ -2841,17 +2940,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         aclInfo.getList().add(rMQueueAclInfo);
       });
       long stopTime = Time.now();
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          TARGET_WEB_SERVICE);
       routerMetrics.succeededCheckUserAccessToQueueRetrieved(stopTime - startTime);
       return aclInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
     }
 
     routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), CHECK_USER_ACCESS_TO_QUEUE,
+        UNKNOWN, TARGET_WEB_SERVICE, "checkUserAccessToQueue error.");
     throw new RuntimeException("checkUserAccessToQueue error.");
   }
 
@@ -2864,6 +2971,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateApplicationAttemptId(appAttemptId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_ATTEMPT,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2874,20 +2983,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       AppAttemptInfo appAttemptInfo = interceptor.getAppAttempt(req, res, appId, appAttemptId);
       if (appAttemptInfo != null) {
         long stopTime = Time.now();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_ATTEMPT,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
         return appAttemptInfo;
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_ATTEMPT,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to getAppAttempt by appId: %s, appAttemptId: %s.", appId, appAttemptId);
     } catch (YarnException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_ATTEMPT,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "getAppAttempt error, appId: %s, appAttemptId: %s.", appId, appAttemptId);
     }
 
     routerMetrics.incrAppAttemptReportFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_APP_ATTEMPT,
+        UNKNOWN, TARGET_WEB_SERVICE, "getAppAttempt failed.");
     throw RouterServerUtil.logAndReturnRunTimeException(
         "getAppAttempt failed, appId: %s, appAttemptId: %s.", appId, appAttemptId);
   }
@@ -2901,6 +3018,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateApplicationId(appId);
       RouterServerUtil.validateApplicationAttemptId(appAttemptId);
     } catch (IllegalArgumentException e) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINERS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       routerMetrics.incrGetContainersFailedRetrieved();
       throw e;
     }
@@ -2921,20 +3040,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
       if (containersInfo != null) {
         long stopTime = clock.getTime();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CONTAINERS,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
         return containersInfo;
       }
     } catch (NotFoundException e) {
       routerMetrics.incrGetContainersFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINERS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e, "getContainers error, appId = %s, " +
           " appAttemptId = %s, Probably getActiveSubclusters error.", appId, appAttemptId);
     } catch (IOException | YarnException e) {
       routerMetrics.incrGetContainersFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINERS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e, "getContainers error, appId = %s, " +
           " appAttemptId = %s.", appId, appAttemptId);
     }
 
     routerMetrics.incrGetContainersFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINERS,
+        UNKNOWN, TARGET_WEB_SERVICE, "getContainers failed.");
     throw RouterServerUtil.logAndReturnRunTimeException(
         "getContainers failed, appId: %s, appAttemptId: %s.", appId, appAttemptId);
   }
@@ -2954,6 +3081,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateContainerId(containerId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
@@ -2965,6 +3094,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (containerInfo != null) {
         long stopTime = Time.now();
         routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CONTAINER,
+            TARGET_WEB_SERVICE);
         return containerInfo;
       }
     } catch (IllegalArgumentException e) {
@@ -2972,13 +3103,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           "Unable to get the AppAttempt appId: %s, appAttemptId: %s, containerId: %s.", appId,
           appAttemptId, containerId);
       routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(msg, e);
     } catch (YarnException e) {
       routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
     }
 
     routerMetrics.incrGetContainerReportFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_CONTAINER,
+        UNKNOWN, TARGET_WEB_SERVICE, "getContainer Failed.");
     throw new RuntimeException("getContainer Failed.");
   }
 
@@ -3002,6 +3139,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Make Sure mutationInfo is not null.
     if (mutationInfo == null) {
       routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE,
+          "Parameter error, the schedConfUpdateInfo is empty or null.");
       throw new IllegalArgumentException(
           "Parameter error, the schedConfUpdateInfo is empty or null.");
     }
@@ -3012,6 +3152,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String pSubClusterId = mutationInfo.getSubClusterId();
     if (StringUtils.isBlank(pSubClusterId)) {
       routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE,
+          "Parameter error, the subClusterId is empty or null.");
       throw new IllegalArgumentException("Parameter error, " +
           "the subClusterId is empty or null.");
     }
@@ -3026,19 +3169,27 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       if (response != null) {
         long endTime = clock.getTime();
         routerMetrics.succeededUpdateSchedulerConfigurationRetrieved(endTime - startTime);
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+            TARGET_WEB_SERVICE);
         return Response.status(response.getStatus()).entity(response.getEntity()).build();
       }
     } catch (NotFoundException e) {
       routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Get subCluster error. subClusterId = %s", pSubClusterId);
     } catch (Exception e) {
       routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException(e,
           "UpdateSchedulerConfiguration error. subClusterId = %s", pSubClusterId);
     }
 
     routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
+        UNKNOWN, TARGET_WEB_SERVICE, "UpdateSchedulerConfiguration Failed.");
     throw new RuntimeException("UpdateSchedulerConfiguration error. subClusterId = "
         + pSubClusterId);
   }
@@ -3081,18 +3232,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
       long endTime = clock.getTime();
       routerMetrics.succeededGetSchedulerConfigurationRetrieved(endTime - startTime);
+      RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_SCHEDULER_CONFIGURATION,
+          TARGET_WEB_SERVICE);
       return Response.status(Status.OK).entity(federationConfInfo).build();
     } catch (NotFoundException e) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
+      routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
-      routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
     } catch (Exception e) {
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULER_CONFIGURATION,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("getSchedulerConfiguration error.", e);
       return Response.status(Status.BAD_REQUEST).entity("getSchedulerConfiguration error.").build();
     }
 
     routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
-    throw new RuntimeException("getSchedulerConfiguration error.");
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_SCHEDULER_CONFIGURATION,
+        UNKNOWN, TARGET_WEB_SERVICE, "getSchedulerConfiguration Failed.");
+    throw new RuntimeException("getSchedulerConfiguration Failed.");
   }
 
   @Override
@@ -3112,12 +3270,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.validateContainerId(containerId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       throw e;
     }
 
     // Check if command is empty or null
     if (command == null || command.isEmpty()) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the command is empty or null.");
       throw new IllegalArgumentException("Parameter error, the command is empty or null.");
     }
 
@@ -3133,18 +3295,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = interceptor.signalToContainer(containerId, command, req);
       if (response != null) {
         long stopTime = Time.now();
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+            TARGET_WEB_SERVICE);
         routerMetrics.succeededSignalToContainerRetrieved(stopTime - startTime);
         return response;
       }
     } catch (YarnException e) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("signalToContainer Failed.", e);
     } catch (AuthorizationException e) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowRunTimeException("signalToContainer Author Failed.", e);
     }
 
     routerMetrics.incrSignalToContainerFailedRetrieved();
+    RouterAuditLogger.logFailure(getUser().getShortUserName(), SIGNAL_TOCONTAINER,
+        UNKNOWN, TARGET_WEB_SERVICE, "signalToContainer Failed.");
     throw new RuntimeException("signalToContainer Failed.");
   }
 
