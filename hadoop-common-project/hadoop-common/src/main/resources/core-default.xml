@@ -2580,10 +2580,20 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
-  <name>callqueue.overflow.trigger.failover</name>
+  <name>ipc.[port_number].callqueue.overflow.trigger.failover</name>
   <value>false</value>
   <description>
     Enable callqueue overflow trigger failover for stateless servers.
+  </description>
+</property>
+
+<property>
+  <name>ipc.callqueue.overflow.trigger.failover</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].callqueue.overflow.trigger.failover" is not defined.
+    It determines whether or not to enable callqueue overflow trigger failover for stateless servers.
   </description>
 </property>
 
