@@ -1948,8 +1948,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (CollectionUtils.isEmpty(oldNodeLabels)) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
-      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
-          TARGET_WEB_SERVICE, "Parameter error, the oldNodeLabels is null or empty.");
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS,
+          UNKNOWN, TARGET_WEB_SERVICE, "Parameter error, the oldNodeLabels is null or empty.");
       throw new IllegalArgumentException("Parameter error, the oldNodeLabels is null or empty.");
     }
 
@@ -1974,13 +1974,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return Response.status(Status.OK).entity(buffer.toString()).build();
     } catch (NotFoundException e) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
-      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
-          TARGET_WEB_SERVICE, e.getLocalizedMessage());
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
-      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS, UNKNOWN,
-          TARGET_WEB_SERVICE, e.getLocalizedMessage());
+      RouterAuditLogger.logFailure(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS,
+          UNKNOWN, TARGET_WEB_SERVICE, e.getLocalizedMessage());
       RouterServerUtil.logAndThrowIOException("removeFromClusterNodeLabels with yarn error.", e);
     }
 
