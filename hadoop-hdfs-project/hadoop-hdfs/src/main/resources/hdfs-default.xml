@@ -3757,6 +3757,14 @@
 </property>
 
 <property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
