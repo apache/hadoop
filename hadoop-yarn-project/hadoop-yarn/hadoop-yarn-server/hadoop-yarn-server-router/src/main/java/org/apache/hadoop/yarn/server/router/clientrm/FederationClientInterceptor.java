@@ -231,9 +231,7 @@ public class FederationClientInterceptor
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
-    if (keepAliveTime > 0) {
-      this.executorService.allowCoreThreadTimeOut(true);
-    }
+    this.executorService.allowCoreThreadTimeOut(true);
 
     final Configuration conf = this.getConf();
 

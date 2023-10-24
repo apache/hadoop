@@ -366,7 +366,6 @@ public class TestFederationClientInterceptorRetry
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
-
     LambdaTestUtils.intercept(YarnException.class, "RM is stopped",
         () -> interceptor.submitApplication(request));
   }
