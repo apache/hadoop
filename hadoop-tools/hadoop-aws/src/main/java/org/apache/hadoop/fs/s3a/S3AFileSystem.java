@@ -1357,7 +1357,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public String getBucketLocation(String bucketName) throws IOException {
       final String region = trackDurationAndSpan(
           STORE_EXISTS_PROBE, bucketName, null, () ->
-              once("getBucketLocation()", bucketName, () ->
+              invoker.retry("getBucketLocation()", bucketName, true, () ->
                   // If accessPoint then region is known from Arn
                   accessPoint != null
                       ? accessPoint.getRegion()
