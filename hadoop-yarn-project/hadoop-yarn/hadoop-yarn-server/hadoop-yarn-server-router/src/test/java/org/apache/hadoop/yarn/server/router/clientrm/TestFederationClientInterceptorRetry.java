@@ -362,7 +362,7 @@ public class TestFederationClientInterceptorRetry
     interceptor.setNumSubmitRetries(1);
 
     final ApplicationId appId =
-       ApplicationId.newInstance(System.currentTimeMillis(), 5);
+        ApplicationId.newInstance(System.currentTimeMillis(), 5);
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
@@ -378,7 +378,7 @@ public class TestFederationClientInterceptorRetry
     interceptor.setNumSubmitRetries(0);
 
     final ApplicationId appId =
-       ApplicationId.newInstance(System.currentTimeMillis(), 6);
+        ApplicationId.newInstance(System.currentTimeMillis(), 6);
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
@@ -393,7 +393,7 @@ public class TestFederationClientInterceptorRetry
 
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId 1 exec getClusterMetrics error RM is stopped.",
-         () -> interceptor.getClusterMetrics(request));
+        () -> interceptor.getClusterMetrics(request));
 
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId 2 exec getClusterMetrics error RM is stopped.",
