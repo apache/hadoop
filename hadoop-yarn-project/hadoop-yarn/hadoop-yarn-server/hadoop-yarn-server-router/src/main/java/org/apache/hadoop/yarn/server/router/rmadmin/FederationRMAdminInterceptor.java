@@ -130,9 +130,17 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router RMAdminClient-" + userName + "-%d ").build();
 
+    long keepAliveTime = getConf().getTimeDuration(
+      YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
+      YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME, TimeUnit.SECONDS);
+
     BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+        keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+
+    if (keepAliveTime > 0) {
+      this.executorService.allowCoreThreadTimeOut(true);
+    }
 
     federationFacade = FederationStateStoreFacade.getInstance(this.getConf());
     this.conf = this.getConf();
