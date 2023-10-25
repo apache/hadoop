@@ -319,21 +319,27 @@ Controlling the redistribution of the protobuf-2.5 dependency
     the Hadoop codebase; alongside the move to Protobuf 3.x a private successor
     class, org.apache.hadoop.ipc.internal.ShadedProtobufHelper is now used.
 
-    The hadoop-common JAR still declares a dependency on protobuf-2.5, but this
-    is likely to change in the future. The maven scope of the dependency can be
-    set with the common.protobuf2.scope option.
-    It can be set to "provided" in a build:
-       -Dcommon.protobuf2.scope=provided
-    If this is done then protobuf-2.5.0.jar will no longer be exported as a dependency,
-    and will then be omitted from the share/hadoop/common/lib/ directory of
-    any Hadoop distribution built. Any application declaring a dependency on hadoop-commmon
-    will no longer get the dependency; if they need it then they must explicitly declare it:
+    The hadoop-common module no longer exports its compile-time dependency on
+    protobuf-2.5. Hadoop distributions no longer include it.
+    Any application declaring a dependency on hadoop-commmon will no longer get
+    the artifact added to their classpath.
+    If is still required, then they must explicitly declare it:
 
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.5.0</version>
       </dependency>
+
+    In Hadoop builds the scope of the dependency can be set with the
+    option "common.protobuf2.scope".
+    This can be upgraded from "provided" to "compile" on the maven command line:
+
+           -Dcommon.protobuf2.scope=compile
+
+    If this is done then protobuf-2.5.0.jar will again be exported as a
+    hadoop-common dependency, and included in the share/hadoop/common/lib/
+    directory of any Hadoop distribution built.
 
 ----------------------------------------------------------------------------------
 Building components separately
