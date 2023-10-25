@@ -412,9 +412,9 @@ public class TestNoNamenodesAvailableLongTime {
   }
 
   /**
-   * Shutdown oberver namenode in the cluste.
+   * Shutdown observer namenode in the cluster.
    *
-   * @param num The number of shutdown oberver.
+   * @param num The number of shutdown observer.
    */
   private void stopObserver(int num) {
     int nnIndex;

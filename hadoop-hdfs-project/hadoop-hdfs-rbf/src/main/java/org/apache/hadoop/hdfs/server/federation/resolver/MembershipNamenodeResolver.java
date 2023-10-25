@@ -79,7 +79,7 @@ public class MembershipNamenodeResolver
    * name and a boolean indicating if observer namenodes should be listed first.
    * If true, observer namenodes are listed first. If false, active namenodes are listed first.
    *  Invalidated on cache refresh. */
-  private Map<Pair<String,Boolean>, List<? extends FederationNamenodeContext>> cacheNS;
+  private Map<Pair<String, Boolean>, List<? extends FederationNamenodeContext>> cacheNS;
   /** Cached lookup of NN for block pool. Invalidated on cache refresh. */
   private Map<String, List<? extends FederationNamenodeContext>> cacheBP;
 
@@ -483,9 +483,9 @@ public class MembershipNamenodeResolver
    * Rotate cache, make the current namenode have the lowest priority,
    * to ensure that the current namenode will not be accessed first next time.
    *
-   * @param nsId name service id
-   * @param namenode namenode contexts
-   * @param listObserversFirst Observer read case, observer NN will be ranked first
+   * @param nsId name service id.
+   * @param namenode namenode contexts.
+   * @param listObserversFirst Observer read case, observer NN will be ranked first.
    */
   @Override
   public void rotateCache(
@@ -503,15 +503,16 @@ public class MembershipNamenodeResolver
         }
       }
 
-      // If the last namenode in the cache at this time is the namenode.
+      // If the last namenode in the cache at this time
+      // is the namenode whose priority needs to be lowered.
       // No need to rotate cache, because other threads have already rotated the cache.
       FederationNamenodeContext lastNamenode = namenodeContexts.get(namenodeContexts.size()-1);
       if (lastNamenode.getRpcAddress().equals(namenode.getRpcAddress())) {
         return namenodeContexts;
       }
 
-      // Move the abnormal namenode to the end of the cache,
-      // to ensure that the current namenode will not be accessed first next time.
+      // Move the inaccessible namenode to the end of the cache,
+      // to ensure that the namenode will not be accessed first next time.
       List<FederationNamenodeContext> rotateNamenodeContexts =
           (List<FederationNamenodeContext>) namenodeContexts;
       rotateNamenodeContexts.remove(namenode);

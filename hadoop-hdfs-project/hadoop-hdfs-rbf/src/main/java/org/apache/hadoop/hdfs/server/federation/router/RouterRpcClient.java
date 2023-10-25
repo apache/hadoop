@@ -457,9 +457,10 @@ public class RouterRpcClient {
    * @param ioe IOException reported.
    * @param retryCount Number of retries.
    * @param nsId Nameservice ID.
+   * @param namenode namenode context.
+   * @param listObserverFirst Observer read case, observer NN will be ranked first.
    * @return Retry decision.
-   * @throws NoNamenodesAvailableException Exception that the retry policy
-   *         generates for no available namenodes.
+   * @throws IOException An IO Error occurred.
    */
   private RetryDecision shouldRetry(
       final IOException ioe, final int retryCount, final String nsId,
@@ -779,8 +780,8 @@ public class RouterRpcClient {
    * Check if the cluster of given nameservice id is available.
    *
    * @param nsId nameservice ID.
-   * @param namenode
-   * @param listObserverFirst
+   * @param namenode namenode context.
+   * @param listObserverFirst Observer read case, observer NN will be ranked first.
    * @return true if the cluster with given nameservice id is available.
    * @throws IOException if error occurs.
    */
@@ -788,7 +789,7 @@ public class RouterRpcClient {
       String nsId, FederationNamenodeContext namenode,
       boolean listObserverFirst) throws IOException {
     // Use observer and the namenode that causes the exception is an observer,
-    // false is returned so that the oberver can be marked as unavailable,so other observers
+    // false is returned so that the observer can be marked as unavailable,so other observers
     // or active namenode which is standby in the cache of the router can be retried.
     if (listObserverFirst && namenode.getState() == FederationNamenodeServiceState.OBSERVER) {
       return false;
