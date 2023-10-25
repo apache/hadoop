@@ -242,7 +242,10 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
       TYPE_DURATION),
-  OBJECT_PUT_REQUESTS(
+  OBJECT_MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_LIST,
+      "Object multipart list request issued",
+      TYPE_DURATION),  OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
       TYPE_DURATION),
