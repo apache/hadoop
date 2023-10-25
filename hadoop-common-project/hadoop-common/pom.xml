@@ -250,10 +250,11 @@
       <artifactId>re2j</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!-- Needed for compilation, though no longer in production.  -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
+      <scope>${common.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -374,8 +375,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.squareup.okio</groupId>
-      <artifactId>okio-jvm</artifactId>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib-jdk8</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -484,11 +485,11 @@
               <!--These classes have direct Protobuf references for backward compatibility reasons-->
               <excludes>
                 <exclude>**/ProtobufHelper.java</exclude>
-                <exclude>**/RpcWritable.java</exclude>
                 <exclude>**/ProtobufRpcEngineCallback.java</exclude>
                 <exclude>**/ProtobufRpcEngine.java</exclude>
                 <exclude>**/ProtobufRpcEngine2.java</exclude>
                 <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+                <exclude>**/ProtobufWrapperLegacy.java</exclude>
               </excludes>
             </configuration>
           </execution>
