@@ -47,8 +47,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
@@ -683,7 +683,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
     private void processUploads(PrintStream out) throws IOException {
       final S3AFileSystem fs = getFilesystem();
-      MultipartUtils.UploadIterator uploads = fs.listUploads(prefix);
+      RemoteIterator<MultipartUpload> uploads = fs.listUploads(prefix);
       // create a span so that the write operation helper
       // is within one
       AuditSpan span =
