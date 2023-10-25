@@ -33,3 +33,5 @@ DROP TABLE masterKeys;
 DROP TABLE delegationTokens;
 
 DROP TABLE sequenceTable;
+
+DROP TABLE versions;

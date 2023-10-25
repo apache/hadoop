@@ -350,7 +350,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
-  File getCurrentDir() {
+  public File getCurrentDir() {
     return currentDir;
   }
 
@@ -499,7 +499,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         return used;
       }
     }
-    return getDfUsed() - getDfsUsed();
+    return Math.max(getDfUsed() - getDfsUsed(), 0L);
   }
 
   /**

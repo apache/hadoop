@@ -54,6 +54,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer2;
@@ -67,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -110,8 +112,7 @@ public class TestWebAppProxyServlet {
     ((ServerConnector)server.getConnectors()[0]).setHost("localhost");
     server.start();
     originalPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
-    LOG.info("Running embedded servlet container at: http://localhost:"
-        + originalPort);
+    LOG.info("Running embedded servlet container at: http://localhost:{}", originalPort);
     // This property needs to be set otherwise CORS Headers will be dropped
     // by HttpUrlConnection
     System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
@@ -345,7 +346,7 @@ public class TestWebAppProxyServlet {
     AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
 
     try {
-      //set AHS_ENBALED = false to simulate getting the app report from RM
+      //set AHS_ENABLED = false to simulate getting the app report from RM
       configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           false);
       ApplicationId app = ApplicationId.newInstance(0, 0);
@@ -364,11 +365,13 @@ public class TestWebAppProxyServlet {
       String appAddressInRm =
           WebAppUtils.getResolvedRMWebAppURLWithScheme(configuration) +
               "/cluster" + "/app/" + app.toString();
-      assertEquals(proxyConn.getURL().toString(), appAddressInRm);
+      assertEquals(proxyConn.getURL().toString(), appAddressInRm,
+          "Webapp proxy servlet should have redirected to RM");
 
-      //set AHS_ENBALED = true to simulate getting the app report from AHS
+      //set AHS_ENABLED = true to simulate getting the app report from AHS
       configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           true);
+      proxy.proxy.appReportFetcher.setAhsAppPageUrlBase(configuration);
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.connect();
       try {
@@ -381,7 +384,8 @@ public class TestWebAppProxyServlet {
       String appAddressInAhs =
           WebAppUtils.getHttpSchemePrefix(configuration) + WebAppUtils.getAHSWebAppURLWithoutScheme(
               configuration) + "/applicationhistory" + "/app/" + app.toString();
-      assertEquals(proxyConn.getURL().toString(), appAddressInAhs);
+      assertEquals(proxyConn.getURL().toString(), appAddressInAhs,
+          "Webapp proxy servlet should have redirected to AHS");
     } finally {
       proxy.close();
     }
@@ -607,8 +611,9 @@ public class TestWebAppProxyServlet {
 
   }
 
-  private class AppReportFetcherForTest extends AppReportFetcher {
+  private class AppReportFetcherForTest extends DefaultAppReportFetcher {
     int answer = 0;
+    private String ahsAppPageUrlBase = null;
 
     public AppReportFetcherForTest(Configuration conf) {
       super(conf);
@@ -655,7 +660,7 @@ public class TestWebAppProxyServlet {
     /*
      * If this method is called with isTrackingUrl=false, no tracking url
      * will set in the app report. Hence, there will be a connection exception
-     * when the prxyCon tries to connect.
+     * when the proxyCon tries to connect.
      */
     private FetchedAppReport getDefaultApplicationReport(ApplicationId appId,
         boolean isTrackingUrl) {
@@ -678,6 +683,18 @@ public class TestWebAppProxyServlet {
 
     private FetchedAppReport getDefaultApplicationReport(ApplicationId appId) {
       return getDefaultApplicationReport(appId, true);
+    }
+
+    @VisibleForTesting
+    public String getAhsAppPageUrlBase() {
+      return ahsAppPageUrlBase != null ? ahsAppPageUrlBase : super.getAhsAppPageUrlBase();
+    }
+
+    @VisibleForTesting
+    public void setAhsAppPageUrlBase(Configuration conf) {
+      this.ahsAppPageUrlBase = StringHelper.pjoin(
+          WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
+          "applicationhistory", "app");
     }
   }
 }

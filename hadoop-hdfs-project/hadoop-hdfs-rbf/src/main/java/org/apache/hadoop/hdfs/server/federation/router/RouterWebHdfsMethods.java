@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
+import org.apache.hadoop.hdfs.web.resources.AllUsersParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
@@ -344,7 +345,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
   ) throws IOException, URISyntaxException {
     try {
       final Router router = getRouter();
@@ -385,12 +387,15 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       case GETXATTRS:
       case LISTXATTRS:
       case CHECKACCESS:
+      case GETLINKTARGET:
+      case GETFILELINKSTATUS:
+      case GETSTATUS:
       {
         return super.get(ugi, delegation, username, doAsUser, fullpath, op,
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirectParam, startAfter);
+            tokenKind, tokenService, noredirectParam, startAfter, allUsers);
       }
       default:
         throw new UnsupportedOperationException(op + " is not supported");

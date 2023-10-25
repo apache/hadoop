@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,16 +34,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongValue;
 
 
 /**
@@ -57,6 +61,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
       ITestS3AHugeMagicCommits.class);
   private static final int COMMITTER_THREADS = 64;
 
+  private static final String JOB_ID = "123";
+
   private Path magicDir;
   private Path jobDir;
 
@@ -66,6 +72,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
 
   /** The file with the JSON data about the commit. */
   private Path pendingDataFile;
+
+  private Path finalDirectory;
 
   /**
    * Use fast upload on disk.
@@ -85,14 +93,19 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
+  protected boolean expectImmediateFileVisibility() {
+    return false;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());
 
     // set up the paths for the commit operation
-    Path finalDirectory = new Path(getScaleTestDir(), "commit");
-    magicDir = new Path(finalDirectory, MAGIC);
-    jobDir = new Path(magicDir, "job_001");
+    finalDirectory = new Path(getScaleTestDir(), "commit");
+    magicDir = new Path(finalDirectory, MAGIC_PATH_PREFIX + JOB_ID);
+    jobDir = new Path(magicDir, "job_" + JOB_ID);
     String filename = "commit.bin";
     setHugefile(new Path(finalDirectory, filename));
     magicOutputFile = new Path(jobDir, filename);
@@ -108,6 +121,19 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     return magicOutputFile;
   }
 
+  @Test
+  public void test_000_CleanupPendingUploads() throws IOException {
+    describe("Cleanup any existing pending uploads");
+    final S3AFileSystem fs = getFileSystem();
+    final String key = fs.pathToKey(finalDirectory);
+    final AuditSpan span = fs.getAuditSpanSource().createSpan(
+        MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED.getSymbol(),
+        key, null);
+    final int count = fs.createWriteOperationHelper(span)
+        .abortMultipartUploadsUnderPath(key + "/");
+    LOG.info("Aborted {} uploads under {}", count, key);
+  }
+
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     describe("Committing file");
@@ -120,10 +146,19 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     FileStatus status = fs.getFileStatus(magicOutputFile);
     assertEquals("Non empty marker file " + status,
         0, status.getLen());
+    final Map<String, byte[]> xAttr = fs.getXAttrs(magicOutputFile);
+    final String header = XA_MAGIC_MARKER;
+    Assertions.assertThat(xAttr)
+        .describedAs("Header %s of %s", header, magicOutputFile)
+        .containsKey(header);
+    Assertions.assertThat(extractXAttrLongValue(xAttr.get(header)))
+        .describedAs("Decoded header %s of %s", header, magicOutputFile)
+        .get()
+        .isEqualTo(getFilesize());
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     CommitOperations operations = new CommitOperations(fs);
     Path destDir = getHugefile().getParent();
-    assertPathExists("Magic dir", new Path(destDir, CommitConstants.MAGIC));
+    assertPathExists("Magic dir", new Path(destDir, MAGIC_PATH_PREFIX + JOB_ID));
     String destDirKey = fs.pathToKey(destDir);
 
     Assertions.assertThat(listMultipartUploads(fs, destDirKey))

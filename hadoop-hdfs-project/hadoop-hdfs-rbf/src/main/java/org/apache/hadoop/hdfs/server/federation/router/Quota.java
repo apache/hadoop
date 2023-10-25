@@ -328,7 +328,9 @@ public class Quota {
 
   /**
    * Invoke predicate by each storage type and bitwise inclusive OR the results.
+   *
    * @param predicate the function test the storage type.
+   * @return true if bitwise OR by all storage type returns true, false otherwise.
    */
   public static boolean orByStorageType(Predicate<StorageType> predicate) {
     boolean res = false;
@@ -340,10 +342,12 @@ public class Quota {
 
   /**
    * Invoke predicate by each storage type and bitwise AND the results.
+   *
    * @param predicate the function test the storage type.
+   * @return true if bitwise AND by all storage type returns true, false otherwise.
    */
   public static boolean andByStorageType(Predicate<StorageType> predicate) {
-    boolean res = false;
+    boolean res = true;
     for (StorageType type : StorageType.values()) {
       res &= predicate.test(type);
     }

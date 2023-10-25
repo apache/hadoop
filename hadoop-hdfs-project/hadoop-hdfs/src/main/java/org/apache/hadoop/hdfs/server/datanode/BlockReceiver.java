@@ -57,6 +57,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 
@@ -274,10 +275,9 @@ class BlockReceiver implements Closeable {
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
       } 
-    } catch (ReplicaAlreadyExistsException bae) {
-      throw bae;
-    } catch (ReplicaNotFoundException bne) {
-      throw bne;
+    } catch (ReplicaAlreadyExistsException | ReplicaNotFoundException
+        | DiskOutOfSpaceException e) {
+      throw e;
     } catch(IOException ioe) {
       if (replicaInfo != null) {
         replicaInfo.releaseAllBytesReserved();

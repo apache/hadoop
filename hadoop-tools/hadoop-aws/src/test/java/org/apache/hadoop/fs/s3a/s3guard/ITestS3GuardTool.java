@@ -33,11 +33,13 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
@@ -70,6 +72,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testLandsatBucketRequireUnencrypted() throws Throwable {
+    removeBaseAndBucketOverrides(getConfiguration(), S3_ENCRYPTION_ALGORITHM);
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         getLandsatCSVFile(getConfiguration()));
@@ -178,8 +181,9 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       // least a second old
       describe("Sleeping 1 second then confirming upload still there");
       Thread.sleep(1000);
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> { assertNumUploadsAge(path, 1, 1); });
+      LambdaTestUtils.eventually(5000, 1000, () -> {
+        assertNumUploadsAge(path, 1, 1);
+      });
 
       // 7. Assert deletion works when age filter matches
       describe("Doing aged deletion");
@@ -231,8 +235,8 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
    *                   search all parts
    * @throws Exception on failure
    */
-  private void uploadCommandAssertCount(S3AFileSystem fs, String options[],
-      Path path, int numUploads, int ageSeconds)
+  private void uploadCommandAssertCount(S3AFileSystem fs, String[] options, Path path,
+      int numUploads, int ageSeconds)
       throws Exception {
     List<String> allOptions = new ArrayList<>();
     List<String> output = new ArrayList<>();

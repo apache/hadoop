@@ -590,9 +590,8 @@ public class Client implements AutoCloseable {
       InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
 
-      if (!server.equals(currentAddr)) {
-        LOG.warn("Address change detected. Old: " + server.toString() +
-                                 " New: " + currentAddr.toString());
+      if (!currentAddr.isUnresolved() && !server.equals(currentAddr)) {
+        LOG.warn("Address change detected. Old: {} New: {}", server, currentAddr);
         server = currentAddr;
         // Update the remote address so that reconnections are with the updated address.
         // This avoids thrashing.
@@ -1215,10 +1214,10 @@ public class Client implements AutoCloseable {
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
-          call.setRpcResponse(value);
           if (call.alignmentContext != null) {
             call.alignmentContext.receiveResponseState(header);
           }
+          call.setRpcResponse(value);
         }
         // verify that packet length was correct
         if (packet.remaining() > 0) {

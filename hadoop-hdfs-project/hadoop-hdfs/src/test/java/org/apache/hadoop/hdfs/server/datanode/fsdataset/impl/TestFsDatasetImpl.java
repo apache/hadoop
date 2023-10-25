@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Random;
@@ -131,6 +132,14 @@ import static org.mockito.Mockito.when;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
 public class TestFsDatasetImpl {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -238,7 +247,6 @@ public class TestFsDatasetImpl {
     for (String bpid : BLOCK_POOL_IDS) {
       dataset.addBlockPool(bpid, conf);
     }
-
     assertEquals(NUM_INIT_VOLUMES, getNumVolumes());
     assertEquals(0, dataset.getNumFailedVolumes());
   }
@@ -248,6 +256,13 @@ public class TestFsDatasetImpl {
     manager.lockLeakCheck();
     // make sure no lock Leak.
     assertNull(manager.getLastException());
+  }
+
+  @Test
+  public void testSetLastDirScannerFinishTime() throws IOException {
+    assertEquals(dataset.getLastDirScannerFinishTime(), 0L);
+    dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
+    assertNotEquals(0L, dataset.getLastDirScannerFinishTime());
   }
 
   @Test
@@ -1167,7 +1182,7 @@ public class TestFsDatasetImpl {
       LOG.info("Exception in testMoveBlockFailure ", ex);
       fail("Exception while testing testMoveBlockFailure ");
     } finally {
-      if (cluster.isClusterUp()) {
+      if (cluster != null && cluster.isClusterUp()) {
         cluster.shutdown();
       }
     }
@@ -1836,7 +1851,8 @@ public class TestFsDatasetImpl {
    */
   @Test
   public void testAysncDiskServiceDeleteReplica()
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException, TimeoutException, MalformedObjectNameException,
+      ReflectionException, AttributeNotFoundException, InstanceNotFoundException, MBeanException {
     HdfsConfiguration config = new HdfsConfiguration();
     // Bump up replication interval.
     config.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
@@ -1890,12 +1906,29 @@ public class TestFsDatasetImpl {
       // If this replica is deleted from memory, the client would got an ReplicaNotFoundException.
       assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
 
+      assertEquals(1, ds.asyncDiskService.countPendingDeletions());
+      assertEquals(1, ds.getPendingAsyncDeletions());
+
+      // Validate PendingAsyncDeletions metrics.
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=FSDatasetState-" + dn.getDatanodeUuid());
+      long pendingAsyncDeletions = (long) mbs.getAttribute(mxbeanName,
+          "PendingAsyncDeletions");
+      assertEquals(1, pendingAsyncDeletions);
+
       // Make it resume the removeReplicaFromMem method.
       semaphore.release(1);
 
       // Waiting for the async deletion task finish.
       GenericTestUtils.waitFor(() ->
           ds.asyncDiskService.countPendingDeletions() == 0, 100, 1000);
+
+      assertEquals(0, ds.getPendingAsyncDeletions());
+
+      pendingAsyncDeletions = (long) mbs.getAttribute(mxbeanName,
+          "PendingAsyncDeletions");
+      assertEquals(0, pendingAsyncDeletions);
 
       // Sleep for two heartbeat times.
       Thread.sleep(config.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -1917,6 +1950,65 @@ public class TestFsDatasetImpl {
     } finally {
       cluster.shutdown();
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  /**
+   * Test the block file which is not found when disk with some exception.
+   * We expect:
+   *     1. block file wouldn't be deleted from disk.
+   *     2. block info would be removed from dn memory.
+   *     3. block would be reported to nn as missing block.
+   *     4. block would be recovered when disk back to normal.
+   */
+  @Test
+  public void tesInvalidateMissingBlock() throws Exception {
+    long blockSize = 1024;
+    int heatbeatInterval = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
+        numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/a"),
+          blockSize, (short)1, 0);
+
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsdataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = fsdataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+
+      ReplicaInfo replicaInfo = replicaInfos.get(0);
+      String blockPath = replicaInfo.getBlockURI().getPath();
+      String metaPath = replicaInfo.getMetadataURI().getPath();
+      File blockFile = new File(blockPath);
+      File metaFile = new File(metaPath);
+
+      // Mock local block file not found when disk with some exception.
+      fsdataset.invalidateMissingBlock(bpid, replicaInfo);
+
+      // Assert local block file wouldn't be deleted from disk.
+      assertTrue(blockFile.exists());
+      // Assert block info would be removed from ReplicaMap.
+      assertEquals("null",
+          fsdataset.getReplicaString(bpid, replicaInfo.getBlockId()));
+      BlockManager blockManager = cluster.getNameNode().
+          getNamesystem().getBlockManager();
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 1, 100, 5000);
+
+      // Mock local block file found when disk back to normal.
+      FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
+      fsdataset.checkAndUpdate(bpid, info);
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
+    } finally {
+      cluster.shutdown();
     }
   }
 }

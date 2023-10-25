@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -36,7 +38,7 @@ public class TestYarnConfiguration {
   void testDefaultRMWebUrl() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     String rmWebUrl = WebAppUtils.getRMWebAppURLWithScheme(conf);
-    // shouldn't have a "/" on the end of the url as all the other uri routinnes
+    // shouldn't have a "/" on the end of the url as all the other uri routines
     // specifically add slashes and Jetty doesn't handle double slashes.
     assertNotSame("http://0.0.0.0:8088",
         rmWebUrl,
@@ -77,7 +79,7 @@ public class TestYarnConfiguration {
     String[] parts = rmWebUrl.split(":");
     assertEquals(24543,
         Integer.parseInt(parts[parts.length - 1]),
-        "RM Web URL Port is incrrect");
+        "RM Web URL Port is incorrect");
     assertNotSame("http://rmtesting:24543", rmWebUrl,
         "RM Web Url not resolved correctly. Should not be rmtesting");
   }
@@ -246,5 +248,22 @@ public class TestYarnConfiguration {
     assertTrue(localizerAddress.toString().startsWith("yo.yo.yo"));
     assertNull(conf.get(
         HAUtil.addSuffix(YarnConfiguration.NM_LOCALIZER_ADDRESS, "rm1")));
+  }
+
+  @Test
+  void checkRmAmExpiryIntervalSetting() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+
+    // 30m, 1800000ms
+    conf.set(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, "30m");
+    long rmAmExpiryIntervalMS = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    assertEquals(1800000, rmAmExpiryIntervalMS);
+
+    // 10m, 600000ms
+    conf.set(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, "600000");
+    String rmAmExpiryIntervalMS1 = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+    assertTrue(NumberUtils.isDigits(rmAmExpiryIntervalMS1));
+    assertEquals(600000, Long.parseLong(rmAmExpiryIntervalMS1));
   }
 }

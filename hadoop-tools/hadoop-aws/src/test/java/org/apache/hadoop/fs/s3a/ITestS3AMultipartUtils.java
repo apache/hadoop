@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
-
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
  * Tests for {@link MultipartUtils}.
@@ -100,21 +102,22 @@ public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
 
     // Don't modify passed-in set, use copy.
     Set<MultipartTestUtils.IdKey> uploads = new HashSet<>(ourUploads);
-    while (list.hasNext()) {
-      MultipartTestUtils.IdKey listing = toIdKey(list.next());
-      if (uploads.contains(listing)) {
+    foreach(list, (upload) -> {
+      MultipartTestUtils.IdKey listing = toIdKey(upload);
+      if (uploads.remove(listing)) {
         LOG.debug("Matched: {},{}", listing.getKey(), listing.getUploadId());
-        uploads.remove(listing);
       } else {
         LOG.debug("Not our upload {},{}", listing.getKey(),
             listing.getUploadId());
       }
-    }
-    assertTrue("Not all our uploads were listed", uploads.isEmpty());
+    });
+    Assertions.assertThat(uploads)
+        .describedAs("Uploads which we expected to be listed.")
+        .isEmpty();
   }
 
   private MultipartTestUtils.IdKey toIdKey(MultipartUpload mu) {
-    return new MultipartTestUtils.IdKey(mu.getKey(), mu.getUploadId());
+    return new MultipartTestUtils.IdKey(mu.key(), mu.uploadId());
   }
 
   private Path getPartFilename(int index) throws IOException {

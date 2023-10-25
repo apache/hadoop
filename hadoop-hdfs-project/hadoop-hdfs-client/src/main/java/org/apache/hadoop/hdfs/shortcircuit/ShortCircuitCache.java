@@ -37,6 +37,7 @@ import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -379,13 +380,17 @@ public class ShortCircuitCache implements Closeable {
   public ShortCircuitCache(int maxTotalSize, long maxNonMmappedEvictableLifespanMs,
       int maxEvictableMmapedSize, long maxEvictableMmapedLifespanMs,
       long mmapRetryTimeoutMs, long staleThresholdMs, int shmInterruptCheckMs) {
-    Preconditions.checkArgument(maxTotalSize >= 0);
+    Preconditions.checkArgument(maxTotalSize >= 0,
+        "maxTotalSize must be greater than zero.");
     this.maxTotalSize = maxTotalSize;
-    Preconditions.checkArgument(maxNonMmappedEvictableLifespanMs >= 0);
+    Preconditions.checkArgument(maxNonMmappedEvictableLifespanMs >= 0,
+        "maxNonMmappedEvictableLifespanMs must be greater than zero.");
     this.maxNonMmappedEvictableLifespanMs = maxNonMmappedEvictableLifespanMs;
-    Preconditions.checkArgument(maxEvictableMmapedSize >= 0);
+    Preconditions.checkArgument(maxEvictableMmapedSize >= 0,
+        HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY + " must be greater than zero.");
     this.maxEvictableMmapedSize = maxEvictableMmapedSize;
-    Preconditions.checkArgument(maxEvictableMmapedLifespanMs >= 0);
+    Preconditions.checkArgument(maxEvictableMmapedLifespanMs >= 0,
+        "maxEvictableMmapedLifespanMs must be greater than zero.");
     this.maxEvictableMmapedLifespanMs = maxEvictableMmapedLifespanMs;
     this.mmapRetryTimeoutMs = mmapRetryTimeoutMs;
     this.staleThresholdMs = staleThresholdMs;

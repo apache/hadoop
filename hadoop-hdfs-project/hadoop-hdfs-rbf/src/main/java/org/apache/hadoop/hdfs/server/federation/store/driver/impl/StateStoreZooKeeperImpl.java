@@ -24,6 +24,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -40,6 +41,7 @@ import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
@@ -230,11 +232,11 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   }
 
   @Override
-  public <T extends BaseRecord> boolean putAll(
+  public <T extends BaseRecord> StateStoreOperationResult putAll(
       List<T> records, boolean update, boolean error) throws IOException {
     verifyDriverReady();
     if (records.isEmpty()) {
-      return true;
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     // All records should be the same
@@ -245,6 +247,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     long start = monotonicNow();
     final AtomicBoolean status = new AtomicBoolean(true);
     List<Callable<Void>> callables = new ArrayList<>();
+    final List<String> failedRecordsKeys = Collections.synchronizedList(new ArrayList<>());
     records.forEach(record ->
         callables.add(
             () -> {
@@ -252,6 +255,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
               String recordZNode = getNodePath(znode, primaryKey);
               byte[] data = serialize(record);
               if (!writeNode(recordZNode, data, update, error)) {
+                failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
                 status.set(false);
               }
               return null;
@@ -276,7 +280,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     } else {
       getMetrics().addFailure(end - start);
     }
-    return status.get();
+    return new StateStoreOperationResult(failedRecordsKeys, status.get());
   }
 
   @Override

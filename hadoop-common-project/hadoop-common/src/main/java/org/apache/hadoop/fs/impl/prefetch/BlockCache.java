@@ -23,6 +23,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
+
 /**
  * Provides functionality necessary for caching blocks of data read from FileSystem.
  */
@@ -64,7 +67,10 @@ public interface BlockCache extends Closeable {
    *
    * @param blockNumber the id of the given block.
    * @param buffer contents of the given block to be added to this cache.
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
    * @throws IOException if there is an error writing the given block.
    */
-  void put(int blockNumber, ByteBuffer buffer) throws IOException;
+  void put(int blockNumber, ByteBuffer buffer, Configuration conf,
+      LocalDirAllocator localDirAllocator) throws IOException;
 }

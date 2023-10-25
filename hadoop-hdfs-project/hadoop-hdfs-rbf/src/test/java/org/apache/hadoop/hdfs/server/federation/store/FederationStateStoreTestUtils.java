@@ -235,9 +235,7 @@ public final class FederationStateStoreTestUtils {
     StateStoreDriver driver = stateStore.getDriver();
     driver.verifyDriverReady();
     if (driver.removeAll(clazz)) {
-      if (driver.putAll(records, true, false)) {
-        return true;
-      }
+      return driver.putAll(records, true, false).isOperationSuccessful();
     }
     return false;
   }

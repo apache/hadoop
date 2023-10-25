@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.federation.router.security.token;
 
-import com.mysql.cj.jdbc.MysqlDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;

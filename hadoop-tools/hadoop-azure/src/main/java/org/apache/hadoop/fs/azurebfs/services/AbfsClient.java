@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
@@ -69,6 +70,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
@@ -78,14 +80,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 
 /**
  * AbfsClient.
  */
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
+  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -111,9 +114,12 @@ public class AbfsClient implements Closeable {
   private Boolean isNamespaceEnabled;
 
 
-  /** logging the rename failure if metadata is in an incomplete state. */
-  private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
-      new LogExactlyOnce(LOG);
+  private boolean renameResilience;
+
+  /**
+   * logging the rename failure if metadata is in an incomplete state.
+   */
+  private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -129,6 +135,7 @@ public class AbfsClient implements Closeable {
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.renameResilience = abfsConfiguration.getRenameResilience();
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
@@ -578,26 +585,54 @@ public class AbfsClient implements Closeable {
    * took place.
    * As rename recovery is only attempted if the source etag is non-empty,
    * in normal rename operations rename recovery will never happen.
-   * @param source path to source file
-   * @param destination destination of rename.
-   * @param continuation continuation.
-   * @param tracingContext trace context
-   * @param sourceEtag etag of source file. may be null or empty
+   *
+   * @param source                    path to source file
+   * @param destination               destination of rename.
+   * @param continuation              continuation.
+   * @param tracingContext            trace context
+   * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
+   * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
   public AbfsClientRenameResult renamePath(
-      final String source,
-      final String destination,
-      final String continuation,
-      final TracingContext tracingContext,
-      final String sourceEtag,
-      boolean isMetadataIncompleteState)
+          final String source,
+          final String destination,
+          final String continuation,
+          final TracingContext tracingContext,
+          String sourceEtag,
+          boolean isMetadataIncompleteState,
+          boolean isNamespaceEnabled)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+
+    final boolean hasEtag = !isEmpty(sourceEtag);
+
+    boolean shouldAttemptRecovery = renameResilience && isNamespaceEnabled;
+    if (!hasEtag && shouldAttemptRecovery) {
+      // in case eTag is already not supplied to the API
+      // and rename resilience is expected and it is an HNS enabled account
+      // fetch the source etag to be used later in recovery
+      try {
+        final AbfsRestOperation srcStatusOp = getPathStatus(source,
+                false, tracingContext, null);
+        if (srcStatusOp.hasResult()) {
+          final AbfsHttpOperation result = srcStatusOp.getResult();
+          sourceEtag = extractEtagHeader(result);
+          // and update the directory status.
+          boolean isDir = checkIsDir(result);
+          shouldAttemptRecovery = !isDir;
+          LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
+        }
+      } catch (AbfsRestOperationException e) {
+        throw new AbfsRestOperationException(e.getStatusCode(), SOURCE_PATH_NOT_FOUND.getErrorCode(),
+                e.getMessage(), e);
+      }
+
+     }
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
     if (authType == AuthType.SAS) {
@@ -615,12 +650,7 @@ public class AbfsClient implements Closeable {
     appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.RenamePath,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+    final AbfsRestOperation op = createRenameRestOperation(url, requestHeaders);
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
@@ -631,20 +661,24 @@ public class AbfsClient implements Closeable {
       // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
       return new AbfsClientRenameResult(op, isMetadataIncompleteState, isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
-        // If we have no HTTP response, throw the original exception.
-        if (!op.hasResult()) {
-          throw e;
-        }
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
 
-        // ref: HADOOP-18242. Rename failure occurring due to a rare case of
-        // tracking metadata being in incomplete state.
-        if (op.getResult().getStorageErrorCode()
-            .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
-            && !isMetadataIncompleteState) {
-          //Logging
-          ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
-              .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
-
+      // ref: HADOOP-18242. Rename failure occurring due to a rare case of
+      // tracking metadata being in incomplete state.
+      if (op.getResult().getStorageErrorCode()
+              .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
+              && !isMetadataIncompleteState) {
+        //Logging
+        ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
+                .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
+        // rename recovery should be attempted in this case also
+        shouldAttemptRecovery = true;
+        isMetadataIncompleteState = true;
+        String sourceEtagAfterFailure = sourceEtag;
+        if (isEmpty(sourceEtagAfterFailure)) {
           // Doing a HEAD call resolves the incomplete metadata state and
           // then we can retry the rename operation.
           AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
@@ -653,24 +687,47 @@ public class AbfsClient implements Closeable {
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
           AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
-          String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
-          renamePath(source, destination, continuation, tracingContext,
-              sourceEtagAfterFailure, isMetadataIncompleteState);
+          sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
-        // if we get out of the condition without a successful rename, then
-        // it isn't metadata incomplete state issue.
-        isMetadataIncompleteState = false;
+        renamePath(source, destination, continuation, tracingContext,
+                sourceEtagAfterFailure, isMetadataIncompleteState, isNamespaceEnabled);
+      }
+      // if we get out of the condition without a successful rename, then
+      // it isn't metadata incomplete state issue.
+      isMetadataIncompleteState = false;
 
-        boolean etagCheckSucceeded = renameIdempotencyCheckOp(
-            source,
-            sourceEtag, op, destination, tracingContext);
-        if (!etagCheckSucceeded) {
-          // idempotency did not return different result
-          // throw back the exception
-          throw e;
-        }
+      // setting default rename recovery success to false
+      boolean etagCheckSucceeded = false;
+      if (shouldAttemptRecovery) {
+        etagCheckSucceeded = renameIdempotencyCheckOp(
+                source,
+                sourceEtag, op, destination, tracingContext);
+      }
+      if (!etagCheckSucceeded) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      }
       return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
     }
+  }
+
+  private boolean checkIsDir(AbfsHttpOperation result) {
+    String resourceType = result.getResponseHeader(
+            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+    return resourceType != null
+            && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
+  }
+
+  @VisibleForTesting
+  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
+    AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.RenamePath,
+            this,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders);
+    return op;
   }
 
   private void incrementAbfsRenamePath() {
@@ -702,30 +759,47 @@ public class AbfsClient implements Closeable {
       TracingContext tracingContext) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
-    if ((op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
-        && isNotEmpty(sourceEtag)) {
+    // removing isDir from debug logs as it can be misleading
+    LOG.debug("rename({}, {}) failure {}; retry={} etag {}",
+              source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
+    if (!(op.isARetriedRequest()
+            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
+      // only attempt recovery if the failure was a 404 on a retried rename request.
+      return false;
+    }
 
-      // Server has returned HTTP 404, which means rename source no longer
-      // exists. Check on destination status and if its etag matches
-      // that of the source, consider it to be a success.
-      LOG.debug("rename {} to {} failed, checking etag of destination",
-          source, destination);
-
+    if (isNotEmpty(sourceEtag)) {
+      // Server has returned HTTP 404, we have an etag, so see
+      // if the rename has actually taken place,
+      LOG.info("rename {} to {} failed, checking etag of destination",
+              source, destination);
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext, null);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
-        return result.getStatusCode() == HttpURLConnection.HTTP_OK
-            && sourceEtag.equals(extractEtagHeader(result));
-      } catch (AzureBlobFileSystemException ignored) {
+        final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
+                && sourceEtag.equals(extractEtagHeader(result));
+        LOG.info("File rename has taken place: recovery {}",
+                recovered ? "succeeded" : "failed");
+        return recovered;
+
+      } catch (AzureBlobFileSystemException ex) {
         // GetFileStatus on the destination failed, the rename did not take place
+        // or some other failure. log and swallow.
+        LOG.debug("Failed to get status of path {}", destination, ex);
       } catch (IOException ioe) {
         LOG.debug(ioe.getMessage());  // ex thrown by encryption framework
       }
+    } else {
+      LOG.debug("No source etag; unable to probe for the operation's success");
     }
-    return false;
+      return false;
+  }
+
+  @VisibleForTesting
+  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
+    return sourceEtag.equals(extractEtagHeader(result));
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
@@ -758,6 +832,15 @@ public class AbfsClient implements Closeable {
       }
     }
 
+    // Check if the retry is with "Expect: 100-continue" header being present in the previous request.
+    if (reqParams.isRetryDueToExpect()) {
+      String userAgentRetry = userAgent;
+      // Remove the specific marker related to "Expect: 100-continue" from the User-Agent string.
+      userAgentRetry = userAgentRetry.replace(HUNDRED_CONTINUE_USER_AGENT, EMPTY_STRING);
+      requestHeaders.removeIf(header -> header.getName().equalsIgnoreCase(USER_AGENT));
+      requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
+    }
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -787,6 +870,7 @@ public class AbfsClient implements Closeable {
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
         LOG.debug("User error, retrying without 100 continue enabled for the given path {}", path);
         reqParams.setExpectHeaderEnabled(false);
+        reqParams.setRetryDueToExpect(true);
         return this.append(path, buffer, reqParams, cachedSasToken,
             encryptionAdapter, tracingContext);
       }
@@ -1399,6 +1483,12 @@ public class AbfsClient implements Closeable {
     appendIfNotEmpty(sb, sslProviderName, true);
     appendIfNotEmpty(sb,
         ExtensionHelper.getUserAgentSuffix(tokenProvider, EMPTY_STRING), true);
+
+    if (abfsConfiguration.isExpectHeaderEnabled()) {
+      sb.append(SINGLE_WHITE_SPACE);
+      sb.append(HUNDRED_CONTINUE);
+      sb.append(SEMICOLON);
+    }
 
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(abfsConfiguration.getClusterName());

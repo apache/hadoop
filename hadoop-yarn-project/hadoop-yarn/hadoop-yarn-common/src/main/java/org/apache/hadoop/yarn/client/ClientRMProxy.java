@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -71,6 +72,29 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
       final Class<T> protocol) throws IOException {
     ClientRMProxy<T> clientRMProxy = new ClientRMProxy<>();
     return createRMProxy(configuration, protocol, clientRMProxy);
+  }
+
+  /**
+   * Create a proxy to the ResourceManager for the specified protocol.
+   * This method is only used for NodeManager#AMRMClientUtils.
+   *
+   * @param configuration Configuration with all the required information.
+   * @param protocol Client protocol for which proxy is being requested.
+   * @param <T> Type of proxy.
+   * @return Proxy to the ResourceManager for the specified client protocol.
+   * @throws IOException io error occur.
+   */
+  public static <T> T createRMProxyFederation(final Configuration configuration,
+      final Class<T> protocol) throws IOException {
+    ClientRMProxy<T> clientRMProxy = new ClientRMProxy<>();
+    return createRMProxyFederation(configuration, protocol, clientRMProxy);
+  }
+
+  @VisibleForTesting
+  public static <T> RMFailoverProxyProvider<T> getClientRMFailoverProxyProvider(
+      final YarnConfiguration configuration, final Class<T> protocol) {
+    ClientRMProxy<T> clientRMProxy = new ClientRMProxy<>();
+    return getRMFailoverProxyProvider(configuration, protocol, clientRMProxy);
   }
 
   private static void setAMRMTokenService(final Configuration conf)

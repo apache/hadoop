@@ -252,7 +252,7 @@ public class Dispatcher extends HttpServlet {
     checkState(devMode, "only in dev mode");
     new Timer("webapp exit", true).schedule(new TimerTask() {
       @Override public void run() {
-        LOG.info("WebAppp /{} exiting...", webApp.name());
+        LOG.info("WebApp /{} exiting...", webApp.name());
         webApp.stop();
         System.exit(0); // FINDBUG: this is intended in dev mode
       }

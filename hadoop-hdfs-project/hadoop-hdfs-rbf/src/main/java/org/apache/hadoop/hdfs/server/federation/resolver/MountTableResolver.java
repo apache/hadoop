@@ -348,9 +348,11 @@ public class MountTableResolver
   }
 
   /**
-   * Check if PATH is the trail associated with the Trash.
+   * Check if path is the trail associated with the Trash.
    *
-   * @param path A path.
+   * @param path a path.
+   * @return true if the path matches the trash path pattern, false otherwise.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static boolean isTrashPath(String path) throws IOException {
@@ -370,7 +372,9 @@ public class MountTableResolver
   /**
    * Subtract a TrashCurrent to get a new path.
    *
-   * @param path A path.
+   * @param path a path.
+   * @return new path with subtracted trash current path.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static String subtractTrashCurrentPath(String path)
@@ -678,11 +682,16 @@ public class MountTableResolver
    * @return Size of the cache.
    * @throws IOException If the cache is not initialized.
    */
-  protected long getCacheSize() throws IOException{
-    if (this.locationCache != null) {
-      return this.locationCache.size();
+  protected long getCacheSize() throws IOException {
+    this.readLock.lock();
+    try {
+      if (this.locationCache != null) {
+        return this.locationCache.size();
+      }
+      throw new IOException("localCache is null");
+    } finally {
+      this.readLock.unlock();
     }
-    throw new IOException("localCache is null");
   }
 
   @VisibleForTesting

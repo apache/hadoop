@@ -334,6 +334,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.redundancy.considerLoadByVolume</name>
+    <value>false</value>
+    <description>Decide if chooseTarget considers the target's volume load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>
@@ -2438,6 +2446,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement.min-blocks-for.write</name>
+  <value>1</value>
+  <description>
+    Setting the minimum number of blocks for write operations is used to calculate the space required
+    for write operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max.slowpeer.collect.nodes</name>
   <value>5</value>
   <description>
@@ -2790,6 +2807,15 @@
     By default this parameter is set to 1 hour.
     Support multiple time unit suffix(case insensitive), as described
     in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.observer.enabled</name>
+  <value>false</value>
+  <description>
+    This causes NameNode on startup to become an observer node if
+    set to true, otherwise startup is no different.
   </description>
 </property>
 
@@ -3727,6 +3753,14 @@
     tries to get local NN thread dump after local NN becomes
     SERVICE_NOT_RESPONDING or SERVICE_UNHEALTHY.
     If it is set to zero, DFS ZKFC won't get local NN thread dump.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
   </description>
 </property>
 
@@ -4714,6 +4748,15 @@
   </property>
 
   <property>
+    <name>dfs.datanode.data.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that can utilize for reading block.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
     <value>0</value>
     <description>
@@ -5138,6 +5181,17 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit</name>
+    <value>100</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 100, inclusive. if the value is set beyond the scope,
+      this value will be set as 100 by default.
+    </description>
+  </property>
+
 <property>
   <name>
     dfs.namenode.available-space-block-placement-policy.balance-local-node
@@ -5239,7 +5293,7 @@
   <name>dfs.namenode.file.close.num-committed-allowed</name>
   <value>0</value>
   <description>
-    Normally a file can only be closed with all its blocks are committed.
+    Normally a file can only be closed with all its blocks are complete.
     When this value is set to a positive integer N, a file can be closed
     when N blocks are committed and the rest complete. In case of Erasure Coded
     blocks, the committed block shall be allowed only when the block group is
@@ -5581,6 +5635,14 @@
   <value>false</value>
   <description>
     If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.congestion.ratio</name>
+  <value>1.5</value>
+  <description>
+    The ratio which is used to compute congestion load.
   </description>
 </property>
 

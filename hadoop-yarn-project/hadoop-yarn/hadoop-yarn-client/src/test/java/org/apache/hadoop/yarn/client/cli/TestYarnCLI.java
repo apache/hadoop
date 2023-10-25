@@ -38,7 +38,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -81,6 +83,7 @@ import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -1744,6 +1747,51 @@ public class TestYarnCLI {
     pw.println("\tPreemption : " + "enabled");
     pw.println("\tIntra-queue Preemption : " + "enabled");
     pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
+  @Test
+  public void testGetQueueInfos() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    Set<String> nodeLabels = new HashSet<String>();
+    nodeLabels.add("GPU");
+    nodeLabels.add("JDK_7");
+    List<QueueInfo> queueInfos = new ArrayList<>();
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", "root.queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo);
+    QueueInfo queueInfo1 = QueueInfo.newInstance("queueB", "root.queueB", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo1);
+    QueueInfo queueInfo2 = QueueInfo.newInstance("queueC", "root.queueC", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo2);
+    QueueInfo queueInfo3 = QueueInfo.newInstance("queueD", "root.queueD", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo3);
+    when(client.getAllQueues()).thenReturn(queueInfos);
+    int result = cli.run(new String[] {"-list", "all"});
+    Assert.assertEquals(0, result);
+    verify(client).getAllQueues();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter writer = new PrintWriter(baos);
+    String titleString = queueInfos.size() + " queues were found";
+    List<String> headerStrings = Arrays.asList("Queue Name", "Queue Path", "State", "Capacity",
+        "Current Capacity", "Maximum Capacity", "Weight", "Maximum Parallel Apps");
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(titleString)
+        .addHeaders(headerStrings);
+    DecimalFormat df = new DecimalFormat("#.00");
+    for (QueueInfo queueInfoe : queueInfos) {
+      formattingCLIUtils.addLine(queueInfoe.getQueueName(), queueInfoe.getQueuePath(),
+          queueInfoe.getQueueState(), df.format(queueInfoe.getCapacity() * 100) + "%",
+          df.format(queueInfoe.getCurrentCapacity() * 100) + "%",
+          df.format(queueInfoe.getMaximumCapacity() * 100) + "%",
+          df.format(queueInfoe.getWeight()),
+          queueInfoe.getMaxParallelApps());
+    }
+    writer.print(formattingCLIUtils.render());
+    writer.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
   }

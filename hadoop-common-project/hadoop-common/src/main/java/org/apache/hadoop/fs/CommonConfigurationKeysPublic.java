@@ -219,6 +219,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY =
+      "fs.trash.clean.trashroot.enable";
+  /** Default value for FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY. */
+  public static final boolean FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT = false;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED =
       "fs.client.resolve.topology.enabled";
   /** Default value for FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED. */
@@ -494,6 +503,10 @@ public class CommonConfigurationKeysPublic {
   public static final String IPC_SERVER_LOG_SLOW_RPC =
                                                 "ipc.server.log.slow.rpc";
   public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
+
+  public static final String IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY =
+      "ipc.server.log.slow.rpc.threshold.ms";
+  public static final long IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT = 0;
 
   public static final String IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY =
     "ipc.server.purge.interval";

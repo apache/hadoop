@@ -28,7 +28,7 @@ import java.util.Collection;
 public abstract class FederationMethodWrapper {
 
   /**
-   * List of parameters: static and dynamic values, matchings types.
+   * List of parameters: static and dynamic values, matching types.
    */
   private Object[] params;
 

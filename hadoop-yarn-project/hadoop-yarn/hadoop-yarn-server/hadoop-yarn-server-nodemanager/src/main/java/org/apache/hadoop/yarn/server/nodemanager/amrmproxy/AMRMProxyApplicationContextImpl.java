@@ -144,7 +144,7 @@ public class AMRMProxyApplicationContextImpl implements
   }
 
   @Override
-  public Context getNMCotext() {
+  public Context getNMContext() {
     return nmContext;
   }
 

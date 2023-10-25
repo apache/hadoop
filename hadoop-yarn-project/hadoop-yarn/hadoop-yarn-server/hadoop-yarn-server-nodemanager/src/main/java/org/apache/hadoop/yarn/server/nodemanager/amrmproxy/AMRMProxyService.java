@@ -145,7 +145,7 @@ public class AMRMProxyService extends CompositeService implements
           RegistryOperations.class);
       addService(this.registry);
     }
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.federationEnabled =
         conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
             YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
@@ -741,7 +741,7 @@ public class AMRMProxyService extends CompositeService implements
             YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
             YarnConfiguration.DEFAULT_AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE);
 
-    List<String> interceptorClassNames = new ArrayList<String>();
+    List<String> interceptorClassNames = new ArrayList<>();
     Collection<String> tempList =
         StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {

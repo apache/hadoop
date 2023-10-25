@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -33,7 +32,7 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -400,12 +399,20 @@ public abstract class S3GuardTool extends Configured implements Tool,
       println(out, "Filesystem %s", fsUri);
       try {
         println(out, "Location: %s", fs.getBucketLocation());
-      } catch (AccessDeniedException e) {
+      } catch (IOException e) {
         // Caller cannot get the location of this bucket due to permissions
-        // in their role or the bucket itself.
+        // in their role or the bucket itself, or it is not an operation
+        // supported by this store.
         // Note and continue.
         LOG.debug("failed to get bucket location", e);
         println(out, LOCATION_UNKNOWN);
+
+        // it may be the bucket is not found; we can't differentiate
+        // that and handle third party store issues where the API may
+        // not work.
+        // Fallback to looking for bucket root attributes.
+        println(out, "Probing for bucket existence");
+        fs.listXAttrs(new Path("/"));
       }
 
       // print any auth paths for directory marker info
@@ -694,11 +701,11 @@ public abstract class S3GuardTool extends Configured implements Tool,
         count++;
         if (mode == Mode.ABORT || mode == Mode.LIST || verbose) {
           println(out, "%s%s %s", mode == Mode.ABORT ? "Deleting: " : "",
-              upload.getKey(), upload.getUploadId());
+              upload.key(), upload.uploadId());
         }
         if (mode == Mode.ABORT) {
           writeOperationHelper
-              .abortMultipartUpload(upload.getKey(), upload.getUploadId(),
+              .abortMultipartUpload(upload.key(), upload.uploadId(),
                   true, LOG_EVENT);
         }
       }
@@ -726,7 +733,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         return true;
       }
       Date ageDate = new Date(System.currentTimeMillis() - msec);
-      return ageDate.compareTo(u.getInitiated()) >= 0;
+      return ageDate.compareTo(Date.from(u.initiated())) >= 0;
     }
 
     private void processArgs(List<String> args, PrintStream out)
@@ -811,7 +818,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
     try {
       uri = new URI(s3Path);
     } catch (URISyntaxException e) {
-      throw invalidArgs("Not a valid fileystem path: %s", s3Path);
+      throw invalidArgs("Not a valid filesystem path: %s", s3Path);
     }
     return uri;
   }

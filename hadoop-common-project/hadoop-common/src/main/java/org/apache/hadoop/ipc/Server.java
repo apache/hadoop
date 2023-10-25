@@ -516,14 +516,20 @@ public abstract class Server {
   private final long metricsUpdaterInterval;
   private final ScheduledExecutorService scheduledExecutorService;
 
-  private boolean logSlowRPC = false;
+  private volatile boolean logSlowRPC = false;
+  /** Threshold time for log slow rpc. */
+  private volatile long logSlowRPCThresholdTime;
 
   /**
    * Checks if LogSlowRPC is set true.
    * @return true, if LogSlowRPC is set true, false, otherwise.
    */
-  protected boolean isLogSlowRPC() {
+  public boolean isLogSlowRPC() {
     return logSlowRPC;
+  }
+
+  public long getLogSlowRPCThresholdTime() {
+    return logSlowRPCThresholdTime;
   }
 
   public int getNumInProcessHandler() {
@@ -543,8 +549,14 @@ public abstract class Server {
    * @param logSlowRPCFlag input logSlowRPCFlag.
    */
   @VisibleForTesting
-  protected void setLogSlowRPC(boolean logSlowRPCFlag) {
+  public void setLogSlowRPC(boolean logSlowRPCFlag) {
     this.logSlowRPC = logSlowRPCFlag;
+  }
+
+  @VisibleForTesting
+  public void setLogSlowRPCThresholdTime(long logSlowRPCThresholdMs) {
+    this.logSlowRPCThresholdTime = rpcMetrics.getMetricsTimeUnit().
+        convert(logSlowRPCThresholdMs, TimeUnit.MILLISECONDS);
   }
 
   private void setPurgeIntervalNanos(int purgeInterval) {
@@ -568,12 +580,15 @@ public abstract class Server {
    * @param methodName - RPC Request method name
    * @param details - Processing Detail.
    *
-   * if this request took too much time relative to other requests
-   * we consider that as a slow RPC. 3 is a magic number that comes
-   * from 3 sigma deviation. A very simple explanation can be found
-   * by searching for 68-95-99.7 rule. We flag an RPC as slow RPC
-   * if and only if it falls above 99.7% of requests. We start this logic
-   * only once we have enough sample size.
+   * If a request took significant more time than other requests,
+   * and its processing time is at least `logSlowRPCThresholdMs` we consider that as a slow RPC.
+   *
+   * The definition rules for calculating whether the current request took too much time
+   * compared to other requests are as follows:
+   * 3 is a magic number that comes from 3 sigma deviation.
+   * A very simple explanation can be found by searching for 68-95-99.7 rule.
+   * We flag an RPC as slow RPC if and only if it falls above 99.7% of requests.
+   * We start this logic only once we have enough sample size.
    */
   void logSlowRpcCalls(String methodName, Call call,
       ProcessingDetails details) {
@@ -587,33 +602,36 @@ public abstract class Server {
     final double threeSigma = rpcMetrics.getProcessingMean() +
         (rpcMetrics.getProcessingStdDev() * deviation);
 
-    long processingTime =
-            details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
+    final TimeUnit metricsTimeUnit = rpcMetrics.getMetricsTimeUnit();
+    long processingTime = details.get(Timing.PROCESSING, metricsTimeUnit);
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
-        (processingTime > threeSigma)) {
-      LOG.warn(
-          "Slow RPC : {} took {} {} to process from client {},"
-              + " the processing detail is {}",
-          methodName, processingTime, rpcMetrics.getMetricsTimeUnit(), call,
-          details.toString());
+        (processingTime > threeSigma) &&
+        (processingTime > getLogSlowRPCThresholdTime())) {
+      LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}," +
+              " and the threshold time is {} {}.", methodName, processingTime, metricsTimeUnit,
+          call, details.toString(), getLogSlowRPCThresholdTime(), metricsTimeUnit);
       rpcMetrics.incrSlowRpc();
     }
   }
 
-  void updateMetrics(Call call, long startTime, boolean connDropped) {
+  void updateMetrics(Call call, long processingStartTimeNanos, boolean connDropped) {
     totalRequests.increment();
     // delta = handler + processing + response
-    long deltaNanos = Time.monotonicNowNanos() - startTime;
-    long timestampNanos = call.timestampNanos;
+    long completionTimeNanos = Time.monotonicNowNanos();
+    long deltaNanos = completionTimeNanos - processingStartTimeNanos;
+    long arrivalTimeNanos = call.timestampNanos;
 
     ProcessingDetails details = call.getProcessingDetails();
     // queue time is the delta between when the call first arrived and when it
     // began being serviced, minus the time it took to be put into the queue
     details.set(Timing.QUEUE,
-        startTime - timestampNanos - details.get(Timing.ENQUEUE));
+        processingStartTimeNanos - arrivalTimeNanos - details.get(Timing.ENQUEUE));
     deltaNanos -= details.get(Timing.PROCESSING);
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
+
+    long enQueueTime = details.get(Timing.ENQUEUE, rpcMetrics.getMetricsTimeUnit());
+    rpcMetrics.addRpcEnQueueTime(enQueueTime);
 
     long queueTime = details.get(Timing.QUEUE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcQueueTime(queueTime);
@@ -627,15 +645,25 @@ public abstract class Server {
         details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     long waitTime =
         details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     // don't include lock wait for detailed metrics.
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
+    // Overall processing time is from arrival to completion.
+    long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
+        .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
+    rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
+    }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
     }
   }
 
@@ -1087,6 +1115,11 @@ public abstract class Server {
     }
 
     @Override
+    public CallerContext getCallerContext() {
+      return this.callerContext;
+    }
+
+    @Override
     public int getPriorityLevel() {
       return this.priorityLevel;
     }
@@ -1229,6 +1262,7 @@ public abstract class Server {
         setResponseFields(value, responseParams);
         sendResponse();
 
+        details.setReturnStatus(responseParams.returnStatus);
         deltaNanos = Time.monotonicNowNanos() - startNanos;
         details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
@@ -3339,6 +3373,10 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
 
+    this.setLogSlowRPCThresholdTime(conf.getLong(
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT));
+
     this.setPurgeIntervalNanos(conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT));
@@ -3835,6 +3873,16 @@ public abstract class Server {
 
   public void setClientBackoffEnabled(boolean value) {
     callQueue.setClientBackoffEnabled(value);
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabled() {
+    return callQueue.isServerFailOverEnabled();
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabledByQueue() {
+    return callQueue.isServerFailOverEnabledByQueue();
   }
 
   /**

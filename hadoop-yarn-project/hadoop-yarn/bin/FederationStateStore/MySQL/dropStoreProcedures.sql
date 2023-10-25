@@ -69,3 +69,7 @@ DROP PROCEDURE sp_getDelegationToken;
 DROP PROCEDURE sp_updateDelegationToken;
 
 DROP PROCEDURE sp_deleteDelegationToken;
+
+DROP PROCEDURE sp_storeVersion;
+
+DROP PROCEDURE sp_getVersion;

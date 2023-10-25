@@ -29,6 +29,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -65,6 +66,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -72,21 +75,26 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFormat;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.net.NetUtils;
@@ -358,9 +366,9 @@ public class TestOfflineImageViewer {
       filesECCount++;
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
+      hdfs.setSafeMode(SafeModeAction.LEAVE, false);
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -719,7 +727,13 @@ public class TestOfflineImageViewer {
         .build();
   }
 
-  private FsImageProto.INodeSection.INode createSampleDirInode() {
+  private FsImageProto.INodeSection.INode createSampleDirInode()
+      throws IOException {
+    return createSampleDirInode(false);
+  }
+
+  private FsImageProto.INodeSection.INode createSampleDirInode(
+      boolean builXAttr) throws IOException {
     FsImageProto.INodeSection.AclFeatureProto.Builder acl =
         FsImageProto.INodeSection.AclFeatureProto.newBuilder()
             .addEntries(2);
@@ -729,6 +743,19 @@ public class TestOfflineImageViewer {
             .setNsQuota(700)
             .setModificationTime(SAMPLE_TIMESTAMP)
             .setAcl(acl);
+    if (builXAttr) {
+      ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+      DataOutputStream dOut = new DataOutputStream(bOut);
+      WritableUtils.writeString(dOut, "test-value");
+      XAttr a = XAttrHelper.buildXAttr("system.hdfs", bOut.toByteArray());
+      XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
+      XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.newBuilder();
+      int v = XAttrFormat.toInt(a);
+      xAttrCompactBuilder.setName(v);
+      xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+      b.addXAttrs(xAttrCompactBuilder.build());
+      directory.setXAttrs(b);
+    }
 
     return FsImageProto.INodeSection.INode.newBuilder()
         .setType(FsImageProto.INodeSection.INode.Type.DIRECTORY)
@@ -754,6 +781,11 @@ public class TestOfflineImageViewer {
 
   private PBImageDelimitedTextWriter createDelimitedWriterSpy()
       throws IOException {
+    return createDelimitedWriterSpy(false);
+  }
+
+  private PBImageDelimitedTextWriter createDelimitedWriterSpy(boolean printECPolicy)
+      throws IOException {
     FsPermission fsPermission = new FsPermission(
         FsAction.ALL,
         FsAction.WRITE_EXECUTE,
@@ -764,7 +796,9 @@ public class TestOfflineImageViewer {
         fsPermission);
 
     PBImageDelimitedTextWriter writer = new
-        PBImageDelimitedTextWriter(null, ",", "");
+        PBImageDelimitedTextWriter(null, ",", "", false,
+        printECPolicy, 1, "-", new Configuration());
+
     PBImageDelimitedTextWriter writerSpy = spy(writer);
     when(writerSpy.getPermission(anyLong())).thenReturn(permStatus);
     return writerSpy;
@@ -784,6 +818,14 @@ public class TestOfflineImageViewer {
                 ",0,0,0,700,1000,drwx-wx-w-+,user_1,group_1",
         createDelimitedWriterSpy().getEntry("/path/",
             createSampleDirInode()));
+  }
+
+  @Test
+  public void testECXAttr() throws IOException {
+    assertEquals("/path/dir,0,2000-01-01 00:00,1970-01-01 00:00" +
+            ",0,0,0,700,1000,drwx-wx-w-+,user_1,group_1,-",
+        createDelimitedWriterSpy(true).getEntry("/path/",
+            createSampleDirInode(true)));
   }
 
   @Test
@@ -1285,7 +1327,7 @@ public class TestOfflineImageViewer {
       }
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
       // Determine location of fsimage file
       fsimageFile =

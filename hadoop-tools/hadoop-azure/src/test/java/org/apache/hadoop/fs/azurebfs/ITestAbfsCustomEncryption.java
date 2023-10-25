@@ -319,8 +319,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         return client.listPath(path, false, 5, null,
           getTestTracingContext(fs, true));
       case RENAME:
+        TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),
-          null, getTestTracingContext(fs, true), null, false).getOp();
+          null, tc, null, false, fs.getIsNamespaceEnabled(tc)).getOp();
       case DELETE:
         return client.deletePath(path, false, null,
           getTestTracingContext(fs, false));

@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -128,6 +129,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
 
+  /** ABFS instance to be held by the output stream to avoid GC close. */
+  private final BackReference fsBackRef;
+
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.client = abfsOutputStreamContext.getClient();
@@ -149,6 +153,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
+    this.fsBackRef = abfsOutputStreamContext.getFsBackRef();
     this.encryptionAdapter = abfsOutputStreamContext.getEncryptionAdapter();
 
     if (this.isAppendBlob) {
@@ -342,7 +347,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             outputStreamStatistics.uploadSuccessful(bytesLength);
             return null;
           } finally {
-            IOUtils.close(blockUploadData);
+            IOUtils.close(blockUploadData, blockToUpload);
           }
         });
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
@@ -491,6 +496,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
 
     try {
+      // Check if Executor Service got shutdown before the writes could be
+      // completed.
+      if (hasActiveBlockDataToUpload() && executorService.isShutdown()) {
+        throw new PathIOException(path, "Executor Service closed before "
+            + "writes could be completed.");
+      }
       flushInternal(true);
     } catch (IOException e) {
       // Problems surface in try-with-resources clauses if
@@ -773,5 +784,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     sb.append(outputStreamStatistics.toString());
     sb.append("}");
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  BackReference getFsBackRef() {
+    return fsBackRef;
+  }
+
+  @VisibleForTesting
+  ListeningExecutorService getExecutorService() {
+    return executorService;
   }
 }

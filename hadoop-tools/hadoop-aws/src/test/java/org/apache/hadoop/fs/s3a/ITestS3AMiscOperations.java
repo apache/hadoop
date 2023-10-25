@@ -25,19 +25,22 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -106,15 +109,15 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
     try (AuditSpan span = span()) {
-      ObjectMetadata metadata = fs.newObjectMetadata(-1);
-      metadata.setContentLength(-1);
+      RequestFactory factory = RequestFactoryImpl.builder().withBucket(fs.getBucket()).build();
       Path path = path("putDirect");
-      final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
-          path.toUri().getPath(),
-          new ByteArrayInputStream("PUT".getBytes()),
-          metadata);
+      PutObjectRequest.Builder putObjectRequestBuilder =
+          factory.newPutObjectRequestBuilder(path.toUri().getPath(), null, -1, false);
+      putObjectRequestBuilder.contentLength(-1L);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs()));
+          () -> fs.putObjectDirect(putObjectRequestBuilder.build(), PutObjectOptions.keepingDirs(),
+              new S3ADataBlocks.BlockUploadData(new ByteArrayInputStream("PUT".getBytes())),
+              false, null));
       assertPathDoesNotExist("put object was created", path);
     }
   }
@@ -179,14 +182,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    * non-null.
    */
   private void assumeNoDefaultEncryption() throws IOException {
-    try {
-      skipIfClientSideEncryption();
-      Assume.assumeThat(getDefaultEncryption(), nullValue());
-    } catch (AccessDeniedException e) {
-      // if the user can't check the default encryption, assume that it is
-      // null and keep going
-      LOG.warn("User does not have permission to call getBucketEncryption()");
-    }
+    skipIfClientSideEncryption();
+    Assume.assumeThat(getDefaultEncryption(), nullValue());
   }
 
   /**
@@ -406,14 +403,16 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    * Gets default encryption settings for the bucket or returns null if default
    * encryption is disabled.
    */
-  private GetBucketEncryptionResult getDefaultEncryption() throws IOException {
+  private GetBucketEncryptionResponse getDefaultEncryption() throws IOException {
     S3AFileSystem fs = getFileSystem();
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("check default encryption");
-    try {
+    S3Client s3 = getS3AInternals().getAmazonS3Client("check default encryption");
+    try (AuditSpan s = span()){
       return Invoker.once("getBucketEncryption()",
           fs.getBucket(),
-          () -> s3.getBucketEncryption(fs.getBucket()));
-    } catch (FileNotFoundException e) {
+          () -> s3.getBucketEncryption(GetBucketEncryptionRequest.builder()
+              .bucket(fs.getBucket())
+              .build()));
+    } catch (FileNotFoundException | AccessDeniedException | AWSBadRequestException e) {
       return null;
     }
   }

@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -35,12 +37,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController.TLDIR_PERMISSIONS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -116,30 +120,76 @@ public class TestLogAggregationFileController {
 
   @Test
   void testRemoteDirCreationWithCustomUser() throws Exception {
+    LogAggregationFileController controller = mock(
+        LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
     FileSystem fs = mock(FileSystem.class);
+    setupCustomUserMocks(controller, fs, "/tmp/logs");
+
+    controller.initialize(new Configuration(), "TFile");
+    controller.fsSupportsChmod = false;
+
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs);
+    assertTrue(controller.fsSupportsChmod);
+
+    doThrow(UnsupportedOperationException.class).when(fs).setPermission(any(), any());
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs); // still once -> cached
+    assertTrue(controller.fsSupportsChmod);
+
+    controller.fsSupportsChmod = false;
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs); // still once -> cached
+    assertTrue(controller.fsSupportsChmod);
+  }
+
+  @Test
+  void testRemoteDirCreationWithCustomUserFsChmodNotSupported() throws Exception {
+    LogAggregationFileController controller = mock(
+        LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
+    FileSystem fs = mock(FileSystem.class);
+    setupCustomUserMocks(controller, fs, "/tmp/logs2");
+    doThrow(UnsupportedOperationException.class).when(fs).setPermission(any(), any());
+
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, "/tmp/logs2");
+    controller.initialize(conf, "TFile");
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs);
+    assertFalse(controller.fsSupportsChmod);
+
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs); // still once -> cached
+    assertFalse(controller.fsSupportsChmod);
+
+    controller.fsSupportsChmod = true;
+    controller.verifyAndCreateRemoteLogDir();
+    assertPermissionFileWasUsedOneTime(fs); // still once -> cached
+    assertFalse(controller.fsSupportsChmod);
+  }
+
+  private static void setupCustomUserMocks(LogAggregationFileController controller,
+                                           FileSystem fs, String path)
+      throws URISyntaxException, IOException {
     doReturn(new URI("")).when(fs).getUri();
     doReturn(new FileStatus(128, false, 0, 64, System.currentTimeMillis(),
         System.currentTimeMillis(), new FsPermission(TLDIR_PERMISSIONS),
-        "not_yarn_user", "yarn_group", new Path("/tmp/logs"))).when(fs)
+        "not_yarn_user", "yarn_group", new Path(path))).when(fs)
         .getFileStatus(any(Path.class));
-
-    Configuration conf = new Configuration();
-    LogAggregationFileController controller = mock(
-        LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
-    controller.fsSupportsChmod = true;
     doReturn(fs).when(controller).getFileSystem(any(Configuration.class));
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         "yarn_user", new String[]{"yarn_group", "other_group"});
     UserGroupInformation.setLoginUser(ugi);
+  }
 
-    controller.initialize(conf, "TFile");
-    controller.verifyAndCreateRemoteLogDir();
-
-    verify(fs).createNewFile(argThat(new PathContainsString(".permission_check")));
-    verify(fs).setPermission(argThat(new PathContainsString(".permission_check")),
+  private static void assertPermissionFileWasUsedOneTime(FileSystem fs) throws IOException {
+    verify(fs, times(1))
+        .createNewFile(argThat(new PathContainsString(".permission_check")));
+    verify(fs, times(1))
+        .setPermission(argThat(new PathContainsString(".permission_check")),
         eq(new FsPermission(TLDIR_PERMISSIONS)));
-    verify(fs).delete(argThat(new PathContainsString(".permission_check")), eq(false));
-    assertTrue(controller.fsSupportsChmod);
+    verify(fs, times(1))
+        .delete(argThat(new PathContainsString(".permission_check")), eq(false));
   }
 }

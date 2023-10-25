@@ -186,8 +186,8 @@ class DataXceiver extends Receiver implements Runnable {
     if (br == null) {
       return;
     }
-    // This doesn't need to be in a critical section. Althogh the client
-    // can resue the connection to issue a different request, trying sending
+    // This doesn't need to be in a critical section. Although the client
+    // can reuse the connection to issue a different request, trying sending
     // an OOB through the recently closed block receiver is harmless.
     LOG.info("Sending OOB to peer: {}", peer);
     br.sendOOB();
@@ -608,7 +608,8 @@ class DataXceiver extends Receiver implements Runnable {
       writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
 
       long beginRead = Time.monotonicNow();
-      read = blockSender.sendBlock(out, baseStream, null); // send data
+      // send data
+      read = blockSender.sendBlock(out, baseStream, dataXceiverServer.getReadThrottler());
       long duration = Time.monotonicNow() - beginRead;
       if (blockSender.didSendEntireByteRange()) {
         // If we sent the entire range, then we should expect the client

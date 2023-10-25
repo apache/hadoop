@@ -238,7 +238,7 @@ public class TestTimelineClientForATS1_5 {
 
   private static TimelineDomain generateDomain() {
     TimelineDomain domain = new TimelineDomain();
-    domain.setId("namesapce id");
+    domain.setId("namespace id");
     domain.setDescription("domain description");
     domain.setOwner("domain owner");
     domain.setReaders("domain_reader");

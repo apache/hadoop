@@ -130,7 +130,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -218,6 +218,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.lz4</groupId>
       <artifactId>lz4-java</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
     </dependency>
   </dependencies>
 
@@ -307,10 +311,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>

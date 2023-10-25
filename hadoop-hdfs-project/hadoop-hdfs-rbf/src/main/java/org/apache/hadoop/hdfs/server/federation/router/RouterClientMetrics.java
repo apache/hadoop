@@ -147,6 +147,7 @@ public class RouterClientMetrics {
   @Metric private MutableCounterLong satisfyStoragePolicyOps;
   @Metric private MutableCounterLong getHAServiceStateOps;
   @Metric private MutableCounterLong otherOps;
+  @Metric private MutableCounterLong getSlowDatanodeReportOps;
 
   // private ConcurrentOps
   @Metric private MutableCounterLong concurrentSetReplicationOps;
@@ -184,6 +185,7 @@ public class RouterClientMetrics {
   @Metric private MutableCounterLong concurrentSetQuotaOps;
   @Metric private MutableCounterLong concurrentGetQuotaUsageOps;
   @Metric private MutableCounterLong concurrentOtherOps;
+  @Metric private MutableCounterLong concurrentGetSlowDatanodeReportOps;
 
   RouterClientMetrics(String processName, String sessionId) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
@@ -525,6 +527,9 @@ public class RouterClientMetrics {
     case "getHAServiceState":
       getHAServiceStateOps.incr();
       break;
+    case "getSlowDatanodeReport":
+      getSlowDatanodeReportOps.incr();
+      break;
     default:
       otherOps.incr();
     }
@@ -637,6 +642,9 @@ public class RouterClientMetrics {
       break;
     case "getQuotaUsage":
       concurrentGetQuotaUsageOps.incr();
+      break;
+    case "getSlowDatanodeReport":
+      concurrentGetSlowDatanodeReportOps.incr();
       break;
     default :
       concurrentOtherOps.incr();

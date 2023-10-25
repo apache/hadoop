@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
@@ -52,6 +54,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private boolean optimizeFooterRead;
 
   private boolean bufferedPreadDisabled;
+
+  /** A BackReference to the FS instance that created this OutputStream. */
+  private BackReference fsBackRef;
 
   private EncryptionAdapter encryptionAdapter = null;
 
@@ -126,11 +131,17 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsInputStreamContext withEncryptionAdapter(
-      EncryptionAdapter encryptionAdapter) {
-    this.encryptionAdapter = encryptionAdapter;
+  public AbfsInputStreamContext withAbfsBackRef(
+      final BackReference fsBackRef) {
+    this.fsBackRef = fsBackRef;
     return this;
   }
+
+    public AbfsInputStreamContext withEncryptionAdapter(
+        EncryptionAdapter encryptionAdapter){
+      this.encryptionAdapter = encryptionAdapter;
+      return this;
+    }
 
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
@@ -191,7 +202,11 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return bufferedPreadDisabled;
   }
 
-  public EncryptionAdapter getEncryptionAdapter() {
-    return encryptionAdapter;
+  public BackReference getFsBackRef() {
+    return fsBackRef;
   }
+
+    public EncryptionAdapter getEncryptionAdapter() {
+      return encryptionAdapter;
+    }
 }

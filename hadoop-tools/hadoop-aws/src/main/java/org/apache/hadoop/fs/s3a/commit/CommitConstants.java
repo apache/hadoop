@@ -39,6 +39,8 @@ public final class CommitConstants {
    * {@value}.
    */
   public static final String MAGIC = "__magic";
+  public static final String JOB_ID_PREFIX = "job-";
+  public static final String MAGIC_PATH_PREFIX = MAGIC + "_" + JOB_ID_PREFIX;
 
   /**
    * Marker of the start of a directory tree for calculating
@@ -280,10 +282,12 @@ public final class CommitConstants {
   /**
    * Default configuration value for
    * {@link #FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS}.
+   * It is disabled by default to support concurrent writes on the same
+   * parent directory but different partition/sub directory.
    * Value: {@value}.
    */
   public static final boolean DEFAULT_FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS =
-      true;
+      false;
 
   /**
    * The limit to the number of committed objects tracked during

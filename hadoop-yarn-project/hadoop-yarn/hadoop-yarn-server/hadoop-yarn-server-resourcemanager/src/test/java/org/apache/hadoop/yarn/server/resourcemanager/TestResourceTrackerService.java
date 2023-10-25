@@ -3222,4 +3222,85 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     rm.close();
   }
+
+  /**
+   * Decommissioning with selective states for untracked nodes.
+   */
+  @Test
+  public void testDecommissionWithSelectiveStates() throws Exception {
+    // clear exclude hosts
+    writeToHostsFile(excludeHostFile, "");
+    // init conf:
+    // (1) set untracked removal timeout to 500ms
+    // (2) set exclude path (no include path)
+    // (3) enable node untracked without pre-configured include path
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC, 500);
+    conf.setBoolean(YarnConfiguration.RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH, true);
+    conf.setStrings(YarnConfiguration.RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE,
+         "DECOMMISSIONED", "SHUTDOWN");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostFile.getAbsolutePath());
+
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    MockNM nm2 = rm.registerNode("host2:1234", 10240);
+    MockNM nm3 = rm.registerNode("host3:1234", 10240);
+    MockNM nm4 = rm.registerNode("host4:1234", 10240);
+    assertEquals(4, rm.getRMContext().getRMNodes().size());
+    assertEquals(0, rm.getRMContext().getInactiveRMNodes().size());
+
+    // decommission nm1 via adding nm1 into exclude hosts
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    writeToHostsFile(excludeHostFile, "host1");
+    rm.getNodesListManager().refreshNodes(conf);
+    rm.drainEvents();
+    assertEquals(rmNode1.getState(), NodeState.DECOMMISSIONED);
+    assertEquals(3, rm.getRMContext().getRMNodes().size());
+    assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
+    assertEquals(new HashSet(Arrays.asList(nm1.getNodeId())),
+         rm.getRMContext().getInactiveRMNodes().keySet());
+
+    // remove nm1 from exclude hosts, so that it will be marked as untracked
+    // and removed from inactive nodes after the timeout
+    writeToHostsFile(excludeHostFile, "");
+    rm.getNodesListManager().refreshNodes(conf);
+    // confirmed that nm1 should be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 0,
+         100, 1000);
+
+    // lost nm2
+    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
+    rm.getRMContext().getDispatcher().getEventHandler()
+         .handle(new RMNodeEvent(nm2.getNodeId(), RMNodeEventType.EXPIRE));
+    rm.drainEvents();
+    assertEquals(rmNode2.getState(), NodeState.LOST);
+    assertEquals(2, rm.getRMContext().getRMNodes().size());
+    assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
+    // confirmed that nm2 should not be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 1,
+         100, 1000);
+
+    // shutdown nm3
+    RMNode rmNode3 = rm.getRMContext().getRMNodes().get(nm3.getNodeId());
+    rm.getRMContext().getDispatcher().getEventHandler()
+         .handle(new RMNodeEvent(nm3.getNodeId(), RMNodeEventType.SHUTDOWN));
+    rm.drainEvents();
+    assertEquals(rmNode3.getState(), NodeState.SHUTDOWN);
+    assertEquals(1, rm.getRMContext().getRMNodes().size());
+    assertEquals(2, rm.getRMContext().getInactiveRMNodes().size());
+    // confirmed that nm3 should be removed from inactive nodes in 1 second
+    GenericTestUtils.waitFor(() -> rm.getRMContext().getInactiveRMNodes().size() == 1,
+         100, 1000);
+
+    // nm4 is still active node at last
+    assertEquals(new HashSet(Arrays.asList(nm4.getNodeId())),
+         rm.getRMContext().getRMNodes().keySet());
+
+    // nm2 is still inactive node at last, not removed
+    assertEquals(new HashSet(Arrays.asList(nm2.getNodeId())),
+         rm.getRMContext().getInactiveRMNodes().keySet());
+
+    rm.close();
+  }
 }

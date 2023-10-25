@@ -609,9 +609,10 @@ public abstract class FSImageTestUtil {
   
   public static void assertNNFilesMatch(MiniDFSCluster cluster) throws Exception {
     List<File> curDirs = Lists.newArrayList();
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
-    
+    for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+      curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, i));
+    }
+
     // Ignore seen_txid file, since the newly bootstrapped standby
     // will have a higher seen_txid than the one it bootstrapped from.
     Set<String> ignoredFiles = ImmutableSet.of("seen_txid");

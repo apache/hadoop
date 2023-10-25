@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -850,8 +853,22 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     Iterator<FiCaSchedulerNode> iter = schedulingPS.getPreferredNodeIterator(
         candidates);
+
     while (iter.hasNext()) {
       FiCaSchedulerNode node = iter.next();
+
+      // Do not schedule if there are any reservations to fulfill on the node
+      if (iter.hasNext() &&
+          node.getReservedContainer() != null &&
+          isSkipAllocateOnNodesWithReservedContainer()) {
+        LOG.debug("Skipping scheduling on node {} since it has already been"
+                + " reserved by {}", node.getNodeID(),
+            node.getReservedContainer().getContainerId());
+        ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
+            activitiesManager, node, application, schedulerKey,
+            ActivityDiagnosticConstant.NODE_HAS_BEEN_RESERVED, ActivityLevel.NODE);
+        continue;
+      }
 
       if (reservedContainer == null) {
         result = preCheckForNodeCandidateSet(node,
@@ -894,7 +911,19 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     return result;
   }
-  
+
+  private boolean isSkipAllocateOnNodesWithReservedContainer() {
+    ResourceScheduler scheduler = rmContext.getScheduler();
+    boolean skipAllocateOnNodesWithReservedContainer = false;
+    if (scheduler instanceof CapacityScheduler) {
+      CapacityScheduler cs = (CapacityScheduler) scheduler;
+      CapacitySchedulerConfiguration csConf = cs.getConfiguration();
+      skipAllocateOnNodesWithReservedContainer =
+          csConf.getSkipAllocateOnNodesWithReservedContainer();
+    }
+    return skipAllocateOnNodesWithReservedContainer;
+  }
+
   @Override
   public CSAssignment assignContainers(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
