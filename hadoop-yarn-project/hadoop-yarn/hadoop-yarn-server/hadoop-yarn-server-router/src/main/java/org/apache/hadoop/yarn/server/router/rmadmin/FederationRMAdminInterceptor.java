@@ -138,8 +138,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
-    if (keepAliveTime > 0) {
-      this.executorService.allowCoreThreadTimeOut(true);
+    boolean allowCoreThreadTimeOut =  getConf().getBoolean(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT);
+
+    if (keepAliveTime > 0 && allowCoreThreadTimeOut) {
+      this.executorService.allowCoreThreadTimeOut(allowCoreThreadTimeOut);
     }
 
     federationFacade = FederationStateStoreFacade.getInstance(this.getConf());
