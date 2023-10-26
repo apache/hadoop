@@ -192,6 +192,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.path.based.cache.block.map.allocation.percent";
   public static final float    DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT = 0.25f;
 
+  public static final String DFS_NAMENODE_CRM_CHECKLOCKTIME_ENABLE =
+      "dfs.namenode.crm.checklocktime.enable";
+  public static final boolean DFS_NAMENODE_CRM_CHECKLOCKTIME_DEFAULT = false;
+
+  public static final String DFS_NAMENODE_CRM_MAXLOCKTIME_MS =
+      "dfs.namenode.crm.maxlocktime.ms";
+  public static final long DFS_NAMENODE_CRM_MAXLOCKTIME_MS_DEFAULT = 1000;
+
+  public static final String DFS_NAMENODE_CRM_SLEEP_TIME_MS =
+      "dfs.namenode.crm.sleeptime.ms";
+  public static final long DFS_NAMENODE_CRM_SLEEP_TIME_MS_DEFAULT = 300;
+
   public static final int     DFS_NAMENODE_HTTP_PORT_DEFAULT =
       HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
   public static final String  DFS_NAMENODE_HTTP_ADDRESS_KEY =
