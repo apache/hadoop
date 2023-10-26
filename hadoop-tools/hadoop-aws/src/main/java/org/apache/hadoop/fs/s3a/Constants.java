@@ -1462,8 +1462,17 @@ public final class Constants {
   /**
    * Stream supports multipart uploads to the given path.
    */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+  public static final String STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED =
       "fs.s3a.capability.multipart.uploads.enabled";
+
+  /**
+   * Stream supports multipart uploads to the given path.
+   * This name is wrong, but it has shipped so must be
+   * retained.
+   */
+  @Deprecated
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED
+      = STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
 
   /**
    * Prefetch max blocks count config.
@@ -1509,4 +1518,11 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
+
+  /**
+   * Is this a v2 SDK build? value {@value}.
+   */
+  public static final String STORE_CAPABILITY_AWS_V2 =
+      "fs.s3a.capability.aws.v2";
+
 }
