@@ -476,7 +476,8 @@ class DataStreamer extends Daemon {
   private DataOutputStream blockStream;
   private DataInputStream blockReplyStream;
   private ResponseProcessor response = null;
-  private volatile DatanodeInfo[] nodes = null; // list of targets for current block
+  public static final DatanodeInfo[] EMPTY_DATANODES = new DatanodeInfo[0];
+  private volatile DatanodeInfo[] nodes = EMPTY_DATANODES; // list of targets for current block
   private volatile StorageType[] storageTypes = null;
   private volatile String[] storageIDs = null;
   private final ErrorState errorState;
@@ -647,7 +648,7 @@ class DataStreamer extends Daemon {
     this.setName("DataStreamer for file " + src);
     closeResponder();
     closeStream();
-    setPipeline(null, null, null);
+    setPipeline(EMPTY_DATANODES, null, null);
     stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
   }
 
@@ -916,7 +917,7 @@ class DataStreamer extends Daemon {
     try (TraceScope ignored = dfsClient.getTracer().
         newScope("waitForAckedSeqno")) {
       LOG.debug("{} waiting for ack for: {}", this, seqno);
-      int dnodes = nodes != null ? nodes.length : 3;
+      int dnodes = nodes.length > 0 ? nodes.length : 3;
       int writeTimeout = dfsClient.getDatanodeWriteTimeout(dnodes);
       long begin = Time.monotonicNow();
       try {
@@ -1576,7 +1577,7 @@ class DataStreamer extends Daemon {
     // Check number of datanodes. Note that if there is no healthy datanode,
     // this must be internal error because we mark external error in striped
     // outputstream only when all the streamers are in the DATA_STREAMING stage
-    if (nodes == null || nodes.length == 0) {
+    if (nodes.length == 0) {
       String msg = "Could not get block locations. " + "Source file \""
           + src + "\" - Aborting..." + this;
       LOG.warn(msg);
