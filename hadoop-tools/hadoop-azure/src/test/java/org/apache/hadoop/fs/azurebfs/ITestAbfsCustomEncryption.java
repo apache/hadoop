@@ -49,7 +49,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -260,9 +260,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       });
       return null;
     } else {
-      EncryptionAdapter encryptionAdapter = null;
+      ContextEncryptionAdapter encryptionAdapter = null;
       if (fileEncryptionType == ENCRYPTION_CONTEXT) {
-        encryptionAdapter = new EncryptionAdapter(ecp,
+        encryptionAdapter = new ContextEncryptionAdapter(ecp,
             fs.getAbfsStore().getRelativePath(testPath),
             Base64.getEncoder().encode(
             ((MockEncryptionContextProvider) ecp).getEncryptionContextForTest(testPath.toString())
@@ -346,7 +346,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     }
   }
 
-  private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
+  private ContextEncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext,
       final AbfsClient client) throws IOException {
     if (client.getEncryptionType() != ENCRYPTION_CONTEXT) {
@@ -362,7 +362,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     byte[] encryptionContext = responseHeaderEncryptionContext.getBytes(
         StandardCharsets.UTF_8);
 
-    return new EncryptionAdapter(client.getEncryptionContextProvider(),
+    return new ContextEncryptionAdapter(client.getEncryptionContextProvider(),
         new Path(path).toUri().getPath(), encryptionContext);
   }
 

@@ -707,9 +707,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     closed = true;
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    if (encryptionAdapter != null) {
-      encryptionAdapter.destroy();
-    }
+    encryptionAdapter.destroy();
   }
 
   /**
