@@ -27,16 +27,19 @@ public abstract class ContextEncryptionAdapter {
 
   /**
    * @return computed encryptionKey from server provided encryptionContext
+   * @throws IOException
    */
   public abstract String getEncodedKey() throws IOException;
 
   /**
    * @return computed encryptionKeySHA from server provided encryptionContext
+   * @throws IOException
    */
   public abstract String getEncodedKeySHA() throws IOException;
 
   /**
    * @return encryptionContext to be supplied in createPath API
+   * @throws IOException
    */
   public abstract String getEncodedContext() throws IOException;
 
