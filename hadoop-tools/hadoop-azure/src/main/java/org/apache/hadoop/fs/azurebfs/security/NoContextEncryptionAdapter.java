@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-import java.io.IOException;
-
 public class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
 
   private NoContextEncryptionAdapter() {
@@ -33,17 +31,17 @@ public class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
   }
 
   @Override
-  public String getEncodedKey() throws IOException {
+  public String getEncodedKey() {
     return null;
   }
 
   @Override
-  public String getEncodedKeySHA() throws IOException {
+  public String getEncodedKeySHA() {
     return null;
   }
 
   @Override
-  public String getEncodedContext() throws IOException {
+  public String getEncodedContext() {
     return null;
   }
 

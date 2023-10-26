@@ -27,21 +27,18 @@ public abstract class ContextEncryptionAdapter {
 
   /**
    * @return computed encryptionKey from server provided encryptionContext
-   * @throws IOException
    */
-  public abstract String getEncodedKey() throws IOException;
+  public abstract String getEncodedKey();
 
   /**
    * @return computed encryptionKeySHA from server provided encryptionContext
-   * @throws IOException
    */
-  public abstract String getEncodedKeySHA() throws IOException;
+  public abstract String getEncodedKeySHA();
 
   /**
    * @return encryptionContext to be supplied in createPath API
-   * @throws IOException
    */
-  public abstract String getEncodedContext() throws IOException;
+  public abstract String getEncodedContext();
 
   /**
    * Destroys all the encapsulated fields which are used for creating keys.

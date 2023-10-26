@@ -95,17 +95,17 @@ public class ContextProviderEncryptionAdapter extends ContextEncryptionAdapter {
   }
 
   @Override
-  public String getEncodedKey() throws IOException {
+  public String getEncodedKey() {
     return getBase64EncodedString(encryptionKey.getEncoded());
   }
 
   @Override
-  public String getEncodedKeySHA() throws IOException {
+  public String getEncodedKeySHA() {
     return getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
   }
 
   @Override
-  public String getEncodedContext() throws IOException {
+  public String getEncodedContext() {
     return getBase64EncodedString(encryptionContext.getEncoded());
   }
 

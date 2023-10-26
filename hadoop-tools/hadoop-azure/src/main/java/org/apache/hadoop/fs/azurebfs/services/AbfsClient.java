@@ -265,7 +265,7 @@ public class AbfsClient implements Closeable {
   private void addEncryptionKeyRequestHeaders(String path,
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled(tracingContext)) {
       return;
     }
@@ -427,14 +427,18 @@ public class AbfsClient implements Closeable {
    * @return object of {@link AbfsRestOperation} which contain all the information
    * about the communication with the server. The information is in
    * {@link AbfsRestOperation#getResult()}
-   * @throws IOException throws back the exception it receives from the
+   * @throws AzureBlobFileSystemException throws back the exception it receives from the
    * {@link AbfsRestOperation#execute(TracingContext)} method call.
    */
-  public AbfsRestOperation createPath(final String path, final boolean isFile,
-      final boolean overwrite, final Permissions permissions,
-      final boolean isAppendBlob, final String eTag,
-      final ContextEncryptionAdapter contextEncryptionAdapter, final TracingContext tracingContext)
-      throws IOException {
+  public AbfsRestOperation createPath(final String path,
+      final boolean isFile,
+      final boolean overwrite,
+      final Permissions permissions,
+      final boolean isAppendBlob,
+      final String eTag,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
+      final TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
       addEncryptionKeyRequestHeaders(path, requestHeaders, true,
@@ -788,8 +792,6 @@ public class AbfsClient implements Closeable {
         // GetFileStatus on the destination failed, the rename did not take place
         // or some other failure. log and swallow.
         LOG.debug("Failed to get status of path {}", destination, ex);
-      } catch (IOException ioe) {
-        LOG.debug(ioe.getMessage());  // ex thrown by encryption framework
       }
     } else {
       LOG.debug("No source etag; unable to probe for the operation's success");
@@ -805,7 +807,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation append(final String path, final byte[] buffer,
       AppendRequestParameters reqParams, final String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -948,7 +950,7 @@ public class AbfsClient implements Closeable {
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
                                        final long length, TracingContext tracingContext)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext, null);
@@ -968,7 +970,7 @@ public class AbfsClient implements Closeable {
       boolean retainUncommittedData, boolean isClose,
       final String cachedSasToken, final String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1002,7 +1004,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation setPathProperties(final String path, final String properties,
                                              final TracingContext tracingContext, final ContextEncryptionAdapter contextEncryptionAdapter)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1031,7 +1033,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation getPathStatus(final String path,
       final boolean includeProperties, final TracingContext tracingContext,
       final ContextEncryptionAdapter contextEncryptionAdapter)
-      throws IOException {
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -1061,10 +1063,15 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag,
-      String cachedSasToken, ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws IOException {
+  public AbfsRestOperation read(final String path,
+      final long position,
+      final byte[] buffer,
+      final int bufferOffset,
+      final int bufferLength,
+      final String eTag,
+      String cachedSasToken,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
