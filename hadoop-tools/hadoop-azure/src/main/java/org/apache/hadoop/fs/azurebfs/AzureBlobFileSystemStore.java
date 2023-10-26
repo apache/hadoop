@@ -497,11 +497,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path Path of the file for which the object of EncryptionAdapter is required.
    * @return <ul>
    *   <li>
-   *     null: if encryptionType is not of type
+   *     {@link NoContextEncryptionAdapter}: if encryptionType is not of type
    *     {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
    *   </li>
    *   <li>
-   *     new object of EncryptionAdapter containing required encryptionKeys for the give file:
+   *     new object of {@link ContextProviderEncryptionAdapter} containing required encryptionKeys for the give file:
    *     if encryptionType is of type {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
    *   </li>
    * </ul>

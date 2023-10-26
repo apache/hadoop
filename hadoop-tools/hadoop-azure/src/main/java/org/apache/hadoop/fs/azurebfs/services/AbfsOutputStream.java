@@ -510,7 +510,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // See HADOOP-16785
       throw wrapException(path, e.getMessage(), e);
     } finally {
-      contextEncryptionAdapter.destroy();
+      if (contextEncryptionAdapter != null) {
+        contextEncryptionAdapter.destroy();
+      }
       if (hasLease()) {
         lease.free();
         lease = null;
