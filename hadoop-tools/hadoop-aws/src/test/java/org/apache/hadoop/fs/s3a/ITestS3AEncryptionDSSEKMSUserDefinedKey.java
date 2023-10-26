@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +46,7 @@ public class ITestS3AEncryptionDSSEKMSUserDefinedKey
     try {
       skipIfEncryptionNotSet(c, DSSE_KMS);
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new UncheckedIOException(e);
     }
     assume("KMS key is expected to be present", StringUtils.isNotBlank(kmsKey));
     Configuration conf = super.createConfiguration();
