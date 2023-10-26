@@ -354,6 +354,9 @@ When downloading DSSE-KMS encrypted data, the sequence is as follows
 
 4. As a result, S3 will only decode the data if the user has been granted access to the key.
 
+Further reading on DSSE-KMS [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html)
+
+AWS Blog post [here](https://aws.amazon.com/blogs/aws/new-amazon-s3-dual-layer-server-side-encryption-with-keys-stored-in-aws-key-management-service-dsse-kms/)
 
 ### Enabling DSSE-KMS
 
