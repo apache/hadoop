@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 /**
  * Utility class to provide method which can return if the account is namespace
  * enabled or not.
- * */
+ */
 public final class NamespaceUtil {
 
   public static final Logger LOG = LoggerFactory.getLogger(NamespaceUtil.class);
@@ -63,7 +63,7 @@ public final class NamespaceUtil {
    * from the {@link AbfsClient#getAclStatus(String, TracingContext)}. In case it gets
    * {@link AbfsRestOperationException}, it checks if the exception statusCode is
    * BAD_REQUEST or not. If not, then it will pass the exception to the calling method.
-   * */
+   */
   public static Boolean isNamespaceEnabled(final AbfsClient abfsClient,
       final TracingContext tracingContext)
       throws AzureBlobFileSystemException {

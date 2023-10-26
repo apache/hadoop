@@ -25,7 +25,7 @@ import java.util.Base64;
 /**
  * Utility class for managing encryption of bytes or base64String conversion of
  * bytes.
- * */
+ */
 public final class EncodingHelper {
 
   private EncodingHelper() {

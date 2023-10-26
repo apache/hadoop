@@ -49,7 +49,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
-import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -111,14 +111,14 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   /**
    * Boolean value to indicate that the server response would have header related
    * to CPK and the test would need to assert its value.
-   * */
+   */
   @Parameterized.Parameter(6)
   public boolean isCpkResponseHdrExpected;
 
   /**
    * Boolean value to indicate that the server response would have fields related
    * to CPK and the test would need to assert its value.
-   * */
+   */
   @Parameterized.Parameter(7)
   public Boolean isCpkResponseKeyExpected = false;
 
@@ -260,9 +260,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       });
       return null;
     } else {
-      ContextEncryptionAdapter encryptionAdapter = null;
+      ContextProviderEncryptionAdapter encryptionAdapter = null;
       if (fileEncryptionType == ENCRYPTION_CONTEXT) {
-        encryptionAdapter = new ContextEncryptionAdapter(ecp,
+        encryptionAdapter = new ContextProviderEncryptionAdapter(ecp,
             fs.getAbfsStore().getRelativePath(testPath),
             Base64.getEncoder().encode(
             ((MockEncryptionContextProvider) ecp).getEncryptionContextForTest(testPath.toString())
@@ -286,7 +286,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
            * 2.Fetch List of VersionFileStatus objects by listStatus API of the AzureBlobFileSystem.
            * 3.Use the context value in the VersionFileStatus object for making read API call to backend.
            * 4.Assert for no exception and get response.
-           * */
+           */
           FileStatus status = fs.listStatus(testPath)[0];
           Assertions.assertThat(status)
               .isInstanceOf(AzureBlobFileSystemStore.VersionedFileStatus.class);
@@ -346,7 +346,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     }
   }
 
-  private ContextEncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
+  private ContextProviderEncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext,
       final AbfsClient client) throws IOException {
     if (client.getEncryptionType() != ENCRYPTION_CONTEXT) {
@@ -362,7 +362,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     byte[] encryptionContext = responseHeaderEncryptionContext.getBytes(
         StandardCharsets.UTF_8);
 
-    return new ContextEncryptionAdapter(client.getEncryptionContextProvider(),
+    return new ContextProviderEncryptionAdapter(client.getEncryptionContextProvider(),
         new Path(path).toUri().getPath(), encryptionContext);
   }
 
@@ -420,7 +420,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
    * </ol>
    * Returns in case of ENCRYPTION_CONTEXT the encryptionProvider object which
    * was used to create the x-ms-encryption-context value used for creating the file.
-   * */
+   */
   private EncryptionContextProvider createEncryptedFile(Path testPath) throws Exception {
     AzureBlobFileSystem fs;
     if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {

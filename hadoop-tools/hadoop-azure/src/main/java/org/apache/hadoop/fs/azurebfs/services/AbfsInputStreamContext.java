@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 
 /**
  * Class to hold extra input stream configs.
@@ -58,7 +58,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   /** A BackReference to the FS instance that created this OutputStream. */
   private BackReference fsBackRef;
 
-  private EncryptionAdapter encryptionAdapter = null;
+  private ContextEncryptionAdapter contextEncryptionAdapter = null;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -138,8 +138,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   }
 
     public AbfsInputStreamContext withEncryptionAdapter(
-        EncryptionAdapter encryptionAdapter){
-      this.encryptionAdapter = encryptionAdapter;
+        ContextEncryptionAdapter contextEncryptionAdapter){
+      this.contextEncryptionAdapter = contextEncryptionAdapter;
       return this;
     }
 
@@ -206,7 +206,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return fsBackRef;
   }
 
-    public EncryptionAdapter getEncryptionAdapter() {
-      return encryptionAdapter;
+    public ContextEncryptionAdapter getEncryptionAdapter() {
+      return contextEncryptionAdapter;
     }
 }

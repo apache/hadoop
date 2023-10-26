@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -243,7 +243,7 @@ public class TestAbfsInputStream extends
     verify(mockClient, times(0).description((String.format(
         "FileStatus [from %s result] provided, GetFileStatus should not be invoked",
         source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), any(
-        EncryptionAdapter.class));
+        ContextEncryptionAdapter.class));
 
     // verify GetPathStatus invoked when FileStatus not provided
     abfsStore.openFileForRead(testFile,
@@ -251,7 +251,8 @@ public class TestAbfsInputStream extends
         tracingContext);
     verify(mockClient, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
-        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), nullable(EncryptionAdapter.class));
+        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), nullable(
+            ContextEncryptionAdapter.class));
 
     Mockito.reset(mockClient); //clears invocation count for next test case
   }
@@ -520,7 +521,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), nullable(EncryptionAdapter.class),
+            any(String.class), nullable(ContextEncryptionAdapter.class),
             any(TracingContext.class));
 
     final ReadBufferManager readBufferManager

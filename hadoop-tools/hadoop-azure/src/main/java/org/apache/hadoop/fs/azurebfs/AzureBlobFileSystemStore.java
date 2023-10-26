@@ -56,9 +56,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
-import org.apache.hadoop.fs.azurebfs.security.NoEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -468,13 +468,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       final Hashtable<String, String> parsedXmsProperties;
       final String relativePath = getRelativePath(path);
-      final EncryptionAdapter encryptionAdapter
+      final ContextEncryptionAdapter contextEncryptionAdapter
           = createEncryptionAdapterFromServerStoreContext(relativePath,
           tracingContext);
       final AbfsRestOperation op = client
-          .getPathStatus(relativePath, true, tracingContext, encryptionAdapter);
+          .getPathStatus(relativePath, true, tracingContext,
+              contextEncryptionAdapter);
       perfInfo.registerResult(op.getResult());
-      encryptionAdapter.destroy();
+      contextEncryptionAdapter.destroy();
 
       final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -487,7 +488,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
-   * Creates an object of {@link org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter}
+   * Creates an object of {@link ContextEncryptionAdapter}
    * from a file path. It calls {@link  org.apache.hadoop.fs.azurebfs.services.AbfsClient
    * #getPathStatus(String, boolean, TracingContext, EncryptionAdapter)} method to get
    * contextValue (x-ms-encryption-context) from the server. The contextValue is passed
@@ -504,11 +505,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *     if encryptionType is of type {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
    *   </li>
    * </ul>
-   * */
-  private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
+   */
+  private ContextEncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext) throws IOException {
     if (client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
-      return NoEncryptionAdapter.getInstance();
+      return NoContextEncryptionAdapter.getInstance();
     }
     final String responseHeaderEncryptionContext = client.getPathStatus(path,
             false, tracingContext, null).getResult()
@@ -521,7 +522,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         StandardCharsets.UTF_8);
 
     try {
-      return new ContextEncryptionAdapter(client.getEncryptionContextProvider(),
+      return new ContextProviderEncryptionAdapter(client.getEncryptionContextProvider(),
           new Path(path).toUri().getPath(), encryptionContext);
     } catch (IOException e) {
       LOG.debug("Could not initialize EncryptionAdapter");
@@ -545,13 +546,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         throw new InvalidAbfsRestOperationException(ex);
       }
       final String relativePath = getRelativePath(path);
-      final EncryptionAdapter encryptionAdapter
+      final ContextEncryptionAdapter contextEncryptionAdapter
           = createEncryptionAdapterFromServerStoreContext(relativePath,
           tracingContext);
       final AbfsRestOperation op = client
           .setPathProperties(getRelativePath(path), commaSeparatedProperties,
-              tracingContext, encryptionAdapter);
-      encryptionAdapter.destroy();
+              tracingContext, contextEncryptionAdapter);
+      contextEncryptionAdapter.destroy();
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -607,12 +608,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
-      final EncryptionAdapter encryptionAdapter;
+      final ContextEncryptionAdapter contextEncryptionAdapter;
       if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-        encryptionAdapter = new ContextEncryptionAdapter(
+        contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
             client.getEncryptionContextProvider(), getRelativePath(path));
       } else {
-        encryptionAdapter = NoEncryptionAdapter.getInstance();
+        contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       }
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
@@ -620,7 +621,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             statistics,
             new Permissions(isNamespaceEnabled, permission, umask),
             isAppendBlob,
-            encryptionAdapter,
+            contextEncryptionAdapter,
             tracingContext
         );
 
@@ -630,7 +631,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new Permissions(isNamespaceEnabled, permission, umask),
             isAppendBlob,
             null,
-            encryptionAdapter,
+            contextEncryptionAdapter,
             tracingContext);
 
       }
@@ -646,7 +647,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               statistics,
               relativePath,
               0,
-              encryptionAdapter,
+              contextEncryptionAdapter,
               tracingContext));
     }
   }
@@ -665,7 +666,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FileSystem.Statistics statistics,
       final Permissions permissions,
       final boolean isAppendBlob,
-      final EncryptionAdapter encryptionAdapter,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
 
@@ -674,7 +675,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       op = client.createPath(relativePath, true, false, permissions,
-          isAppendBlob, null, encryptionAdapter, tracingContext);
+          isAppendBlob, null, contextEncryptionAdapter, tracingContext);
 
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
@@ -699,7 +700,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
           op = client.createPath(relativePath, true, true, permissions,
-              isAppendBlob, eTag, encryptionAdapter, tracingContext);
+              isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
@@ -742,7 +743,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileSystem.Statistics statistics,
       String path,
       long position,
-      EncryptionAdapter encryptionAdapter,
+      ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
@@ -759,7 +760,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
-            .withEncryptionAdapter(encryptionAdapter)
+            .withEncryptionAdapter(contextEncryptionAdapter)
             .withBlockFactory(getBlockFactory())
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .withClient(client)
@@ -816,7 +817,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String relativePath = getRelativePath(path);
       String resourceType, eTag;
       long contentLength;
-      EncryptionAdapter encryptionAdapter = NoEncryptionAdapter.getInstance();
+      ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       /*
       * GetPathStatus API has to be called in case of:
       *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
@@ -824,7 +825,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
       *       have encryptionContext field when client's encryptionType is
       *       ENCRYPTION_CONTEXT.
-      * */
+      */
       if ((fileStatus instanceof VersionedFileStatus) && (
           client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
               || ((VersionedFileStatus) fileStatus).getEncryptionContext()
@@ -840,7 +841,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         final String encryptionContext
             = ((VersionedFileStatus) fileStatus).getEncryptionContext();
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          encryptionAdapter = new ContextEncryptionAdapter(
+          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
               encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
@@ -855,7 +856,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         /*
          * For file created with ENCRYPTION_CONTEXT, client shall receive
          * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
-         * */
+         */
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           final String fileEncryptionContext = op.getResponseHeader(
               HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
@@ -864,7 +865,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             throw new PathIOException(path.toString(),
                 "EncryptionContext not present in GetPathStatus response headers");
           }
-          encryptionAdapter = new ContextEncryptionAdapter(
+          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
               fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
         }
@@ -884,13 +885,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return new AbfsInputStream(client, statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
           parameters.map(OpenFileParameters::getOptions),
-          encryptionAdapter),
+          contextEncryptionAdapter),
           eTag, tracingContext);
     }
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
-      Optional<Configuration> options, EncryptionAdapter encryptionAdapter) {
+      Optional<Configuration> options, ContextEncryptionAdapter contextEncryptionAdapter) {
     boolean bufferedPreadDisabled = options
         .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
         .orElse(false);
@@ -907,7 +908,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
-            .withEncryptionAdapter(encryptionAdapter)
+            .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
             .build();
   }
@@ -948,7 +949,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
-      final EncryptionAdapter encryptionAdapter;
+      final ContextEncryptionAdapter contextEncryptionAdapter;
       if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
         final String encryptionContext = op.getResult()
             .getResponseHeader(
@@ -957,11 +958,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           throw new PathIOException(path.toString(),
               "File doesn't have encryptionContext.");
         }
-        encryptionAdapter = new ContextEncryptionAdapter(
+        contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
             client.getEncryptionContextProvider(), getRelativePath(path),
             encryptionContext.getBytes(StandardCharsets.UTF_8));
       } else {
-        encryptionAdapter = NoEncryptionAdapter.getInstance();
+        contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       }
 
       return new AbfsOutputStream(
@@ -972,7 +973,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               statistics,
               relativePath,
               offset,
-              encryptionAdapter,
+              contextEncryptionAdapter,
               tracingContext));
     }
   }

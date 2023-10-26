@@ -20,28 +20,35 @@ package org.apache.hadoop.fs.azurebfs.security;
 
 import java.io.IOException;
 
-/**
- * Provides APIs to get encryptionKey from encryptionContext for a given path.
- */
-public abstract class ContextEncryptionAdapter {
+public class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
 
-  /**
-   * @return computed encryptionKey from server provided encryptionContext
-   */
-  public abstract String getEncodedKey() throws IOException;
+  private NoContextEncryptionAdapter() {
 
-  /**
-   * @return computed encryptionKeySHA from server provided encryptionContext
-   */
-  public abstract String getEncodedKeySHA() throws IOException;
+  }
+  private static NoContextEncryptionAdapter
+      instance = new NoContextEncryptionAdapter();
 
-  /**
-   * @return encryptionContext to be supplied in createPath API
-   */
-  public abstract String getEncodedContext() throws IOException;
+  public static NoContextEncryptionAdapter getInstance() {
+    return instance;
+  }
 
-  /**
-   * Destroys all the encapsulated fields which are used for creating keys.
-   */
-  public abstract void destroy();
+  @Override
+  public String getEncodedKey() throws IOException {
+    return null;
+  }
+
+  @Override
+  public String getEncodedKeySHA() throws IOException {
+    return null;
+  }
+
+  @Override
+  public String getEncodedContext() throws IOException {
+    return null;
+  }
+
+  @Override
+  public void destroy() {
+
+  }
 }

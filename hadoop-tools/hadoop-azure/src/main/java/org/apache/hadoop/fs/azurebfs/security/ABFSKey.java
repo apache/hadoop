@@ -25,7 +25,7 @@ import java.util.Arrays;
  * Implementation of SecretKey that would be used by EncryptionAdapter object,
  * implementations of encryptionContextProvider to maintain the byteArrays of
  * encryptionContext and encryptionKey.
- * */
+ */
 public final class ABFSKey implements SecretKey {
   private byte[] bytes;
 
@@ -48,7 +48,7 @@ public final class ABFSKey implements SecretKey {
   /**
    * This method to be called by implementations of EncryptionContextProvider interface.
    * Method returns clone of the original bytes array to prevent findbugs flags.
-   * */
+   */
   @Override
   public byte[] getEncoded() {
     if (bytes == null) {

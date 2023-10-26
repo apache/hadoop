@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
  *   </li>
  *   <li>To create encryptionKey using encryptionContext.</li>
  * </ul>
- * */
+ */
 public interface EncryptionContextProvider extends Destroyable {
   /**
    * Initialize instance.
