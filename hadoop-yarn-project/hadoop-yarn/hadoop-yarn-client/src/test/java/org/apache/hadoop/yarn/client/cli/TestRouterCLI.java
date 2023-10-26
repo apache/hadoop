@@ -40,6 +40,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -265,5 +266,30 @@ public class TestRouterCLI {
 
     String[] args = {"-policy", "-l", "--queue", "root.a"};
     assertEquals(0, rmAdminCLI.run(args));
+  }
+
+  @Test
+  public void testBuildHelpMsg() throws Exception {
+    Map<String, RouterCLI.RouterCmdUsageInfos> adminUsage = rmAdminCLI.getAdminUsage();
+    assertEquals(2, adminUsage.size());
+
+    RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
+        adminUsage.get("-deregisterSubCluster");
+    assertNotNull(deregisterSubClusterUsageInfos);
+    Map<String, List<String>> dsExamplesMap = deregisterSubClusterUsageInfos.getExamples();
+    assertNotNull(dsExamplesMap);
+    assertEquals(1, dsExamplesMap.size());
+    List<String> dsExamples = dsExamplesMap.get("-deregisterSubCluster");
+    assertNotNull(dsExamples);
+    assertEquals(2, dsExamples.size());
+
+    RouterCLI.RouterCmdUsageInfos policyUsageInfos = adminUsage.get("-policy");
+    assertNotNull(policyUsageInfos);
+    Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
+    assertNotNull(policyExamplesMap);
+    assertEquals(3, policyExamplesMap.size());
+    policyExamplesMap.forEach((cmd, cmdExamples) -> {
+      assertEquals(2, cmdExamples.size());
+    });
   }
 }
