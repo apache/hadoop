@@ -418,14 +418,12 @@ public class TestNoNamenodesAvailableLongTime {
    */
   private void stopObserver(int num) {
     int nnIndex;
-    for (nnIndex = 0; nnIndex < cluster.getNamenodes().size(); nnIndex++) {
+    int numNns = cluster.getNamenodes().size();
+    for (nnIndex = 0; nnIndex < numNns && num > 0; nnIndex++) {
       NameNode nameNode = cluster.getCluster().getNameNode(nnIndex);
       if (nameNode != null && nameNode.isObserverState()) {
         cluster.getCluster().shutdownNameNode(nnIndex);
         num--;
-        if (num == 0) {
-          break;
-        }
       }
     }
   }
