@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
 
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -151,7 +154,7 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private class StreamerStreams implements java.io.Closeable {
+  private class StreamerStreams implements Closeable {
     private Socket sock = null;
     private DataOutputStream out = null;
     private DataInputStream in = null;
@@ -528,9 +531,8 @@ class DataStreamer extends Daemon {
   // are congested
   private final List<DatanodeInfo> congestedNodes = new ArrayList<>();
   private final Map<DatanodeInfo, Integer> slowNodeMap = new HashMap<>();
-  private static final int CONGESTION_BACKOFF_MEAN_TIME_IN_MS = 5000;
-  private static final int CONGESTION_BACK_OFF_MAX_TIME_IN_MS =
-      CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
+  private int congestionBackOffMeanTimeInMs;
+  private int congestionBackOffMaxTimeInMs;
   private int lastCongestionBackoffTime;
   private int maxPipelineRecoveryRetries;
   private int markSlowNodeAsBadNodeThreshold;
@@ -564,6 +566,32 @@ class DataStreamer extends Daemon {
     this.addBlockFlags = flags;
     this.maxPipelineRecoveryRetries = conf.getMaxPipelineRecoveryRetries();
     this.markSlowNodeAsBadNodeThreshold = conf.getMarkSlowNodeAsBadNodeThreshold();
+    congestionBackOffMeanTimeInMs = dfsClient.getConfiguration().getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME,
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT);
+    congestionBackOffMaxTimeInMs = dfsClient.getConfiguration().getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
+    if (congestionBackOffMeanTimeInMs <= 0 || congestionBackOffMaxTimeInMs <= 0 || 
+        congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
+      if (congestionBackOffMeanTimeInMs <= 0) {
+        LOG.warn("Configuration: {} is not appropriate, use default value: {}",
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME,
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT);
+      }
+      if (congestionBackOffMaxTimeInMs <= 0) {
+        LOG.warn("Configuration: {} is not appropriate, use default value: {}",
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
+      }
+      if (congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
+        LOG.warn("Configuration: {} can not less than {}, use their default values.",
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+            HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME);
+      }
+      congestionBackOffMeanTimeInMs = HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT;
+      congestionBackOffMaxTimeInMs = HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT;
+    }
   }
 
   /**
@@ -1113,7 +1141,7 @@ class DataStreamer extends Daemon {
     InetAddress addr = null;
     try {
       addr = InetAddress.getByName(nodes[index].getIpAddr());
-    } catch (java.net.UnknownHostException e) {
+    } catch (UnknownHostException e) {
       // we are passing an ip address. this should not happen.
       assert false;
     }
@@ -1998,10 +2026,10 @@ class DataStreamer extends Daemon {
           sb.append(' ').append(i);
         }
         int range = Math.abs(lastCongestionBackoffTime * 3 -
-                                CONGESTION_BACKOFF_MEAN_TIME_IN_MS);
+            congestionBackOffMeanTimeInMs);
         int base = Math.min(lastCongestionBackoffTime * 3,
-                            CONGESTION_BACKOFF_MEAN_TIME_IN_MS);
-        t = Math.min(CONGESTION_BACK_OFF_MAX_TIME_IN_MS,
+            congestionBackOffMeanTimeInMs);
+        t = Math.min(congestionBackOffMaxTimeInMs,
                      (int)(base + Math.random() * range));
         lastCongestionBackoffTime = t;
         sb.append(" are congested. Backing off for ").append(t).append(" ms");
