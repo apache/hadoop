@@ -24,10 +24,10 @@ public final class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
 
   }
   private static final NoContextEncryptionAdapter
-      instance = new NoContextEncryptionAdapter();
+      INSTANCE = new NoContextEncryptionAdapter();
 
   public static NoContextEncryptionAdapter getInstance() {
-    return instance;
+    return INSTANCE;
   }
 
   @Override
