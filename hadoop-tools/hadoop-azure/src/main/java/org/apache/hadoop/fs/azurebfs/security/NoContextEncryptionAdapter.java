@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-public class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
+public final class NoContextEncryptionAdapter extends ContextEncryptionAdapter {
 
   private NoContextEncryptionAdapter() {
 
   }
-  private static NoContextEncryptionAdapter
+  private static final NoContextEncryptionAdapter
       instance = new NoContextEncryptionAdapter();
 
   public static NoContextEncryptionAdapter getInstance() {

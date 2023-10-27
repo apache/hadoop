@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-import java.io.IOException;
-
 /**
  * Provides APIs to get encryptionKey from encryptionContext for a given path.
  */
