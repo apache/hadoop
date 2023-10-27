@@ -1554,4 +1554,17 @@ public final class S3ATestUtils {
     return fs.getConf().getBoolean(Constants.ENABLE_MULTI_DELETE,
         true);
   }
+
+  /**
+   * Does this FS have create performance enabled?
+   * @param fs filesystem
+   * @return true if create performance is enabled
+   * @throws IOException IO problems
+   */
+  public static boolean isCreatePerformanceEnabled(FileSystem fs)
+      throws IOException {
+    return fs.hasPathCapability(new Path("/"), FS_S3A_CREATE_PERFORMANCE_ENABLED);
+  }
+
+
 }

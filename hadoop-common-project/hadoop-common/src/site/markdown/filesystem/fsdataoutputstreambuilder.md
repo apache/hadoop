@@ -224,6 +224,12 @@ be used as evidence at the inquest as proof that they made a
 conscious decision to choose speed over safety and
 that the outcome was their own fault.
 
+Note: the option can be set for an entire filesystem. Again, the safety checks
+are there to more closely match the semantics of a classic filesystem,
+and to reduce the likelihood that the object store ends up in a state which
+diverges so much from the classic directory + tree structur that applications
+get confused.
+
 Accordingly: *Use if and only if you are confident that the conditions are met.*
 
 ### `fs.s3a.create.header` User-supplied header support
