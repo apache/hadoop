@@ -4565,6 +4565,11 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
 
+  public static final String GPG_WEBAPP_CONNECT_TIMEOUT = GPG_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+  public static final String GPG_WEBAPP_READ_TIMEOUT = GPG_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_READ_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+
   /**
    * Connection and Read timeout from the Router to RM.
    */

@@ -5723,4 +5723,27 @@
     <value>50000</value>
   </property>
 
+  <property>
+    <description>
+      Set the connect timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This ensures that the connection is established within a specified time,
+      or it triggers a connection timeout exception.
+    </description>
+    <name>yarn.federation.gpg.webapp.connect-timeout</name>
+    <value>30s</value>
+  </property>
+
+  <property>
+    <description>
+      Set the read timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This timeout specifies the maximum time a client should wait for data to be read from a server
+      once the connection has been established.
+      If data is not received within the specified time, a read timeout exception is raised.
+    </description>
+    <name>yarn.federation.gpg.webapp.read-timeout</name>
+    <value>30s</value>
+  </property>
+
 </configuration>

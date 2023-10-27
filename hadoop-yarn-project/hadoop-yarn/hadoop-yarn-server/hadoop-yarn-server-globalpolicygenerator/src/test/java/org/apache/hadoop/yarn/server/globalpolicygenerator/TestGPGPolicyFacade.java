@@ -42,7 +42,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -73,7 +72,7 @@ public class TestGPGPolicyFacade {
   }
 
   @Before
-  public void setUp() throws IOException, YarnException {
+  public void setUp() throws YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
     facade.reinitialize(stateStore, conf);
