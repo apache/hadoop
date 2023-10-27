@@ -126,7 +126,7 @@ public final class RouterServerUtil {
       throws YarnException {
     if (t != null) {
       LOG.error(errMsg + "" + t.getMessage(), t);
-      throw new YarnException(errMsg, t);
+      throw new YarnException(errMsg + "" + t.getMessage(), t);
     } else {
       LOG.error(errMsg);
       throw new YarnException(errMsg);
