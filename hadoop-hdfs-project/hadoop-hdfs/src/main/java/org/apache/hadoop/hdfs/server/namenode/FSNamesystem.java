@@ -4534,6 +4534,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               LOG.warn(lowResourcesMsg + "Already in safe mode.");
             }
             enterSafeMode(true);
+          } else {
+            if (isNoManualAndResourceLowSafeMode()) {
+              LOG.info("Namenode has sufficient available resources, exiting safe mode.");
+              leaveSafeMode(false);
+            }
           }
           try {
             Thread.sleep(resourceRecheckInterval);
@@ -5263,6 +5268,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private synchronized boolean isInManualOrResourceLowSafeMode() {
     return manualSafeMode || resourceLowSafeMode;
+  }
+
+  /**
+   * @return true if it is not in manual safe mode and resource low safe mode.
+   */
+  private synchronized boolean isNoManualAndResourceLowSafeMode() {
+    return !manualSafeMode && resourceLowSafeMode;
   }
 
   private synchronized void setManualAndResourceLowSafeMode(boolean manual,

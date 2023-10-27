@@ -355,6 +355,7 @@ public class TestProtoBufRpc extends TestRpcBase {
       TimeoutException, InterruptedException {
     //No test with legacy
     assumeFalse(testWithLegacy);
+    server.setLogSlowRPCThresholdTime(SLEEP_DURATION);
     TestRpcService2 client = getClient2();
     // make 10 K fast calls
     for (int x = 0; x < 10000; x++) {
@@ -370,7 +371,13 @@ public class TestProtoBufRpc extends TestRpcBase {
     assertThat(rpcMetrics.getProcessingSampleCount()).isGreaterThan(999L);
     long before = rpcMetrics.getRpcSlowCalls();
 
-    // make a really slow call. Sleep sleeps for 1000ms
+    // Sleep sleeps for 500ms(less than `logSlowRPCThresholdTime`),
+    // make sure we never called into Log slow RPC routine.
+    client.sleep(null, newSleepRequest(SLEEP_DURATION / 2));
+    long after = rpcMetrics.getRpcSlowCalls();
+    assertThat(before).isEqualTo(after);
+
+    // Make a really slow call. Sleep sleeps for 3000ms.
     client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
 
     // Ensure slow call is logged.

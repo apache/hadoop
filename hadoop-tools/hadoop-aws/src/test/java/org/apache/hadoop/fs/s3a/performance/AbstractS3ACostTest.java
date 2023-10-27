@@ -91,6 +91,13 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     this.keepMarkers = keepMarkers;
   }
 
+  /**
+   * Constructor with markers kept.
+   */
+  public AbstractS3ACostTest() {
+    this(true);
+  }
+
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

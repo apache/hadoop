@@ -97,22 +97,22 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     LOG.info("Exec output=\n{}", output);
   }
 
-  private final static String UPLOAD_PREFIX = "test-upload-prefix";
   private final static String UPLOAD_NAME = "test-upload";
 
   @Test
   public void testUploads() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    Path path = path(UPLOAD_PREFIX + "/" + UPLOAD_NAME);
+    Path path = methodPath();
+    Path file = new Path(path, UPLOAD_NAME);
 
     describe("Cleaning up any leftover uploads from previous runs.");
-    final String key = fs.pathToKey(path);
+    final String key = fs.pathToKey(file);
     try {
       // 1. Make sure key doesn't already exist
       clearAnyUploads(fs, path);
 
       // 2. Confirm no uploads are listed via API
-      assertNoUploadsAt(fs, path.getParent());
+      assertNoUploadsAt(fs, path);
 
       // 3. Confirm no uploads are listed via CLI
       describe("Confirming CLI lists nothing.");
@@ -127,8 +127,6 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       // 6. Confirm part exists via CLI, direct path and parent path
       describe("Confirming CLI lists one part");
       assertNumUploads(path, 1);
-      assertNumUploads(path.getParent(), 1);
-      // 7. Use CLI to delete part, assert it worked
       describe("Deleting part via CLI");
       assertNumDeleted(fs, path, 1);
 
@@ -150,22 +148,23 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
   @Test
   public void testUploadListByAge() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    Path path = path(UPLOAD_PREFIX + "/" + UPLOAD_NAME);
+    Path path = methodPath();
+    Path file = new Path(path, UPLOAD_NAME);
 
     describe("Cleaning up any leftover uploads from previous runs.");
+
     // 1. Make sure key doesn't already exist
     clearAnyUploads(fs, path);
 
     // 2. Create a upload part
     describe("Uploading single part.");
-    final String key = fs.pathToKey(path);
+    final String key = fs.pathToKey(file);
     createPartUpload(fs, key, 128, 1);
 
     //try (AuditSpan span = fs.startOperation("multipart", key, null)) {
     try {
 
-      // 3. Confirm it exists via API.. may want to wrap with
-      // LambdaTestUtils.eventually() ?
+      // 3. Confirm it exists via API
       assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
 
       // 4. Confirm part does appear in listing with long age filter

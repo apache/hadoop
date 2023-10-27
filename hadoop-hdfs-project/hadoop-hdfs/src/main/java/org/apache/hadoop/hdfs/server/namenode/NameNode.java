@@ -126,6 +126,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
@@ -365,7 +369,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
-          DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY));
+          DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY,
+          IPC_SERVER_LOG_SLOW_RPC,
+          IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2369,6 +2375,9 @@ public class NameNode extends ReconfigurableBase implements
           newVal);
     } else if (property.equals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY)) {
       return reconfigureMinBlocksForWrite(property, newVal);
+    } else if (property.equals(IPC_SERVER_LOG_SLOW_RPC) ||
+        (property.equals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY))) {
+      return reconfigureLogSlowRPC(property, newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2509,6 +2518,43 @@ public class NameNode extends ReconfigurableBase implements
     rpcServer.getClientRpcServer()
         .setClientBackoffEnabled(clientBackoffEnabled);
     return Boolean.toString(clientBackoffEnabled);
+  }
+
+  String reconfigureLogSlowRPC(String property, String newVal) throws ReconfigurationException {
+    String result = null;
+    try {
+      if (property.equals(IPC_SERVER_LOG_SLOW_RPC)) {
+        if (newVal != null && !newVal.equalsIgnoreCase("true") &&
+            !newVal.equalsIgnoreCase("false")) {
+          throw new IllegalArgumentException(newVal + " is not boolean value");
+        }
+        boolean logSlowRPC = (newVal == null ? IPC_SERVER_LOG_SLOW_RPC_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        rpcServer.getClientRpcServer().setLogSlowRPC(logSlowRPC);
+        if (rpcServer.getServiceRpcServer() != null) {
+          rpcServer.getServiceRpcServer().setLogSlowRPC(logSlowRPC);
+        }
+        if (rpcServer.getLifelineRpcServer() != null) {
+          rpcServer.getLifelineRpcServer().setLogSlowRPC(logSlowRPC);
+        }
+        result = Boolean.toString(logSlowRPC);
+      } else if (property.equals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY)) {
+        long logSlowRPCThresholdTime = (newVal == null ?
+            IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT : Long.parseLong(newVal));
+        rpcServer.getClientRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
+        if (rpcServer.getServiceRpcServer() != null) {
+          rpcServer.getServiceRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
+        }
+        if (rpcServer.getLifelineRpcServer() != null) {
+          rpcServer.getLifelineRpcServer().setLogSlowRPCThresholdTime(logSlowRPCThresholdTime);
+        }
+        result = Long.toString(logSlowRPCThresholdTime);
+      }
+      LOG.info("RECONFIGURE* changed reconfigureLogSlowRPC {} to {}", property, result);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
   }
 
   String reconfigureSPSModeEvent(String newVal, String property)

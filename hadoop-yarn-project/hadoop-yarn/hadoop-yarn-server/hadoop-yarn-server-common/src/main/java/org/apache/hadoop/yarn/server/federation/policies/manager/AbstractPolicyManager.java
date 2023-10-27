@@ -53,10 +53,10 @@ public abstract class AbstractPolicyManager implements
    * @param federationPolicyContext the current context
    * @param oldInstance             the existing (possibly null) instance.
    *
-   * @return a valid and fully reinitalized {@link FederationAMRMProxyPolicy}
+   * @return a valid and fully reinitialized {@link FederationAMRMProxyPolicy}
    * instance
    *
-   * @throws FederationPolicyInitializationException if the reinitalization is
+   * @throws FederationPolicyInitializationException if the reinitialization is
    *                                                 not valid, and ensure
    *                                                 previous state is preserved
    */
@@ -89,10 +89,10 @@ public abstract class AbstractPolicyManager implements
    * @param federationPolicyContext the current context
    * @param oldInstance             the existing (possibly null) instance.
    *
-   * @return a valid and fully reinitalized {@link FederationRouterPolicy}
+   * @return a valid and fully reinitialized {@link FederationRouterPolicy}
    * instance
    *
-   * @throws FederationPolicyInitializationException if the reinitalization is
+   * @throws FederationPolicyInitializationException if the reinitialization is
    *                                                 not valid, and ensure
    *                                                 previous state is preserved
    */

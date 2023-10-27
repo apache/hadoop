@@ -465,9 +465,165 @@ If we want to use JCache, we can configure `yarn.federation.cache.class` to `org
 This is a Cache implemented based on the Guava framework.
 If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
+Router command line:
+
+- deregisterSubCluster
+
+This command is used to `deregister subCluster`, If the interval between the heartbeat time of the subCluster, and the current time exceeds the timeout period, set the state of the subCluster to `SC_LOST`.
+
+Uasge:
+
+`yarn routeradmin -deregisterSubCluster [-sc|--subClusterId <subCluster Id>]`
+
+Options:
+
+| Property                              | Description                                                                                                                                                      |
+|:--------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `-sc, --subClusterId [subCluster Id]` | `'-sc' option allows you to specify the sub-cluster to operate on, while the '--subClusterId' option is the long format of -sc and serves the same purpose.`     |
+
+Examples:
+
+If we want to deregisterSubCluster `SC-1`
+
+- yarn routeradmin -deregisterSubCluster -sc SC-1
+- yarn routeradmin -deregisterSubCluster --subClusterId SC-1
+
+- policy
+
+We provide a set of commands for Policy Include list policies, save policies, batch save policies.
+
+Uasge:
+
+`yarn routeradmin -policy -s|--save (queue;router weight;amrm weight;headroomalpha)`
+
+`yarn routeradmin -policy -bs|--batch-save (--format xml) (-f|--input-file fileName)`
+
+`yarn routeradmin -policy -l|--list ([--pageSize][--currentPage][--queue][--queues])`
+
+- -s|--save (<queue;router weight;amrm weight;headroomalpha>)
+
+This command is used to save the policy information of the queue, including queue and weight information.
+
+How to configure `queue;router weight;amrm weight;headroomalpha`
+
+the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
+
+| Property        | Description                                                                                                                                                                     |
+|:----------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `queue`         | `Scheduled queue`                                                                                                                                                               |
+| `router weight` | `Weight for routing applications to different subclusters.`                                                                                                                     |
+| `amrm weight`   | `Weight for resource request from ApplicationMaster (AM) to different subclusters' Resource Manager (RM).`                                                                      |
+| `headroomalpha` | `Used by policies that balance weight-based and load-based considerations in their decisions. It is recommended to use 1.0 because the load-base function is not yet complete.` |
+
+Example:
+
+We have two sub-clusters, `SC-1` and `SC-2`. We want to configure a weight policy for the `root.a` queue. The Router Weight is set to `SC-1` with a weight of `0.7` and `SC-2` with a weight of `0.3`.
+The AMRM Weight is set `SC-1` to `0.6` and `SC-2` to `0.4`. We are using the default value of `0.1` for `headroomalpha`.
+
+yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
+
+yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
+
+- -bs|--batch-save (--format xml) (-f|--input-file fileName)
+
+This command can batch load weight information for queues based on the provided `federation-weights.xml` file.
+
+| Property                  | Description                                                                                   |
+|:--------------------------|:----------------------------------------------------------------------------------------------|
+| `--format [xml]`          | `Configuration file format, we currently only support xml format`                             |
+| `-f, --input-file [path]` | `The path to the configuration file. Please use the absolute path of the configuration file.` |
+
+How to configure `federation-weights.xml`
+  ```xml
+  <federationWeights>
+    <weight>
+        <queue>
+            <name>root.a</name>
+            <amrmPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.7</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.3</weight>
+                </subClusterIdInfo>
+            </amrmPolicyWeights>
+            <routerPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.6</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.4</weight>
+                </subClusterIdInfo>
+            </routerPolicyWeights>
+            <headroomAlpha>1.0</headroomAlpha>
+        </queue>
+    </weight>
+    <weight>
+        <queue>
+            <name>root.b</name>
+            <amrmPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.8</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.2</weight>
+                </subClusterIdInfo>
+            </amrmPolicyWeights>
+            <routerPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.6</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.4</weight>
+                </subClusterIdInfo>
+            </routerPolicyWeights>
+            <headroomAlpha>1.0</headroomAlpha>
+        </queue>
+    </weight>
+   </federationWeights>
+  ```
+
+Example:
+
+We have two sub-clusters, `SC-1` and `SC-2`. We would like to configure weights for `root.a` and `root.b` queues. We can set the weights for `root.a` and `root.b` in the `federation-weights.xml` file.
+and then use the batch-save command to save the configurations in bulk.
+
+The file name can be any file name, but it is recommended to use `federation-weights.xml`
+
+yarn routeradmin -policy -bs --format xml -f /path/federation-weights.xml
+
+yarn routeradmin -policy --batch-save --format xml -f /path/federation-weights.xml
+
+- -l|--list (--pageSize --currentPage --queue --queues)
+
+This command is used to display the configured queue weight information.
+
+| Property        | Description                                                  |
+|:----------------|:-------------------------------------------------------------|
+| `--pageSize`    | `The number of policies displayed per page.`                 |
+| `--currentPage` | `This parameter represents the page number to be displayed.` |
+| `--queue`       | `the queue we need to filter. example: root.a`               |
+| `--queues`      | `list of queues to filter. example: root.a,root.b,root.c`    |
+
+Example:
+
+We can display the list of already configured queue weight information. We can use the `--queue` option to query the weight information for a specific queue or use the `--queues` option to query the weight information for multiple queues.
+
+yarn routeradmin -policy -l --pageSize 20 --currentPage 1 --queue root.a
+
+yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b
+
 ### ON GPG:
 
-GlobalPolicyGenerator, abbreviated as "GPG," is used for the automatic generation of global policies for subClusters.
+GlobalPolicyGenerator, abbreviated as "GPG", is used for the automatic generation of global policies for subClusters.
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** for GPG. We allow only one GPG.
 

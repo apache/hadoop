@@ -1192,11 +1192,25 @@ public final class Constants {
 
   /**
    * Flag for create performance.
-   * This is *not* a configuration option; it is for use in the
-   * {code createFile()} builder.
+   * This can be set in the {code createFile()} builder.
    * Value {@value}.
    */
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Default value for create performance in an S3A FS.
+   * Value {@value}.
+   */
+  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = true;
+
+
+  /**
+   * Capability to indicate that the FS has been instantiated with
+   * {@link #FS_S3A_CREATE_PERFORMANCE} set to true.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE_ENABLED =
+      FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
    * Prefix for adding a header to the object when created.
@@ -1318,4 +1332,19 @@ public final class Constants {
    * The bucket region header.
    */
   public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Should directory operations purge uploads?
+   * This adds at least one parallelized list operation to the call,
+   * plus the overhead of deletions.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_OPERATIONS_PURGE_UPLOADS =
+      "fs.s3a.directory.operations.purge.uploads";
+
+  /**
+   * Default value of {@link #DIRECTORY_OPERATIONS_PURGE_UPLOADS}: {@value}.
+   */
+  public static final boolean DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT = false;
+
 }
