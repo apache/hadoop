@@ -443,8 +443,9 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
       store.init(conf);
       Mockito.verify(factory, Mockito.times(1))
           .repair(Mockito.any(File.class), Mockito.any(Options.class));
-      FilenameFilter fileFilter =
-          new WildcardFileFilter("*" + RollingLevelDBTimelineStore.BACKUP_EXT + "*");
+      FilenameFilter fileFilter = WildcardFileFilter.builder()
+              .setWildcards("*" + RollingLevelDBTimelineStore.BACKUP_EXT + "*")
+              .get();
       Assert.assertTrue(new File(path.getAbsolutePath(), RollingLevelDBTimelineStore.FILENAME)
           .list(fileFilter).length > 0);
     } finally {
