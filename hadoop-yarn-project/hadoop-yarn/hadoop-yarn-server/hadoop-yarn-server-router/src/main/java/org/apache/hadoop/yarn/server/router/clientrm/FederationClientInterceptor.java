@@ -816,9 +816,9 @@ public class FederationClientInterceptor
       clusterMetrics = invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      String msg = "Unable to get cluster metrics due to exception. ";
+      String msg = "Unable to get cluster metrics due to exception.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, msg + ex.getMessage());
+          TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
@@ -837,7 +837,7 @@ public class FederationClientInterceptor
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
-    List<String> exceptions = new ArrayList<>();
+    Map<SubClusterId, Exception> exceptions = new TreeMap<>();
 
     // Generate parallel Callable tasks
     for (SubClusterId subClusterId : subClusterIds) {
@@ -856,8 +856,9 @@ public class FederationClientInterceptor
             cause = cause.getCause();
           }
           String errMsg = (cause.getMessage() != null) ? cause.getMessage() : "UNKNOWN";
-          throw new YarnException(String.format("subClusterId %s exec %s error %s.",
-              subClusterId, request.getMethodName(), errMsg), e);
+          return Pair.of(subClusterId, new YarnException(
+                  String.format("subClusterId %s exec %s error %s.", subClusterId,
+                          request.getMethodName(), errMsg), e));
         }
       });
     }
@@ -872,11 +873,15 @@ public class FederationClientInterceptor
           Pair<SubClusterId, Object> pair = future.get();
           subClusterId = pair.getKey();
           Object result = pair.getValue();
+          if(result instanceof YarnException) {
+            throw YarnException.class.cast(result);
+          }
           results.put(subClusterId, clazz.cast(result));
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | YarnException e) {
           Throwable cause = e.getCause();
-          LOG.error(cause.getMessage(), e);
-          exceptions.add(cause.getMessage());
+          LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
+                  subClusterId.getId(), cause.getMessage());
+          exceptions.put(subClusterId, e);
         }
       });
     } catch (InterruptedException e) {
@@ -886,7 +891,8 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      throw new YarnException("invokeConcurrent Failed = " + StringUtils.join(exceptions, ","));
+      throw new YarnException("invokeConcurrent Failed = " +
+          StringUtils.join(exceptions.values(), ","));
     }
 
     // return result

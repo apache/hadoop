@@ -125,7 +125,7 @@ public final class RouterServerUtil {
   public static void logAndThrowException(String errMsg, Throwable t)
       throws YarnException {
     if (t != null) {
-      LOG.error(errMsg, t);
+      LOG.error(errMsg + "" + t.getMessage(), t);
       throw new YarnException(errMsg, t);
     } else {
       LOG.error(errMsg);
