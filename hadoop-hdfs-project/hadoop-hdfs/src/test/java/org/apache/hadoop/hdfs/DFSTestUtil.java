@@ -1438,7 +1438,7 @@ public class DFSTestUtil {
     Short permission = 0777;
     filesystem.setPermission(pathFileCreate, new FsPermission(permission));
     // OP_SET_OWNER 8
-    filesystem.setOwner(pathFileCreate, new String("newOwner"), null);
+    filesystem.setOwner(pathFileCreate, "newOwner", null);
     // OP_CLOSE 9 see above
     // OP_SET_GENSTAMP 10 see above
     // OP_SET_NS_QUOTA 11 obsolete
