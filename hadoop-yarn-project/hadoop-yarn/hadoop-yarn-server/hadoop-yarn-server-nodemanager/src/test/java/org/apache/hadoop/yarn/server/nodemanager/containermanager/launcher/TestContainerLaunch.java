@@ -218,7 +218,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       //Capture output from prelaunch.out
 
       List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       assert(output.contains("hello"));
 
       symLinkFile = new File(tmpDir, badSymlink);
@@ -549,7 +549,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } catch(ExitCodeException e){
         //Capture diagnostics from prelaunch.stderr
         List<String> error = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR),
-            Charset.forName("UTF-8"));
+            StandardCharsets.UTF_8);
         diagnostics = StringUtils.join("\n", error);
       }
       Assert.assertTrue(diagnostics.contains(Shell.WINDOWS ?

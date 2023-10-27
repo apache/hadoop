@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -53,7 +54,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String ANONYMOUS_ALLOWED = TYPE + ".anonymous.allowed";
 
-  private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+  private static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
 
   private static final String PSEUDO_AUTH = "PseudoAuth";
 

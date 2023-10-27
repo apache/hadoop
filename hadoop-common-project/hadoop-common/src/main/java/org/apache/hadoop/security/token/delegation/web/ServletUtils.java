@@ -24,6 +24,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -31,7 +32,7 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 class ServletUtils {
-  private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+  private static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
 
   /**
    * Extract a query string parameter without triggering http parameters

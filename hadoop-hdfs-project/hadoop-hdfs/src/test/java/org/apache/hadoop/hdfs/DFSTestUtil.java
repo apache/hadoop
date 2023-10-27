@@ -53,6 +53,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -70,7 +71,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -985,7 +985,7 @@ public class DFSTestUtil {
    * @return url content as string (UTF-8 encoding assumed)
    */
   public static String urlGet(URL url) throws IOException {
-    return new String(urlGetBytes(url), Charsets.UTF_8);
+    return new String(urlGetBytes(url), StandardCharsets.UTF_8);
   }
   
   /**

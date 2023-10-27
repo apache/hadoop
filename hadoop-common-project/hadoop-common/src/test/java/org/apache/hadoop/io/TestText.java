@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import org.junit.Test;
 
@@ -105,7 +105,7 @@ public class TestText {
       ByteBuffer bb = Text.encode(before);
           
       byte[] utf8Text = bb.array();
-      byte[] utf8Java = before.getBytes("UTF-8");
+      byte[] utf8Java = before.getBytes(StandardCharsets.UTF_8);
       assertEquals(0, WritableComparator.compareBytes(
               utf8Text, 0, bb.limit(),
               utf8Java, 0, utf8Java.length));
@@ -392,7 +392,7 @@ public class TestText {
   @Test
   public void testReadWithKnownLength() throws IOException {
     String line = "hello world";
-    byte[] inputBytes = line.getBytes(Charsets.UTF_8);
+    byte[] inputBytes = line.getBytes(StandardCharsets.UTF_8);
     DataInputBuffer in = new DataInputBuffer();
     Text text = new Text();
 
