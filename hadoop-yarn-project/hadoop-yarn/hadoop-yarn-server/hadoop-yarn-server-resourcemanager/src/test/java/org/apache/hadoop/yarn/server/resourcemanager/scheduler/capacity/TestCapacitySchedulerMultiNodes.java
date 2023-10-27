@@ -491,7 +491,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default", 1.0f);
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
     newConf.set(CapacitySchedulerConfiguration.SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS,
         "true");
     MockRM rm1 = new MockRM(newConf);
