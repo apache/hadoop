@@ -2367,7 +2367,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             "block: {}", v, invalidBlks[i]));
       }
     }
-    
+
     if (!infos.isEmpty()) {
       for(int i = 0; i < infos.size(); i++) {
         LOG.info(infos.get(i));
@@ -2472,7 +2472,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       try {
         File blockFile = new File(info.getBlockURI());
         if (blockFile.getParentFile() == null) {
-          errors.add(String.format("Failed to delete replica {}. Parent not found for block file: {} " +
+          errors.add(String.format("Failed to delete replica {}. " +
+              "Parent not found for block file: {} " +
               "in removeReplicaFromMem.", localBlock, blockFile));
         }
       } catch(IllegalArgumentException e) {
@@ -2481,7 +2482,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
 
       if (!volume.getStorageID().equals(v.getStorageID())) {
-        errors.add(String.format("Failed to delete replica {}. Appear different volumes, oldVolume: {} " +
+        errors.add(String.format("Failed to delete replica {}. " +
+            "Appear different volumes, oldVolume: {} " +
             "and newVolume: {} for this replica in removeReplicaFromMem.",
             localBlock, volume, v));
       }
