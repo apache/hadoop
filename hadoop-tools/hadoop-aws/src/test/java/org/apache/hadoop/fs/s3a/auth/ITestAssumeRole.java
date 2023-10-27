@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.sts.model.StsException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.assertj.core.api.Assertions;
@@ -40,10 +41,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
@@ -463,7 +464,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     // list multipart uploads.
     // This is part of the read policy.
     int counter = 0;
-    MultipartUtils.UploadIterator iterator = roleFS.listUploads("/");
+    RemoteIterator<MultipartUpload> iterator = roleFS.listUploads("/");
     while (iterator.hasNext()) {
       counter++;
       iterator.next();
