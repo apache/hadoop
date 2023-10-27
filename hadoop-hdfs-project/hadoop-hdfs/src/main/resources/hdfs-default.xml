@@ -2941,6 +2941,33 @@
 </property>
 
 <property>
+  <name>dfs.namenode.crm.checklocktime.enable</name>
+  <value>false</value>
+  <description>
+    Set to true to enable CacheManager to check amount of time to hold the
+    global rwlock.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.maxlocktime.ms</name>
+  <value>1000</value>
+  <description>
+    The maximum amount of time that CacheManager should hold the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.sleeptime.ms</name>
+  <value>300</value>
+  <description>
+    The amount of time that CacheManager should relase the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.max.locked.memory</name>
   <value>0</value>
   <description>
@@ -3753,6 +3780,14 @@
     tries to get local NN thread dump after local NN becomes
     SERVICE_NOT_RESPONDING or SERVICE_UNHEALTHY.
     If it is set to zero, DFS ZKFC won't get local NN thread dump.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
   </description>
 </property>
 

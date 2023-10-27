@@ -164,4 +164,16 @@ public interface OperationCallbacks {
       Path path,
       String key)
       throws IOException;
+
+  /**
+   * Abort multipart uploads under a path; paged.
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  @Retries.RetryTranslated
+  default long abortMultipartUploadsUnderPrefix(String prefix)
+      throws IOException {
+    return 0;
+  }
 }

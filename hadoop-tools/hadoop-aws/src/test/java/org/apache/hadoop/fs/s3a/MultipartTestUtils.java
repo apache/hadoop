@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.io.IOUtils;
@@ -96,7 +97,7 @@ public final class MultipartTestUtils {
     String key = fs.pathToKey(path);
     AuditSpan span = null;
     try {
-      MultipartUtils.UploadIterator uploads = fs.listUploads(key);
+      RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
       span = fs.createSpan("multipart", path.toString(), null);
       final WriteOperationHelper helper
           = fs.getWriteOperationHelper();
@@ -118,7 +119,7 @@ public final class MultipartTestUtils {
   public static void assertNoUploadsAt(S3AFileSystem fs, Path path) throws
       Exception {
     String key = fs.pathToKey(path);
-    MultipartUtils.UploadIterator uploads = fs.listUploads(key);
+    RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
       Assert.fail("Found unexpected upload " + upload.key() + " " +
@@ -130,7 +131,7 @@ public final class MultipartTestUtils {
   public static int countUploadsAt(S3AFileSystem fs, Path path) throws
       IOException {
     String key = fs.pathToKey(path);
-    MultipartUtils.UploadIterator uploads = fs.listUploads(key);
+    RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
     int count = 0;
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();

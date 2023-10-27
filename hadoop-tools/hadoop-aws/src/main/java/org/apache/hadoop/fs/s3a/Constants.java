@@ -1318,4 +1318,19 @@ public final class Constants {
    * The bucket region header.
    */
   public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Should directory operations purge uploads?
+   * This adds at least one parallelized list operation to the call,
+   * plus the overhead of deletions.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_OPERATIONS_PURGE_UPLOADS =
+      "fs.s3a.directory.operations.purge.uploads";
+
+  /**
+   * Default value of {@link #DIRECTORY_OPERATIONS_PURGE_UPLOADS}: {@value}.
+   */
+  public static final boolean DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT = false;
+
 }

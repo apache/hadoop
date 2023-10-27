@@ -88,7 +88,7 @@ public class TestRefreshCallQueue {
   @SuppressWarnings("serial")
   public static class MockCallQueue<E> extends LinkedBlockingQueue<E> {
     public MockCallQueue(int levels, int cap, String ns, int[] capacityWeights,
-        Configuration conf) {
+        boolean serverFailOverEnabled, Configuration conf) {
       super(cap);
       mockQueueConstructions++;
     }
@@ -172,6 +172,6 @@ public class TestRefreshCallQueue {
     // check callQueueSize has changed
     assertEquals(150 * serviceHandlerCount, rpcServer.getClientRpcServer()
         .getMaxQueueSize());
- }
+  }
 
 }
