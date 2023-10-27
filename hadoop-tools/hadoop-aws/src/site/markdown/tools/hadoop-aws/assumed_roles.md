@@ -371,16 +371,7 @@ The Assumed Role Credential Provider is enabled, but `fs.s3a.assumed.role.arn` i
 ```
 java.io.IOException: Unset property fs.s3a.assumed.role.arn
   at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:76)
-  at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
-  at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
-  at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
-  at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:583)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
+
 ```
 
 ### <a name="not_authorized_for_assumed_role"></a> "Not authorized to perform sts:AssumeRole"
@@ -390,17 +381,9 @@ or one to which the caller has no access.
 
 ```
 java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
- on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
   Not authorized to perform sts:AssumeRole (Service: AWSSecurityTokenService; Status Code: 403;
    Error Code: AccessDenied; Request ID: aad4e59a-f4b0-11e7-8c78-f36aaa9457f6):AccessDenied
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:215)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
+
 ```
 
 ### <a name="root_account"></a> "Roles may not be assumed by root accounts"
@@ -411,31 +394,15 @@ the role.
 
 ```
 java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
- on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+
     Roles may not be assumed by root accounts. (Service: AWSSecurityTokenService; Status Code: 403; Error Code: AccessDenied;
     Request ID: e86dfd8f-e758-11e7-88e7-ad127c04b5e2):
     No AWS Credentials provided by AssumedRoleCredentialProvider :
-    com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+    software.amazon.awssdk.services.sts.model.StsException:
     Roles may not be assumed by root accounts. (Service: AWSSecurityTokenService;
      Status Code: 403; Error Code: AccessDenied; Request ID: e86dfd8f-e758-11e7-88e7-ad127c04b5e2)
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:215)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
-  ... 22 more
-Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
- Roles may not be assumed by root accounts.
-  (Service: AWSSecurityTokenService; Status Code: 403; Error Code: AccessDenied;
-   Request ID: e86dfd8f-e758-11e7-88e7-ad127c04b5e2)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1055)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:743)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:717)
+
+
 ```
 
 ### <a name="invalid_duration"></a> `Member must have value greater than or equal to 900`
@@ -444,7 +411,7 @@ The value of `fs.s3a.assumed.role.session.duration` is too low.
 
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException: request role credentials:
-com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+software.amazon.awssdk.services.sts.model.StsException:
 1 validation error detected: Value '20' at 'durationSeconds' failed to satisfy constraint:
 Member must have value greater than or equal to 900 (Service: AWSSecurityTokenService;
 Status Code: 400; Error Code: ValidationError;
@@ -459,7 +426,7 @@ The value of `fs.s3a.assumed.role.session.duration` is too high.
 
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException: request role credentials:
- com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+ software.amazon.awssdk.services.sts.model.StsException:
 The requested DurationSeconds exceeds the MaxSessionDuration set for this role.
 (Service: AWSSecurityTokenService; Status Code: 400;
  Error Code: ValidationError; Request ID: 17875165-d0a7-11e8-b85f-d15a599a7f6d)
@@ -478,7 +445,7 @@ any role for up to  12h; attempting to use a larger number will fail.
 
 
 ```
-Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+Caused by: software.amazon.awssdk.services.sts.model.StsException:
 1 validation error detected:
 Value '345600' at 'durationSeconds' failed to satisfy constraint:
 Member must have value less than or equal to 43200
@@ -492,7 +459,7 @@ For full sessions, the duration limit is 129600 seconds: 36h.
 
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException: request session credentials:
-com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+software.amazon.awssdk.services.sts.model.StsException:
 1 validation error detected: Value '345600' at 'durationSeconds' failed to satisfy constraint:
 Member must have value less than or equal to 129600
 (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError;
@@ -510,26 +477,12 @@ AWS specification of Role Policies.
 
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
- com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException:
+ software.amazon.awssdk.services.sts.model.MalformedPolicyDocumentException:
   The policy is not in the valid JSON format. (Service: AWSSecurityTokenService; Status Code: 400;
    Error Code: MalformedPolicyDocument; Request ID: baf8cb62-f552-11e7-9768-9df3b384e40c):
    MalformedPolicyDocument: The policy is not in the valid JSON format.
    (Service: AWSSecurityTokenService; Status Code: 400; Error Code: MalformedPolicyDocument;
     Request ID: baf8cb62-f552-11e7-9768-9df3b384e40c)
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:209)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
-Caused by: com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException:
- The policy is not in the valid JSON format.
-  (Service: AWSSecurityTokenService; Status Code: 400;
-   Error Code: MalformedPolicyDocument; Request ID: baf8cb62-f552-11e7-9768-9df3b384e40c)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
 ```
 
 ### <a name="policy_syntax_error"></a> `MalformedPolicyDocumentException` "Syntax errors in policy"
@@ -539,27 +492,13 @@ The policy set in `fs.s3a.assumed.role.policy` is not valid JSON.
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException:
 Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
- com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException:
+ software.amazon.awssdk.services.sts.model.MalformedPolicyDocumentException:
   Syntax errors in policy. (Service: AWSSecurityTokenService;
   Status Code: 400; Error Code: MalformedPolicyDocument;
   Request ID: 24a281e8-f553-11e7-aa91-a96becfb4d45):
   MalformedPolicyDocument: Syntax errors in policy.
   (Service: AWSSecurityTokenService; Status Code: 400; Error Code: MalformedPolicyDocument;
   Request ID: 24a281e8-f553-11e7-aa91-a96becfb4d45)
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:209)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
- (Service: AWSSecurityTokenService; Status Code: 400; Error Code: MalformedPolicyDocument;
-  Request ID: 24a281e8-f553-11e7-aa91-a96becfb4d45)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1055)
-  ... 19 more
 ```
 
 ### <a name="recursive_auth"></a> `IOException`: "AssumedRoleCredentialProvider cannot be in fs.s3a.assumed.role.credentials.provider"
@@ -591,7 +530,7 @@ inner authentication which is breaking signature creation.
 
 ```
  org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
-  on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+  on : software.amazon.awssdk.services.sts.model.StsException:
    'valid/20180109/us-east-1/sts/aws4_request' not a valid key=value pair (missing equal-sign) in Authorization header:
     'AWS4-HMAC-SHA256 Credential=not valid/20180109/us-east-1/sts/aws4_request,
     SignedHeaders=amz-sdk-invocation-id;amz-sdk-retry;host;user-agent;x-amz-date.
@@ -601,21 +540,7 @@ inner authentication which is breaking signature creation.
     in Authorization header: 'AWS4-HMAC-SHA256 Credential=not valid/20180109/us-east-1/sts/aws4_request,
     SignedHeaders=amz-sdk-invocation-id;amz-sdk-retry;host;user-agent;x-amz-date,
     (Service: AWSSecurityTokenService; Status Code: 400; Error Code: IncompleteSignature;
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:209)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
 
-Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
-    'valid/20180109/us-east-1/sts/aws4_request' not a valid key=value pair (missing equal-sign)
-    in Authorization header: 'AWS4-HMAC-SHA256 Credential=not valid/20180109/us-east-1/sts/aws4_request,
-    SignedHeaders=amz-sdk-invocation-id;amz-sdk-retry;host;user-agent;x-amz-date,
-    (Service: AWSSecurityTokenService; Status Code: 400; Error Code: IncompleteSignature;
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
 ```
 
 ### <a name="invalid_token"></a> `AccessDeniedException/InvalidClientTokenId`: "The security token included in the request is invalid"
@@ -625,27 +550,11 @@ The credentials used to authenticate with the AWS Security Token Service are inv
 ```
 [ERROR] Failures:
 [ERROR] java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
- com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+ software.amazon.awssdk.services.sts.model.StsException:
   The security token included in the request is invalid.
   (Service: AWSSecurityTokenService; Status Code: 403; Error Code: InvalidClientTokenId;
    Request ID: 74aa7f8a-f557-11e7-850c-33d05b3658d7):InvalidClientTokenId
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:215)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-
-Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
-The security token included in the request is invalid.
- (Service: AWSSecurityTokenService; Status Code: 403; Error Code: InvalidClientTokenId;
- Request ID: 74aa7f8a-f557-11e7-850c-33d05b3658d7)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1055)
-  ... 25 more
-```
+ ```
 
 ### <a name="invalid_session"></a> `AWSSecurityTokenServiceExceptiond`: "Member must satisfy regular expression pattern: `[\w+=,.@-]*`"
 
@@ -659,7 +568,7 @@ If set explicitly, it must be valid.
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException:
  Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on
-    com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+    software.amazon.awssdk.services.sts.model.StsException:
     1 validation error detected: Value 'Session Names cannot Hava Spaces!' at 'roleSessionName'
     failed to satisfy constraint: Member must satisfy regular expression pattern: [\w+=,.@-]*
     (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError;
@@ -667,23 +576,7 @@ org.apache.hadoop.fs.s3a.AWSBadRequestException:
     1 validation error detected: Value 'Session Names cannot Hava Spaces!' at 'roleSessionName'
     failed to satisfy constraint: Member must satisfy regular expression pattern: [\w+=,.@-]*
     (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError;
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:209)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:616)
-  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:520)
-  at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:52)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:252)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
-  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
-  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
-
-Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
-    1 validation error detected: Value 'Session Names cannot Hava Spaces!' at 'roleSessionName'
-    failed to satisfy constraint:
-    Member must satisfy regular expression pattern: [\w+=,.@-]*
-    (Service: AWSSecurityTokenService; Status Code: 400; Error Code: ValidationError;
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
-```
+  ```
 
 
 ### <a name="access_denied"></a> `java.nio.file.AccessDeniedException` within a FileSystem API call
@@ -692,23 +585,11 @@ If an operation fails with an `AccessDeniedException`, then the role does not ha
 the permission for the S3 Operation invoked during the call.
 
 ```
-java.nio.file.AccessDeniedException: s3a://bucket/readonlyDir:
-  rename(s3a://bucket/readonlyDir, s3a://bucket/renameDest)
- on s3a://bucket/readonlyDir:
-  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
-  (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 2805F2ABF5246BB1;
-   S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=),
-   S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=:AccessDenied
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:216)
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:143)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.rename(S3AFileSystem.java:853)
- ...
-Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
- (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 2805F2ABF5246BB1;
-  S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=),
-  S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
-  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
+> hadoop fs -touch  s3a://landsat-pds/a
+
+java.nio.file.AccessDeniedException: a: Writing Object on a:
+ software.amazon.awssdk.services.s3.model.S3Exception: Access Denied
+ (Service: S3, Status Code: 403, Request ID: F08EV50F85AYKF1V, Extended Request ID: 75vMz9xWNP5/lYplPSZfm/i4yQ5q0G32SIwOwfaj6a8gNCRj9tLBAqcLaaexT/aNg2DhWZQPvDU=):AccessDenied
 ```
 
 This is the policy restriction behaving as intended: the caller is trying to
@@ -743,28 +624,9 @@ If the client does have write access to the bucket, verify that the caller has
 
 ```
 java.nio.file.AccessDeniedException: test/testDTFileSystemClient: Writing Object on test/testDTFileSystemClient:
-  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; 
+  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied (Service: Amazon S3; Status Code: 403;
   Error Code: AccessDenied; Request ID: E86544FF1D029857)
 
-    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:243)
-    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:111)
-    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:314)
-    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:406)
-    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:310)
-    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:285)
-    at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:150)
-    at org.apache.hadoop.fs.s3a.WriteOperationHelper.putObject(WriteOperationHelper.java:460)
-    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.lambda$putObject$0(S3ABlockOutputStream.java:438)
-    at org.apache.hadoop.util.SemaphoredDelegatingExecutor$CallableWithPermitRelease.call(SemaphoredDelegatingExecutor.java:219)
-    at org.apache.hadoop.util.SemaphoredDelegatingExecutor$CallableWithPermitRelease.call(SemaphoredDelegatingExecutor.java:219)
-    at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:125)
-    at com.google.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:57)
-    at com.google.common.util.concurrent.TrustedListenableFutureTask.run(TrustedListenableFutureTask.java:78)
-    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-    at java.lang.Thread.run(Thread.java:748)
-Caused by:  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403;
-            Error Code: AccessDenied; Request ID: E86544FF1D029857)
 ```
 
 Note: the ability to read encrypted data in the store does not guarantee that the caller can encrypt new data.
@@ -779,14 +641,9 @@ This is a low-level networking error. Possible causes include:
 
 ```
 org.apache.hadoop.fs.s3a.AWSClientIOException: request session credentials:
-  com.amazonaws.SdkClientException:
 
   Unable to execute HTTP request: null: Unable to execute HTTP request: null
-at com.amazonaws.thirdparty.apache.http.impl.conn.DefaultRoutePlanner.determineRoute(DefaultRoutePlanner.java:88)
-at com.amazonaws.thirdparty.apache.http.impl.client.InternalHttpClient.determineRoute(InternalHttpClient.java:124)
-at com.amazonaws.thirdparty.apache.http.impl.client.InternalHttpClient.doExecute(InternalHttpClient.java:183)
-at com.amazonaws.thirdparty.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
-at com.amazonaws.thirdparty.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+
 ```
 
 ###  <a name="credential_scope"></a> Error "Credential should be scoped to a valid region"
@@ -800,7 +657,7 @@ Variant 1: `Credential should be scoped to a valid region, not 'us-west-1'` (or 
 
 ```
 java.nio.file.AccessDeniedException: : request session credentials:
-com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+software.amazon.awssdk.services.sts.model.StsException:
 Credential should be scoped to a valid region, not 'us-west-1'.
 (Service: AWSSecurityTokenService; Status Code: 403; Error Code: SignatureDoesNotMatch; Request ID: d9065cc4-e2b9-11e8-8b7b-f35cb8d7aea4):SignatureDoesNotMatch
 ```
@@ -817,7 +674,7 @@ Variant 2: `Credential should be scoped to a valid region, not ''`
 
 ```
 java.nio.file.AccessDeniedException: : request session credentials:
-com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
+software.amazon.awssdk.services.sts.model.StsException:
   Credential should be scoped to a valid region, not ''. (
   Service: AWSSecurityTokenService; Status Code: 403; Error Code: SignatureDoesNotMatch;
   Request ID: bd3e5121-e2ac-11e8-a566-c1a4d66b6a16):SignatureDoesNotMatch

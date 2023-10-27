@@ -85,7 +85,7 @@ public final class ConfigurationKeys {
   /**
    * What data block buffer to use.
    * <br>
-   * Options include: "disk"(Default), "array", and "bytebuffer".
+   * Options include: "disk", "array", and "bytebuffer"(Default).
    * <br>
    * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
    * Value: {@value}

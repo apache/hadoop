@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
+
 /**
  * A 400 "Bad Request" exception was received.
  * This is the general "bad parameters, headers, whatever" failure.
@@ -28,7 +30,7 @@ public class AWSBadRequestException extends AWSServiceIOException {
   /**
    * HTTP status code which signals this failure mode was triggered: {@value}.
    */
-  public static final int STATUS_CODE = 400;
+  public static final int STATUS_CODE = SC_400_BAD_REQUEST;
 
   /**
    * Instantiate.

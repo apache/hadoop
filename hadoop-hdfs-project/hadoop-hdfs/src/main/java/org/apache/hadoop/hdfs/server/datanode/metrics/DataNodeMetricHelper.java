@@ -73,7 +73,10 @@ public class DataNodeMetricHelper {
           " blocks failed in cache eviction"),
         beanClass.getNumBlocksFailedToUncache())
         .addGauge(Interns.info("LastDirectoryScannerFinishTime",
-        "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime());
+        "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime())
+        .addGauge(Interns.info("PendingAsyncDeletions",
+            "The count of pending and running asynchronous disk operations"),
+            beanClass.getPendingAsyncDeletions());
   }
 
 }

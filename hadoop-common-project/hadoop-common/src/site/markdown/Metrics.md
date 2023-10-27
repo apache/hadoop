@@ -508,8 +508,12 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
-| `slowFlushOrSyncCount` | Total number of packets whose sync/flush takes more than a certain time (300ms by default) |
-| `slowAckToUpstreamCount` | Total number of packets whose upstream ack takes more than a certain time (300ms by default) |
+| `SlowFlushOrSyncCount` | Total number of packets whose sync/flush takes more than a certain time (300ms by default) |
+| `SlowAckToUpstreamCount` | Total number of packets whose upstream ack takes more than a certain time (300ms by default) |
+| `SumOfActorCommandQueueLength` | Sum of all BPServiceActors command queue length |
+| `NumProcessedCommands` | Num of processed commands of all BPServiceActors |
+| `ProcessedCommandsOpNumOps` | Total number of processed commands operations |
+| `ProcessedCommandsOpAvgTime` | Average time of processed commands operations in milliseconds |
 
 FsVolume
 --------

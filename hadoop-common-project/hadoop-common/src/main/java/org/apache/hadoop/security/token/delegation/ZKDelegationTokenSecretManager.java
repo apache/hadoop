@@ -60,7 +60,6 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -270,10 +269,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
       try {
         String nameSpace = "/" + zkClient.getNamespace();
-        Stat stat = nullNsFw.checkExists().forPath(nameSpace);
-        if (stat == null) {
-          nullNsFw.create().creatingParentContainersIfNeeded().forPath(nameSpace);
-        }
+        nullNsFw.create().creatingParentContainersIfNeeded().forPath(nameSpace);
+      } catch (KeeperException.NodeExistsException ignore) {
+        // We don't care if the znode already exists
       } catch (Exception e) {
         throw new IOException("Could not create namespace", e);
       }

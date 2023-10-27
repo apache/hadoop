@@ -384,7 +384,7 @@ Optional:
 |`yarn.federation.state-store.heartbeat-interval-secs` | `60` | The rate at which RMs report their membership to the federation to the central state-store. |
 
 
-###ON ROUTER:
+### ON ROUTER:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each Router.
 
@@ -465,7 +465,244 @@ If we want to use JCache, we can configure `yarn.federation.cache.class` to `org
 This is a Cache implemented based on the Guava framework.
 If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
-###ON NMs:
+Router command line:
+
+- deregisterSubCluster
+
+This command is used to `deregister subCluster`, If the interval between the heartbeat time of the subCluster, and the current time exceeds the timeout period, set the state of the subCluster to `SC_LOST`.
+
+Uasge:
+
+`yarn routeradmin -deregisterSubCluster [-sc|--subClusterId <subCluster Id>]`
+
+Options:
+
+| Property                              | Description                                                                                                                                                      |
+|:--------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `-sc, --subClusterId [subCluster Id]` | `'-sc' option allows you to specify the sub-cluster to operate on, while the '--subClusterId' option is the long format of -sc and serves the same purpose.`     |
+
+Examples:
+
+If we want to deregisterSubCluster `SC-1`
+
+- yarn routeradmin -deregisterSubCluster -sc SC-1
+- yarn routeradmin -deregisterSubCluster --subClusterId SC-1
+
+- policy
+
+We provide a set of commands for Policy Include list policies, save policies, batch save policies.
+
+Uasge:
+
+`yarn routeradmin -policy -s|--save (queue;router weight;amrm weight;headroomalpha)`
+
+`yarn routeradmin -policy -bs|--batch-save (--format xml) (-f|--input-file fileName)`
+
+`yarn routeradmin -policy -l|--list ([--pageSize][--currentPage][--queue][--queues])`
+
+- -s|--save (<queue;router weight;amrm weight;headroomalpha>)
+
+This command is used to save the policy information of the queue, including queue and weight information.
+
+How to configure `queue;router weight;amrm weight;headroomalpha`
+
+the sum of weights for all sub-clusters in routerWeight/amrmWeight should be 1.
+
+| Property        | Description                                                                                                                                                                     |
+|:----------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `queue`         | `Scheduled queue`                                                                                                                                                               |
+| `router weight` | `Weight for routing applications to different subclusters.`                                                                                                                     |
+| `amrm weight`   | `Weight for resource request from ApplicationMaster (AM) to different subclusters' Resource Manager (RM).`                                                                      |
+| `headroomalpha` | `Used by policies that balance weight-based and load-based considerations in their decisions. It is recommended to use 1.0 because the load-base function is not yet complete.` |
+
+Example:
+
+We have two sub-clusters, `SC-1` and `SC-2`. We want to configure a weight policy for the `root.a` queue. The Router Weight is set to `SC-1` with a weight of `0.7` and `SC-2` with a weight of `0.3`.
+The AMRM Weight is set `SC-1` to `0.6` and `SC-2` to `0.4`. We are using the default value of `0.1` for `headroomalpha`.
+
+yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
+
+yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
+
+- -bs|--batch-save (--format xml) (-f|--input-file fileName)
+
+This command can batch load weight information for queues based on the provided `federation-weights.xml` file.
+
+| Property                  | Description                                                                                   |
+|:--------------------------|:----------------------------------------------------------------------------------------------|
+| `--format [xml]`          | `Configuration file format, we currently only support xml format`                             |
+| `-f, --input-file [path]` | `The path to the configuration file. Please use the absolute path of the configuration file.` |
+
+How to configure `federation-weights.xml`
+  ```xml
+  <federationWeights>
+    <weight>
+        <queue>
+            <name>root.a</name>
+            <amrmPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.7</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.3</weight>
+                </subClusterIdInfo>
+            </amrmPolicyWeights>
+            <routerPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.6</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.4</weight>
+                </subClusterIdInfo>
+            </routerPolicyWeights>
+            <headroomAlpha>1.0</headroomAlpha>
+        </queue>
+    </weight>
+    <weight>
+        <queue>
+            <name>root.b</name>
+            <amrmPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.8</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.2</weight>
+                </subClusterIdInfo>
+            </amrmPolicyWeights>
+            <routerPolicyWeights>
+                <subClusterIdInfo>
+                    <id>SC-1</id>
+                    <weight>0.6</weight>
+                </subClusterIdInfo>
+                <subClusterIdInfo>
+                    <id>SC-2</id>
+                    <weight>0.4</weight>
+                </subClusterIdInfo>
+            </routerPolicyWeights>
+            <headroomAlpha>1.0</headroomAlpha>
+        </queue>
+    </weight>
+   </federationWeights>
+  ```
+
+Example:
+
+We have two sub-clusters, `SC-1` and `SC-2`. We would like to configure weights for `root.a` and `root.b` queues. We can set the weights for `root.a` and `root.b` in the `federation-weights.xml` file.
+and then use the batch-save command to save the configurations in bulk.
+
+The file name can be any file name, but it is recommended to use `federation-weights.xml`
+
+yarn routeradmin -policy -bs --format xml -f /path/federation-weights.xml
+
+yarn routeradmin -policy --batch-save --format xml -f /path/federation-weights.xml
+
+- -l|--list (--pageSize --currentPage --queue --queues)
+
+This command is used to display the configured queue weight information.
+
+| Property        | Description                                                  |
+|:----------------|:-------------------------------------------------------------|
+| `--pageSize`    | `The number of policies displayed per page.`                 |
+| `--currentPage` | `This parameter represents the page number to be displayed.` |
+| `--queue`       | `the queue we need to filter. example: root.a`               |
+| `--queues`      | `list of queues to filter. example: root.a,root.b,root.c`    |
+
+Example:
+
+We can display the list of already configured queue weight information. We can use the `--queue` option to query the weight information for a specific queue or use the `--queues` option to query the weight information for multiple queues.
+
+yarn routeradmin -policy -l --pageSize 20 --currentPage 1 --queue root.a
+
+yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b
+
+### ON GPG:
+
+GlobalPolicyGenerator, abbreviated as "GPG", is used for the automatic generation of global policies for subClusters.
+
+These are extra configurations that should appear in the **conf/yarn-site.xml** for GPG. We allow only one GPG.
+
+Optional:
+
+| Property                                                          | Example                                                                                | Description                                                                                                                                                                      |
+|:------------------------------------------------------------------|:---------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.federation.gpg.scheduled.executor.threads`                  | `10`                                                                                   | The number of threads to use for the GPG scheduled executor service. default is 10.                                                                                              |
+| `yarn.federation.gpg.subcluster.cleaner.interval-ms`              | `-1`                                                                                   | The interval at which the subcluster cleaner runs, -1 means disabled                                                                                                             |
+| `yarn.federation.gpg.subcluster.heartbeat.expiration-ms`          | `30m`                                                                                  | The expiration time for a subcluster heartbeat, default is 30 minutes.                                                                                                           |
+| `yarn.federation.gpg.application.cleaner.class`                   | `org.apache.hadoop.yarn.server.globalpolicygenerator.DefaultApplicationCleaner`        | The application cleaner class to use.                                                                                                                                            |
+| `yarn.federation.gpg.application.cleaner.interval-ms`             | `-1`                                                                                   | The interval at which the application cleaner runs, -1 means disabled                                                                                                            |
+| `yarn.federation.gpg.application.cleaner.contact.router.spec`     | `3,10,600000`                                                                          | Should have three values separated by comma: minimal success retries, maximum total retry, retry interval (ms).                                                                  |
+| `yarn.federation.gpg.policy.generator.interval`                   | `1h`                                                                                   | The interval at which the policy generator runs, default is one hour.                                                                                                            |
+| `yarn.federation.gpg.policy.generator.class`                      | `org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.NoOpGlobalPolicy` | The configured policy generator class, runs NoOpGlobalPolicy by default.                                                                                                         |
+| `yarn.federation.gpg.policy.generator.readonly`                   | `false`                                                                                | Whether or not the policy generator is running in read only (won't modify policies), default is false.`                                                                          |
+| `yarn.federation.gpg.policy.generator.blacklist`                  |                                                                                        | Which sub-clusters the policy generator should blacklist.                                                                                                                        |
+| `yarn.federation.gpg.policy.generator.load-based.pending.minimum` | `100`                                                                                  | The minimum number of pending applications in the subCluster.                                                                                                                    |
+| `yarn.federation.gpg.policy.generator.load-based.pending.maximum` | `1000`                                                                                 | The maximum number of pending applications in the subCluster.                                                                                                                    |
+| `yarn.federation.gpg.policy.generator.load-based.weight.minimum`  | `0`                                                                                    | If a subCluster has a very high load, we will assign this value to the subCluster. The default value is 0, which means that we no longer assign appliaction to this subCluster.  |
+| `yarn.federation.gpg.policy.generator.load-based.edit.maximum`    | `3`                                                                                    | This value represents the number of subClusters we want to calculate. default is 3.                                                                                              |
+| `yarn.federation.gpg.policy.generator.load-based.scaling`         | `LINEAR`                                                                               | We provide 4 calculation methods: NONE, LINEAR, QUADRATIC, LOG.                                                                                                                  |
+| `yarn.federation.gpg.webapp.address`                              | `0.0.0.0:8069`                                                                         | The address of the GPG web application.                                                                                                                                          |
+| `yarn.federation.gpg.webapp.https.address`                        | `0.0.0.0:8070`                                                                         | The https address of the GPG web application.                                                                                                                                    |
+
+- yarn.federation.gpg.application.cleaner.contact.router.spec
+
+Specifications on how (many times) to contact Router for apps. We need to
+do this because Router might return partial application list because some
+sub-cluster RM is not responsive (e.g. failing over). Should have three values separated by comma: minimal success retries,
+maximum total retry, retry interval (ms).
+
+- yarn.federation.gpg.policy.generator.load-based.scaling
+
+Note, this calculation method is when the number of Pending Applications in
+the subCluster is less than yarn.federation.gpg.policy.generator.load-based.pending.maximum.
+
+maxPendingVal = `yarn.federation.gpg.policy.generator.load-based.pending.maximum` -
+`yarn.federation.gpg.policy.generator.load-based.pending.minimum`
+
+curPendingVal = `Pending Applications in the subCluster` -
+`yarn.federation.gpg.policy.generator.load-based.pending.minimum`
+
+No calculation is required, and the weight is 1 at this time.
+
+- LINEAR:
+  For linear computation,
+  we will use (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+- QUADRATIC:
+  Calculated using quadratic, We will calculate quadratic for maxPendingVal, curPendingVal,
+  then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+- LOG(LOGARITHM):
+  Calculated using logarithm, We will calculate logarithm for maxPendingVal, curPendingVal,
+  then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+LINEAR is used by default.
+
+Security:
+
+Kerberos supported in GPG.
+
+| Property                                          | Example | Description                                                                                                                                                                                                                             |
+|:--------------------------------------------------|:--------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.federation.gpg.keytab.file`                 |         | The keytab file used by GPG to login as its service principal. The principal name is configured with 'yarn.federation.gpg.kerberos.principal.hostname'.                                                                                 |
+| `yarn.federation.gpg.kerberos.principal`          |         | The GPG service principal. This is typically set to GPG/_HOST@REALM.TLD. GPG will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on GPG in setup. |
+| `yarn.federation.gpg.kerberos.principal.hostname` |         | Optional. The hostname for the GPG containing this configuration file. Will be different for each machine. Defaults to current hostname.                                                                                                |
+
+Enabling CORS support:
+
+To enable cross-origin support (CORS) for the Yarn Router, please set the following configuration parameters:
+
+| Property                                          | Example                                                       | Description                                                                                              |
+|---------------------------------------------------|---------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| `hadoop.http.filter.initializers`                 | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
+| `yarn.federation.gpg.webapp.cross-origin.enabled` | `true`                                                        | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml.                          |
+
+### ON NMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each NodeManager.
 

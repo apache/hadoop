@@ -70,12 +70,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
-    regionName = determineRegion(fs.getBucket());
+    final Configuration conf = fs.getConf();
+    endpoint = conf.getTrimmed(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
+    LOG.info("Test endpoint is {}", endpoint);
+    regionName = conf.getTrimmed(Constants.AWS_REGION, "");
+    if (regionName.isEmpty()) {
+      regionName = determineRegion(fs.getBucket());
+    }
     LOG.info("Determined region name to be [{}] for bucket [{}]", regionName,
         fs.getBucket());
-    endpoint = fs.getConf()
-        .get(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
-    LOG.info("Test endpoint is {}", endpoint);
   }
 
   @Test
@@ -118,11 +121,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           .isGreaterThan(invocationCount);
 
       Assertions.assertThat(CustomSigner.lastStoreValue)
-          .as("Store value should not be null").isNotNull();
+          .as("Store value should not be null in %s", CustomSigner.description())
+          .isNotNull();
       Assertions.assertThat(CustomSigner.lastStoreValue.conf)
-          .as("Configuration should not be null").isNotNull();
+          .as("Configuration should not be null  in %s", CustomSigner.description())
+          .isNotNull();
       Assertions.assertThat(CustomSigner.lastStoreValue.conf.get(TEST_ID_KEY))
-          .as("Configuration TEST_KEY mismatch").isEqualTo(identifier);
+          .as("Configuration TEST_KEY mismatch in %s", CustomSigner.description())
+          .isEqualTo(identifier);
 
       return fs;
     });
@@ -196,8 +202,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
+        LOG.info("Store value for bucket {} is {}", bucketName, lastStoreValue);
       } catch (IOException e) {
-        throw new RuntimeException("Failed to get current Ugi", e);
+        throw new RuntimeException("Failed to get current Ugi " + e, e);
       }
       if (bucketName.equals("kms")) {
         Aws4Signer realKMSSigner = Aws4Signer.create();
@@ -247,6 +254,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public static int getInvocationCount() {
       return INVOCATION_COUNT.get();
     }
+
+    public static String description() {
+      return "CustomSigner{"
+          + "invocations=" + INVOCATION_COUNT.get()
+          + ", instantiations=" + INSTANTIATION_COUNT.get()
+          + ", lastStoreValue=" + lastStoreValue
+          + "}";
+    }
   }
 
   @Private
@@ -260,6 +275,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       StoreValue storeValue = new StoreValue(storeConf, dtProvider);
+      LOG.info("Registering store {} with value {}", storeKey, storeValue);
       knownStores.put(storeKey, storeValue);
     }
 
@@ -267,6 +283,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public void unregisterStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
+      LOG.info("Unregistering store {}", storeKey);
       knownStores.remove(storeKey);
     }
 
@@ -302,6 +319,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       public int hashCode() {
         return Objects.hash(bucketName, ugi);
       }
+
+      @Override
+      public String toString() {
+        return "StoreKey{" +
+            "bucketName='" + bucketName + '\'' +
+            ", ugi=" + ugi +
+            '}';
+      }
     }
 
     static class StoreValue {
@@ -312,6 +337,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           DelegationTokenProvider dtProvider) {
         this.conf = conf;
         this.dtProvider = dtProvider;
+      }
+
+      @Override
+      public String toString() {
+        return "StoreValue{" +
+            "conf=" + conf +
+            ", dtProvider=" + dtProvider +
+            '}';
       }
     }
   }

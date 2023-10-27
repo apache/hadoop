@@ -61,12 +61,13 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import java.io.Closeable;
 import java.io.File;
@@ -466,8 +467,20 @@ public final class S3ATestUtils {
    */
   public static void skipIfEncryptionTestsDisabled(
       Configuration configuration) {
-    if (!configuration.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      skip("Skipping encryption tests");
+    skipIfNotEnabled(configuration, KEY_ENCRYPTION_TESTS, "Skipping encryption tests");
+  }
+
+  /**
+   * Skip a test suite/casee if a configuration has been explicitly disabled.
+   * @param configuration configuration to probe
+   * @param key key to resolve
+   * @param message assertion text
+   */
+  public static void skipIfNotEnabled(final Configuration configuration,
+      final String key,
+      final String message) {
+    if (!configuration.getBoolean(key, true)) {
+      skip(message);
     }
   }
 
@@ -477,9 +490,18 @@ public final class S3ATestUtils {
    */
   public static void skipIfStorageClassTestsDisabled(
       Configuration configuration) {
-    if (!configuration.getBoolean(KEY_STORAGE_CLASS_TESTS_ENABLED, true)) {
-      skip("Skipping storage class tests");
-    }
+    skipIfNotEnabled(configuration, KEY_STORAGE_CLASS_TESTS_ENABLED,
+        "Skipping storage class tests");
+  }
+
+  /**
+   * Skip a test if ACL class tests are disabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfACLTestsDisabled(
+      Configuration configuration) {
+    skipIfNotEnabled(configuration, KEY_ACL_TESTS_ENABLED,
+        "Skipping storage class ACL tests");
   }
 
   /**
@@ -635,9 +657,7 @@ public final class S3ATestUtils {
    * @param conf configuration to examine
    */
   public static void assumeSessionTestsEnabled(final Configuration conf) {
-    if (!conf.getBoolean(TEST_STS_ENABLED, true)) {
-      skip("STS functional tests disabled");
-    }
+    skipIfNotEnabled(conf, TEST_STS_ENABLED, "STS functional tests disabled");
   }
 
   /**
@@ -1246,6 +1266,14 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Convert a throwable to an assumption failure.
+   * @param t thrown exception.
+   */
+  public static void raiseAsAssumption(Throwable t) {
+    throw new AssumptionViolatedException(t.toString(), t);
+  }
+
+  /**
    * Get the statistics from a wrapped block output stream.
    * @param out output stream
    * @return the (active) stats of the write
@@ -1514,5 +1542,16 @@ public final class S3ATestUtils {
    */
   public static void disablePrefetching(Configuration conf) {
     removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
+
+  /**
+   * Does this FS support multi object delete?
+   * @param fs filesystem
+   * @return true if multi-delete is enabled.
+   */
+
+  public static boolean isBulkDeleteEnabled(FileSystem fs) {
+    return fs.getConf().getBoolean(Constants.ENABLE_MULTI_DELETE,
+        true);
   }
 }

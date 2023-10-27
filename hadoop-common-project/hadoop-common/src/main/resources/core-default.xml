@@ -1584,8 +1584,14 @@
 
 <property>
   <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors.</description>
+  <value>5</value>
+  <description>
+    Number of times the AWS client library should retry errors before
+    escalating to the S3A code: {@value}.
+    The S3A connector does its own selective retries; the only time the AWS
+    SDK operations are not wrapped is during multipart copy via the AWS SDK
+    transfer manager.
+  </description>
 </property>
 
 <property>
@@ -2521,6 +2527,15 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.server.log.slow.rpc.threshold.ms</name>
+  <value>0</value>
+  <description>The threshold in milliseconds for logging slow rpc when ipc.server.log.slow.rpc is enabled.
+    Besides of being much slower than other RPC requests, an RPC request has to take at least the threshold value
+    defined by this property before it can be considered as slow. By default, this threshold is set to 0 (disabled).
+  </description>
+</property>
+
+<property>
   <name>ipc.server.purge.interval</name>
   <value>15</value>
   <description>Define how often calls are cleaned up in the server.
@@ -2574,10 +2589,20 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
-  <name>callqueue.overflow.trigger.failover</name>
+  <name>ipc.[port_number].callqueue.overflow.trigger.failover</name>
   <value>false</value>
   <description>
     Enable callqueue overflow trigger failover for stateless servers.
+  </description>
+</property>
+
+<property>
+  <name>ipc.callqueue.overflow.trigger.failover</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].callqueue.overflow.trigger.failover" is not defined.
+    It determines whether or not to enable callqueue overflow trigger failover for stateless servers.
   </description>
 </property>
 
