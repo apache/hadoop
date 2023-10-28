@@ -374,6 +374,15 @@ WeightedPolicyInfo include the following:
   used by policies that balance weight-based and load-based considerations in their decisions.
   For policies that use this parameter, values close to 1 indicate that most of the decision should be based on currently observed headroom from various sub-clusters, values close to zero, indicate that the decision should be mostly based on weights and practically ignore current load.
 
+##### How to Config ZookeeperFederationStateStore Hierarchies
+
+Similar to YARN-2962, We have implemented hierarchical storage for applications in the ZooKeeper federation store to manage the number of nodes under a specific Znode.
+
+We can configure `yarn.resourcemanager.zk-appid-node.split-index`, default is 0, Index at which last section of application id (with each section separated by _ in application id) will be split so that application znode stored in zookeeper RM state store will be stored as two different znodes (parent-child). Split is done from the end.
+For instance, with no split, appid znode will be of the form application_1352994193343_0001. If the value of this config is 1, the appid znode will be broken into two parts application_1352994193343_000 and 1 respectively with former being the parent node.
+application_1352994193343_0002 will then be stored as 2 under the parent node application_1352994193343_000. This config can take values from 0 to 4. 0 means there will be no split. If configuration value is outside this range, it will be treated as config value of 0(i.e. no split). A value
+larger than 0 (up to 4) should be configured if you are storing a large number of apps in ZK based RM state store and state store operations are failing due to LenError in Zookeeper.
+
 ### ON RMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each ResourceManager.
