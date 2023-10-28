@@ -72,8 +72,10 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     SkipBadRecords.setAutoIncrReducerProcCount(job, false);
     skipping = job.getBoolean(MRJobConfig.SKIP_RECORDS, false);
 
-    reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t").getBytes(StandardCharsets.UTF_8);
-    reduceInputFieldSeparator = job_.get("stream.reduce.input.field.separator", "\t").getBytes(StandardCharsets.UTF_8);
+    reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
+    reduceInputFieldSeparator = job_.get("stream.reduce.input.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
     this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
   }
 

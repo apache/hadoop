@@ -216,7 +216,8 @@ public class Util {
       final File f = new File(dir,
           prefix + dateFormat.format(new Date(System.currentTimeMillis())) + ".txt");
       if (!f.exists())
-        return new PrintWriter(new OutputStreamWriter(new FileOutputStream(f), StandardCharsets.UTF_8));
+        return new PrintWriter(new OutputStreamWriter(
+                new FileOutputStream(f), StandardCharsets.UTF_8));
 
       try {Thread.sleep(10);} catch (InterruptedException e) {}
     }
@@ -310,13 +311,14 @@ public class Util {
   static void writeResults(String name, List<TaskResult> results, FileSystem fs, String dir) throws IOException {
     final Path outfile = new Path(dir, name + ".txt");
     Util.out.println(name + "> writing results to " + outfile);
-    final PrintWriter out = new PrintWriter(new OutputStreamWriter(fs.create(outfile), StandardCharsets.UTF_8), true);
+    final PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(
+            fs.create(outfile), StandardCharsets.UTF_8), true);
     try {
       for(TaskResult r : results)
-        out.println(r);
+        printWriter.println(r);
     }
     finally {
-      out.close();
+      printWriter.close();
     }
   }
 

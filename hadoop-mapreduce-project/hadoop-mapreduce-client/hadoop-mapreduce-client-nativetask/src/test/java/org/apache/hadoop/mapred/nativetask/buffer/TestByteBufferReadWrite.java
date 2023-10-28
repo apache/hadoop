@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;

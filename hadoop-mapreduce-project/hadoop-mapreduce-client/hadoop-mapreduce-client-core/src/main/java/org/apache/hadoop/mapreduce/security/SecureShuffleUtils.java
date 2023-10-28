@@ -86,7 +86,7 @@ public class SecureShuffleUtils {
    */
   public static String hashFromString(String enc_str, SecretKey key) 
   throws IOException {
-    return generateHash(enc_str.getBytes(StandardCharsets.UTF_8), key); 
+    return generateHash(enc_str.getBytes(StandardCharsets.UTF_8), key);
   }
   
   /**

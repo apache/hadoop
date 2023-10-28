@@ -76,8 +76,10 @@ public class PipeMapper extends PipeMapRed implements Mapper {
         inputFormatClassName.equals(TextInputFormat.class.getCanonicalName()));
     }
     
-    mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t").getBytes(StandardCharsets.UTF_8);
-    mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t").getBytes(StandardCharsets.UTF_8);
+    mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
+    mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
     numOfMapOutputKeyFields = job.getInt("stream.num.map.output.key.fields", 1);
   }
 
