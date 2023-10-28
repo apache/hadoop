@@ -436,6 +436,18 @@ The role of the interceptor is to forward client requests to RM.
 | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor`             | `Federation`     | This Class provides an implementation for federation of YARN RM and scaling an application across multiple YARN SubClusters. All the federation specific implementation is encapsulated in this class. This is always the last interceptor in the chain. |
 | `org.apache.hadoop.yarn.server.router.clientrm.ApplicationSubmissionContextInterceptor` | `Federation`     | It prevents DoS attack over the ApplicationClientProtocol. Currently, it checks the size of the ApplicationSubmissionContext. If it exceeds the limit it can cause Zookeeper failures.                                                                   |
 
+**How to configure the thread pool of FederationClientInterceptor**
+
+The FederationClientInterceptor retrieves data from multiple subClusters. To improve performance, we utilize a thread pool for concurrent access to multiple subClusters. 
+Below is the configuration for the thread pool, which can be adjusted based on the requirements of the production environment.
+
+| Property                                                              | Mode    | Description                                                                                                                                                                                                                                  |
+|:----------------------------------------------------------------------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.interceptor.user-thread-pool.minimum-pool-size`          | `5`     | This configurable is used to set the corePoolSize(minimumPoolSize) of the thread pool of the interceptor. Default is 5.                                                                                                                      |
+| `yarn.router.interceptor.user-thread-pool.maximum-pool-size`          | `5`     | This configuration is used to set the default value of maximumPoolSize of the thread pool of the interceptor. Default is 5.                                                                                                                  |
+| `yarn.router.interceptor.user-thread-pool.keep-alive-time`            | `0s`    | This configurable is used to set the keepAliveTime of the thread pool of the interceptor. Default is 0s.                                                                                                                                     |
+| `yarn.router.interceptor.user-thread-pool.allow-core-thread-time-out` | `false` | This method configures the policy for core threads regarding termination when no tasks arrive within the keep-alive time. If set to true, We need to ensure that yarn.router.interceptor.user-thread-pool.keep-alive-time is greater than 0. |
+
 - yarn.router.rmadmin.interceptor-class.pipeline
 
 The role of the interceptor is to forward client's administrator requests to RM.
@@ -444,6 +456,10 @@ The role of the interceptor is to forward client's administrator requests to RM.
 |:--------------------------------------------------------------------------------|:-----------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor` | `Non-Federation` | That simply forwards the client requests to the cluster resource manager.                                                                                 |
 | `org.apache.hadoop.yarn.server.router.rmadmin.FederationRMAdminInterceptor`     | `Federation`     | Intercept the client's administrator request and forward it to the ResourceManager of Yarn SubClusters. This is always the last interceptor in the chain. |
+
+**How to configure the thread pool of FederationRMAdminInterceptor**
+
+The thread pool configuration used by the `FederationRMAdminInterceptor` is consistent with that of the `FederationClientInterceptor` and can be directly referenced for configuration.
 
 - yarn.router.webapp.interceptor-class.pipeline
 
@@ -826,6 +842,26 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 |---------------------------------------------------|---------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
 | `hadoop.http.filter.initializers`                 | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
 | `yarn.federation.gpg.webapp.cross-origin.enabled` | `true`                                                        | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml.                          |
+
+#### How to configure GPG Opts
+
+If we need to modify the `HEAPSIZE` or `OPTS` for the GPG, we can make changes in the `yarn-env.sh` file.
+
+- YARN_GLOBALPOLICYGENERATOR_HEAPSIZE
+```
+# Specify the max heapsize for the Global Policy Generator.
+# If no units are given, it will be assumed to be in MB. Default is the same as HADOOP_HEAPSIZE_MAX
+# export YARN_GLOBALPOLICYGENERATOR_HEAPSIZE=
+```
+
+- YARN_GLOBALPOLICYGENERATOR_OPTS
+```
+# Specify the JVM options to be used when starting the GPG.
+# These options will be appended to the options specified as HADOOP_OPTS and therefore may override any similar flags set in HADOOP_OPTS
+#
+# See ResourceManager for some examples
+# export YARN_GLOBALPOLICYGENERATOR_OPTS=
+```
 
 ### ON NMs:
 
