@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_OP_XATTR_LIST;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
@@ -43,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_TYPE;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_STANDARD_HEADERS;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
 /**
  * Invoke XAttr API calls against objects in S3 and validate header
@@ -95,8 +97,11 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
   public void testXAttrFile() throws Throwable {
     describe("Test xattr on a file");
     Path testFile = methodPath();
-    create(testFile, true, CREATE_FILE_OVERWRITE);
     S3AFileSystem fs = getFileSystem();
+    boolean createPerformance = isCreatePerformanceEnabled(fs);
+
+    create(testFile, true,
+        createPerformance ? NO_HEAD_OR_LIST : CREATE_FILE_OVERWRITE);
     Map<String, byte[]> xAttrs = verifyMetrics(() ->
             fs.getXAttrs(testFile),
         with(INVOCATION_XATTR_GET_MAP, GET_METADATA_ON_OBJECT));

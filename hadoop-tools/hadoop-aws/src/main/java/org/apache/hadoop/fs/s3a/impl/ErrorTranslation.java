@@ -79,7 +79,7 @@ public final class ErrorTranslation {
    * @param thrown exception
    * @return a translated exception or null.
    */
-  public static IOException maybeExtractNetworkException(String path, Throwable thrown) {
+  public static IOException maybeExtractIOException(String path, Throwable thrown) {
 
     if (thrown == null) {
       return null;
@@ -100,7 +100,9 @@ public final class ErrorTranslation {
     // as a new instance is created through reflection, the
     // class of the returned instance will be that of the innermost,
     // unless no suitable constructor is available.
-    return wrapWithInnerIOE(path, thrown, (IOException) cause);
+    final IOException ioe = (IOException) cause;
+
+    return wrapWithInnerIOE(path, thrown, ioe);
 
   }
 
