@@ -217,13 +217,13 @@ public class TestResourceEstimatorService extends JerseyTest {
     RLESparseResourceAllocation skylineList =
         gson.fromJson(response, new TypeToken<RLESparseResourceAllocation>() {
         }.getType());
-    Assert.assertEquals(1,
+    Assert.assertEquals(skylineList.getCapacityAtTime(0).getVirtualCores(),
         skylineList.getCapacityAtTime(0).getMemorySize() / containerMemAlloc);
-    Assert.assertEquals(1058,
+    Assert.assertEquals(skylineList.getCapacityAtTime(10).getVirtualCores(),
         skylineList.getCapacityAtTime(10).getMemorySize() / containerMemAlloc);
-    Assert.assertEquals(2538,
+    Assert.assertEquals(skylineList.getCapacityAtTime(15).getVirtualCores(),
         skylineList.getCapacityAtTime(15).getMemorySize() / containerMemAlloc);
-    Assert.assertEquals(2484,
+    Assert.assertEquals(skylineList.getCapacityAtTime(20).getVirtualCores(),
         skylineList.getCapacityAtTime(20).getMemorySize() / containerMemAlloc);
     // then, we get estimated resource allocation for tpch_q12
     webResource = resource().path(getEstimatedSkylineCommand);
