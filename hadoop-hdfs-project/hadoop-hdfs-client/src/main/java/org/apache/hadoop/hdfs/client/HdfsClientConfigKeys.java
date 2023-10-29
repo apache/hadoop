@@ -291,7 +291,7 @@ public interface HdfsClientConfigKeys {
       "dfs.client.congestion.backoff.mean.time";
   int DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT = 5000;
 
-  String DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME = 
+  String DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME =
       "dfs.client.congestion.backoff.max.time";
   int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT = 50000;
 

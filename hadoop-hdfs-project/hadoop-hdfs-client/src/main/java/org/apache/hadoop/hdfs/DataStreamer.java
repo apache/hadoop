@@ -572,7 +572,7 @@ class DataStreamer extends Daemon {
     congestionBackOffMaxTimeInMs = dfsClient.getConfiguration().getInt(
         HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
         HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
-    if (congestionBackOffMeanTimeInMs <= 0 || congestionBackOffMaxTimeInMs <= 0 || 
+    if (congestionBackOffMeanTimeInMs <= 0 || congestionBackOffMaxTimeInMs <= 0 ||
         congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
       if (congestionBackOffMeanTimeInMs <= 0) {
         LOG.warn("Configuration: {} is not appropriate, use default value: {}",
@@ -589,8 +589,10 @@ class DataStreamer extends Daemon {
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME);
       }
-      congestionBackOffMeanTimeInMs = HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT;
-      congestionBackOffMaxTimeInMs = HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT;
+      congestionBackOffMeanTimeInMs =
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT;
+      congestionBackOffMaxTimeInMs =
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT;
     }
   }
 
