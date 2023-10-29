@@ -372,7 +372,7 @@ public class TestFederationClientInterceptorRetry
 
   @Test
   public void testSubmitApplicationOneBadNodeWithRealError() throws Exception {
-    LOG.info("Test submitApplication with two bad SubClusters.");
+    LOG.info("Test submitApplication with one bad SubClusters.");
     setupCluster(Arrays.asList(bad1));
     interceptor.setNumSubmitRetries(0);
 
@@ -386,7 +386,8 @@ public class TestFederationClientInterceptorRetry
   }
 
   @Test
-  public void testGetClusterMetricsTwoBadNode() throws Exception {
+  public void testGetClusterMetricsTwoBadNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
 
@@ -396,6 +397,17 @@ public class TestFederationClientInterceptorRetry
 
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId 2 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+  }
+
+  @Test
+  public void testGetClusterMetricsOneBadNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with one bad SubClusters.");
+    setupCluster(Arrays.asList(bad1));
+    GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 1 exec getClusterMetrics error RM is stopped.",
         () -> interceptor.getClusterMetrics(request));
   }
 }

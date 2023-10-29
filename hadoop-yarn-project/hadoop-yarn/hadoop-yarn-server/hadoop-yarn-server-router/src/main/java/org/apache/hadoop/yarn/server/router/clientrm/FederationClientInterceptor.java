@@ -880,7 +880,7 @@ public class FederationClientInterceptor
         } catch (InterruptedException | ExecutionException | YarnException e) {
           Throwable cause = e.getCause();
           LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
-                  subClusterId.getId(), cause.getMessage());
+              subClusterId.getId(), cause.getMessage());
           exceptions.put(subClusterId, e);
         }
       });
