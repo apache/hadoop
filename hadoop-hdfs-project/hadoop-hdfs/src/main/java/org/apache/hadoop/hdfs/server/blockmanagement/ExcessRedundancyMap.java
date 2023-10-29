@@ -162,7 +162,7 @@ class ExcessRedundancyMap {
 
     @Override
     public int compareTo(ExcessBlockInfo o) {
-      return Long.compare(o.timeStamp, this.timeStamp);
+      return Long.compare(this.timeStamp, o.timeStamp);
     }
   }
 }

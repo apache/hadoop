@@ -3138,7 +3138,7 @@ public class BlockManager implements BlockStatsMXBean {
                       block, datanodeDescriptor);
                 }
                 excessBlockInfo.setTimeStamp();
-                processed ++;
+                processed++;
                 break;
               }
             }
