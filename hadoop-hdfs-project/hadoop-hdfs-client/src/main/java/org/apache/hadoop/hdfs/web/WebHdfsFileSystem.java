@@ -100,6 +100,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1955,6 +1956,26 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOTS);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETTRASHROOTS;
+    try {
+      Collection<FileStatus> trashRoots =
+          new FsPathResponseRunner<Collection<FileStatus>>(op, null,
+              new AllUsersParam(allUsers)) {
+            @Override
+            Collection<FileStatus> decodeResponse(Map<?, ?> json) throws IOException {
+              return JsonUtilClient.getTrashRoots(json);
+            }
+          }.run();
+      return trashRoots;
+    } catch (IOException e) {
+      return super.getTrashRoots(allUsers);
+    }
+  }
+
   @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.CHECKACCESS;
@@ -2188,6 +2209,32 @@ public class WebHdfsFileSystem extends FileSystem
       @Override
       FsStatus decodeResponse(Map<?, ?> json) {
         return JsonUtilClient.toFsStatus(json);
+      }
+    }.run();
+  }
+
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_POLICIES);
+    final GetOpParam.Op op = GetOpParam.Op.GETECPOLICIES;
+    return new FsPathResponseRunner<Collection<ErasureCodingPolicyInfo>>(op, null) {
+      @Override
+      Collection<ErasureCodingPolicyInfo> decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.getAllErasureCodingPolicies(json);
+      }
+    }.run();
+  }
+
+  public Map<String, String> getAllErasureCodingCodecs()
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_CODECS);
+    final HttpOpParam.Op op = GetOpParam.Op.GETECCODECS;
+    return new FsPathResponseRunner<Map<String, String>>(op, null) {
+      @Override
+      Map<String, String> decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.getErasureCodeCodecs(json);
       }
     }.run();
   }

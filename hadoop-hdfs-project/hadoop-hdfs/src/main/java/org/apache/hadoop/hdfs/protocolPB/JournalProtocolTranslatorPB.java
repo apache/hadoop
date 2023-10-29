@@ -29,13 +29,12 @@ import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegme
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -69,11 +68,17 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
         .setNumTxns(numTxns)
         .setRecords(PBHelperClient.getByteString(records))
         .build();
-    try {
-      rpcProxy.journal(NULL_CONTROLLER, req);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.journal(NULL_CONTROLLER, req));
+  }
+
+  @Override
+  public FenceResponse fence(JournalInfo journalInfo, long epoch,
+      String fencerInfo) throws IOException {
+    FenceRequestProto req = FenceRequestProto.newBuilder().setEpoch(epoch)
+        .setJournalInfo(PBHelper.convert(journalInfo)).build();
+    FenceResponseProto resp = ipc(() -> rpcProxy.fence(NULL_CONTROLLER, req));
+    return new FenceResponse(resp.getPreviousEpoch(),
+        resp.getLastTransactionId(), resp.getInSync());
   }
 
   @Override
@@ -84,25 +89,7 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
         .setEpoch(epoch)
         .setTxid(txid)
         .build();
-    try {
-      rpcProxy.startLogSegment(NULL_CONTROLLER, req);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-  }
-  
-  @Override
-  public FenceResponse fence(JournalInfo journalInfo, long epoch,
-      String fencerInfo) throws IOException {
-    FenceRequestProto req = FenceRequestProto.newBuilder().setEpoch(epoch)
-        .setJournalInfo(PBHelper.convert(journalInfo)).build();
-    try {
-      FenceResponseProto resp = rpcProxy.fence(NULL_CONTROLLER, req);
-      return new FenceResponse(resp.getPreviousEpoch(),
-          resp.getLastTransactionId(), resp.getInSync());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.startLogSegment(NULL_CONTROLLER, req));
   }
 
   @Override

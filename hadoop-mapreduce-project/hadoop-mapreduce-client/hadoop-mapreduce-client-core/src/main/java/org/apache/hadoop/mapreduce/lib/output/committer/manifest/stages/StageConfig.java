@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -28,7 +29,9 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.TaskPool;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 
 /**
  * Stage Config.
@@ -151,6 +154,23 @@ public class StageConfig {
    * Name for logging.
    */
   private String name = "";
+
+  /**
+   * Configuration used where needed.
+   * Default value is a configuration with the normal constructor;
+   * jobs should override this with what was passed down.
+   */
+  private Configuration conf = new Configuration();
+
+  /**
+   * Entry writer queue capacity.
+   */
+  private int writerQueueCapacity = DEFAULT_WRITER_QUEUE_CAPACITY;
+
+  /**
+   * Number of marker files to include in success file.
+   */
+  private int successMarkerFileLimit = SUCCESS_MARKER_FILE_LIMIT;
 
   public StageConfig() {
   }
@@ -406,6 +426,42 @@ public class StageConfig {
   }
 
   /**
+   * Set configuration.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withConfiguration(Configuration value) {
+    conf = value;
+    return this;
+  }
+
+  /**
+   * Get configuration.
+   * @return the configuration
+   */
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * Get writer queue capacity.
+   * @return the queue capacity
+   */
+  public int getWriterQueueCapacity() {
+    return writerQueueCapacity;
+  }
+
+  /**
+   * Set writer queue capacity.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withWriterQueueCapacity(final int value) {
+    writerQueueCapacity = value;
+    return this;
+  }
+
+  /**
    * Handler for stage entry events.
    * @return the handler.
    */
@@ -530,6 +586,22 @@ public class StageConfig {
 
   public boolean getDeleteTargetPaths() {
     return deleteTargetPaths;
+  }
+
+  /**
+   * Number of marker files to include in success file.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withSuccessMarkerFileLimit(final int value) {
+    checkOpen();
+
+    successMarkerFileLimit = value;
+    return this;
+  }
+
+  public int getSuccessMarkerFileLimit() {
+    return successMarkerFileLimit;
   }
 
   /**

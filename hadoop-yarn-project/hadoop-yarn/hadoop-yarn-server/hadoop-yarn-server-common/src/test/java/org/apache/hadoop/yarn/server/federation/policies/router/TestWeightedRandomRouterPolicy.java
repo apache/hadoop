@@ -39,7 +39,7 @@ import org.junit.Test;
 
 /**
  * Simple test class for the {@link WeightedRandomRouterPolicy}. Generate large
- * number of randomized tests to check we are weighiting correctly even if
+ * number of randomized tests to check we are weighting correctly even if
  * clusters go inactive.
  */
 public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {

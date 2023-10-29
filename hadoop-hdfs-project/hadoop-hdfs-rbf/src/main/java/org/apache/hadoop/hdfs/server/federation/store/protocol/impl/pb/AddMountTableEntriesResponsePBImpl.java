@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
 
@@ -66,7 +67,17 @@ public class AddMountTableEntriesResponsePBImpl
   }
 
   @Override
+  public List<String> getFailedRecordsKeys() {
+    return this.translator.getProtoOrBuilder().getFailedEntriesKeysList();
+  }
+
+  @Override
   public void setStatus(boolean result) {
     this.translator.getBuilder().setStatus(result);
+  }
+
+  @Override
+  public void setFailedRecordsKeys(List<String> failedRecordsKeys) {
+    this.translator.getBuilder().addAllFailedEntriesKeys(failedRecordsKeys);
   }
 }

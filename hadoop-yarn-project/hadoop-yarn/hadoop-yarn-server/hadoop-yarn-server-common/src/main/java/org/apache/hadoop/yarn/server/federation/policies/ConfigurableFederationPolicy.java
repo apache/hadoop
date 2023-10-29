@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 /**
  * This interface provides a general method to reinitialize a policy. The
  * semantics are try-n-swap, so in case of an exception is thrown the
- * implmentation must ensure the previous state and configuration is preserved.
+ * implementation must ensure the previous state and configuration is preserved.
  */
 public interface ConfigurableFederationPolicy {
 

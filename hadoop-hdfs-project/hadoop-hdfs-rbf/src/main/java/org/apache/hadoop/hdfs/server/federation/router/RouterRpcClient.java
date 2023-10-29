@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
+import static org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor.CONCURRENT;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -598,6 +599,8 @@ public class RouterRpcClient {
           }
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
+          // Rotate cache so that client can retry the next namenode in the cache
+          this.namenodeResolver.rotateCache(nsId, namenode, shouldUseObserver);
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);
         } else {
@@ -1572,7 +1575,9 @@ public class RouterRpcClient {
           results.add(new RemoteResult<>(location, ioe));
         }
       }
-
+      if (rpcMonitor != null) {
+        rpcMonitor.proxyOpComplete(true, CONCURRENT, null);
+      }
       return results;
     } catch (RejectedExecutionException e) {
       if (rpcMonitor != null) {
@@ -1780,9 +1785,16 @@ public class RouterRpcClient {
   }
 
   private boolean isObserverReadEligible(String nsId, Method method) {
-    boolean isReadEnabledForNamespace =
-        observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
-    return isReadEnabledForNamespace && isReadCall(method);
+    return isReadCall(method) && isNamespaceObserverReadEligible(nsId);
+  }
+
+  /**
+   * Check if a namespace is eligible for observer reads.
+   * @param nsId namespaceID
+   * @return whether the 'namespace' has observer reads enabled.
+   */
+  boolean isNamespaceObserverReadEligible(String nsId) {
+    return observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
   }
 
   /**
@@ -1790,6 +1802,9 @@ public class RouterRpcClient {
    * @return whether the 'method' is a read-only operation.
    */
   private static boolean isReadCall(Method method) {
+    if (method == null) {
+      return false;
+    }
     if (!method.isAnnotationPresent(ReadOnly.class)) {
       return false;
     }

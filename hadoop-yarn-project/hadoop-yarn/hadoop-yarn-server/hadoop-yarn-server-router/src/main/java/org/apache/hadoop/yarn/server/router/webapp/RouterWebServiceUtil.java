@@ -363,14 +363,32 @@ public final class RouterWebServiceUtil {
    */
   protected static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
-    client.setConnectTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            TimeUnit.MILLISECONDS));
-    client.setReadTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT,
-            TimeUnit.MILLISECONDS));
+
+    long checkConnectTimeOut = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, 0);
+    int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    if (checkConnectTimeOut <= 0 || checkConnectTimeOut > Integer.MAX_VALUE) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+      connectTimeOut = (int) TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+    client.setConnectTimeout(connectTimeOut);
+
+    long checkReadTimeout = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, 0);
+    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    if (checkReadTimeout < 0) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+      readTimeout = (int) TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+    client.setReadTimeout(readTimeout);
+
     return client;
   }
 
@@ -488,10 +506,14 @@ public final class RouterWebServiceUtil {
 
     metrics.setTotalMB(metrics.getTotalMB()
         + metricsResponse.getTotalMB());
+    metrics.setUtilizedMB(metrics.getUtilizedMB()
+        + metricsResponse.getUtilizedMB());
     metrics.setTotalVirtualCores(metrics.getTotalVirtualCores()
         + metricsResponse.getTotalVirtualCores());
     metrics.setTotalNodes(metrics.getTotalNodes()
         + metricsResponse.getTotalNodes());
+    metrics.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores()
+        + metricsResponse.getUtilizedVirtualCores());
     metrics.setLostNodes(metrics.getLostNodes()
         + metricsResponse.getLostNodes());
     metrics.setUnhealthyNodes(metrics.getUnhealthyNodes()
@@ -506,6 +528,14 @@ public final class RouterWebServiceUtil {
         + metricsResponse.getActiveNodes());
     metrics.setShutdownNodes(metrics.getShutdownNodes()
         + metricsResponse.getShutdownNodes());
+
+    int utilizedVirtualCoresPercent = metrics.getTotalVirtualCores() <= 0 ? 0 :
+        (int) (metrics.getUtilizedVirtualCores() * 100 / metrics.getTotalVirtualCores());
+    metrics.setUtilizedVirtualCoresPercent(utilizedVirtualCoresPercent);
+
+    int utilizedMBPercent = metrics.getTotalMB() <= 0 ? 0 :
+        (int) (metrics.getUtilizedMB() * 100 / metrics.getTotalMB());
+    metrics.setUtilizedMBPercent(utilizedMBPercent);
   }
 
   /**
@@ -733,5 +763,14 @@ public final class RouterWebServiceUtil {
 
     // return caller UGI
     return callerUGI;
+  }
+
+  public static String generateWebTitle(String title, String msg) {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(title);
+    stringBuilder.append(" (");
+    stringBuilder.append(msg);
+    stringBuilder.append(")");
+    return stringBuilder.toString();
   }
 }

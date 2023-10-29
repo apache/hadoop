@@ -386,6 +386,9 @@ public abstract class StateStoreFileBaseImpl
 
     // Check if any record exists
     Map<String, T> toWrite = new HashMap<>();
+    final List<String> failedRecordsKeys = Collections.synchronizedList(new ArrayList<>());
+    final AtomicBoolean success = new AtomicBoolean(true);
+
     for (T record : records) {
       Class<? extends BaseRecord> recordClass = record.getClass();
       String path = getPathForClass(recordClass);
@@ -400,10 +403,8 @@ public abstract class StateStoreFileBaseImpl
           toWrite.put(recordPath, record);
         } else if (errorIfExists) {
           LOG.error("Attempt to insert record {} that already exists", recordPath);
-          if (metrics != null) {
-            metrics.addFailure(monotonicNow() - start);
-          }
-          return new StateStoreOperationResult(primaryKey);
+          failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
+          success.set(false);
         } else {
           LOG.debug("Not updating {}", record);
         }
@@ -413,9 +414,7 @@ public abstract class StateStoreFileBaseImpl
     }
 
     // Write the records
-    final AtomicBoolean success = new AtomicBoolean(true);
     final List<Callable<Void>> callables = new ArrayList<>();
-    final List<String> failedRecordsKeys = Collections.synchronizedList(new ArrayList<>());
     toWrite.entrySet().forEach(
         entry -> callables.add(() -> writeRecordToFile(success, entry, failedRecordsKeys)));
     if (this.concurrentStoreAccessPool != null) {
@@ -484,13 +483,13 @@ public abstract class StateStoreFileBaseImpl
     } catch (IOException e) {
       LOG.error("Cannot write {}", recordPathTemp, e);
       recordWrittenSuccessfully = false;
-      failedRecordsList.add(primaryKey);
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     // Commit
     if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
       LOG.error("Failed committing record into {}", recordPath);
-      failedRecordsList.add(primaryKey);
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     return null;

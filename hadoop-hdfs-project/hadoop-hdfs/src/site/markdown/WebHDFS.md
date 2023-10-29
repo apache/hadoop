@@ -61,6 +61,9 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
     * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
     * [`GETSTATUS`](#Get_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus)
+    * [`GETECPOLICIES`](#Get_EC_Policies)
+    * [`GETECCODECS`](#Get_EC_Codecs)
+    * [`GETTRASHROOTS`](#Get_Trash_Roots) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getTrashRoots)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1191,6 +1194,44 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTa
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkInfo
 
+### Get EC Policies
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETECPOLICIES"
+
+  The client receives a response with a [`ECPolicies` JSON object](#EC_Policies_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+          "ErasureCodingPolicies": {
+            "ErasureCodingPolicyInfo": [
+              {
+                "state": "ENABLED",
+                "policy": {
+                  "name": "RS-6-3-1024k",
+                  "schema": {
+                    "codecName": "rs",
+                    "numDataUnits": 6,
+                    "numParityUnits": 3,
+                    "extraOptions": {}
+                  },
+                  "cellSize": 1048576,
+                  "id": 1,
+                  "replicationPolicy": false,
+                  "codecName": "rs",
+                  "numDataUnits": 6,
+                  "numParityUnits": 3,
+                  "systemPolicy": true
+                }
+              }
+            ]
+          }
+        }
+
 ### Get Status
 
 * Submit a HTTP GET request.
@@ -1212,6 +1253,67 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLi
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus
+
+### Get EC Codecs
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETALLECCODECS"
+
+  The client receives a response with a [`ECCodecs` JSON object](#EC_Codecs_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "ErasureCodeCodecs": {
+                "rs": "rs_native, rs_java",
+                "rs-legacy": "rs-legacy_java",
+                "xor":"xor_native, xor_java"
+            }
+        }
+
+### Get Trash Roots
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETTRASHROOTS
+                                      &allusers=<true|false>"
+
+  The client receives a response with a [`Paths` JSON object](#Paths_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "Paths": [{
+                "blocksize": 0,
+                "owner": "hadoop",
+                "path": "/user/user0/.Trash",
+                "length": 0,
+                "permission": "755",
+                "modification_time": 1693050205747,
+                "isdir": true,
+                "block_replication": 0,
+                "access_time": 0,
+                "group": "supergroup"
+             }, {
+                "blocksize": 0,
+                "owner": "hadoop",
+                "path": "/user/user1/.Trash",
+                "length": 0,
+                "permission": "755",
+                "modification_time": 1693049382962,
+                "isdir": true,
+                "block_replication": 0,
+                "access_time": 0,
+                "group": "supergroup"
+             }]
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getTrashRoots
 
 Storage Policy Operations
 -------------------------
@@ -3173,6 +3275,66 @@ var blockLocationProperties =
     "remaining": 292893392896,
     "capacity": 322122547200
   }
+}
+```
+### EC Policies JSON Schema
+
+```json
+{
+  "ErasureCodingPolicies": {
+    "ErasureCodingPolicyInfo": [
+      {
+        "state": "ENABLED",
+        "policy": {
+          "name": "RS-6-3-1024k",
+          "schema": {
+            "codecName": "rs",
+            "numDataUnits": 6,
+            "numParityUnits": 3,
+            "extraOptions": {}
+          },
+          "cellSize": 1048576,
+          "id": 1,
+          "replicationPolicy": false,
+          "codecName": "rs",
+          "numDataUnits": 6,
+          "numParityUnits": 3,
+          "systemPolicy": true
+        }
+      }
+    ]
+  }
+}
+```
+
+### EC Codecs JSON Schema
+
+```json
+{
+  "ErasureCodingCodecs": {
+    "rs": "rs_native, rs_java",
+    "rs-legacy": "rs-legacy_java",
+    "xor": "xor_native, xor_java"
+  }
+}
+```
+
+### Paths JSON Schema
+
+```json
+{
+  "Paths": [{
+    "blocksize": 0,
+    "owner": "hadoop",
+    "path": "/user/user0/.Trash",
+    "length": 0,
+    "permission": "755",
+    "modification_time": 1693050205747,
+    "isdir": true,
+    "block_replication": 0,
+    "access_time": 0,
+    "group": "supergroup"
+  }]
 }
 ```
 

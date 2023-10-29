@@ -38,6 +38,7 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
             <version>${hadoop.protobuf.version}</version>
+            <scope>${transient.protobuf2.scope}</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>

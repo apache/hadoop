@@ -158,11 +158,16 @@
 #
 # See ResourceManager for some examples
 #
-#export YARN_ROUTER_OPTS=
+#export YARN_ROUTER_OPTS="-Drouter.audit.logger=INFO,ROUTERAUDIT"
 
 ###
 # Global Policy Generator specific parameters
 ###
+
+# Specify the max heapsize for the Global Policy Generator.  If no units are
+# given, it will be assumed to be in MB.
+# Default is the same as HADOOP_HEAPSIZE_MAX
+#export YARN_GLOBALPOLICYGENERATOR_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the GPG.
 # These options will be appended to the options specified as HADOOP_OPTS

@@ -224,6 +224,7 @@ public class TestContainerAllocation {
           new ArrayList<ContainerId>()).getAllocatedContainers();
     // should be able to fetch the container;
     Assert.assertEquals(1, containers.size());
+    rm1.stop();
   }
 
   // This is to test whether LogAggregationContext is passed into
@@ -353,6 +354,7 @@ public class TestContainerAllocation {
       SecurityUtilTestHelper.setTokenServiceUseIp(false);
     }
     MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    rm1.stop();
   }
   
   @Test(timeout = 60000)

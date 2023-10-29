@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
@@ -147,6 +148,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
   public static final String OFFSET_PARAM = "offset";
   public static final String LENGTH_PARAM = "length";
+  public static final String ALLUSERS_PARAM = "allusers";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -284,6 +286,9 @@ public class HttpFSFileSystem extends FileSystem
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
     GETFILELINKSTATUS(HTTP_GET),
     GETSTATUS(HTTP_GET),
+    GETECPOLICIES(HTTP_GET),
+    GETECCODECS(HTTP_GET),
+    GETTRASHROOTS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1771,6 +1776,44 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.toFsStatus(json);
+  }
+
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECPOLICIES.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getAllErasureCodingPolicies(json);
+  }
+
+  public Map<String, String> getAllErasureCodingCodecs() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECCODECS.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECCODECS.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getErasureCodeCodecs(json);
+  }
+
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETTRASHROOTS.toString());
+    params.put(ALLUSERS_PARAM, Boolean.toString(allUsers));
+    Path path = new Path(getUri().toString(), "/");
+    try {
+      HttpURLConnection conn = getConnection(Operation.GETTRASHROOTS.getMethod(),
+          params, path, true);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+      return JsonUtilClient.getTrashRoots(json);
+    } catch (IOException e) {
+      return super.getTrashRoots(allUsers);
+    }
   }
 
   @VisibleForTesting
