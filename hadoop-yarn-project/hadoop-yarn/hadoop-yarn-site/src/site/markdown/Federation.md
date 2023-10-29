@@ -447,7 +447,7 @@ The role of the interceptor is to forward client requests to RM.
 
 **How to configure the thread pool of FederationClientInterceptor**
 
-The FederationClientInterceptor retrieves data from multiple subClusters. To improve performance, we utilize a thread pool for concurrent access to multiple subClusters. 
+The FederationClientInterceptor retrieves data from multiple subClusters. To improve performance, we utilize a thread pool for concurrent access to multiple subClusters.
 Below is the configuration for the thread pool, which can be adjusted based on the requirements of the production environment.
 
 | Property                                                              | Mode    | Description                                                                                                                                                                                                                                  |
@@ -643,7 +643,7 @@ Usage:
 
 `yarn routeradmin -policy -l|--list ([--pageSize][--currentPage][--queue][--queues])`
 
-###### SubCmd1: -s|--save (<queue;router weight;amrm weight;headroomalpha>) 
+###### SubCmd1: -s|--save (<queue;router weight;amrm weight;headroomalpha>)
 
 This command is used to save the policy information of the queue, including queue and weight information.
 
@@ -669,7 +669,7 @@ yarn routeradmin -policy --save root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
 yarn routeradmin -policy -s root.a;SC-1:0.7,SC-2:0.3;SC-1:0.6,SC-2:0.4;1.0
 ```
 
-###### SubCmd2: -bs|--batch-save (--format xml) (-f|--input-file fileName) 
+###### SubCmd2: -bs|--batch-save (--format xml) (-f|--input-file fileName)
 
 This command can batch load weight information for queues based on the provided `federation-weights.xml` file.
 
@@ -749,7 +749,7 @@ yarn routeradmin -policy -bs --format xml -f /path/federation-weights.xml
 yarn routeradmin -policy --batch-save --format xml -f /path/federation-weights.xml
 ```
 
-###### SubCmd3: -l|--list (--pageSize --currentPage --queue --queues) 
+###### SubCmd3: -l|--list (--pageSize --currentPage --queue --queues)
 
 This command is used to display the configured queue weight information.
 
