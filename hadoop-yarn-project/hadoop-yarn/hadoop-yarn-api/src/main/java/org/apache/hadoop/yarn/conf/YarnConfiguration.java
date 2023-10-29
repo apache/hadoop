@@ -857,6 +857,10 @@ public class YarnConfiguration extends Configuration {
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
+  /** Enable Zookeeper SSL/TLS communication. */
+  public static final String RM_ZK_CLIENT_SSL_ENABLED = RM_ZK_PREFIX + "client-ssl.enabled";
+  public static final boolean DEFAULT_RM_ZK_CLIENT_SSL_ENABLED = false;
+
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
@@ -2227,6 +2231,14 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-localizer.java.opts";
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
+
+  /*
+   * Flag to indicate whether JDK17's required add-exports flags should be added to
+   * container localizers regardless of the user specified JAVA_OPTS.
+   */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
+  public static final boolean NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT = true;
 
   /** The log level of container localizer process. */
   public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
@@ -4357,6 +4369,22 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
       TimeUnit.SECONDS.toMillis(0); // 0s
 
+  /**
+   * This method configures the policy for core threads regarding termination
+   * when no tasks arrive within the keep-alive time.
+   * When set to false, core threads are never terminated due to a lack of tasks.
+   * When set to true, the same keep-alive policy
+   * that applies to non-core threads also applies to core threads.
+   * To prevent constant thread replacement,
+   * ensure that the keep-alive time is greater than zero when setting it to true.
+   * It's advisable to call this method before the pool becomes actively used.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.allow-core-thread-time-out";
+
+  public static final boolean DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      false;
+
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
       ROUTER_WEBAPP_PREFIX + "address";
@@ -4536,6 +4564,11 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
   public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
+
+  public static final String GPG_WEBAPP_CONNECT_TIMEOUT = GPG_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+  public static final String GPG_WEBAPP_READ_TIMEOUT = GPG_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_READ_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
   /**
    * Connection and Read timeout from the Router to RM.

@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -125,6 +124,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.QueryFederation
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.QueryFederationQueuePoliciesResponsePBImpl;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.getRemoteException;
 
 @Private
 public class ResourceManagerAdministrationProtocolPBClientImpl implements ResourceManagerAdministrationProtocol, Closeable {
@@ -243,7 +244,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
       return (String[]) responseProto.getGroupsList().toArray(
           new String[responseProto.getGroupsCount()]);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw getRemoteException(e);
     }
   }
 

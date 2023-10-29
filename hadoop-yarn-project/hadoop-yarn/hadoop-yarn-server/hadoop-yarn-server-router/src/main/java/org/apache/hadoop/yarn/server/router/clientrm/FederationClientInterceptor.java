@@ -230,6 +230,15 @@ public class FederationClientInterceptor
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
+    // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
+    boolean allowCoreThreadTimeOut =  getConf().getBoolean(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT);
+
+    if (keepAliveTime > 0 && allowCoreThreadTimeOut) {
+      this.executorService.allowCoreThreadTimeOut(allowCoreThreadTimeOut);
+    }
+
     final Configuration conf = this.getConf();
 
     try {

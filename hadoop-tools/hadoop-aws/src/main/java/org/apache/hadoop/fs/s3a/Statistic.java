@@ -242,7 +242,10 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
       TYPE_DURATION),
-  OBJECT_PUT_REQUESTS(
+  OBJECT_MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_LIST,
+      "Object multipart list request issued",
+      TYPE_DURATION),  OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
       TYPE_DURATION),
@@ -548,11 +551,6 @@ public enum Statistic {
       StoreStatisticNames.STORE_IO_THROTTLE_RATE,
       "Rate of S3 request throttling",
       TYPE_QUANTILE),
-  STORE_REGION_PROBE(
-      StoreStatisticNames.STORE_REGION_PROBE,
-      "Store Region Probe",
-      TYPE_DURATION
-  ),
 
   /*
    * Delegation Token Operations.
@@ -582,7 +580,7 @@ public enum Statistic {
       TYPE_COUNTER),
   MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
       StoreStatisticNames.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
-      "Multipart Upload Abort Unner Path Invoked",
+      "Multipart Upload Abort Under Path Invoked",
       TYPE_COUNTER),
   MULTIPART_UPLOAD_COMPLETED(
       StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,

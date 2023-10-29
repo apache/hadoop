@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -48,8 +47,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
@@ -400,12 +399,20 @@ public abstract class S3GuardTool extends Configured implements Tool,
       println(out, "Filesystem %s", fsUri);
       try {
         println(out, "Location: %s", fs.getBucketLocation());
-      } catch (AccessDeniedException e) {
+      } catch (IOException e) {
         // Caller cannot get the location of this bucket due to permissions
-        // in their role or the bucket itself.
+        // in their role or the bucket itself, or it is not an operation
+        // supported by this store.
         // Note and continue.
         LOG.debug("failed to get bucket location", e);
         println(out, LOCATION_UNKNOWN);
+
+        // it may be the bucket is not found; we can't differentiate
+        // that and handle third party store issues where the API may
+        // not work.
+        // Fallback to looking for bucket root attributes.
+        println(out, "Probing for bucket existence");
+        fs.listXAttrs(new Path("/"));
       }
 
       // print any auth paths for directory marker info
@@ -676,7 +683,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
     private void processUploads(PrintStream out) throws IOException {
       final S3AFileSystem fs = getFilesystem();
-      MultipartUtils.UploadIterator uploads = fs.listUploads(prefix);
+      RemoteIterator<MultipartUpload> uploads = fs.listUploads(prefix);
       // create a span so that the write operation helper
       // is within one
       AuditSpan span =

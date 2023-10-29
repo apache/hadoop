@@ -228,6 +228,9 @@ public final class Constants {
   /**
    * Number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
+   * The S3A connector does its own selective retries; the only time the AWS
+   * SDK operations are not wrapped is during multipart copy via the AWS SDK
+   * transfer manager.
    */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
 
@@ -235,7 +238,7 @@ public final class Constants {
    * Default number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
    */
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 5;
 
   /**
    * Experimental/Unstable feature: should the AWS client library retry
@@ -264,7 +267,7 @@ public final class Constants {
   // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
+  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5000;
 
   // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
@@ -1177,17 +1180,37 @@ public final class Constants {
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
   /**
+   * The default S3 region when using cross region client.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 
   /**
    * Flag for create performance.
-   * This is *not* a configuration option; it is for use in the
-   * {code createFile()} builder.
+   * This can be set in the {code createFile()} builder.
    * Value {@value}.
    */
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Default value for create performance in an S3A FS.
+   * Value {@value}.
+   */
+  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = true;
+
+
+  /**
+   * Capability to indicate that the FS has been instantiated with
+   * {@link #FS_S3A_CREATE_PERFORMANCE} set to true.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE_ENABLED =
+      FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
    * Prefix for adding a header to the object when created.
@@ -1309,4 +1332,19 @@ public final class Constants {
    * The bucket region header.
    */
   public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Should directory operations purge uploads?
+   * This adds at least one parallelized list operation to the call,
+   * plus the overhead of deletions.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_OPERATIONS_PURGE_UPLOADS =
+      "fs.s3a.directory.operations.purge.uploads";
+
+  /**
+   * Default value of {@link #DIRECTORY_OPERATIONS_PURGE_UPLOADS}: {@value}.
+   */
+  public static final boolean DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT = false;
+
 }

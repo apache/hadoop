@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -33,11 +34,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
+import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -69,8 +72,14 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     assertTrue("getFileStatus on root should always return a directory",
             fs.getFileStatus(root).isDirectory());
 
-    expectUnknownStore(
-        () -> fs.listStatus(root));
+    try {
+      expectUnknownStore(
+          () -> fs.listStatus(root));
+    } catch (AccessDeniedException e) {
+      // this is a sign that there's tests with a third-party bucket and
+      // interacting with aws is not going to authenticate
+      skip("no aws credentials");
+    }
 
     Path src = new Path(root, "testfile");
     Path dest = new Path(root, "dst");
@@ -129,7 +138,8 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(conf,
         S3A_BUCKET_PROBE,
         ENDPOINT,
-        AWS_REGION);
+        AWS_REGION,
+        PATH_STYLE_ACCESS);
     conf.setInt(S3A_BUCKET_PROBE, probe);
     conf.set(AWS_REGION, EU_WEST_1);
     return conf;

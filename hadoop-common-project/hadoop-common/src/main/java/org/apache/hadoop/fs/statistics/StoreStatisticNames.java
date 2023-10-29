@@ -245,6 +245,13 @@ public final class StoreStatisticNames {
       "object_multipart_aborted";
 
   /**
+   * Object multipart list request.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_MULTIPART_UPLOAD_LIST =
+      "object_multipart_list";
+
+  /**
    * Object put/multipart upload count.
    * Value :{@value}.
    */
@@ -406,10 +413,6 @@ public final class StoreStatisticNames {
 
   public static final String MULTIPART_UPLOAD_LIST
       = "multipart_upload_list";
-
-  /** Probe for store region: {@value}. */
-  public static final String STORE_REGION_PROBE
-      = "store_region_probe";
 
   private StoreStatisticNames() {
   }

@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -80,8 +81,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
  * <p></p>
  * Similarly: JUnit assertions over AssertJ.
  * <p></p>
- * The tests work with unguarded buckets only -the bucket settings are changed
- * appropriately.
+ * s3a create performance is disabled for consistent assertions.
  */
 @RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
@@ -199,11 +199,13 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY);
+        DIRECTORY_MARKER_POLICY,
+        FS_S3A_CREATE_PERFORMANCE);
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
 
@@ -455,6 +457,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     Path src = basePath;
     Path dest = new Path(methodPath(), "dest");
+    getFileSystem().delete(dest, true);
     assertRenamed(src, dest);
 
     assertPathDoesNotExist("source", src);
@@ -610,15 +613,18 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
             RequestBody.fromString(content)));
   }
   /**
-   * Delete an object.
+   * Delete an object; exceptions are swallowed.
    * @param key key
-   * @param content string
    */
   private void deleteObject(final String key) throws Exception {
-    exec("DELETE " + key, () -> {
-      s3client.deleteObject(b -> b.bucket(bucket).key(key));
-      return "deleted " + key;
-    });
+    try {
+      exec("DELETE " + key, () -> {
+        s3client.deleteObject(b -> b.bucket(bucket).key(key));
+        return "deleted " + key;
+      });
+    } catch (IOException ignored) {
+
+    }
   }
 
   /**

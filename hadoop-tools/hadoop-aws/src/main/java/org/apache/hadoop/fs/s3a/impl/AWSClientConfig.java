@@ -117,14 +117,14 @@ public final class AWSClientConfig {
         S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
     int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
 
-    httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
-    httpClientBuilder.socketTimeout(Duration.ofSeconds(socketTimeout));
+    httpClientBuilder.connectionTimeout(Duration.ofMillis(connectionEstablishTimeout));
+    httpClientBuilder.socketTimeout(Duration.ofMillis(socketTimeout));
 
     // set the connection TTL irrespective of whether the connection is in use or not.
     // this can balance requests over different S3 servers, and avoid failed
     // connections. See HADOOP-18845.
     long ttl = longOption(conf, CONNECTION_TTL, DEFAULT_CONNECTION_TTL, -1);
-    httpClientBuilder.connectionTimeToLive(Duration.ofSeconds(ttl));
+    httpClientBuilder.connectionTimeToLive(Duration.ofMillis(ttl));
 
     NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
@@ -148,15 +148,15 @@ public final class AWSClientConfig {
         S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
     int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
 
-    httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
-    httpClientBuilder.readTimeout(Duration.ofSeconds(socketTimeout));
-    httpClientBuilder.writeTimeout(Duration.ofSeconds(socketTimeout));
+    httpClientBuilder.connectionTimeout(Duration.ofMillis(connectionEstablishTimeout));
+    httpClientBuilder.readTimeout(Duration.ofMillis(socketTimeout));
+    httpClientBuilder.writeTimeout(Duration.ofMillis(socketTimeout));
 
     // set the connection TTL irrespective of whether the connection is in use or not.
     // this can balance requests over different S3 servers, and avoid failed
     // connections. See HADOOP-18845.
     long ttl = longOption(conf, CONNECTION_TTL, DEFAULT_CONNECTION_TTL, -1);
-    httpClientBuilder.connectionTimeToLive(Duration.ofSeconds(ttl));
+    httpClientBuilder.connectionTimeToLive(Duration.ofMillis(ttl));
 
     // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);

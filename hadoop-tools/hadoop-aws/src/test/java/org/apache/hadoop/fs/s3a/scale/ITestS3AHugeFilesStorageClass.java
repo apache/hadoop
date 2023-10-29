@@ -47,14 +47,9 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AHugeFilesStorageClass.class);
 
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfStorageClassTestsDisabled(getConfiguration());
-  }
-
-  @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
     disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS);
 

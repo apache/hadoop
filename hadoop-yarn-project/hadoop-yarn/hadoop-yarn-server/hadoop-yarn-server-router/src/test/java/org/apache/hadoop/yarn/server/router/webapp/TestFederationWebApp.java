@@ -116,6 +116,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testNodeLabelAppViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testNodeLabelAppViewNotEnable - NotEnable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -125,6 +126,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testNodeLabelAppViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testNodeLabelAppViewEnable - Enable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);

@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureReq
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
 import org.apache.hadoop.net.NetUtils;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class maintains a cache of protocol versions and corresponding protocol
@@ -122,12 +122,8 @@ public class RpcClientUtil {
       builder.setProtocol(protocol.getName());
       builder.setRpcKind(rpcKind.toString());
       GetProtocolSignatureResponseProto resp;
-      try {
-        resp = protocolInfoProxy.getProtocolSignature(NULL_CONTROLLER,
-            builder.build());
-      } catch (ServiceException se) {
-        throw ProtobufHelper.getRemoteException(se);
-      }
+      resp = ipc(() -> protocolInfoProxy.getProtocolSignature(NULL_CONTROLLER,
+          builder.build()));
       versionMap = convertProtocolSignatureProtos(resp
           .getProtocolSignatureList());
       putVersionSignatureMap(serverAddress, protocol.getName(),
