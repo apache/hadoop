@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,47 +107,32 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
-   * @param blockData information about each block of the underlying file.
-   * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
-   * @param prefetchingStatistics statistics for this stream.
-   * @param conf the configuration.
-   * @param localDirAllocator the local dir allocator instance.
-   * @param maxBlocksCount max blocks count to be kept in cache at any time.
-   * @param trackerFactory tracker with statistics to update.
+   * @param blockManagerParams params for block manager.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
-  @SuppressWarnings("checkstyle:parameternumber")
-  public CachingBlockManager(
-      ExecutorServiceFuturePool futurePool,
-      BlockData blockData,
-      int bufferPoolSize,
-      PrefetchingStatistics prefetchingStatistics,
-      Configuration conf,
-      LocalDirAllocator localDirAllocator,
-      int maxBlocksCount,
-      DurationTrackerFactory trackerFactory) {
-    super(blockData);
+  public CachingBlockManager(@Nonnull final BlockManagerParams blockManagerParams) {
+    super(blockManagerParams.getBlockData());
 
-    Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
+    Validate.checkPositiveInteger(blockManagerParams.getBufferPoolSize(), "bufferPoolSize");
 
-    this.futurePool = requireNonNull(futurePool);
-    this.bufferPoolSize = bufferPoolSize;
+    this.futurePool = requireNonNull(blockManagerParams.getFuturePool());
+    this.bufferPoolSize = blockManagerParams.getBufferPoolSize();
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
-    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
-    this.conf = requireNonNull(conf);
+    this.prefetchingStatistics = requireNonNull(blockManagerParams.getPrefetchingStatistics());
+    this.conf = requireNonNull(blockManagerParams.getConf());
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache(maxBlocksCount, trackerFactory);
+      this.cache = this.createCache(blockManagerParams.getMaxBlocksCount(),
+          blockManagerParams.getTrackerFactory());
     }
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
-    this.localDirAllocator = localDirAllocator;
+    this.localDirAllocator = blockManagerParams.getLocalDirAllocator();
   }
 
   /**
