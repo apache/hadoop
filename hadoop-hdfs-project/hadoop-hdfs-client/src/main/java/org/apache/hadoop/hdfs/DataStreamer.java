@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
 
 import java.io.BufferedOutputStream;
-import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -30,7 +29,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -154,7 +152,7 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private class StreamerStreams implements Closeable {
+  private class StreamerStreams implements java.io.Closeable {
     private Socket sock = null;
     private DataOutputStream out = null;
     private DataInputStream in = null;
@@ -575,17 +573,17 @@ class DataStreamer extends Daemon {
     if (congestionBackOffMeanTimeInMs <= 0 || congestionBackOffMaxTimeInMs <= 0 ||
         congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
       if (congestionBackOffMeanTimeInMs <= 0) {
-        LOG.warn("Configuration: {} is not appropriate, use default value: {}",
+        LOG.warn("Configuration: {} is not appropriate, using default value: {}",
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME,
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT);
       }
       if (congestionBackOffMaxTimeInMs <= 0) {
-        LOG.warn("Configuration: {} is not appropriate, use default value: {}",
+        LOG.warn("Configuration: {} is not appropriate, using default value: {}",
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
       }
       if (congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
-        LOG.warn("Configuration: {} can not less than {}, use their default values.",
+        LOG.warn("Configuration: {} can not less than {}, using their default values.",
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
             HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME);
       }
@@ -1143,7 +1141,7 @@ class DataStreamer extends Daemon {
     InetAddress addr = null;
     try {
       addr = InetAddress.getByName(nodes[index].getIpAddr());
-    } catch (UnknownHostException e) {
+    } catch (java.net.UnknownHostException e) {
       // we are passing an ip address. this should not happen.
       assert false;
     }
