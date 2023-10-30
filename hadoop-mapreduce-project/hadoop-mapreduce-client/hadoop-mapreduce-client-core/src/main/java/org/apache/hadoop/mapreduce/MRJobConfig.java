@@ -323,6 +323,7 @@ public interface MRJobConfig {
   public static final int DEFAULT_IO_SORT_MB = 100;
 
   public static final String INDEX_CACHE_MEMORY_LIMIT = "mapreduce.task.index.cache.limit.bytes";
+  String SPILL_FILES_COUNT_LIMIT = "mapreduce.task.spill.files.count.limit";
 
   public static final String PRESERVE_FAILED_TASK_FILES = "mapreduce.task.files.preserve.failedtasks";
 
