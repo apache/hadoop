@@ -117,17 +117,12 @@ public class HostRestrictingAuthorizationFilter implements Filter {
       String rulePath = rule.getPath();
       LOG.trace("Evaluating rule, subnet: {}, path: {}",
           subnet != null ? subnet.getCidrSignature() : "*", rulePath);
-      try {
-        if ((subnet == null || subnet.isInRange(remoteIp))
-            && FilenameUtils.directoryContains(rulePath, path)) {
-          LOG.debug("Found matching rule, subnet: {}, path: {}; returned true",
-              rule.getSubnet() != null ? subnet.getCidrSignature() : null,
-              rulePath);
-          return true;
-        }
-      } catch (IOException e) {
-        LOG.warn("Got IOException {}; returned false", e);
-        return false;
+      if ((subnet == null || subnet.isInRange(remoteIp))
+          && FilenameUtils.directoryContains(rulePath, path)) {
+        LOG.debug("Found matching rule, subnet: {}, path: {}; returned true",
+            rule.getSubnet() != null ? subnet.getCidrSignature() : null,
+            rulePath);
+        return true;
       }
     }
 
