@@ -285,6 +285,7 @@ public class StandbyCheckpointer {
     }
     InterruptedException ie = null;
     List<IOException> ioes = Lists.newArrayList();
+    boolean isSuccess = false;
     for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
         uploads.entrySet()) {
       String url = entry.getKey();
@@ -297,6 +298,7 @@ public class StandbyCheckpointer {
         if (uploadResult == TransferFsImage.TransferResult.SUCCESS) {
           receiverEntry.setLastUploadTime(monotonicNow());
           receiverEntry.setIsPrimary(true);
+          isSuccess = true;
         } else {
           // Getting here means image upload is explicitly rejected
           // by the other node. This could happen if:
@@ -342,7 +344,7 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
-    if (!ioes.isEmpty()) {
+    if (!ioes.isEmpty() && !isSuccess) {
       throw MultipleIOException.createIOException(ioes);
     }
   }
