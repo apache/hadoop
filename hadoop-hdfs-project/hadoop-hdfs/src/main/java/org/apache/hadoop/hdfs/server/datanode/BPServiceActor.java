@@ -122,7 +122,7 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
-  private long fullBlockReportLeaseId;
+  private volatile long fullBlockReportLeaseId;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -483,6 +483,8 @@ class BPServiceActor implements Runnable {
                   (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
           ".");
     }
+    scheduler.updateLastBlockReportTime(monotonicNow());
+    scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
   }
 
@@ -770,10 +772,7 @@ class BPServiceActor implements Runnable {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          fbrExecutorService.submit(new FBRTaskHandler(fullBlockReportLeaseId));
-          fullBlockReportLeaseId = 0;
-          scheduler.updateLastBlockReportTime(monotonicNow());
-          scheduler.scheduleNextBlockReport();
+          fbrExecutorService.submit(new FBRTaskHandler());
         }
 
         if (!dn.areCacheReportsDisabledForTests()) {
@@ -971,20 +970,25 @@ class BPServiceActor implements Runnable {
 
   void reRegister() throws IOException {
     if (shouldRun()) {
-      // re-retrieve namespace info to make sure that, if the NN
-      // was restarted, we still match its version (HDFS-2120)
-      NamespaceInfo nsInfo = retrieveNamespaceInfo();
-      // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
-      // for sometime.
-      if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
-        ibrManager.clearIBRs();
+      if (scheduler.shouldReRegister()) {
+        // re-retrieve namespace info to make sure that, if the NN
+        // was restarted, we still match its version (HDFS-2120)
+        NamespaceInfo nsInfo = retrieveNamespaceInfo();
+        // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
+        // for sometime.
+        if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
+          ibrManager.clearIBRs();
+        }
+        // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
+        // some blocks report to Standby util next FBR.
+        // and re-register
+        register(nsInfo);
+        scheduler.setReRegisterTime(monotonicNow());
+        scheduler.scheduleHeartbeat();
+        DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
+      } else {
+        LOG.info("DNA_REGISTER execution interval is too short. Skip.");
       }
-      // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
-      // some blocks report to Standby util next FBR.
-      // and re-register
-      register(nsInfo);
-      scheduler.scheduleHeartbeat();
-      DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
     }
   }
 
@@ -1195,10 +1199,7 @@ class BPServiceActor implements Runnable {
 
   final class FBRTaskHandler implements Runnable {
 
-    private long fullBlockReportLeaseId;
-
-    private FBRTaskHandler(long fullBlockReportLeaseId) {
-      this.fullBlockReportLeaseId = fullBlockReportLeaseId;
+    private FBRTaskHandler() {
     }
 
     @Override
@@ -1207,10 +1208,12 @@ class BPServiceActor implements Runnable {
       List<DatanodeCommand> cmds = null;
       try {
         synchronized (sendBRLock) {
-          cmds = blockReport(this.fullBlockReportLeaseId);
+          cmds = blockReport(fullBlockReportLeaseId);
         }
+        fullBlockReportLeaseId = 0;
         commandProcessingThread.enqueue(cmds);
       } catch (Throwable t) {
+        fullBlockReportLeaseId = 0;
         LOG.warn("InterruptedException in FBR Task Handler.", t);
         sleepAndLogInterrupts(5000, "offering FBR service");
         synchronized(ibrManager) {
@@ -1260,6 +1263,7 @@ class BPServiceActor implements Runnable {
     private final long lifelineIntervalMs;
     private volatile long blockReportIntervalMs;
     private volatile long outliersReportIntervalMs;
+    private long reRegisterTime = 0;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
               long blockReportIntervalMs, long outliersReportIntervalMs) {
@@ -1443,6 +1447,14 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     long getOutliersReportIntervalMs() {
       return this.outliersReportIntervalMs;
+    }
+
+    private boolean shouldReRegister() {
+      return monotonicNow() - reRegisterTime > this.heartbeatIntervalMs * 3;
+    }
+
+    public void setReRegisterTime(long reRegisterTime) {
+      this.reRegisterTime = reRegisterTime;
     }
 
     /**
