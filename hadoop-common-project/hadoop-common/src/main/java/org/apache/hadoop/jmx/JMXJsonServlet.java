@@ -52,8 +52,8 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.apache.hadoop.http.HttpServer2.JMX_NAN_FILTER;
-import static org.apache.hadoop.http.HttpServer2.JMX_NAN_FILTER_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER_DEFAULT;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has

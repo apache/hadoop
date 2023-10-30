@@ -163,9 +163,6 @@ public final class HttpServer2 implements FilterContainer {
   public static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
-  public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
-  public static final boolean JMX_NAN_FILTER_DEFAULT = false;
-
   public static final String HTTP_SNI_HOST_CHECK_ENABLED_KEY
       = "hadoop.http.sni.host.check.enabled";
   public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
