@@ -508,7 +508,11 @@ public class EditLogTailer {
           boolean triggeredLogRoll = false;
           if (tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
-            triggerActiveLogRoll();
+            if (namesystem.standbyCheckpointerIsWorking()) {
+              LOG.warn("Skip triggering log roll, because standby checkpointer is working.");
+            } else {
+              triggerActiveLogRoll();
+            }
             triggeredLogRoll = true;
           }
           /**

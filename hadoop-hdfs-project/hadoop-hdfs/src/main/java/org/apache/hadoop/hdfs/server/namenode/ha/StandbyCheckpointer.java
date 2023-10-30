@@ -84,7 +84,9 @@ public class StandbyCheckpointer {
 
   // A map from NN url to the most recent image upload time.
   private final HashMap<String, CheckpointReceiverEntry> checkpointReceivers;
-  
+
+  private volatile boolean isWorking = false;
+
   public StandbyCheckpointer(Configuration conf, FSNamesystem ns)
       throws IOException {
     this.namesystem = ns;
@@ -427,6 +429,7 @@ public class StandbyCheckpointer {
       // on startup.
       lastCheckpointTime = monotonicNow();
       while (shouldRun) {
+        isWorking = false;
         boolean needRollbackCheckpoint = namesystem.isNeedRollbackFsImage();
         if (!needRollbackCheckpoint) {
           try {
@@ -466,6 +469,7 @@ public class StandbyCheckpointer {
           }
 
           if (needCheckpoint) {
+            isWorking = true;
             synchronized (cancelLock) {
               if (now < preventCheckpointsUntil) {
                 LOG.info("But skipping this checkpoint since we are about to failover!");
@@ -500,6 +504,7 @@ public class StandbyCheckpointer {
         } catch (Throwable t) {
           LOG.error("Exception in doCheckpoint", t);
         } finally {
+          isWorking = false;
           synchronized (cancelLock) {
             canceler = null;
           }
@@ -511,5 +516,9 @@ public class StandbyCheckpointer {
   @VisibleForTesting
   List<URL> getActiveNNAddresses() {
     return activeNNAddresses;
+  }
+
+  public boolean isWorking() {
+    return isWorking;
   }
 }

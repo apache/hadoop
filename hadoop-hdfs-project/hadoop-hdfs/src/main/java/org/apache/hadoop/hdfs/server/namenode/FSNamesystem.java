@@ -1622,6 +1622,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
+  public boolean standbyCheckpointerIsWorking() {
+    return standbyCheckpointer != null && standbyCheckpointer.isWorking();
+  }
+
   public void checkOperation(OperationCategory op) throws StandbyException {
     if (haContext != null) {
       // null in some unit tests
