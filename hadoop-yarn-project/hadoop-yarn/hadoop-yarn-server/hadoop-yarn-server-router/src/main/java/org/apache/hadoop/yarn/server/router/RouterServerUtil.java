@@ -227,7 +227,7 @@ public final class RouterServerUtil {
       throws IOException {
     if (t != null) {
       LOG.error(errMsg, t);
-      throw new IOException(errMsg, t);
+      throw new IOException(errMsg + " " + t.getMessage(), t);
     } else {
       LOG.error(errMsg);
       throw new IOException(errMsg);
@@ -249,7 +249,7 @@ public final class RouterServerUtil {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
       LOG.error(msg, t);
-      throw new IOException(msg, t);
+      throw new IOException(msg + " " + t.getMessage(), t);
     } else {
       LOG.error(msg);
       throw new IOException(msg);
@@ -269,7 +269,7 @@ public final class RouterServerUtil {
       throws RuntimeException {
     if (t != null) {
       LOG.error(errMsg, t);
-      throw new RuntimeException(errMsg, t);
+      throw new RuntimeException(errMsg + " " + t.getMessage(), t);
     } else {
       LOG.error(errMsg);
       throw new RuntimeException(errMsg);
@@ -291,7 +291,7 @@ public final class RouterServerUtil {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
       LOG.error(msg, t);
-      throw new RuntimeException(msg, t);
+      throw new RuntimeException(msg + " " + t.getMessage(), t);
     } else {
       LOG.error(msg);
       throw new RuntimeException(msg);
@@ -313,7 +313,7 @@ public final class RouterServerUtil {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
       LOG.error(msg, t);
-      return new RuntimeException(msg, t);
+      return new RuntimeException(msg + " " + t.getMessage(), t);
     } else {
       LOG.error(msg);
       return new RuntimeException(msg);
@@ -349,7 +349,7 @@ public final class RouterServerUtil {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
       LOG.error(msg, t);
-      return new YarnRuntimeException(msg, t);
+      return new YarnRuntimeException(msg + " " + t.getMessage(), t);
     } else {
       LOG.error(msg);
       return new YarnRuntimeException(msg);
