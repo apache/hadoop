@@ -293,7 +293,8 @@ public interface HdfsClientConfigKeys {
 
   String DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME =
       "dfs.client.congestion.backoff.max.time";
-  int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT = 50000;
+  int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT =
+      DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT * 10;
 
   /**
    * These are deprecated config keys to client code.
