@@ -151,7 +151,7 @@ class BPServiceActor implements Runnable {
     fullBlockReportLeaseId = 0;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
-        dnConf.outliersReportIntervalMs);
+        dnConf.outliersReportIntervalMs, dnConf.heartBeatReRegisterInterval);
     // get the value of maxDataLength.
     this.maxDataLength = dnConf.getMaxDataLength();
     if (serviceId != null) {
@@ -1263,14 +1263,16 @@ class BPServiceActor implements Runnable {
     private final long lifelineIntervalMs;
     private volatile long blockReportIntervalMs;
     private volatile long outliersReportIntervalMs;
+    private final long heartBeatReRegisterIntervalMs;
     private long reRegisterTime = 0;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
-              long blockReportIntervalMs, long outliersReportIntervalMs) {
+              long blockReportIntervalMs, long outliersReportIntervalMs, long heartBeatReRegisterIntervalMs ) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
       this.outliersReportIntervalMs = outliersReportIntervalMs;
+      this.heartBeatReRegisterIntervalMs = heartBeatReRegisterIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
     }
 
@@ -1450,7 +1452,7 @@ class BPServiceActor implements Runnable {
     }
 
     private boolean shouldReRegister() {
-      return monotonicNow() - reRegisterTime > this.heartbeatIntervalMs * 3;
+      return monotonicNow() - reRegisterTime > this.heartBeatReRegisterIntervalMs;
     }
 
     public void setReRegisterTime(long reRegisterTime) {
