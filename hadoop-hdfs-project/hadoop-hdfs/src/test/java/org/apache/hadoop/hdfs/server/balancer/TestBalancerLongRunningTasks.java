@@ -71,6 +71,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_EN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_REREGISTER_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -561,6 +562,7 @@ public class TestBalancerLongRunningTasks {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
     conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 30000);
+    conf.setLong(DFS_HEARTBEAT_REREGISTER_INTERVAL_KEY, 0);
 
     final long capacity = 1000L;
     final int diffBetweenNodes = 50;

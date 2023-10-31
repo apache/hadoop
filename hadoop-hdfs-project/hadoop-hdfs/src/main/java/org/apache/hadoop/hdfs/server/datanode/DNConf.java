@@ -39,6 +39,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_REREGISTER_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_REREGISTER_INTERVAL__DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
@@ -105,6 +107,7 @@ public class DNConf {
 
   final long readaheadLength;
   final long heartBeatInterval;
+  final long heartBeatReRegisterInterval;
   private final long lifelineIntervalMs;
   volatile long blockReportInterval;
   volatile long blockReportSplitThreshold;
@@ -218,6 +221,9 @@ public class DNConf {
     initBlockReportDelay();
     heartBeatInterval = getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
+        TimeUnit.MILLISECONDS);
+    heartBeatReRegisterInterval = getConf().getTimeDuration(DFS_HEARTBEAT_REREGISTER_INTERVAL_KEY,
+        DFS_HEARTBEAT_REREGISTER_INTERVAL__DEFAULT, TimeUnit.SECONDS,
         TimeUnit.MILLISECONDS);
     long confLifelineIntervalMs =
         getConf().getLong(DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY,

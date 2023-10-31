@@ -972,6 +972,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT = true;
   public static final String  DFS_HEARTBEAT_INTERVAL_KEY = "dfs.heartbeat.interval";
   public static final long    DFS_HEARTBEAT_INTERVAL_DEFAULT = 3;
+  public static final String  DFS_HEARTBEAT_REREGISTER_INTERVAL_KEY = "dfs.heartbeat.reregister,interval";
+  public static final long    DFS_HEARTBEAT_REREGISTER_INTERVAL__DEFAULT = 9;
   public static final String  DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY =
       "dfs.datanode.lifeline.interval.seconds";
   public static final String  DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS = "dfs.namenode.path.based.cache.retry.interval.ms";
