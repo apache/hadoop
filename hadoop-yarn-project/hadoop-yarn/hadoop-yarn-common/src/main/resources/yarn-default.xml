@@ -5132,10 +5132,10 @@
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
-    <value>0s</value>
+    <value>30s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
-      Default is 0s.
+      Default is 30s.
     </description>
   </property>
 
