@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
  * This class is used to provide params to {@link BlockManager}.
  */
 @InterfaceAudience.Private
-public class BlockManagerParams {
+public final class BlockManagerParams {
 
   /**
    * Asynchronous tasks are performed in this pool.
@@ -63,6 +63,7 @@ public class BlockManagerParams {
    */
   private final DurationTrackerFactory trackerFactory;
 
+  @SuppressWarnings("checkstyle:parameternumber")
   private BlockManagerParams(ExecutorServiceFuturePool futurePool, BlockData blockData,
       int bufferPoolSize, PrefetchingStatistics prefetchingStatistics, Configuration conf,
       LocalDirAllocator localDirAllocator, int maxBlocksCount,
@@ -119,44 +120,44 @@ public class BlockManagerParams {
     private int maxBlocksCount;
     private DurationTrackerFactory trackerFactory;
 
-    public BlockManagerParamsBuilder setFuturePool(ExecutorServiceFuturePool futurePool) {
-      this.futurePool = futurePool;
+    public BlockManagerParamsBuilder setFuturePool(ExecutorServiceFuturePool pool) {
+      this.futurePool = pool;
       return this;
     }
 
-    public BlockManagerParamsBuilder setBlockData(BlockData blockData) {
-      this.blockData = blockData;
+    public BlockManagerParamsBuilder setBlockData(BlockData data) {
+      this.blockData = data;
       return this;
     }
 
-    public BlockManagerParamsBuilder setBufferPoolSize(int bufferPoolSize) {
-      this.bufferPoolSize = bufferPoolSize;
+    public BlockManagerParamsBuilder setBufferPoolSize(int poolSize) {
+      this.bufferPoolSize = poolSize;
       return this;
     }
 
     public BlockManagerParamsBuilder setPrefetchingStatistics(
-        PrefetchingStatistics prefetchingStatistics) {
-      this.prefetchingStatistics = prefetchingStatistics;
+        PrefetchingStatistics statistics) {
+      this.prefetchingStatistics = statistics;
       return this;
     }
 
-    public BlockManagerParamsBuilder setConf(Configuration conf) {
-      this.conf = conf;
+    public BlockManagerParamsBuilder setConf(Configuration configuration) {
+      this.conf = configuration;
       return this;
     }
 
-    public BlockManagerParamsBuilder setLocalDirAllocator(LocalDirAllocator localDirAllocator) {
-      this.localDirAllocator = localDirAllocator;
+    public BlockManagerParamsBuilder setLocalDirAllocator(LocalDirAllocator dirAllocator) {
+      this.localDirAllocator = dirAllocator;
       return this;
     }
 
-    public BlockManagerParamsBuilder setMaxBlocksCount(int maxBlocksCount) {
-      this.maxBlocksCount = maxBlocksCount;
+    public BlockManagerParamsBuilder setMaxBlocksCount(int blocksCount) {
+      this.maxBlocksCount = blocksCount;
       return this;
     }
 
-    public BlockManagerParamsBuilder setTrackerFactory(DurationTrackerFactory trackerFactory) {
-      this.trackerFactory = trackerFactory;
+    public BlockManagerParamsBuilder setTrackerFactory(DurationTrackerFactory factory) {
+      this.trackerFactory = factory;
       return this;
     }
 
