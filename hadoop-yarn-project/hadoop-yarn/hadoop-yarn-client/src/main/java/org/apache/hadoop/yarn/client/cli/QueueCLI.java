@@ -241,34 +241,37 @@ public class QueueCLI extends YarnCLI {
    * @param queueInfo Queue Information.
    */
   private void printFairSchedulerQueue(PrintWriter writer, QueueInfo queueInfo) {
+    String generateQueueInfoMessage = generateQueueInfoMessage(queueInfo);
+    writer.print(generateQueueInfoMessage);
+  }
+
+  private String generateQueueInfoMessage(QueueInfo queueInfo) {
+    StringBuilder stringBuilder = new StringBuilder();
     if (queueInfo.getSchedulerType() != null) {
-      writer.print("Scheduler Name : ");
-      writer.println(queueInfo.getSchedulerType());
+      stringBuilder.append("Scheduler Name : ").append(queueInfo.getSchedulerType()).append("\n");
     }
-    writer.print("Queue Name : ");
-    writer.println(queueInfo.getQueueName());
-    writer.print("\tWeight : ");
+    stringBuilder.append("Queue Name : ").append(queueInfo.getQueueName()).append("\n");
     DecimalFormat df = new DecimalFormat("0.00");
-    writer.println(df.format(queueInfo.getWeight()));
-    writer.print("\tState : ");
-    writer.println(queueInfo.getQueueState());
-    writer.print("\tMinResource : ");
-    writer.println("<memory : " + queueInfo.getMinResourceMemory() +
-        ", vCores:" + queueInfo.getMinResourceVCore() + ">");
-    writer.print("\tMaxResource : ");
-    writer.println("<memory : " + queueInfo.getMaxResourceMemory() +
-        ", vCores:" + queueInfo.getMaxResourceVCore() + ">");
-    writer.print("\tReservedResource : ");
-    writer.println("<memory : " + queueInfo.getReservedResourceMemory() +
-        ", vCores:" + queueInfo.getReservedResourceVCore() + ">");
-    writer.print("\tSteadyFairShare : ");
-    writer.println("<memory : " + queueInfo.getSteadyFairShareMemory() +
-        ", vCores:" + queueInfo.getSteadyFairShareVCore() + ">");
+    stringBuilder.append("\tWeight : ").append(df.format(queueInfo.getWeight())).append("\n");
+    stringBuilder.append("\tState : ").append(queueInfo.getQueueState()).append("\n");
+    stringBuilder.append("\tMinResource : ").append("<memory : ")
+        .append(queueInfo.getMinResourceMemory()).append(", vCores:")
+        .append(queueInfo.getMinResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tMaxResource : ").append("<memory : ")
+        .append(queueInfo.getMaxResourceMemory()).append(", vCores:")
+        .append(queueInfo.getMaxResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tReservedResource : ").append("<memory : ")
+        .append(queueInfo.getReservedResourceMemory()).append(", vCores:")
+        .append(queueInfo.getReservedResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tSteadyFairShare : ").append("<memory : ")
+        .append(queueInfo.getSteadyFairShareMemory()).append(", vCores:")
+        .append(queueInfo.getSteadyFairShareVCore()).append(">").append("\n");
     Boolean queuePreemption = queueInfo.getPreemptionDisabled();
     if (queuePreemption != null) {
-      writer.print("\tQueue Preemption : ");
-      writer.println(queuePreemption ? "enabled" : "disabled");
+      stringBuilder.append("\tQueue Preemption : ")
+          .append(queuePreemption ? "enabled" : "disabled").append("\n");
     }
+    return stringBuilder.toString();
   }
 
   /**
