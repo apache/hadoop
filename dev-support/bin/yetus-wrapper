@@ -77,7 +77,7 @@ WANTED="$1"
 shift
 ARGV=("$@")
 
-HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.14.0}
+HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.14.1}
 BIN=$(yetus_abs "${BASH_SOURCE-$0}")
 BINDIR=$(dirname "${BIN}")
 
@@ -123,7 +123,7 @@ fi
 ## need to DL, etc
 ##
 
-BASEURL="https://archive.apache.org/dist/yetus/${HADOOP_YETUS_VERSION}/"
+BASEURL="https://downloads.apache.org/yetus/${HADOOP_YETUS_VERSION}/"
 TARBALL="${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}-bin.tar"
 
 GPGBIN=$(command -v gpg)
