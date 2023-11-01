@@ -447,7 +447,7 @@ and rate of requests. Spreading data across different buckets, and/or using
 a more balanced directory structure may be beneficial.
 Consult [the AWS documentation](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html).
 
-Reading or writing data encrypted with SSE-KMS forces S3 to make calls of
+Reading or writing data encrypted with SSE-KMS or DSSE-KMS forces S3 to make calls of
 the AWS KMS Key Management Service, which comes with its own
 [Request Rate Limits](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
 These default to 1200/second for an account, across all keys and all uses of
