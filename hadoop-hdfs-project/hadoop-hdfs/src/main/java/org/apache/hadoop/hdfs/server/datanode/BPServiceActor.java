@@ -123,6 +123,7 @@ class BPServiceActor implements Runnable {
   private final DNConf dnConf;
   private long prevBlockReportId;
   private volatile long fullBlockReportLeaseId;
+  private volatile boolean shouldSendFBR = true;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -149,6 +150,7 @@ class BPServiceActor implements Runnable {
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     fullBlockReportLeaseId = 0;
+    shouldSendFBR = true;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs, dnConf.heartBeatReRegisterInterval);
@@ -771,7 +773,8 @@ class BPServiceActor implements Runnable {
         if (forceFullBr) {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
-        if ((fullBlockReportLeaseId != 0) || forceFullBr) {
+        if ((fullBlockReportLeaseId != 0 && shouldSendFBR) || forceFullBr) {
+          shouldSendFBR = false;
           fbrExecutorService.submit(new FBRTaskHandler());
         }
 
@@ -799,6 +802,7 @@ class BPServiceActor implements Runnable {
         }
         if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
           fullBlockReportLeaseId = 0;
+          shouldSendFBR = true;
         }
         LOG.warn("RemoteException in offerService", re);
         sleepAfterException();
@@ -873,6 +877,7 @@ class BPServiceActor implements Runnable {
     // reset lease id whenever registered to NN.
     // ask for a new lease id at the next heartbeat.
     fullBlockReportLeaseId = 0;
+    shouldSendFBR = true;
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs, true);
@@ -1212,8 +1217,10 @@ class BPServiceActor implements Runnable {
         }
         fullBlockReportLeaseId = 0;
         commandProcessingThread.enqueue(cmds);
+        shouldSendFBR = true;
       } catch (Throwable t) {
         fullBlockReportLeaseId = 0;
+        shouldSendFBR = true;
         LOG.warn("InterruptedException in FBR Task Handler.", t);
         sleepAndLogInterrupts(5000, "offering FBR service");
         synchronized(ibrManager) {
