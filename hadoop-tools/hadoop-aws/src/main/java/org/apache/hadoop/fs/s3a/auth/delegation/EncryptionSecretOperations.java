@@ -53,7 +53,8 @@ public final class EncryptionSecretOperations {
    * @return an optional key to attach to a request.
    */
   public static Optional<String> getSSEAwsKMSKey(final EncryptionSecrets secrets) {
-    if (secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS
+    if ((secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS
+        || secrets.getEncryptionMethod() == S3AEncryptionMethods.DSSE_KMS)
         && secrets.hasEncryptionKey()) {
       return Optional.of(secrets.getEncryptionKey());
     } else {
