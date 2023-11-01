@@ -35,8 +35,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
+import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_DSSE_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.DSSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
@@ -44,13 +44,9 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
- * and tests already configured bucket level encryption using s3 console.
- * This requires the SERVER_SIDE_ENCRYPTION_KEY
- * to be set in auth-keys.xml for it to run. The value should match with the
- * kms key set for the bucket.
- * See HADOOP-16794.
+ * and tests already configured bucket level DSSE encryption using s3 console.
  */
-public class ITestS3AEncryptionWithDefaultS3Settings extends
+public class ITestS3ADSSEEncryptionWithDefaultS3Settings extends
         AbstractTestS3AEncryption {
 
   @Override
@@ -94,7 +90,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     S3AFileSystem fs = getFileSystem();
     Configuration c = fs.getConf();
     String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
-    EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
+    EncryptionTestUtils.assertEncrypted(fs, path, DSSE_KMS, kmsKey);
   }
 
   @Override
@@ -127,13 +123,13 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
    */
   private void skipIfBucketNotKmsEncrypted() throws IOException {
     S3AFileSystem fs = getFileSystem();
-    Path path = path(getMethodName() + "find-encryption-algo");
+    Path path = methodPath();
     ContractTestUtils.touch(fs, path);
     try {
       String sseAlgorithm =
           getS3AInternals().getObjectMetadata(path).serverSideEncryptionAsString();
-      if (StringUtils.isBlank(sseAlgorithm) || !sseAlgorithm.equals(AWS_KMS_SSE_ALGORITHM)) {
-        skip("Test bucket is not configured with " + AWS_KMS_SSE_ALGORITHM);
+      if (StringUtils.isBlank(sseAlgorithm) || !sseAlgorithm.equals(AWS_KMS_DSSE_ALGORITHM)) {
+        skip("Test bucket is not configured with " + AWS_KMS_DSSE_ALGORITHM);
       }
     } finally {
       ContractTestUtils.assertDeleted(fs, path, false);
@@ -154,10 +150,9 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
 
-    // fs2 conf will always use SSE-KMS
     Configuration fs2Conf = new Configuration(fs.getConf());
     fs2Conf.set(S3_ENCRYPTION_ALGORITHM,
-        S3AEncryptionMethods.SSE_KMS.getMethod());
+        DSSE_KMS.getMethod());
     try (FileSystem kmsFS = FileSystem.newInstance(fs.getUri(), fs2Conf)) {
       Path targetDir = path("target");
       kmsFS.mkdirs(targetDir);
@@ -166,7 +161,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
       ContractTestUtils.verifyFileContents(fs, renamedFile, data);
       String kmsKey = getS3EncryptionKey(getTestBucketName(fs2Conf), fs2Conf);
       // we assert that the renamed file has picked up the KMS key of our FS
-      EncryptionTestUtils.assertEncrypted(fs, renamedFile, SSE_KMS, kmsKey);
+      EncryptionTestUtils.assertEncrypted(fs, renamedFile, DSSE_KMS, kmsKey);
     }
   }
 }

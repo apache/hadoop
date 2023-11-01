@@ -167,7 +167,6 @@ public class NodeLabelsBlock extends RouterBlock {
           row = row.td(String.valueOf(nActiveNMs));
         }
 
-        row = row.td(String.valueOf(nActiveNMs));
         PartitionInfo partitionInfo = info.getPartitionInfo();
         ResourceInfo available = partitionInfo.getResourceAvailable();
         row.td(available.toFormattedString()).__();
