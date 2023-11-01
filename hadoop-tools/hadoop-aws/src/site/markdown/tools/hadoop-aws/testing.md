@@ -1087,7 +1087,7 @@ The specific tests an Assumed Role ARN is required for are
 To run these tests you need:
 
 1. A role in your AWS account will full read and write access rights to
-the S3 bucket used in the tests, and KMS for any SSE-KMS tests.
+the S3 bucket used in the tests, and KMS for any SSE-KMS or DSSE-KMS tests.
 
 
 1. Your IAM User to have the permissions to "assume" that role.

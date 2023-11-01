@@ -109,6 +109,8 @@ public class TestCapacitySchedulerAutoQueueCreation
   private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
 
+  private static final String SPECIFIED_QUEUE_MAPPING = "%specified";
+
   private static final String CURRENT_USER_MAPPING = "%user";
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
@@ -1052,6 +1054,42 @@ public class TestCapacitySchedulerAutoQueueCreation
       if (mockRM != null) {
         mockRM.close();
       }
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testAutoCreateLeafQueueFailsWithSpecifiedEmptyStringLeafQueue()
+          throws Exception {
+
+    final String invalidQueue = "";
+
+    MockRM newMockRM = setupSchedulerInstance();
+    CapacityScheduler newCS =
+            (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    //queue mapping to place app in queue specified by user
+    setupQueueMapping(newCS, "app_user", "root.c", SPECIFIED_QUEUE_MAPPING);
+    newCS.updatePlacementRules();
+
+    try {
+      //submitting to root.c. should fail WITHOUT crashing the RM
+      submitApp(newCS, "app_user", invalidQueue, "root.c");
+
+      RMContext rmContext = mock(RMContext.class);
+      when(rmContext.getDispatcher()).thenReturn(dispatcher);
+      newCS.setRMContext(rmContext);
+
+      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
+              appId, "root.c." + invalidQueue, "app_user");
+      newCS.handle(addAppEvent);
+
+      RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
+              "error");
+      dispatcher.spyOnNextEvent(event, 10000);
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
     }
   }
 }
