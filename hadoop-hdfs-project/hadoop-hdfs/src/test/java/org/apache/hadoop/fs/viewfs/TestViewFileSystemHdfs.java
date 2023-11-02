@@ -193,34 +193,34 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @Test
   public void testTrashRootsAfterEncryptionZoneDeletion() throws Exception {
     try {
-    final Path zone = new Path("/EZ");
-    fsTarget.mkdirs(zone);
-    final Path zone1 = new Path("/EZ/zone1");
-    fsTarget.mkdirs(zone1);
+      final Path zone = new Path("/EZ");
+      fsTarget.mkdirs(zone);
+      final Path zone1 = new Path("/EZ/zone1");
+      fsTarget.mkdirs(zone1);
 
-    DFSTestUtil.createKey("test_key", cluster, CONF);
-    HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
-    final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
-        EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
-    hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+      DFSTestUtil.createKey("test_key", cluster, CONF);
+      HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
 
-    final Path encFile = new Path(zone1, "encFile");
-    DFSTestUtil.createFile(fsTarget, encFile, 10240, (short) 1, 0xFEED);
+      final Path encFile = new Path(zone1, "encFile");
+      DFSTestUtil.createFile(fsTarget, encFile, 10240, (short) 1, 0xFEED);
 
-    Configuration clientConf = new Configuration(CONF);
-    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
-    clientConf.set("fs.default.name", fsTarget.getUri().toString());
-    FsShell shell = new FsShell(clientConf);
+      Configuration clientConf = new Configuration(CONF);
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+      clientConf.set("fs.default.name", fsTarget.getUri().toString());
+      FsShell shell = new FsShell(clientConf);
 
-    //Verify file deletion within EZ
-    DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
-    assertTrue("ViewFileSystem trash roots should include EZ file trash",
-        (fsView.getTrashRoots(true).size() == 1));
+      //Verify file deletion within EZ
+      DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
+      assertTrue("ViewFileSystem trash roots should include EZ file trash",
+          (fsView.getTrashRoots(true).size() == 1));
 
-    //Verify deletion of EZ
-    DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
-    assertTrue("ViewFileSystem trash roots should include EZ zone trash",
-        (fsView.getTrashRoots(true).size() == 2));
+      //Verify deletion of EZ
+      DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
+      assertTrue("ViewFileSystem trash roots should include EZ zone trash",
+          (fsView.getTrashRoots(true).size() == 2));
     } finally {
       DFSTestUtil.deleteKey("test_key", cluster);
     }

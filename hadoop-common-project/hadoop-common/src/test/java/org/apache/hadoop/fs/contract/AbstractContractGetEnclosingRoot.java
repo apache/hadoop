@@ -40,13 +40,18 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
         root, fs.getEnclosingRoot(foobar));
     assertEquals("Ensure getEnclosingRoot called on itself returns the root directory",
         root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
-    assertEquals("Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path",
+    assertEquals(
+        "Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path",
         fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
     assertEquals("Ensure getEnclosingRoot on a path returns the root directory",
         root, fs.getEnclosingRoot(methodPath()));
     assertEquals("Ensure getEnclosingRoot called on itself on a path returns the root directory",
         root, fs.getEnclosingRoot(fs.getEnclosingRoot(methodPath())));
-    assertEquals("Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path", fs.getEnclosingRoot(root), fs.getEnclosingRoot(methodPath()));
+    assertEquals(
+        "Ensure getEnclosingRoot for different paths in the same enclosing root "
+            + "returns the same path",
+        fs.getEnclosingRoot(root),
+        fs.getEnclosingRoot(methodPath()));
   }
 
 
@@ -57,7 +62,8 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = methodPath();
     fs.mkdirs(foobar);
 
-    assertEquals("Ensure getEnclosingRoot returns the root directory when the root directory exists",
+    assertEquals(
+        "Ensure getEnclosingRoot returns the root directory when the root directory exists",
         root, fs.getEnclosingRoot(foobar));
     assertEquals("Ensure getEnclosingRoot returns the root directory when the directory exists",
         root, fs.getEnclosingRoot(foobar));
@@ -70,9 +76,11 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path root = path("/");
 
     // .
-    assertEquals("Ensure getEnclosingRoot returns the root directory even when the path does not exist",
+    assertEquals(
+        "Ensure getEnclosingRoot returns the root directory even when the path does not exist",
         root, fs.getEnclosingRoot(foobar));
-    assertEquals("Ensure getEnclosingRoot returns the root directory even when the path does not exist",
+    assertEquals(
+        "Ensure getEnclosingRoot returns the root directory even when the path does not exist",
         root, fs.getEnclosingRoot(methodPath()));
   }
 
