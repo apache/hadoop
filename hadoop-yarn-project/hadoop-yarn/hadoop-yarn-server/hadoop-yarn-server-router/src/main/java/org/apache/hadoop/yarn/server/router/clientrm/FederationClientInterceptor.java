@@ -852,13 +852,16 @@ public class FederationClientInterceptor
           return Pair.of(subClusterId, result);
         } catch (Exception e) {
           Throwable cause = e.getCause();
+          // We use Callable. If the exception thrown here is InvocationTargetException,
+          // it is a wrapped exception. We need to get the real cause of the error.
           if (cause != null && cause instanceof InvocationTargetException) {
             cause = cause.getCause();
           }
           String errMsg = (cause.getMessage() != null) ? cause.getMessage() : "UNKNOWN";
-          return Pair.of(subClusterId, new YarnException(
-                  String.format("subClusterId %s exec %s error %s.", subClusterId,
-                          request.getMethodName(), errMsg), e));
+          YarnException yarnException =
+              new YarnException(String.format("subClusterId %s exec %s error %s.",
+              subClusterId, request.getMethodName(), errMsg), e);
+          return Pair.of(subClusterId, yarnException);
         }
       });
     }
@@ -873,7 +876,7 @@ public class FederationClientInterceptor
           Pair<SubClusterId, Object> pair = future.get();
           subClusterId = pair.getKey();
           Object result = pair.getValue();
-          if(result instanceof YarnException) {
+          if (result instanceof YarnException) {
             throw YarnException.class.cast(result);
           }
           results.put(subClusterId, clazz.cast(result));
