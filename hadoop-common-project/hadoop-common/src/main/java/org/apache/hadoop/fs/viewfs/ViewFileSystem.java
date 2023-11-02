@@ -1376,7 +1376,8 @@ public class ViewFileSystem extends FileSystem {
     try {
       res = fsState.resolve(getUriPath(path), true);
     } catch (FileNotFoundException ex) {
-      throw new NotInMountpointException(path, String.format("getEnclosingRoot - %s", ex.getMessage()));
+      throw new NotInMountpointException(path,
+          String.format("getEnclosingRoot - %s", ex.getMessage()));
     }
     Path mountPath = new Path(res.resolvedPath);
     Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));

@@ -41,7 +41,8 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     assertEquals("Ensure getEnclosingRoot called on itself returns the root directory",
         root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
     assertEquals(
-        "Ensure getEnclosingRoot for different paths in the same enclosing root returns the same path",
+        "Ensure getEnclosingRoot for different paths in the same enclosing root "
+            + "returns the same path",
         fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
     assertEquals("Ensure getEnclosingRoot on a path returns the root directory",
         root, fs.getEnclosingRoot(methodPath()));
