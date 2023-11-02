@@ -937,6 +937,13 @@
 </property>
 
 <property>
+  <name>dfs.heartbeat.reregister.interval</name>
+  <value>6</value>
+  <description>
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.lifeline.interval.seconds</name>
   <value></value>
   <description>
