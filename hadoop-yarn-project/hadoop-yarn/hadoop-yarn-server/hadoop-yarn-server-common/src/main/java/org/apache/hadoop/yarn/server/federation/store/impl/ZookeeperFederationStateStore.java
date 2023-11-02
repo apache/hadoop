@@ -832,7 +832,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public void deleteStore() throws Exception {
+  public void deleteStateStore() throws Exception {
     zkManager.delete(baseZNode);
   }
 

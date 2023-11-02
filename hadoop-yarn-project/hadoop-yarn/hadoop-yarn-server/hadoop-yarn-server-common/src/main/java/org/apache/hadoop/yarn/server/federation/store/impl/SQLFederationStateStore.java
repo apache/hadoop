@@ -1123,7 +1123,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public void deleteStore() throws Exception {
+  public void deleteStateStore() throws Exception {
 
   }
 
@@ -2080,6 +2080,10 @@ public class SQLFederationStateStore implements FederationStateStore {
         LOG.error("close connection error.", e);
       }
     }
+  }
+
+  private boolean truncateTable() {
+    return false;
   }
 
   @VisibleForTesting

@@ -294,6 +294,23 @@ public class FederationQueryRunner {
     }
   }
 
+  public void truncateTable(Connection connection, String tableName)
+      throws SQLException {
+    DbType dbType = DatabaseProduct.getDbType(connection);
+  }
+
+  private String getTruncateStatement(DbType dbType, String name) {
+    if (isMYSQL(dbType)) {
+      return ("DELETE FROM \"" + name + "\"");
+    } else {
+      return("DELETE FROM " + name);
+    }
+  }
+
+  private boolean isMYSQL(DbType dbType) {
+    return dbType == DbType.MYSQL;
+  }
+
   static void rollbackDBConn(Connection dbConn) {
     try {
       if (dbConn != null && !dbConn.isClosed()) {

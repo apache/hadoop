@@ -103,9 +103,9 @@ public interface FederationStateStore extends
   }
 
   /**
-   * We will clear the data in stateStore through the deleteStore method.
+   * We will clear the data in stateStore through the deleteStateStore method.
    *
    * @throws Exception an exception occurred in delete store.
    */
-  void deleteStore() throws Exception;
+  void deleteStateStore() throws Exception;
 }
