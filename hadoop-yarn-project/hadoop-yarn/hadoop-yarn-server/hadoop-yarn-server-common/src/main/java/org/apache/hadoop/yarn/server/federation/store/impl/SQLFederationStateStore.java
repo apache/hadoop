@@ -29,6 +29,7 @@ import java.sql.Blob;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
@@ -215,6 +216,10 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   private static final String CALL_SP_LOAD_VERSION =
       "{call sp_getVersion(?, ?)}";
+
+  private static final List<String> TABLES = new ArrayList<>(
+      Arrays.asList("applicationsHomeSubCluster", "membership", "policies",
+      "reservationsHomeSubCluster", "masterKeys", "delegationTokens", "sequenceTable"));
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1124,7 +1129,7 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public void deleteStateStore() throws Exception {
-
+    truncateTable();
   }
 
   /**
@@ -2082,8 +2087,24 @@ public class SQLFederationStateStore implements FederationStateStore {
     }
   }
 
-  private boolean truncateTable() {
-    return false;
+  private void truncateTable() {
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String table : TABLES) {
+        runner.truncateTable(connection, table);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Could not truncate table!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
   }
 
   @VisibleForTesting
