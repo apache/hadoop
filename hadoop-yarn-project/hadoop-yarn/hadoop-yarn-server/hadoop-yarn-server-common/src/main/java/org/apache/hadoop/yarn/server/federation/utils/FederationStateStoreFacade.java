@@ -1120,6 +1120,6 @@ public final class FederationStateStoreFacade {
   }
 
   public void deleteStore() throws Exception {
-    stateStore.deleteStore();
+    stateStore.deleteStateStore();
   }
 }

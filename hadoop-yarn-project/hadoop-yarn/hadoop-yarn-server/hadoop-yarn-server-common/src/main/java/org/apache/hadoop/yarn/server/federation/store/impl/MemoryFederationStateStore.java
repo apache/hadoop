@@ -420,7 +420,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public void deleteStore() throws Exception {
+  public void deleteStateStore() throws Exception {
     membership.clear();
     applications.clear();
     reservations.clear();

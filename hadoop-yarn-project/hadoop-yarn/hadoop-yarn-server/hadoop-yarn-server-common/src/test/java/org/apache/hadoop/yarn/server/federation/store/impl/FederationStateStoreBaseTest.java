@@ -91,6 +91,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Base class for FederationMembershipStateStore implementations.
@@ -120,6 +121,7 @@ public abstract class FederationStateStoreBaseTest {
 
   @After
   public void after() throws Exception {
+    testDeleteStateStore();
     stateStore.close();
   }
 
@@ -1111,5 +1113,14 @@ public abstract class FederationStateStoreBaseTest {
     assertEquals(appId, applicationHomeSubCluster.getApplicationId());
     assertEquals(subClusterId, applicationHomeSubCluster.getHomeSubCluster());
     assertEquals(context, applicationHomeSubCluster.getApplicationSubmissionContext());
+  }
+
+  public void testDeleteStateStore() throws Exception {
+    FederationStateStore federationStateStore = this.getStateStore();
+    federationStateStore.deleteStateStore();
+    GetSubClustersInfoRequest request = GetSubClustersInfoRequest.newInstance(true);
+    List<SubClusterInfo> subClustersActive = stateStore.getSubClusters(request).getSubClusters();
+    assertNotNull(subClustersActive);
+    assertEquals(0, subClustersActive.size());
   }
 }

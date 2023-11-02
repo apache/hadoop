@@ -288,6 +288,11 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
+  public void deleteStateStore() throws Exception {
+    stateStoreClient.deleteStateStore();
+  }
+
+  @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
     FederationClientMethod<GetSubClusterPolicyConfigurationResponse> clientMethod =

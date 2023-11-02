@@ -226,6 +226,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private ZKFederationStateStoreOpDurations opDurations =
       ZKFederationStateStoreOpDurations.getInstance();
 
+  private Configuration configuration;
+
   /*
    * Indicates different app attempt state store operations.
    */
@@ -251,7 +253,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public void init(Configuration conf) throws YarnException {
 
     LOG.info("Initializing ZooKeeper connection");
-
+    this.configuration = conf;
     maxAppsInStateStore = conf.getInt(
        YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
@@ -833,7 +835,35 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public void deleteStateStore() throws Exception {
-    zkManager.delete(baseZNode);
+    zkManager.delete(appsZNode);
+    zkManager.delete(membershipZNode);
+    zkManager.delete(policiesZNode);
+    zkManager.delete(reservationsZNode);
+    zkManager.delete(routerRMDTSecretManagerRoot);
+    zkManager.delete(routerRMDTMasterKeysRootPath);
+    zkManager.delete(routerRMDelegationTokensRootPath);
+
+    // Create base znode for each entity
+    try {
+      List<ACL> zkAcl = ZKCuratorManager.getZKAcls(configuration);
+      zkManager.createRootDirRecursively(membershipZNode, zkAcl);
+      zkManager.createRootDirRecursively(appsZNode, zkAcl);
+      zkManager.createRootDirRecursively(
+              getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
+      for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
+        zkManager.createRootDirRecursively(
+                routerAppRootHierarchies.get(splitIndex));
+      }
+      zkManager.createRootDirRecursively(policiesZNode, zkAcl);
+      zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
+      zkManager.createRootDirRecursively(versionNode, zkAcl);
+    } catch (Exception e) {
+      String errMsg = "Cannot create base directories: " + e.getMessage();
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
   }
 
   /**
