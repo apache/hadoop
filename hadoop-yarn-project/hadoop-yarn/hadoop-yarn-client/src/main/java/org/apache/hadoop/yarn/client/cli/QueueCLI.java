@@ -168,7 +168,7 @@ public class QueueCLI extends YarnCLI {
       throws YarnException, IOException {
     int rc;
     PrintWriter writer = new PrintWriter(
-       new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
     QueueInfo queueInfo = client.getQueueInfo(queueName, subClusterId);
     if (queueInfo != null) {
       if (isYarnFederationEnabled(getConf())) {
@@ -275,7 +275,7 @@ public class QueueCLI extends YarnCLI {
   }
 
   /**
-   * Print Queue information
+   * Print Queue information.
    *
    * @param writer PrintWriter.
    * @param queueInfo Queue Information.

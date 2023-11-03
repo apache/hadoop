@@ -1996,7 +1996,7 @@ public class TestYarnCLI {
     queueInfo.setMaxRunningApp(10);
     queueInfo.setPreemptionDisabled(true);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
-    int result = cli.run(new String[] { "-status", "queueA" });
+    int result = cli.run(new String[]{"-status", "queueA"});
     assertEquals(0, result);
     verify(client).getQueueInfo("queueA");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

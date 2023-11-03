@@ -23,7 +23,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
