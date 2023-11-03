@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 
 /**
  * DAO which wraps PartitionQueueCapacitiesInfo applicable for a queue
@@ -57,8 +58,10 @@ public class QueueCapacitiesInfo {
     float weight;
     float normalizedWeight;
     for (String partitionName : capacities.getExistingNodeLabels()) {
-      queueCapacityVectorInfo = new QueueCapacityVectorInfo(
-           queue.getConfiguredCapacityVector(partitionName));
+      QueueCapacityVector queueCapacityVector = queue.getConfiguredCapacityVector(partitionName);
+      queueCapacityVectorInfo = queueCapacityVector == null ?
+              new QueueCapacityVectorInfo(new QueueCapacityVector()) :
+              new QueueCapacityVectorInfo(queue.getConfiguredCapacityVector(partitionName));
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
       maxCapacity = capacities.getMaximumCapacity(partitionName);
