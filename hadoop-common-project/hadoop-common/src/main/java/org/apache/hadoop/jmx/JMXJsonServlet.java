@@ -17,14 +17,12 @@
 
 package org.apache.hadoop.jmx;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer2;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Array;
+import java.util.Iterator;
+import java.util.Set;
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -44,16 +42,14 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Array;
-import java.util.Iterator;
-import java.util.Objects;
-import java.util.Set;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER_DEFAULT;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.http.HttpServer2;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -143,7 +139,6 @@ public class JMXJsonServlet extends HttpServlet {
    */
   protected transient JsonFactory jsonFactory;
 
-  protected transient boolean nanFilter;
   /**
    * Initialize this servlet.
    */
@@ -151,9 +146,6 @@ public class JMXJsonServlet extends HttpServlet {
   public void init() throws ServletException {
     // Retrieve the MBean server
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
-    Configuration conf = new Configuration();
-    nanFilter = conf.getBoolean(JMX_NAN_FILTER, JMX_NAN_FILTER_DEFAULT);
-    LOG.debug("NaN filter is set to {}", nanFilter);
     jsonFactory = new JsonFactory();
   }
 
@@ -413,14 +405,8 @@ public class JMXJsonServlet extends HttpServlet {
           writeObject(jg, item, attName);
         }
         jg.writeEndArray();
-      } else if (nanFilter && Objects.equals("NaN", Objects.toString(value).trim())) {
-        // For example in case of MutableGauge we are using numbers,
-        // but not implementing Number interface,
-        // so we skip class check here because we can not be sure NaN values are wrapped
-        // with classes which implements the Number interface
-        LOG.debug("The {} attribute with value: {} was identified as NaN "
-            + "and will be replaced with 0.0", attName, value);
-        jg.writeNumber(0.0);
+      } else if (extraCheck(value)) {
+        extraWrite(value, attName, jg);
       } else if(value instanceof Number) {
         Number n = (Number)value;
         jg.writeNumber(n.toString());
@@ -447,5 +433,22 @@ public class JMXJsonServlet extends HttpServlet {
         jg.writeString(value.toString());
       }
     }
+  }
+
+  /**
+   * In case you need to modify the logic, how java objects transforms to json,
+   * you can overwrite this method to return true in case special handling
+   * @param value the object what should be judged
+   * @return true, if it needs special transformation
+   */
+  protected boolean extraCheck(Object value) {
+    return false;
+  }
+
+  /**
+   * @see JMXJsonServletNaNFiltered
+   */
+  protected void extraWrite(Object value, String attName, JsonGenerator jg) throws IOException {
+    throw new NotImplementedException();
   }
 }
