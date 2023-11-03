@@ -1116,11 +1116,24 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   public void testDeleteStateStore() throws Exception {
+    // Step1. We clean the StateStore.
     FederationStateStore federationStateStore = this.getStateStore();
     federationStateStore.deleteStateStore();
+
+    // Step2. When we query the sub-cluster information, it should not exist.
     GetSubClustersInfoRequest request = GetSubClustersInfoRequest.newInstance(true);
     List<SubClusterInfo> subClustersActive = stateStore.getSubClusters(request).getSubClusters();
     assertNotNull(subClustersActive);
     assertEquals(0, subClustersActive.size());
+
+    // Step3. When we query the applications' information, it should not exist.
+    GetApplicationsHomeSubClusterRequest getRequest =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    GetApplicationsHomeSubClusterResponse result =
+        stateStore.getApplicationsHomeSubCluster(getRequest);
+    assertNotNull(result);
+    List<ApplicationHomeSubCluster> appsHomeSubClusters = result.getAppsHomeSubClusters();
+    assertNotNull(appsHomeSubClusters);
+    assertEquals(0, appsHomeSubClusters.size());
   }
 }

@@ -218,7 +218,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_getVersion(?, ?)}";
 
   private static final List<String> TABLES = new ArrayList<>(
-      Arrays.asList("applicationsHomeSubCluster", "membership", "policies",
+      Arrays.asList("applicationsHomeSubCluster", "membership", "policies", "versions",
       "reservationsHomeSubCluster", "masterKeys", "delegationTokens", "sequenceTable"));
 
   private Calendar utcCalendar =
@@ -2087,13 +2087,19 @@ public class SQLFederationStateStore implements FederationStateStore {
     }
   }
 
+  /**
+   * We will truncate the tables, iterate through each table individually,
+   * and then clean the tables.
+   */
   private void truncateTable() {
     Connection connection = null;
     try {
       connection = getConnection(false);
       FederationQueryRunner runner = new FederationQueryRunner();
       for (String table : TABLES) {
+        LOG.info("truncate table = {} start.", table);
         runner.truncateTable(connection, table);
+        LOG.info("truncate table = {} finished.", table);
       }
     } catch (Exception e) {
       throw new RuntimeException("Could not truncate table!", e);

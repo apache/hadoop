@@ -304,26 +304,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         ROUTER_RM_DT_MASTER_KEY_ID_ZNODE_NAME);
 
     // Create base znode for each entity
-    try {
-      List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
-      zkManager.createRootDirRecursively(membershipZNode, zkAcl);
-      zkManager.createRootDirRecursively(appsZNode, zkAcl);
-      zkManager.createRootDirRecursively(
-          getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
-      for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
-        zkManager.createRootDirRecursively(
-            routerAppRootHierarchies.get(splitIndex));
-      }
-      zkManager.createRootDirRecursively(policiesZNode, zkAcl);
-      zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
-      zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
-      zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
-      zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
-      zkManager.createRootDirRecursively(versionNode, zkAcl);
-    } catch (Exception e) {
-      String errMsg = "Cannot create base directories: " + e.getMessage();
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
-    }
+    createBaseZNodeForEachEntity();
 
     // Distributed sequenceNum.
     try {
@@ -833,26 +814,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     put(versionNode, data, isUpdate);
   }
 
-  @Override
-  public void deleteStateStore() throws Exception {
-    zkManager.delete(appsZNode);
-    zkManager.delete(membershipZNode);
-    zkManager.delete(policiesZNode);
-    zkManager.delete(reservationsZNode);
-    zkManager.delete(routerRMDTSecretManagerRoot);
-    zkManager.delete(routerRMDTMasterKeysRootPath);
-    zkManager.delete(routerRMDelegationTokensRootPath);
-
-    // Create base znode for each entity
+  private void createBaseZNodeForEachEntity() throws YarnException {
     try {
       List<ACL> zkAcl = ZKCuratorManager.getZKAcls(configuration);
       zkManager.createRootDirRecursively(membershipZNode, zkAcl);
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
       zkManager.createRootDirRecursively(
-              getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
+          getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES));
       for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
         zkManager.createRootDirRecursively(
-                routerAppRootHierarchies.get(splitIndex));
+            routerAppRootHierarchies.get(splitIndex));
       }
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
       zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
@@ -864,6 +835,23 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+  }
+
+  @Override
+  public void deleteStateStore() throws Exception {
+    // Cleaning ZNodes and their child nodes;
+    // after the cleaning is complete, the ZNodes will no longer exist.
+    zkManager.delete(appsZNode);
+    zkManager.delete(membershipZNode);
+    zkManager.delete(policiesZNode);
+    zkManager.delete(reservationsZNode);
+    zkManager.delete(routerRMDTSecretManagerRoot);
+    zkManager.delete(routerRMDTMasterKeysRootPath);
+    zkManager.delete(routerRMDelegationTokensRootPath);
+    zkManager.delete(versionNode);
+
+    // We will continue to create ZNodes to ensure that the base path exists.
+    createBaseZNodeForEachEntity();
   }
 
   /**

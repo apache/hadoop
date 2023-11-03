@@ -648,6 +648,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     assertEquals(10000, connTimeOut);
     assertEquals("YARN-Federation-DataBasePool", poolName);
     assertEquals(1, minimumIdle);
-    assertEquals(1, maximumPoolSize);
+    assertEquals(10, maximumPoolSize);
   }
 }
