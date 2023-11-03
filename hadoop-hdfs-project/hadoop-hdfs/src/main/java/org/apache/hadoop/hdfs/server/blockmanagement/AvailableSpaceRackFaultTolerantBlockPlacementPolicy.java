@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicyUtils.AvailableSpaceContext;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.slf4j.Logger;
@@ -82,7 +83,7 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
         DFSConfigKeys.
             DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
         DFSConfigKeys.
-            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCE__NODE_DEFAULT);
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_DEFAULT);
 
     LOG.info("Available space rack fault tolerant block placement policy "
         + "initialized: "
@@ -136,7 +137,8 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
-        balancedPreference, balancedSpaceToleranceLimit, balancedSpaceTolerance);
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
   @Override
@@ -150,10 +152,11 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
           maxNodesPerRack, results, avoidStaleNodes, storageTypes,
           fallbackToLocalRack);
     }
-    return AvailableSpaceBlockPlacementPolicyUtils.chooseLocalStorage(localMachine, excludedNodes,
-        blocksize, maxNodesPerRack, results, avoidStaleNodes, storageTypes,
-        fallbackToLocalRack, balancedPreference,
-        balancedSpaceToleranceLimit, balancedSpaceTolerance, this);
+    return AvailableSpaceBlockPlacementPolicyUtils.chooseLocalStorage(
+        localMachine, excludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes, fallbackToLocalRack,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance, this));
   }
 
   @Override
@@ -164,7 +167,8 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     DatanodeDescriptor b =
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
     return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
-        balancedPreference, balancedSpaceToleranceLimit, balancedSpaceTolerance);
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
   @VisibleForTesting

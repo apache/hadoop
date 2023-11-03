@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicyUtils.AvailableSpaceContext;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
@@ -130,7 +131,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
-        balancedPreference, balancedSpaceToleranceLimit, balancedSpaceTolerance);
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
   @Override
@@ -146,8 +148,9 @@ public class AvailableSpaceBlockPlacementPolicy extends
     }
     return AvailableSpaceBlockPlacementPolicyUtils.chooseLocalStorage(
         localMachine, excludedNodes, blocksize, maxNodesPerRack, results,
-        avoidStaleNodes, storageTypes, fallbackToLocalRack, balancedPreference,
-        balancedSpaceToleranceLimit, balancedSpaceTolerance, this);
+        avoidStaleNodes, storageTypes, fallbackToLocalRack,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance, this));
   }
 
   @Override
@@ -158,7 +161,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
     DatanodeDescriptor b =
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
     return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
-        balancedPreference, balancedSpaceToleranceLimit, balancedSpaceTolerance);
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
   @VisibleForTesting

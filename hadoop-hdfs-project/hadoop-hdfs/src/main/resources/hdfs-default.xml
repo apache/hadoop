@@ -4313,6 +4313,7 @@
   <name>dfs.block.placement.ec.classname</name>
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant</value>
   <description>
+    Placement policy class for striped files.
     There are two block placement policies currently being supported:
     BlockPlacementPolicyRackFaultTolerant.class and AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class.
     Defaults to BlockPlacementPolicyRackFaultTolerant.class
