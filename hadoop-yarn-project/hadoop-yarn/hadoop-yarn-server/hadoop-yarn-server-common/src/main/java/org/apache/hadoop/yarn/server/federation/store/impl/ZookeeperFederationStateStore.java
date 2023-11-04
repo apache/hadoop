@@ -275,13 +275,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
     versionNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_VERSION);
 
-    String hierarchiesPath = getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES);
-    routerAppRootHierarchies = new HashMap<>();
-    routerAppRootHierarchies.put(0, appsZNode);
-    for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
-      routerAppRootHierarchies.put(splitIndex,
-          getNodePath(hierarchiesPath, Integer.toString(splitIndex)));
-    }
+    // Initialize hierarchical path
+    initHierarchiesPath();
 
     appIdNodeSplitIndex = conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
          YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
@@ -814,6 +809,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     put(versionNode, data, isUpdate);
   }
 
+  private void initHierarchiesPath() {
+    String hierarchiesPath = getNodePath(appsZNode, ROUTER_APP_ROOT_HIERARCHIES);
+    routerAppRootHierarchies = new HashMap<>();
+    routerAppRootHierarchies.put(0, appsZNode);
+    for (int splitIndex = 1; splitIndex <= HIERARCHIES_LEVEL; splitIndex++) {
+      routerAppRootHierarchies.put(splitIndex,
+          getNodePath(hierarchiesPath, Integer.toString(splitIndex)));
+    }
+  }
+
   private void createBaseZNodeForEachEntity() throws YarnException {
     try {
       List<ACL> zkAcl = ZKCuratorManager.getZKAcls(configuration);
@@ -839,6 +844,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public void deleteStateStore() throws Exception {
+
     // Cleaning ZNodes and their child nodes;
     // after the cleaning is complete, the ZNodes will no longer exist.
     zkManager.delete(appsZNode);
@@ -849,6 +855,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     zkManager.delete(routerRMDTMasterKeysRootPath);
     zkManager.delete(routerRMDelegationTokensRootPath);
     zkManager.delete(versionNode);
+
+    // Initialize hierarchical path
+    initHierarchiesPath();
 
     // We will continue to create ZNodes to ensure that the base path exists.
     createBaseZNodeForEachEntity();
