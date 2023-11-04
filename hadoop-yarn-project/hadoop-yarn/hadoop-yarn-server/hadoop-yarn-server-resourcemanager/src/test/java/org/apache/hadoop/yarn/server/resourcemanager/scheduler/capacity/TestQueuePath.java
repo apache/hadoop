@@ -48,9 +48,11 @@ public class TestQueuePath {
   @Test
   public void testEmptyPart() {
     QueuePath queuePathWithEmptyPart = new QueuePath("root..level_2");
+    QueuePath queuePathWithEmptyLeaf = new QueuePath("root.level_1.");
     QueuePath queuePathWithoutEmptyPart = new QueuePath(TEST_QUEUE);
 
     Assert.assertTrue(queuePathWithEmptyPart.hasEmptyPart());
+    Assert.assertTrue(queuePathWithEmptyLeaf.hasEmptyPart());
     Assert.assertFalse(queuePathWithoutEmptyPart.hasEmptyPart());
   }
 
