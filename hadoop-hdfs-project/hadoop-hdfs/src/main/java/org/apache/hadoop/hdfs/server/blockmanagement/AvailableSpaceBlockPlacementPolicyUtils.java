@@ -129,7 +129,7 @@ public class AvailableSpaceBlockPlacementPolicyUtils {
     return a.getDfsUsedPercent() < b.getDfsUsedPercent() ? -1 : 1;
   }
 
-  protected static class AvailableSpaceContext {
+  protected final static class AvailableSpaceContext {
     private final int balancedPreference;
     private final int balancedSpaceToleranceLimit;
     private final int balancedSpaceTolerance;
