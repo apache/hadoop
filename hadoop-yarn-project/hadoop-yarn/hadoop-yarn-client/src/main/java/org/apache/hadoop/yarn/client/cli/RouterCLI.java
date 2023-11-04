@@ -17,12 +17,7 @@
  */
 package org.apache.hadoop.yarn.client.cli;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.MissingArgumentException;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -246,6 +241,9 @@ public class RouterCLI extends Configured implements Tool {
       .addUsageInfo(APPLICATION_DELETE_USAGE)
       .addExampleDescs(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_DESC)
       .addExample(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_1);
+
+  // delete application
+  private static final String OPTION_DELETE_APP = "delete";
 
   protected final static Map<String, RouterCmdUsageInfos> ADMIN_USAGE =
       ImmutableMap.<String, RouterCmdUsageInfos>builder()
@@ -836,6 +834,50 @@ public class RouterCLI extends Configured implements Tool {
     }
   }
 
+
+  private int handleDeleteApplication(String application) {
+    LOG.info("Delete Application = {}.", application);
+    try {
+      /*SaveFederationQueuePolicyRequest request = parsePolicy(policy);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      SaveFederationQueuePolicyResponse response = adminProtocol.saveFederationQueuePolicy(request);
+      System.out.println(response.getMessage());*/
+      return EXIT_SUCCESS;
+    } catch (Exception e) {
+      LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
+  }
+
+  private int handleApplication(String[] args)
+      throws IOException, YarnException, ParseException {
+    // Prepare Options.
+    Options opts = new Options();
+    opts.addOption("application", false,
+        "We provide a set of commands to query and clean applications.");
+    Option deleteOpt = new Option(null, OPTION_DELETE_APP, true,
+        "We will clean up the provided application.");
+    opts.addOption(deleteOpt);
+
+    // Parse command line arguments.
+    CommandLine cliParser;
+    try {
+      cliParser = new DefaultParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      System.out.println("Missing argument for options");
+      printUsage(args[0]);
+      return EXIT_ERROR;
+    }
+
+    if (cliParser.hasOption(OPTION_DELETE_APP)) {
+      String application = cliParser.getOptionValue(OPTION_DELETE_APP);
+      // return handleSavePolicy(policy);
+    } else {
+
+    }
+    return 0;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf = getConf() == null ?
@@ -861,6 +903,8 @@ public class RouterCLI extends Configured implements Tool {
       return handleDeregisterSubCluster(args);
     } else if (CMD_POLICY.equals(cmd)) {
       return handlePolicy(args);
+    } else if (CMD_APPLICATION.equals(cmd)) {
+      return handleApplication(args);
     } else {
       System.out.println("No related commands found.");
       printHelp();
