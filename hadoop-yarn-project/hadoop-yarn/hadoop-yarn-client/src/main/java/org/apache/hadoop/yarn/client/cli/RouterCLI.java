@@ -227,12 +227,34 @@ public class RouterCLI extends Configured implements Tool {
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_1)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2);
 
+  // Command3: application
+  private static final String CMD_APPLICATION = "-application";
+
+  // Application Delete
+  protected final static UsageInfo APPLICATION_DELETE_USAGE = new UsageInfo(
+     "--delete <application_id>",
+     "This command is used to delete the specified application.");
+
+  protected final static String APPLICATION_DELETE_USAGE_EXAMPLE_DESC =
+      "If we want to delete application_1440536969523_0001.";
+
+  protected final static String APPLICATION_DELETE_USAGE_EXAMPLE_1 =
+      "yarn routeradmin -application --delete application_1440536969523_0001";
+
+  protected final static RouterCmdUsageInfos APPLICATION_USAGEINFOS = new RouterCmdUsageInfos()
+      // application delete
+      .addUsageInfo(APPLICATION_DELETE_USAGE)
+      .addExampleDescs(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_DESC)
+      .addExample(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_1);
+
   protected final static Map<String, RouterCmdUsageInfos> ADMIN_USAGE =
       ImmutableMap.<String, RouterCmdUsageInfos>builder()
       // Command1: deregisterSubCluster
       .put(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER_USAGEINFOS)
       // Command2: policy
       .put(CMD_POLICY, POLICY_USAGEINFOS)
+      // Command3: application
+      .put(CMD_APPLICATION, APPLICATION_USAGEINFOS)
       .build();
 
   public RouterCLI() {
