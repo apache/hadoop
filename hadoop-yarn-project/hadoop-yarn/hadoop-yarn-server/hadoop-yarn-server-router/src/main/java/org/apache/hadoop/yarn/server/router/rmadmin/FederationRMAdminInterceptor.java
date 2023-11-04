@@ -153,7 +153,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     this.heartbeatExpirationMillis = this.conf.getTimeDuration(
         YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
-        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
