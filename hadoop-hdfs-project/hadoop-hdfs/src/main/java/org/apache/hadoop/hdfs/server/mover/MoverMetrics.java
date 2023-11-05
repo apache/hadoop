@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.mover;
 
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -27,9 +28,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
  * Metrics for HDFS Mover of a blockpool.
  */
 @Metrics(about="Mover metrics", context="dfs")
-final class MoverMetrics {
-
-  private final Mover mover;
+public final class MoverMetrics {
+  private final NameNodeConnector nnc;
 
   @Metric("If mover is processing namespace.")
   private MutableGaugeInt processingNamespace;
@@ -40,33 +40,33 @@ final class MoverMetrics {
   @Metric("Number of files being processed.")
   private MutableCounterLong filesProcessed;
 
-  private MoverMetrics(Mover m) {
-    this.mover = m;
+  private MoverMetrics(NameNodeConnector nnc) {
+    this.nnc = nnc;
   }
 
-  public static MoverMetrics create(Mover mover) {
-    MoverMetrics m = new MoverMetrics(mover);
+  public static MoverMetrics create(NameNodeConnector nnc) {
+    MoverMetrics m = new MoverMetrics(nnc);
     return DefaultMetricsSystem.instance().register(
         m.getName(), null, m);
   }
 
   String getName() {
-    return "Mover-" + mover.getNnc().getBlockpoolID();
+    return "Mover-" + nnc.getBlockpoolID();
   }
 
   @Metric("Bytes that already moved by mover.")
   public long getBytesMoved() {
-    return mover.getNnc().getBytesMoved().get();
+    return nnc.getBytesMoved().get();
   }
 
   @Metric("Number of blocks that successfully moved by mover.")
   public long getBlocksMoved() {
-    return mover.getNnc().getBlocksMoved().get();
+    return nnc.getBlocksMoved().get();
   }
 
   @Metric("Number of blocks that failed moved by mover.")
   public long getBlocksFailed() {
-    return mover.getNnc().getBlocksFailed().get();
+    return nnc.getBlocksFailed().get();
   }
 
   void setProcessingNamespace(boolean processingNamespace) {
