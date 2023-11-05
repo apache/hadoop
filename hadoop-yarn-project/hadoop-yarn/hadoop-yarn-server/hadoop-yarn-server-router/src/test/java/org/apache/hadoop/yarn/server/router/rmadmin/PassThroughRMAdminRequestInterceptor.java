@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 
 /**
  * Mock interceptor that does not do anything other than forwarding it to the
@@ -184,5 +186,11 @@ public class PassThroughRMAdminRequestInterceptor
   public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
       QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
     return getNextInterceptor().listFederationQueuePolicies(request);
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request) throws YarnException, IOException {
+    return getNextInterceptor().deleteFederationApplication(request);
   }
 }

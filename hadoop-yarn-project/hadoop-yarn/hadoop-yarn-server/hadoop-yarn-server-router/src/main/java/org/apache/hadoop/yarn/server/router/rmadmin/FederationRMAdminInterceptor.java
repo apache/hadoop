@@ -71,6 +71,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -1086,6 +1088,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
     throw new YarnException("Unable to listFederationQueuePolicies.");
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request) throws YarnException, IOException {
+    return null;
   }
 
   /**

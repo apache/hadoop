@@ -21,36 +21,30 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 
 @Private
 @Unstable
-public class DeleteFederationApplicationRequestPBImpl extends DeleteFederationApplicationRequest {
+public class DeleteFederationApplicationResponsePBImpl extends DeleteFederationApplicationResponse {
 
-  private DeleteFederationApplicationRequestProto proto =
-      DeleteFederationApplicationRequestProto.getDefaultInstance();
-  private DeleteFederationApplicationRequestProto.Builder builder = null;
+  private DeleteFederationApplicationResponseProto proto =
+      DeleteFederationApplicationResponseProto.getDefaultInstance();
+  private DeleteFederationApplicationResponseProto.Builder builder = null;
   private boolean viaProto = false;
 
-  public DeleteFederationApplicationRequestPBImpl() {
-    builder = DeleteFederationApplicationRequestProto.newBuilder();
+  public DeleteFederationApplicationResponsePBImpl() {
+    builder = DeleteFederationApplicationResponseProto.newBuilder();
   }
 
-  public DeleteFederationApplicationRequestPBImpl(DeleteFederationApplicationRequestProto proto) {
+  public DeleteFederationApplicationResponsePBImpl(DeleteFederationApplicationResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = DeleteFederationApplicationRequestProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-
-  public DeleteFederationApplicationRequestProto getProto() {
+  public DeleteFederationApplicationResponseProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -64,34 +58,41 @@ public class DeleteFederationApplicationRequestPBImpl extends DeleteFederationAp
   @Override
   public boolean equals(Object other) {
     if (!(other instanceof DeleteFederationApplicationRequest)) {
-        return false;
+      return false;
     }
-    DeleteFederationApplicationRequestPBImpl otherImpl = this.getClass().cast(other);
+    DeleteFederationApplicationResponsePBImpl otherImpl = this.getClass().cast(other);
     return new EqualsBuilder().append(this.getProto(), otherImpl.getProto()).isEquals();
-  }
-
-  @Override
-  public String getApplication() {
-    DeleteFederationApplicationRequestProtoOrBuilder p = viaProto ? proto : builder;
-    boolean hasApplication = p.hasApplication();
-    if (hasApplication) {
-      return p.getApplication();
-    }
-    return null;
-  }
-
-  @Override
-  public void setApplication(String application) {
-    maybeInitBuilder();
-    if (application == null) {
-      builder.clearApplication();
-      return;
-    }
-    builder.setApplication(application);
   }
 
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  @Override
+  public String getMessage() {
+    DeleteFederationApplicationResponseProtoOrBuilder p = viaProto ? proto : builder;
+    boolean hasMessage = p.hasMessage();
+    if (hasMessage) {
+      return p.getMessage();
+    }
+    return null;
+  }
+
+  private synchronized void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+        builder = DeleteFederationApplicationResponseProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public void setMessage(String msg) {
+    maybeInitBuilder();
+    if (msg == null) {
+      builder.clearMessage();
+      return;
+    }
+    builder.setMessage(msg);
   }
 }
