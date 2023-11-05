@@ -24,15 +24,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 
 /**
- * Exception to wrap invalid checksum verification on client side.
+ * Exception to be thrown if any Runtime Exception occurs.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AbfsRuntimeException extends AbfsRestOperationException {
+public class AbfsDriverException extends AbfsRestOperationException {
 
   private static final String ERROR_MESSAGE = "Runtime Exception Occurred In ABFS Driver";
 
-  public AbfsRuntimeException(final Exception innerException) {
+  public AbfsDriverException(final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),
@@ -42,7 +42,7 @@ public class AbfsRuntimeException extends AbfsRestOperationException {
         innerException);
   }
 
-  public AbfsRuntimeException(final Exception innerException, final String activityId) {
+  public AbfsDriverException(final Exception innerException, final String activityId) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),

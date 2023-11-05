@@ -918,7 +918,7 @@ Please refer the following links for further information.
 2. https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
 `fs.azure.list.max.results`: listStatus API fetches the FileStatus information
-from server in a page by page manner. The config used to set the maxResults URI
+from server in a page by page manner. The config is used to set the maxResults URI
 param which sets the page size(maximum results per call). The value should
 be >  0. By default, this will be 5000. Server has a maximum value for this
 parameter as 5000. So even if the config is above 5000 the response will only

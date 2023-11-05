@@ -32,14 +32,14 @@ public class AbfsInvalidChecksumException extends AbfsRestOperationException {
 
   private static final String ERROR_MESSAGE = "Checksum Validation Failed, MD5 Mismatch Error";
 
-  public AbfsInvalidChecksumException(final Exception innerException) {
+  public AbfsInvalidChecksumException(final AbfsRestOperationException abfsRestOperationException) {
     super(
-        AzureServiceErrorCode.UNKNOWN.getStatusCode(),
-        AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-        innerException != null
-            ? innerException.toString()
-            : ERROR_MESSAGE,
-        innerException);
+        abfsRestOperationException.getStatusCode(),
+        abfsRestOperationException.getErrorCode().getErrorCode(),
+        abfsRestOperationException != null
+                ? abfsRestOperationException.toString()
+                : ERROR_MESSAGE,
+        abfsRestOperationException);
   }
 
   public AbfsInvalidChecksumException(final String activityId) {
