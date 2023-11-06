@@ -45,8 +45,17 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_BACKOFF_INTERVAL = 3_000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
-  public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 500; // 500ms
-  public static final int DEFAULT_HTTP_READ_TIMEOUT = 30 * 1000; // 30 secs
+
+  /**
+   * Default value of connection timeout to be used while setting up HTTP Connection.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 2_000; // 2s
+  /**
+   * Default value of read timeout to be used while setting up HTTP Connection.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_HTTP_READ_TIMEOUT = 30_000; // 30 secs
 
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;

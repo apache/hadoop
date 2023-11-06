@@ -256,7 +256,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param url The full URL including query string parameters.
    * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
+   * @param connectionTimeout The Connection Timeout value to be used while establishing http connection
+   * @param readTimeout The Read Timeout value to be used with http connection while making a request
    * @throws IOException if an error occurs.
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,

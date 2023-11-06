@@ -319,7 +319,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   }
 
   private void checkHeaderForRetryPolicyAbbreviation(String header, String expectedFailureReason, String expectedRetryPolicyAbbreviation) {
-    String headerContents[] = header.split(":");
+    String[] headerContents = header.split(":");
     String previousReqContext = headerContents[6];
 
     if (expectedFailureReason != null) {

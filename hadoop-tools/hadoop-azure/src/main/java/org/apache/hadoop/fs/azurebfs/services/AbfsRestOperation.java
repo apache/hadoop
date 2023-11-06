@@ -410,8 +410,10 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
-   * requestHeaders fields of the AbfsRestOperation object.
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, requestHeader fields and
+   * timeout values as set in configuration of the AbfsRestOperation object.
+   *
+   * @return {@link AbfsHttpOperation} to be used for sending requests
    */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {

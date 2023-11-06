@@ -69,7 +69,7 @@ public abstract class AbfsRetryPolicy {
    * @param retryCount The current retry attempt count.
    * @return backoff Interval time
    */
-  public abstract long getRetryInterval(final int retryCount);
+  public abstract long getRetryInterval(int retryCount);
 
   /**
    * Returns a String value of the abbreviation
@@ -90,9 +90,9 @@ public abstract class AbfsRetryPolicy {
 
   @Override
   public String toString() {
-    return "AbfsRetryPolicy of subtype: " +
-        retryPolicyAbbreviation +
-        " and max retry count: " +
-        maxRetryCount;
+    return "AbfsRetryPolicy of subtype: "
+        + retryPolicyAbbreviation
+        + " and max retry count: "
+        + maxRetryCount;
   }
 }

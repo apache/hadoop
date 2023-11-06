@@ -125,8 +125,8 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
 
     final double incrementDelta = (Math.pow(2, retryCount - 1)) * boundedRandDelta;
 
-    final long retryInterval = (int) Math.round(Math.min(this.minBackoff +
-        incrementDelta, maxBackoff));
+    final long retryInterval = (int) Math.round(Math.min(
+            this.minBackoff + incrementDelta, maxBackoff));
 
     return retryInterval;
   }

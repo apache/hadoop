@@ -235,9 +235,10 @@ public class AbfsClient implements Closeable {
    * @return retry policy to be used.
    */
   public AbfsRetryPolicy getRetryPolicy(final String failureReason) {
-    return CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) &&
-        getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()
-        ? getStaticRetryPolicy() : getExponentialRetryPolicy();
+    return CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
+        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()
+        ? getStaticRetryPolicy()
+        : getExponentialRetryPolicy();
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {

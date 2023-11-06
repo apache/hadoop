@@ -66,6 +66,8 @@ import static org.mockito.Mockito.when;
 
 public class TestAbfsRestOperationMockFailures {
 
+  private static final int ONE_SEC = 1000;
+
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
     Exception[] exceptions = new Exception[1];
@@ -427,7 +429,7 @@ public class TestAbfsRestOperationMockFailures {
     // We want only two retries to occcur
     Mockito.doReturn(false).when(staticRetryPolicy).shouldRetry(2, HTTP_UNAVAILABLE);
     Mockito.doReturn(STATIC_RETRY_POLICY_ABBREVIATION).when(staticRetryPolicy).getAbbreviation();
-    Mockito.doReturn(1000L).when(staticRetryPolicy).getRetryInterval(nullable(Integer.class));
+    Mockito.doReturn(ONE_SEC).when(staticRetryPolicy).getRetryInterval(nullable(Integer.class));
 
     // Defining behavior of exponential retry policy
     Mockito.doReturn(true).when(exponentialRetryPolicy)
@@ -438,7 +440,7 @@ public class TestAbfsRestOperationMockFailures {
     // We want only two retries to occcur
     Mockito.doReturn(false).when(exponentialRetryPolicy).shouldRetry(2, HTTP_UNAVAILABLE);
     Mockito.doReturn(EXPONENTIAL_RETRY_POLICY_ABBREVIATION).when(exponentialRetryPolicy).getAbbreviation();
-    Mockito.doReturn(2000L).when(exponentialRetryPolicy).getRetryInterval(nullable(Integer.class));
+    Mockito.doReturn(2 * ONE_SEC).when(exponentialRetryPolicy).getRetryInterval(nullable(Integer.class));
 
     AbfsConfiguration configurations = Mockito.mock(AbfsConfiguration.class);
     Mockito.doReturn(configurations).when(abfsClient).getAbfsConfiguration();
