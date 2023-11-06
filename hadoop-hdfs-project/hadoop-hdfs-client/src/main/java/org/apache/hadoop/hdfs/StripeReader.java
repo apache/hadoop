@@ -21,7 +21,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
@@ -120,7 +119,7 @@ abstract class StripeReader {
   protected final RawErasureDecoder decoder;
   protected final DFSStripedInputStream dfsStripedInputStream;
   private long readTo = -1;
-  protected final int readDNMaxAttempts;
+  private final int readDNMaxAttempts;
 
   protected ECChunk[] decodeInputs;
 
@@ -240,6 +239,7 @@ abstract class StripeReader {
     final int targetLength = strategy.getTargetLength();
     int curAttempts = 0;
     while (curAttempts < readDNMaxAttempts) {
+      curAttempts++;
       int length = 0;
       try {
         while (length < targetLength) {
@@ -262,8 +262,7 @@ abstract class StripeReader {
       } catch (IOException e) {
         //Clear buffer to make next decode success
         strategy.getReadBuffer().clear();
-        if (curAttempts < readDNMaxAttempts - 1) {
-          curAttempts++;
+        if (curAttempts < readDNMaxAttempts) {
           if (readerInfos[chunkIndex].reader != null) {
             readerInfos[chunkIndex].reader.close();
           }
@@ -276,14 +275,16 @@ abstract class StripeReader {
             DFSClient.LOG.warn(msg);
             continue;
           }
-        DFSClient.LOG.warn("Exception while reading from "
-            + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
-            + currentNode, e);
-        throw e;
+          DFSClient.LOG.warn("Exception while reading from "
+              + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
+              + currentNode, e);
+          throw e;
+        }
       }
     }
-  }
-    return  -1;
+    throw new IOException("Read request interrupted. " +
+        currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
+        + currentNode);
   }
 
   private Callable<BlockReadStats> readCells(final BlockReader reader,
