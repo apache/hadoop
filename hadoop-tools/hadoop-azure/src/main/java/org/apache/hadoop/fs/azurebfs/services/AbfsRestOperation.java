@@ -159,6 +159,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.intercept = client.getIntercept();
+    this.retryPolicy = client.getExponentialRetryPolicy();
   }
 
   /**

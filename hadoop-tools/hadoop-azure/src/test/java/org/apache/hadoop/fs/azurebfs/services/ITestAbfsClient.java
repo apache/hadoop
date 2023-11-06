@@ -362,6 +362,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAuthType()).thenReturn(currentAuthType);
+    when(client.getExponentialRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
     when(client.getRetryPolicy(any())).thenReturn(
         new ExponentialRetryPolicy(1));
 

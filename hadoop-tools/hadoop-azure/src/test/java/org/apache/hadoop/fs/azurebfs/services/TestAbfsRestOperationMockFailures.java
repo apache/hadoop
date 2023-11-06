@@ -66,7 +66,7 @@ import static org.mockito.Mockito.when;
 
 public class TestAbfsRestOperationMockFailures {
 
-  private static final int ONE_SEC = 1000;
+  private static final long ONE_SEC = 1000;
 
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
