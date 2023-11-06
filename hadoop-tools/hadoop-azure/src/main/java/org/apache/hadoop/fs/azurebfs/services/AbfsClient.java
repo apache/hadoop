@@ -1189,7 +1189,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * If configured for SAS AuthType, appends SAS token to queryBuilder
+   * If configured for SAS AuthType, appends SAS token to queryBuilder.
    * @param path
    * @param operation
    * @param queryBuilder
@@ -1201,7 +1201,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * If configured for SAS AuthType, appends SAS token to queryBuilder
+   * If configured for SAS AuthType, appends SAS token to queryBuilder.
    * @param path
    * @param operation
    * @param queryBuilder

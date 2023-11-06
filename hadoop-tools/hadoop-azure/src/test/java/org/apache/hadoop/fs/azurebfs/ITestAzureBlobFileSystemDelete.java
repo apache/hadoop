@@ -65,7 +65,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-
 /**
  * Test delete operation.
  */
@@ -307,5 +306,6 @@ public class ITestAzureBlobFileSystemDelete extends
     AbfsClientTestUtil.hookOnRestOpsForTracingContextSingularity(spiedClient);
 
     fs.delete(new Path("/testDir"), true);
+    fs.close();
   }
 }
