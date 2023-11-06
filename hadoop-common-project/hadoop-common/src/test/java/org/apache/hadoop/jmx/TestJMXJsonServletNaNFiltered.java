@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -42,17 +42,17 @@ public class TestJMXJsonServletNaNFiltered extends HttpServerFunctionalTest {
     server.start();
     baseUrl = getServerURL(server);
   }
-  
+
   @AfterClass public static void cleanup() throws Exception {
     server.stop();
   }
-  
+
   public static void assertReFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
     assertTrue("'"+p+"' does not match "+value, m.find());
   }
-  
+
   @Test public void testQuery() throws Exception {
     System.setProperty("THE_TEST_OF_THE_NAN_VALUES", String.valueOf(Float.NaN));
     String result = readOutput(new URL(baseUrl, "/jmx"));
@@ -62,5 +62,4 @@ public class TestJMXJsonServletNaNFiltered extends HttpServerFunctionalTest {
         result
     );
   }
-
 }

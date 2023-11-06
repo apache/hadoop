@@ -980,6 +980,7 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default servlets.
+   * @param configuration the hadoop configuration
    */
   protected void addDefaultServlets(Configuration configuration) {
     // set up default servlets

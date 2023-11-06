@@ -445,9 +445,6 @@ public class JMXJsonServlet extends HttpServlet {
     return false;
   }
 
-  /**
-   * @see JMXJsonServletNaNFiltered
-   */
   protected void extraWrite(Object value, String attName, JsonGenerator jg) throws IOException {
     throw new NotImplementedException();
   }
