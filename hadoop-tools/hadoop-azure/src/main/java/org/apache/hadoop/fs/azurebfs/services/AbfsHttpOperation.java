@@ -52,9 +52,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
-  private static final int CONNECT_TIMEOUT = 30 * 1000;
-  private static final int READ_TIMEOUT = 30 * 1000;
-
   private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
   private static final int ONE_THOUSAND = 1000;
@@ -262,7 +259,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
+                           final int connectionTimeout, final int readTimeout)
       throws IOException {
     this.url = url;
     this.method = method;
@@ -276,9 +274,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       }
     }
 
-    this.connection.setConnectTimeout(CONNECT_TIMEOUT);
-    this.connection.setReadTimeout(READ_TIMEOUT);
-
+    this.connection.setConnectTimeout(connectionTimeout);
+    this.connection.setReadTimeout(readTimeout);
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {

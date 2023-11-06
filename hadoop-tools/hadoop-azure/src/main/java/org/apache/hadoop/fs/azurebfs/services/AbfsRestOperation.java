@@ -415,7 +415,9 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
+    return new AbfsHttpOperation(url, method, requestHeaders,
+            client.getAbfsConfiguration().getHttpConnectionTimeout(),
+            client.getAbfsConfiguration().getHttpReadTimeout());
   }
 
   /**

@@ -168,6 +168,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_CONNECTION_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_CONNECTION_TIMEOUT)
+  private int httpConnectionTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_READ_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_READ_TIMEOUT)
+  private int httpReadTimeout;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
       DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
@@ -681,6 +689,14 @@ public class AbfsConfiguration{
 
   public int getCustomTokenFetchRetryCount() {
     return this.customTokenFetchRetryCount;
+  }
+
+  public int getHttpConnectionTimeout() {
+    return this.httpConnectionTimeout;
+  }
+
+  public int getHttpReadTimeout() {
+    return this.httpReadTimeout;
   }
 
   public long getAzureBlockSize() {
