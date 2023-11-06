@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.yarn.client.cli;
 
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.MissingArgumentException;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -37,6 +43,8 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
@@ -834,14 +842,15 @@ public class RouterCLI extends Configured implements Tool {
     }
   }
 
-
   private int handleDeleteApplication(String application) {
     LOG.info("Delete Application = {}.", application);
     try {
-      /*SaveFederationQueuePolicyRequest request = parsePolicy(policy);
+      DeleteFederationApplicationRequest request =
+          DeleteFederationApplicationRequest.newInstance(application);
       ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-      SaveFederationQueuePolicyResponse response = adminProtocol.saveFederationQueuePolicy(request);
-      System.out.println(response.getMessage());*/
+      DeleteFederationApplicationResponse response =
+          adminProtocol.deleteFederationApplication(request);
+      System.out.println(response.getMessage());
       return EXIT_SUCCESS;
     } catch (Exception e) {
       LOG.error("handleSavePolicy error.", e);
@@ -871,10 +880,9 @@ public class RouterCLI extends Configured implements Tool {
 
     if (cliParser.hasOption(OPTION_DELETE_APP)) {
       String application = cliParser.getOptionValue(OPTION_DELETE_APP);
-      // return handleSavePolicy(policy);
-    } else {
-
+      return handleDeleteApplication(application);
     }
+
     return 0;
   }
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -1093,7 +1094,24 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   @Override
   public DeleteFederationApplicationResponse deleteFederationApplication(
       DeleteFederationApplicationRequest request) throws YarnException, IOException {
-    return null;
+    // Parameter validation.
+    if (request == null) {
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationApplication Request.", null);
+    }
+
+
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(request.getApplication());
+      federationFacade.deleteApplicationHomeSubCluster(applicationId);
+      return DeleteFederationApplicationResponse.newInstance(
+          "application = " + applicationId + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationApplication due to exception. " + e.getMessage());
+    }
+
+    throw new YarnException("Unable to listFederationQueuePolicies.");
   }
 
   /**
