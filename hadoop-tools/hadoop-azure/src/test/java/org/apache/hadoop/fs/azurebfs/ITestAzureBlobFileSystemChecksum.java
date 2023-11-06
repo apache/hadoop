@@ -84,7 +84,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testReadWithChecksumAtDifferentOffsets() throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient client = fs.getAbfsStore().getClient();
     Path path = path("testPath" + getMethodName());
     byte[] data = generateRandomBytes(MB_16);
