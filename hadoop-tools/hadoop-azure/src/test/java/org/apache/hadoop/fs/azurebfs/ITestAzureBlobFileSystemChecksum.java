@@ -49,12 +49,13 @@ import static org.mockito.ArgumentMatchers.any;
  */
 public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTest {
 
-  private final int MB2 = 2 * ONE_MB;
-  private final int MB3 = 3 * ONE_MB;
-  private final int MB4 = 4 * ONE_MB;
-  private final int MB8 = 8 * ONE_MB;
-  private final int MB15 = 15 * ONE_MB;
-  private final int MB16 = 16 * ONE_MB;
+  private static final int MB_2 = 2 * ONE_MB;
+  private static final int MB_3 = 3 * ONE_MB;
+  private static final int MB_4 = 4 * ONE_MB;
+  private static final int MB_8 = 8 * ONE_MB;
+  private static final int MB_15 = 15 * ONE_MB;
+  private static final int MB_16 = 16 * ONE_MB;
+  private static final String invalidText = "Text for Invalid MD5 Computation";
 
   public ITestAzureBlobFileSystemChecksum() throws Exception {
     super();
@@ -68,33 +69,33 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testAppendWithChecksumAtDifferentOffsets() throws Exception {
-    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB4, MB4, true)) {
+    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)) {
       AbfsClient client = fs.getAbfsStore().getClient();
       Path path = path("testPath" + getMethodName());
       try (FSDataOutputStream out = fs.create(path)) {
-        byte[] data = generateRandomBytes(MB4);
+        byte[] data = generateRandomBytes(MB_4);
 
         appendWithOffsetHelper(client, path, data, fs, 0);
         appendWithOffsetHelper(client, path, data, fs, ONE_MB);
-        appendWithOffsetHelper(client, path, data, fs, MB2);
-        appendWithOffsetHelper(client, path, data, fs, MB4 - 1);
+        appendWithOffsetHelper(client, path, data, fs, MB_2);
+        appendWithOffsetHelper(client, path, data, fs, MB_4 - 1);
       }
     }
   }
 
   @Test
   public void testReadWithChecksumAtDifferentOffsets() throws Exception {
-    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB4, MB4, true)) {
+    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)) {
       AbfsClient client = fs.getAbfsStore().getClient();
       Path path = path("testPath" + getMethodName());
-      byte[] data = generateRandomBytes(MB16);
+      byte[] data = generateRandomBytes(MB_16);
 
       createFileWithData(path, data, fs);
       readWithOffsetAndPositionHelper(client, path, data, fs, 0, 0);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB4, 0);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB4, ONE_MB);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB8, MB2);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB15, MB4 - 1);
+      readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, 0);
+      readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, ONE_MB);
+      readWithOffsetAndPositionHelper(client, path, data, fs, MB_8, MB_2);
+      readWithOffsetAndPositionHelper(client, path, data, fs, MB_15, MB_4 - 1);
     }
   }
 
@@ -106,12 +107,12 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testAbfsInvalidChecksumExceptionInAppend() throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(MB4, MB4, true);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
     Path path = path("testPath" + getMethodName());
     fs.create(path);
-    byte[] data= generateRandomBytes(MB4);
-    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes(), 0, 11);
+    byte[] data= generateRandomBytes(MB_4);
+    String invalidMD5Hash = spiedClient.computeMD5Hash(invalidText.getBytes(), 0, invalidText.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
@@ -125,13 +126,13 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testAbfsInvalidChecksumExceptionInRead() throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(MB4, MB4, true);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
     Path path = path("testPath" + getMethodName());
-    byte[] data = generateRandomBytes(MB3);
+    byte[] data = generateRandomBytes(MB_3);
     createFileWithData(path, data, fs);
 
-    String invalidMD5Hash = spiedClient.computeMD5Hash("InvalidData".getBytes(), 0, 11);
+    String invalidMD5Hash = spiedClient.computeMD5Hash(invalidText.getBytes(), 0, invalidText.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
 
@@ -142,8 +143,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
       throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(MB4, MB4, readAheadEnabled);
-    final int dataSize = MB16 + 1000;
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, readAheadEnabled);
+    final int dataSize = MB_16 + 1000;
     Path testPath = path("testPath" + getMethodName());
     byte[] bytesUploaded = generateRandomBytes(dataSize);
 
@@ -211,8 +212,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   private void testWriteReadWithChecksumAndOptionsInternal(
       final boolean readAheadEnabled) throws Exception {
-    AzureBlobFileSystem fs = getConfiguredFileSystem(MB8, ONE_MB, readAheadEnabled);
-    final int dataSize = MB16 + 1000;
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_8, ONE_MB, readAheadEnabled);
+    final int dataSize = MB_16 + 1000;
 
     Path testPath = path("testPath" + getMethodName());
     byte[] bytesUploaded = generateRandomBytes(dataSize);
@@ -223,15 +224,14 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     try (FSDataInputStream in = fs.openFileWithOptions(testPath,
         new OpenFileParameters().withOptions(cpm1)
             .withMandatoryKeys(new HashSet<>())).get()) {
-      ;
       byte[] bytesRead = new byte[dataSize];
 
-      in.read(1, bytesRead, 1, MB4);
+      in.read(1, bytesRead, 1, MB_4);
 
       // Verify that the data read is same as data written
-      Assertions.assertThat(Arrays.copyOfRange(bytesRead, 1, MB4))
+      Assertions.assertThat(Arrays.copyOfRange(bytesRead, 1, MB_4))
               .describedAs("Bytes read with checksum enabled are not as expected")
-              .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, MB4));
+              .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, MB_4));
     }
   }
 

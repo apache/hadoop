@@ -34,11 +34,15 @@ public class AbfsInvalidChecksumException extends AbfsRestOperationException {
 
   public AbfsInvalidChecksumException(final AbfsRestOperationException abfsRestOperationException) {
     super(
-        abfsRestOperationException.getStatusCode(),
-        abfsRestOperationException.getErrorCode().getErrorCode(),
         abfsRestOperationException != null
-                ? abfsRestOperationException.toString()
-                : ERROR_MESSAGE,
+            ? abfsRestOperationException.getStatusCode()
+            : AzureServiceErrorCode.UNKNOWN.getStatusCode(),
+        abfsRestOperationException != null
+            ? abfsRestOperationException.getErrorCode().getErrorCode()
+            : AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+        abfsRestOperationException != null
+            ? abfsRestOperationException.toString()
+            : ERROR_MESSAGE,
         abfsRestOperationException);
   }
 
