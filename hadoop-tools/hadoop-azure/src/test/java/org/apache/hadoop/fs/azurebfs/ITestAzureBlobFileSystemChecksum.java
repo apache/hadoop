@@ -69,34 +69,32 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   @Test
   public void testAppendWithChecksumAtDifferentOffsets() throws Exception {
-    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)) {
-      AbfsClient client = fs.getAbfsStore().getClient();
-      Path path = path("testPath" + getMethodName());
-      try (FSDataOutputStream out = fs.create(path)) {
-        byte[] data = generateRandomBytes(MB_4);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
+    AbfsClient client = fs.getAbfsStore().getClient();
+    Path path = path("testPath" + getMethodName());
+    try (FSDataOutputStream out = fs.create(path)) {
+      byte[] data = generateRandomBytes(MB_4);
 
-        appendWithOffsetHelper(client, path, data, fs, 0);
-        appendWithOffsetHelper(client, path, data, fs, ONE_MB);
-        appendWithOffsetHelper(client, path, data, fs, MB_2);
-        appendWithOffsetHelper(client, path, data, fs, MB_4 - 1);
-      }
+      appendWithOffsetHelper(client, path, data, fs, 0);
+      appendWithOffsetHelper(client, path, data, fs, ONE_MB);
+      appendWithOffsetHelper(client, path, data, fs, MB_2);
+      appendWithOffsetHelper(client, path, data, fs, MB_4 - 1);
     }
   }
 
   @Test
   public void testReadWithChecksumAtDifferentOffsets() throws Exception {
-    try (AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)) {
-      AbfsClient client = fs.getAbfsStore().getClient();
-      Path path = path("testPath" + getMethodName());
-      byte[] data = generateRandomBytes(MB_16);
+    AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true)
+    AbfsClient client = fs.getAbfsStore().getClient();
+    Path path = path("testPath" + getMethodName());
+    byte[] data = generateRandomBytes(MB_16);
 
-      createFileWithData(path, data, fs);
-      readWithOffsetAndPositionHelper(client, path, data, fs, 0, 0);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, 0);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, ONE_MB);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB_8, MB_2);
-      readWithOffsetAndPositionHelper(client, path, data, fs, MB_15, MB_4 - 1);
-    }
+    createFileWithData(path, data, fs);
+    readWithOffsetAndPositionHelper(client, path, data, fs, 0, 0);
+    readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, 0);
+    readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, ONE_MB);
+    readWithOffsetAndPositionHelper(client, path, data, fs, MB_8, MB_2);
+    readWithOffsetAndPositionHelper(client, path, data, fs, MB_15, MB_4 - 1);
   }
 
   @Test
@@ -244,8 +242,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   private AzureBlobFileSystem getConfiguredFileSystem(final int writeBuffer,
       final int readBuffer, final boolean readAheadEnabled) throws Exception {
-    Configuration conf = getRawConfiguration();
-    AzureBlobFileSystem fs =  (AzureBlobFileSystem) FileSystem.newInstance(conf);
+    AzureBlobFileSystem fs = createFileSystem();
     AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
     abfsConf.setIsChecksumValidationEnabled(true);
     abfsConf.setWriteBufferSize(writeBuffer);
