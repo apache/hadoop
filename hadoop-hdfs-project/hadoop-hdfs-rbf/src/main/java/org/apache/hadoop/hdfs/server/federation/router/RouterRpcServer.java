@@ -1612,9 +1612,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+      long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
     return nnProto.getBlocks(datanode, size, minBlockSize,
-            hotBlockTimeInterval);
+            hotBlockTimeInterval, storageType);
   }
 
   @Override // NamenodeProtocol
