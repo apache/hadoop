@@ -3112,16 +3112,18 @@ public class BlockManager implements BlockStatsMXBean {
           if (processed >= excessRedundancyTimeoutCheckLimit) {
             break;
           }
-          BlockInfo blockInfo = excessBlockInfo.getBlockInfo();
-          BlockInfo bi = blocksMap.getStoredBlock(blockInfo);
-          if (bi == null || bi.isDeleted()) {
-            continue;
-          }
 
+          processed++;
           // If the datanode doesn't have any excess block that has exceeded the timeout,
           // can exit this loop.
           if (now <= excessBlockInfo.getTimeStamp() + excessRedundancyTimeout) {
             break;
+          }
+
+          BlockInfo blockInfo = excessBlockInfo.getBlockInfo();
+          BlockInfo bi = blocksMap.getStoredBlock(blockInfo);
+          if (bi == null || bi.isDeleted()) {
+            continue;
           }
 
           Iterator<DatanodeStorageInfo> iterator = blockInfo.getStorageInfos();
@@ -3138,7 +3140,6 @@ public class BlockManager implements BlockStatsMXBean {
                       block, datanodeDescriptor);
                 }
                 excessBlockInfo.setTimeStamp();
-                processed++;
                 break;
               }
             }
