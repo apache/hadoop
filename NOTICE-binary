@@ -334,19 +334,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
------------------------------------------------------------------------
-
-This product contains a modified portion of 'OkHttp', an open source
-HTTP & SPDY client for Android and Java applications, which can be obtained
-at:
-
-  * LICENSE:
-    * okhttp/third_party/okhttp/LICENSE (Apache License 2.0)
-  * HOMEPAGE:
-    * https://github.com/square/okhttp
-  * LOCATION_IN_GRPC:
-    * okhttp/third_party/okhttp
-
 This product contains a modified portion of 'Netty', an open source
 networking library, which can be obtained at:
 

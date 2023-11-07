@@ -150,7 +150,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_CONTAINER_DEBUG_INFO =
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info-on-error.enabled";
+
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = true;
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR = false;
 
   ////////////////////////////////
   // IPC Configs
@@ -517,7 +521,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
 
   /** The address of the RM admin interface.*/
-  public static final String RM_ADMIN_ADDRESS = 
+  public static final String RM_ADMIN_ADDRESS =
     RM_PREFIX + "admin.address";
   public static final int DEFAULT_RM_ADMIN_PORT = 8033;
   public static final String DEFAULT_RM_ADMIN_ADDRESS = "0.0.0.0:" +
@@ -852,6 +856,10 @@ public class YarnConfiguration extends Configuration {
 
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
+
+  /** Enable Zookeeper SSL/TLS communication. */
+  public static final String RM_ZK_CLIENT_SSL_ENABLED = RM_ZK_PREFIX + "client-ssl.enabled";
+  public static final boolean DEFAULT_RM_ZK_CLIENT_SSL_ENABLED = false;
 
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
@@ -2223,6 +2231,14 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-localizer.java.opts";
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
+
+  /*
+   * Flag to indicate whether JDK17's required add-exports flags should be added to
+   * container localizers regardless of the user specified JAVA_OPTS.
+   */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
+  public static final boolean NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT = true;
 
   /** The log level of container localizer process. */
   public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
@@ -4353,6 +4369,22 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
       TimeUnit.SECONDS.toMillis(0); // 0s
 
+  /**
+   * This method configures the policy for core threads regarding termination
+   * when no tasks arrive within the keep-alive time.
+   * When set to false, core threads are never terminated due to a lack of tasks.
+   * When set to true, the same keep-alive policy
+   * that applies to non-core threads also applies to core threads.
+   * To prevent constant thread replacement,
+   * ensure that the keep-alive time is greater than zero when setting it to true.
+   * It's advisable to call this method before the pool becomes actively used.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.allow-core-thread-time-out";
+
+  public static final boolean DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      false;
+
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
       ROUTER_WEBAPP_PREFIX + "address";
@@ -4432,6 +4464,31 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
       "kerberos.principal.hostname";
 
+  // The application cleaner class to use
+  public static final String GPG_APPCLEANER_CLASS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.class";
+  public static final String DEFAULT_GPG_APPCLEANER_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator"
+          + ".applicationcleaner.DefaultApplicationCleaner";
+
+  // The interval at which the application cleaner runs, -1 means disabled
+  public static final String GPG_APPCLEANER_INTERVAL_MS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.interval-ms";
+  public static final long DEFAULT_GPG_APPCLEANER_INTERVAL_MS = TimeUnit.SECONDS.toMillis(-1);
+
+  /**
+   * Specifications on how (many times) to contact Router for apps. We need to
+   * do this because Router might return partial application list because some
+   * sub-cluster RM is not responsive (e.g. failing over).
+   *
+   * Should have three values separated by comma: minimal success retries,
+   * maximum total retry, retry interval (ms).
+   */
+  public static final String GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      FEDERATION_GPG_PREFIX + "application.cleaner.contact.router.spec";
+  public static final String DEFAULT_GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      "3,10,600000";
+
   public static final String FEDERATION_GPG_POLICY_PREFIX =
       FEDERATION_GPG_PREFIX + "policy.generator.";
 
@@ -4507,6 +4564,11 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
   public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
+
+  public static final String GPG_WEBAPP_CONNECT_TIMEOUT = GPG_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+  public static final String GPG_WEBAPP_READ_TIMEOUT = GPG_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_READ_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
   /**
    * Connection and Read timeout from the Router to RM.

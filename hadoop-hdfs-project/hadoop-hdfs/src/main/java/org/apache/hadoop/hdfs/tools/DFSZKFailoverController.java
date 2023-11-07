@@ -294,4 +294,11 @@ public class DFSZKFailoverController extends ZKFailoverController {
     }
     return targets;
   }
+
+  @Override
+  protected boolean isSSLEnabled() {
+    return conf.getBoolean(
+        DFSConfigKeys.ZK_CLIENT_SSL_ENABLED,
+        DFSConfigKeys.DEFAULT_ZK_CLIENT_SSL_ENABLED);
+  }
 }

@@ -18,17 +18,22 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Test;
 
+
 import java.io.IOException;
-import java.util.Date;
+import java.io.InputStream;
+import java.time.Instant;
 
 import static org.junit.Assert.assertEquals;
 
@@ -40,10 +45,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Uses mocks to check that the {@link S3ObjectInputStream} is closed when
- * {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer} is called. Unlike the
- * other unbuffer tests, this specifically tests that the underlying S3 object
- * stream is closed.
+ * Uses mocks to check that the {@link ResponseInputStream<GetObjectResponse>} is
+ * closed when {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer} is called.
+ * Unlike the other unbuffer tests, this specifically tests that the underlying
+ * S3 object stream is closed.
  */
 public class TestS3AUnbuffer extends AbstractS3AMockTest {
 
@@ -51,22 +56,27 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
   public void testUnbuffer() throws IOException {
     // Create mock ObjectMetadata for getFileStatus()
     Path path = new Path("/file");
-    ObjectMetadata meta = mock(ObjectMetadata.class);
-    when(meta.getContentLength()).thenReturn(1L);
-    when(meta.getLastModified()).thenReturn(new Date(2L));
-    when(meta.getETag()).thenReturn("mock-etag");
-    when(s3.getObjectMetadata(any())).thenReturn(meta);
+    HeadObjectResponse objectMetadata = HeadObjectResponse.builder()
+        .contentLength(1L)
+        .lastModified(Instant.ofEpochMilli(2L))
+        .eTag("mock-etag")
+        .build();
+    when(s3.headObject((HeadObjectRequest) any())).thenReturn(objectMetadata);
 
-    // Create mock S3ObjectInputStream and S3Object for open()
-    S3ObjectInputStream objectStream = mock(S3ObjectInputStream.class);
+    // Create mock ResponseInputStream<GetObjectResponse> and GetObjectResponse for open()
+    GetObjectResponse objectResponse = GetObjectResponse.builder()
+        .contentLength(1L)
+        .lastModified(Instant.ofEpochMilli(2L))
+        .eTag("mock-etag")
+        .build();
+    InputStream objectStream = mock(InputStream.class);
     when(objectStream.read()).thenReturn(-1);
     when(objectStream.read(any(byte[].class))).thenReturn(-1);
     when(objectStream.read(any(byte[].class), anyInt(), anyInt())).thenReturn(-1);
-
-    S3Object s3Object = mock(S3Object.class);
-    when(s3Object.getObjectContent()).thenReturn(objectStream);
-    when(s3Object.getObjectMetadata()).thenReturn(meta);
-    when(s3.getObject(any())).thenReturn(s3Object);
+    ResponseInputStream<GetObjectResponse> getObjectResponseInputStream =
+        new ResponseInputStream(objectResponse,
+            AbortableInputStream.create(objectStream, () -> {}));
+    when(s3.getObject((GetObjectRequest) any())).thenReturn(getObjectResponseInputStream);
 
     // Call read and then unbuffer
     FSDataInputStream stream = fs.open(path);

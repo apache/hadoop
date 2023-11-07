@@ -54,7 +54,9 @@ public class ClusterMetricsInfo {
   private int containersPending;
 
   private long totalMB;
+  private long utilizedMB;
   private long totalVirtualCores;
+  private long utilizedVirtualCores;
   private int utilizedMBPercent;
   private int utilizedVirtualCoresPercent;
   private int rmSchedulerBusyPercent;
@@ -167,6 +169,7 @@ public class ClusterMetricsInfo {
         .getContainerAssignedPerSecond();
     this.rmEventQueueSize = clusterMetrics.getRmEventQueueSize();
     this.schedulerEventQueueSize = clusterMetrics.getSchedulerEventQueueSize();
+    this.utilizedVirtualCores = clusterMetrics.getUtilizedVirtualCores();
   }
 
   public int getAppsSubmitted() {
@@ -431,5 +434,21 @@ public class ClusterMetricsInfo {
 
   public int getSchedulerEventQueueSize() {
     return schedulerEventQueueSize;
+  }
+
+  public long getUtilizedVirtualCores() {
+    return utilizedVirtualCores;
+  }
+
+  public void setUtilizedVirtualCores(long utilizedVirtualCores) {
+    this.utilizedVirtualCores = utilizedVirtualCores;
+  }
+
+  public long getUtilizedMB() {
+    return utilizedMB;
+  }
+
+  public void setUtilizedMB(long utilizedMB) {
+    this.utilizedMB = utilizedMB;
   }
 }

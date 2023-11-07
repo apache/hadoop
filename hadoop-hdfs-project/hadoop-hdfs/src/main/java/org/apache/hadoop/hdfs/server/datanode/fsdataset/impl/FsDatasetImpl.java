@@ -3822,5 +3822,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public void setLastDirScannerFinishTime(long time) {
     this.lastDirScannerFinishTime = time;
   }
+
+  @Override
+  public long getPendingAsyncDeletions() {
+    return asyncDiskService.countPendingDeletions();
+  }
 }
 
