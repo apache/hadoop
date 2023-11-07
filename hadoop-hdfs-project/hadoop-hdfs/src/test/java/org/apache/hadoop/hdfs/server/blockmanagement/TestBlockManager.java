@@ -2271,7 +2271,7 @@ public class TestBlockManager {
       assertEquals(0, blockManager.getPendingDeletionBlocksCount());
       assertNotNull(excessDn);
 
-      // Name node will ask datanode to delete replicas in heartbeat response.
+      // NameNode will ask datanode to delete replicas in heartbeat response.
       cluster.triggerHeartbeats();
 
       // Wait for the datanode to process any block deletions

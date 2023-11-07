@@ -67,7 +67,7 @@ class ExcessRedundancyMap {
    */
   synchronized boolean contains(DatanodeDescriptor dn, BlockInfo blk) {
     final LightWeightHashSet<ExcessBlockInfo> set = map.get(dn.getDatanodeUuid());
-    return set != null && set.contains(new ExcessBlockInfo(blk));
+    return set != null && set.contains(blk);
   }
 
   /**
@@ -102,7 +102,7 @@ class ExcessRedundancyMap {
       return false;
     }
 
-    final boolean removed = set.remove(new ExcessBlockInfo(blk));
+    final boolean removed = set.remove(blk);
     if (removed) {
       size.decrementAndGet();
       blockLog.debug("BLOCK* ExcessRedundancyMap.remove({}, {})", dn, blk);
@@ -153,11 +153,16 @@ class ExcessRedundancyMap {
       if (this == obj) {
         return true;
       }
-      if (!(obj instanceof ExcessBlockInfo)) {
-        return false;
+
+      if (obj instanceof ExcessBlockInfo) {
+        ExcessBlockInfo other = (ExcessBlockInfo) obj;
+        return this.blockInfo.equals(other.blockInfo);
       }
-      ExcessBlockInfo other = (ExcessBlockInfo) obj;
-      return (this.blockInfo.equals(other.blockInfo));
+
+      if (obj instanceof BlockInfo) {
+       return this.blockInfo.equals(obj);
+      }
+      return false;
     }
 
     @Override

@@ -3104,7 +3104,7 @@ public class BlockManager implements BlockStatsMXBean {
         Map.Entry<String, LightWeightHashSet<ExcessBlockInfo>> entry = iter.next();
         String datanodeUuid = entry.getKey();
         LightWeightHashSet<ExcessBlockInfo> blocks = entry.getValue();
-        List<ExcessRedundancyMap.ExcessBlockInfo> sortedBlocks = new ArrayList<>(blocks);
+        List<ExcessBlockInfo> sortedBlocks = new ArrayList<>(blocks);
         // Sort blocks by timestamp in descending order.
         Collections.sort(sortedBlocks);
 
@@ -3130,18 +3130,16 @@ public class BlockManager implements BlockStatsMXBean {
           while (iterator.hasNext()) {
             DatanodeStorageInfo datanodeStorageInfo = iterator.next();
             DatanodeDescriptor datanodeDescriptor = datanodeStorageInfo.getDatanodeDescriptor();
-            if (datanodeDescriptor.getDatanodeUuid().equals(datanodeUuid)) {
-              if (datanodeStorageInfo.getState().equals(State.NORMAL)) {
-                final Block block = getBlockOnStorage(blockInfo,
-                    datanodeStorageInfo);
-                if (!containsInvalidateBlock(datanodeDescriptor, block)) {
-                  addToInvalidates(block, datanodeDescriptor);
-                  LOG.debug("Excess block timeout ({}, {}) is added to invalidated.",
-                      block, datanodeDescriptor);
-                }
-                excessBlockInfo.setTimeStamp();
-                break;
+            if (datanodeDescriptor.getDatanodeUuid().equals(datanodeUuid) &&
+                datanodeStorageInfo.getState().equals(State.NORMAL)) {
+              final Block block = getBlockOnStorage(blockInfo, datanodeStorageInfo);
+              if (!containsInvalidateBlock(datanodeDescriptor, block)) {
+                addToInvalidates(block, datanodeDescriptor);
+                LOG.debug("Excess block timeout ({}, {}) is added to invalidated.",
+                    block, datanodeDescriptor);
               }
+              excessBlockInfo.setTimeStamp();
+              break;
             }
           }
         }
