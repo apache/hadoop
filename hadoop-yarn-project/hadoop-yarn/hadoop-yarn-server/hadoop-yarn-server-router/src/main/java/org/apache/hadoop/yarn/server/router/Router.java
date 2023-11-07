@@ -373,9 +373,15 @@ public class Router extends CompositeService {
     LOG.info("Application is deleted from state store");
   }
 
-  private static void handFormatStateStore() {
-    // TODO: YARN-11548. [Federation] Router Supports Format FederationStateStore.
-    System.err.println("format-state-store is not yet supported.");
+  private static void handFormatStateStore(Configuration conf) {
+    try {
+      System.out.println("Deleting Federation state store.");
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(conf);
+      System.out.println("Federation state store has been cleaned.");
+      facade.deleteStore();
+    } catch (Exception e) {
+      System.err.println("Delete Federation state store error, exception = " + e);
+    }
   }
 
   private static void handRemoveApplicationFromStateStore(Configuration conf,
@@ -409,7 +415,7 @@ public class Router extends CompositeService {
       CommandLine cliParser = new DefaultParser().parse(opts, args);
 
       if (CMD_FORMAT_STATE_STORE.equals(cmd)) {
-        handFormatStateStore();
+        handFormatStateStore(conf);
       } else if (CMD_REMOVE_APPLICATION_FROM_STATE_STORE.equals(cmd)) {
         if (cliParser.hasOption(removeApplicationFromStateStoreOpt)) {
           String applicationId = cliParser.getOptionValue(removeApplicationFromStateStoreOpt);
