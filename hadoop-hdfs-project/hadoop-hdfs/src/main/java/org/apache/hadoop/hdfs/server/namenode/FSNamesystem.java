@@ -1946,10 +1946,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *
    * @param datanode on which blocks are located
    * @param size total size of blocks
-   * @param minimumBlockSize
+   * @param minimumBlockSize each block should be of this minimum Block Size
+   * @param timeInterval prefer to get blocks which are belong to
+   *                     the cold files accessed before the time interval
+   * @param storageType the given storage type {@link StorageType}
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
-      minimumBlockSize, long timeInterval) throws IOException {
+      minimumBlockSize, long timeInterval, StorageType storageType) throws IOException {
     OperationCategory checkOp =
         isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
             OperationCategory.UNCHECKED;
@@ -1958,7 +1961,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
-          minimumBlockSize, timeInterval);
+          minimumBlockSize, timeInterval, storageType);
     } finally {
       readUnlock("getBlocks");
     }

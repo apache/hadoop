@@ -88,8 +88,8 @@
     <!-- This is used in hadoop-common for compilation only -->
     <protobuf.version>2.5.0</protobuf.version>
     <!-- Protobuf scope in hadoop common -->
-    <!-- set to "provided" and protobuf2 will no longer be exported as a dependency  -->
-    <common.protobuf2.scope>compile</common.protobuf2.scope>
+    <!-- set to "provided" so protobuf2 is no longer exported as a dependency  -->
+    <common.protobuf2.scope>provided</common.protobuf2.scope>
     <!-- Protobuf scope in other modules which explicitly import the libarary -->
     <transient.protobuf2.scope>${common.protobuf2.scope}</transient.protobuf2.scope>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
