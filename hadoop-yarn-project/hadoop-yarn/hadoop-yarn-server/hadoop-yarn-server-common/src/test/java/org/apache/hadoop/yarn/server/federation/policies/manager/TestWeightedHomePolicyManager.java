@@ -16,6 +16,47 @@
  */
 package org.apache.hadoop.yarn.server.federation.policies.manager;
 
-public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
+import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.HomeAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.router.WeightedRandomRouterPolicy;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
+public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
+  private WeightedPolicyInfo policyInfo;
+
+  @Before
+  public void setup() {
+    // configure a policy
+    wfp = new WeightedHomePolicyManager();
+    wfp.setQueue("queue1");
+    SubClusterId sc1 = SubClusterId.newInstance("sc1");
+    policyInfo = new WeightedPolicyInfo();
+
+    Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
+    routerWeights.put(new SubClusterIdInfo(sc1), 0.2f);
+    policyInfo.setRouterPolicyWeights(routerWeights);
+
+    ((WeightedHomePolicyManager) wfp).setWeightedPolicyInfo(policyInfo);
+
+     //set expected params that the base test class will use for tests
+     expectedPolicyManager = WeightedHomePolicyManager.class;
+     expectedAMRMProxyPolicy = HomeAMRMProxyPolicy.class;
+     expectedRouterPolicy = WeightedRandomRouterPolicy.class;
+  }
+
+  @Test
+  public void testPolicyInfoSetCorrectly() throws Exception {
+    serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
+        expectedAMRMProxyPolicy, expectedRouterPolicy);
+    // check the policyInfo propagates through ser/der correctly
+    Assert.assertEquals(((WeightedHomePolicyManager) wfp)
+        .getWeightedPolicyInfo(), policyInfo);
+  }
 }
