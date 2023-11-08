@@ -587,7 +587,8 @@ public class TestUnmanagedApplicationManager {
   @Test(timeout = 5000)
   public void testUnmanagedAppName() throws IOException, InterruptedException, YarnException {
     launchUAM(attemptId);
-    GetApplicationReportRequest request = GetApplicationReportRequest.newInstance(attemptId.getApplicationId());
+    GetApplicationReportRequest request =
+        GetApplicationReportRequest.newInstance(attemptId.getApplicationId());
     GetApplicationReportResponse response = uam.getRMProxy().getApplicationReport(request);
     Assert.assertEquals(APP_NAME, response.getApplicationReport().getName());
   }
