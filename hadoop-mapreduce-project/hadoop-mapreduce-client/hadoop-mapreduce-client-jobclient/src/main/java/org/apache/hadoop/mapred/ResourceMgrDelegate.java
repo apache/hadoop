@@ -400,6 +400,12 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
+  public org.apache.hadoop.yarn.api.records.QueueInfo getQueueInfo(
+      String queueName, String subClusterId) throws YarnException, IOException {
+    return client.getQueueInfo(queueName, subClusterId);
+  }
+
+  @Override
   public List<org.apache.hadoop.yarn.api.records.QueueInfo> getAllQueues()
       throws YarnException, IOException {
     return client.getAllQueues();

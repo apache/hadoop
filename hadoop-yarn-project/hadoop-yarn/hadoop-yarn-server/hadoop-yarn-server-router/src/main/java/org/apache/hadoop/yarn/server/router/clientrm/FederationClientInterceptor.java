@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -902,6 +903,40 @@ public class FederationClientInterceptor
     return results.values();
   }
 
+  <R> Collection<R> invoke(ClientMethod request, Class<R> clazz, String subClusterId)
+      throws YarnException {
+
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfoMap = federationFacade.getSubClusters(true);
+
+    // According to subCluster of string type, convert to SubClusterId type
+    SubClusterId subClusterIdKey = SubClusterId.newInstance(subClusterId);
+
+    // If the provided subCluster is not Active or does not exist,
+    // an exception will be returned directly.
+    if (!subClusterInfoMap.containsKey(subClusterIdKey)) {
+      throw new YarnException("subClusterId = " + subClusterId + " is not an active subCluster.");
+    }
+
+    try {
+      ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterIdKey);
+      String methodName = request.getMethodName();
+      Class<?>[] types = request.getTypes();
+      Object[] params = request.getParams();
+      Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
+      Object result = method.invoke(protocol, params);
+      if (result != null) {
+        return Collections.singletonList(clazz.cast(result));
+      }
+    } catch (Exception e) {
+      throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+          subClusterId, e);
+    }
+
+    throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+        subClusterId);
+  }
+
   @Override
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
       throws YarnException, IOException {
@@ -933,6 +968,21 @@ public class FederationClientInterceptor
     throw new YarnException("Unable to get cluster nodes.");
   }
 
+  /**
+   * <p>The interface used by clients to get information about <em>queues</em>
+   * from the <code>ResourceManager</code>.</p>
+   *
+   * <p>The client, via {@link GetQueueInfoRequest}, can ask for details such
+   * as used/total resources, child queues, running applications etc.</p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access before
+   * providing the information.</p>
+   *
+   * @param request request to get queue information
+   * @return queue information
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
+   */
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
@@ -943,13 +993,18 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
+    String rSubCluster = request.getSubClusterId();
 
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
         new Class[]{GetQueueInfoRequest.class}, new Object[]{request});
     Collection<GetQueueInfoResponse> queues = null;
     try {
-      queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
+      if (StringUtils.isNotBlank(rSubCluster)) {
+        queues = invoke(remoteMethod, GetQueueInfoResponse.class, rSubCluster);
+      } else {
+        queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
+      }
     } catch (Exception ex) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
       String msg = "Unable to get queue [" + request.getQueueName() + "] to exception.";
