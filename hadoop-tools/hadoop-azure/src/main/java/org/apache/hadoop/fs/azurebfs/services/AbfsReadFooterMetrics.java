@@ -159,50 +159,124 @@ public class AbfsReadFooterMetrics {
     }
   }
 
+  /**
+   * Updates metrics for a specific file identified by filePathIdentifier.
+   *
+   * @param filePathIdentifier  The unique identifier for the file.
+   * @param len                The length of the read operation.
+   * @param contentLength      The total content length of the file.
+   * @param nextReadPos        The position of the next read operation.
+   */
   private void updateMetrics(final String filePathIdentifier, final int len, final long contentLength,
-      final long nextReadPos) {
+                             final long nextReadPos) {
     AbfsReadFooterMetrics readFooterMetrics = metricsMap.get(filePathIdentifier);
+
+    // Create a new AbfsReadFooterMetrics object if it doesn't exist in the metricsMap.
+    if (readFooterMetrics == null) {
+      readFooterMetrics = new AbfsReadFooterMetrics();
+      metricsMap.put(filePathIdentifier, readFooterMetrics);
+    }
+
     int readCount = readFooterMetrics.getReadCount().incrementAndGet();
-    if (readCount == 1 && nextReadPos >= contentLength - 20 * ONE_KB) {
+
+    if (readCount == 1) {
+      // Update metrics for the first read.
+      updateMetricsOnFirstRead(readFooterMetrics, nextReadPos, len, contentLength);
+    }
+
+    if (readCount == 2) {
+      // Update metrics for the second read.
+      updateMetricsOnSecondRead(readFooterMetrics, nextReadPos, len);
+    }
+  }
+
+  /**
+   * Updates metrics for the first read operation.
+   *
+   * @param readFooterMetrics The metrics object to update.
+   * @param nextReadPos       The position of the next read operation.
+   * @param len               The length of the read operation.
+   * @param contentLength     The total content length of the file.
+   */
+  private void updateMetricsOnFirstRead(AbfsReadFooterMetrics readFooterMetrics, long nextReadPos, int len, long contentLength) {
+    if (nextReadPos >= contentLength - 20 * ONE_KB) {
       readFooterMetrics.getCollectMetrics().set(true);
       readFooterMetrics.getCollectMetricsForNextRead().set(true);
       readFooterMetrics.getOffsetOfFirstRead().set(nextReadPos);
-      readFooterMetrics.setSizeReadByFirstRead
-          ((len + "_" + (Math.abs(contentLength - nextReadPos))));
+      readFooterMetrics.setSizeReadByFirstRead(len + "_" + Math.abs(contentLength - nextReadPos));
       readFooterMetrics.getFileLength().set(contentLength);
     }
+
     if (readFooterMetrics.getCollectLenMetrics().get()) {
       readFooterMetrics.getDataLenRequested().getAndAdd(len);
     }
-    if (readCount == 2 && readFooterMetrics.getCollectMetricsForNextRead().get()) {
-      readFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead
-          (len + "_" + (Math.abs(nextReadPos - readFooterMetrics
-              .getOffsetOfFirstRead().get())));
+  }
+
+  /**
+   * Updates metrics for the second read operation.
+   *
+   * @param readFooterMetrics The metrics object to update.
+   * @param nextReadPos       The position of the next read operation.
+   * @param len               The length of the read operation.
+   */
+  private void updateMetricsOnSecondRead(AbfsReadFooterMetrics readFooterMetrics, long nextReadPos, int len) {
+    if (readFooterMetrics.getCollectMetricsForNextRead().get()) {
+      long offsetDiff = Math.abs(nextReadPos - readFooterMetrics.getOffsetOfFirstRead().get());
+      readFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + offsetDiff);
       readFooterMetrics.getCollectLenMetrics().set(true);
     }
   }
 
-  private void checkIsParquet(Map<String, AbfsReadFooterMetrics> metricsMap) {
-    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
-    {
+
+  /**
+   * Check if the given metrics should be marked as a Parquet file.
+   *
+   * @param metrics The metrics to evaluate.
+   * @return True if the metrics meet the criteria for being marked as a Parquet file, false otherwise.
+   */
+  private boolean shouldMarkAsParquet(AbfsReadFooterMetrics metrics) {
+    return metrics.getCollectMetrics().get() &&
+            metrics.getReadCount().get() >= 2 &&
+            !metrics.getIsParquetEvaluated().get() &&
+            haveEqualValues(metrics.getSizeReadByFirstRead()) &&
+            haveEqualValues(metrics.getOffsetDiffBetweenFirstAndSecondRead());
+  }
+
+  /**
+   * Check if two values are equal, considering they are in the format "value1_value2".
+   *
+   * @param value The value to check.
+   * @return True if the two parts of the value are equal, false otherwise.
+   */
+  private boolean haveEqualValues(String value) {
+    String[] parts = value.split("_");
+    return parts.length == 2 && parts[0].equals(parts[1]);
+  }
+
+  /**
+   * Mark the given metrics as a Parquet file and update related values.
+   *
+   * @param metrics The metrics to mark as Parquet.
+   */
+  private void markAsParquet(AbfsReadFooterMetrics metrics) {
+    metrics.getIsParquetFile().set(true);
+    String[] parts = metrics.getSizeReadByFirstRead().split("_");
+    metrics.setSizeReadByFirstRead(parts[0]);
+    parts = metrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
+    metrics.setOffsetDiffBetweenFirstAndSecondRead(parts[0]);
+    metrics.getIsParquetEvaluated().set(true);
+  }
+
+  /**
+   * Check each metric in the provided map and mark them as Parquet files if they meet the criteria.
+   *
+   * @param metricsMap The map containing metrics to evaluate.
+   */
+  public void checkIsParquet(Map<String, AbfsReadFooterMetrics> metricsMap) {
+    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) {
       AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
-      if (readFooterMetrics.getCollectMetrics().get() && readFooterMetrics.getReadCount().get() >= 2) {
-        if (!readFooterMetrics.getIsParquetEvaluated().get()) {
-          String[] firstReadSize = readFooterMetrics.getSizeReadByFirstRead()
-              .split("_");
-          String[] offDiffFirstSecondRead
-              = readFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
-              .split("_");
-          if ((firstReadSize[0].equals(firstReadSize[1]))
-              && (offDiffFirstSecondRead[0].equals(
-              offDiffFirstSecondRead[1]))) {
-            readFooterMetrics.getIsParquetFile().set(true);
-            readFooterMetrics.setSizeReadByFirstRead(firstReadSize[0]);
-            readFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(
-                offDiffFirstSecondRead[0]);
-          }
-        }
-        readFooterMetrics.getIsParquetEvaluated().set(true);
+      if (shouldMarkAsParquet(readFooterMetrics)) {
+        markAsParquet(readFooterMetrics);
         metricsMap.replace(entry.getKey(), readFooterMetrics);
       }
     }

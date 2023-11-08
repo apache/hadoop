@@ -19,12 +19,15 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_TRACINGMETRICHEADER_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 
+import com.codahale.metrics.Metric;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 
 import java.util.Random;
@@ -57,6 +60,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore()
         .getAbfsConfiguration();
+    abfsConfiguration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
     abfsConfiguration.set(FS_AZURE_TRACINGMETRICHEADER_FORMAT,
         String.valueOf(TracingHeaderFormat.INTERNAL_FOOTER_METRIC_FORMAT));
     abfsConfiguration.setWriteBufferSize(bufferSize);
