@@ -235,8 +235,8 @@ public class RouterCLI extends Configured implements Tool {
 
   // Application Delete
   protected final static UsageInfo APPLICATION_DELETE_USAGE = new UsageInfo(
-     "--delete <application_id>",
-     "This command is used to delete the specified application.");
+      "--delete <application_id>",
+      "This command is used to delete the specified application.");
 
   protected final static String APPLICATION_DELETE_USAGE_EXAMPLE_DESC =
       "If we want to delete application_1440536969523_0001.";

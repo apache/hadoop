@@ -81,7 +81,7 @@ public class DeleteFederationApplicationResponsePBImpl extends DeleteFederationA
 
   private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
-        builder = DeleteFederationApplicationResponseProto.newBuilder(proto);
+      builder = DeleteFederationApplicationResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }

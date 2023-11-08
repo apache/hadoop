@@ -64,7 +64,7 @@ public class DeleteFederationApplicationRequestPBImpl extends DeleteFederationAp
   @Override
   public boolean equals(Object other) {
     if (!(other instanceof DeleteFederationApplicationRequest)) {
-        return false;
+      return false;
     }
     DeleteFederationApplicationRequestPBImpl otherImpl = this.getClass().cast(other);
     return new EqualsBuilder().append(this.getProto(), otherImpl.getProto()).isEquals();

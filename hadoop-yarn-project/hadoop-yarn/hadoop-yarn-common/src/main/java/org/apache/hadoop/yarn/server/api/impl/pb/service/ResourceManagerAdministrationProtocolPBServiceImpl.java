@@ -453,8 +453,9 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   }
 
   @Override
-  public DeleteFederationApplicationResponseProto deleteFederationApplication(RpcController controller,
-      DeleteFederationApplicationRequestProto proto) throws ServiceException {
+  public DeleteFederationApplicationResponseProto deleteFederationApplication(
+      RpcController controller, DeleteFederationApplicationRequestProto proto)
+      throws ServiceException {
     DeleteFederationApplicationRequest request =
         new DeleteFederationApplicationRequestPBImpl(proto);
     try {

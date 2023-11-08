@@ -24,7 +24,8 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  * This class is used for cleaning up an application that exists in the FederationStateStore.
- * This is a user-specified operation; we typically use this command to clean up an expired application.
+ * This is a user-specified operation;
+ * we typically use this command to clean up an expired application.
  * However, it can also be used to clean up non-expired application, although it is not recommended.
  */
 @Private
