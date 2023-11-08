@@ -68,14 +68,22 @@ public final class AbfsClientTestUtil {
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
         eq(AbfsRestOperationType.ListPaths), any(), any(), any());
 
-    addMockBehaviourToAbfsClient(spiedClient, retryPolicy);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+    addGeneralMockBehaviourToAbfsClient(spiedClient, retryPolicy);
+    addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     functionRaisingIOE.apply(httpOperation);
   }
 
-  public static void addMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
-      final AbfsHttpOperation httpOperation) throws IOException {
+  /**
+   * Adding general mock behaviour to AbfsRestOperation and AbfsHttpOperation
+   * to avoid any NPE occurring. These will avoid any network call made and
+   * will return the relevant exception or return value directly.
+   * @param abfsRestOperation to be mocked
+   * @param httpOperation to be mocked
+   * @throws IOException
+   */
+  public static void addGeneralMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
+                                                              final AbfsHttpOperation httpOperation) throws IOException {
     HttpURLConnection httpURLConnection = Mockito.mock(HttpURLConnection.class);
     Mockito.doNothing().when(httpURLConnection)
         .setRequestProperty(nullable(String.class), nullable(String.class));
@@ -84,8 +92,15 @@ public final class AbfsClientTestUtil {
     Mockito.doReturn(httpOperation).when(abfsRestOperation).createHttpOperation();
   }
 
-  public static void addMockBehaviourToAbfsClient(final AbfsClient abfsClient,
-      final ExponentialRetryPolicy retryPolicy) throws IOException {
+  /**
+   * Adding general mock behaviour to AbfsClient to avoid any NPE occurring.
+   * These will avoid any network call made and will return the relevant exception or return value directly.
+   * @param abfsClient to be mocked
+   * @param retryPolicy to be mocked
+   * @throws IOException
+   */
+  public static void addGeneralMockBehaviourToAbfsClient(final AbfsClient abfsClient,
+                                                         final ExponentialRetryPolicy retryPolicy) throws IOException {
     Mockito.doReturn(OAuth).when(abfsClient).getAuthType();
     Mockito.doReturn("").when(abfsClient).getAccessToken();
     AbfsThrottlingIntercept intercept = Mockito.mock(

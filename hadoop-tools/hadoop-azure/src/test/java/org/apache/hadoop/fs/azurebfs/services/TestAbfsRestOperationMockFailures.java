@@ -37,8 +37,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addMockBehaviourToAbfsClient;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addMockBehaviourToRestOpAndHttpOp;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToRestOpAndHttpOp;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
@@ -165,7 +165,7 @@ public class TestAbfsRestOperationMockFailures {
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
     ExponentialRetryPolicy retryPolicy = Mockito.mock(
         ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
+    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy);
 
 
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
@@ -177,7 +177,7 @@ public class TestAbfsRestOperationMockFailures {
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+    addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Mockito.doNothing()
         .doNothing()
@@ -226,7 +226,7 @@ public class TestAbfsRestOperationMockFailures {
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
     ExponentialRetryPolicy retryPolicy = Mockito.mock(
         ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
+    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy);
 
 
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
@@ -238,7 +238,7 @@ public class TestAbfsRestOperationMockFailures {
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+    addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(exceptions[0]);
     for (int iteration = 1; iteration < len; iteration++) {
