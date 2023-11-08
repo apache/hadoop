@@ -1094,24 +1094,36 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   @Override
   public DeleteFederationApplicationResponse deleteFederationApplication(
       DeleteFederationApplicationRequest request) throws YarnException, IOException {
+
     // Parameter validation.
     if (request == null) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing deleteFederationApplication Request.", null);
     }
 
+    String application = request.getApplication();
+    if (StringUtils.isBlank(application)) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "ApplicationId cannot be null.", null);
+    }
 
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
     try {
-      ApplicationId applicationId = ApplicationId.fromString(request.getApplication());
+      long startTime = clock.getTime();
+      ApplicationId applicationId = ApplicationId.fromString(application);
       federationFacade.deleteApplicationHomeSubCluster(applicationId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationApplicationFailedRetrieved(stopTime - startTime);
       return DeleteFederationApplicationResponse.newInstance(
-          "application = " + applicationId + " delete success.");
+          "applicationId = " + applicationId + " delete success.");
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(e,
           "Unable to deleteFederationApplication due to exception. " + e.getMessage());
     }
 
-    throw new YarnException("Unable to listFederationQueuePolicies.");
+    throw new YarnException("Unable to deleteFederationApplication.");
   }
 
   /**

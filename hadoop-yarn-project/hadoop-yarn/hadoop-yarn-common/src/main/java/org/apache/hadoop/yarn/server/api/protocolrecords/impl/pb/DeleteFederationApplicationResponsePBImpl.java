@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 
 @Private
@@ -57,7 +56,7 @@ public class DeleteFederationApplicationResponsePBImpl extends DeleteFederationA
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof DeleteFederationApplicationRequest)) {
+    if (!(other instanceof DeleteFederationApplicationResponse)) {
       return false;
     }
     DeleteFederationApplicationResponsePBImpl otherImpl = this.getClass().cast(other);
