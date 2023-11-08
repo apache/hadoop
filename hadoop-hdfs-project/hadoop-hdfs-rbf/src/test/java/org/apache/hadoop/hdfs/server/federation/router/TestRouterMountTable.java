@@ -356,22 +356,29 @@ public class TestRouterMountTable {
     String child = "testA";
     Path childPath = new Path(src, child);
     HdfsFileStatus dirStatus =
-        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0, true);
     assertEquals(child, dirStatus.getLocalName());
 
     String src1 = "/testA";
     String child1 = "testB";
     Path childPath1 = new Path(src1, child1);
     HdfsFileStatus dirStatus1 =
-        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0, true);
     assertEquals(child1, dirStatus1.getLocalName());
 
     String src2 = "/testA/testB";
     String child2 = "testC";
     Path childPath2 = new Path(src2, child2);
     HdfsFileStatus dirStatus2 =
-        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, true);
     assertEquals(child2, dirStatus2.getLocalName());
+
+    String src3 = "/testA/testB/testC";
+    String child3 = "testD";
+    Path childPath3 = new Path(src3, child3);
+    HdfsFileStatus dirStatus3 =
+        clientProtocol.getMountPointStatus(childPath3.toString(), 0, 0, false);
+    assertTrue(dirStatus3.getLocalName().length() == 0);
   }
   /**
    * GetListing of testPath through router.
@@ -762,5 +769,32 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
+  }
+
+
+  @Test
+  public void testGetMountPointFileStatus() throws Exception {
+
+    // Add a read only entry
+    MountTable test = MountTable.newInstance(
+        "/test", Collections.singletonMap("ns0", "/empty"));
+    assertTrue(addMountTable(test));
+    MountTable testFull= MountTable.newInstance(
+        "/test/test1/test2/test3", Collections.singletonMap("ns0", "/empty"));
+    assertTrue(addMountTable(testFull));
+
+
+    FileStatus status =
+        routerFs.getFileStatus(new Path("/test"));
+    assertEquals("/test", status.getPath().toUri().getPath());
+
+    status = routerFs.getFileStatus(new Path("/test/test1"));
+    assertEquals("/test/test1", status.getPath().toUri().getPath());
+
+    status = routerFs.getFileStatus(new Path("/test/test1/test2"));
+    assertEquals("/test/test1/test2", status.getPath().toUri().getPath());
+
+    status = routerFs.getFileStatus(new Path("/test/test1/test2/test3"));
+    assertEquals("/test/test1/test2/test3", status.getPath().toUri().getPath());
   }
 }
