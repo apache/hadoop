@@ -969,6 +969,11 @@ public class TestDistributedFileSystem {
       checkStatistics(dfs, ++readOps, writeOps, 0);
       checkOpStatistics(OpType.GET_ENCRYPTION_ZONE, opCount + 1);
 
+      opCount = getOpStatistics(OpType.GET_ENCLOSING_ROOT);
+      dfs.getEnclosingRoot(dir);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_ENCLOSING_ROOT, opCount + 1);
+
       opCount = getOpStatistics(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
       dfs.getSnapshottableDirListing();
       checkStatistics(dfs, ++readOps, writeOps, 0);
