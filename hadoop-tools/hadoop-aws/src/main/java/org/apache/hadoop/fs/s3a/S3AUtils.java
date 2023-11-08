@@ -1440,6 +1440,11 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case DSSE_KMS:
+      LOG.debug("Using DSSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");

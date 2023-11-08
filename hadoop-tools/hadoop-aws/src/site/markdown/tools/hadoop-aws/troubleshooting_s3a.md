@@ -1544,3 +1544,13 @@ software.amazon.awssdk.core.exception.SdkClientException: Unable to execute HTTP
 
 When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
 completely by setting it to `0`.
+
+### <a name="debug-switches"></a> Debugging Switches
+
+There are some switches which can be set to enable/disable features and assist
+in isolating problems and at least make them "go away".
+
+
+| Key  | Default | Action   |
+|------|---------|----------|
+| `fs.s3a.optimized.copy.from.local.enabled` | `true`  | [HADOOP-18925](https://issues.apache.org/jira/browse/HADOOP-18925) enable/disable CopyFromLocalOperation. Also a path capability. |

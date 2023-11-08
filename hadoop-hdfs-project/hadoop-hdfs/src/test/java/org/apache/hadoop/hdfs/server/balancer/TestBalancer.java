@@ -1891,7 +1891,7 @@ public class TestBalancer {
         numGetBlocksCalls.incrementAndGet();
         return blk;
       }}).when(fsnSpy).getBlocks(any(DatanodeID.class),
-        anyLong(), anyLong(), anyLong());
+        anyLong(), anyLong(), anyLong(), any(StorageType.class));
   }
 
   /**

@@ -125,8 +125,9 @@ public final class RouterServerUtil {
   public static void logAndThrowException(String errMsg, Throwable t)
       throws YarnException {
     if (t != null) {
-      LOG.error(errMsg, t);
-      throw new YarnException(errMsg, t);
+      String newErrMsg = getErrorMsg(errMsg, t);
+      LOG.error(newErrMsg, t);
+      throw new YarnException(newErrMsg, t);
     } else {
       LOG.error(errMsg);
       throw new YarnException(errMsg);
@@ -144,6 +145,13 @@ public final class RouterServerUtil {
   public static void logAndThrowException(String errMsg) throws YarnException {
     LOG.error(errMsg);
     throw new YarnException(errMsg);
+  }
+
+  private static String getErrorMsg(String errMsg, Throwable t) {
+    if (t.getMessage() != null) {
+      return errMsg + "" + t.getMessage();
+    }
+    return errMsg;
   }
 
   public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
