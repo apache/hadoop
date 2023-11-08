@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
@@ -32,6 +33,7 @@ import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.DSSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
@@ -68,13 +70,16 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
   @Override
   protected void assertEncrypted(Path hugeFile) throws IOException {
     Configuration c = new Configuration();
-    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
-    if (SSE_KMS.getMethod().equals(c.get(S3_ENCRYPTION_ALGORITHM))) {
+
+    final String bucket = getTestBucketName(c);
+    String kmsKey = getS3EncryptionKey(bucket, c);
+    final S3AEncryptionMethods algorithm = getEncryptionAlgorithm(bucket, c);
+    if (SSE_KMS.equals(algorithm)) {
       EncryptionTestUtils.assertEncrypted(getFileSystem(), hugeFile, SSE_KMS, kmsKey);
-    } else if (DSSE_KMS.getMethod().equals(c.get(S3_ENCRYPTION_ALGORITHM))) {
+    } else if (DSSE_KMS.equals(algorithm)) {
       EncryptionTestUtils.assertEncrypted(getFileSystem(), hugeFile, DSSE_KMS, kmsKey);
     } else {
-      throw new AssertionError("Invalid encryption configured");
+      throw new AssertionError("Invalid encryption configured: " + algorithm);
     }
   }
 }
