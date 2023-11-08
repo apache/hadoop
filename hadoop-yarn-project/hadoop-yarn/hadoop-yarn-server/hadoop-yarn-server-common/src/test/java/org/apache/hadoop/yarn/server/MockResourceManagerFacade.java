@@ -117,6 +117,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -195,7 +196,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   private static final Logger LOG =
       LoggerFactory.getLogger(MockResourceManagerFacade.class);
 
-  private HashSet<ApplicationId> applicationMap = new HashSet<>();
+  private HashMap<ApplicationId, ApplicationSubmissionContext> applicationMap = new HashMap<>();
   private HashSet<ApplicationId> keepContainerOnUams = new HashSet<>();
   private HashMap<ApplicationId, List<ContainerId>> applicationContainerIdMap =
       new HashMap<>();
@@ -485,6 +486,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     report.setCurrentApplicationAttemptId(
         ApplicationAttemptId.newInstance(request.getApplicationId(), 1));
     report.setAMRMToken(Token.newInstance(new byte[0], "", new byte[0], ""));
+    if (applicationMap.get(request.getApplicationId()) != null) {
+      report.setName(applicationMap.get(request.getApplicationId()).getApplicationName());
+    }
     response.setApplicationReport(report);
     return response;
   }
@@ -527,7 +531,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       appId = request.getApplicationSubmissionContext().getApplicationId();
     }
     LOG.info("Application submitted: " + appId);
-    applicationMap.add(appId);
+    applicationMap.put(appId, request.getApplicationSubmissionContext());
 
     if (request.getApplicationSubmissionContext().getUnmanagedAM()
         || request.getApplicationSubmissionContext()
@@ -546,7 +550,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     ApplicationId appId = null;
     if (request.getApplicationId() != null) {
       appId = request.getApplicationId();
-      if (!applicationMap.remove(appId)) {
+      if (applicationMap.remove(appId) == null) {
         throw new ApplicationNotFoundException(
             "Trying to kill an absent application: " + appId);
       }

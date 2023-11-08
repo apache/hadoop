@@ -431,6 +431,7 @@ public class UnmanagedApplicationManager {
     context.setResource(resource);
     context.setAMContainerSpec(amContainer);
     if (applicationSubmissionContext != null) {
+      context.setApplicationName(applicationSubmissionContext.getApplicationName());
       context.setApplicationType(applicationSubmissionContext.getApplicationType());
       context.setKeepContainersAcrossApplicationAttempts(
           applicationSubmissionContext.getKeepContainersAcrossApplicationAttempts());

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.uam;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
@@ -37,6 +40,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -64,6 +69,7 @@ import org.slf4j.LoggerFactory;
 public class TestUnmanagedApplicationManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestUnmanagedApplicationManager.class);
+  private static final String APP_NAME = "APP1";
 
   private TestableUnmanagedApplicationManager uam;
   private Configuration conf = new YarnConfiguration();
@@ -82,9 +88,20 @@ public class TestUnmanagedApplicationManager {
     attemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
 
+    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getApplicationName()).thenReturn(APP_NAME);
+    when(submissionContext.getApplicationType()).thenReturn(null);
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts()).thenReturn(true);
+    when(submissionContext.getApplicationTags()).thenReturn(null);
+    when(submissionContext.getApplicationTimeouts()).thenReturn(null);
+    when(submissionContext.getLogAggregationContext()).thenReturn(null);
+    when(submissionContext.getNodeLabelExpression()).thenReturn(null);
+    when(submissionContext.getApplicationSchedulingPropertiesMap()).thenReturn(null);
+    when(submissionContext.getPriority()).thenReturn(null);
+
     uam = new TestableUnmanagedApplicationManager(conf,
         attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true,
-        "rm", null);
+        "rm", submissionContext);
 
     threadpool = Executors.newCachedThreadPool();
     uamPool = new TestableUnmanagedAMPoolManager(this.threadpool);
@@ -565,5 +582,13 @@ public class TestUnmanagedApplicationManager {
     GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
         100, 2000);
     Assert.assertEquals(0, unmanagedAppMasterMap.size());
+  }
+
+  @Test(timeout = 5000)
+  public void testUnmanagedAppName() throws IOException, InterruptedException, YarnException {
+    launchUAM(attemptId);
+    GetApplicationReportRequest request = GetApplicationReportRequest.newInstance(attemptId.getApplicationId());
+    GetApplicationReportResponse response = uam.getRMProxy().getApplicationReport(request);
+    Assert.assertEquals(APP_NAME, response.getApplicationReport().getName());
   }
 }

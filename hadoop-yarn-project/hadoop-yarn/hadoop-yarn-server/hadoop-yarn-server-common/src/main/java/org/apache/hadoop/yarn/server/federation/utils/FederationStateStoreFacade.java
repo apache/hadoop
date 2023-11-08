@@ -1104,7 +1104,7 @@ public final class FederationStateStoreFacade {
   public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId) {
     try {
       GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
-          GetApplicationHomeSubClusterRequest.newInstance(appId));
+          GetApplicationHomeSubClusterRequest.newInstance(appId, true));
       ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
       return appHomeSubCluster.getApplicationSubmissionContext();
     } catch (Exception e) {
