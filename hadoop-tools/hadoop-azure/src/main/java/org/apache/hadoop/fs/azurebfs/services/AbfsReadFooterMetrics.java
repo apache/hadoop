@@ -142,16 +142,29 @@ public class AbfsReadFooterMetrics {
     return isLenUpdated;
   }
 
+  /**
+   * Updates the metrics map with an entry for the specified file if it doesn't already exist.
+   *
+   * @param filePathIdentifier The unique identifier for the file.
+   */
   public void updateMap(String filePathIdentifier) {
-    if (!metricsMap.containsKey(filePathIdentifier)) {
-      metricsMap.put(filePathIdentifier, new AbfsReadFooterMetrics(filePathIdentifier));
-    }
+    // If the file is not already in the metrics map, add it with a new AbfsReadFooterMetrics object.
+    metricsMap.computeIfAbsent(filePathIdentifier, key -> new AbfsReadFooterMetrics(filePathIdentifier));
   }
 
+  /**
+   * Checks and updates metrics for a specific file identified by filePathIdentifier.
+   * If the metrics do not exist for the file, they are initialized.
+   *
+   * @param filePathIdentifier The unique identifier for the file.
+   * @param len               The length of the read operation.
+   * @param contentLength     The total content length of the file.
+   * @param nextReadPos       The position of the next read operation.
+   */
   public void checkMetricUpdate(final String filePathIdentifier, final int len, final long contentLength,
       final long nextReadPos) {
-    updateMap(filePathIdentifier);
-    AbfsReadFooterMetrics readFooterMetrics = metricsMap.get(filePathIdentifier);
+    AbfsReadFooterMetrics readFooterMetrics = metricsMap.computeIfAbsent(
+            filePathIdentifier, key -> new AbfsReadFooterMetrics(filePathIdentifier));
     if (readFooterMetrics.getReadCount().get() == 0
         || (readFooterMetrics.getReadCount().get() >= 1
         && readFooterMetrics.getCollectMetrics().get())) {
@@ -184,6 +197,10 @@ public class AbfsReadFooterMetrics {
       updateMetricsOnFirstRead(readFooterMetrics, nextReadPos, len, contentLength);
     }
 
+    if (readFooterMetrics.getCollectLenMetrics().get()) {
+      readFooterMetrics.getDataLenRequested().getAndAdd(len);
+    }
+
     if (readCount == 2) {
       // Update metrics for the second read.
       updateMetricsOnSecondRead(readFooterMetrics, nextReadPos, len);
@@ -205,10 +222,6 @@ public class AbfsReadFooterMetrics {
       readFooterMetrics.getOffsetOfFirstRead().set(nextReadPos);
       readFooterMetrics.setSizeReadByFirstRead(len + "_" + Math.abs(contentLength - nextReadPos));
       readFooterMetrics.getFileLength().set(contentLength);
-    }
-
-    if (readFooterMetrics.getCollectLenMetrics().get()) {
-      readFooterMetrics.getDataLenRequested().getAndAdd(len);
     }
   }
 
@@ -282,8 +295,14 @@ public class AbfsReadFooterMetrics {
     }
   }
 
+  /**
+   * Updates the average read length requested for metrics of all files in the metrics map.
+   * If the metrics indicate that the update is needed, it calculates the average read length and updates the metrics.
+   *
+   * @param metricsMap A map containing metrics for different files with unique identifiers.
+   */
   private void updateLenRequested(Map<String, AbfsReadFooterMetrics> metricsMap) {
-    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
+    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet())
     {
       AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
       if (readFooterMetrics.getCollectMetrics().get() && readFooterMetrics.getReadCount().get() > 2) {
@@ -292,7 +311,6 @@ public class AbfsReadFooterMetrics {
             readFooterMetrics.setAvgReadLenRequested(
                 (double) readFooterMetrics.getDataLenRequested().get()
                     / readReqCount);
-            metricsMap.replace(entry.getKey(), readFooterMetrics);
         }
         readFooterMetrics.getIsLenUpdated().set(true);
         metricsMap.replace(entry.getKey(), readFooterMetrics);
