@@ -45,10 +45,10 @@ public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
 
     ((WeightedHomePolicyManager) wfp).setWeightedPolicyInfo(policyInfo);
 
-     //set expected params that the base test class will use for tests
-     expectedPolicyManager = WeightedHomePolicyManager.class;
-     expectedAMRMProxyPolicy = HomeAMRMProxyPolicy.class;
-     expectedRouterPolicy = WeightedRandomRouterPolicy.class;
+    //set expected params that the base test class will use for tests
+    expectedPolicyManager = WeightedHomePolicyManager.class;
+    expectedAMRMProxyPolicy = HomeAMRMProxyPolicy.class;
+    expectedRouterPolicy = WeightedRandomRouterPolicy.class;
   }
 
   @Test
