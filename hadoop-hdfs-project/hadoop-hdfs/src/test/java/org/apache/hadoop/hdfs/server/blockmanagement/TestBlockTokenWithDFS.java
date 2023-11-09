@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -357,6 +358,75 @@ public class TestBlockTokenWithDFS {
           .build();
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
+      doTestRead(conf, cluster, false);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Tests migrating without downtime into enabling block access tokens.
+   */
+  @Test
+  public void testReadWithMigration() throws Exception {
+    MiniDFSCluster cluster = null;
+    int numDataNodes = 2;
+    Configuration conf = getConf(numDataNodes);
+    //
+    // At first, migration mode is enabled and access tokens disabled.
+    // Namenodes will start up without access tokens, but DN's will be prepared to ignore
+    // them if they receive them.
+    //
+    conf.setBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false);
+
+    try {
+      // prefer non-ephemeral port to avoid port collision on restartNameNode
+      cluster = new MiniDFSCluster.Builder(conf)
+              .nameNodePort(ServerSocketUtil.getPort(18020, 100))
+              .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
+              .numDataNodes(numDataNodes)
+              .build();
+      cluster.waitActive();
+      assertEquals(numDataNodes, cluster.getDataNodes().size());
+
+      //
+      // Now we enable access tokens on the namenodes. Previously, DataNodes would
+      // fail with "Inconsistent configuration of block access tokens". Since
+      // we have migration mode enabled, they are able to proceed with re-registry.
+      //
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        cluster.getConfiguration(i).setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+        cluster.restartNameNode(i);
+      }
+      cluster.triggerHeartbeats();
+
+      //
+      // Do a test read, which confirms that migration mode is working
+      //
+
+      doTestRead(conf, cluster, false);
+
+      //
+      // Now that access tokens are enabled on the NameNode without downtime, we can
+      // turn off migration mode and rolling restart datanodes. When they start up,
+      // they will register and get the block access tokens and use them going forward.
+      //
+
+      conf.setBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, false);
+      for (int idx = 0; idx < cluster.getDataNodes().size(); idx++) {
+        cluster.stopDataNode(idx);
+      }
+      cluster.startDataNodes(conf, numDataNodes, true, null, null);
+      cluster.waitActive();
+
+      //
+      // Do another test read which verifies that everything is working
+      // with fully enabled block access tokens.
+      //
+
       doTestRead(conf, cluster, false);
     } finally {
       if (cluster != null) {
