@@ -74,13 +74,15 @@ public class ZookeeperClient {
   private String connectionString;
   private String namespace;
 
-  private String authType = "none";
+  private String authenticationType = "none";
   private String keytab;
   private String principal;
   private String jaasLoginEntryName;
 
-  private int sessionTimeout = Integer.getInteger("curator-default-session-timeout", 60 * 1000);
-  private int connectionTimeout = Integer.getInteger("curator-default-connection-timeout", 15 * 1000);
+  private int sessionTimeout =
+      Integer.getInteger("curator-default-session-timeout", 60 * 1000);
+  private int connectionTimeout =
+      Integer.getInteger("curator-default-connection-timeout", 15 * 1000);
 
   private RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
 
@@ -101,48 +103,48 @@ public class ZookeeperClient {
     return this;
   }
 
-  public ZookeeperClient withNamespace(String namespace) {
-    this.namespace = namespace;
+  public ZookeeperClient withNamespace(String ns) {
+    this.namespace = ns;
     return this;
   }
 
   public ZookeeperClient withAuthType(String authType) {
-    this.authType = authType;
+    this.authenticationType = authType;
     return this;
   }
 
-  public ZookeeperClient withKeytab(String keytab) {
-    this.keytab = keytab;
+  public ZookeeperClient withKeytab(String keytabPath) {
+    this.keytab = keytabPath;
     return this;
   }
 
-  public ZookeeperClient withPrincipal(String principal) {
-    this.principal = principal;
+  public ZookeeperClient withPrincipal(String princ) {
+    this.principal = princ;
     return this;
   }
 
-  public ZookeeperClient withJaasLoginEntryName(String jaasLoginEntryName) {
-    this.jaasLoginEntryName = jaasLoginEntryName;
+  public ZookeeperClient withJaasLoginEntryName(String entryName) {
+    this.jaasLoginEntryName = entryName;
     return this;
   }
 
-  public ZookeeperClient withSessionTimeout(int sessionTimeout) {
-    this.sessionTimeout = sessionTimeout;
+  public ZookeeperClient withSessionTimeout(int timeoutMS) {
+    this.sessionTimeout = timeoutMS;
     return this;
   }
 
-  public ZookeeperClient withConnectionTimeout(int connectionTimeout) {
-    this.connectionTimeout = connectionTimeout;
+  public ZookeeperClient withConnectionTimeout(int timeoutMS) {
+    this.connectionTimeout = timeoutMS;
     return this;
   }
 
-  public ZookeeperClient withRetryPolicy(RetryPolicy retryPolicy) {
-    this.retryPolicy = retryPolicy;
+  public ZookeeperClient withRetryPolicy(RetryPolicy policy) {
+    this.retryPolicy = policy;
     return this;
   }
 
-  public ZookeeperClient withZookeeperFactory(ZookeeperFactory zkFactory) {
-    this.zkFactory = zkFactory;
+  public ZookeeperClient withZookeeperFactory(ZookeeperFactory factory) {
+    this.zkFactory = factory;
     return this;
   }
 
@@ -151,23 +153,23 @@ public class ZookeeperClient {
     return this;
   }
 
-  public ZookeeperClient withKeystore(String keystoreLocation) {
-    this.keystoreLocation = keystoreLocation;
+  public ZookeeperClient withKeystore(String keystorePath) {
+    this.keystoreLocation = keystorePath;
     return this;
   }
 
-  public ZookeeperClient withKeystorePassword(String keystorePassword) {
-    this.keystorePassword = keystorePassword;
+  public ZookeeperClient withKeystorePassword(String keystorePass) {
+    this.keystorePassword = keystorePass;
     return this;
   }
 
-  public ZookeeperClient withTruststore(String truststoreLocation) {
-    this.truststoreLocation = truststoreLocation;
+  public ZookeeperClient withTruststore(String truststorePath) {
+    this.truststoreLocation = truststorePath;
     return this;
   }
 
-  public ZookeeperClient withTruststorePassword(String truststorePassword) {
-    this.truststorePassword = truststorePassword;
+  public ZookeeperClient withTruststorePassword(String truststorePass) {
+    this.truststorePassword = truststorePass;
     return this;
   }
 
@@ -194,12 +196,12 @@ public class ZookeeperClient {
 
   private ACLProvider aclProvider() {
     // AuthType has to be explicitly set to 'none' or 'sasl'
-    checkNotNull(authType, "Zookeeper authType cannot be null!");
-    checkArgument(authType.equals("sasl") || authType.equals("none"),
+    checkNotNull(authenticationType, "Zookeeper authType cannot be null!");
+    checkArgument(authenticationType.equals("sasl") || authenticationType.equals("none"),
         "Zookeeper authType must be one of [none, sasl]!");
 
     ACLProvider aclProvider;
-    if (authType.equals("sasl")) {
+    if (authenticationType.equals("sasl")) {
       LOG.info("Connecting to ZooKeeper with SASL/Kerberos and using 'sasl' ACLs.");
 
       checkArgument(!isEmpty(keytab), "Zookeeper client's Kerberos Keytab must be specified!");
@@ -250,7 +252,7 @@ public class ZookeeperClient {
    * that gives all permissions only to a single principal.
    */
   @VisibleForTesting
-  static class SASLOwnerACLProvider implements ACLProvider {
+  static final class SASLOwnerACLProvider implements ACLProvider {
 
     private final List<ACL> saslACL;
 
@@ -287,6 +289,4 @@ public class ZookeeperClient {
       throw new IllegalArgumentException(errorMessage);
     }
   }
-
-  private ZookeeperClient() {}
 }
