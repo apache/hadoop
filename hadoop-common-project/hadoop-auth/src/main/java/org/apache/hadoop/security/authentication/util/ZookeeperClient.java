@@ -22,10 +22,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Utility class to create a CuratorFramework object that can be used to connect to Zookeeper based
- * on configuration values that can be supplied from different configuration properties.
+ * Utility class to create a CuratorFramework object that can be used to connect to Zookeeper
+ * based on configuration values that can be supplied from different configuration properties.
  * It is used from ZKDelegationTokenSecretManager in hadoop-common, and from
- * {@link ZKSignerSecretProvider}.<br/>
+ * {@link ZKSignerSecretProvider}.
+ *
  * The class implements a fluid API to set up all the different properties. A very basic setup
  * would seem like:
  * <pre>
@@ -33,37 +34,48 @@ import java.util.List;
  *     .withConnectionString(&lt;connectionString&gt;)
  *     .create();
  * </pre>
- * Mandatory parameters to be set:<br/>
- *   - connectionString: A Zookeeper connection string.<br/>
- *   - if authentication type is set to 'sasl':<br/>
- *     - keytab: the location of the keytab to be used for Kerberos authentication<br/>
- *     - principal: the Kerberos principal to be used from the supplied Kerberos keytab file.<br/>
- *     - jaasLoginEntryName: the login entry name in the JAAS configuration that is created for
- *                           the KerberosLoginModule to be used by the Zookeeper client code.<br/>
- *   - if SSL is enabled:<br/>
- *     - the location of the Truststore file to be used<br/>
- *     - the location of the Keystore file to be used<br/>
- *     - if the Truststore is protected by a password, then the password of the Truststore<br/>
- *     - if the Keystore is protected by a password, then the password if the Keystore<br/>
- * <br/>
+ *
+ * Mandatory parameters to be set:
+ * <ul>
+ *   <li>connectionString: A Zookeeper connection string.</li>
+ *   <li>if authentication type is set to 'sasl':
+ *   <ul>
+ *     <li>keytab: the location of the keytab to be used for Kerberos authentication</li>
+ *     <li>principal: the Kerberos principal to be used from the supplied Kerberos keytab file.</li>
+ *     <li>jaasLoginEntryName: the login entry name in the JAAS configuration that is created for
+ *                           the KerberosLoginModule to be used by the Zookeeper client code.</li>
+ *   </ul>
+ *   </li>
+ *   <li>if SSL is enabled:
+ *   <ul>
+ *     <li>the location of the Truststore file to be used</li>
+ *     <li>the location of the Keystore file to be used</li>
+ *     <li>if the Truststore is protected by a password, then the password of the Truststore</li>
+ *     <li>if the Keystore is protected by a password, then the password if the Keystore</li>
+ *   </ul>
+ *   </li>
+ * </ul>
+ *
  * When using 'sasl' authentication type, the JAAS configuration to be used by the Zookeeper client
  * withing CuratorFramework is set to use the supplied keytab and principal for Kerberos login,
  * moreover an ACL provider is set to provide a default ACL that requires SASL auth and the same
- * principal to have access to the used paths. <br/>
- *  <br/>
+ * principal to have access to the used paths.
+ *
  * When using SSL/TLS, the Zookeeper client will set to use the secure channel towards Zookeeper,
- * with the specified Keystore and Truststore. <br/>
- *  <br/>
- * Default values: <br/>
- *   - authentication type: 'none' <br/>
- *   - sessionTimeout: either the system property curator-default-session-timeout, or 60
- *                     seconds<br/>
- *   - connectionTimeout: either the system property curator-default-connection-timeout, or 15
- *                        seconds <br/>
- *   - retryPolicy: an ExponentialBackoffRetry, with a starting interval of 1 seconds and 3
- *                  retries <br/>
- *   - zkFactory: a ConfigurableZookeeperFactory instance, to allow SSL setup via
- *                ZKClientConfig<br/>
+ * with the specified Keystore and Truststore.
+ *
+ * Default values:
+ * <ul>
+ *   <li>authentication type: 'none'</li>
+ *   <li>sessionTimeout: either the system property curator-default-session-timeout, or 60
+ *                     seconds</li>
+ *   <li>connectionTimeout: either the system property curator-default-connection-timeout, or 15
+ *                        seconds</li>
+ *   <li>retryPolicy: an ExponentialBackoffRetry, with a starting interval of 1 seconds and 3
+ *                  retries</li>
+ *   <li>zkFactory: a ConfigurableZookeeperFactory instance, to allow SSL setup via
+ *                ZKClientConfig</li>
+ * </ul>
  *
  * @see ZKSignerSecretProvider
  */
