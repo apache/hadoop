@@ -85,6 +85,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
 import static org.apache.hadoop.yarn.client.util.YarnClientUtils.NO_LABEL_ERR_MSG;
+import static org.apache.hadoop.yarn.client.util.YarnClientUtils.isYarnFederationEnabled;
 
 @Private
 @Unstable
@@ -99,6 +100,7 @@ public class RMAdminCLI extends HAAdmin {
       "Invalid timeout specified : ";
   private static final Pattern RESOURCE_TYPES_ARGS_PATTERN =
       Pattern.compile("^[0-9]*$");
+  public static final String OPTION_SUBCLUSTERID = "subClusterId";
 
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder()
@@ -347,28 +349,38 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshNodes(boolean graceful) throws IOException, YarnException {
+  private int refreshNodes(boolean graceful, String subClusterId)
+      throws IOException, YarnException {
     // Refresh the nodes
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesRequest request = RefreshNodesRequest.newInstance(
         graceful? DecommissionType.GRACEFUL : DecommissionType.NORMAL);
+    if (isYarnFederationEnabled(getConf()) && StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshNodes(request);
     return 0;
   }
 
-  private int refreshNodes(int timeout, String trackingMode)
+  private int refreshNodes(int timeout, String trackingMode, String subClusterId)
       throws IOException, YarnException {
     boolean serverTracking = !"client".equals(trackingMode);
     // Graceful decommissioning with timeout
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesRequest gracefulRequest = RefreshNodesRequest
         .newInstance(DecommissionType.GRACEFUL, timeout);
+    if (isYarnFederationEnabled(getConf()) && StringUtils.isNotBlank(subClusterId)) {
+      gracefulRequest.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshNodes(gracefulRequest);
     if (serverTracking) {
       return 0;
     }
     CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest = recordFactory
         .newRecordInstance(CheckForDecommissioningNodesRequest.class);
+    if (isYarnFederationEnabled(getConf()) && StringUtils.isNotBlank(subClusterId)) {
+      checkForDecommissioningNodesRequest.setSubClusterId(subClusterId);
+    }
     long waitingTime;
     boolean nodesDecommissioning = true;
     // As RM enforces timeout automatically, client usually don't need
@@ -408,6 +420,9 @@ public class RMAdminCLI extends HAAdmin {
           + " seconds, issuing forceful decommissioning command.");
       RefreshNodesRequest forcefulRequest = RefreshNodesRequest
           .newInstance(DecommissionType.FORCEFUL);
+      if (isYarnFederationEnabled(getConf()) && StringUtils.isNotBlank(subClusterId)) {
+        forcefulRequest.setSubClusterId(subClusterId);
+      }
       adminProtocol.refreshNodes(forcefulRequest);
     } else {
       System.out.println("Graceful decommissioning completed in " + waitingTime
@@ -425,8 +440,8 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshNodes() throws IOException, YarnException {
-    return refreshNodes(false);
+  private int refreshNodes(String subClusterId) throws IOException, YarnException {
+    return refreshNodes(false, subClusterId);
   }
 
   private int refreshUserToGroupsMappings() throws IOException,
@@ -750,6 +765,11 @@ public class RMAdminCLI extends HAAdmin {
       }
     }
 
+    // If it is federation mode, we will print federation mode information
+    if (isYarnFederationEnabled(getConf())) {
+      System.out.println("Using YARN Federation mode.");
+    }
+
     try {
       if ("-refreshQueues".equals(cmd)) {
         exitCode = refreshQueues();
@@ -827,6 +847,8 @@ public class RMAdminCLI extends HAAdmin {
         "Indicates the timeout tracking should be handled by the client.");
     opts.addOption("server", false,
         "Indicates the timeout tracking should be handled by the RM.");
+    opts.addOption(OPTION_SUBCLUSTERID, true, "We support setting subClusterId in " +
+        "YARN Federation mode to specify specific subClusters.");
 
     int exitCode = -1;
     CommandLine cliParser = null;
@@ -839,6 +861,7 @@ public class RMAdminCLI extends HAAdmin {
     }
 
     int timeout = -1;
+    String subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
     if (cliParser.hasOption("g")) {
       String strTimeout = cliParser.getOptionValue("g");
       if (strTimeout != null) {
@@ -853,9 +876,9 @@ public class RMAdminCLI extends HAAdmin {
         printUsage(cmd, isHAEnabled);
         return -1;
       }
-      return refreshNodes(timeout, trackingMode);
+      return refreshNodes(timeout, trackingMode, subClusterId);
     } else {
-      return refreshNodes();
+      return refreshNodes(subClusterId);
     }
   }
 
@@ -1037,6 +1060,12 @@ public class RMAdminCLI extends HAAdmin {
   @Override
   protected String getUsageString() {
     return "Usage: rmadmin";
+  }
+
+  public static boolean isYarnFederationEnabled(Configuration conf) {
+    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    return isEnabled;
   }
 
   public static void main(String[] args) throws Exception {
