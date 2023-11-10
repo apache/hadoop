@@ -406,15 +406,15 @@ The following configuration properties are specific to the `zookeeper` implement
 
 *   `signer.secret.provider.zookeeper.ssl.enabled` : Set this to true to enable SSL/TLS
     communication between the server and Zookeeper, if the SignerSecretProvider is zookeeper.
- 
+
 *   `signer.secret.provider.zookeeper.ssl.keystore.location` : Specifies the location of the
-    Zookeeper client's keystore file. 
+    Zookeeper client's keystore file.
 
 *   `signer.secret.provider.zookeeper.ssl.keystore.password` : Specifies the location of the
     Zookeeper client's keystore password.
 
 *   `signer.secret.provider.zookeeper.ssl.truststore.location` : Specifies the location of the
-    Zookeeper client's truststore file. 
+    Zookeeper client's truststore file.
 
 *   `signer.secret.provider.zookeeper.ssl.truststore.password` : Specifies the location of the
     Zookeeper client's truststore password.
