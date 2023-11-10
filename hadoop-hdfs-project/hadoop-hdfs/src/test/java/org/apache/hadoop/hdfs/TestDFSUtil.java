@@ -866,17 +866,24 @@ public class TestDFSUtil {
 
   @Test (timeout=15000)
   public void testIsValidName() {
-    assertFalse(DFSUtil.isValidName("/foo/../bar"));
-    assertFalse(DFSUtil.isValidName("/foo/./bar"));
-    assertFalse(DFSUtil.isValidName("/foo//bar"));
-    assertTrue(DFSUtil.isValidName("/"));
-    assertTrue(DFSUtil.isValidName("/bar/"));
-    assertFalse(DFSUtil.isValidName("/foo/:/bar"));
-    assertFalse(DFSUtil.isValidName("/foo:bar"));
+    String validPaths[] = new String[]{"/", "/bar/"};
+    for (String path : validPaths) {
+      assertTrue("Should have been accepted '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String invalidPaths[] =
+        new String[]{"/foo/../bar", "/foo/./bar", "/foo//bar", "/foo/:/bar", "/foo:bar"};
+    for (String path : invalidPaths) {
+      assertFalse("Should have been rejected '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String windowsPath = "/C:/foo/bar";
     if (Shell.WINDOWS) {
-      assertTrue(DFSUtil.isValidName("/C:/some/path"));
+      assertTrue("Should have been accepted '" + windowsPath + "' in windows os.",
+          DFSUtil.isValidName(windowsPath));
     } else {
-      assertFalse(DFSUtil.isValidName("/C:/some/path"));
+      assertFalse("Should have been rejected '" + windowsPath + "' in unix os.",
+          DFSUtil.isValidName(windowsPath));
     }
   }
   
