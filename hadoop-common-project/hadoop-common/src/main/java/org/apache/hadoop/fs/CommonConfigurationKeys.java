@@ -418,7 +418,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_RETRY_INTERVAL_MS =
       ZK_PREFIX + "retry-interval-ms";
 
-  /** SSL enablement for all Hadoop->ZK communication.<br/>
+  /** SSL enablement for all Hadoop-&gt;ZK communication.<br/>
    * Note: except {@link org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider})
    * in hadoop-auth to avoid circular dependency.
    */
