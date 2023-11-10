@@ -18,6 +18,9 @@ CORE-SITE.XML_fs.defaultFS=hdfs://namenode
 HDFS-SITE.XML_dfs.namenode.rpc-address=namenode:8020
 HDFS-SITE.XML_dfs.replication=1
 MAPRED-SITE.XML_mapreduce.framework.name=yarn
+MAPRED-SITE.XML_yarn.app.mapreduce.am.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
+MAPRED-SITE.XML_mapreduce.map.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
+MAPRED-SITE.XML_mapreduce.reduce.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
 YARN-SITE.XML_yarn.resourcemanager.hostname=resourcemanager
 YARN-SITE.XML_yarn.nodemanager.pmem-check-enabled=false
 YARN-SITE.XML_yarn.nodemanager.delete.debug-delay-sec=600
