@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -3098,15 +3100,18 @@ public class BlockManager implements BlockStatsMXBean {
     long now = Time.monotonicNow();
     int processed = 0;
     try {
-      Iterator<Map.Entry<String, LightWeightHashSet<ExcessBlockInfo>>> iter =
+      Iterator<Map.Entry<String, LightWeightHashSet<Block>>> iter =
           excessRedundancyMap.getExcessRedundancyMap().entrySet().iterator();
       while (iter.hasNext() && processed < excessRedundancyTimeoutCheckLimit) {
-        Map.Entry<String, LightWeightHashSet<ExcessBlockInfo>> entry = iter.next();
+        Map.Entry<String, LightWeightHashSet<Block>> entry = iter.next();
         String datanodeUuid = entry.getKey();
-        LightWeightHashSet<ExcessBlockInfo> blocks = entry.getValue();
-        List<ExcessBlockInfo> sortedBlocks = new ArrayList<>(blocks);
+        LightWeightHashSet<Block> blocks = entry.getValue();
         // Sort blocks by timestamp in descending order.
-        Collections.sort(sortedBlocks);
+        List<ExcessBlockInfo> sortedBlocks = blocks.stream()
+            .filter(block -> block instanceof ExcessBlockInfo)
+            .map(block -> (ExcessBlockInfo) block)
+            .sorted(Comparator.comparingLong(ExcessBlockInfo::getTimeStamp))
+            .collect(Collectors.toList());
 
         for (ExcessBlockInfo excessBlockInfo : sortedBlocks) {
           if (processed >= excessRedundancyTimeoutCheckLimit) {
@@ -3132,11 +3137,11 @@ public class BlockManager implements BlockStatsMXBean {
             DatanodeDescriptor datanodeDescriptor = datanodeStorageInfo.getDatanodeDescriptor();
             if (datanodeDescriptor.getDatanodeUuid().equals(datanodeUuid) &&
                 datanodeStorageInfo.getState().equals(State.NORMAL)) {
-              final Block block = getBlockOnStorage(blockInfo, datanodeStorageInfo);
-              if (!containsInvalidateBlock(datanodeDescriptor, block)) {
-                addToInvalidates(block, datanodeDescriptor);
+              final Block b = getBlockOnStorage(blockInfo, datanodeStorageInfo);
+              if (!containsInvalidateBlock(datanodeDescriptor, b)) {
+                addToInvalidates(b, datanodeDescriptor);
                 LOG.debug("Excess block timeout ({}, {}) is added to invalidated.",
-                    block, datanodeDescriptor);
+                    b, datanodeDescriptor);
               }
               excessBlockInfo.setTimeStamp();
               break;

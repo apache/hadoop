@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.slf4j.Logger;
@@ -37,7 +38,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 class ExcessRedundancyMap {
   public static final Logger blockLog = NameNode.blockStateChangeLog;
 
-  private final Map<String, LightWeightHashSet<ExcessBlockInfo>> map = new HashMap<>();
+  private final Map<String, LightWeightHashSet<Block>> map = new HashMap<>();
   private final AtomicLong size = new AtomicLong(0L);
 
   /**
@@ -52,7 +53,7 @@ class ExcessRedundancyMap {
    */
   @VisibleForTesting
   synchronized int getSize4Testing(String dnUuid) {
-    final LightWeightHashSet<ExcessBlockInfo> set = map.get(dnUuid);
+    final LightWeightHashSet<Block> set = map.get(dnUuid);
     return set == null? 0: set.size();
   }
 
@@ -66,7 +67,7 @@ class ExcessRedundancyMap {
    *         datanode and the given block?
    */
   synchronized boolean contains(DatanodeDescriptor dn, BlockInfo blk) {
-    final LightWeightHashSet<ExcessBlockInfo> set = map.get(dn.getDatanodeUuid());
+    final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
     return set != null && set.contains(blk);
   }
 
@@ -77,7 +78,7 @@ class ExcessRedundancyMap {
    * @return true if the block is added.
    */
   synchronized boolean add(DatanodeDescriptor dn, BlockInfo blk) {
-    LightWeightHashSet<ExcessBlockInfo> set = map.get(dn.getDatanodeUuid());
+    LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
     if (set == null) {
       set = new LightWeightHashSet<>();
       map.put(dn.getDatanodeUuid(), set);
@@ -97,11 +98,10 @@ class ExcessRedundancyMap {
    * @return true if the block is removed.
    */
   synchronized boolean remove(DatanodeDescriptor dn, BlockInfo blk) {
-    final LightWeightHashSet<ExcessBlockInfo> set = map.get(dn.getDatanodeUuid());
+    final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
     if (set == null) {
       return false;
     }
-
     final boolean removed = set.remove(blk);
     if (removed) {
       size.decrementAndGet();
@@ -114,7 +114,7 @@ class ExcessRedundancyMap {
     return removed;
   }
 
-  synchronized Map<String, LightWeightHashSet<ExcessBlockInfo>> getExcessRedundancyMap() {
+  synchronized Map<String, LightWeightHashSet<Block>> getExcessRedundancyMap() {
     return map;
   }
 
@@ -122,11 +122,12 @@ class ExcessRedundancyMap {
    * An object that contains information about a block that is being excess redundancy.
    * It records the timestamp when added excess redundancy map of this block.
    */
-  static class ExcessBlockInfo implements Comparable<ExcessBlockInfo> {
+  static class ExcessBlockInfo extends Block {
     private long timeStamp;
-    private BlockInfo blockInfo;
+    private final BlockInfo blockInfo;
 
     ExcessBlockInfo(BlockInfo blockInfo) {
+      super(blockInfo.getBlockId(), blockInfo.getNumBytes(), blockInfo.getGenerationStamp());
       this.timeStamp = monotonicNow();
       this.blockInfo = blockInfo;
     }
@@ -145,29 +146,12 @@ class ExcessRedundancyMap {
 
     @Override
     public int hashCode() {
-      return blockInfo.hashCode();
+      return super.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-
-      if (obj instanceof ExcessBlockInfo) {
-        ExcessBlockInfo other = (ExcessBlockInfo) obj;
-        return this.blockInfo.equals(other.blockInfo);
-      }
-
-      if (obj instanceof BlockInfo) {
-       return this.blockInfo.equals(obj);
-      }
-      return false;
-    }
-
-    @Override
-    public int compareTo(ExcessBlockInfo o) {
-      return Long.compare(this.timeStamp, o.timeStamp);
+      return super.equals(obj);
     }
   }
 }
