@@ -620,6 +620,7 @@ public class EditLogTailer {
 
           // if we have reached the max loop count, quit by returning null
           if ((nnLoopCount / nnCount) >= maxRetries) {
+            LOG.warn("Have reached the max loop count ({}).", nnLoopCount);
             return null;
           }
 
