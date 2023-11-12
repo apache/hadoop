@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
@@ -100,8 +101,9 @@ public class RMAdminCLI extends HAAdmin {
       "Invalid timeout specified : ";
   private static final Pattern RESOURCE_TYPES_ARGS_PATTERN =
       Pattern.compile("^[0-9]*$");
-  public static final String OPTION_SUBCLUSTERID = "subClusterId";
-
+  private static final String SUBCLUSTERID = "subClusterId";
+  private static final Option OPTION_SUBCLUSTERID = new Option(SUBCLUSTERID, true,
+       "We support setting subClusterId in YARN Federation mode to specify specific subClusters.");
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder()
           .put("-refreshQueues", new UsageInfo("",
@@ -340,11 +342,14 @@ public class RMAdminCLI extends HAAdmin {
         ResourceManagerAdministrationProtocol.class);
   }
 
-  private int refreshQueues() throws IOException, YarnException {
+  private int refreshQueues(String subClusterId) throws IOException, YarnException {
     // Refresh the queue properties
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshQueuesRequest request = 
       recordFactory.newRecordInstance(RefreshQueuesRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshQueues(request);
     return 0;
   }
@@ -431,11 +436,15 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshNodesResources() throws IOException, YarnException {
+  private int refreshNodesResources(String subClusterId)
+      throws IOException, YarnException {
     // Refresh the resources at the Nodemanager
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesResourcesRequest request =
-    recordFactory.newRecordInstance(RefreshNodesResourcesRequest.class);
+        recordFactory.newRecordInstance(RefreshNodesResourcesRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshNodesResources(request);
     return 0;
   }
@@ -444,66 +453,83 @@ public class RMAdminCLI extends HAAdmin {
     return refreshNodes(false, subClusterId);
   }
 
-  private int refreshUserToGroupsMappings() throws IOException,
+  private int refreshUserToGroupsMappings(String subClusterId) throws IOException,
       YarnException {
     // Refresh the user-to-groups mappings
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshUserToGroupsMappingsRequest request = 
       recordFactory.newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshUserToGroupsMappings(request);
     return 0;
   }
   
-  private int refreshSuperUserGroupsConfiguration() throws IOException,
+  private int refreshSuperUserGroupsConfiguration(String subClusterId) throws IOException,
       YarnException {
     // Refresh the super-user groups
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshSuperUserGroupsConfigurationRequest request = 
       recordFactory.newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshSuperUserGroupsConfiguration(request);
     return 0;
   }
   
-  private int refreshAdminAcls() throws IOException, YarnException {
+  private int refreshAdminAcls(String subClusterId) throws IOException, YarnException {
     // Refresh the admin acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshAdminAclsRequest request = 
       recordFactory.newRecordInstance(RefreshAdminAclsRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshAdminAcls(request);
     return 0;
   }
   
-  private int refreshServiceAcls() throws IOException, YarnException {
+  private int refreshServiceAcls(String subClusterId) throws IOException, YarnException {
     // Refresh the service acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshServiceAclsRequest request = 
       recordFactory.newRecordInstance(RefreshServiceAclsRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshServiceAcls(request);
     return 0;
   }
 
-  private int refreshClusterMaxPriority() throws IOException, YarnException {
+  private int refreshClusterMaxPriority(String subClusterId) throws IOException, YarnException {
     // Refresh cluster max priority
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshClusterMaxPriorityRequest request =
         recordFactory.newRecordInstance(RefreshClusterMaxPriorityRequest.class);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.refreshClusterMaxPriority(request);
     return 0;
   }
 
   private int updateNodeResource(String nodeIdStr, Resource resource,
-      int overCommitTimeout) throws YarnException, IOException {
+      int overCommitTimeout, String subClusterId) throws YarnException, IOException {
 
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     UpdateNodeResourceRequest request =
       recordFactory.newRecordInstance(UpdateNodeResourceRequest.class);
     NodeId nodeId = NodeId.fromString(nodeIdStr);
 
-    Map<NodeId, ResourceOption> resourceMap =
-        new HashMap<NodeId, ResourceOption>();
+    Map<NodeId, ResourceOption> resourceMap = new HashMap<>();
     resourceMap.put(
         nodeId, ResourceOption.newInstance(resource, overCommitTimeout));
     request.setNodeResourceMap(resourceMap);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      request.setSubClusterId(subClusterId);
+    }
     adminProtocol.updateNodeResource(request);
     return 0;
   }
@@ -566,8 +592,10 @@ public class RMAdminCLI extends HAAdmin {
         "Add to cluster node labels.");
     opts.addOption("directlyAccessNodeLabelStore", false,
         "Directly access node label store.");
+    opts.addOption(OPTION_SUBCLUSTERID);
+
     int exitCode = -1;
-    CommandLine cliParser = null;
+    CommandLine cliParser;
     try {
       cliParser = new GnuParser().parse(opts, args);
     } catch (MissingArgumentException ex) {
@@ -576,6 +604,7 @@ public class RMAdminCLI extends HAAdmin {
       return exitCode;
     }
 
+    String subClusterId = parseSubClusterId(cliParser);
     List<NodeLabel> labels = YarnClientUtils.buildNodeLabelsFromStr(
         cliParser.getOptionValue("addToClusterNodeLabels"));
     if (cliParser.hasOption("directlyAccessNodeLabelStore")) {
@@ -585,6 +614,9 @@ public class RMAdminCLI extends HAAdmin {
           createAdminProtocol();
       AddToClusterNodeLabelsRequest request =
           AddToClusterNodeLabelsRequest.newInstance(labels);
+      if (StringUtils.isNotBlank(subClusterId)) {
+        request.setSubClusterId(subClusterId);
+      }
       adminProtocol.addToClusterNodeLabels(request);
     }
     return 0;
@@ -597,8 +629,9 @@ public class RMAdminCLI extends HAAdmin {
         "Remove From cluster node labels.");
     opts.addOption("directlyAccessNodeLabelStore", false,
         "Directly access node label store.");
+    opts.addOption(OPTION_SUBCLUSTERID);
     int exitCode = -1;
-    CommandLine cliParser = null;
+    CommandLine cliParser;
     try {
       cliParser = new GnuParser().parse(opts, args);
     } catch (MissingArgumentException ex) {
@@ -607,6 +640,7 @@ public class RMAdminCLI extends HAAdmin {
       return exitCode;
     }
 
+    String subClusterId = parseSubClusterId(cliParser);
     Set<String> labels = buildNodeLabelNamesFromStr(
         cliParser.getOptionValue("removeFromClusterNodeLabels"));
     if (cliParser.hasOption("directlyAccessNodeLabelStore")) {
@@ -617,6 +651,9 @@ public class RMAdminCLI extends HAAdmin {
           createAdminProtocol();
       RemoveFromClusterNodeLabelsRequest request =
           RemoveFromClusterNodeLabelsRequest.newInstance(labels);
+      if(StringUtils.isNotBlank(subClusterId)) {
+        request.setSubClusterId(subClusterId);
+      }
       adminProtocol.removeFromClusterNodeLabels(request);
     }
 
@@ -681,6 +718,7 @@ public class RMAdminCLI extends HAAdmin {
         "Fail on unknown nodes.");
     opts.addOption("directlyAccessNodeLabelStore", false,
         "Directly access node label store.");
+    opts.addOption(OPTION_SUBCLUSTERID);
     int exitCode = -1;
     CommandLine cliParser = null;
     try {
@@ -693,13 +731,15 @@ public class RMAdminCLI extends HAAdmin {
 
     Map<NodeId, Set<String>> map = buildNodeLabelsMapFromStr(
         cliParser.getOptionValue("replaceLabelsOnNode"));
+    String subClusterId = parseSubClusterId(cliParser);
     return replaceLabelsOnNodes(map,
         cliParser.hasOption("failOnUnknownNodes"),
-        cliParser.hasOption("directlyAccessNodeLabelStore"));
+        cliParser.hasOption("directlyAccessNodeLabelStore"), subClusterId);
   }
 
   private int replaceLabelsOnNodes(Map<NodeId, Set<String>> map,
-      boolean failOnUnknownNodes, boolean directlyAccessNodeLabelStore)
+      boolean failOnUnknownNodes, boolean directlyAccessNodeLabelStore,
+      String subClusterId)
       throws IOException, YarnException {
     if (directlyAccessNodeLabelStore) {
       getNodeLabelManagerInstance(getConf()).replaceLabelsOnNode(map);
@@ -709,6 +749,9 @@ public class RMAdminCLI extends HAAdmin {
       ReplaceLabelsOnNodeRequest request =
           ReplaceLabelsOnNodeRequest.newInstance(map);
       request.setFailOnUnknownNodes(failOnUnknownNodes);
+      if (StringUtils.isNotBlank(subClusterId) && isYarnFederationEnabled(getConf())) {
+        request.setSubClusterId(subClusterId);
+      }
       adminProtocol.replaceLabelsOnNode(request);
     }
     return 0;
@@ -754,12 +797,22 @@ public class RMAdminCLI extends HAAdmin {
     //
     // verify that we have enough command line parameters
     //
+    String subClusterId = StringUtils.EMPTY;
     if ("-refreshAdminAcls".equals(cmd) || "-refreshQueues".equals(cmd) ||
         "-refreshNodesResources".equals(cmd) ||
         "-refreshServiceAcl".equals(cmd) ||
         "-refreshUserToGroupsMappings".equals(cmd) ||
-        "-refreshSuperUserGroupsConfiguration".equals(cmd)) {
-      if (args.length != 1) {
+        "-refreshSuperUserGroupsConfiguration".equals(cmd) ||
+        "-refreshClusterMaxPriority".equals(cmd)) {
+      subClusterId = parseSubClusterId(args, isHAEnabled);
+      // If we enable Federation mode, the number of args may be either one or three.
+      // Example: -refreshQueues or -refreshQueues -subClusterId SC-1
+      if (isYarnFederationEnabled(getConf()) && args.length != 1 && args.length != 3) {
+        printUsage(cmd, isHAEnabled);
+        return exitCode;
+      } else if (!isYarnFederationEnabled(getConf()) && args.length != 1) {
+        // If Federation mode is not enabled, then the number of args can only be one.
+        // Example: -refreshQueues
         printUsage(cmd, isHAEnabled);
         return exitCode;
       }
@@ -772,26 +825,26 @@ public class RMAdminCLI extends HAAdmin {
 
     try {
       if ("-refreshQueues".equals(cmd)) {
-        exitCode = refreshQueues();
+        exitCode = refreshQueues(subClusterId);
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = handleRefreshNodes(args, cmd, isHAEnabled);
       } else if ("-refreshNodesResources".equals(cmd)) {
-        exitCode = refreshNodesResources();
+        exitCode = refreshNodesResources(subClusterId);
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
-        exitCode = refreshUserToGroupsMappings();
+        exitCode = refreshUserToGroupsMappings(subClusterId);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
-        exitCode = refreshSuperUserGroupsConfiguration();
+        exitCode = refreshSuperUserGroupsConfiguration(subClusterId);
       } else if ("-refreshAdminAcls".equals(cmd)) {
-        exitCode = refreshAdminAcls();
+        exitCode = refreshAdminAcls(subClusterId);
       } else if ("-refreshServiceAcl".equals(cmd)) {
-        exitCode = refreshServiceAcls();
+        exitCode = refreshServiceAcls(subClusterId);
       } else if ("-refreshClusterMaxPriority".equals(cmd)) {
-        exitCode = refreshClusterMaxPriority();
+        exitCode = refreshClusterMaxPriority(subClusterId);
       } else if ("-getGroups".equals(cmd)) {
         String[] usernames = Arrays.copyOfRange(args, i, args.length);
         exitCode = getGroups(usernames);
       } else if ("-updateNodeResource".equals(cmd)) {
-        exitCode = handleUpdateNodeResource(args, cmd, isHAEnabled);
+        exitCode = handleUpdateNodeResource(args, cmd, isHAEnabled, subClusterId);
       } else if ("-addToClusterNodeLabels".equals(cmd)) {
         exitCode = handleAddToClusterNodeLabels(args, cmd, isHAEnabled);
       } else if ("-removeFromClusterNodeLabels".equals(cmd)) {
@@ -847,8 +900,7 @@ public class RMAdminCLI extends HAAdmin {
         "Indicates the timeout tracking should be handled by the client.");
     opts.addOption("server", false,
         "Indicates the timeout tracking should be handled by the RM.");
-    opts.addOption(OPTION_SUBCLUSTERID, true, "We support setting subClusterId in " +
-        "YARN Federation mode to specify specific subClusters.");
+    opts.addOption(OPTION_SUBCLUSTERID);
 
     int exitCode = -1;
     CommandLine cliParser = null;
@@ -861,7 +913,7 @@ public class RMAdminCLI extends HAAdmin {
     }
 
     int timeout = -1;
-    String subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+    String subClusterId = parseSubClusterId(cliParser);
     if (cliParser.hasOption("g")) {
       String strTimeout = cliParser.getOptionValue("g");
       if (strTimeout != null) {
@@ -898,7 +950,7 @@ public class RMAdminCLI extends HAAdmin {
    * @throws YarnException if any issues thrown from server
    */
   private int handleUpdateNodeResource(
-      String[] args, String cmd, boolean isHAEnabled)
+      String[] args, String cmd, boolean isHAEnabled, String subClusterId)
           throws YarnException, IOException {
     int i = 1;
     int overCommitTimeout = ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT;
@@ -936,7 +988,7 @@ public class RMAdminCLI extends HAAdmin {
     if (i == args.length - 1) {
       overCommitTimeout = Integer.parseInt(args[i]);
     }
-    return updateNodeResource(nodeID, resource, overCommitTimeout);
+    return updateNodeResource(nodeID, resource, overCommitTimeout, subClusterId);
   }
 
   private Resource parseCommandAndCreateResource(String resourceTypes) {
@@ -1062,10 +1114,52 @@ public class RMAdminCLI extends HAAdmin {
     return "Usage: rmadmin";
   }
 
-  public static boolean isYarnFederationEnabled(Configuration conf) {
-    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
-    return isEnabled;
+  /**
+   * Parse subClusterId.
+   * This method will only parse subClusterId when Yarn Federation mode is enabled.
+   *
+   * @param cliParser CommandLine.
+   * @return subClusterId.
+   */
+  protected String parseSubClusterId(CommandLine cliParser) {
+    // If YARN Federation mode is not enabled, return empty.
+    if (!isYarnFederationEnabled(getConf())) {
+      return StringUtils.EMPTY;
+    }
+
+    String subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+    if(StringUtils.isBlank(subClusterId)) {
+      return StringUtils.EMPTY;
+    }
+
+    System.out.println("SubClusterId : " + subClusterId);
+    return subClusterId;
+  }
+
+  protected String parseSubClusterId(String[] args, boolean isHAEnabled) {
+    // If YARN Federation mode is not enabled, return empty.
+    if (!isYarnFederationEnabled(getConf())) {
+      return StringUtils.EMPTY;
+    }
+
+    Options opts = new Options();
+    opts.addOption("refreshQueues", false,
+        "Refresh the hosts information at the ResourceManager.");
+    opts.addOption("refreshNodesResources", false, "");
+    opts.addOption("refreshUserToGroupsMappings", false, "");
+    opts.addOption("refreshUserToGroupsMappings", false, "");
+    opts.addOption("updateNodeResource", false, "");
+    opts.addOption(OPTION_SUBCLUSTERID);
+
+    CommandLine cliParser = null;
+    try {
+      cliParser = new DefaultParser().parse(opts, args);
+    } catch (ParseException ex) {
+      System.err.println("parseSubClusterId error, " + ex.getMessage());
+      printUsage(args[0], isHAEnabled);
+    }
+
+    return parseSubClusterId(cliParser);
   }
 
   public static void main(String[] args) throws Exception {
