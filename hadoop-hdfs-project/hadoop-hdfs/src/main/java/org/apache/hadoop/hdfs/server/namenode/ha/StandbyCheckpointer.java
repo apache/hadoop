@@ -340,8 +340,10 @@ public class StandbyCheckpointer {
       // that are not doing any work also stop
       executor.awaitTermination(500, TimeUnit.MILLISECONDS);
 
-      // re-throw the exception we got, since one of these two must be non-null
-      throw ie;
+      if (!isSuccess) {
+        // re-throw the exception we got, since one of these two must be non-null
+        throw ie;
+      }
     }
 
     if (!ioes.isEmpty() && !isSuccess) {
