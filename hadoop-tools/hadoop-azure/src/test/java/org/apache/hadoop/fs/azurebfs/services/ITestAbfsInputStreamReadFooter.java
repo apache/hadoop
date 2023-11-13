@@ -41,7 +41,6 @@ import static org.mockito.Mockito.spy;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
@@ -64,8 +63,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private void testNumBackendCalls(boolean optimizeFooterRead)
       throws Exception {
-    for (int i = 1; i <= 4; i++) {
-      int fileSize = i * ONE_MB;
+    for (int i = 0; i <= 5; i++) {
+      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead,
           fileSize);
       String fileName = methodName.getMethodName() + i;
@@ -211,16 +210,16 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         actualLength = length - delta;
       }
       long expectedLimit;
-      long expectedBCurson;
+      long expectedBCursor;
       long expectedFCursor;
       if (optimizationOn) {
         if (actualContentLength <= footerReadBufferSize) {
           expectedLimit = actualContentLength;
-          expectedBCurson = seekPos + actualLength;
+          expectedBCursor = seekPos + actualLength;
         } else {
           expectedLimit = footerReadBufferSize;
           long lastBlockStart = max(0, actualContentLength - footerReadBufferSize);
-          expectedBCurson = seekPos - lastBlockStart + actualLength;
+          expectedBCursor = seekPos - lastBlockStart + actualLength;
         }
         expectedFCursor = actualContentLength;
       } else {
@@ -231,13 +230,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           expectedLimit = actualContentLength - seekPos;
           expectedFCursor = min(seekPos + readBufferSize, actualContentLength);
         }
-        expectedBCurson = actualLength;
+        expectedBCursor = actualLength;
       }
 
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
       assertEquals(expectedFCursor, abfsInputStream.getFCursorAfterLastRead());
       assertEquals(expectedLimit, abfsInputStream.getLimit());
-      assertEquals(expectedBCurson, abfsInputStream.getBCursor());
+      assertEquals(expectedBCursor, abfsInputStream.getBCursor());
       assertEquals(actualLength, bytesRead);
       //  Verify user-content read
       assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
@@ -295,7 +294,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testPartialReadWithSomeDat()
+  public void testPartialReadWithSomeData()
       throws Exception {
     for (int i = 0; i <= 5; i++) {
       int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
@@ -303,13 +302,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      testPartialReadWithSomeDat(fs, testFilePath,
+      testPartialReadWithSomeData(fs, testFilePath,
           fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
           fileContent);
     }
   }
 
-  private void testPartialReadWithSomeDat(final FileSystem fs,
+  private void testPartialReadWithSomeData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
       final byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {
