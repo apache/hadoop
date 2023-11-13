@@ -64,7 +64,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   private void testNumBackendCalls(boolean optimizeFooterRead)
       throws Exception {
     for (int i = 0; i <= 5; i++) {
-      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
+      int fileSize = (int) Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead,
           fileSize);
       String fileName = methodName.getMethodName() + i;
@@ -157,7 +157,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
     // Files between footer read buffer and read buffer size
     // Files bigger than read buffer size
     for (int i = 0; i <= 5; i++) {
-      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
+      int fileSize = (int) Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead,
           fileSize);
       String fileName = methodName.getMethodName() + i;
@@ -254,7 +254,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   public void testPartialReadWithNoData()
       throws Exception {
     for (int i = 0; i <= 5; i++) {
-      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
+      int fileSize = (int) Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
@@ -297,7 +297,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   public void testPartialReadWithSomeData()
       throws Exception {
     for (int i = 0; i <= 5; i++) {
-      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
+      int fileSize = (int) Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);

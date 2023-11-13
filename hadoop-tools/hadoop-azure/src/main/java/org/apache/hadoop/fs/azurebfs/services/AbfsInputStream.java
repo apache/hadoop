@@ -360,6 +360,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return optimisedRead(b, off, len, 0, contentLength);
   }
 
+  // To do footer read of files when enabled
   private int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
@@ -815,7 +816,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
-  public int getFooterReadBufferSize() {
+  protected int getFooterReadBufferSize() {
     return footerReadSize;
   }
 
