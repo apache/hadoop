@@ -3923,17 +3923,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // constructor-supplied one -this ensures all audit log events are grouped correctly
       span.activate();
       trackDuration(getDurationTrackerFactory(), OBJECT_PUT_REQUESTS.getSymbol(), () -> {
-            final String key = pathToKey(to);
-            final ObjectMetadata om = newObjectMetadata(file.length());
-            Progressable progress = null;
-            PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
-            S3AFileSystem.this.invoker.retry(
-                "putObject(" + "" + ")", to.toString(),
-                true,
-                () -> executePut(putObjectRequest, progress, putOptionsForPath(to)));
+        final String key = pathToKey(to);
+        final ObjectMetadata om = newObjectMetadata(file.length());
+        Progressable progress = null;
+        PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
+        S3AFileSystem.this.invoker.retry(
+            "putObject()", to.toString(),
+            true,
+            () -> executePut(putObjectRequest, progress, putOptionsForPath(to)));
 
-            return null;
-          });
+        return null;
+      });
     }
 
     @Override
