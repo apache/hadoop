@@ -153,8 +153,12 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private void testSeekAndReadWithConf(boolean optimizeFooterRead,
       SeekTo seekTo) throws Exception {
-    for (int i = 2; i <= 6; i++) {
-      int fileSize = i * ONE_MB;
+    // Running the test for file sizes ranging from 256 KB to 8 MB/
+    // This will cover files less than footer read buffer size,
+    // Files between footer read buffer and read buffer size
+    // Files bigger than read buffer size
+    for (int i = 0; i <= 5; i++) {
+      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead,
           fileSize);
       String fileName = methodName.getMethodName() + i;
@@ -190,7 +194,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
     try (FSDataInputStream iStream = fs.open(testFilePath)) {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
-      long bufferSize = abfsInputStream.getBufferSize();
+      long footerReadBufferSize = abfsInputStream.getFooterReadBufferSize();
+      long readBufferSize = abfsInputStream.getBufferSize();
       seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       long bytesRead = iStream.read(buffer, 0, length);
@@ -209,22 +214,22 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedBCurson;
       long expectedFCursor;
       if (optimizationOn) {
-        if (actualContentLength <= bufferSize) {
+        if (actualContentLength <= footerReadBufferSize) {
           expectedLimit = actualContentLength;
           expectedBCurson = seekPos + actualLength;
         } else {
-          expectedLimit = bufferSize;
-          long lastBlockStart = max(0, actualContentLength - bufferSize);
+          expectedLimit = footerReadBufferSize;
+          long lastBlockStart = max(0, actualContentLength - footerReadBufferSize);
           expectedBCurson = seekPos - lastBlockStart + actualLength;
         }
         expectedFCursor = actualContentLength;
       } else {
-        if (seekPos + bufferSize < actualContentLength) {
-          expectedLimit = bufferSize;
-          expectedFCursor = bufferSize;
+        if (seekPos + readBufferSize < actualContentLength) {
+          expectedLimit = readBufferSize;
+          expectedFCursor = readBufferSize;
         } else {
           expectedLimit = actualContentLength - seekPos;
-          expectedFCursor = min(seekPos + bufferSize, actualContentLength);
+          expectedFCursor = min(seekPos + readBufferSize, actualContentLength);
         }
         expectedBCurson = actualLength;
       }
@@ -239,7 +244,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
-        from = (int) max(0, actualContentLength - bufferSize);
+        from = (int) max(0, actualContentLength - footerReadBufferSize);
       }
       assertContentReadCorrectly(fileContent, from, (int) abfsInputStream.getLimit(),
           abfsInputStream.getBuffer(), testFilePath);
@@ -249,8 +254,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   @Test
   public void testPartialReadWithNoData()
       throws Exception {
-    for (int i = 2; i <= 6; i++) {
-      int fileSize = i * ONE_MB;
+    for (int i = 0; i <= 5; i++) {
+      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
@@ -292,8 +297,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   @Test
   public void testPartialReadWithSomeDat()
       throws Exception {
-    for (int i = 3; i <= 6; i++) {
-      int fileSize = i * ONE_MB;
+    for (int i = 0; i <= 5; i++) {
+      int fileSize = (int)Math.pow(2, i) * 256 * ONE_KB;
       final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
@@ -317,7 +322,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       //  second readRemote returns data till the last 2 bytes
       int someDataLength = 2;
       int secondReturnSize =
-          min(fileContent.length, abfsInputStream.getBufferSize()) - 10
+          min(fileContent.length, abfsInputStream.getFooterReadBufferSize()) - 10
               - someDataLength;
       doReturn(10).doReturn(secondReturnSize).doCallRealMethod()
           .when(abfsInputStream)
