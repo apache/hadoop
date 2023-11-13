@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 
 import java.net.InetAddress;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import javax.security.sasl.Sasl;
@@ -38,7 +39,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  */
 public class SaslPropertiesResolver implements Configurable{
-  private Map<String,String> properties;
+  private SortedMap<String,String> properties;
   Configuration conf;
 
   /**
@@ -82,7 +83,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return sasl Properties
    */
   public Map<String,String> getDefaultProperties() {
-    return properties;
+    return new TreeMap<>(properties);
   }
 
   /**
@@ -91,7 +92,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return the sasl properties to be used for the connection.
    */
   public Map<String, String> getServerProperties(InetAddress clientAddress){
-    return properties;
+    return new TreeMap<>(properties);
   }
 
   /**
@@ -111,7 +112,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return the sasl properties to be used for the connection.
    */
   public Map<String, String> getClientProperties(InetAddress serverAddress){
-    return properties;
+    return new TreeMap<>(properties);
   }
 
   /**
