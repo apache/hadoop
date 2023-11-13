@@ -170,6 +170,26 @@ public abstract class FederationQueueWeight {
     }
   }
 
+  public static void checkPolicyManagerValid(String policyManager) throws YarnException {
+    switch (policyManager) {
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager":
+        throw new YarnException("HashBroadcastPolicyManager does not support the use of queue weights.");
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.HomePolicyManager":
+        throw new YarnException("HomePolicyManager does not support the use of queue weights.");
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.RejectAllPolicyManager":
+        throw new YarnException("RejectAllPolicyManager does not support the " +
+            "use of queue weights.");
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager":
+        throw new YarnException("UniformBroadcastPolicyManager does not support the " +
+            "use of queue weights.");
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager":
+      case "org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager":
+        break;
+      default:
+        throw new YarnException("Unknown PolicyManager");
+    }
+  }
+
   /**
    * Determines whether the given value is a number.
    *
