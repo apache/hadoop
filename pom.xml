@@ -227,6 +227,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                   </restrictImports>
                   <restrictImports>
                     <includeTestCode>true</includeTestCode>
+                    <reason>Use java.nio.charset.StandardCharsets rather than Guava provided Charsets</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
                     <reason>Use alternative to Guava provided Optional</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Optional</bannedImport>
