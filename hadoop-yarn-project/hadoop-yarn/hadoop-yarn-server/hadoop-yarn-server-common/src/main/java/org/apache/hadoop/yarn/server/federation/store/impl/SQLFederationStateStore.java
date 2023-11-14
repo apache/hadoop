@@ -29,6 +29,7 @@ import java.sql.Blob;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
@@ -215,6 +216,10 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   private static final String CALL_SP_LOAD_VERSION =
       "{call sp_getVersion(?, ?)}";
+
+  private static final List<String> TABLES = new ArrayList<>(
+      Arrays.asList("applicationsHomeSubCluster", "membership", "policies", "versions",
+      "reservationsHomeSubCluster", "masterKeys", "delegationTokens", "sequenceTable"));
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1120,6 +1125,11 @@ public class SQLFederationStateStore implements FederationStateStore {
     byte[] fedVersion = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
     String versionComment = CURRENT_VERSION_INFO.toString();
     storeVersion(fedVersion, versionComment);
+  }
+
+  @Override
+  public void deleteStateStore() throws Exception {
+    truncateTable();
   }
 
   /**
@@ -2067,6 +2077,32 @@ public class SQLFederationStateStore implements FederationStateStore {
       return runner.selectOrUpdateSequenceTable(connection, sequenceName, isUpdate);
     } catch (Exception e) {
       throw new RuntimeException("Could not query sequence table!!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
+  }
+
+  /**
+   * We will truncate the tables, iterate through each table individually,
+   * and then clean the tables.
+   */
+  private void truncateTable() {
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String table : TABLES) {
+        LOG.info("truncate table = {} start.", table);
+        runner.truncateTable(connection, table);
+        LOG.info("truncate table = {} finished.", table);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Could not truncate table!", e);
     } finally {
       // Return to the pool the CallableStatement
       try {
