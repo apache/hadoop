@@ -235,6 +235,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_S
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_NO_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
@@ -348,7 +349,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AStatisticsContext statisticsContext;
   /** Storage Statistics Bonded to the instrumentation. */
   private S3AStorageStatistics storageStatistics;
-
+  /** Should all create files be "performance" unless unset. */
+  private boolean performanceCreation;
   /**
    * Default input policy; may be overridden in
    * {@code openFile()}.
@@ -459,6 +461,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Scheme for the current filesystem.
    */
   private String scheme = FS_S3A;
+
+  /**
+   * Flag to indicate that the higher performance copyFromLocalFile implementation
+   * should be used.
+   */
+  private boolean optimizedCopyFromLocal;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -660,6 +668,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // verify there's no S3Guard in the store config.
       checkNoS3Guard(this.getUri(), getConf());
 
+      // performance creation flag for code which wants performance
+      // at the risk of overwrites.
+      performanceCreation = conf.getBoolean(FS_S3A_CREATE_PERFORMANCE,
+          FS_S3A_CREATE_PERFORMANCE_DEFAULT);
+      LOG.debug("{} = {}", FS_S3A_CREATE_PERFORMANCE, performanceCreation);
       allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
 
       // directory policy, which may look at authoritative paths
@@ -689,6 +702,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               AWS_S3_VECTOR_ACTIVE_RANGE_READS, DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS, 1);
       vectoredIOContext = populateVectoredIOContext(conf);
       scheme = (this.uri != null && this.uri.getScheme() != null) ? this.uri.getScheme() : FS_S3A;
+      optimizedCopyFromLocal = conf.getBoolean(OPTIMIZED_COPY_FROM_LOCAL,
+          OPTIMIZED_COPY_FROM_LOCAL_DEFAULT);
+      LOG.debug("Using optimized copyFromLocal implementation: {}", optimizedCopyFromLocal);
     } catch (SdkException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -1878,14 +1894,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Progressable progress) throws IOException {
     final Path path = qualify(f);
 
+    // work out the options to pass down
+    CreateFileBuilder.CreateFileOptions options;
+    if (performanceCreation) {
+      options = OPTIONS_CREATE_FILE_PERFORMANCE;
+    }else {
+      options = overwrite
+          ? OPTIONS_CREATE_FILE_OVERWRITE
+          : OPTIONS_CREATE_FILE_NO_OVERWRITE;
+    }
+
     // the span will be picked up inside the output stream
     return trackDurationAndSpan(INVOCATION_CREATE, path, () ->
         innerCreateFile(path,
             progress,
             getActiveAuditSpan(),
-            overwrite
-                ? OPTIONS_CREATE_FILE_OVERWRITE
-                : OPTIONS_CREATE_FILE_NO_OVERWRITE));
+            options));
   }
 
   /**
@@ -1912,14 +1936,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final CreateFileBuilder.CreateFileOptions options) throws IOException {
     auditSpan.activate();
     String key = pathToKey(path);
+    if (key.isEmpty()) {
+      // no matter the creation options, root cannot be written to.
+      throw new PathIOException("/", "Can't create root path");
+    }
     EnumSet<CreateFlag> flags = options.getFlags();
-    boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
-    boolean performance = options.isPerformance();
-    boolean skipProbes = performance || isUnderMagicCommitPath(path);
+
+    boolean skipProbes = options.isPerformance() || isUnderMagicCommitPath(path);
     if (skipProbes) {
       LOG.debug("Skipping existence/overwrite checks");
     } else {
       try {
+        boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+
         // get the status or throw an FNFE.
         // when overwriting, there is no need to look for any existing file,
         // just a directory (for safety)
@@ -1951,7 +1980,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // put options are derived from the path and the
     // option builder.
-    boolean keep = performance || keepDirectoryMarkers(path);
+    boolean keep = options.isPerformance() || keepDirectoryMarkers(path);
     final PutObjectOptions putOptions =
         new PutObjectOptions(keep, null, options.getHeaders());
 
@@ -2034,11 +2063,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final AuditSpan span = entryPoint(INVOCATION_CREATE_FILE,
           pathToKey(qualified),
           null);
-      return new CreateFileBuilder(this,
+      final CreateFileBuilder builder = new CreateFileBuilder(this,
           qualified,
-          new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_FILE, span))
-            .create()
-            .overwrite(true);
+          new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_FILE, span));
+      builder
+          .create()
+          .overwrite(true)
+          .must(FS_S3A_CREATE_PERFORMANCE, performanceCreation);
+      return builder;
     } catch (IOException e) {
       // catch any IOEs raised in span creation and convert to
       // an UncheckedIOException
@@ -2101,7 +2133,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .create()
         .withFlags(flags)
         .blockSize(blockSize)
-        .bufferSize(bufferSize);
+        .bufferSize(bufferSize)
+        .must(FS_S3A_CREATE_PERFORMANCE, performanceCreation);
     if (progress != null) {
       builder.progress(progress);
     }
@@ -3997,9 +4030,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * the given dst name.
    *
    * This version doesn't need to create a temporary file to calculate the md5.
-   * Sadly this doesn't seem to be used by the shell cp :(
+   * If {@link Constants#OPTIMIZED_COPY_FROM_LOCAL} is set to false,
+   * the superclass implementation is used.
    *
-   * delSrc indicates if the source should be removed
    * @param delSrc whether to delete the src
    * @param overwrite whether to overwrite an existing file
    * @param src path
@@ -4007,35 +4040,59 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO problem
    * @throws FileAlreadyExistsException the destination file exists and
    * overwrite==false
-   * @throws SdkException failure in the AWS SDK
    */
   @Override
   @AuditEntryPoint
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
                                 Path dst) throws IOException {
     checkNotClosed();
-    LOG.debug("Copying local file from {} to {}", src, dst);
-    trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst,
-        () -> new CopyFromLocalOperation(
-            createStoreContext(),
-            src,
-            dst,
-            delSrc,
-            overwrite,
-            createCopyFromLocalCallbacks()).execute());
+    LOG.debug("Copying local file from {} to {} (delSrc={} overwrite={}",
+        src, dst, delSrc, overwrite);
+    if (optimizedCopyFromLocal) {
+      trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst, () ->
+          new CopyFromLocalOperation(
+              createStoreContext(),
+              src,
+              dst,
+              delSrc,
+              overwrite,
+              createCopyFromLocalCallbacks(getActiveAuditSpan()))
+              .execute());
+    } else {
+      // call the superclass, but still count statistics.
+      // there is no overall span here, as each FS API call will
+      // be in its own span.
+      LOG.debug("Using base copyFromLocalFile implementation");
+      trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst, () -> {
+        super.copyFromLocalFile(delSrc, overwrite, src, dst);
+        return null;
+      });
+    }
   }
 
+  /**
+   * Create the CopyFromLocalCallbacks;
+   * protected to assist in mocking.
+   * @param span audit span.
+   * @return the callbacks
+   * @throws IOException failure to get the local fs.
+   */
   protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
-      createCopyFromLocalCallbacks() throws IOException {
+      createCopyFromLocalCallbacks(final AuditSpanS3A span) throws IOException {
     LocalFileSystem local = getLocal(getConf());
-    return new CopyFromLocalCallbacksImpl(local);
+    return new CopyFromLocalCallbacksImpl(span, local);
   }
 
   protected final class CopyFromLocalCallbacksImpl implements
       CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
+
+    /** Span to use for all operations. */
+    private final AuditSpanS3A span;
     private final LocalFileSystem local;
 
-    private CopyFromLocalCallbacksImpl(LocalFileSystem local) {
+    private CopyFromLocalCallbacksImpl(final AuditSpanS3A span,
+        LocalFileSystem local) {
+      this.span = span;
       this.local = local;
     }
 
@@ -4057,20 +4114,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     public void copyLocalFileFromTo(File file, Path from, Path to) throws IOException {
-      trackDurationAndSpan(
-          OBJECT_PUT_REQUESTS,
-          to,
-          () -> {
-            final String key = pathToKey(to);
-            Progressable progress = null;
-            PutObjectRequest.Builder putObjectRequestBuilder =
-                newPutObjectRequestBuilder(key, file.length(), false);
-            S3AFileSystem.this.invoker.retry("putObject(" + "" + ")", to.toString(), true,
-                () -> executePut(putObjectRequestBuilder.build(), progress, putOptionsForPath(to),
-                    file));
-
-            return null;
-          });
+      // the duration of the put is measured, but the active span is the
+      // constructor-supplied one -this ensures all audit log events are grouped correctly
+      span.activate();
+      trackDuration(getDurationTrackerFactory(), OBJECT_PUT_REQUESTS.getSymbol(), () -> {
+        final String key = pathToKey(to);
+        PutObjectRequest.Builder putObjectRequestBuilder =
+            newPutObjectRequestBuilder(key, file.length(), false);
+        final String dest = to.toString();
+        S3AFileSystem.this.invoker.retry("putObject(" + dest + ")", dest, true, () ->
+            executePut(putObjectRequestBuilder.build(), null, putOptionsForPath(to), file));
+        return null;
+      });
     }
 
     @Override
@@ -5370,6 +5425,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case FS_S3A_CREATE_PERFORMANCE:
     case FS_S3A_CREATE_HEADER:
       return true;
+
+    // is the FS configured for create file performance
+    case FS_S3A_CREATE_PERFORMANCE_ENABLED:
+      return performanceCreation;
+
+      // is the optimized copy from local enabled.
+    case OPTIMIZED_COPY_FROM_LOCAL:
+      return optimizedCopyFromLocal;
 
     default:
       return super.hasPathCapability(p, cap);

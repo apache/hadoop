@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandProto;
@@ -101,11 +102,15 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize, long timeInterval, StorageType storageType)
       throws IOException {
-    GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
+    GetBlocksRequestProto.Builder builder = GetBlocksRequestProto.newBuilder()
         .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
-        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval).build();
+        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval);
+    if (storageType != null) {
+      builder.setStorageType(PBHelperClient.convertStorageType(storageType));
+    }
+    GetBlocksRequestProto req = builder.build();
     return PBHelper.convert(ipc(() -> rpcProxy.getBlocks(NULL_CONTROLLER, req)
         .getBlocks()));
   }

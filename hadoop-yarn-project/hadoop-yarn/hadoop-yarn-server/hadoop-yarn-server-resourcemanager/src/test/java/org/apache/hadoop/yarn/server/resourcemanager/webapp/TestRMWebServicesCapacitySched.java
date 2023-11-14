@@ -150,6 +150,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     conf.set("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.set("yarn.scheduler.capacity.root.queues", "a, b, c");
     conf.set("yarn.scheduler.capacity.root.a.capacity", "12.5");
+    conf.set("yarn.scheduler.capacity.root.a.accessible-node-labels", "root-a-default-label");
     conf.set("yarn.scheduler.capacity.root.a.maximum-capacity", "50");
     conf.set("yarn.scheduler.capacity.root.a.max-parallel-app", "42");
     conf.set("yarn.scheduler.capacity.root.b.capacity", "50");

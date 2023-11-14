@@ -1192,11 +1192,25 @@ public final class Constants {
 
   /**
    * Flag for create performance.
-   * This is *not* a configuration option; it is for use in the
-   * {code createFile()} builder.
+   * This can be set in the {code createFile()} builder.
    * Value {@value}.
    */
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Default value for create performance in an S3A FS.
+   * Value {@value}.
+   */
+  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = true;
+
+
+  /**
+   * Capability to indicate that the FS has been instantiated with
+   * {@link #FS_S3A_CREATE_PERFORMANCE} set to true.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE_ENABLED =
+      FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
    * Prefix for adding a header to the object when created.
@@ -1333,4 +1347,17 @@ public final class Constants {
    */
   public static final boolean DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT = false;
 
+
+  /**
+   * Is the higher performance copy from local file to S3 enabled?
+   * This switch allows for it to be disabled if there are problems.
+   * Value: {@value}.
+   */
+  public static final String OPTIMIZED_COPY_FROM_LOCAL = "fs.s3a.optimized.copy.from.local.enabled";
+
+  /**
+   * Default value for {@link #OPTIMIZED_COPY_FROM_LOCAL}.
+   * Value: {@value}.
+   */
+  public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
 }

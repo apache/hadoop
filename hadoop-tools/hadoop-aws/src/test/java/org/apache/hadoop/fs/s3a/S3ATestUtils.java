@@ -78,6 +78,7 @@ import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -1483,19 +1484,25 @@ public final class S3ATestUtils {
    * Skip a test if encryption algorithm or encryption key is not set.
    *
    * @param configuration configuration to probe.
+   * @param s3AEncryptionMethods list of encryption algorithms to probe.
+   * @throws IOException if the secret lookup fails.
    */
   public static void skipIfEncryptionNotSet(Configuration configuration,
-      S3AEncryptionMethods s3AEncryptionMethod) throws IOException {
+      S3AEncryptionMethods... s3AEncryptionMethods) throws IOException {
+    if (s3AEncryptionMethods == null || s3AEncryptionMethods.length == 0) {
+      throw new IllegalArgumentException("Specify at least one encryption method");
+    }
     // if S3 encryption algorithm is not set to desired method or AWS encryption
     // key is not set, then skip.
     String bucket = getTestBucketName(configuration);
     final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
-    if (!s3AEncryptionMethod.getMethod().equals(secrets.getEncryptionMethod().getMethod())
-        || StringUtils.isBlank(secrets.getEncryptionKey())) {
-      skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
-          .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
-          + s3AEncryptionMethod.getMethod()
-          + " in " + secrets);
+    boolean encryptionMethodMatching = Arrays.stream(s3AEncryptionMethods).anyMatch(
+        s3AEncryptionMethod -> s3AEncryptionMethod.getMethod()
+            .equals(secrets.getEncryptionMethod().getMethod()));
+    if (!encryptionMethodMatching || StringUtils.isBlank(secrets.getEncryptionKey())) {
+      skip(S3_ENCRYPTION_KEY + " is not set or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
+          + Arrays.stream(s3AEncryptionMethods).map(S3AEncryptionMethods::getMethod)
+          .collect(Collectors.toList()) + " in " + secrets);
     }
   }
 
@@ -1554,4 +1561,17 @@ public final class S3ATestUtils {
     return fs.getConf().getBoolean(Constants.ENABLE_MULTI_DELETE,
         true);
   }
+
+  /**
+   * Does this FS have create performance enabled?
+   * @param fs filesystem
+   * @return true if create performance is enabled
+   * @throws IOException IO problems
+   */
+  public static boolean isCreatePerformanceEnabled(FileSystem fs)
+      throws IOException {
+    return fs.hasPathCapability(new Path("/"), FS_S3A_CREATE_PERFORMANCE_ENABLED);
+  }
+
+
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
@@ -62,6 +63,8 @@ public class TestDefaultApplicationCleaner {
   private List<ApplicationId> appIds;
   // The list of applications returned by mocked router
   private Set<ApplicationId> routerAppIds;
+
+  private ApplicationId appIdToAddConcurrently;
 
   @Before
   public void setup() throws Exception {
@@ -111,6 +114,7 @@ public class TestDefaultApplicationCleaner {
           new Token<AMRMTokenIdentifier>());
     }
     Assert.assertEquals(3, registryClient.getAllApplications().size());
+    appIdToAddConcurrently = null;
   }
 
   @After
@@ -159,7 +163,42 @@ public class TestDefaultApplicationCleaner {
       extends DefaultApplicationCleaner {
     @Override
     public Set<ApplicationId> getAppsFromRouter() throws YarnRuntimeException {
+      if (appIdToAddConcurrently != null) {
+        SubClusterId scId = SubClusterId.newInstance("MySubClusterId");
+        try {
+          ApplicationHomeSubCluster appHomeSubCluster =
+              ApplicationHomeSubCluster.newInstance(appIdToAddConcurrently, scId);
+          AddApplicationHomeSubClusterRequest request =
+              AddApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster);
+          stateStore.addApplicationHomeSubCluster(request);
+        } catch (YarnException e) {
+          throw new YarnRuntimeException(e);
+        }
+        registryClient.writeAMRMTokenForUAM(appIdToAddConcurrently, scId.toString(),
+            new Token<>());
+      }
       return routerAppIds;
     }
+  }
+
+  @Test
+  public void testConcurrentNewApp() throws YarnException {
+    appIdToAddConcurrently = ApplicationId.newInstance(1, 1);
+
+    appCleaner.run();
+
+    // The concurrently added app should be still there
+    GetApplicationsHomeSubClusterRequest appHomeSubClusterRequest =
+         GetApplicationsHomeSubClusterRequest.newInstance();
+    GetApplicationsHomeSubClusterResponse applicationsHomeSubCluster =
+        stateStore.getApplicationsHomeSubCluster(appHomeSubClusterRequest);
+    Assert.assertNotNull(applicationsHomeSubCluster);
+    List<ApplicationHomeSubCluster> appsHomeSubClusters =
+        applicationsHomeSubCluster.getAppsHomeSubClusters();
+    Assert.assertNotNull(appsHomeSubClusters);
+    Assert.assertEquals(1, appsHomeSubClusters.size());
+
+    // The concurrently added app should be still there
+    Assert.assertEquals(1, registryClient.getAllApplications().size());
   }
 }

@@ -1720,8 +1720,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Get all blocks with location information from a datanode. */
   public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
-      final long size, final long minBlockSize, final long timeInterval) throws
-      UnregisteredNodeException {
+      final long size, final long minBlockSize, final long timeInterval,
+      final StorageType storageType) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
       blockLog.warn("BLOCK* getBlocks: Asking for blocks from an" +
@@ -1735,10 +1735,11 @@ public class BlockManager implements BlockStatsMXBean {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
 
-    // skip stale storage
+    // skip stale storage, then choose specific storage type.
     DatanodeStorageInfo[] storageInfos = Arrays
         .stream(node.getStorageInfos())
         .filter(s -> !s.areBlockContentsStale())
+        .filter(s -> storageType == null || s.getStorageType().equals(storageType))
         .toArray(DatanodeStorageInfo[]::new);
 
     // starting from a random block
