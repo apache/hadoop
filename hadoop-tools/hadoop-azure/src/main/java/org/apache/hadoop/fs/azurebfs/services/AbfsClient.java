@@ -784,7 +784,7 @@ public class AbfsClient implements Closeable {
             sasTokenForReuse);
     try {
       op.execute(tracingContext);
-    } catch (AzureBlobFileSystemException e) {
+    } catch (AbfsRestOperationException e) {
       /*
          If the http response code indicates a user error we retry
          the same append request with expect header being disabled.
@@ -794,7 +794,7 @@ public class AbfsClient implements Closeable {
          if someone has taken dependency on the exception message,
          which is created using the error string present in the response header.
       */
-      int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
+      int responseStatusCode = e.getStatusCode();
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
         LOG.debug("User error, retrying without 100 continue enabled for the given path {}", path);
         reqParams.setExpectHeaderEnabled(false);
@@ -808,7 +808,7 @@ public class AbfsClient implements Closeable {
       }
 
       if (isMd5ChecksumError(e)) {
-        throw new AbfsInvalidChecksumException((AbfsRestOperationException) e);
+        throw new AbfsInvalidChecksumException(e);
       }
 
       if (reqParams.isAppendBlob()
@@ -827,6 +827,13 @@ public class AbfsClient implements Closeable {
         return successOp;
       }
       throw e;
+    }
+
+    catch (AzureBlobFileSystemException e) {
+      /**
+       * Any server issue will be returned as {@link AbfsRestOperationException} handled above.
+       */
+      LOG.debug("Append request failed with non server issues");
     }
 
     return op;
@@ -879,7 +886,7 @@ public class AbfsClient implements Closeable {
    * @param e Exception returned by AbfsRestOperation
    * @return boolean whether exception is due to MD5Mismatch or not
    */
-  protected boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
+  private boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
     AzureServiceErrorCode storageErrorCode = ((AbfsRestOperationException) e).getErrorCode();
     return storageErrorCode == AzureServiceErrorCode.MD5_MISMATCH;
   }
