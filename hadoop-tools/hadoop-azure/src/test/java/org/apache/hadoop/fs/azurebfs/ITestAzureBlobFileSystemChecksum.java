@@ -162,7 +162,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
 
   /**
    * Verify that the checksum computed on client side matches with the one
-   * computed at server side. If not, request will fail with 400 Bad request
+   * computed at server side. If not, request will fail with 400 Bad request.
    * @param client
    * @param path
    * @param data

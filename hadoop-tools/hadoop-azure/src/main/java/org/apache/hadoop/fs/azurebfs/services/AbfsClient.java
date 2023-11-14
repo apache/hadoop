@@ -1454,7 +1454,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Add MD5 hash as request header to the append request
+   * Add MD5 hash as request header to the append request.
    * @param requestHeaders to be updated with checksum header
    * @param reqParams for getting offset and length
    * @param buffer for getting input data for MD5 computation
@@ -1469,11 +1469,11 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * To verify the checksum information received from server for the data read
-   * @param buffer stores the data received from server
-   * @param result HTTP Operation Result
-   * @param bufferOffset Position where data returned by server is saved in buffer
-   * @throws AbfsRestOperationException if Md5Mismatch
+   * To verify the checksum information received from server for the data read.
+   * @param buffer stores the data received from server.
+   * @param result HTTP Operation Result.
+   * @param bufferOffset Position where data returned by server is saved in buffer.
+   * @throws AbfsRestOperationException if Md5Mismatch.
    */
   private void verifyCheckSumForRead(final byte[] buffer,
       final AbfsHttpOperation result, final int bufferOffset)
@@ -1482,7 +1482,7 @@ public class AbfsClient implements Closeable {
     // caller requests. In case it is less, extra bytes will be initialized to 0
     // Server returned MD5 Hash will be computed on what server returned.
     // We need to get exact data that server returned and compute its md5 hash
-    // Computed hash should be equal to what server returned
+    // Computed hash should be equal to what server returned.
     int numberOfBytesRead = (int) result.getBytesReceived();
     if (numberOfBytesRead == 0) {
       return;
