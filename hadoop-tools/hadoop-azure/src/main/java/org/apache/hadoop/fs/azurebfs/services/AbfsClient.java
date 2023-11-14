@@ -830,7 +830,7 @@ public class AbfsClient implements Closeable {
     }
 
     catch (AzureBlobFileSystemException e) {
-      //Any server issue will be returned as {@link AbfsRestOperationException} handled above.
+      // Any server side issue will be returned as AbfsRestOperationException and will be handled above.
       LOG.debug("Append request failed with non server issues");
       throw e;
     }
@@ -885,8 +885,8 @@ public class AbfsClient implements Closeable {
    * @param e Exception returned by AbfsRestOperation
    * @return boolean whether exception is due to MD5Mismatch or not
    */
-  private boolean isMd5ChecksumError(final AzureBlobFileSystemException e) {
-    AzureServiceErrorCode storageErrorCode = ((AbfsRestOperationException) e).getErrorCode();
+  private boolean isMd5ChecksumError(final AbfsRestOperationException e) {
+    AzureServiceErrorCode storageErrorCode = e.getErrorCode();
     return storageErrorCode == AzureServiceErrorCode.MD5_MISMATCH;
   }
 
