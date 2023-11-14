@@ -63,17 +63,24 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
    */
   @Override
   protected boolean isEncrypted(S3AFileSystem fileSystem) {
-    Configuration c = new Configuration();
-    return StringUtils.isNotBlank(getS3EncryptionKey(getTestBucketName(c), c));
+    Configuration conf = new Configuration();
+    return StringUtils.isNotBlank(getS3EncryptionKey(getTestBucketName(conf), conf));
   }
 
+  /**
+   * This test suite will run if the algorithm is set to SSE_KMS or DSSE_KMS;
+   * the assertions validate this.
+   * @param hugeFile file to validate.
+   * @throws IOException problems with encryption lookup.
+   * @throws AssertionError if the encryption is not as expected.
+   */
   @Override
   protected void assertEncrypted(Path hugeFile) throws IOException {
-    Configuration c = new Configuration();
+    Configuration conf = new Configuration();
 
-    final String bucket = getTestBucketName(c);
-    String kmsKey = getS3EncryptionKey(bucket, c);
-    final S3AEncryptionMethods algorithm = getEncryptionAlgorithm(bucket, c);
+    final String bucket = getTestBucketName(conf);
+    String kmsKey = getS3EncryptionKey(bucket, conf);
+    final S3AEncryptionMethods algorithm = getEncryptionAlgorithm(bucket, conf);
     if (SSE_KMS.equals(algorithm)) {
       EncryptionTestUtils.assertEncrypted(getFileSystem(), hugeFile, SSE_KMS, kmsKey);
     } else if (DSSE_KMS.equals(algorithm)) {
