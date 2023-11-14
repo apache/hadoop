@@ -31,6 +31,8 @@ import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides SaslProperties to be used for a connection.
  * The default implementation is to read the values from configuration.
@@ -39,7 +41,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  */
 public class SaslPropertiesResolver implements Configurable{
-  private SortedMap<String,String> properties;
+  private SortedMap<String, String> properties;
   Configuration conf;
 
   /**
@@ -83,7 +85,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return sasl Properties
    */
   public Map<String,String> getDefaultProperties() {
-    return new TreeMap<>(properties);
+    return cloneProperties();
   }
 
   /**
@@ -92,7 +94,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return the sasl properties to be used for the connection.
    */
   public Map<String, String> getServerProperties(InetAddress clientAddress){
-    return new TreeMap<>(properties);
+    return cloneProperties();
   }
 
   /**
@@ -112,7 +114,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @return the sasl properties to be used for the connection.
    */
   public Map<String, String> getClientProperties(InetAddress serverAddress){
-    return new TreeMap<>(properties);
+    return cloneProperties();
   }
 
   /**
@@ -124,6 +126,12 @@ public class SaslPropertiesResolver implements Configurable{
   public Map<String, String> getClientProperties(InetAddress serverAddress,
       int ingressPort) {
     return getClientProperties(serverAddress);
+  }
+
+  private Map<String, String> cloneProperties() {
+    requireNonNull(properties,
+        "properties map in SaslPropertiesResolver was null, did you call setConf()?");
+    return new TreeMap<>(properties);
   }
 
   /**
