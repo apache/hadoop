@@ -830,10 +830,9 @@ public class AbfsClient implements Closeable {
     }
 
     catch (AzureBlobFileSystemException e) {
-      /**
-       * Any server issue will be returned as {@link AbfsRestOperationException} handled above.
-       */
+      //Any server issue will be returned as {@link AbfsRestOperationException} handled above.
       LOG.debug("Append request failed with non server issues");
+      throw e;
     }
 
     return op;

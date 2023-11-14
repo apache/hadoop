@@ -30,7 +30,6 @@ import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -55,7 +54,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   private static final int MB_8 = 8 * ONE_MB;
   private static final int MB_15 = 15 * ONE_MB;
   private static final int MB_16 = 16 * ONE_MB;
-  private static final String invalidText = "Text for Invalid MD5 Computation";
+  private static final String TEXT_FOR_INVALID_MD5_COMPUTATION = "Text for Invalid MD5 Computation";
 
   public ITestAzureBlobFileSystemChecksum() throws Exception {
     super();
@@ -110,7 +109,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     Path path = path("testPath" + getMethodName());
     fs.create(path);
     byte[] data= generateRandomBytes(MB_4);
-    String invalidMD5Hash = spiedClient.computeMD5Hash(invalidText.getBytes(), 0, invalidText.length());
+    String invalidMD5Hash = spiedClient.computeMD5Hash(
+            TEXT_FOR_INVALID_MD5_COMPUTATION.getBytes(), 0, TEXT_FOR_INVALID_MD5_COMPUTATION.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
@@ -130,7 +130,8 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     byte[] data = generateRandomBytes(MB_3);
     createFileWithData(path, data, fs);
 
-    String invalidMD5Hash = spiedClient.computeMD5Hash(invalidText.getBytes(), 0, invalidText.length());
+    String invalidMD5Hash = spiedClient.computeMD5Hash(
+            TEXT_FOR_INVALID_MD5_COMPUTATION.getBytes(), 0, TEXT_FOR_INVALID_MD5_COMPUTATION.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
 
