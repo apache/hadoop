@@ -1477,5 +1477,22 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       throw readOnlyMountTable("setStoragePolicy", path);
     }
+
+    @Override
+    public Path getEnclosingRoot(Path path) throws IOException {
+      InodeTree.ResolveResult<AbstractFileSystem> res;
+      try {
+        res = fsState.resolve((path.toString()), true);
+      } catch (FileNotFoundException ex) {
+        NotInMountpointException mountPointEx =
+            new NotInMountpointException(path,
+                String.format("getEnclosingRoot - %s", ex.getMessage()));
+        mountPointEx.initCause(ex);
+        throw mountPointEx;
+      }
+      Path fullPath = new Path(res.resolvedPath);
+      Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+      return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
+    }
   }
 }

@@ -63,6 +63,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -660,6 +661,10 @@ public class DFSUtilClient {
     String[] components = StringUtils.split(src, '/');
     for (int i = 0; i < components.length; i++) {
       String element = components[i];
+      // For Windows, we must allow the : in the drive letter.
+      if (Shell.WINDOWS && i == 1 && element.endsWith(":")) {
+        continue;
+      }
       if (element.equals(".")  ||
           (element.contains(":"))  ||
           (element.contains("/"))) {

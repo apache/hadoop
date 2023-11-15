@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
 
 /**
  * S3A Test suite for the FSMainOperationsBaseTest tests.
@@ -70,4 +74,20 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
       throws Exception {
   }
 
+  @Override
+  public void testOverwrite() throws IOException {
+    boolean createPerformance = isCreatePerformanceEnabled(fSys);
+    try {
+      super.testOverwrite();
+      Assertions.assertThat(createPerformance)
+          .describedAs("create performance enabled")
+          .isFalse();
+    } catch (AssertionError e) {
+      // swallow the exception if create performance is enabled,
+      // else rethrow
+      if (!createPerformance) {
+        throw e;
+      }
+    }
+  }
 }

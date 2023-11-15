@@ -702,4 +702,39 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         lfs.getFileStatus(destDirPath.getParent().getParent()).getPermission());
   }
 
+  @Test
+  public void testDefaultJavaOptionsWhenExtraJDK17OptionsAreConfigured() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY,
+        true);
+
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    if (Shell.isJavaVersionAtLeast(17)) {
+      Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
+    Assert.assertTrue(javaOpts.contains("-Xmx256m"));
+  }
+
+  @Test
+  public void testDefaultJavaOptionsWhenExtraJDK17OptionsAreNotConfigured() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY,
+        false);
+
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    if (Shell.isJavaVersionAtLeast(17)) {
+      Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
+    Assert.assertTrue(javaOpts.contains("-Xmx256m"));
+  }
 }

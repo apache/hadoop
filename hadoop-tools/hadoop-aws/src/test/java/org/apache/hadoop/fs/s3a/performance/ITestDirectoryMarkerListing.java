@@ -27,9 +27,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -48,10 +49,12 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -78,8 +81,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
  * <p></p>
  * Similarly: JUnit assertions over AssertJ.
  * <p></p>
- * The tests work with unguarded buckets only -the bucket settings are changed
- * appropriately.
+ * s3a create performance is disabled for consistent assertions.
  */
 @RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
@@ -156,7 +158,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   /**
    * S3 Client of the FS.
    */
-  private AmazonS3 s3client;
+  private S3Client s3client;
 
   /**
    * Path to a file under the marker.
@@ -197,11 +199,13 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY);
+        DIRECTORY_MARKER_POLICY,
+        FS_S3A_CREATE_PERFORMANCE);
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
 
@@ -212,7 +216,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs = getFileSystem();
-    s3client = fs.getAmazonS3ClientForTesting("markers");
+    s3client = getS3AInternals().getAmazonS3Client("markers");
     bucket = fs.getBucket();
     Path base = new Path(methodPath(), "base");
 
@@ -453,6 +457,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     Path src = basePath;
     Path dest = new Path(methodPath(), "dest");
+    getFileSystem().delete(dest, true);
     assertRenamed(src, dest);
 
     assertPathDoesNotExist("source", src);
@@ -604,18 +609,22 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private void put(final String key, final String content) throws Exception {
     exec("PUT " + key, () ->
-        s3client.putObject(bucket, key, content));
+        s3client.putObject(b -> b.bucket(bucket).key(key),
+            RequestBody.fromString(content)));
   }
   /**
-   * Delete an object.
+   * Delete an object; exceptions are swallowed.
    * @param key key
-   * @param content string
    */
   private void deleteObject(final String key) throws Exception {
-    exec("DELETE " + key, () -> {
-      s3client.deleteObject(bucket, key);
-      return "deleted " + key;
-    });
+    try {
+      exec("DELETE " + key, () -> {
+        s3client.deleteObject(b -> b.bucket(bucket).key(key));
+        return "deleted " + key;
+      });
+    } catch (IOException ignored) {
+
+    }
   }
 
   /**
@@ -624,10 +633,10 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @return a description of the object.
    */
   private String head(final String key) throws Exception {
-    ObjectMetadata md = exec("HEAD " + key, () ->
-        s3client.getObjectMetadata(bucket, key));
+    HeadObjectResponse response = exec("HEAD " + key, () ->
+        s3client.headObject(b -> b.bucket(bucket).key(key)));
     return String.format("Object %s of length %d",
-        key, md.getInstanceLength());
+        key, response.contentLength());
   }
 
   /**
@@ -655,7 +664,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (AuditSpan span = getSpanSource().createSpan(op, null, null)) {
       return call.call();
-    } catch (AmazonClientException ex) {
+    } catch (SdkException ex) {
       throw S3AUtils.translateException(op, "", ex);
     } finally {
       timer.end(op);

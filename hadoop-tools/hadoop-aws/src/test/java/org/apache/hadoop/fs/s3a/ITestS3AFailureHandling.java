@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
@@ -34,13 +36,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.nio.file.AccessDeniedException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
@@ -85,7 +90,22 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     S3AFileSystem fs =  getFileSystem();
     Path path = path("largeDir");
     mkdirs(path);
-    createFiles(fs, path, 1, 1005, 0);
+    final boolean bulkDeleteEnabled = isBulkDeleteEnabled(getFileSystem());
+
+    // with single object delete, only create a few files for a faster
+    // test run.
+    int filesToCreate;
+    int pages;
+    if (bulkDeleteEnabled) {
+      filesToCreate = 1005;
+      pages = 5;
+    } else {
+      filesToCreate = 250;
+      pages = 0;
+    }
+
+
+    createFiles(fs, path, 1, filesToCreate, 0);
     RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
             fs.listFiles(path, false);
     List<String> keys  = toList(mappingRemoteIterator(locatedFileStatusRemoteIterator,
@@ -98,9 +118,10 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     }
     Long bulkDeleteReqAfter = getNumberOfBulkDeleteRequestsMadeTillNow(fs);
     // number of delete requests is 5 as we have default page size of 250.
+
     Assertions.assertThat(bulkDeleteReqAfter - bulkDeleteReqBefore)
             .describedAs("Number of batched bulk delete requests")
-            .isEqualTo(5);
+            .isEqualTo(pages);
   }
 
   private Long getNumberOfBulkDeleteRequestsMadeTillNow(S3AFileSystem fs) {
@@ -115,12 +136,12 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     }
   }
 
-  private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
+  private List<ObjectIdentifier> buildDeleteRequest(
       final String[] keys) {
-    List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
+    List<ObjectIdentifier> request = new ArrayList<>(
         keys.length);
     for (String key : keys) {
-      request.add(new DeleteObjectsRequest.KeyVersion(key));
+      request.add(ObjectIdentifier.builder().key(key).build());
     }
     return request;
   }
@@ -156,12 +177,26 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     // create a span, expect it to be activated.
     fs.getAuditSpanSource().createSpan(StoreStatisticNames.OP_DELETE,
         csvPath.toString(), null);
-    List<DeleteObjectsRequest.KeyVersion> keys
+    List<ObjectIdentifier> keys
         = buildDeleteRequest(
             new String[]{
                 fs.pathToKey(csvPath),
                 "missing-key.csv"
             });
+    MultiObjectDeleteException ex = intercept(
+        MultiObjectDeleteException.class,
+        () -> fs.removeKeys(keys, false));
+    final List<Path> undeleted = ex.errors().stream()
+        .map(S3Error::key)
+        .map(fs::keyToQualifiedPath)
+        .collect(Collectors.toList());
+    final String undeletedFiles = undeleted.stream()
+        .map(Path::toString)
+        .collect(Collectors.joining(", "));
+    failIf(undeleted.size() != 2,
+        "undeleted list size wrong: " + undeletedFiles,
+        ex);
+    assertTrue("no CSV in " +undeletedFiles, undeleted.contains(csvPath));
   }
 
   /**

@@ -223,6 +223,58 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     assertEquals(quorumEntry.getRouterId(), ROUTERS[3]);
   }
 
+  /**
+   * Fix getRepresentativeQuorum when records have same date modified time.
+   */
+  @Test
+  public void testRegistrationMajorityQuorumEqDateModified()
+      throws IOException {
+
+    // Populate the state store with a set of non-matching elements
+    // 1) ns0:nn0 - Standby (newest)
+    // 2) ns0:nn0 - Active
+    // 3) ns0:nn0 - Active
+    // 4) ns0:nn0 - Active
+    // (2), (3), (4) have the same date modified time
+    // Verify the selected entry is the newest majority opinion (4)
+    String ns = "ns0";
+    String nn = "nn0";
+
+    long dateModified = Time.now();
+    // Active - oldest
+    MembershipState report = createRegistration(
+        ns, nn, ROUTERS[1], FederationNamenodeServiceState.ACTIVE);
+    report.setDateModified(dateModified);
+    assertTrue(namenodeHeartbeat(report));
+
+    // Active - 2nd oldest
+    report = createRegistration(
+        ns, nn, ROUTERS[2], FederationNamenodeServiceState.ACTIVE);
+    report.setDateModified(dateModified);
+    assertTrue(namenodeHeartbeat(report));
+
+    // Active - 3rd oldest
+    report = createRegistration(
+        ns, nn, ROUTERS[3], FederationNamenodeServiceState.ACTIVE);
+    report.setDateModified(dateModified);
+    assertTrue(namenodeHeartbeat(report));
+
+    // standby - newest overall
+    report = createRegistration(
+        ns, nn, ROUTERS[0], FederationNamenodeServiceState.STANDBY);
+    assertTrue(namenodeHeartbeat(report));
+
+    // Load and calculate quorum
+    assertTrue(getStateStore().loadCache(MembershipStore.class, true));
+
+    // Verify quorum entry
+    MembershipState quorumEntry = getNamenodeRegistration(
+        report.getNameserviceId(), report.getNamenodeId());
+    assertNotNull(quorumEntry);
+    // The name node status should be active
+    assertEquals(FederationNamenodeServiceState.ACTIVE, quorumEntry.getState());
+  }
+
   @Test
   public void testRegistrationQuorumExcludesExpired()
       throws InterruptedException, IOException {

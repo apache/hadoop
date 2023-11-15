@@ -494,7 +494,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final Hashtable<String, String> properties, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
-      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
+      LOG.debug("setPathProperties for filesystem: {} path: {} with properties: {}",
               client.getFileSystem(),
               path,
               properties);
@@ -707,7 +707,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
-            .withBlockFactory(blockFactory)
+            .withBlockFactory(getBlockFactory())
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .withClient(client)
             .withPosition(position)
@@ -1938,6 +1938,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   void setClient(AbfsClient client) {
     this.client = client;
+  }
+
+  @VisibleForTesting
+  DataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
   }
 
   @VisibleForTesting

@@ -62,6 +62,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -194,7 +196,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   /**
    * In YARN-Federation mode, this method provides a way to save queue policies in batches.
    *
-   * @param request BatchSaveFederationQueuePolicies Request
+   * @param request BatchSaveFederationQueuePolicies Request.
    * @return Response from batchSaveFederationQueuePolicies.
    * @throws YarnException exceptions from yarn servers.
    * @throws IOException if an IO error occurred.
@@ -203,4 +205,17 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
       BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException;
+
+  /**
+   *  In YARN-Federation mode, this method provides a way to list policies.
+   *
+   * @param request QueryFederationQueuePoliciesRequest Request.
+   * @return Response from listFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Idempotent
+  QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException;
 }
