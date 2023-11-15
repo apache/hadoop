@@ -96,7 +96,7 @@ public class S3AAuditLogMergerAndParser {
         }
       }
     }
-    LOG.info("MMT audit map: {}", auditLogMap);
+    LOG.info("audit map: {}", auditLogMap);
     return auditLogMap;
   }
 

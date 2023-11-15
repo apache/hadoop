@@ -158,10 +158,10 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
     assertNotNull("the result of parseAuditLogResult should be not null",
         parseAuditLogResult);
     //verifying the bucket from parsed audit log
-    assertEquals("the expected and actual results should be same",
+    assertEquals("Mismatch in the bucket parsed from the audit",
         "bucket-london", parseAuditLogResult.get("bucket"));
     //verifying the remoteip from parsed audit log
-    assertEquals("the expected and actual results should be same",
+    assertEquals("Mismatch in the Remote I.P parsed from the audit",
         "109.157.171.174", parseAuditLogResult.get("remoteip"));
   }
 
@@ -195,11 +195,11 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
     assertNotNull("the result of parseReferrerHeaderResult should be not null",
         parseReferrerHeaderResult);
     //verifying the path 'p1' from parsed referrer header
-    assertEquals("the expected and actual results should be same",
+    assertEquals("Mismatch in the path parsed from the referrer",
         "fork-0001/test/testParseBrokenCSVFile",
         parseReferrerHeaderResult.get("p1"));
     //verifying the principal 'pr' from parsed referrer header
-    assertEquals("the expected and actual results should be same", "alice",
+    assertEquals("Mismatch in the principal parsed from the referrer", "alice",
         parseReferrerHeaderResult.get("pr"));
   }
 
@@ -246,9 +246,11 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
             auditDirPath, destPath);
     assertTrue("The merge and parse failed for the audit log",
         mergeAndParseResult);
-    // 35 audit logs with referrer in each of the 2 sample files.
-    assertEquals("", s3AAuditLogMergerAndParser.getAuditLogsParsed(), 36 + 36);
-    assertEquals("", s3AAuditLogMergerAndParser.getReferrerHeaderLogParsed(), 36 + 36);
+    // 36 audit logs with referrer in each of the 2 sample files.
+    assertEquals("Count of audit logs parsed is not correct",
+        s3AAuditLogMergerAndParser.getAuditLogsParsed(), 36 + 36);
+    assertEquals("Count of referrer headers parsed is not correct",
+        s3AAuditLogMergerAndParser.getReferrerHeaderLogParsed(), 36 + 36);
   }
 
   /**
@@ -278,10 +280,11 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
     boolean mergeAndParseResult =
         s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
             logsPath, destPath);
-    assertTrue("the result should be true", mergeAndParseResult);
+    assertTrue("Merge and parsing of the audit logs files was unsuccessful",
+        mergeAndParseResult);
 
     long noOfAuditLogsParsed = s3AAuditLogMergerAndParser.getAuditLogsParsed();
-    assertEquals("the expected and actual results should be same",
+    assertEquals("Mismatch in the number of audit logs parsed",
         3, noOfAuditLogsParsed);
   }
 }
