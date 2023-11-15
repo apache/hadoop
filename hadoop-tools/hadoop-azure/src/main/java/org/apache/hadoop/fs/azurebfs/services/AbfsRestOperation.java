@@ -73,7 +73,7 @@ public class AbfsRestOperation {
   private int bufferLength;
   private int retryCount = 0;
 
-  private AbfsHttpOperation result;
+  private AbfsApacheHttpClientHttpOperation result;
   private AbfsCounters abfsCounters;
 
   /**
@@ -90,12 +90,12 @@ public class AbfsRestOperation {
     return result != null;
   }
 
-  public AbfsHttpOperation getResult() {
+  public AbfsApacheHttpClientHttpOperation getResult() {
     return result;
   }
 
   public void hardSetResult(int httpStatus) {
-    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
+    result = AbfsApacheHttpClientHttpOperation.getAbfsApacheHttpClientHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
   }
 
@@ -268,7 +268,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation;
+    AbfsApacheHttpClientHttpOperation httpOperation;
 
     try {
       // initialize the HTTP request and open the connection
@@ -365,7 +365,7 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
+  public void signRequest(final AbfsApacheHttpClientHttpOperation httpOperation, int bytesToSign) throws IOException {
     switch(client.getAuthType()) {
       case Custom:
       case OAuth:
@@ -390,12 +390,12 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * Creates new object of {@link AbfsApacheHttpClientHttpOperation} with the url, method, and
    * requestHeaders fields of the AbfsRestOperation object.
    */
   @VisibleForTesting
-  AbfsHttpOperation createHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
+  AbfsApacheHttpClientHttpOperation createHttpOperation() throws IOException {
+    return new AbfsApacheHttpClientHttpOperation(url, method, requestHeaders);
   }
 
   /**

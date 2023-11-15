@@ -2,7 +2,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +22,6 @@ import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ConnectionRequest;
-import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
@@ -221,14 +219,14 @@ public class AbfsApacheHttpClient {
     httpClient = builder.build();
   }
 
-  public void execute(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) throws Exception {
-    HttpRequestBase httpRequest = new HttpGet(url.toURI());
+  public HttpResponse execute(HttpRequestBase httpRequest) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectionRequestTimeout(20)
         .setConnectTimeout(30_000)
         .setSocketTimeout(30_000);
     httpRequest.setConfig(requestConfigBuilder.build());
+    return httpClient.execute(httpRequest);
   }
 
 
