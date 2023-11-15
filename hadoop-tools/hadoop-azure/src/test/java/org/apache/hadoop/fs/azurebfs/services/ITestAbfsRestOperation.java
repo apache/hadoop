@@ -290,6 +290,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
+    Mockito.doReturn(tracingContext).when(op).createNewTracingContext(Mockito.any());
 
     switch (errorType) {
     case WRITE:

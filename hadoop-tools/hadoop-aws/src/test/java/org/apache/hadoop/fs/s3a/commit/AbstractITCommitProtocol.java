@@ -741,8 +741,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    */
   private void validateStorageClass(Path dir, String expectedStorageClass) throws Exception {
     Path expectedFile = getPart0000(dir);
-    S3AFileSystem fs = getFileSystem();
-    String actualStorageClass = fs.getObjectMetadata(expectedFile).getStorageClass();
+    String actualStorageClass = getS3AInternals().getObjectMetadata(expectedFile)
+        .storageClassAsString();
 
     Assertions.assertThat(actualStorageClass)
         .describedAs("Storage class of object %s", expectedFile)
@@ -1419,7 +1419,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     recordWriter.write(iw, iw);
     long expectedLength = 4;
     Path dest = recordWriter.getDest();
-    validateTaskAttemptPathDuringWrite(dest, expectedLength);
+    validateTaskAttemptPathDuringWrite(dest, expectedLength, jobData.getCommitter().getUUID());
     recordWriter.close(tContext);
     // at this point
     validateTaskAttemptPathAfterWrite(dest, expectedLength);
@@ -1833,10 +1833,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * itself.
    * @param p path
    * @param expectedLength
+   * @param jobId job id
    * @throws IOException IO failure
    */
   protected void validateTaskAttemptPathDuringWrite(Path p,
-      final long expectedLength) throws IOException {
+      final long expectedLength,
+      String jobId) throws IOException {
 
   }
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -73,7 +74,8 @@ public class NodeLabelsBlock extends RouterBlock {
   private NodeLabelsInfo getSubClusterNodeLabelsInfo(String subCluster) {
     try {
       SubClusterId subClusterId = SubClusterId.newInstance(subCluster);
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      FederationStateStoreFacade facade =
+          FederationStateStoreFacade.getInstance(router.getConfig());
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
 
       if (subClusterInfo != null) {
@@ -92,14 +94,34 @@ public class NodeLabelsBlock extends RouterBlock {
     return null;
   }
 
+  /**
+   * We will obtain the NodeLabel information of multiple sub-clusters.
+   *
+   * If Federation mode is enabled, get the NodeLabels of multiple sub-clusters,
+   * otherwise get the NodeLabels of the local cluster.
+   *
+   * @param isEnabled Whether to enable Federation mode,
+   * true, Federation mode; false, Non-Federation mode.
+   *
+   * @return NodeLabelsInfo.
+   */
   private NodeLabelsInfo getYarnFederationNodeLabelsInfo(boolean isEnabled) {
+    Configuration config = this.router.getConfig();
+    String webAddress;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.router.getConfig());
-      return getSubClusterNodeLabelsByWebAddress(webAddress);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(config);
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
     }
-    return null;
+    return getSubClusterNodeLabelsByWebAddress(webAddress);
   }
 
+  /**
+   * Get NodeLabels based on WebAddress.
+   *
+   * @param webAddress RM WebAddress.
+   * @return NodeLabelsInfo.
+   */
   private NodeLabelsInfo getSubClusterNodeLabelsByWebAddress(String webAddress) {
     Configuration conf = this.router.getConfig();
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
@@ -111,6 +133,12 @@ public class NodeLabelsBlock extends RouterBlock {
     return nodes;
   }
 
+  /**
+   * Initialize the Router page based on NodeLabels.
+   *
+   * @param nodeLabelsInfo NodeLabelsInfo.
+   * @param html html Block.
+   */
   private void initYarnFederationNodeLabelsOfCluster(NodeLabelsInfo nodeLabelsInfo, Block html) {
 
     Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.table("#nodelabels").
@@ -131,7 +159,14 @@ public class NodeLabelsBlock extends RouterBlock {
         String type = (info.getExclusivity()) ? "Exclusive Partition" : "Non Exclusive Partition";
         row = row.td(type);
         int nActiveNMs = info.getActiveNMs();
-        row = row.td(String.valueOf(nActiveNMs));
+        if (nActiveNMs > 0) {
+          row = row.td().a(url("nodes",
+              "?" + YarnWebParams.NODE_LABEL + "=" + info.getName()), String.valueOf(nActiveNMs))
+              .__();
+        } else {
+          row = row.td(String.valueOf(nActiveNMs));
+        }
+
         PartitionInfo partitionInfo = info.getPartitionInfo();
         ResourceInfo available = partitionInfo.getResourceAvailable();
         row.td(available.toFormattedString()).__();

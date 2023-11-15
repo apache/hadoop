@@ -161,7 +161,11 @@ class FsDatasetAsyncDiskService {
       executors.remove(storageId);
     }
   }
-  
+
+  /**
+   * The count of pending and running asynchronous disk operations,
+   * include deletion of block files and requesting sync_file_range() operations.
+   */
   synchronized long countPendingDeletions() {
     long count = 0;
     for (ThreadPoolExecutor exec : executors.values()) {

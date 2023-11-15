@@ -347,7 +347,7 @@ public class Quota {
    * @return true if bitwise AND by all storage type returns true, false otherwise.
    */
   public static boolean andByStorageType(Predicate<StorageType> predicate) {
-    boolean res = false;
+    boolean res = true;
     for (StorageType type : StorageType.values()) {
       res &= predicate.test(type);
     }

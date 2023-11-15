@@ -67,6 +67,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
@@ -1361,7 +1362,30 @@ public class DFSUtil {
   }
 
   /**
-   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}
+   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}.
+   * This method is for exclusive use by the hadoop libraries, as its signature
+   * changes with the version of the shaded protobuf library it has been built with.
+   * @param conf configuration
+   * @param protocol Protocol interface
+   * @param service service that implements the protocol
+   * @param server RPC server to which the protocol &amp; implementation is
+   *               added to
+   * @throws IOException failure
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static void addInternalPBProtocol(Configuration conf,
+      Class<?> protocol,
+      BlockingService service,
+      RPC.Server server) throws IOException {
+    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+  }
+
+  /**
+   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}.
+   * Deprecated as it will only reliably compile if an unshaded protobuf library
+   * is also on the classpath.
    * @param conf configuration
    * @param protocol Protocol interface
    * @param service service that implements the protocol
@@ -1369,17 +1393,17 @@ public class DFSUtil {
    *               added to
    * @throws IOException
    */
+  @Deprecated
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
       BlockingService service, RPC.Server server) throws IOException {
-    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
-    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+    addInternalPBProtocol(conf, protocol, service, server);
   }
 
   /**
    * Add protobuf based protocol to the {@link RPC.Server}.
    * This engine uses Protobuf 2.5.0. Recommended to upgrade to
    * Protobuf 3.x from hadoop-thirdparty and use
-   * {@link DFSUtil#addPBProtocol(Configuration, Class, BlockingService,
+   * {@link DFSUtil#addInternalPBProtocol(Configuration, Class, BlockingService,
    * RPC.Server)}.
    * @param conf configuration
    * @param protocol Protocol interface

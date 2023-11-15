@@ -48,7 +48,7 @@ public interface FederationPolicyManager {
    * instance of {@link FederationAMRMProxyPolicy} reinitialized with the
    * current context, otherwise a new instance initialized with the current
    * context is provided. If the instance is compatible with the current class
-   * the implementors should attempt to reinitalize (retaining state). To affect
+   * the implementors should attempt to reinitialize (retaining state). To affect
    * a complete policy reset oldInstance should be null.
    *
    * @param policyContext the current context
@@ -70,7 +70,7 @@ public interface FederationPolicyManager {
    * instance of {@link FederationRouterPolicy} reinitialized with the current
    * context, otherwise a new instance initialized with the current context is
    * provided. If the instance is compatible with the current class the
-   * implementors should attempt to reinitalize (retaining state). To affect a
+   * implementors should attempt to reinitialize (retaining state). To affect a
    * complete policy reset oldInstance should be set to null.
    *
    * @param policyContext the current context

@@ -153,7 +153,7 @@ public class TestRouterWebAppProxy {
             newApplicationReport(appId4, YarnApplicationState.FINISHED, proxyAppUrl4, null)));
 
     // Initial federation store.
-    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(conf);
     facade.getStateStore()
         .registerSubCluster(SubClusterRegisterRequest.newInstance(subClusterInfo1));
     facade.getStateStore()

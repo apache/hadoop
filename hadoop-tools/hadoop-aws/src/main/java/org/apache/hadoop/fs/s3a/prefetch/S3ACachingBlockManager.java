@@ -76,7 +76,8 @@ public class S3ACachingBlockManager extends CachingBlockManager {
         streamStatistics,
         conf,
         localDirAllocator,
-        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT),
+        streamStatistics);
 
     Validate.checkNotNull(reader, "reader");
 

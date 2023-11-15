@@ -24,10 +24,14 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminMonitorInterface;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.junit.Assert.*;
@@ -652,6 +656,95 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
     }
+  }
+
+  @Test
+  public void testReconfigureMinBlocksForWrite() throws Exception {
+    final NameNode nameNode = cluster.getNameNode(0);
+    final BlockManager bm = nameNode.getNamesystem().getBlockManager();
+    String key = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY;
+    int defaultVal = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT;
+
+    // Ensure we cannot set any of the parameters negative
+    ReconfigurationException reconfigurationException =
+        LambdaTestUtils.intercept(ReconfigurationException.class,
+            () -> nameNode.reconfigurePropertyImpl(key, "-20"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '-20' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "0"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '0' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+
+    // Ensure none of the parameters can be set to a string value
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "str"));
+    assertTrue(reconfigurationException.getCause() instanceof NumberFormatException);
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    nameNode.reconfigurePropertyImpl(key, "3");
+
+    // Ensure none of the values were updated from the new value.
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.STRIPED));
+  }
+
+  @Test
+  public void testReconfigureLogSlowRPC() throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final NameNodeRpcServer nnrs = (NameNodeRpcServer) nameNode.getRpcServer();
+    // verify default value.
+    assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
+    assertEquals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT,
+        nnrs.getClientRpcServer().getLogSlowRPCThresholdTime());
+
+    // try invalid logSlowRPC.
+    try {
+      nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, "non-boolean");
+      fail("should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property ipc.server.log.slow.rpc from 'false' to 'non-boolean'",
+          e.getMessage());
+    }
+
+    // try correct logSlowRPC.
+    nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, "True");
+    assertTrue(nnrs.getClientRpcServer().isLogSlowRPC());
+
+    // revert to defaults.
+    nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, null);
+    assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
+
+    // try invalid logSlowRPCThresholdTime.
+    try {
+      nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+          "non-numeric");
+      fail("Should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals("Could not change property " +
+          "ipc.server.log.slow.rpc.threshold.ms from '0' to 'non-numeric'", e.getMessage());
+    }
+
+    // try correct logSlowRPCThresholdTime.
+    nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+        "20000");
+    assertEquals(nnrs.getClientRpcServer().getLogSlowRPCThresholdTime(), 20000);
   }
 
   @After

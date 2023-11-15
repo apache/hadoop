@@ -42,7 +42,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -53,8 +52,7 @@ public class TestGPGPolicyFacade {
 
   private Configuration conf;
   private FederationStateStore stateStore;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
   private GPGPolicyFacade policyFacade;
 
   private Set<SubClusterId> subClusterIds;
@@ -70,10 +68,11 @@ public class TestGPGPolicyFacade {
     subClusterIds.add(SubClusterId.newInstance("sc0"));
     subClusterIds.add(SubClusterId.newInstance("sc1"));
     subClusterIds.add(SubClusterId.newInstance("sc2"));
+    facade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Before
-  public void setUp() throws IOException, YarnException {
+  public void setUp() throws YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
     facade.reinitialize(stateStore, conf);

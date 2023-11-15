@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -111,8 +112,10 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param conf the configuration.
    * @param localDirAllocator the local dir allocator instance.
    * @param maxBlocksCount max blocks count to be kept in cache at any time.
+   * @param trackerFactory tracker with statistics to update.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
+  @SuppressWarnings("checkstyle:parameternumber")
   public CachingBlockManager(
       ExecutorServiceFuturePool futurePool,
       BlockData blockData,
@@ -120,7 +123,8 @@ public abstract class CachingBlockManager extends BlockManager {
       PrefetchingStatistics prefetchingStatistics,
       Configuration conf,
       LocalDirAllocator localDirAllocator,
-      int maxBlocksCount) {
+      int maxBlocksCount,
+      DurationTrackerFactory trackerFactory) {
     super(blockData);
 
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
@@ -136,7 +140,7 @@ public abstract class CachingBlockManager extends BlockManager {
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache(maxBlocksCount);
+      this.cache = this.createCache(maxBlocksCount, trackerFactory);
     }
 
     this.ops = new BlockOperations();
@@ -559,8 +563,8 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  protected BlockCache createCache(int maxBlocksCount) {
-    return new SingleFilePerBlockCache(prefetchingStatistics, maxBlocksCount);
+  protected BlockCache createCache(int maxBlocksCount, DurationTrackerFactory trackerFactory) {
+    return new SingleFilePerBlockCache(prefetchingStatistics, maxBlocksCount, trackerFactory);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {

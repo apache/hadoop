@@ -130,7 +130,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -218,6 +218,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.lz4</groupId>
       <artifactId>lz4-java</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
     </dependency>
   </dependencies>
 

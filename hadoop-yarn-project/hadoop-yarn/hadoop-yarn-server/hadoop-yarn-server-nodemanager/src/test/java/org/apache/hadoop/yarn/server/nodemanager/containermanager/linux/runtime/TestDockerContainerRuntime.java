@@ -1272,7 +1272,7 @@ public class TestDockerContainerRuntime {
         command);
 
     //no --cgroup-parent should be added here
-    Mockito.verifyNoMoreInteractions(command);
+    Mockito.verifyZeroInteractions(command);
 
     String resourceOptionsCpu = "/sys/fs/cgroup/cpu/" + hierarchy +
         containerIdStr;
@@ -1296,7 +1296,7 @@ public class TestDockerContainerRuntime {
         command);
 
     //no --cgroup-parent should be added in either case
-    Mockito.verifyNoMoreInteractions(command);
+    Mockito.verifyZeroInteractions(command);
   }
 
   @Test
