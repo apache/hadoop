@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -318,6 +319,19 @@ public class AbfsReadFooterMetrics {
     }
   }
 
+  /**
+   * Calculates the average metrics from a list of AbfsReadFooterMetrics and sets the values in the provided 'avgParquetReadFooterMetrics' object.
+   *
+   * @param isParquetList The list of AbfsReadFooterMetrics to compute the averages from.
+   * @param avgParquetReadFooterMetrics The target AbfsReadFooterMetrics object to store the computed average values.
+   *
+   * This method calculates various average metrics from the provided list and sets them in the 'avgParquetReadFooterMetrics' object.
+   * The metrics include:
+   * - Size read by the first read
+   * - Offset difference between the first and second read
+   * - Average file length
+   * - Average requested read length
+   */
   private void getParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isParquetList,
       AbfsReadFooterMetrics avgParquetReadFooterMetrics){
     avgParquetReadFooterMetrics.setSizeReadByFirstRead(
@@ -336,36 +350,35 @@ public class AbfsReadFooterMetrics {
         mapToDouble(Double::doubleValue).average().orElse(0.0));
   }
 
-  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
-      AbfsReadFooterMetrics avgNonParquetReadFooterMetrics){
+  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList, AbfsReadFooterMetrics avgNonParquetReadFooterMetrics) {
     int size = isNonParquetList.get(0).getSizeReadByFirstRead().split("_").length;
-    double[] store = new double[2*size];
-    for (AbfsReadFooterMetrics abfsReadFooterMetrics : isNonParquetList) {
+    double[] store = new double[2 * size];
+    // Calculating sum of individual values
+    isNonParquetList.forEach(abfsReadFooterMetrics -> {
       String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
       String[] offDiffFirstSecondRead = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
+
       for (int i = 0; i < firstReadSize.length; i++) {
         store[i] += Long.parseLong(firstReadSize[i]);
         store[i + size] += Long.parseLong(offDiffFirstSecondRead[i]);
       }
+    });
+
+    // Calculating averages and creating formatted strings
+    StringJoiner firstReadSize = new StringJoiner("_");
+    StringJoiner offDiffFirstSecondRead = new StringJoiner("_");
+
+    for (int j = 0; j < size; j++) {
+      firstReadSize.add(String.format("%.3f", store[j] / isNonParquetList.size()));
+      offDiffFirstSecondRead.add(String.format("%.3f", store[j + size] / isNonParquetList.size()));
     }
-    StringBuilder firstReadSize = new StringBuilder();
-    StringBuilder offDiffFirstSecondRead = new StringBuilder();
-    firstReadSize.append(String.format("%.3f", store[0] / isNonParquetList.size()));
-    offDiffFirstSecondRead.append(String.format("%.3f", store[size] / isNonParquetList.size()));
-    for (int j = 1; j < size; j++) {
-      firstReadSize.append("_")
-          .append(String.format("%.3f", store[j] / isNonParquetList.size()));
-      offDiffFirstSecondRead.append("_")
-          .append(String.format("%.3f", store[j + size] / isNonParquetList.size()));
-    }
+
     avgNonParquetReadFooterMetrics.setSizeReadByFirstRead(firstReadSize.toString());
     avgNonParquetReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead.toString());
     avgNonParquetReadFooterMetrics.setAvgFileLength(isNonParquetList.stream()
-        .map(AbfsReadFooterMetrics::getFileLength)
-        .mapToDouble(AtomicLong::get).average().orElse(0.0));
-    avgNonParquetReadFooterMetrics.setAvgReadLenRequested(isNonParquetList.stream().
-            map(AbfsReadFooterMetrics::getAvgReadLenRequested).
-            mapToDouble(Double::doubleValue).average().orElse(0.0));
+            .mapToDouble(metrics -> metrics.getFileLength().doubleValue()).average().orElse(0.0));
+    avgNonParquetReadFooterMetrics.setAvgReadLenRequested(isNonParquetList.stream()
+            .mapToDouble(AbfsReadFooterMetrics::getAvgReadLenRequested).average().orElse(0.0));
   }
 
   /*
