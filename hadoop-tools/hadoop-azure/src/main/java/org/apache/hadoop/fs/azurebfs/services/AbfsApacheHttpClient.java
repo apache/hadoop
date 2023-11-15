@@ -3,11 +3,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpClientConnection;
+import org.apache.http.HttpConnectionMetrics;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -18,6 +21,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.routing.HttpRoute;
@@ -37,7 +41,114 @@ public class AbfsApacheHttpClient {
     public Long readTime;
   }
 
+  public static class AbfsApacheHttpConnection implements HttpClientConnection {
+
+    private HttpClientConnection httpClientConnection;
+
+    public AbfsApacheHttpConnection(HttpClientConnection clientConnection) {
+      this.httpClientConnection = clientConnection;
+    }
+
+    @Override
+    public void close() throws IOException {
+      httpClientConnection.close();
+    }
+
+    @Override
+    public boolean isOpen() {
+      return httpClientConnection.isOpen();
+    }
+
+    @Override
+    public boolean isStale() {
+      return httpClientConnection.isStale();
+    }
+
+    @Override
+    public void setSocketTimeout(final int timeout) {
+      httpClientConnection.setSocketTimeout(timeout);
+    }
+
+    @Override
+    public int getSocketTimeout() {
+      return httpClientConnection.getSocketTimeout();
+    }
+
+    @Override
+    public void shutdown() throws IOException {
+      httpClientConnection.shutdown();
+    }
+
+    @Override
+    public HttpConnectionMetrics getMetrics() {
+      return httpClientConnection.getMetrics();
+    }
+
+    @Override
+    public boolean isResponseAvailable(final int timeout) throws IOException {
+      return httpClientConnection.isResponseAvailable(timeout);
+    }
+
+    @Override
+    public void sendRequestHeader(final HttpRequest request)
+        throws HttpException, IOException {
+      httpClientConnection.sendRequestHeader(request);
+    }
+
+    @Override
+    public void sendRequestEntity(final HttpEntityEnclosingRequest request)
+        throws HttpException, IOException {
+      httpClientConnection.sendRequestEntity(request);
+    }
+
+    @Override
+    public HttpResponse receiveResponseHeader()
+        throws HttpException, IOException {
+      return httpClientConnection.receiveResponseHeader();
+    }
+
+    @Override
+    public void receiveResponseEntity(final HttpResponse response)
+        throws HttpException, IOException {
+      httpClientConnection.receiveResponseEntity(response);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      httpClientConnection.flush();
+    }
+  }
+
+  public static class AbfsConnRequest implements ConnectionRequest {
+
+    private ConnectionRequest connectionRequest;
+
+    public AbfsConnRequest(ConnectionRequest connectionRequest) {
+      this.connectionRequest = connectionRequest;
+    }
+
+    @Override
+    public HttpClientConnection get(final long timeout, final TimeUnit timeUnit)
+        throws InterruptedException, ExecutionException,
+        ConnectionPoolTimeoutException {
+      HttpClientConnection clientConnection = new AbfsApacheHttpConnection(connectionRequest.get(timeout, timeUnit));
+      return clientConnection;
+    }
+
+    @Override
+    public boolean cancel() {
+      return connectionRequest.cancel();
+    }
+  }
+
   private static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
+
+    @Override
+    public ConnectionRequest requestConnection(final HttpRoute route,
+        final Object state) {
+      return new AbfsConnRequest(super.requestConnection(route, state));
+    }
+
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory) {
       super(createSocketFactoryRegistry(connectionSocketFactory));
     }
