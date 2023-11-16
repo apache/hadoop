@@ -3064,13 +3064,13 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * Sets the timeout (in seconds) for excess redundancy blocks, if the provided timeout is
    * less than or equal to 0, the default value is used (converted to milliseconds).
-   * @param timeOut The time (in seconds) to set as the excess redundancy block timeout.
+   * @param timeout The time (in seconds) to set as the excess redundancy block timeout.
    */
-  public void setExcessRedundancyTimeout(long timeOut) {
-    if (timeOut <= 0) {
+  public void setExcessRedundancyTimeout(long timeout) {
+    if (timeout <= 0) {
       this.excessRedundancyTimeout = DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC * 1000L;
     } else {
-      this.excessRedundancyTimeout = timeOut * 1000L;
+      this.excessRedundancyTimeout = timeout * 1000L;
     }
   }
 
