@@ -1,0 +1,324 @@
+package org.apache.hadoop.fs.azurebfs.services;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+
+public abstract class HttpOperation implements AbfsPerfLoggable {
+  Logger LOG;
+
+  protected static final int CONNECT_TIMEOUT = 30 * 1000;
+  protected static final int READ_TIMEOUT = 30 * 1000;
+
+  protected static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
+
+  protected static final int ONE_THOUSAND = 1000;
+  protected static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
+
+  protected String method;
+  protected URL url;
+  protected String maskedUrl;
+  protected String maskedEncodedUrl;
+
+  protected int statusCode;
+  protected String statusDescription;
+  protected String storageErrorCode = "";
+  protected String storageErrorMessage  = "";
+  protected String requestId  = "";
+  protected String expectedAppendPos = "";
+  protected ListResultSchema listResultSchema = null;
+
+  // metrics
+  protected int bytesSent;
+  protected int expectedBytesToBeSent;
+  protected long bytesReceived;
+
+  protected long connectionTimeMs;
+  protected long sendRequestTimeMs;
+  protected long recvResponseTimeMs;
+  protected boolean shouldMask = false;
+
+  public HttpOperation(Logger logger) {
+    this.LOG = logger;
+  }
+
+
+
+  public String getMethod() {
+    return method;
+  }
+
+  public String getHost() {
+    return url.getHost();
+  }
+
+  public int getStatusCode() {
+    return statusCode;
+  }
+
+  public String getStatusDescription() {
+    return statusDescription;
+  }
+
+  public String getStorageErrorCode() {
+    return storageErrorCode;
+  }
+
+  public String getStorageErrorMessage() {
+    return storageErrorMessage;
+  }
+
+  public abstract String getClientRequestId();
+
+  public String getExpectedAppendPos() {
+    return expectedAppendPos;
+  }
+
+  public String getRequestId() {
+    return requestId;
+  }
+
+  public void setMaskForSAS() {
+    shouldMask = true;
+  }
+
+  public int getBytesSent() {
+    return bytesSent;
+  }
+
+  public int getExpectedBytesToBeSent() {
+    return expectedBytesToBeSent;
+  }
+
+  public long getBytesReceived() {
+    return bytesReceived;
+  }
+
+  public ListResultSchema getListResultSchema() {
+    return listResultSchema;
+  }
+
+  public abstract String getResponseHeader(String httpHeader);
+
+  // Returns a trace message for the request
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(statusCode);
+    sb.append(",");
+    sb.append(storageErrorCode);
+    sb.append(",");
+    sb.append(expectedAppendPos);
+    sb.append(",cid=");
+    sb.append(getClientRequestId());
+    sb.append(",rid=");
+    sb.append(requestId);
+    sb.append(",connMs=");
+    sb.append(connectionTimeMs);
+    sb.append(",sendMs=");
+    sb.append(sendRequestTimeMs);
+    sb.append(",recvMs=");
+    sb.append(recvResponseTimeMs);
+    sb.append(",sent=");
+    sb.append(bytesSent);
+    sb.append(",recv=");
+    sb.append(bytesReceived);
+    sb.append(",");
+    sb.append(method);
+    sb.append(",");
+    sb.append(getMaskedUrl());
+    return sb.toString();
+  }
+
+  // Returns a trace message for the ABFS API logging service to consume
+  public String getLogString() {
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
+        .append(statusCode)
+        .append(" e=")
+        .append(storageErrorCode)
+        .append(" ci=")
+        .append(getClientRequestId())
+        .append(" ri=")
+        .append(requestId)
+
+        .append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs)
+
+        .append(" bs=")
+        .append(bytesSent)
+        .append(" br=")
+        .append(bytesReceived)
+        .append(" m=")
+        .append(method)
+        .append(" u=")
+        .append(getMaskedEncodedUrl());
+
+    return sb.toString();
+  }
+
+  public String getMaskedUrl() {
+    if (!shouldMask) {
+      return url.toString();
+    }
+    if (maskedUrl != null) {
+      return maskedUrl;
+    }
+    maskedUrl = UriUtils.getMaskedUrl(url);
+    return maskedUrl;
+  }
+
+  public String getMaskedEncodedUrl() {
+    if (maskedEncodedUrl != null) {
+      return maskedEncodedUrl;
+    }
+    maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
+    return maskedEncodedUrl;
+  }
+
+  public abstract  void sendRequest(byte[] buffer, int offset, int length) throws
+      IOException;
+  public abstract  void processResponse(final byte[] buffer, final int offset, final int length) throws IOException;
+
+  public abstract  void setRequestProperty(String key, String value);
+
+  /**
+   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * and extract the storageErrorCode and storageErrorMessage.  Any errors
+   * encountered while attempting to process the error response are logged,
+   * but otherwise ignored.
+   *
+   * For storage errors, the response body *usually* has the following format:
+   *
+   * {
+   *   "error":
+   *   {
+   *     "code": "string",
+   *     "message": "string"
+   *   }
+   * }
+   *
+   */
+  protected void processStorageErrorResponse() {
+    try (InputStream stream = getErrorStream()) {
+      if (stream == null) {
+        return;
+      }
+      JsonFactory jf = new JsonFactory();
+      try (JsonParser jp = jf.createParser(stream)) {
+        String fieldName, fieldValue;
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();  // FIELD_NAME - "error":
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();
+        while (jp.hasCurrentToken()) {
+          if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
+            fieldName = jp.getCurrentName();
+            jp.nextToken();
+            fieldValue = jp.getText();
+            switch (fieldName) {
+            case "code":
+              storageErrorCode = fieldValue;
+              break;
+            case "message":
+              storageErrorMessage = fieldValue;
+              break;
+            case "ExpectedAppendPos":
+              expectedAppendPos = fieldValue;
+              break;
+            default:
+              break;
+            }
+          }
+          jp.nextToken();
+        }
+      }
+    } catch (IOException ex) {
+      // Ignore errors that occur while attempting to parse the storage
+      // error, since the response may have been handled by the HTTP driver
+      // or for other reasons have an unexpected
+      LOG.debug("ExpectedError: ", ex);
+    }
+  }
+
+  protected abstract InputStream getErrorStream();
+
+  /**
+   * Parse the list file response
+   *
+   * @param stream InputStream contains the list results.
+   * @throws IOException
+   */
+  protected void parseListFilesResponse(final InputStream stream) throws IOException {
+    if (stream == null) {
+      return;
+    }
+
+    if (listResultSchema != null) {
+      // already parse the response
+      return;
+    }
+
+    try {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
+    } catch (IOException ex) {
+      LOG.error("Unable to deserialize list results", ex);
+      throw ex;
+    }
+  }
+
+  /**
+   * Gets the connection request property for a key.
+   * @param key The request property key.
+   * @return request peoperty value.
+   */
+  abstract String getConnProperty(String key);
+
+  /**
+   * Gets the connection url.
+   * @return url.
+   */
+  abstract URL getConnUrl();
+
+  /**
+   * Gets the connection request method.
+   * @return request method.
+   */
+  abstract String getConnRequestMethod();
+
+  /**
+   * Gets the connection response code.
+   * @return response code.
+   * @throws IOException
+   */
+  abstract Integer getConnResponseCode() throws IOException;
+
+
+  /**
+   * Gets the connection response message.
+   * @return response message.
+   * @throws IOException
+   */
+  abstract String getConnResponseMessage() throws IOException;
+
+}

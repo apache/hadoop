@@ -49,40 +49,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 /**
  * Represents an HTTP operation.
  */
-public class AbfsHttpOperation implements AbfsPerfLoggable {
+public class AbfsHttpOperation extends HttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
-  private static final int CONNECT_TIMEOUT = 30 * 1000;
-  private static final int READ_TIMEOUT = 30 * 1000;
-
-  private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
-
-  private static final int ONE_THOUSAND = 1000;
-  private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
-
-  private final String method;
-  private final URL url;
-  private String maskedUrl;
-  private String maskedEncodedUrl;
-
   private HttpURLConnection connection;
-  private int statusCode;
-  private String statusDescription;
-  private String storageErrorCode = "";
-  private String storageErrorMessage  = "";
-  private String requestId  = "";
-  private String expectedAppendPos = "";
-  private ListResultSchema listResultSchema = null;
-
-  // metrics
-  private int bytesSent;
-  private int expectedBytesToBeSent;
-  private long bytesReceived;
-
-  private long connectionTimeMs;
-  private long sendRequestTimeMs;
-  private long recvResponseTimeMs;
-  private boolean shouldMask = false;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -102,6 +72,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   protected AbfsHttpOperation(final URL url,
       final String method,
       final int httpStatus) {
+    super(LOG);
     this.url = url;
     this.method = method;
     this.statusCode = httpStatus;
@@ -172,68 +143,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  // Returns a trace message for the request
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder();
-    sb.append(statusCode);
-    sb.append(",");
-    sb.append(storageErrorCode);
-    sb.append(",");
-    sb.append(expectedAppendPos);
-    sb.append(",cid=");
-    sb.append(getClientRequestId());
-    sb.append(",rid=");
-    sb.append(requestId);
-    sb.append(",connMs=");
-    sb.append(connectionTimeMs);
-    sb.append(",sendMs=");
-    sb.append(sendRequestTimeMs);
-    sb.append(",recvMs=");
-    sb.append(recvResponseTimeMs);
-    sb.append(",sent=");
-    sb.append(bytesSent);
-    sb.append(",recv=");
-    sb.append(bytesReceived);
-    sb.append(",");
-    sb.append(method);
-    sb.append(",");
-    sb.append(getMaskedUrl());
-    return sb.toString();
-  }
-
-  // Returns a trace message for the ABFS API logging service to consume
-  public String getLogString() {
-
-    final StringBuilder sb = new StringBuilder();
-    sb.append("s=")
-      .append(statusCode)
-      .append(" e=")
-      .append(storageErrorCode)
-      .append(" ci=")
-      .append(getClientRequestId())
-      .append(" ri=")
-      .append(requestId)
-
-      .append(" ct=")
-      .append(connectionTimeMs)
-      .append(" st=")
-      .append(sendRequestTimeMs)
-      .append(" rt=")
-      .append(recvResponseTimeMs)
-
-      .append(" bs=")
-      .append(bytesSent)
-      .append(" br=")
-      .append(bytesReceived)
-      .append(" m=")
-      .append(method)
-      .append(" u=")
-      .append(getMaskedEncodedUrl());
-
-    return sb.toString();
-  }
-
   public String getMaskedUrl() {
     if (!shouldMask) {
       return url.toString();
@@ -264,6 +173,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
+    super(LOG);
     this.url = url;
     this.method = method;
 
@@ -457,63 +367,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-  /**
-   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
-   * and extract the storageErrorCode and storageErrorMessage.  Any errors
-   * encountered while attempting to process the error response are logged,
-   * but otherwise ignored.
-   *
-   * For storage errors, the response body *usually* has the following format:
-   *
-   * {
-   *   "error":
-   *   {
-   *     "code": "string",
-   *     "message": "string"
-   *   }
-   * }
-   *
-   */
-  private void processStorageErrorResponse() {
-    try (InputStream stream = connection.getErrorStream()) {
-      if (stream == null) {
-        return;
-      }
-      JsonFactory jf = new JsonFactory();
-      try (JsonParser jp = jf.createParser(stream)) {
-        String fieldName, fieldValue;
-        jp.nextToken();  // START_OBJECT - {
-        jp.nextToken();  // FIELD_NAME - "error":
-        jp.nextToken();  // START_OBJECT - {
-        jp.nextToken();
-        while (jp.hasCurrentToken()) {
-          if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-            fieldName = jp.getCurrentName();
-            jp.nextToken();
-            fieldValue = jp.getText();
-            switch (fieldName) {
-              case "code":
-                storageErrorCode = fieldValue;
-                break;
-              case "message":
-                storageErrorMessage = fieldValue;
-                break;
-              case "ExpectedAppendPos":
-                expectedAppendPos = fieldValue;
-                break;
-              default:
-                break;
-            }
-          }
-          jp.nextToken();
-        }
-      }
-    } catch (IOException ex) {
-      // Ignore errors that occur while attempting to parse the storage
-      // error, since the response may have been handled by the HTTP driver
-      // or for other reasons have an unexpected
-      LOG.debug("ExpectedError: ", ex);
-    }
+  @Override
+  protected InputStream getErrorStream() {
+    return connection.getErrorStream();
   }
 
   /**
@@ -521,31 +377,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   private long elapsedTimeMs(final long startTime) {
     return (System.nanoTime() - startTime) / ONE_MILLION;
-  }
-
-  /**
-   * Parse the list file response
-   *
-   * @param stream InputStream contains the list results.
-   * @throws IOException
-   */
-  private void parseListFilesResponse(final InputStream stream) throws IOException {
-    if (stream == null) {
-      return;
-    }
-
-    if (listResultSchema != null) {
-      // already parse the response
-      return;
-    }
-
-    try {
-      final ObjectMapper objectMapper = new ObjectMapper();
-      this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
-    } catch (IOException ex) {
-      LOG.error("Unable to deserialize list results", ex);
-      throw ex;
-    }
   }
 
   /**

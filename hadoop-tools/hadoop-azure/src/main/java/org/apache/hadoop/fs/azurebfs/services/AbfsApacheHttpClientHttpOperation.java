@@ -450,4 +450,33 @@ public class AbfsApacheHttpClientHttpOperation implements AbfsPerfLoggable {
   public String getMaskedEncodedUrl() {
     return maskedEncodedUrl;
   }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(statusCode);
+    sb.append(",");
+    sb.append(storageErrorCode);
+    sb.append(",");
+    sb.append(expectedAppendPos);
+    sb.append(",cid=");
+    sb.append(getClientRequestId());
+    sb.append(",rid=");
+    sb.append(requestId);
+    sb.append(",connMs=");
+    sb.append(connectionTimeMs);
+    sb.append(",sendMs=");
+    sb.append(sendRequestTimeMs);
+    sb.append(",recvMs=");
+    sb.append(recvResponseTimeMs);
+    sb.append(",sent=");
+    sb.append(bytesSent);
+    sb.append(",recv=");
+    sb.append(bytesReceived);
+    sb.append(",");
+    sb.append(method);
+    sb.append(",");
+    sb.append(getMaskedUrl());
+    return sb.toString();
+  }
 }
