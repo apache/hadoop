@@ -1128,7 +1128,7 @@ public class RMAdminCLI extends HAAdmin {
     }
 
     String subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
-    if(StringUtils.isBlank(subClusterId)) {
+    if (StringUtils.isBlank(subClusterId)) {
       return StringUtils.EMPTY;
     }
 
