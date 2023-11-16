@@ -75,7 +75,6 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkHeadRoomAlphaValid;
 import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkSubClusterQueueWeightRatioValid;
-import static org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight.checkPolicyManagerValid;
 
 public class RouterCLI extends Configured implements Tool {
 
@@ -635,8 +634,6 @@ public class RouterCLI extends Configured implements Tool {
         FederationQueueWeight.newInstance(routerWeight, amrmWeight, headroomalpha);
     String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
         YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
-    checkPolicyManagerValid(policyManager);
-
     SaveFederationQueuePolicyRequest request = SaveFederationQueuePolicyRequest.newInstance(
         queue, federationQueueWeight, policyManager);
 
@@ -657,11 +654,6 @@ public class RouterCLI extends Configured implements Tool {
    */
   protected int parseXml2PoliciesAndBatchSavePolicies(String policiesXml) {
     try {
-
-      String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
-          YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
-      checkPolicyManagerValid(policyManager);
-
       List<FederationQueueWeight> federationQueueWeightsList = parsePoliciesByXml(policiesXml);
       MemoryPageUtils<FederationQueueWeight> memoryPageUtils = new MemoryPageUtils<>(20);
       federationQueueWeightsList.forEach(federationQueueWeight ->
@@ -734,6 +726,7 @@ public class RouterCLI extends Configured implements Tool {
 
             String policyManager = getConf().get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
                 YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
+
             LOG.debug("Queue: {}, AmrmPolicyWeights: {}, RouterWeight: {}, HeadroomAlpha: {}.",
                 queueName, amrmWeight, routerWeight, headroomAlpha);
 
