@@ -132,6 +132,7 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>

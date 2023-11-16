@@ -427,7 +427,8 @@ public class ResourceManager extends CompositeService
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos);
+    manager.start(authInfos, config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+        YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
     return manager;
   }
 
@@ -1902,10 +1903,11 @@ public class ResourceManager extends CompositeService
     }
 
     if (scheduler instanceof MutableConfScheduler && isConfigurationMutable) {
-      YarnConfigurationStore confStore = YarnConfigurationStoreFactory
-          .getStore(conf);
-      confStore.initialize(conf, conf, rmContext);
-      confStore.format();
+      try (YarnConfigurationStore confStore = YarnConfigurationStoreFactory
+          .getStore(conf)) {
+        confStore.initialize(conf, conf, rmContext);
+        confStore.format();
+      }
     } else {
       System.out.println(String.format("Scheduler Configuration format only " +
           "supported by %s.", MutableConfScheduler.class.getSimpleName()));

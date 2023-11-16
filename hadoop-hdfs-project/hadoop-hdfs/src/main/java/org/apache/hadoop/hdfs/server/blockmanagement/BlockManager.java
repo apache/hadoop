@@ -150,10 +150,10 @@ import org.slf4j.LoggerFactory;
  * redundancy.
  *
  * For regular replication, # of min live replicas for maintenance is determined
- * by DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY. This number has to &lt;=
- * DFS_NAMENODE_REPLICATION_MIN_KEY.
+ * by {@link DFSConfigKeys#DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY}. This number has to &lt;=
+ * {@link DFSConfigKeys#DFS_NAMENODE_REPLICATION_MIN_KEY}.
  * For erasure encoding, # of min live replicas for maintenance is
- * BlockInfoStriped#getRealDataBlockNum.
+ * {@link BlockInfoStriped#getRealDataBlockNum}.
  *
  * Another safety property is to satisfy the block placement policy. While the
  * policy is configurable, the replicas the policy is applied to are the live
@@ -1720,8 +1720,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Get all blocks with location information from a datanode. */
   public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
-      final long size, final long minBlockSize, final long timeInterval) throws
-      UnregisteredNodeException {
+      final long size, final long minBlockSize, final long timeInterval,
+      final StorageType storageType) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
       blockLog.warn("BLOCK* getBlocks: Asking for blocks from an" +
@@ -1735,10 +1735,11 @@ public class BlockManager implements BlockStatsMXBean {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
 
-    // skip stale storage
+    // skip stale storage, then choose specific storage type.
     DatanodeStorageInfo[] storageInfos = Arrays
         .stream(node.getStorageInfos())
         .filter(s -> !s.areBlockContentsStale())
+        .filter(s -> storageType == null || s.getStorageType().equals(storageType))
         .toArray(DatanodeStorageInfo[]::new);
 
     // starting from a random block
@@ -4201,6 +4202,12 @@ public class BlockManager implements BlockStatsMXBean {
       storage2index.put(storage, index);
     }
 
+    if (duplicated.isEmpty()) {
+      LOG.debug("Found no duplicated internal blocks for {}. Maybe it's " +
+          "because there are stale storages.", storedBlock);
+      return;
+    }
+
     // use delHint only if delHint is duplicated
     final DatanodeStorageInfo delStorageHint =
         DatanodeStorageInfo.getDatanodeStorageInfo(nonExcess, delNodeHint);
@@ -5682,5 +5689,17 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
+  }
+
+  public void setMinBlocksForWrite(int minBlocksForWrite) {
+    ensurePositiveInt(minBlocksForWrite,
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY);
+    placementPolicies.getPolicy(CONTIGUOUS).setMinBlocksForWrite(minBlocksForWrite);
+    placementPolicies.getPolicy(STRIPED).setMinBlocksForWrite(minBlocksForWrite);
+  }
+
+  @VisibleForTesting
+  public int getMinBlocksForWrite(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
   }
 }

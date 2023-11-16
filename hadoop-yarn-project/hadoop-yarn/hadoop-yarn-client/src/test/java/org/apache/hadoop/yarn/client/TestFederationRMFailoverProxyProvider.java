@@ -77,7 +77,7 @@ public class TestFederationRMFailoverProxyProvider {
 
     stateStore = spy(new MemoryFederationStateStore());
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);
     verify(stateStore, times(0))
         .getSubClusters(any(GetSubClustersInfoRequest.class));
   }
@@ -180,7 +180,7 @@ public class TestFederationRMFailoverProxyProvider {
           .getSubClusters(any(GetSubClustersInfoRequest.class));
 
       // Force flush cache, so that it will pick up the new RM address
-      FederationStateStoreFacade.getInstance().getSubCluster(subClusterId,
+      FederationStateStoreFacade.getInstance(conf).getSubCluster(subClusterId,
           true);
     }
 

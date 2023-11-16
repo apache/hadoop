@@ -145,6 +145,7 @@ public class MiniYARNCluster extends CompositeService {
   private boolean useFixedPorts;
   private boolean useRpc = false;
   private int failoverTimeout;
+  private boolean isNMWebEnabled = true;
 
   private ConcurrentMap<ApplicationAttemptId, Long> appMasters =
       new ConcurrentHashMap<ApplicationAttemptId, Long>(16, 0.75f, 2);
@@ -249,6 +250,21 @@ public class MiniYARNCluster extends CompositeService {
   public MiniYARNCluster(String testName, int numNodeManagers,
                          int numLocalDirs, int numLogDirs) {
     this(testName, 1, numNodeManagers, numLocalDirs, numLogDirs);
+  }
+
+  /**
+   * Constructor of MiniYARNCluster.
+   *
+   * @param testName name of the test
+   * @param numNodeManagers the number of node managers in the cluster
+   * @param numLocalDirs the number of nm-local-dirs per nodemanager
+   * @param numLogDirs the number of nm-log-dirs per nodemanager
+   * @param nMWebEnabled Whether to enable the WebNM page
+   */
+  public MiniYARNCluster(String testName, int numNodeManagers,
+      int numLocalDirs, int numLogDirs, boolean nMWebEnabled) {
+    this(testName, 1, numNodeManagers, numLocalDirs, numLogDirs);
+    isNMWebEnabled = nMWebEnabled;
   }
 
   @Override
@@ -619,6 +635,9 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     protected synchronized void serviceStart() throws Exception {
+      if (!isNMWebEnabled) {
+        nodeManagers[index].disableWebServer();
+      }
       nodeManagers[index].start();
       if (nodeManagers[index].getServiceState() != STATE.STARTED) {
         // NM could have failed.

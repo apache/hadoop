@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWS4Signer;
-import com.amazonaws.arn.Arn;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.Signer;
-import com.amazonaws.services.s3.internal.AWSS3V4Signer;
+import software.amazon.awssdk.arns.Arn;
+import software.amazon.awssdk.auth.signer.Aws4Signer;
+import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -70,12 +70,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
-    regionName = determineRegion(fs.getBucket());
+    final Configuration conf = fs.getConf();
+    endpoint = conf.getTrimmed(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
+    LOG.info("Test endpoint is {}", endpoint);
+    regionName = conf.getTrimmed(Constants.AWS_REGION, "");
+    if (regionName.isEmpty()) {
+      regionName = determineRegion(fs.getBucket());
+    }
     LOG.info("Determined region name to be [{}] for bucket [{}]", regionName,
         fs.getBucket());
-    endpoint = fs.getConf()
-        .get(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
-    LOG.info("Test endpoint is {}", endpoint);
   }
 
   @Test
@@ -118,11 +121,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           .isGreaterThan(invocationCount);
 
       Assertions.assertThat(CustomSigner.lastStoreValue)
-          .as("Store value should not be null").isNotNull();
+          .as("Store value should not be null in %s", CustomSigner.description())
+          .isNotNull();
       Assertions.assertThat(CustomSigner.lastStoreValue.conf)
-          .as("Configuration should not be null").isNotNull();
+          .as("Configuration should not be null  in %s", CustomSigner.description())
+          .isNotNull();
       Assertions.assertThat(CustomSigner.lastStoreValue.conf.get(TEST_ID_KEY))
-          .as("Configuration TEST_KEY mismatch").isEqualTo(identifier);
+          .as("Configuration TEST_KEY mismatch in %s", CustomSigner.description())
+          .isEqualTo(identifier);
 
       return fs;
     });
@@ -152,7 +158,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   private String determineRegion(String bucketName) throws IOException {
-    return getFileSystem().getBucketLocation(bucketName);
+    return getS3AInternals().getBucketLocation(bucketName);
   }
 
   @Private
@@ -183,35 +189,29 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
      * request because the signature calculated by the service doesn't match
      * what we sent.
      * @param request the request to sign.
-     * @param credentials credentials used to sign the request.
+     * @param executionAttributes request executionAttributes which contain the credentials.
      */
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
       int c = INVOCATION_COUNT.incrementAndGet();
       LOG.info("Signing request #{}", c);
 
-      String host = request.getEndpoint().getHost();
+      String host = request.host();
       String bucketName = parseBucketFromHost(host);
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
+        LOG.info("Store value for bucket {} is {}", bucketName, lastStoreValue);
       } catch (IOException e) {
-        throw new RuntimeException("Failed to get current Ugi", e);
+        throw new RuntimeException("Failed to get current Ugi " + e, e);
       }
       if (bucketName.equals("kms")) {
-        AWS4Signer realKMSSigner = new AWS4Signer();
-        realKMSSigner.setServiceName("kms");
-        if (lastStoreValue != null) {
-          realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-        }
-        realKMSSigner.sign(request, credentials);
+        Aws4Signer realKMSSigner = Aws4Signer.create();
+        return realKMSSigner.sign(request, executionAttributes);
       } else {
-        AWSS3V4Signer realSigner = new AWSS3V4Signer();
-        realSigner.setServiceName("s3");
-        if (lastStoreValue != null) {
-          realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-        }
-        realSigner.sign(request, credentials);
+        AwsS3V4Signer realSigner = AwsS3V4Signer.create();
+        return realSigner.sign(request, executionAttributes);
       }
     }
 
@@ -235,11 +235,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         String accessPointName =
             bucketName.substring(0, bucketName.length() - (accountId.length() + 1));
         Arn arn = Arn.builder()
-            .withAccountId(accountId)
-            .withPartition("aws")
-            .withRegion(hostBits[2])
-            .withResource("accesspoint" + "/" + accessPointName)
-            .withService("s3").build();
+            .accountId(accountId)
+            .partition("aws")
+            .region(hostBits[2])
+            .resource("accesspoint" + "/" + accessPointName)
+            .service("s3").build();
 
         bucketName = arn.toString();
       }
@@ -254,6 +254,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public static int getInvocationCount() {
       return INVOCATION_COUNT.get();
     }
+
+    public static String description() {
+      return "CustomSigner{"
+          + "invocations=" + INVOCATION_COUNT.get()
+          + ", instantiations=" + INSTANTIATION_COUNT.get()
+          + ", lastStoreValue=" + lastStoreValue
+          + "}";
+    }
   }
 
   @Private
@@ -267,6 +275,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       StoreValue storeValue = new StoreValue(storeConf, dtProvider);
+      LOG.info("Registering store {} with value {}", storeKey, storeValue);
       knownStores.put(storeKey, storeValue);
     }
 
@@ -274,6 +283,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public void unregisterStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
+      LOG.info("Unregistering store {}", storeKey);
       knownStores.remove(storeKey);
     }
 
@@ -309,6 +319,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       public int hashCode() {
         return Objects.hash(bucketName, ugi);
       }
+
+      @Override
+      public String toString() {
+        return "StoreKey{" +
+            "bucketName='" + bucketName + '\'' +
+            ", ugi=" + ugi +
+            '}';
+      }
     }
 
     static class StoreValue {
@@ -319,6 +337,14 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           DelegationTokenProvider dtProvider) {
         this.conf = conf;
         this.dtProvider = dtProvider;
+      }
+
+      @Override
+      public String toString() {
+        return "StoreValue{" +
+            "conf=" + conf +
+            ", dtProvider=" + dtProvider +
+            '}';
       }
     }
   }

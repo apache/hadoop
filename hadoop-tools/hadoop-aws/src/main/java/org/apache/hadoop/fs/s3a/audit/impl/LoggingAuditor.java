@@ -24,10 +24,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -258,21 +262,22 @@ public class LoggingAuditor
 
     /**
      * Attach Range of data for GetObject Request.
-     * @param request given get object request
+     * @param request the sdk request to be modified
+     * @param executionAttributes execution attributes for this request
      */
-    private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest) {
-        long[] rangeValue = ((GetObjectRequest) request).getRange();
-        if (rangeValue == null || rangeValue.length == 0) {
-          return;
+    private void attachRangeFromRequest(SdkHttpRequest request,
+        ExecutionAttributes executionAttributes) {
+
+      String operationName = executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME);
+
+      if (operationName != null && operationName.equals("GetObject")) {
+        if (request.headers() != null && request.headers().get("Range") != null) {
+          String[] rangeHeader = request.headers().get("Range").get(0).split("=");
+          // only set header if range unit is  bytes
+          if (rangeHeader[0].equals("bytes")) {
+            referrer.set(AuditConstants.PARAM_RANGE, rangeHeader[1]);
+          }
         }
-        if (rangeValue.length != 2) {
-          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements."
-              + " Got {} elements. Ignoring.", rangeValue.length);
-          return;
-        }
-        String combinedRangeValue = String.format("%d-%d", rangeValue[0], rangeValue[1]);
-        referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
       }
     }
 
@@ -346,64 +351,78 @@ public class LoggingAuditor
       referrer.set(key, value);
     }
 
+
+
     /**
-     * Before execution, the logging auditor always builds
-     * the referrer header, saves to the outer class
-     * (where {@link #getLastHeader()} can retrieve it,
+     * Before transmitting a request, the logging auditor
+     * always builds the referrer header, saves to the outer
+     * class (where {@link #getLastHeader()} can retrieve it,
      * and logs at debug.
      * If configured to add the header to the S3 logs, it will
      * be set as the HTTP referrer.
-     * @param request request
-     * @param <T> type of request.
-     * @return the request with any extra headers.
+     * @param context The current state of the execution,
+     *                including the SDK and current HTTP request.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
+     * @return The potentially-modified HTTP request that should be
+     *          sent to the service. Must not be null.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
+    public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context,
+        ExecutionAttributes executionAttributes) {
+      SdkHttpRequest httpRequest = context.httpRequest();
+      SdkRequest sdkRequest = context.request();
+
       // attach range for GetObject requests
-      attachRangeFromRequest(request);
+      attachRangeFromRequest(httpRequest, executionAttributes);
+
       // for delete op, attach the number of files to delete
-      attachDeleteKeySizeAttribute(request);
+      attachDeleteKeySizeAttribute(sdkRequest);
+
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
       setLastHeader(header);
       if (headerEnabled) {
         // add the referrer header
-        request.putCustomRequestHeader(HEADER_REFERRER,
-            header);
+        httpRequest = httpRequest.toBuilder()
+            .appendHeader(HEADER_REFERRER, header)
+            .build();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("[{}] {} Executing {} with {}; {}",
             currentThreadID(),
             getSpanId(),
             getOperationName(),
-            analyzer.analyze(request),
+            analyzer.analyze(context.request()),
             header);
       }
+
       // now see if the request is actually a blocked multipart request
-      if (!isMultipartUploadEnabled && isRequestMultipartIO(request)) {
+      if (!isMultipartUploadEnabled && isRequestMultipartIO(sdkRequest)) {
         throw new AuditOperationRejectedException("Multipart IO request "
-            + request + " rejected " + header);
+            + sdkRequest + " rejected " + header);
       }
 
-      return request;
+      return httpRequest;
     }
 
     /**
      * For delete requests, attach delete key size as a referrer attribute.
      *
      * @param request the request object.
-     * @param <T> type of the request.
      */
-    private <T extends AmazonWebServiceRequest> void attachDeleteKeySizeAttribute(T request) {
+    private void attachDeleteKeySizeAttribute(SdkRequest request) {
+
       if (request instanceof DeleteObjectsRequest) {
-        int keySize = ((DeleteObjectsRequest) request).getKeys().size();
-        this.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
+        int keySize = ((DeleteObjectsRequest) request).delete().objects().size();
+        referrer.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
       } else if (request instanceof DeleteObjectRequest) {
-        String key = ((DeleteObjectRequest) request).getKey();
+        String key = ((DeleteObjectRequest) request).key();
         if (key != null && key.length() > 0) {
-          this.set(DELETE_KEYS_SIZE, "1");
+          referrer.set(DELETE_KEYS_SIZE, "1");
         }
       }
     }
@@ -460,15 +479,13 @@ public class LoggingAuditor
     }
 
     @Override
-    public <T extends AmazonWebServiceRequest> T requestCreated(
-        final T request) {
+    public void requestCreated(final SdkRequest.Builder builder) {
       String error = "Creating a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(builder.build());
       LOG.info(error);
       if (LOG.isDebugEnabled()) {
         LOG.debug(error, new AuditFailureException("unaudited"));
       }
-      return request;
     }
 
     /**
@@ -476,20 +493,22 @@ public class LoggingAuditor
      * increment the failure count.
      * Some requests (e.g. copy part) are not expected in spans due
      * to how they are executed; these do not trigger failures.
-     * @param request request
-     * @param <T> type of request
-     * @return an updated request.
-     * @throws AuditFailureException if failure is enabled.
+     * @param context The current state of the execution, including
+     *                the unmodified SDK request from the service
+     *                client call.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
-
+    public void beforeExecution(Context.BeforeExecution context,
+        ExecutionAttributes executionAttributes) {
       String error = "executing a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(context.request());
       final String unaudited = getSpanId() + " "
           + UNAUDITED_OPERATION + " " + error;
-      if (isRequestNotAlwaysInSpan(request)) {
+      if (isRequestNotAlwaysInSpan(context.request())) {
         // can get by auditing during a copy, so don't overreact
         LOG.debug(unaudited);
       } else {
@@ -500,7 +519,7 @@ public class LoggingAuditor
         }
       }
       // now hand off to the superclass for its normal preparation
-      return super.beforeExecution(request);
+      super.beforeExecution(context, executionAttributes);
     }
   }
 }

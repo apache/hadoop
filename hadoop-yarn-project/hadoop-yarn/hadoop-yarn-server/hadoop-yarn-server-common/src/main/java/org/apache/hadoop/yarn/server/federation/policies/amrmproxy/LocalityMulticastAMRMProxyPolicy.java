@@ -394,7 +394,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         targetSubclusters = allocationBookkeeper.getActiveAndEnabledSC();
       }
 
-      // SECOND: pick how much to ask to each RM for each request
+      // SECOND: pick how much to ask each RM for each request
       splitIndividualAny(resourceRequest, targetSubclusters,
           allocationBookkeeper);
     }
