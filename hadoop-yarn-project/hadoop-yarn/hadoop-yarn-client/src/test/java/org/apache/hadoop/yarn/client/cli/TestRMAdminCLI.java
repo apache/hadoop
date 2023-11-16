@@ -1105,14 +1105,14 @@ public class TestRMAdminCLI {
     rmAdminCLI.getConf().setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
 
     // replaceLabelsOnNode
-    String[] replaceLabelsOnNodeArgs = { "-replaceLabelsOnNode",
+    String[] replaceLabelsOnNodeArgs = { "-replaceLabelsOnNode" ,
         "node1:8000,x node2:8000=y node3,x node4=Y", "-subClusterId", "SC-1" };
     assertEquals(0, rmAdminCLI.run(replaceLabelsOnNodeArgs));
 
-    String[] refreshQueuesArgs = { "-refreshQueues", "-subClusterId", "SC-1"  };
+    String[] refreshQueuesArgs = { "-refreshQueues" , "-subClusterId", "SC-1"  };
     assertEquals(0, rmAdminCLI.run(refreshQueuesArgs));
 
-    String[] refreshNodesResourcesArgs = { "-refreshNodesResources", "-subClusterId", "SC-1"  };
+    String[] refreshNodesResourcesArgs = { "-refreshNodesResources" , "-subClusterId", "SC-1"  };
     assertEquals(0, rmAdminCLI.run(refreshNodesResourcesArgs));
 
     String nodeIdStr = "0.0.0.0:0";
