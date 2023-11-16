@@ -218,7 +218,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
    * }
    *
    */
-  protected void processStorageErrorResponse() {
+  protected void processStorageErrorResponse() throws IOException {
     try (InputStream stream = getErrorStream()) {
       if (stream == null) {
         return;
@@ -260,7 +260,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
     }
   }
 
-  protected abstract InputStream getErrorStream();
+  protected abstract InputStream getErrorStream() throws IOException;
 
   /**
    * Parse the list file response
