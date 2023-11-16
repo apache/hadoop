@@ -744,7 +744,8 @@
   <property>
     <description>
       Enable SSL/TLS encryption for the ZooKeeper communication.
-      Note that if hadoop.zk.ssl.enabled is set that will override this value.
+      Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+      and this value will be overridden by the value of hadoop.zk.ssl.enabled.
     </description>
     <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
     <value>false</value>
