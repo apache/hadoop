@@ -250,7 +250,7 @@ public class TestYarnFederationWithFairScheduler {
         assertNotNull(nodesInfo);
         ArrayList<NodeInfo> nodes = nodesInfo.getNodes();
         assertNotNull(nodes);
-        return (0 == nodes.size());
+        return nodes.isEmpty();
       } catch (Exception e) {
         return false;
       }
