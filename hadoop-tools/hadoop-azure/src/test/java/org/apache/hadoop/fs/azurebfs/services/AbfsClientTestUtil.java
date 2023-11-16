@@ -56,6 +56,7 @@ public final class AbfsClientTestUtil {
       FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
       throws Exception {
     ExponentialRetryPolicy retryPolicy = Mockito.mock(ExponentialRetryPolicy.class);
+    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.ListPaths,
@@ -68,7 +69,7 @@ public final class AbfsClientTestUtil {
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
         eq(AbfsRestOperationType.ListPaths), any(), any(), any());
 
-    addGeneralMockBehaviourToAbfsClient(spiedClient, retryPolicy);
+    addGeneralMockBehaviourToAbfsClient(spiedClient, retryPolicy, intercept);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     functionRaisingIOE.apply(httpOperation);
@@ -100,11 +101,10 @@ public final class AbfsClientTestUtil {
    * @throws IOException
    */
   public static void addGeneralMockBehaviourToAbfsClient(final AbfsClient abfsClient,
-                                                         final ExponentialRetryPolicy retryPolicy) throws IOException {
+                                                         final ExponentialRetryPolicy retryPolicy,
+                                                         final AbfsThrottlingIntercept intercept) throws IOException {
     Mockito.doReturn(OAuth).when(abfsClient).getAuthType();
     Mockito.doReturn("").when(abfsClient).getAccessToken();
-    AbfsThrottlingIntercept intercept = Mockito.mock(
-        AbfsThrottlingIntercept.class);
     Mockito.doReturn(intercept).when(abfsClient).getIntercept();
     Mockito.doNothing()
         .when(intercept)

@@ -38,22 +38,14 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.*;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToRestOpAndHttpOp;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 
 public class TestAbfsRestOperationMockFailures {
+  // In these tests a request first fails with given exceptions and then succeed on retry.
+  // Client Side Throttling Metrics will be updated at least for retried request which succeeded.
+  // For original requests it will be updated only for EGR, IGR, OPR throttling.
 
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
@@ -61,7 +53,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE);
     abbreviations[0] = CONNECTION_TIMEOUT_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -73,7 +65,7 @@ public class TestAbfsRestOperationMockFailures {
     abbreviations[0] = CONNECTION_TIMEOUT_ABBREVIATION;
     exceptions[1] = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
     abbreviations[1] = READ_TIMEOUT_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -82,7 +74,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
     abbreviations[0] = READ_TIMEOUT_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -91,7 +83,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new UnknownHostException();
     abbreviations[0] = UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -100,7 +92,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException(CONNECTION_RESET_MESSAGE + " by peer");
     abbreviations[0] = CONNECTION_RESET_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -109,7 +101,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketException("unknown");
     abbreviations[0] = SOCKET_EXCEPTION_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -118,52 +110,65 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new InterruptedIOException();
     abbreviations[0] = IO_EXCEPTION_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
   public void testClientRequestIdFor400Retry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_BAD_REQUEST, "", "400");
+    testClientRequestIdForStatusRetry(HTTP_BAD_REQUEST, "", "400", 1);
   }
 
   @Test
   public void testClientRequestIdFor500Retry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_INTERNAL_ERROR, "", "500");
+    testClientRequestIdForStatusRetry(HTTP_INTERNAL_ERROR, "", "500", 1);
   }
 
   @Test
   public void testClientRequestIdFor503INGRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
-        INGRESS_LIMIT_BREACH_ABBREVIATION);
+    testClientRequestIdForStatusRetry(
+            HTTP_UNAVAILABLE,
+            INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
+            INGRESS_LIMIT_BREACH_ABBREVIATION,
+            2);
   }
 
   @Test
-  public void testClientRequestIdFor503egrRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
-        EGRESS_LIMIT_BREACH_ABBREVIATION);
+  public void testClientRequestIdFor503EGRRetry() throws Exception {
+    testClientRequestIdForStatusRetry(
+            HTTP_UNAVAILABLE,
+            EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
+            EGRESS_LIMIT_BREACH_ABBREVIATION,
+            2);
   }
 
   @Test
   public void testClientRequestIdFor503OPRRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        TPS_OVER_ACCOUNT_LIMIT.getErrorMessage(), OPERATION_LIMIT_BREACH_ABBREVIATION);
+    testClientRequestIdForStatusRetry(
+            HTTP_UNAVAILABLE,
+            TPS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
+            OPERATION_LIMIT_BREACH_ABBREVIATION,
+            2);
   }
 
   @Test
   public void testClientRequestIdFor503OtherRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE, "Other.", "503");
+    testClientRequestIdForStatusRetry(
+            HTTP_UNAVAILABLE,
+            OTHER_SERVER_THROTTLING.getErrorMessage(),
+            OTHER_SERVER_THROTTLING_ABBREVIATION,
+            1);
   }
 
   private void testClientRequestIdForStatusRetry(int status,
-      String serverErrorMessage,
-      String keyExpected) throws Exception {
+                                                 String serverErrorMessage,
+                                                 String keyExpected,
+                                                 int numOfTimesCSTMetricsUpdated) throws Exception {
 
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
+    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
     ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy);
+            ExponentialRetryPolicy.class);
+    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy, intercept);
 
 
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
@@ -216,16 +221,19 @@ public class TestAbfsRestOperationMockFailures {
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(2);
 
+    Mockito.verify(intercept, Mockito.times(numOfTimesCSTMetricsUpdated)).updateMetrics(any(), any());
+
   }
 
   private void testClientRequestIdForTimeoutRetry(Exception[] exceptions,
-      String[] abbreviationsExpected,
-      int len) throws Exception {
+                                                  String[] abbreviationsExpected,
+                                                  int len,
+                                                  int numOfTimesCSTMetricsUpdated) throws Exception {
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
+    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
     ExponentialRetryPolicy retryPolicy = Mockito.mock(
         ExponentialRetryPolicy.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
+    addGeneralMockBehaviourToAbfsClient(abfsClient, retryPolicy, intercept);
 
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.ReadFile,
@@ -267,5 +275,8 @@ public class TestAbfsRestOperationMockFailures {
 
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(len + 1);
+
+    // Verify Number of updateMetrics invocations
+    Mockito.verify(intercept, Mockito.times(numOfTimesCSTMetricsUpdated)).updateMetrics(any(), any());
   }
 }
