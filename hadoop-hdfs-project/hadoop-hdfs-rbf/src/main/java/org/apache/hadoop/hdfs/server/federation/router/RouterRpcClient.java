@@ -788,7 +788,8 @@ public class RouterRpcClient {
   private boolean isClusterUnAvailable(
       String nsId, FederationNamenodeContext namenode,
       boolean listObserverFirst) throws IOException {
-    // Use observer and the namenode that causes the exception is an observer,
+    // If the operation is an observer read
+    // and the namenode that caused the exception is an observer,
     // false is returned so that the observer can be marked as unavailable,so other observers
     // or active namenode which is standby in the cache of the router can be retried.
     if (listObserverFirst && namenode.getState() == FederationNamenodeServiceState.OBSERVER) {

@@ -90,6 +90,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -240,27 +241,23 @@ public class MiniRouterDFSCluster {
     }
 
     public FileSystem getFileSystemWithObserverReadProxyProvider() throws IOException {
-      Configuration observerReadConf = new Configuration(conf);
-      observerReadConf.set(DFS_NAMESERVICES,
-          observerReadConf.get(DFS_NAMESERVICES)+ ",router-service");
-      observerReadConf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
-      observerReadConf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
-          getFileSystemURI().toString());
-      observerReadConf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
-          + "." + "router-service", ObserverReadProxyProvider.class.getName());
-      DistributedFileSystem.setDefaultUri(observerReadConf, "hdfs://router-service");
-
-      return DistributedFileSystem.get(observerReadConf);
+      return getFileSystemWithProxyProvider(ObserverReadProxyProvider.class.getName());
     }
 
     public FileSystem getFileSystemWithConfiguredFailoverProxyProvider() throws IOException {
+      return getFileSystemWithProxyProvider(ConfiguredFailoverProxyProvider.class.getName());
+    }
+
+    private FileSystem getFileSystemWithProxyProvider(
+        String proxyProviderClassName) throws IOException {
       conf.set(DFS_NAMESERVICES,
           conf.get(DFS_NAMESERVICES)+ ",router-service");
       conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
       conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
           getFileSystemURI().toString());
+
       conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
-          + "." + "router-service", ConfiguredFailoverProxyProvider.class.getName());
+          + "." + "router-service", proxyProviderClassName);
       DistributedFileSystem.setDefaultUri(conf, "hdfs://router-service");
 
       return DistributedFileSystem.get(conf);
