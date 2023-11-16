@@ -246,7 +246,7 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
+    AbfsApacheHttpClientHttpOperation httpOp = mock(AbfsApacheHttpClientHttpOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
@@ -318,7 +318,7 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
+    AbfsApacheHttpClientHttpOperation httpOp = mock(AbfsApacheHttpClientHttpOperation.class);
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);

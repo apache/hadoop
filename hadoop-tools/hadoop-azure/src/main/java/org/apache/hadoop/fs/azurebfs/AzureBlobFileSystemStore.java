@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.AbfsApacheHttpClientHttpOperation;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -99,7 +100,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -432,7 +432,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getFilesystemProperties(tracingContext);
       perfInfo.registerResult(op.getResult());
 
-      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      final String xMsProperties = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
       parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
       perfInfo.registerSuccess(true);
@@ -480,7 +480,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getPathStatus(getRelativePath(path), true, tracingContext);
       perfInfo.registerResult(op.getResult());
 
-      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      final String xMsProperties = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
       parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
 
@@ -643,7 +643,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
 
         String eTag = op.getResult()
-            .getResponseHeader(HttpHeaderConfigurations.ETAG);
+            .getHeaderValue(HttpHeaderConfigurations.ETAG);
 
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
@@ -779,13 +779,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               "Fallback to getPathStatus REST call as provided filestatus "
                   + "is not of type VersionedFileStatus");
         }
-        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
+        AbfsApacheHttpClientHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext).getResult();
-        resourceType = op.getResponseHeader(
+        resourceType = op.getHeaderValue(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
         contentLength = Long.parseLong(
-            op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+            op.getHeaderValue(HttpHeaderConfigurations.CONTENT_LENGTH));
+        eTag = op.getHeaderValue(HttpHeaderConfigurations.ETAG);
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -843,8 +843,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getPathStatus(relativePath, false, tracingContext);
       perfInfo.registerResult(op.getResult());
 
-      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      final String resourceType = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      final Long contentLength = Long.valueOf(op.getResult().getHeaderValue(HttpHeaderConfigurations.CONTENT_LENGTH));
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
@@ -938,7 +938,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());
-        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        continuation = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
@@ -973,7 +973,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = client
             .deletePath(relativePath, recursive, continuation, tracingContext);
         perfInfo.registerResult(op.getResult());
-        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        continuation = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
@@ -1010,11 +1010,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerResult(op.getResult());
       final long blockSize = abfsConfiguration.getAzureBlockSize();
-      final AbfsHttpOperation result = op.getResult();
+      final AbfsApacheHttpClientHttpOperation result = op.getResult();
 
       String eTag = extractEtagHeader(result);
-      final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
-      final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
+      final String lastModified = result.getHeaderValue(HttpHeaderConfigurations.LAST_MODIFIED);
+      final String permissions = result.getHeaderValue((HttpHeaderConfigurations.X_MS_PERMISSIONS));
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
       final long contentLength;
       final boolean resourceIsDir;
@@ -1023,17 +1023,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = 0;
         resourceIsDir = true;
       } else {
-        contentLength = parseContentLength(result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        resourceIsDir = parseIsDirectory(result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
+        contentLength = parseContentLength(result.getHeaderValue(HttpHeaderConfigurations.CONTENT_LENGTH));
+        resourceIsDir = parseIsDirectory(result.getHeaderValue(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
       }
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
-              result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              result.getHeaderValue(HttpHeaderConfigurations.X_MS_OWNER),
               true,
               userName);
 
       final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
-              result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              result.getHeaderValue(HttpHeaderConfigurations.X_MS_GROUP),
               false,
               primaryUserGroup);
 
@@ -1114,7 +1114,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getListMaxResults(), continuation,
             tracingContext);
         perfInfo.registerResult(op.getResult());
-        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        continuation = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
@@ -1305,9 +1305,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getAclStatus(relativePath, useUpn, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = op.getResult().getHeaderValue(HttpHeaderConfigurations.ETAG);
 
-      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL));
 
       AbfsAclHelper.modifyAclEntriesInternal(aclEntries, modifyAclEntries);
 
@@ -1348,9 +1348,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getAclStatus(relativePath, isUpnFormat, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = op.getResult().getHeaderValue(HttpHeaderConfigurations.ETAG);
 
-      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL));
 
       AbfsAclHelper.removeAclEntriesInternal(aclEntries, removeAclEntries);
 
@@ -1386,8 +1386,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getAclStatus(relativePath, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final String eTag = op.getResult().getHeaderValue(HttpHeaderConfigurations.ETAG);
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL));
       final Map<String, String> defaultAclEntries = new HashMap<>();
 
       for (Map.Entry<String, String> aclEntry : aclEntries.entrySet()) {
@@ -1430,9 +1430,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getAclStatus(relativePath, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = op.getResult().getHeaderValue(HttpHeaderConfigurations.ETAG);
 
-      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL));
       final Map<String, String> newAclEntries = new HashMap<>();
 
       newAclEntries.put(AbfsHttpConstants.ACCESS_USER, aclEntries.get(AbfsHttpConstants.ACCESS_USER));
@@ -1476,9 +1476,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getAclStatus(relativePath, isUpnFormat, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = op.getResult().getHeaderValue(HttpHeaderConfigurations.ETAG);
 
-      final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL));
 
       AbfsAclHelper.setAclEntriesInternal(aclEntries, getAclEntries);
 
@@ -1511,20 +1511,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsRestOperation op = client
           .getAclStatus(getRelativePath(path), tracingContext);
-      AbfsHttpOperation result = op.getResult();
+      AbfsApacheHttpClientHttpOperation result = op.getResult();
       perfInfo.registerResult(result);
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
-              result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              result.getHeaderValue(HttpHeaderConfigurations.X_MS_OWNER),
               true,
               userName);
       final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
-              result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              result.getHeaderValue(HttpHeaderConfigurations.X_MS_GROUP),
               false,
               primaryUserGroup);
 
-      final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
-      final String aclSpecString = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL);
+      final String permissions = result.getHeaderValue(HttpHeaderConfigurations.X_MS_PERMISSIONS);
+      final String aclSpecString = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_ACL);
 
       final List<AclEntry> aclEntries = AclEntry.parseAclSpec(AbfsAclHelper.processAclString(aclSpecString), true);
       identityTransformer.transformAclEntriesForGetRequest(aclEntries, userName, primaryUserGroup);
@@ -1985,8 +1985,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param result response to process.
    * @return the quote-unwrapped etag.
    */
-  public static String extractEtagHeader(AbfsHttpOperation result) {
-    String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+  public static String extractEtagHeader(AbfsApacheHttpClientHttpOperation result) {
+    String etag = result.getHeaderValue(HttpHeaderConfigurations.ETAG);
     if (etag != null) {
       // strip out any wrapper "" quotes which come back, for consistency with
       // list calls

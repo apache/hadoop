@@ -411,7 +411,7 @@ public class AbfsClient implements Closeable {
       }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         String existingResource =
-            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
+            op.getResult().getHeaderValue(X_MS_EXISTING_RESOURCE_TYPE);
         if (existingResource != null && existingResource.equals(DIRECTORY)) {
           return op; //don't throw ex on mkdirs for existing directory
         }
@@ -546,7 +546,7 @@ public class AbfsClient implements Closeable {
         final AbfsRestOperation srcStatusOp = getPathStatus(source,
                 false, tracingContext);
         if (srcStatusOp.hasResult()) {
-          final AbfsHttpOperation result = srcStatusOp.getResult();
+          final AbfsApacheHttpClientHttpOperation result = srcStatusOp.getResult();
           sourceEtag = extractEtagHeader(result);
           // and update the directory status.
           boolean isDir = checkIsDir(result);
@@ -611,7 +611,7 @@ public class AbfsClient implements Closeable {
               tracingContext);
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
-          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          AbfsApacheHttpClientHttpOperation sourceStatusResult = sourceStatusOp.getResult();
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
@@ -637,8 +637,8 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private boolean checkIsDir(AbfsHttpOperation result) {
-    String resourceType = result.getResponseHeader(
+  private boolean checkIsDir(AbfsApacheHttpClientHttpOperation result) {
+    String resourceType = result.getHeaderValue(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     return resourceType != null
             && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
@@ -700,7 +700,7 @@ public class AbfsClient implements Closeable {
               source, destination);
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination, false, tracingContext);
-        final AbfsHttpOperation result = destStatusOp.getResult();
+        final AbfsApacheHttpClientHttpOperation result = destStatusOp.getResult();
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
                 && sourceEtag.equals(extractEtagHeader(result));
@@ -720,7 +720,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
+  boolean isSourceDestEtagEqual(String sourceEtag, AbfsApacheHttpClientHttpOperation result) {
     return sourceEtag.equals(extractEtagHeader(result));
   }
 
@@ -872,7 +872,7 @@ public class AbfsClient implements Closeable {
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext);
       if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
-        String fileLength = destStatusOp.getResult().getResponseHeader(
+        String fileLength = destStatusOp.getResult().getHeaderValue(
             HttpHeaderConfigurations.CONTENT_LENGTH);
         if (length <= Long.parseLong(fileLength)) {
           LOG.debug("Returning success response from append blob idempotency code");

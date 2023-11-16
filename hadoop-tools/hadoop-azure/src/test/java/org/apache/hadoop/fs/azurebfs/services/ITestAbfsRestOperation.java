@@ -285,7 +285,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   public void testExpectHundredContinue() throws Exception {
     // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
-    AbfsHttpOperation httpOperation = op.createHttpOperation();
+    AbfsApacheHttpClientHttpOperation httpOperation = op.createHttpOperation();
 
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,

@@ -5,7 +5,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -16,24 +18,32 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_POST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
-public class AbfsApacheHttpClientHttpOperation {
+public class AbfsApacheHttpClientHttpOperation implements AbfsPerfLoggable {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
@@ -188,7 +198,7 @@ public class AbfsApacheHttpClientHttpOperation {
     }
   }
 
-  private String getHeaderValue(final String headerName) {
+  public String getHeaderValue(final String headerName) {
     Header header = httpResponse.getFirstHeader(headerName);
     if(header != null) {
       return header.getValue();
@@ -285,7 +295,7 @@ public class AbfsApacheHttpClientHttpOperation {
       final int length)
       throws IOException {
     try {
-      HttpEntityEnclosingRequestBase httpRequestBase = null;
+      HttpRequestBase httpRequestBase = null;
       if (HTTP_METHOD_PUT.equals(method)) {
         httpRequestBase = new HttpPut(url.toURI());
       }
@@ -296,9 +306,23 @@ public class AbfsApacheHttpClientHttpOperation {
         httpRequestBase = new HttpPost(url.toURI());
       }
       if(httpRequestBase != null) {
-        translateHeaders(httpRequestBase, requestHeaders);
+
+        this.expectedBytesToBeSent = length;
+        this.bytesSent = length;
         HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length, TEXT_PLAIN);
+        ((HttpEntityEnclosingRequestBase)httpRequestBase).setEntity(httpEntity);
+      } else {
+        if(HTTP_METHOD_GET.equals(method)) {
+          httpRequestBase = new HttpGet(url.toURI());
+        }
+        if(HTTP_METHOD_DELETE.equals(method)) {
+          httpRequestBase = new HttpDelete((url.toURI()));
+        }
+        if(HTTP_METHOD_HEAD.equals(method)) {
+          httpRequestBase = new HttpHead(url.toURI());
+        }
       }
+      translateHeaders(httpRequestBase, requestHeaders);
       this.httpRequestBase = httpRequestBase;
     } catch (Exception e) {
       throw new IOException(e);
@@ -309,5 +333,109 @@ public class AbfsApacheHttpClientHttpOperation {
     for(AbfsHttpHeader header : requestHeaders) {
       httpRequestBase.setHeader(header.getName(), header.getValue());
     }
+  }
+
+  public int getStatusCode() {
+    return statusCode;
+  }
+
+  public long getBytesReceived() {
+    return bytesReceived;
+  }
+
+  public String getStorageErrorMessage() {
+    return storageErrorMessage;
+  }
+
+  public void setHeader(String name, String val) {
+    requestHeaders.add(new AbfsHttpHeader(name, val));
+  }
+
+  public String getStorageErrorCode() {
+    return storageErrorCode;
+  }
+
+  @Override
+  public String getLogString() {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
+        .append(statusCode)
+        .append(" e=")
+        .append(storageErrorCode)
+//        .append(" ci=")
+//        .append(getClientRequestId())
+        .append(" ri=")
+        .append(requestId)
+
+        .append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs)
+
+        .append(" bs=")
+        .append(bytesSent)
+        .append(" br=")
+        .append(bytesReceived)
+        .append(" m=")
+        .append(method);
+//        .append(" u=")
+//        .append(getMaskedEncodedUrl());
+
+    return sb.toString();
+  }
+
+  public ListResultSchema getListResultSchema() {
+    return listResultSchema;
+  }
+
+  public String getMethod() {
+    return method;
+  }
+
+  public String getStatusDescription() {
+    return statusDescription;
+  }
+
+  public String getMaskedUrl() {
+    return "";
+  }
+
+  public String getRequestId() {
+    return requestId;
+  }
+
+  public URL getURL() {
+    return url;
+  }
+
+  public Map<String, List<String>> getRequestHeaders() {
+    Map<String, List<String>> map = new HashMap<>();
+    for(AbfsHttpHeader header : requestHeaders) {
+      map.put(header.getName(), new ArrayList<String>(){{add(header.getValue());}});
+    }
+    return map;
+  }
+
+  public int getExpectedBytesToBeSent() {
+    return expectedBytesToBeSent;
+  }
+
+  public int getBytesSent() {
+    return bytesSent;
+  }
+
+  public String getClientRequestId() {
+    for(AbfsHttpHeader header : requestHeaders) {
+      if(X_MS_CLIENT_REQUEST_ID.equals(header.getName())) {
+        return header.getValue();
+      }
+    }
+    return "";
+  }
+
+  public String getMaskedEncodedUrl() {
+    return maskedEncodedUrl;
   }
 }

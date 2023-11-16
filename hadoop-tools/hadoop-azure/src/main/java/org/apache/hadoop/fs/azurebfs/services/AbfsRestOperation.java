@@ -281,13 +281,13 @@ public class AbfsRestOperation {
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
-          "Auth failure: " + e.getMessage(), e);
+          "Auth failure: " + e.getMessage(), e, result);
     }
 
     try {
       // dump the headers
-      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+//      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
+//          httpOperation.getConnection().getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
       if (hasRequestBody) {
         // HttpUrlConnection requires
@@ -308,7 +308,7 @@ public class AbfsRestOperation {
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      hostname = httpOperation.getHost();
+      hostname = url.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
@@ -370,12 +370,12 @@ public class AbfsRestOperation {
       case Custom:
       case OAuth:
         LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        httpOperation.setHeader(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
         break;
       case SAS:
         // do nothing; the SAS token should already be appended to the query string
-        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+//        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
         break;
       case SharedKey:
       default:
@@ -383,7 +383,7 @@ public class AbfsRestOperation {
         LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
+            httpOperation,
             bytesToSign);
         break;
     }

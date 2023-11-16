@@ -285,7 +285,7 @@ public class ITestAbfsInputStreamStatistics
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
           nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
-          abfsRestOperation.getResult().getResponseHeader("ETag"),
+          abfsRestOperation.getResult().getHeaderValue("ETag"),
           getTestTracingContext(fs, false));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
