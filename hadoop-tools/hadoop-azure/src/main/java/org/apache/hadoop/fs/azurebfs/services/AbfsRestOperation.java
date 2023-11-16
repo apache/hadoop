@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OTHER_SERVER_THROTTLING_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -314,6 +315,21 @@ public class AbfsRestOperation {
       } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
+
+      // If no exception occurred here it means http operation was successfully complete and
+      // a response from server has been received which might be failure or success.
+      LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
+
+      // If request failed at server and should be retried, we will determine failure reason and retry policy here
+      if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
+        int status = httpOperation.getStatusCode();
+        failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+        return false;
+      }
+
+      // If the request has succeeded or failed with non-retrial error, save the operation and return.
+      result = httpOperation;
+
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
@@ -339,29 +355,25 @@ public class AbfsRestOperation {
     } finally {
       int status = httpOperation.getStatusCode();
       /*
-        A status less than 300 (2xx range) or greater than or equal
-        to 500 (5xx range) should contribute to throttling metrics being updated.
-        Less than 200 or greater than or equal to 500 show failed operations. 2xx
-        range contributes to successful operations. 3xx range is for redirects
-        and 4xx range is for user errors. These should not be a part of
-        throttling backoff computation.
+        Updating Client Side Throttling Metrics for relevant request statuses.
+        1. Status code in 2xx range: Successful Operations should contribute
+        2. Status code in 3xx range: Redirection Operations should not contribute
+        3. Status code in 4xx range: User Errors should not contribute
+        4. Status code in 5xx range: Server Error should contribute as following:
+          a. 503, Ingress Over Account Limit: Should Contribute
+          b. 503, Egress Over Account Limit: Should Contribute
+          c. 503, TPS Over Account Limit: Should Contribute
+          d. 503, Other Server Throttling: Should not contribute
+          e. 5xx other than 503: Should contribute
        */
-      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
-              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
+      boolean updateMetricsResponseCode = (
+              (status < HttpURLConnection.HTTP_MULT_CHOICE
+              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR))
+              && !OTHER_SERVER_THROTTLING_ABBREVIATION.equals(failureReason);
       if (updateMetricsResponseCode) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
-
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
-
-    if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
-      int status = httpOperation.getStatusCode();
-      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
-      return false;
-    }
-
-    result = httpOperation;
 
     return true;
   }
