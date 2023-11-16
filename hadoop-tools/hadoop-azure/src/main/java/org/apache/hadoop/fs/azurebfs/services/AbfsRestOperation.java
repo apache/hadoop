@@ -289,12 +289,13 @@ public class AbfsRestOperation {
 //      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
 //          httpOperation.getConnection().getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
-      if (hasRequestBody) {
-        // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
-        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
-      }
+      httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+//      if (hasRequestBody) {
+//        // HttpUrlConnection requires
+//        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+//        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+//        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+//      }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);

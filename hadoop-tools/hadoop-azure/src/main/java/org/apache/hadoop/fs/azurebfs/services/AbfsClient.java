@@ -150,6 +150,7 @@ public class AbfsClient implements Closeable {
                 + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
+        AbfsApacheHttpClientHttpOperation.setAbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory());
       } catch (IOException e) {
         // Suppress exception. Failure to init DelegatingSSLSocketFactory would have only performance impact.
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "

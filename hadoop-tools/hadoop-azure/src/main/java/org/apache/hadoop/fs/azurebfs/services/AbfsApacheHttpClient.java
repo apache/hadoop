@@ -1,6 +1,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -18,19 +21,23 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ConnectionRequest;
+import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestExecutor;
+
 
 public class AbfsApacheHttpClient {
 
@@ -39,11 +46,20 @@ public class AbfsApacheHttpClient {
     public Long readTime;
   }
 
-  public static class AbfsApacheHttpConnection implements HttpClientConnection {
+  public static class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
-    private HttpClientConnection httpClientConnection;
+    @Override
+    public ManagedHttpClientConnection create(final HttpRoute route,
+        final ConnectionConfig config) {
+      return new AbfsApacheHttpConnection(super.create(route, config));
+    }
+  }
 
-    public AbfsApacheHttpConnection(HttpClientConnection clientConnection) {
+  public static class AbfsApacheHttpConnection implements ManagedHttpClientConnection {
+
+    private ManagedHttpClientConnection httpClientConnection;
+
+    public AbfsApacheHttpConnection(ManagedHttpClientConnection clientConnection) {
       this.httpClientConnection = clientConnection;
     }
 
@@ -90,7 +106,9 @@ public class AbfsApacheHttpClient {
     @Override
     public void sendRequestHeader(final HttpRequest request)
         throws HttpException, IOException {
+      Long start = System.currentTimeMillis();
       httpClientConnection.sendRequestHeader(request);
+      System.out.println("BLA BLA" + (System.currentTimeMillis() - start));
     }
 
     @Override
@@ -115,40 +133,76 @@ public class AbfsApacheHttpClient {
     public void flush() throws IOException {
       httpClientConnection.flush();
     }
-  }
 
-  public static class AbfsConnRequest implements ConnectionRequest {
-
-    private ConnectionRequest connectionRequest;
-
-    public AbfsConnRequest(ConnectionRequest connectionRequest) {
-      this.connectionRequest = connectionRequest;
+    @Override
+    public String getId() {
+      return httpClientConnection.getId();
     }
 
     @Override
-    public HttpClientConnection get(final long timeout, final TimeUnit timeUnit)
-        throws InterruptedException, ExecutionException,
-        ConnectionPoolTimeoutException {
-      HttpClientConnection clientConnection = new AbfsApacheHttpConnection(connectionRequest.get(timeout, timeUnit));
-      return clientConnection;
+    public void bind(final Socket socket) throws IOException {
+      httpClientConnection.bind(socket);
     }
 
     @Override
-    public boolean cancel() {
-      return connectionRequest.cancel();
+    public Socket getSocket() {
+      return httpClientConnection.getSocket();
+    }
+
+    @Override
+    public SSLSession getSSLSession() {
+      return httpClientConnection.getSSLSession();
+    }
+
+    @Override
+    public InetAddress getLocalAddress() {
+      return httpClientConnection.getLocalAddress();
+    }
+
+    @Override
+    public int getLocalPort() {
+      return httpClientConnection.getLocalPort();
+    }
+
+    @Override
+    public InetAddress getRemoteAddress() {
+      return httpClientConnection.getRemoteAddress();
+    }
+
+    @Override
+    public int getRemotePort() {
+      return httpClientConnection.getRemotePort();
     }
   }
+
+  private static AbfsConnFactory abfsConnFactory = new AbfsConnFactory();
+
+//  public static class AbfsConnRequest implements ConnectionRequest {
+//
+//    private ConnectionRequest connectionRequest;
+//
+//    public AbfsConnRequest(ConnectionRequest connectionRequest) {
+//      this.connectionRequest = connectionRequest;
+//    }
+//
+//    @Override
+//    public HttpClientConnection get(final long timeout, final TimeUnit timeUnit)
+//        throws InterruptedException, ExecutionException,
+//        ConnectionPoolTimeoutException {
+//      HttpClientConnection clientConnection = new AbfsApacheHttpConnection(connectionRequest.get(timeout, timeUnit));
+//      return clientConnection;
+//    }
+//
+//    @Override
+//    public boolean cancel() {
+//      return connectionRequest.cancel();
+//    }
+//  }
 
   private static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
-    @Override
-    public ConnectionRequest requestConnection(final HttpRoute route,
-        final Object state) {
-      return new AbfsConnRequest(super.requestConnection(route, state));
-    }
-
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory) {
-      super(createSocketFactoryRegistry(connectionSocketFactory));
+      super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -222,7 +276,7 @@ public class AbfsApacheHttpClient {
   public HttpResponse execute(HttpRequestBase httpRequest) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
-        .setConnectionRequestTimeout(20)
+//        .setConnectionRequestTimeout(20_000)
         .setConnectTimeout(30_000)
         .setSocketTimeout(30_000);
     httpRequest.setConfig(requestConfigBuilder.build());

@@ -450,7 +450,7 @@ public class SharedKeyCredentials {
   }
 
   private static String getHeaderValue(final AbfsApacheHttpClientHttpOperation conn, final String headerName, final String defaultValue) {
-    final String headerValue = conn.getHeaderValue(headerName);
+    final String headerValue = conn.getRequestHeader(headerName);
     return headerValue == null ? defaultValue : headerValue;
   }
 

@@ -309,8 +309,11 @@ public class AbfsApacheHttpClientHttpOperation implements AbfsPerfLoggable {
 
         this.expectedBytesToBeSent = length;
         this.bytesSent = length;
-        HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length, TEXT_PLAIN);
-        ((HttpEntityEnclosingRequestBase)httpRequestBase).setEntity(httpEntity);
+        if(buffer != null) {
+          HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
+              TEXT_PLAIN);
+          ((HttpEntityEnclosingRequestBase)httpRequestBase).setEntity(httpEntity);
+        }
       } else {
         if(HTTP_METHOD_GET.equals(method)) {
           httpRequestBase = new HttpGet(url.toURI());
@@ -416,6 +419,15 @@ public class AbfsApacheHttpClientHttpOperation implements AbfsPerfLoggable {
       map.put(header.getName(), new ArrayList<String>(){{add(header.getValue());}});
     }
     return map;
+  }
+
+  public String getRequestHeader(String name) {
+    for(AbfsHttpHeader header : requestHeaders) {
+      if(header.getName().equals(name)) {
+        return header.getValue();
+      }
+    }
+    return "";
   }
 
   public int getExpectedBytesToBeSent() {
