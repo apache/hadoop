@@ -218,6 +218,7 @@ everything uses the same HTTP connection pool.
 | `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation                         |
 | `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued excluding prefetching operations |
 
+### <a name="timeouts"></a> Timeouts.
 
 Network timeout options can be tuned to make the client fail faster *or* retry more.
 The choice is yours. Generally recovery is better, but sometimes fail-fast is more useful.

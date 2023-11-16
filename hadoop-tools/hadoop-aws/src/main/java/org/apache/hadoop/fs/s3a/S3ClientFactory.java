@@ -177,6 +177,11 @@ public interface S3ClientFactory {
     private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
 
     /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -460,6 +465,24 @@ public interface S3ClientFactory {
           ", region='" + region + '\'' +
           ", expressCreateSession=" + expressCreateSession +
           '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
+      return this;
     }
   }
 }
