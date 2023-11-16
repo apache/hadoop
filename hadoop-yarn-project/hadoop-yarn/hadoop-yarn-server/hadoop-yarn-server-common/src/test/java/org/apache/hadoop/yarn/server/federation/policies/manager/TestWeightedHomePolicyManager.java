@@ -34,16 +34,17 @@ public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
   @Before
   public void setup() {
     // configure a policy
-    wfp = new WeightedHomePolicyManager();
-    wfp.setQueue("queue1");
+    WeightedHomePolicyManager whpm = new WeightedHomePolicyManager();
+    whpm.setQueue("queue1");
+
     SubClusterId sc1 = SubClusterId.newInstance("sc1");
     policyInfo = new WeightedPolicyInfo();
-
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     routerWeights.put(new SubClusterIdInfo(sc1), 0.2f);
     policyInfo.setRouterPolicyWeights(routerWeights);
 
-    ((WeightedHomePolicyManager) wfp).setWeightedPolicyInfo(policyInfo);
+    whpm.setWeightedPolicyInfo(policyInfo);
+    this.wfp = whpm;
 
     //set expected params that the base test class will use for tests
     expectedPolicyManager = WeightedHomePolicyManager.class;
