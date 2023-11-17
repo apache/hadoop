@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -427,8 +428,11 @@ public class ResourceManager extends CompositeService
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos, config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
-        YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    boolean isSSLEnabled =
+        config.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+            config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+                YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    manager.start(authInfos, isSSLEnabled);
     return manager;
   }
 

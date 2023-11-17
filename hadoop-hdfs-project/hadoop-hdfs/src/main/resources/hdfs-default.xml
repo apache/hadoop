@@ -3802,6 +3802,8 @@
   <value>false</value>
   <description>
     Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
+    Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+    and this value will be overridden by the value of hadoop.zk.ssl.enabled.
   </description>
 </property>
 
