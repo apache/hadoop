@@ -230,7 +230,6 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
         "TestAuditLogs").toString();
     String auditSingleFile = this.getClass().getClassLoader().getResource(
         "TestAuditLogs/sampleLog1").toString();
-
     Preconditions.checkArgument(!StringUtils.isAnyBlank(auditLogDir,
         auditSingleFile), String.format("Audit path should not be empty. Check "
         + "test/resources. auditLogDir : %s, auditLogSingleFile :%s",
