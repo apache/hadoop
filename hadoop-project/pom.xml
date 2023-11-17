@@ -1293,7 +1293,7 @@
         <artifactId>mockito-bom</artifactId>
         <version>${mockito.version}</version>
         <type>pom</type>
-        <scope>import</scope>
+        <scope>compile</scope>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
