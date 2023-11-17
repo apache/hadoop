@@ -23,7 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
@@ -53,8 +52,6 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
    * Constant for the configuration property that indicates if anonymous users are allowed.
    */
   public static final String ANONYMOUS_ALLOWED = TYPE + ".anonymous.allowed";
-
-  private static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
 
   private static final String PSEUDO_AUTH = "PseudoAuth";
 
@@ -147,7 +144,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
     if(queryString == null || queryString.length() == 0) {
       return null;
     }
-    List<NameValuePair> list = URLEncodedUtils.parse(queryString, UTF8_CHARSET);
+    List<NameValuePair> list = URLEncodedUtils.parse(queryString, StandardCharsets.UTF_8);
     if (list != null) {
       for (NameValuePair nv : list) {
         if (PseudoAuthenticator.USER_NAME.equals(nv.getName())) {
