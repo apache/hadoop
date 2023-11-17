@@ -64,6 +64,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,5 +234,12 @@ public class DefaultRMAdminRequestInterceptor
   public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
       QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
     return rmAdminProxy.listFederationQueuePolicies(request);
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request)
+      throws YarnException, IOException {
+    return rmAdminProxy.deleteFederationApplication(request);
   }
 }

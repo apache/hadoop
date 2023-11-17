@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -64,12 +65,15 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.junit.Assert;
@@ -988,5 +992,29 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class,
         "The index of the records to be retrieved has exceeded the maximum index.",
         () -> interceptor.listFederationQueuePolicies(request8));
+  }
+
+
+  @Test
+  public void testDeleteFederationApplication() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(10, 1);
+    DeleteFederationApplicationRequest request1 =
+        DeleteFederationApplicationRequest.newInstance(applicationId.toString());
+    LambdaTestUtils.intercept(YarnException.class,
+        "Application application_10_0001 does not exist.",
+        () -> interceptor.deleteFederationApplication(request1));
+
+    ApplicationId applicationId2 = ApplicationId.newInstance(10, 2);
+    SubClusterId homeSubCluster = SubClusterId.newInstance("SC-1");
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId2, homeSubCluster);
+    facade.addApplicationHomeSubCluster(appHomeSubCluster);
+    DeleteFederationApplicationRequest request2 =
+        DeleteFederationApplicationRequest.newInstance(applicationId2.toString());
+    DeleteFederationApplicationResponse deleteFederationApplicationResponse =
+        interceptor.deleteFederationApplication(request2);
+    assertNotNull(deleteFederationApplicationResponse);
+    assertEquals("applicationId = " + applicationId2 + " delete success.",
+        deleteFederationApplicationResponse.getMessage());
   }
 }
