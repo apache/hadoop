@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -71,6 +72,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -1086,6 +1089,41 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
     throw new YarnException("Unable to listFederationQueuePolicies.");
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationApplication Request.", null);
+    }
+
+    String application = request.getApplication();
+    if (StringUtils.isBlank(application)) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "ApplicationId cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      ApplicationId applicationId = ApplicationId.fromString(application);
+      federationFacade.deleteApplicationHomeSubCluster(applicationId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationApplicationFailedRetrieved(stopTime - startTime);
+      return DeleteFederationApplicationResponse.newInstance(
+          "applicationId = " + applicationId + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationApplication due to exception. " + e.getMessage());
+    }
+
+    throw new YarnException("Unable to deleteFederationApplication.");
   }
 
   /**
