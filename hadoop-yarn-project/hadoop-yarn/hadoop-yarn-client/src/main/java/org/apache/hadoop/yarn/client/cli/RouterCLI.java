@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
@@ -42,6 +43,8 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
@@ -227,12 +230,37 @@ public class RouterCLI extends Configured implements Tool {
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_1)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2);
 
+  // Command3: application
+  private static final String CMD_APPLICATION = "-application";
+
+  // Application Delete
+  protected final static UsageInfo APPLICATION_DELETE_USAGE = new UsageInfo(
+      "--delete <application_id>",
+      "This command is used to delete the specified application.");
+
+  protected final static String APPLICATION_DELETE_USAGE_EXAMPLE_DESC =
+      "If we want to delete application_1440536969523_0001.";
+
+  protected final static String APPLICATION_DELETE_USAGE_EXAMPLE_1 =
+      "yarn routeradmin -application --delete application_1440536969523_0001";
+
+  protected final static RouterCmdUsageInfos APPLICATION_USAGEINFOS = new RouterCmdUsageInfos()
+      // application delete
+      .addUsageInfo(APPLICATION_DELETE_USAGE)
+      .addExampleDescs(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_DESC)
+      .addExample(APPLICATION_DELETE_USAGE.args, APPLICATION_DELETE_USAGE_EXAMPLE_1);
+
+  // delete application
+  private static final String OPTION_DELETE_APP = "delete";
+
   protected final static Map<String, RouterCmdUsageInfos> ADMIN_USAGE =
       ImmutableMap.<String, RouterCmdUsageInfos>builder()
       // Command1: deregisterSubCluster
       .put(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER_USAGEINFOS)
       // Command2: policy
       .put(CMD_POLICY, POLICY_USAGEINFOS)
+      // Command3: application
+      .put(CMD_APPLICATION, APPLICATION_USAGEINFOS)
       .build();
 
   public RouterCLI() {
@@ -814,6 +842,50 @@ public class RouterCLI extends Configured implements Tool {
     }
   }
 
+  private int handleDeleteApplication(String application) {
+    LOG.info("Delete Application = {}.", application);
+    try {
+      DeleteFederationApplicationRequest request =
+          DeleteFederationApplicationRequest.newInstance(application);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      DeleteFederationApplicationResponse response =
+          adminProtocol.deleteFederationApplication(request);
+      System.out.println(response.getMessage());
+      return EXIT_SUCCESS;
+    } catch (Exception e) {
+      LOG.error("handleSavePolicy error.", e);
+      return EXIT_ERROR;
+    }
+  }
+
+  private int handleApplication(String[] args)
+      throws IOException, YarnException, ParseException {
+    // Prepare Options.
+    Options opts = new Options();
+    opts.addOption("application", false,
+        "We provide a set of commands to query and clean applications.");
+    Option deleteOpt = new Option(null, OPTION_DELETE_APP, true,
+        "We will clean up the provided application.");
+    opts.addOption(deleteOpt);
+
+    // Parse command line arguments.
+    CommandLine cliParser;
+    try {
+      cliParser = new DefaultParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      System.out.println("Missing argument for options");
+      printUsage(args[0]);
+      return EXIT_ERROR;
+    }
+
+    if (cliParser.hasOption(OPTION_DELETE_APP)) {
+      String application = cliParser.getOptionValue(OPTION_DELETE_APP);
+      return handleDeleteApplication(application);
+    }
+
+    return 0;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf = getConf() == null ?
@@ -839,6 +911,8 @@ public class RouterCLI extends Configured implements Tool {
       return handleDeregisterSubCluster(args);
     } else if (CMD_POLICY.equals(cmd)) {
       return handlePolicy(args);
+    } else if (CMD_APPLICATION.equals(cmd)) {
+      return handleApplication(args);
     } else {
       System.out.println("No related commands found.");
       printHelp();
