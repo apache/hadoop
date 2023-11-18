@@ -62,10 +62,15 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Memory"));
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"modelerType\"", result);
-    
+
+    System.setProperty("THE_TEST_OF_THE_NAN_VALUES", String.valueOf(Float.NaN));
     result = readOutput(new URL(baseUrl, "/jmx"));
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
-    
+    assertReFind(
+        "\"key\"\\s*:\\s*\"THE_TEST_OF_THE_NAN_VALUES\"\\s*,\\s*\"value\"\\s*:\\s*\"NaN\"",
+        result
+    );
+
     // test to get an attribute of a mbean
     result = readOutput(new URL(baseUrl, 
         "/jmx?get=java.lang:type=Memory::HeapMemoryUsage"));

@@ -1118,4 +1118,8 @@ public final class FederationStateStoreFacade {
   public FederationCache getFederationCache() {
     return federationCache;
   }
+
+  public void deleteStore() throws Exception {
+    stateStore.deleteStateStore();
+  }
 }
