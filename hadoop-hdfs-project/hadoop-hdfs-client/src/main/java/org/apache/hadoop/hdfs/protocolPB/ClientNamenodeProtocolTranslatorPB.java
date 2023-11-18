@@ -2095,7 +2095,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
           rpcProxy.getEnclosingRoot(null, req);
       return new Path(response.getEnclosingRootPath());
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw getRemoteException(e);
     }
   }
 
