@@ -49,7 +49,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   private final int lowProgVersion;
   private final int highProgVersion;
   protected final boolean allowInsecurePorts;
-  
+
   /**
    * If not null, this will be used as the socket to use to connect to the
    * system portmap daemon when registering this RPC server program.
@@ -69,7 +69,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
 
   /**
    * Constructor
-   * 
+   *
    * @param program program name
    * @param host host where the Rpc server program is started
    * @param port port where the Rpc server program is listening to
@@ -117,7 +117,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
       register(mapEntry, true);
     }
   }
-  
+
   /**
    * Unregister this program with the local portmapper.
    * @param transport transport layer for port map
@@ -136,7 +136,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
       register(mapEntry, false);
     }
   }
-  
+
   /**
    * Register the program with Portmap or Rpcbind.
    * @param mapEntry port map entries
@@ -159,7 +159,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   // Start extra daemons or services
   public void startDaemons() {}
   public void stopDaemons() {}
-  
+
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg)
       throws Exception {
@@ -178,7 +178,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
     if (LOG.isTraceEnabled()) {
       LOG.trace(program + " procedure #" + call.getProcedure());
     }
-    
+
     if (this.progNumber != call.getProgram()) {
       LOG.warn("Invalid RPC call program " + call.getProgram());
       sendAcceptedReply(call, remoteAddress, AcceptState.PROG_UNAVAIL, ctx);
@@ -191,10 +191,10 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
       sendAcceptedReply(call, remoteAddress, AcceptState.PROG_MISMATCH, ctx);
       return;
     }
-    
+
     handleInternal(ctx, info);
   }
-  
+
   public boolean doPortMonitoring(SocketAddress remoteAddress) {
     if (!allowInsecurePorts) {
       if (LOG.isTraceEnabled()) {
@@ -217,7 +217,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
     }
     return true;
   }
-  
+
   private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
       AcceptState acceptState, ChannelHandlerContext ctx) {
     RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
@@ -234,7 +234,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
     RpcResponse rsp = new RpcResponse(b, remoteAddress);
     RpcUtil.sendRpcResponse(ctx, rsp);
   }
-  
+
   protected static void sendRejectedReply(RpcCall call,
       SocketAddress remoteAddress, ChannelHandlerContext ctx) {
     XDR out = new XDR();
@@ -249,14 +249,14 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   }
 
   protected abstract void handleInternal(ChannelHandlerContext ctx, RpcInfo info);
-  
+
   @Override
   public String toString() {
     return "Rpc program: " + program + " at " + host + ":" + port;
   }
-  
+
   protected abstract boolean isIdempotent(RpcCall call);
-  
+
   public int getPort() {
     return port;
   }

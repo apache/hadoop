@@ -27,7 +27,7 @@ import java.util.Arrays;
  * A simple UDP based RPC client which just sends one request to a server.
  */
 public class SimpleUdpClient {
-  
+
   protected final String host;
   protected final int port;
   protected final XDR request;
@@ -71,7 +71,7 @@ public class SimpleUdpClient {
       DatagramPacket receivePacket = new DatagramPacket(receiveData,
           receiveData.length);
       socket.receive(receivePacket);
-  
+
       // Check reply status
       XDR xdr = new XDR(Arrays.copyOfRange(receiveData, 0,
           receivePacket.getLength()));

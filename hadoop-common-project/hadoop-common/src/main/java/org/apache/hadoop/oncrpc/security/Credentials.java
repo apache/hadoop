@@ -45,7 +45,7 @@ public abstract class Credentials extends RpcAuthInfo {
     credentials.read(xdr);
     return credentials;
   }
-  
+
   /**
    * Write AuthFlavor and the credentials to the XDR
    * @param cred credentials
@@ -63,9 +63,9 @@ public abstract class Credentials extends RpcAuthInfo {
     }
     cred.write(xdr);
   }
-  
+
   protected int mCredentialsLength;
-  
+
   protected Credentials(AuthFlavor flavor) {
     super(flavor);
   }

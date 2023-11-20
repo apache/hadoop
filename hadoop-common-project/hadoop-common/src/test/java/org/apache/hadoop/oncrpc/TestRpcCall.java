@@ -29,7 +29,7 @@ import org.junit.Test;
  * Tests for {@link RpcCall}
  */
 public class TestRpcCall {
-  
+
   @Test
   public void testConstructor() {
     Credentials credential = new CredentialsNone();
@@ -49,13 +49,13 @@ public class TestRpcCall {
     assertEquals(credential, call.getCredential());
     assertEquals(verifier, call.getVerifier());
   }
-  
+
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidRpcVersion() {
     int invalidRpcVersion = 3;
     new RpcCall(0, RpcMessage.Type.RPC_CALL, invalidRpcVersion, 2, 3, 4, null, null);
   }
-  
+
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidRpcMessageType() {
     RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY; // Message typ is not RpcMessage.RPC_CALL

@@ -38,16 +38,16 @@ public class TestRpcAcceptedReply {
     assertEquals(AcceptState.GARBAGE_ARGS, AcceptState.fromValue(4));
     assertEquals(AcceptState.SYSTEM_ERR, AcceptState.fromValue(5));
   }
-  
+
   @Test(expected = IndexOutOfBoundsException.class)
   public void testAcceptStateFromInvalidValue() {
     AcceptState.fromValue(6);
   }
-  
+
   @Test
   public void testConstructor() {
     Verifier verifier = new VerifierNone();
-    RpcAcceptedReply reply = new RpcAcceptedReply(0, 
+    RpcAcceptedReply reply = new RpcAcceptedReply(0,
         ReplyState.MSG_ACCEPTED, verifier, AcceptState.SUCCESS);
     assertEquals(0, reply.getXid());
     assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());

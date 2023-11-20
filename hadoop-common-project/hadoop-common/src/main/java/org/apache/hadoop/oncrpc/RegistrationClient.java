@@ -86,7 +86,7 @@ public class RegistrationClient extends SimpleTcpClient {
     }
 
     private void handle(RpcDeniedReply deniedReply) {
-      LOG.warn("Portmap mapping registration request was denied , " + 
+      LOG.warn("Portmap mapping registration request was denied , " +
           deniedReply);
     }
 

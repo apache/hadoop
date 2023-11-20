@@ -32,20 +32,20 @@ public class TestRpcMessage {
       }
     };
   }
-  
+
   @Test
   public void testRpcMessage() {
     RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
     Assert.assertEquals(0, msg.getXid());
     Assert.assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
   }
-  
+
   @Test
   public void testValidateMessage() {
     RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
     msg.validateMessageType(RpcMessage.Type.RPC_CALL);
   }
-  
+
   @Test(expected = IllegalArgumentException.class)
   public void testValidateMessageException() {
     RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);

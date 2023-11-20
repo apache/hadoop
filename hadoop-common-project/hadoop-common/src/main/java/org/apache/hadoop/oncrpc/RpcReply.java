@@ -30,25 +30,25 @@ public abstract class RpcReply extends RpcMessage {
     // the order of the values below are significant.
     MSG_ACCEPTED,
     MSG_DENIED;
-    
+
     int getValue() {
       return ordinal();
     }
-    
+
     public static ReplyState fromValue(int value) {
       return values()[value];
     }
   }
-  
+
   protected final ReplyState replyState;
   protected final Verifier verifier;
-  
+
   RpcReply(int xid, ReplyState state, Verifier verifier) {
     super(xid, RpcMessage.Type.RPC_REPLY);
     this.replyState = state;
     this.verifier = verifier;
   }
-  
+
   public RpcAuthInfo getVerifier() {
     return verifier;
   }
@@ -57,7 +57,7 @@ public abstract class RpcReply extends RpcMessage {
     int xid = xdr.readInt();
     final Type messageType = Type.fromValue(xdr.readInt());
     Preconditions.checkState(messageType == RpcMessage.Type.RPC_REPLY);
-    
+
     ReplyState stat = ReplyState.fromValue(xdr.readInt());
     switch (stat) {
     case MSG_ACCEPTED:

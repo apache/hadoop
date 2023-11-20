@@ -39,11 +39,11 @@ public class SimpleTcpClient {
   protected final boolean oneShot;
   private NioEventLoopGroup workerGroup;
   private ChannelFuture future;
-  
+
   public SimpleTcpClient(String host, int port, XDR request) {
     this(host,port, request, true);
   }
-  
+
   public SimpleTcpClient(String host, int port, XDR request, Boolean oneShot) {
     this.host = host;
     this.port = port;

@@ -35,7 +35,7 @@ public class TestRpcAuthInfo {
     assertEquals(AuthFlavor.AUTH_DH, AuthFlavor.fromValue(3));
     assertEquals(AuthFlavor.RPCSEC_GSS, AuthFlavor.fromValue(6));
   }
-  
+
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidAuthFlavor() {
     assertEquals(AuthFlavor.AUTH_NONE, AuthFlavor.fromValue(4));

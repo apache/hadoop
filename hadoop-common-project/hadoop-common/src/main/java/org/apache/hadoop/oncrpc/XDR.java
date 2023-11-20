@@ -76,7 +76,7 @@ public final class XDR {
    * Wraps a byte array as a read-only XDR message. There's no copy involved,
    * thus it is the client's responsibility to ensure that the byte array
    * remains unmodified when using the XDR object.
-   * 
+   *
    * @param src
    *          the byte array to be wrapped.
    */

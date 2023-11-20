@@ -31,17 +31,17 @@ public class RpcCall extends RpcMessage {
 
   public static RpcCall read(XDR xdr) {
     return new RpcCall(xdr.readInt(), RpcMessage.Type.fromValue(xdr.readInt()),
-        xdr.readInt(), xdr.readInt(), xdr.readInt(), xdr.readInt(), 
+        xdr.readInt(), xdr.readInt(), xdr.readInt(), xdr.readInt(),
         Credentials.readFlavorAndCredentials(xdr),
         Verifier.readFlavorAndVerifier(xdr));
   }
-  
+
   public static RpcCall getInstance(int xid, int program, int version,
       int procedure, Credentials cred, Verifier verifier) {
     return new RpcCall(xid, RpcMessage.Type.RPC_CALL, 2, program, version,
         procedure, cred, verifier);
   }
-  
+
   private final int rpcVersion;
   private final int program;
   private final int version;
@@ -64,14 +64,14 @@ public class RpcCall extends RpcMessage {
     }
     validate();
   }
-  
+
   private void validateRpcVersion() {
     if (rpcVersion != RPC_VERSION) {
       throw new IllegalArgumentException("RPC version is expected to be "
           + RPC_VERSION + " but got " + rpcVersion);
     }
   }
-  
+
   public void validate() {
     validateMessageType(RpcMessage.Type.RPC_CALL);
     validateRpcVersion();
@@ -95,7 +95,7 @@ public class RpcCall extends RpcMessage {
   public int getProcedure() {
     return procedure;
   }
-  
+
   public Credentials getCredential() {
     return credentials;
   }
@@ -103,7 +103,7 @@ public class RpcCall extends RpcMessage {
   public Verifier getVerifier() {
     return verifier;
   }
-  
+
   @Override
   public XDR write(XDR xdr) {
     xdr.writeInt(xid);
@@ -116,7 +116,7 @@ public class RpcCall extends RpcMessage {
     Verifier.writeFlavorAndVerifier(verifier, xdr);
     return xdr;
   }
-  
+
   @Override
   public String toString() {
     return String.format("Xid:%d, messageType:%s, rpcVersion:%d, program:%d,"

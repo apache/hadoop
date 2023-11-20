@@ -56,7 +56,7 @@ public abstract class Verifier extends RpcAuthInfo {
     verifer.read(xdr);
     return verifer;
   }
-  
+
   /**
    * Write AuthFlavor and the verifier to the XDR.
    * @param verifier written to XDR
@@ -71,5 +71,5 @@ public abstract class Verifier extends RpcAuthInfo {
       throw new UnsupportedOperationException("Cannot recognize the verifier");
     }
     verifier.write(xdr);
-  }  
+  }
 }

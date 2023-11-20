@@ -29,13 +29,13 @@ public class VerifierGSS extends Verifier {
   @Override
   public void read(XDR xdr) {
     // TODO Auto-generated method stub
-    
+
   }
 
   @Override
   public void write(XDR xdr) {
     // TODO Auto-generated method stub
-    
+
   }
 
 }

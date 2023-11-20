@@ -26,7 +26,7 @@ public abstract class RpcMessage {
     // the order of the values below are significant.
     RPC_CALL,
     RPC_REPLY;
-    
+
     public int getValue() {
       return ordinal();
     }
@@ -41,7 +41,7 @@ public abstract class RpcMessage {
 
   protected final int xid;
   protected final Type messageType;
-  
+
   RpcMessage(int xid, Type messageType) {
     if (messageType != Type.RPC_CALL && messageType != Type.RPC_REPLY) {
       throw new IllegalArgumentException("Invalid message type " + messageType);
@@ -49,9 +49,9 @@ public abstract class RpcMessage {
     this.xid = xid;
     this.messageType = messageType;
   }
-  
+
   public abstract XDR write(XDR xdr);
-  
+
   public int getXid() {
     return xid;
   }
@@ -59,7 +59,7 @@ public abstract class RpcMessage {
   public Type getMessageType() {
     return messageType;
   }
-  
+
   protected void validateMessageType(Type expected) {
     if (expected != messageType) {
       throw new IllegalArgumentException("Message type is expected to be "

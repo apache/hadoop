@@ -32,12 +32,12 @@ public class TestRpcDeniedReply {
     Assert.assertEquals(RejectState.RPC_MISMATCH, RejectState.fromValue(0));
     Assert.assertEquals(RejectState.AUTH_ERROR, RejectState.fromValue(1));
   }
-  
+
   @Test(expected=IndexOutOfBoundsException.class)
   public void testRejectStateFromInvalidValue1() {
     RejectState.fromValue(2);
   }
-  
+
   @Test
   public void testConstructor() {
     RpcDeniedReply reply = new RpcDeniedReply(0, ReplyState.MSG_ACCEPTED,

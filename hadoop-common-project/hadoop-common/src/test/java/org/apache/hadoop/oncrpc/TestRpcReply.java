@@ -32,12 +32,12 @@ public class TestRpcReply {
     Assert.assertEquals(ReplyState.MSG_ACCEPTED, ReplyState.fromValue(0));
     Assert.assertEquals(ReplyState.MSG_DENIED, ReplyState.fromValue(1));
   }
-  
+
   @Test(expected=IndexOutOfBoundsException.class)
   public void testReplyStateFromInvalidValue1() {
     ReplyState.fromValue(2);
   }
-  
+
   @Test
   public void testRpcReply() {
     RpcReply reply = new RpcReply(0, ReplyState.MSG_ACCEPTED,

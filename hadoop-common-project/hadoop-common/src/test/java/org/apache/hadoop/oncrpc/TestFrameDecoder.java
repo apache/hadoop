@@ -40,7 +40,7 @@ import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
 public class TestFrameDecoder {
-  
+
   static {
     GenericTestUtils.setLogLevel(RpcProgram.LOG, Level.TRACE);
   }
@@ -78,7 +78,7 @@ public class TestFrameDecoder {
           return;
         }
       }
-      
+
       resultSize = info.data().readableBytes();
       RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(1234,
           new VerifierNone());
@@ -127,7 +127,7 @@ public class TestFrameDecoder {
     assertTrue(decoder.isLast());
     buf.release();
   }
-  
+
   @Test
   public void testMultipleFrames() {
     RpcFrameDecoder decoder = new RpcFrameDecoder();
@@ -142,7 +142,7 @@ public class TestFrameDecoder {
     assertTrue(XDR.fragmentSize(fragment1)==10);
 
     List<Object> outputBufs = new ArrayList<>();
-    
+
     // decoder should wait for the final fragment
     ByteBuf buf = Unpooled.directBuffer(4 + 10, 4 + 10);
     buf.writeBytes(fragment1);
@@ -188,7 +188,7 @@ public class TestFrameDecoder {
     // Verify the server got the request with right size
     assertEquals(requestSize, resultSize);
   }
-  
+
   @Test
   public void testUnprivilegedPort() throws InterruptedException {
     // Don't allow connections from unprivileged ports. Given that this test is
@@ -205,7 +205,7 @@ public class TestFrameDecoder {
 
     // Verify the server rejected the request.
     assertEquals(0, resultSize);
-    
+
     // Ensure that the NULL procedure does in fact succeed.
     xdrOut = new XDR();
     createPortmapXDRheader(xdrOut, 0);
@@ -213,14 +213,14 @@ public class TestFrameDecoder {
     buffer = new byte[bufsize];
     xdrOut.writeFixedOpaque(buffer);
     int requestSize = xdrOut.size() - headerSize;
-    
+
     // Send the request to the server
     testRequest(xdrOut, serverPort);
 
     // Verify the server did not reject the request.
     assertEquals(requestSize, resultSize);
   }
-  
+
   private static int startRpcServer(boolean allowInsecurePorts)
       throws InterruptedException {
     Random rand = new Random();
@@ -262,19 +262,19 @@ public class TestFrameDecoder {
   }
   /*
    * static void testGetport() { XDR xdr_out = new XDR();
-   * 
+   *
    * createPortmapXDRheader(xdr_out, 3);
-   * 
+   *
    * xdr_out.writeInt(100003); xdr_out.writeInt(3); xdr_out.writeInt(6);
    * xdr_out.writeInt(0);
-   * 
+   *
    * XDR request2 = new XDR();
-   * 
+   *
    * createPortmapXDRheader(xdr_out, 3); request2.writeInt(100003);
    * request2.writeInt(3); request2.writeInt(6); request2.writeInt(0);
-   * 
+   *
    * testRequest(xdr_out); }
-   * 
+   *
    * static void testDump() { XDR xdr_out = new XDR();
    * createPortmapXDRheader(xdr_out, 4); testRequest(xdr_out); }
    */

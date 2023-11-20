@@ -22,7 +22,7 @@ import org.apache.hadoop.oncrpc.XDR;
 /**
  * Represents a mapping entry for in the Portmap service for binding RPC
  * protocols. See RFC 1833 for details.
- * 
+ *
  * This maps a program to a port number.
  */
 public class PortmapMapping {
@@ -61,7 +61,7 @@ public class PortmapMapping {
   public static String key(PortmapMapping mapping) {
     return mapping.program + " " + mapping.version + " " + mapping.transport;
   }
-  
+
   @Override
   public String toString() {
     return String.format("(PortmapMapping-%d:%d:%d:%d)", program, version,

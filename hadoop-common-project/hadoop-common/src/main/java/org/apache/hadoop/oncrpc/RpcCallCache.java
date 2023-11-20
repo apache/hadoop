@@ -39,34 +39,34 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * <br>
  * A request is identified by the client ID (address of the client) and
  * transaction ID (xid) from the Rpc call.
- * 
+ *
  */
 public class RpcCallCache {
-  
+
   public static class CacheEntry {
     private RpcResponse response; // null if no response has been sent
-    
+
     public CacheEntry() {
       response = null;
     }
-      
+
     public boolean isInProgress() {
       return response == null;
     }
-    
+
     public boolean isCompleted() {
       return response != null;
     }
-    
+
     public RpcResponse getResponse() {
       return response;
     }
-    
+
     public void setResponse(RpcResponse response) {
       this.response = response;
     }
   }
-  
+
   /**
    * Call that is used to track a client in the {@link RpcCallCache}
    */
@@ -85,9 +85,9 @@ public class RpcCallCache {
 
     @Override
     public int hashCode() {
-	  return xid + clientId.hashCode() * 31;
+      return xid + clientId.hashCode() * 31;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
       if (this == obj) {
@@ -100,11 +100,11 @@ public class RpcCallCache {
       return clientId.equals(other.clientId) && (xid == other.xid);
     }
   }
-  
+
   private final String program;
-  
+
   private final Map<ClientRequest, CacheEntry> map;
-  
+
   public RpcCallCache(final String program, final int maxEntries) {
     if (maxEntries <= 0) {
       throw new IllegalArgumentException("Cache size is " + maxEntries
@@ -121,7 +121,7 @@ public class RpcCallCache {
       }
     };
   }
-  
+
   /**
    * Return the program name.
    * @return RPC program name
@@ -144,7 +144,7 @@ public class RpcCallCache {
     }
     e.response = response;
   }
-  
+
   /**
    * Check the cache for an entry. If it does not exist, add the request
    * as in progress.
@@ -164,7 +164,7 @@ public class RpcCallCache {
     }
     return e;
   }
-  
+
   /**
    * Return number of cached entries.
    * @return cache size
@@ -172,8 +172,8 @@ public class RpcCallCache {
   public int size() {
     return map.size();
   }
-  
-  /** 
+
+  /**
    * Iterator to the cache entries.
    * @return iterator cache iterator
    */

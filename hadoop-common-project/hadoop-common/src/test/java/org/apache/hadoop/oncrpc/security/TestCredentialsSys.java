@@ -34,13 +34,13 @@ public class TestCredentialsSys {
     credential.setUID(0);
     credential.setGID(1);
     credential.setStamp(1234);
-    
+
     XDR xdr = new XDR();
     credential.write(xdr);
-    
+
     CredentialsSys newCredential = new CredentialsSys();
     newCredential.read(xdr.asReadOnlyWrap());
-    
+
     assertEquals(0, newCredential.getUID());
     assertEquals(1, newCredential.getGID());
     assertEquals(1234, newCredential.getStamp());

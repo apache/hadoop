@@ -19,7 +19,7 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.security.Verifier;
 
-/** 
+/**
  * Represents RPC message MSG_ACCEPTED reply body. See RFC 1831 for details.
  * This response is sent to a request to indicate success of the request.
  */
@@ -32,7 +32,7 @@ public class RpcAcceptedReply extends RpcReply {
     PROC_UNAVAIL, /* program can't support procedure */
     GARBAGE_ARGS, /* procedure can't decode params */
     SYSTEM_ERR; /* e.g. memory allocation failure */
-    
+
     public static AcceptState fromValue(int value) {
       return values()[value];
     }
@@ -41,12 +41,12 @@ public class RpcAcceptedReply extends RpcReply {
       return ordinal();
     }
   };
-  
-  public static RpcAcceptedReply getAcceptInstance(int xid, 
+
+  public static RpcAcceptedReply getAcceptInstance(int xid,
       Verifier verifier) {
     return getInstance(xid, AcceptState.SUCCESS, verifier);
   }
-  
+
   public static RpcAcceptedReply getInstance(int xid, AcceptState state,
       Verifier verifier) {
     return new RpcAcceptedReply(xid, ReplyState.MSG_ACCEPTED, verifier,
@@ -70,7 +70,7 @@ public class RpcAcceptedReply extends RpcReply {
   public AcceptState getAcceptState() {
     return acceptState;
   }
-  
+
   @Override
   public XDR write(XDR xdr) {
     xdr.writeInt(xid);

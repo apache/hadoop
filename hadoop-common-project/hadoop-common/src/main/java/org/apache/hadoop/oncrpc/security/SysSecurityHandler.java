@@ -22,16 +22,16 @@ import org.apache.hadoop.security.IdMappingConstant;
 import org.apache.hadoop.security.IdMappingServiceProvider;
 
 public class SysSecurityHandler extends SecurityHandler {
-  
+
   private final IdMappingServiceProvider iug;
   private final CredentialsSys mCredentialsSys;
-  
+
   public SysSecurityHandler(CredentialsSys credentialsSys,
       IdMappingServiceProvider iug) {
     this.mCredentialsSys = credentialsSys;
     this.iug = iug;
   }
-  
+
   @Override
   public String getUser() {
     return iug.getUserName(mCredentialsSys.getUID(),
@@ -47,12 +47,12 @@ public class SysSecurityHandler extends SecurityHandler {
   public VerifierNone getVerifer(RpcCall request) {
     return new VerifierNone();
   }
-  
+
   @Override
   public int getUid() {
     return mCredentialsSys.getUID();
   }
-  
+
   @Override
   public int getGid() {
     return mCredentialsSys.getGID();

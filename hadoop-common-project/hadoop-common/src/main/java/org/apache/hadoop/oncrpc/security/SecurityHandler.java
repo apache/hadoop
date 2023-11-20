@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public abstract class SecurityHandler {
   public static final Logger LOG =
       LoggerFactory.getLogger(SecurityHandler.class);
-  
+
   public abstract String getUser();
 
   public abstract boolean shouldSilentlyDrop(RpcCall request);
@@ -52,7 +52,7 @@ public abstract class SecurityHandler {
   public XDR unwrap(RpcCall request, byte[] data ) throws IOException {
     throw new UnsupportedOperationException();
   }
-  
+
   /**
    * Used by GSS.
    * @param request RPC request
@@ -63,7 +63,7 @@ public abstract class SecurityHandler {
   public byte[] wrap(RpcCall request, XDR response) throws IOException {
     throw new UnsupportedOperationException();
   }
-  
+
   /**
    * Used by AUTH_SYS.
    * Return the uid of the NFS user credential.
@@ -72,7 +72,7 @@ public abstract class SecurityHandler {
   public int getUid() {
     throw new UnsupportedOperationException();
   }
-  
+
   /**
    * Used by AUTH_SYS.
    * Return the gid of the NFS user credential.

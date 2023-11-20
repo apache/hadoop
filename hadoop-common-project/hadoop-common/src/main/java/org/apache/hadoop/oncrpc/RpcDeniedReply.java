@@ -19,7 +19,7 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.security.Verifier;
 
-/** 
+/**
  * Represents RPC message MSG_DENIED reply body. See RFC 1831 for details.
  * This response is sent to a request to indicate failure of the request.
  */
@@ -55,7 +55,7 @@ public class RpcDeniedReply extends RpcReply {
   public RejectState getRejectState() {
     return rejectState;
   }
-  
+
   @Override
   public String toString() {
     return new StringBuffer().append("xid:").append(xid)
@@ -63,7 +63,7 @@ public class RpcDeniedReply extends RpcReply {
         .append(verifier.getFlavor()).append("rejectState:")
         .append(rejectState).toString();
   }
-  
+
   @Override
   public XDR write(XDR xdr) {
     xdr.writeInt(xid);
