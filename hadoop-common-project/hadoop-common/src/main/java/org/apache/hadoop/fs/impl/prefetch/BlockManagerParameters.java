@@ -70,78 +70,156 @@ public final class BlockManagerParameters {
    */
   private DurationTrackerFactory trackerFactory;
 
+  /**
+   * @return The Executor future pool to perform async prefetch tasks.
+   */
   public ExecutorServiceFuturePool getFuturePool() {
     return futurePool;
   }
 
+  /**
+   * @return The object holding blocks data info for the underlying file.
+   */
   public BlockData getBlockData() {
     return blockData;
   }
 
+  /**
+   * @return The size of the in-memory cache.
+   */
   public int getBufferPoolSize() {
     return bufferPoolSize;
   }
 
+  /**
+   * @return The prefetching statistics for the stream.
+   */
   public PrefetchingStatistics getPrefetchingStatistics() {
     return prefetchingStatistics;
   }
 
+  /**
+   * @return The configuration object.
+   */
   public Configuration getConf() {
     return conf;
   }
 
+  /**
+   * @return The local dir allocator instance.
+   */
   public LocalDirAllocator getLocalDirAllocator() {
     return localDirAllocator;
   }
 
+  /**
+   * @return The max blocks count to be kept in cache at any time.
+   */
   public int getMaxBlocksCount() {
     return maxBlocksCount;
   }
 
+  /**
+   * @return The duration tracker with statistics to update.
+   */
   public DurationTrackerFactory getTrackerFactory() {
     return trackerFactory;
   }
 
-  public BlockManagerParameters setFuturePool(
-      ExecutorServiceFuturePool pool) {
+  /**
+   * Sets the executor service future pool that is later used to perform
+   * async prefetch tasks.
+   *
+   * @param pool The future pool.
+   * @return The builder.
+   */
+  public BlockManagerParameters withFuturePool(
+      final ExecutorServiceFuturePool pool) {
     this.futurePool = pool;
     return this;
   }
 
-  public BlockManagerParameters setBlockData(BlockData data) {
+  /**
+   * Sets the object holding blocks data info for the underlying file.
+   *
+   * @param data The block data object.
+   * @return The builder.
+   */
+  public BlockManagerParameters withBlockData(
+      final BlockData data) {
     this.blockData = data;
     return this;
   }
 
-  public BlockManagerParameters setBufferPoolSize(int poolSize) {
+  /**
+   * Sets the in-memory cache size as number of blocks.
+   *
+   * @param poolSize The buffer pool size as number of blocks.
+   * @return The builder.
+   */
+  public BlockManagerParameters withBufferPoolSize(
+      final int poolSize) {
     this.bufferPoolSize = poolSize;
     return this;
   }
 
-  public BlockManagerParameters setPrefetchingStatistics(
-      PrefetchingStatistics statistics) {
+  /**
+   * Sets the prefetching statistics for the stream.
+   *
+   * @param statistics The prefetching statistics.
+   * @return The builder.
+   */
+  public BlockManagerParameters withPrefetchingStatistics(
+      final PrefetchingStatistics statistics) {
     this.prefetchingStatistics = statistics;
     return this;
   }
 
-  public BlockManagerParameters setConf(Configuration configuration) {
+  /**
+   * Sets the configuration object.
+   *
+   * @param configuration The configuration object.
+   * @return The builder.
+   */
+  public BlockManagerParameters withConf(
+      final Configuration configuration) {
     this.conf = configuration;
     return this;
   }
 
-  public BlockManagerParameters setLocalDirAllocator(
-      LocalDirAllocator dirAllocator) {
+  /**
+   * Sets the local dir allocator for round-robin disk allocation
+   * while creating files.
+   *
+   * @param dirAllocator The local dir allocator object.
+   * @return The builder.
+   */
+  public BlockManagerParameters withLocalDirAllocator(
+      final LocalDirAllocator dirAllocator) {
     this.localDirAllocator = dirAllocator;
     return this;
   }
 
-  public BlockManagerParameters setMaxBlocksCount(int blocksCount) {
+  /**
+   * Sets the max blocks count to be kept in cache at any time.
+   *
+   * @param blocksCount The max blocks count.
+   * @return The builder.
+   */
+  public BlockManagerParameters withMaxBlocksCount(
+      final int blocksCount) {
     this.maxBlocksCount = blocksCount;
     return this;
   }
 
-  public BlockManagerParameters setTrackerFactory(
-      DurationTrackerFactory factory) {
+  /**
+   * Sets the duration tracker with statistics to update.
+   *
+   * @param factory The tracker factory object.
+   * @return The builder.
+   */
+  public BlockManagerParameters withTrackerFactory(
+      final DurationTrackerFactory factory) {
     this.trackerFactory = factory;
     return this;
   }

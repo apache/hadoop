@@ -69,89 +69,122 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       S3ATestUtils.prepareTestConfiguration(new Configuration());
 
   @Test
+  public void testFuturePoolNull() throws Exception {
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    Configuration conf = new Configuration();
+    try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
+      BlockManagerParameters blockManagerParams =
+          new BlockManagerParameters()
+              .withBlockData(blockData)
+              .withBufferPoolSize(POOL_SIZE)
+              .withPrefetchingStatistics(streamStatistics)
+              .withConf(conf);
+
+      intercept(NullPointerException.class,
+          () -> new S3ACachingBlockManager(blockManagerParams, reader));
+    }
+  }
+
+  @Test
+  public void testNullReader() throws Exception {
+    Configuration conf = new Configuration();
+    BlockManagerParameters blockManagerParams =
+        new BlockManagerParameters()
+            .withFuturePool(futurePool)
+            .withBlockData(blockData)
+            .withBufferPoolSize(POOL_SIZE)
+            .withPrefetchingStatistics(streamStatistics)
+            .withConf(conf)
+            .withMaxBlocksCount(
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+
+    intercept(IllegalArgumentException.class, "'reader' must not be null",
+        () -> new S3ACachingBlockManager(blockManagerParams, null));
+  }
+
+  @Test
+  public void testNullBlockData() throws Exception {
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    Configuration conf = new Configuration();
+    try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
+      BlockManagerParameters blockManagerParams =
+          new BlockManagerParameters()
+              .withFuturePool(futurePool)
+              .withBufferPoolSize(POOL_SIZE)
+              .withPrefetchingStatistics(streamStatistics)
+              .withConf(conf);
+
+      intercept(IllegalArgumentException.class, "'blockData' must not be null",
+          () -> new S3ACachingBlockManager(blockManagerParams, reader));
+    }
+  }
+
+  @Test
+  public void testNonPositiveBufferPoolSize() throws Exception {
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    Configuration conf = new Configuration();
+    try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
+      BlockManagerParameters blockManagerParams =
+          new BlockManagerParameters()
+              .withFuturePool(futurePool)
+              .withBlockData(blockData)
+              .withBufferPoolSize(0)
+              .withPrefetchingStatistics(streamStatistics)
+              .withConf(conf);
+
+      intercept(IllegalArgumentException.class, "'bufferPoolSize' must be a positive integer",
+          () -> new S3ACachingBlockManager(blockManagerParams, reader));
+
+      BlockManagerParameters blockManagerParamsWithNegativeSize =
+          new BlockManagerParameters()
+              .withFuturePool(futurePool)
+              .withBlockData(blockData)
+              .withBufferPoolSize(-1)
+              .withPrefetchingStatistics(streamStatistics)
+              .withConf(conf);
+
+      intercept(IllegalArgumentException.class, "'bufferPoolSize' must be a positive integer",
+          () -> new S3ACachingBlockManager(blockManagerParamsWithNegativeSize, reader));
+    }
+  }
+
+  @Test
+  public void testNullPrefetchingStatistics() throws Exception {
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    Configuration conf = new Configuration();
+    try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
+
+      BlockManagerParameters blockManagerParamsBuilder7 =
+          new BlockManagerParameters()
+              .withFuturePool(futurePool)
+              .withBlockData(blockData)
+              .withBufferPoolSize(POOL_SIZE)
+              .withConf(conf);
+
+      intercept(NullPointerException.class,
+          () -> new S3ACachingBlockManager(blockManagerParamsBuilder7, reader));
+    }
+  }
+
+  @Test
   public void testArgChecks() throws Exception {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
 
     Configuration conf = new Configuration();
-    BlockManagerParameters blockManagerParamsBuilder1 =
+    BlockManagerParameters blockManagerParams =
         new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf)
-            .setMaxBlocksCount(
+            .withFuturePool(futurePool)
+            .withBlockData(blockData)
+            .withBufferPoolSize(POOL_SIZE)
+            .withPrefetchingStatistics(streamStatistics)
+            .withConf(conf)
+            .withMaxBlocksCount(
                 conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
 
     // Should not throw.
     S3ACachingBlockManager blockManager =
-        new S3ACachingBlockManager(blockManagerParamsBuilder1, reader);
-
-    BlockManagerParameters blockManagerParamsBuilder2 =
-        new BlockManagerParameters()
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf);
-    // Verify it throws correctly.
-    intercept(NullPointerException.class,
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder2, reader));
-
-    BlockManagerParameters blockManagerParamsBuilder3 =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf)
-            .setMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
-
-    intercept(IllegalArgumentException.class, "'reader' must not be null",
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder3, null));
-
-    BlockManagerParameters blockManagerParamsBuilder4 =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf);
-
-    intercept(IllegalArgumentException.class, "'blockData' must not be null",
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder4, reader));
-
-    BlockManagerParameters blockManagerParamsBuilder5 =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(0)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf);
-
-    intercept(IllegalArgumentException.class, "'bufferPoolSize' must be a positive integer",
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder5, reader));
-
-    BlockManagerParameters blockManagerParamsBuilder6 =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(-1)
-            .setPrefetchingStatistics(streamStatistics)
-            .setConf(conf);
-
-    intercept(IllegalArgumentException.class, "'bufferPoolSize' must be a positive integer",
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder6, reader));
-
-    BlockManagerParameters blockManagerParamsBuilder7 =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setConf(conf);
-
-    intercept(NullPointerException.class,
-        () -> new S3ACachingBlockManager(blockManagerParamsBuilder7, reader));
+        new S3ACachingBlockManager(blockManagerParams, reader);
 
     intercept(
         IllegalArgumentException.class,
@@ -235,18 +268,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   private void testGetHelper(boolean forceReadFailure) throws Exception {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, true);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    BlockManagerParameters blockManagerParamsBuilder =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
-            .setConf(CONF)
-            .setMaxBlocksCount(
-                CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+    BlockManagerParameters blockManagerParams = getBlockManagerParameters();
     BlockManagerForTesting blockManager =
-        new BlockManagerForTesting(blockManagerParamsBuilder, reader);
+        new BlockManagerForTesting(blockManagerParams, reader);
 
     for (int b = 0; b < blockData.getNumBlocks(); b++) {
       // We simulate caching failure for all even numbered blocks.
@@ -292,18 +316,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       throws IOException, InterruptedException {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    BlockManagerParameters blockManagerParamsBuilder =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
-            .setConf(CONF)
-            .setMaxBlocksCount(
-                CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+    BlockManagerParameters blockManagerParams = getBlockManagerParameters();
     BlockManagerForTesting blockManager =
-        new BlockManagerForTesting(blockManagerParamsBuilder, reader);
+        new BlockManagerForTesting(blockManagerParams, reader);
     assertInitialState(blockManager);
 
     int expectedNumErrors = 0;
@@ -329,6 +344,18 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     assertEquals(expectedNumSuccesses, blockManager.numCached());
   }
 
+  private BlockManagerParameters getBlockManagerParameters() {
+    return new BlockManagerParameters()
+        .withFuturePool(futurePool)
+        .withBlockData(blockData)
+        .withBufferPoolSize(POOL_SIZE)
+        .withPrefetchingStatistics(streamStatistics)
+        .withLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
+        .withConf(CONF)
+        .withMaxBlocksCount(
+            CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+  }
+
   // @Ignore
   @Test
   public void testCachingOfPrefetched()
@@ -338,14 +365,14 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParamsBuilder =
         new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setLocalDirAllocator(
+            .withFuturePool(futurePool)
+            .withBlockData(blockData)
+            .withBufferPoolSize(POOL_SIZE)
+            .withPrefetchingStatistics(streamStatistics)
+            .withLocalDirAllocator(
                 new LocalDirAllocator(conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR))
-            .setConf(conf)
-            .setMaxBlocksCount(
+            .withConf(conf)
+            .withMaxBlocksCount(
                 conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
     S3ACachingBlockManager blockManager =
         new S3ACachingBlockManager(blockManagerParamsBuilder, reader);
@@ -382,18 +409,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       throws IOException, InterruptedException {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    BlockManagerParameters blockManagerParamsBuilder =
-        new BlockManagerParameters()
-            .setFuturePool(futurePool)
-            .setBlockData(blockData)
-            .setBufferPoolSize(POOL_SIZE)
-            .setPrefetchingStatistics(streamStatistics)
-            .setLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
-            .setConf(CONF)
-            .setMaxBlocksCount(
-                CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+    BlockManagerParameters blockManagerParams = getBlockManagerParameters();
     BlockManagerForTesting blockManager =
-        new BlockManagerForTesting(blockManagerParamsBuilder, reader);
+        new BlockManagerForTesting(blockManagerParams, reader);
     assertInitialState(blockManager);
 
     int expectedNumErrors = 0;

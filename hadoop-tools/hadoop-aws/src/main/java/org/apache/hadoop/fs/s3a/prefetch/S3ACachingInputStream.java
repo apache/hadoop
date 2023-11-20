@@ -85,15 +85,15 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
     BlockManagerParameters blockManagerParamsBuilder =
         new BlockManagerParameters()
-            .setFuturePool(this.getContext().getFuturePool())
-            .setBlockData(this.getBlockData())
-            .setBufferPoolSize(bufferPoolSize)
-            .setConf(conf)
-            .setLocalDirAllocator(localDirAllocator)
-            .setMaxBlocksCount(
+            .withFuturePool(this.getContext().getFuturePool())
+            .withBlockData(this.getBlockData())
+            .withBufferPoolSize(bufferPoolSize)
+            .withConf(conf)
+            .withLocalDirAllocator(localDirAllocator)
+            .withMaxBlocksCount(
                 conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
-            .setPrefetchingStatistics(getS3AStreamStatistics())
-            .setTrackerFactory(getS3AStreamStatistics());
+            .withPrefetchingStatistics(getS3AStreamStatistics())
+            .withTrackerFactory(getS3AStreamStatistics());
     this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
         this.getReader());
     int fileSize = (int) s3Attributes.getLen();
