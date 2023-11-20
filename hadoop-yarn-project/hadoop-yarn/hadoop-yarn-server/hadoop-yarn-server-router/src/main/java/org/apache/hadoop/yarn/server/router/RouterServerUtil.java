@@ -105,8 +105,9 @@ public final class RouterServerUtil {
       throws YarnException {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(msg, t);
-      throw new YarnException(msg, t);
+      String newErrMsg = getErrorMsg(msg, t);
+      LOG.error(newErrMsg, t);
+      throw new YarnException(newErrMsg, t);
     } else {
       LOG.error(msg);
       throw new YarnException(msg);
@@ -234,8 +235,9 @@ public final class RouterServerUtil {
   public static void logAndThrowIOException(String errMsg, Throwable t)
       throws IOException {
     if (t != null) {
-      LOG.error(errMsg, t);
-      throw new IOException(errMsg, t);
+      String newErrMsg = getErrorMsg(errMsg, t);
+      LOG.error(newErrMsg, t);
+      throw new IOException(newErrMsg, t);
     } else {
       LOG.error(errMsg);
       throw new IOException(errMsg);
@@ -256,8 +258,9 @@ public final class RouterServerUtil {
       throws IOException {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(msg, t);
-      throw new IOException(msg, t);
+      String newErrMsg = getErrorMsg(msg, t);
+      LOG.error(newErrMsg, t);
+      throw new IOException(newErrMsg, t);
     } else {
       LOG.error(msg);
       throw new IOException(msg);
@@ -276,8 +279,9 @@ public final class RouterServerUtil {
   public static void logAndThrowRunTimeException(String errMsg, Throwable t)
       throws RuntimeException {
     if (t != null) {
-      LOG.error(errMsg, t);
-      throw new RuntimeException(errMsg, t);
+      String newErrMsg = getErrorMsg(errMsg, t);
+      LOG.error(newErrMsg, t);
+      throw new RuntimeException(newErrMsg, t);
     } else {
       LOG.error(errMsg);
       throw new RuntimeException(errMsg);
@@ -298,8 +302,9 @@ public final class RouterServerUtil {
       throws RuntimeException {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(msg, t);
-      throw new RuntimeException(msg, t);
+      String newErrMsg = getErrorMsg(msg, t);
+      LOG.error(newErrMsg, t);
+      throw new RuntimeException(newErrMsg, t);
     } else {
       LOG.error(msg);
       throw new RuntimeException(msg);
@@ -320,8 +325,9 @@ public final class RouterServerUtil {
       Throwable t, String errMsgFormat, Object... args) {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(msg, t);
-      return new RuntimeException(msg, t);
+      String newErrMsg = getErrorMsg(msg, t);
+      LOG.error(newErrMsg, t);
+      return new RuntimeException(newErrMsg, t);
     } else {
       LOG.error(msg);
       return new RuntimeException(msg);
@@ -356,8 +362,9 @@ public final class RouterServerUtil {
       Throwable t, String errMsgFormat, Object... args) {
     String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(msg, t);
-      return new YarnRuntimeException(msg, t);
+      String newErrMsg = getErrorMsg(msg, t);
+      LOG.error(newErrMsg, t);
+      return new YarnRuntimeException(newErrMsg, t);
     } else {
       LOG.error(msg);
       return new YarnRuntimeException(msg);

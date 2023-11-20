@@ -26,12 +26,12 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 public class TestGpuDeviceInformationParser {
-  private static final String UTF_8 = "UTF-8";
   private static final double DELTA = 1e-6;
 
   @Rule
@@ -40,7 +40,7 @@ public class TestGpuDeviceInformationParser {
   @Test
   public void testParse() throws IOException, YarnException {
     File f = new File("src/test/resources/nvidia-smi-sample-output.xml");
-    String s = FileUtils.readFileToString(f, UTF_8);
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
     GpuDeviceInformation info = parser.parseXml(s);
@@ -54,7 +54,7 @@ public class TestGpuDeviceInformationParser {
   @Test
   public void testParseExcerpt() throws IOException, YarnException {
     File f = new File("src/test/resources/nvidia-smi-output-excerpt.xml");
-    String s = FileUtils.readFileToString(f, UTF_8);
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
     GpuDeviceInformation info = parser.parseXml(s);
@@ -69,7 +69,7 @@ public class TestGpuDeviceInformationParser {
   public void testParseConsecutivelyWithSameParser()
       throws IOException, YarnException {
     File f = new File("src/test/resources/nvidia-smi-sample-output.xml");
-    String s = FileUtils.readFileToString(f, UTF_8);
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     for (int i = 0; i < 3; i++) {
       GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
@@ -99,7 +99,7 @@ public class TestGpuDeviceInformationParser {
   @Test
   public void testParseMissingTags() throws IOException, YarnException {
     File f = new File("src/test/resources/nvidia-smi-output-missing-tags.xml");
-    String s = FileUtils.readFileToString(f, UTF_8);
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
     GpuDeviceInformation info = parser.parseXml(s);
@@ -119,7 +119,7 @@ public class TestGpuDeviceInformationParser {
   @Test
   public void testParseMissingInnerTags() throws IOException, YarnException {
     File f =new File("src/test/resources/nvidia-smi-output-missing-tags2.xml");
-    String s = FileUtils.readFileToString(f, UTF_8);
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
     GpuDeviceInformation info = parser.parseXml(s);

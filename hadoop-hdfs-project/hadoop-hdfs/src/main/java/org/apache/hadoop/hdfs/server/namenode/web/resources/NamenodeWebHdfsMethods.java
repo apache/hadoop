@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
@@ -124,7 +125,6 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -1339,7 +1339,7 @@ public class NamenodeWebHdfsMethods {
     {
       byte[] start = HdfsFileStatus.EMPTY_NAME;
       if (startAfter != null && startAfter.getValue() != null) {
-        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+        start = startAfter.getValue().getBytes(StandardCharsets.UTF_8);
       }
       final DirectoryListing listing = getDirectoryListing(cp, fullpath, start);
       final String js = JsonUtil.toJsonString(listing);
@@ -1532,7 +1532,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-            outstream, Charsets.UTF_8));
+            outstream, StandardCharsets.UTF_8));
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 

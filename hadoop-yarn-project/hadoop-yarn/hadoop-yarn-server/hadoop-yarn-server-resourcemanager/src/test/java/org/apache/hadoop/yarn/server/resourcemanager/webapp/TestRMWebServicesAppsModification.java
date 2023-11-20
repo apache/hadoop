@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -925,7 +926,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     Text key = new Text("secret1");
     assertTrue("Secrets missing from credentials object", cs
         .getAllSecretKeys().contains(key));
-    assertEquals("mysecret", new String(cs.getSecretKey(key), "UTF-8"));
+    assertEquals("mysecret", new String(cs.getSecretKey(key), StandardCharsets.UTF_8));
 
     // Check LogAggregationContext
     ApplicationSubmissionContext asc = app.getApplicationSubmissionContext();

@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -85,7 +86,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestRMAdminCLI {
@@ -1061,7 +1061,7 @@ public class TestRMAdminCLI {
     try {
       String[] args = {"-transitionToActive"};
       assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
-      String errOut = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
+      String errOut = new String(errOutBytes.toByteArray(), StandardCharsets.UTF_8);
       errOutBytes.reset();
       assertTrue(errOut.contains("Usage: rmadmin"));
     } finally {

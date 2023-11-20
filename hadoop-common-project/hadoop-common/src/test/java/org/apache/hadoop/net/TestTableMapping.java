@@ -21,11 +21,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TA
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +41,7 @@ public class TestTableMapping {
   public void testResolve() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testResolve", ".txt");
-    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write(
         hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
@@ -64,7 +64,7 @@ public class TestTableMapping {
   public void testTableCaching() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testTableCaching", ".txt");
-    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write(
         hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
@@ -128,7 +128,7 @@ public class TestTableMapping {
   public void testClearingCachedMappings() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testClearingCachedMappings", ".txt");
-    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write(
         hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
 
@@ -147,7 +147,7 @@ public class TestTableMapping {
     assertEquals("/rack1", result.get(0));
     assertEquals("/rack2", result.get(1));
 
-    Files.asCharSink(mapFile, Charsets.UTF_8).write("");
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write("");
 
     mapping.reloadCachedMappings();
 
@@ -166,7 +166,7 @@ public class TestTableMapping {
   public void testBadFile() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testBadFile", ".txt");
-    Files.asCharSink(mapFile, Charsets.UTF_8).write("bad contents");
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write("bad contents");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 

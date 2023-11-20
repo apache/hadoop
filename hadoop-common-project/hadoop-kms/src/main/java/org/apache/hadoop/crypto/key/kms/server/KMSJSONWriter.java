@@ -33,7 +33,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -64,8 +64,7 @@ public class KMSJSONWriter implements MessageBodyWriter<Object> {
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> stringObjectMultivaluedMap,
       OutputStream outputStream) throws IOException, WebApplicationException {
-    Writer writer = new OutputStreamWriter(outputStream, Charset
-        .forName("UTF-8"));
+    Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
     JsonSerialization.writer().writeValue(writer, obj);
   }
 
