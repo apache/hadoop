@@ -65,6 +65,18 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.http.jmx.nan-filter.enabled</name>
+  <value>false</value>
+  <description>
+    The REST API of the JMX interface can return with NaN values
+    if the attribute represent a 0.0/0.0 value.
+    Some JSON parser by default can not parse json attributes like foo:NaN.
+    If this filter is enabled the NaN values will be converted to 0.0 values,
+    to make json parse less complicated.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>

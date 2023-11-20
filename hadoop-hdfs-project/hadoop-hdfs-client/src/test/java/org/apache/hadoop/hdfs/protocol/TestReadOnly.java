@@ -56,6 +56,7 @@ public class TestReadOnly {
           "listCachePools",
           "getAclStatus",
           "getEZForPath",
+          "getEnclosingRoot",
           "listEncryptionZones",
           "listReencryptionStatus",
           "getXAttrs",

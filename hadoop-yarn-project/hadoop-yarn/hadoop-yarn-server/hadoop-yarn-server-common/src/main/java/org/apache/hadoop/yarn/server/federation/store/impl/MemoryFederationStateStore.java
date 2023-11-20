@@ -420,6 +420,16 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
+  public void deleteStateStore() throws Exception {
+    membership.clear();
+    applications.clear();
+    reservations.clear();
+    policies.clear();
+    sequenceNum = new AtomicInteger();
+    masterKeyId = new AtomicInteger();
+  }
+
+  @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
