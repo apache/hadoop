@@ -26,7 +26,7 @@ import org.apache.hadoop.oncrpc.XDR;
 
 /** Credential used by AUTH_SYS */
 public class CredentialsSys extends Credentials {
- 
+
   private static final String HOSTNAME;
   static {
     try {
@@ -40,7 +40,7 @@ public class CredentialsSys extends Credentials {
       throw new RuntimeException(e);
     }
   }
-  
+
   protected int mUID, mGID;
   protected int[] mAuxGIDs;
   protected String mHostName;
@@ -51,7 +51,7 @@ public class CredentialsSys extends Credentials {
     this.mCredentialsLength = 0;
     this.mHostName = HOSTNAME;
   }
-  
+
   public int getGID() {
     return mGID;
   }
@@ -117,12 +117,12 @@ public class CredentialsSys extends Credentials {
       mCredentialsLength += mAuxGIDs.length * 4;
     }
     xdr.writeInt(mCredentialsLength);
-    
+
     xdr.writeInt(mStamp);
     xdr.writeString(mHostName);
     xdr.writeInt(mUID);
     xdr.writeInt(mGID);
-    
+
     if((mAuxGIDs == null) || (mAuxGIDs.length == 0)) {
       xdr.writeInt(0);
     } else {
