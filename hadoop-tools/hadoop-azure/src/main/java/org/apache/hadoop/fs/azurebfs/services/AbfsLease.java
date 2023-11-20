@@ -133,7 +133,7 @@ public final class AbfsLease {
     client.addCallback(future, new FutureCallback<AbfsRestOperation>() {
       @Override
       public void onSuccess(@Nullable AbfsRestOperation op) {
-        leaseID = op.getResult().getHeaderValue(HttpHeaderConfigurations.X_MS_LEASE_ID);
+        leaseID = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_LEASE_ID);
         LOG.debug("Acquired lease {} on {}", leaseID, path);
       }
 

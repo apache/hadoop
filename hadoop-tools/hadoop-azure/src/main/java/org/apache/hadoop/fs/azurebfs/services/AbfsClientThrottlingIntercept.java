@@ -124,7 +124,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    * @return true if the operation is throttled and has some bytes to transfer.
    */
   private boolean updateBytesTransferred(boolean isThrottledOperation,
-      AbfsApacheHttpClientHttpOperation abfsHttpOperation) {
+      HttpOperation abfsHttpOperation) {
     return isThrottledOperation && abfsHttpOperation.getExpectedBytesToBeSent() > 0;
   }
 
@@ -135,7 +135,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    */
   @Override
   public void updateMetrics(AbfsRestOperationType operationType,
-      AbfsApacheHttpClientHttpOperation abfsHttpOperation) {
+      HttpOperation abfsHttpOperation) {
     if (abfsHttpOperation == null) {
       return;
     }
@@ -160,7 +160,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
             throttling but there were some expectedBytesToBeSent.
            */
           if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
-            LOG.debug("Updating metrics due to throttling for path {}", abfsHttpOperation.getURL().getPath());
+            LOG.debug("Updating metrics due to throttling for path {}", abfsHttpOperation.getConnUrl().getPath());
             contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
           }
         }
@@ -170,7 +170,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         }
         break;
       case ReadFile:
-        String range = abfsHttpOperation.getHeaderValue(HttpHeaderConfigurations.RANGE);
+        String range = abfsHttpOperation.getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           readThrottler.addBytesTransferred(contentLength,

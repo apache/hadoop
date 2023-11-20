@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.services.AbfsApacheHttpClientHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.util.Preconditions;
@@ -127,7 +127,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AbfsRestOperation op = abfsClient.getPathStatus(fileName, false,
         tracingContext);
     final String eTag = op.getResult()
-        .getHeaderValue(HttpHeaderConfigurations.ETAG);
+        .getResponseHeader(HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
     assertCPKHeaders(abfsRestOperation, true);
@@ -177,7 +177,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AbfsRestOperation op = abfsClient
         .getPathStatus(fileName, false, tracingContext);
     final String eTag = op.getResult()
-        .getHeaderValue(HttpHeaderConfigurations.ETAG);
+        .getResponseHeader(HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
     assertCPKHeaders(abfsRestOperation, false);
@@ -837,8 +837,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void assertResponseHeader(AbfsRestOperation abfsRestOperation,
       boolean isHeaderExpected, String headerName, String expectedValue) {
-    final AbfsApacheHttpClientHttpOperation result = abfsRestOperation.getResult();
-    final String value = result.getHeaderValue(headerName);
+    final HttpOperation result = abfsRestOperation.getResult();
+    final String value = result.getResponseHeader(headerName);
     if (isHeaderExpected) {
       Assertions.assertThat(value).isEqualTo(expectedValue);
     } else {

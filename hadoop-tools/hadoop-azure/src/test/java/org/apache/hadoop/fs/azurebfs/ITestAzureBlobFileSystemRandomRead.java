@@ -510,7 +510,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
         .getPathStatus(testFile.toUri().getPath(), false,
             getTestTracingContext(fs, false))
         .getResult()
-        .getHeaderValue(ETAG);
+        .getResponseHeader(ETAG);
 
     TestAbfsInputStream testInputStream = new TestAbfsInputStream();
 

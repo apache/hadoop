@@ -47,50 +47,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsAHCHttpOperation.class);
 
-  private final URL url;
-  private final String method;
-  private final List<AbfsHttpHeader> requestHeaders;
-
-  private byte[] sendBuffer;
-
   private static AbfsApacheHttpClient abfsApacheHttpClient;
 
   private HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
 
-  private static final int CONNECT_TIMEOUT = 30 * 1000;
-  private static final int READ_TIMEOUT = 30 * 1000;
-
-  private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
-
-  private static final int ONE_THOUSAND = 1000;
-  private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
-
-  private String maskedUrl;
-  private String maskedEncodedUrl;
-  private int statusCode;
-  private String statusDescription;
-  private String storageErrorCode = "";
-  private String storageErrorMessage  = "";
-  private String requestId  = "";
-  private String expectedAppendPos = "";
-  private ListResultSchema listResultSchema = null;
-
-  // metrics
-  private int bytesSent;
-  private int expectedBytesToBeSent;
-  private long bytesReceived;
-
-  private long connectionTimeMs;
-  private long sendRequestTimeMs;
-  private long recvResponseTimeMs;
-  private boolean shouldMask = false;;
-
-  public synchronized  static void setAbfsApacheHttpClient(
-      DelegatingSSLSocketFactory delegatingSSLSocketFactory) {
+  private synchronized void setAbfsApacheHttpClient() {
     if(abfsApacheHttpClient == null) {
-      abfsApacheHttpClient = new AbfsApacheHttpClient(delegatingSSLSocketFactory);
+      abfsApacheHttpClient = new AbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory());
     }
   }
 
@@ -102,6 +67,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
+    setAbfsApacheHttpClient();
   }
 
 
@@ -130,7 +96,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   URL getConnUrl() {
-    return null;
+    return url;
   }
 
   @Override
@@ -161,7 +127,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
     this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
 
-    this.requestId = getHeaderValue(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
@@ -179,7 +145,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
       processStorageErrorResponse();
 //      this.recvResponseTimeMs += elapsedTimeMs(startTime);
-      String contentLength = getHeaderValue(
+      String contentLength = getResponseHeader(
           HttpHeaderConfigurations.CONTENT_LENGTH);
       if(contentLength != null) {
         this.bytesReceived = Long.parseLong(contentLength);
@@ -235,10 +201,20 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public void setRequestProperty(final String key, final String value) {
-
+    setHeader(key, value);
   }
 
-  public String getHeaderValue(final String headerName) {
+  @Override
+  Map<String, List<String>> getRequestProperties() {
+    Map<String, List<String>> map = new HashMap<>();
+    for(AbfsHttpHeader header : requestHeaders) {
+      map.put(header.getName(), new ArrayList<String>(){{add(header.getValue());}});
+    }
+    return map;
+  }
+
+  @Override
+  public String getResponseHeader(final String headerName) {
     Header header = httpResponse.getFirstHeader(headerName);
     if(header != null) {
       return header.getValue();
@@ -317,19 +293,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     requestHeaders.add(new AbfsHttpHeader(name, val));
   }
 
-  public URL getURL() {
-    return url;
-  }
-
-  public Map<String, List<String>> getRequestHeaders() {
-    Map<String, List<String>> map = new HashMap<>();
-    for(AbfsHttpHeader header : requestHeaders) {
-      map.put(header.getName(), new ArrayList<String>(){{add(header.getValue());}});
-    }
-    return map;
-  }
-
-  public String getRequestHeader(String name) {
+  @Override
+  public String getRequestProperty(String name) {
     for(AbfsHttpHeader header : requestHeaders) {
       if(header.getName().equals(name)) {
         return header.getValue();
@@ -345,11 +310,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       }
     }
     return "";
-  }
-
-  @Override
-  public String getResponseHeader(final String httpHeader) {
-    return null;
   }
 
   @Override

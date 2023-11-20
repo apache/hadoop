@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperationType;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -144,6 +145,9 @@ public final class FileSystemConfigurations {
    * IO rate limit. Value: {@value}
    */
   public static final int RATE_LIMIT_DEFAULT = 10_000;
+
+  public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
+      = HttpOperationType.APACHE_HTTP_CLIENT;
 
   private FileSystemConfigurations() {}
 }

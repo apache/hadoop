@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -143,25 +144,6 @@ public class AbfsHttpOperation extends HttpOperation {
     return connection.getHeaderField(httpHeader);
   }
 
-  public String getMaskedUrl() {
-    if (!shouldMask) {
-      return url.toString();
-    }
-    if (maskedUrl != null) {
-      return maskedUrl;
-    }
-    maskedUrl = UriUtils.getMaskedUrl(url);
-    return maskedUrl;
-  }
-
-  public String getMaskedEncodedUrl() {
-    if (maskedEncodedUrl != null) {
-      return maskedEncodedUrl;
-    }
-    maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
-    return maskedEncodedUrl;
-  }
-
   /**
    * Initializes a new HTTP request and opens the connection.
    *
@@ -262,6 +244,16 @@ public class AbfsHttpOperation extends HttpOperation {
       }
       this.sendRequestTimeMs = elapsedTimeMs(startTime);
     }
+  }
+
+  @Override
+  String getRequestProperty(final String headerName) {
+    return connection.getRequestProperty(headerName);
+  }
+
+  @Override
+  Map<String, List<String>> getRequestProperties() {
+    return connection.getRequestProperties();
   }
 
   /**

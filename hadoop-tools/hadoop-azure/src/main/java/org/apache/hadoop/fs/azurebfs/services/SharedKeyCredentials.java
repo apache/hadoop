@@ -79,10 +79,10 @@ public class SharedKeyCredentials {
     initializeMac();
   }
 
-  public void signRequest(AbfsApacheHttpClientHttpOperation connection, final long contentLength) throws UnsupportedEncodingException {
+  public void signRequest(HttpOperation connection, final long contentLength) throws UnsupportedEncodingException {
 
     String gmtTime = getGMTTime();
-    connection.setHeader(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
+    connection.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
 
     final String stringToSign = canonicalize(connection, accountName, contentLength);
 
@@ -90,7 +90,7 @@ public class SharedKeyCredentials {
 
     String signature = String.format("%s %s:%s", "SharedKey", accountName,
         computedBase64Signature);
-    connection.setHeader(HttpHeaderConfigurations.AUTHORIZATION,
+    connection.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
         signature);
     LOG.debug("Signing request with timestamp of {} and signature {}",
         gmtTime, signature);
@@ -116,12 +116,12 @@ public class SharedKeyCredentials {
    * @param conn                the HttpURLConnection for the operation
    * @param canonicalizedString the canonicalized string to add the canonicalized headerst to.
    */
-  private static void addCanonicalizedHeaders(final AbfsApacheHttpClientHttpOperation conn, final StringBuilder canonicalizedString) {
+  private static void addCanonicalizedHeaders(final HttpOperation conn, final StringBuilder canonicalizedString) {
     // Look for header names that start with
     // HeaderNames.PrefixForStorageHeader
     // Then sort them in case-insensitive manner.
 
-    final Map<String, List<String>> headers = conn.getRequestHeaders();
+    final Map<String, List<String>> headers = conn.getRequestProperties();
     final ArrayList<String> httpStorageHeaderNameArray = new ArrayList<String>();
 
     for (final String key : headers.keySet()) {
@@ -204,7 +204,7 @@ public class SharedKeyCredentials {
    */
   private static String canonicalizeHttpRequest(final URL address,
       final String accountName, final String method, final String contentType,
-      final long contentLength, final String date, final AbfsApacheHttpClientHttpOperation conn)
+      final long contentLength, final String date, final HttpOperation conn)
       throws UnsupportedEncodingException {
 
     // The first element should be the Method of the request.
@@ -449,8 +449,8 @@ public class SharedKeyCredentials {
     return value.substring(spaceDex);
   }
 
-  private static String getHeaderValue(final AbfsApacheHttpClientHttpOperation conn, final String headerName, final String defaultValue) {
-    final String headerValue = conn.getRequestHeader(headerName);
+  private static String getHeaderValue(final HttpOperation conn, final String headerName, final String defaultValue) {
+    final String headerValue = conn.getRequestProperty(headerName);
     return headerValue == null ? defaultValue : headerValue;
   }
 
@@ -464,7 +464,7 @@ public class SharedKeyCredentials {
    *                      -1 if unknown
    * @return a canonicalized string.
    */
-  private String canonicalize(final AbfsApacheHttpClientHttpOperation conn,
+  private String canonicalize(final HttpOperation conn,
                               final String accountName,
                               final Long contentLength) throws UnsupportedEncodingException {
 
@@ -475,7 +475,7 @@ public class SharedKeyCredentials {
 
     String contentType = getHeaderValue(conn, HttpHeaderConfigurations.CONTENT_TYPE, "");
 
-    return canonicalizeHttpRequest(conn.getURL(), accountName,
+    return canonicalizeHttpRequest(conn.getConnUrl(), accountName,
         conn.getMethod(), contentType, contentLength, null, conn);
   }
 

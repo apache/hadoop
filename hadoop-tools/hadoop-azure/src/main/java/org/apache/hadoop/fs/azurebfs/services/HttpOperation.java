@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -31,6 +33,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
 
   protected String method;
   protected URL url;
+  protected List<AbfsHttpHeader> requestHeaders;
   protected String maskedUrl;
   protected String maskedEncodedUrl;
 
@@ -321,4 +324,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
    */
   abstract String getConnResponseMessage() throws IOException;
 
+  abstract Map<String, List<String>> getRequestProperties();
+
+  abstract String getRequestProperty(String headerName);
 }

@@ -25,8 +25,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.services.AbfsApacheHttpClientHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
@@ -66,7 +66,7 @@ public class TracingContext {
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
    * to the last part of the {@link #clientRequestId}'s UUID
-   * in {@link #constructHeader(AbfsApacheHttpClientHttpOperation, String)} only on the
+   * in {@link #constructHeader(HttpOperation, String)} only on the
    * first API call for an operation. Subsequent retries for that operation
    * will not change this field. In case {@link  #primaryRequestId} is non-null,
    * this field shall not be set.
@@ -169,7 +169,7 @@ public class TracingContext {
    * @param previousFailure Failure seen before this API trigger on same operation
    * from AbfsClient.
    */
-  public void constructHeader(AbfsApacheHttpClientHttpOperation httpOperation, String previousFailure) {
+  public void constructHeader(HttpOperation httpOperation, String previousFailure) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -188,7 +188,7 @@ public class TracingContext {
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
-    httpOperation.setHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
     * API call (previousFailure shall be null), maintain the last part of clientRequestId's

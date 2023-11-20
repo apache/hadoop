@@ -267,5 +267,6 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+  public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
   private ConfigurationKeys() {}
 }

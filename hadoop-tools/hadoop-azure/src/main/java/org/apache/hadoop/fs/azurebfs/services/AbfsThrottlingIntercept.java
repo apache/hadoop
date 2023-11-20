@@ -34,7 +34,7 @@ public interface AbfsThrottlingIntercept {
    * @param abfsHttpOperation Used for status code and data transferred.
    */
   void updateMetrics(AbfsRestOperationType operationType,
-      AbfsApacheHttpClientHttpOperation abfsHttpOperation);
+      HttpOperation abfsHttpOperation);
 
   /**
    * Called before the request is sent.  Client-side throttling

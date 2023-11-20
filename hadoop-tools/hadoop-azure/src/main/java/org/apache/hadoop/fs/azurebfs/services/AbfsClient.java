@@ -150,7 +150,6 @@ public class AbfsClient implements Closeable {
                 + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
-        AbfsApacheHttpClientHttpOperation.setAbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory());
       } catch (IOException e) {
         // Suppress exception. Failure to init DelegatingSSLSocketFactory would have only performance impact.
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
@@ -273,7 +272,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -297,7 +297,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -322,7 +323,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_GET,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -339,7 +341,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_HEAD,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -356,7 +359,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -402,7 +406,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException ex) {
@@ -412,7 +417,7 @@ public class AbfsClient implements Closeable {
       }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         String existingResource =
-            op.getResult().getHeaderValue(X_MS_EXISTING_RESOURCE_TYPE);
+            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
         if (existingResource != null && existingResource.equals(DIRECTORY)) {
           return op; //don't throw ex on mkdirs for existing directory
         }
@@ -437,7 +442,8 @@ public class AbfsClient implements Closeable {
         this,
         HTTP_METHOD_POST,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -457,7 +463,8 @@ public class AbfsClient implements Closeable {
         this,
         HTTP_METHOD_POST,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -477,7 +484,8 @@ public class AbfsClient implements Closeable {
         this,
         HTTP_METHOD_POST,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -497,7 +505,8 @@ public class AbfsClient implements Closeable {
         this,
         HTTP_METHOD_POST,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -547,7 +556,7 @@ public class AbfsClient implements Closeable {
         final AbfsRestOperation srcStatusOp = getPathStatus(source,
                 false, tracingContext);
         if (srcStatusOp.hasResult()) {
-          final AbfsApacheHttpClientHttpOperation result = srcStatusOp.getResult();
+          final HttpOperation result = srcStatusOp.getResult();
           sourceEtag = extractEtagHeader(result);
           // and update the directory status.
           boolean isDir = checkIsDir(result);
@@ -612,7 +621,7 @@ public class AbfsClient implements Closeable {
               tracingContext);
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
-          AbfsApacheHttpClientHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          HttpOperation sourceStatusResult = sourceStatusOp.getResult();
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
@@ -638,8 +647,8 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private boolean checkIsDir(AbfsApacheHttpClientHttpOperation result) {
-    String resourceType = result.getHeaderValue(
+  private boolean checkIsDir(HttpOperation result) {
+    String resourceType = result.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     return resourceType != null
             && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
@@ -652,7 +661,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     return op;
   }
 
@@ -701,7 +711,7 @@ public class AbfsClient implements Closeable {
               source, destination);
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination, false, tracingContext);
-        final AbfsApacheHttpClientHttpOperation result = destStatusOp.getResult();
+        final HttpOperation result = destStatusOp.getResult();
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
                 && sourceEtag.equals(extractEtagHeader(result));
@@ -721,7 +731,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  boolean isSourceDestEtagEqual(String sourceEtag, AbfsApacheHttpClientHttpOperation result) {
+  boolean isSourceDestEtagEqual(String sourceEtag, HttpOperation result) {
     return sourceEtag.equals(extractEtagHeader(result));
   }
 
@@ -849,7 +859,7 @@ public class AbfsClient implements Closeable {
         requestHeaders,
         buffer,
         bufferOffset,
-        bufferLength, sasTokenForReuse);
+        bufferLength, sasTokenForReuse, abfsConfiguration);
   }
 
   /**
@@ -873,7 +883,7 @@ public class AbfsClient implements Closeable {
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext);
       if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
-        String fileLength = destStatusOp.getResult().getHeaderValue(
+        String fileLength = destStatusOp.getResult().getResponseHeader(
             HttpHeaderConfigurations.CONTENT_LENGTH);
         if (length <= Long.parseLong(fileLength)) {
           LOG.debug("Returning success response from append blob idempotency code");
@@ -913,7 +923,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders, sasTokenForReuse);
+            requestHeaders, sasTokenForReuse, abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -940,7 +950,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -969,7 +980,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_HEAD,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -997,7 +1009,7 @@ public class AbfsClient implements Closeable {
             requestHeaders,
             buffer,
             bufferOffset,
-            bufferLength, sasTokenForReuse);
+            bufferLength, sasTokenForReuse, abfsConfiguration);
     op.execute(tracingContext);
 
     return op;
@@ -1020,7 +1032,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders);
+            requestHeaders, abfsConfiguration);
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -1069,7 +1081,8 @@ public class AbfsClient implements Closeable {
           this,
           HTTP_METHOD_DELETE,
           op.getUrl(),
-          op.getRequestHeaders());
+          op.getRequestHeaders(),
+          abfsConfiguration);
       successOp.hardSetResult(HttpURLConnection.HTTP_OK);
       LOG.debug("Returning success response from delete idempotency logic");
       return successOp;
@@ -1104,7 +1117,8 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -1130,7 +1144,8 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -1165,7 +1180,8 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -1190,7 +1206,8 @@ public class AbfsClient implements Closeable {
         this,
         AbfsHttpConstants.HTTP_METHOD_HEAD,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }
@@ -1214,7 +1231,8 @@ public class AbfsClient implements Closeable {
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.CheckAccess, this,
-        AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());
+        AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders(),
+        abfsConfiguration);
     op.execute(tracingContext);
     return op;
   }

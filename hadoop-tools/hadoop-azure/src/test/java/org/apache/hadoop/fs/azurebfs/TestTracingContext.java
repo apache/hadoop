@@ -38,10 +38,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
-import org.apache.hadoop.fs.azurebfs.services.AbfsApacheHttpClientHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -213,8 +212,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         0));
-    AbfsApacheHttpClientHttpOperation abfsHttpOperation = Mockito.mock(AbfsApacheHttpClientHttpOperation.class);
-    Mockito.doNothing().when(abfsHttpOperation).setHeader(Mockito.anyString(), Mockito.anyString());
+    HttpOperation abfsHttpOperation = Mockito.mock(HttpOperation.class);
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
     tracingContext.constructHeader(abfsHttpOperation, null);
     String header = tracingContext.getHeader();
     String clientRequestIdUsed = header.split(":")[1];
@@ -250,8 +249,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         0));
     tracingContext.setPrimaryRequestID();
-    AbfsApacheHttpClientHttpOperation abfsHttpOperation = Mockito.mock(AbfsApacheHttpClientHttpOperation.class);
-    Mockito.doNothing().when(abfsHttpOperation).setHeader(Mockito.anyString(), Mockito.anyString());
+    HttpOperation abfsHttpOperation = Mockito.mock(HttpOperation.class);
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
     tracingContext.constructHeader(abfsHttpOperation, null);
     String header = tracingContext.getHeader();
     String assertionPrimaryId = header.split(":")[3];
