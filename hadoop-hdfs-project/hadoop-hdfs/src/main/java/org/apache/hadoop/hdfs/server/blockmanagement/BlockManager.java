@@ -604,7 +604,7 @@ public class BlockManager implements BlockStatsMXBean {
             DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT);
 
     setExcessRedundancyTimeout(conf.getLong(DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY,
-        DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC));
+        DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT));
     setExcessRedundancyTimeoutCheckLimit(conf.getLong(
         DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT,
         DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT));
@@ -3068,7 +3068,7 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public void setExcessRedundancyTimeout(long timeout) {
     if (timeout <= 0) {
-      this.excessRedundancyTimeout = DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC * 1000L;
+      this.excessRedundancyTimeout = DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT * 1000L;
     } else {
       this.excessRedundancyTimeout = timeout * 1000L;
     }

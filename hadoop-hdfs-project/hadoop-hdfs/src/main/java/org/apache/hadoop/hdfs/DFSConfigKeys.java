@@ -317,7 +317,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY =
       "dfs.namenode.excess.redundancy.timeout-sec";
-  public static final long DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC = 3600;
+  public static final long DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT = 3600;
   public static final String DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT
       = "dfs.namenode.excess.redundancy.timeout.check.limit";
   public static final long DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT = 1000;
