@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Plugin to calculate resource information on the system.
@@ -109,6 +110,21 @@ public abstract class SysInfo {
   public abstract float getCpuUsagePercentage();
 
   /**
+   * Obtain the IO usage % of the machine. Return -1 if it is unavailable
+   *
+   * @return IO usage in %
+   */
+  public abstract float getIoUsagePercentage(String[] paths);
+
+  /**
+   * Obtain the node resource of the machine. Return null if it is unavailable
+   *
+   * @return cpu & io & memory usage in %
+   */
+  public abstract NodeResource getNodeResourceLastPeriod(
+      String[] localDirs, long millis);
+
+  /**
    * Obtain the number of VCores used. Return -1 if it is unavailable
    *
    * @return Number of VCores used a percentage (from 0 to #VCores).
@@ -132,13 +148,13 @@ public abstract class SysInfo {
    *
    * @return total number of bytes read.
    */
-  public abstract long getStorageBytesRead();
+  public abstract long getStorageBytesRead(String[] paths);
 
   /**
    * Obtain the aggregated number of bytes written to disks.
    *
    * @return total number of bytes written.
    */
-  public abstract long getStorageBytesWritten();
+  public abstract long getStorageBytesWritten(String[] paths);
 
 }

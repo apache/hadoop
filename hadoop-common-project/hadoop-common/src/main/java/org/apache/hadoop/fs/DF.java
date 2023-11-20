@@ -39,6 +39,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 @InterfaceStability.Evolving
 public class DF extends Shell {
 
+  /** Default DF refresh interval. */
+  public static final long DF_INTERVAL_DEFAULT = 3 * 1000;
+
   private final String dirPath;
   private final File dirFile;
   private String filesystem;

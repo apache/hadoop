@@ -58,7 +58,7 @@ public class TestSysInfoWindows {
     assertEquals(1, tester.getNumCores());
     assertEquals(2805000L, tester.getCpuFrequency());
     assertEquals(6261812L, tester.getCumulativeCpuTime());
-    assertEquals(1234567L, tester.getStorageBytesRead());
+    assertEquals(1234567L, tester.getStorageBytesRead(null));
     assertEquals(2345678L, tester.getStorageBytesWritten());
     assertEquals(3456789L, tester.getNetworkBytesRead());
     assertEquals(4567890L, tester.getNetworkBytesWritten());

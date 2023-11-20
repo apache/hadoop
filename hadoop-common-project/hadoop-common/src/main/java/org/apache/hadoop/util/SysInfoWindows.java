@@ -208,6 +208,20 @@ public class SysInfoWindows extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
+  public float getIoUsagePercentage(String[] paths) {
+    return 0f;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public NodeResource getNodeResourceLastPeriod(
+      String[] localDirs, long millis) {
+    // TODO support for windows
+    return null;
+  }
+
+  /** {@inheritDoc} */
+  @Override
   public synchronized float getNumVCoresUsed() {
     refreshIfNeeded();
     float ret = cpuUsage;
@@ -232,7 +246,7 @@ public class SysInfoWindows extends SysInfo {
   }
 
   @Override
-  public long getStorageBytesRead() {
+  public long getStorageBytesRead(String[] paths) {
     refreshIfNeeded();
     return storageBytesRead;
   }
