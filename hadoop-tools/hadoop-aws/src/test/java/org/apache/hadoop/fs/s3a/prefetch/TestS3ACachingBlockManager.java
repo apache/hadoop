@@ -180,7 +180,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   private static final class BlockManagerForTesting
       extends S3ACachingBlockManager {
 
-    BlockManagerForTesting(BlockManagerParameters blockManagerParameters, S3ARemoteObjectReader reader) {
+    BlockManagerForTesting(BlockManagerParameters blockManagerParameters,
+        S3ARemoteObjectReader reader) {
       super(blockManagerParameters, reader);
     }
 
