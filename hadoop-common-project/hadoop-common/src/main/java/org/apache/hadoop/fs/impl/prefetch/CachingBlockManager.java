@@ -107,32 +107,33 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
-   * @param blockManagerParams params for block manager.
+   * @param blockManagerParameters params for block manager.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
-  public CachingBlockManager(@Nonnull final BlockManagerParams blockManagerParams) {
-    super(blockManagerParams.getBlockData());
+  public CachingBlockManager(@Nonnull final BlockManagerParameters blockManagerParameters) {
+    super(blockManagerParameters.getBlockData());
 
-    Validate.checkPositiveInteger(blockManagerParams.getBufferPoolSize(), "bufferPoolSize");
+    Validate.checkPositiveInteger(blockManagerParameters.getBufferPoolSize(), "bufferPoolSize");
 
-    this.futurePool = requireNonNull(blockManagerParams.getFuturePool());
-    this.bufferPoolSize = blockManagerParams.getBufferPoolSize();
+    this.futurePool = requireNonNull(blockManagerParameters.getFuturePool());
+    this.bufferPoolSize = blockManagerParameters.getBufferPoolSize();
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
-    this.prefetchingStatistics = requireNonNull(blockManagerParams.getPrefetchingStatistics());
-    this.conf = requireNonNull(blockManagerParams.getConf());
+    this.prefetchingStatistics = requireNonNull(
+        blockManagerParameters.getPrefetchingStatistics());
+    this.conf = requireNonNull(blockManagerParameters.getConf());
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache(blockManagerParams.getMaxBlocksCount(),
-          blockManagerParams.getTrackerFactory());
+      this.cache = this.createCache(blockManagerParameters.getMaxBlocksCount(),
+          blockManagerParameters.getTrackerFactory());
     }
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
-    this.localDirAllocator = blockManagerParams.getLocalDirAllocator();
+    this.localDirAllocator = blockManagerParameters.getLocalDirAllocator();
   }
 
   /**

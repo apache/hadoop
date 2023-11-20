@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
-import org.apache.hadoop.fs.impl.prefetch.BlockManagerParams;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -83,18 +83,18 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
 
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
-    BlockManagerParams.BlockManagerParamsBuilder blockManagerParamsBuilder =
-        new BlockManagerParams.BlockManagerParamsBuilder();
-    blockManagerParamsBuilder.setFuturePool(this.getContext().getFuturePool());
-    blockManagerParamsBuilder.setBlockData(this.getBlockData());
-    blockManagerParamsBuilder.setBufferPoolSize(bufferPoolSize);
-    blockManagerParamsBuilder.setConf(conf);
-    blockManagerParamsBuilder.setLocalDirAllocator(localDirAllocator);
-    blockManagerParamsBuilder.setMaxBlocksCount(
-        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
-    blockManagerParamsBuilder.setPrefetchingStatistics(getS3AStreamStatistics());
-    blockManagerParamsBuilder.setTrackerFactory(getS3AStreamStatistics());
-    this.blockManager = this.createBlockManager(blockManagerParamsBuilder.build(),
+    BlockManagerParameters blockManagerParamsBuilder =
+        new BlockManagerParameters()
+            .setFuturePool(this.getContext().getFuturePool())
+            .setBlockData(this.getBlockData())
+            .setBufferPoolSize(bufferPoolSize)
+            .setConf(conf)
+            .setLocalDirAllocator(localDirAllocator)
+            .setMaxBlocksCount(
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .setPrefetchingStatistics(getS3AStreamStatistics())
+            .setTrackerFactory(getS3AStreamStatistics());
+    this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
         this.getReader());
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
@@ -189,8 +189,8 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   }
 
   protected BlockManager createBlockManager(
-      @Nonnull final BlockManagerParams blockManagerParams,
+      @Nonnull final BlockManagerParameters blockManagerParameters,
       final S3ARemoteObjectReader reader) {
-    return new S3ACachingBlockManager(blockManagerParams, reader);
+    return new S3ACachingBlockManager(blockManagerParameters, reader);
   }
 }

@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 
 import javax.annotation.Nonnull;
 
-import org.apache.hadoop.fs.impl.prefetch.BlockManagerParams;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 
@@ -41,15 +41,15 @@ public class S3ACachingBlockManager extends CachingBlockManager {
   /**
    * Constructs an instance of a {@code S3ACachingBlockManager}.
    *
-   * @param blockManagerParams params for block manager.
+   * @param blockManagerParameters params for block manager.
    * @param reader reader that reads from S3 file.
    * @throws IllegalArgumentException if reader is null.
    */
   public S3ACachingBlockManager(
-      @Nonnull final BlockManagerParams blockManagerParams,
+      @Nonnull final BlockManagerParameters blockManagerParameters,
       final S3ARemoteObjectReader reader) {
 
-    super(blockManagerParams);
+    super(blockManagerParameters);
 
     Validate.checkNotNull(reader, "reader");
 

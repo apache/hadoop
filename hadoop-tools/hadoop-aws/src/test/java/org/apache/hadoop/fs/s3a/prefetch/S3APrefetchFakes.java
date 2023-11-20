@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockCache;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
-import org.apache.hadoop.fs.impl.prefetch.BlockManagerParams;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
@@ -366,9 +366,9 @@ public final class S3APrefetchFakes {
       extends S3ACachingBlockManager {
 
     public FakeS3ACachingBlockManager(
-        @Nonnull final BlockManagerParams blockManagerParams,
+        @Nonnull final BlockManagerParameters blockManagerParameters,
         final S3ARemoteObjectReader reader) {
-      super(blockManagerParams, reader);
+      super(blockManagerParameters, reader);
     }
 
     @Override
@@ -407,9 +407,9 @@ public final class S3APrefetchFakes {
 
     @Override
     protected BlockManager createBlockManager(
-        @Nonnull final BlockManagerParams blockManagerParams,
+        @Nonnull final BlockManagerParameters blockManagerParameters,
         final S3ARemoteObjectReader reader) {
-      return new FakeS3ACachingBlockManager(blockManagerParams, reader);
+      return new FakeS3ACachingBlockManager(blockManagerParameters, reader);
     }
   }
 }
