@@ -60,7 +60,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings("deprecation")
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("core-default.xml");
+    xmlFilename = "core-default.xml";
     configurationClasses = new Class[] {
         CommonConfigurationKeys.class,
         CommonConfigurationKeysPublic.class,

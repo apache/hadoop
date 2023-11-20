@@ -52,7 +52,6 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
@@ -75,6 +74,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -912,7 +912,7 @@ public final class S3ATestUtils {
     return submit(EXECUTOR, () -> {
       try (DurationInfo ignore =
                new DurationInfo(LOG, false, "Creating %s", path)) {
-        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
+        createFile(fs, path, true, text.getBytes(StandardCharsets.UTF_8));
         return path;
       }
     });

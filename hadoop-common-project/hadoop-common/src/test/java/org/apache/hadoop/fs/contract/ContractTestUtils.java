@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -806,7 +807,7 @@ public class ContractTestUtils extends Assert {
     try (FSDataInputStream in = fs.open(path)) {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
-      return new String(buf, "UTF-8");
+      return new String(buf, StandardCharsets.UTF_8);
     }
   }
 

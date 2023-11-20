@@ -19,9 +19,9 @@
 package org.apache.hadoop.examples.dancing;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * This class uses the dancing links algorithm from Knuth to solve sudoku
@@ -136,7 +136,7 @@ public class Sudoku {
    */
   public Sudoku(InputStream stream) throws IOException {
     BufferedReader file = new BufferedReader(
-        new InputStreamReader(stream, Charsets.UTF_8));
+        new InputStreamReader(stream, StandardCharsets.UTF_8));
     String line = file.readLine();
     List<int[]> result = new ArrayList<int[]>();
     while (line != null) {
