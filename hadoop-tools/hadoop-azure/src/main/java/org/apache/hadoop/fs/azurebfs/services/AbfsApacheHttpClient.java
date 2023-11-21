@@ -3,11 +3,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.ProtocolException;
 import java.net.Socket;
 import java.net.URL;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpClientConnection;
@@ -31,12 +34,16 @@ import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.DefaultClientConnectionReuseStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestExecutor;
+
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 
 
 public class AbfsApacheHttpClient {
@@ -44,6 +51,7 @@ public class AbfsApacheHttpClient {
   public static class AbfsHttpClientContext extends HttpClientContext {
     public Long connectTime;
     public Long readTime;
+    public Boolean expect100;
   }
 
   public static class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
@@ -218,16 +226,18 @@ public class AbfsApacheHttpClient {
     }
   }
 
-  private final ConnectionReuseStrategy connectionReuseStrategy = new ConnectionReuseStrategy() {
+  public static class AhcConnReuseStrategy extends
+      DefaultClientConnectionReuseStrategy {
+
     @Override
     public boolean keepAlive(final HttpResponse response,
         final HttpContext context) {
-      if(context instanceof AbfsHttpClientContext) {
-        return ((AbfsHttpClientContext) context).readTime <= 100;
-      }
-      return true;
+//      response.
+      return super.keepAlive(response, context);
     }
-  };
+  }
+
+  private final ConnectionReuseStrategy connectionReuseStrategy  = new AhcConnReuseStrategy();
 
   private static class AbfsHttpRequestExecutor extends HttpRequestExecutor {
 
@@ -240,6 +250,9 @@ public class AbfsApacheHttpClient {
       long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).readTime = elapsed;
+      }
+      if(request != null && request.containsHeader(EXPECT) && res != null && res.getStatusLine().getStatusCode() != 200) {
+        throw new AbfsApacheHttpExpect100Exception("Server rejected operation", res);
       }
       return res;
     }
@@ -261,7 +274,13 @@ public class AbfsApacheHttpClient {
   final HttpClient httpClient;
 
   public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory) {
-    final AbfsConnMgr connMgr = new AbfsConnMgr(new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null));
+    final AbfsConnMgr connMgr;
+    if(delegatingSSLSocketFactory == null) {
+      connMgr = new AbfsConnMgr(null);
+    } else {
+      connMgr = new AbfsConnMgr(
+          new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null));
+    }
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsHttpRequestExecutor())
@@ -280,11 +299,16 @@ public class AbfsApacheHttpClient {
         .setConnectTimeout(30_000)
         .setSocketTimeout(30_000);
     httpRequest.setConfig(requestConfigBuilder.build());
-    return httpClient.execute(httpRequest);
+    return httpClient.execute(httpRequest, new AbfsHttpClientContext());
   }
 
 
   private static Registry<ConnectionSocketFactory> createSocketFactoryRegistry(ConnectionSocketFactory sslSocketFactory) {
+    if(sslSocketFactory == null) {
+      return RegistryBuilder.<ConnectionSocketFactory>create()
+          .register("http", PlainConnectionSocketFactory.getSocketFactory())
+          .build();
+    }
     return RegistryBuilder.<ConnectionSocketFactory>create()
         .register("http", PlainConnectionSocketFactory.getSocketFactory())
         .register("https", sslSocketFactory)

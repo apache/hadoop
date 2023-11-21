@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -49,7 +50,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private static AbfsApacheHttpClient abfsApacheHttpClient;
 
-  private HttpRequestBase httpRequestBase;
+  public HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
 
@@ -117,7 +118,14 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    httpResponse = abfsApacheHttpClient.execute(httpRequestBase);
+    try {
+      httpResponse = abfsApacheHttpClient.execute(httpRequestBase);
+    } catch (AbfsApacheHttpExpect100Exception ex) {
+      LOG.debug(
+          "Getting output stream failed with expect header enabled, returning back ",
+          ex);
+      httpResponse = ex.getHttpResponse();
+    }
     // get the response
     long startTime = 0;
     startTime = System.nanoTime();
