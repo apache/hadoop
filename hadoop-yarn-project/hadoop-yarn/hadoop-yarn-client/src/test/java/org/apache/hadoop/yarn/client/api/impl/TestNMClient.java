@@ -78,7 +78,7 @@ import static org.junit.Assert.assertTrue;
 public class TestNMClient {
   private static final String IS_NOT_HANDLED_BY_THIS_NODEMANAGER =
       "is not handled by this NodeManager";
-  private static final String UNKNOWN_NODEMANAGER =
+  private static final String UNKNOWN_CONTAINER =
       "Unknown container";
 
   private static final int NUMBER_OF_CONTAINERS = 5;
@@ -118,7 +118,6 @@ public class TestNMClient {
       if (beforeState != afterState &&
           afterState == org.apache.hadoop.yarn.server.nodemanager.containermanager.container
             .ContainerState.RUNNING) {
-        System.out.println("tomi postTransaction " + Thread.currentThread());
         RUNNING_TRANSITIONS.compute(op.getContainerId(),
             (containerId, counter) -> counter == null ? 1 : ++counter);
       }
@@ -288,17 +287,17 @@ public class TestNMClient {
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.restartContainer(container.getId()),
-          UNKNOWN_NODEMANAGER);
+          UNKNOWN_CONTAINER);
       // rollback shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.rollbackLastReInitialization(container.getId()),
-          UNKNOWN_NODEMANAGER);
+          UNKNOWN_CONTAINER);
       // commit shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.commitLastReInitialization(container.getId()),
-          UNKNOWN_NODEMANAGER);
+          UNKNOWN_CONTAINER);
       // stopContainer shouldn't be called before startContainer,
       // otherwise, an exception will be thrown
       assertYarnException(
@@ -365,7 +364,6 @@ public class TestNMClient {
   }
 
   private void waitForContainerRunningTransitionCount(Container container, long transitions) {
-    System.out.println("tomi waitForContainerRunningTransitionCount " + Thread.currentThread());
     while (DebugSumContainerStateListener.RUNNING_TRANSITIONS
         .getOrDefault(container.getId(), 0) != transitions) {
       sleep(500);
