@@ -37,7 +37,9 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.RestoreObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.Tier;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -250,5 +252,16 @@ public interface RequestFactory {
    */
   DeleteObjectsRequest.Builder newBulkDeleteRequestBuilder(
           List<ObjectIdentifier> keysToDelete);
+
+  /**
+   * Create a request builder to initiate a restore of Glacier object
+   * @param key object to restore
+   * @param tier glacier retrieval tier at which the restore will be processed.
+   * @param expirationDays lifetime of the active restored copy in days.
+   * @return the request builder
+   */
+  RestoreObjectRequest.Builder newRestoreObjectRequestBuilder(String key,
+      Tier tier,
+      int expirationDays);
 
 }

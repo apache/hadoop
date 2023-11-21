@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.GlacierJobParameters;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -42,9 +43,13 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.OptionalObjectAttributes;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.RestoreObjectRequest;
+import software.amazon.awssdk.services.s3.model.RestoreRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.Tier;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.utils.Md5Utils;
 import org.apache.hadoop.util.Preconditions;
@@ -609,6 +614,7 @@ public class RequestFactoryImpl implements RequestFactory {
     final ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
         .bucket(bucket)
         .maxKeys(maxKeys)
+        .optionalObjectAttributes(OptionalObjectAttributes.RESTORE_STATUS) // Optional Attribute to get the Restored Status of the Glacier Objects
         .prefix(key);
 
     if (delimiter != null) {
@@ -630,6 +636,21 @@ public class RequestFactoryImpl implements RequestFactory {
         .builder()
         .bucket(bucket)
         .delete(d -> d.objects(keysToDelete).quiet(!LOG.isTraceEnabled())));
+  }
+
+  @Override
+  public RestoreObjectRequest.Builder newRestoreObjectRequestBuilder(String key,
+      Tier tier,
+      int expirationDays) {
+    return prepareRequest(RestoreObjectRequest
+        .builder()
+        .bucket(bucket)
+        .key(key)
+        .restoreRequest(RestoreRequest
+            .builder()
+            .days(expirationDays)
+            .glacierJobParameters(GlacierJobParameters.builder().tier(tier).build())
+            .build()));
   }
 
   @Override

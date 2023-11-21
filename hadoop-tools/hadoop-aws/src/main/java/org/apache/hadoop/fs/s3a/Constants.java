@@ -1520,6 +1520,12 @@ public final class Constants {
   public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
   /**
+   * Read Restored Glacier objects config.
+   * Value = {@value}
+   */
+  public static final String READ_RESTORED_GLACIER_OBJECTS = "fs.s3a.glacier.read.restored.objects";
+
+  /**
    * The bucket region header.
    */
   public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";

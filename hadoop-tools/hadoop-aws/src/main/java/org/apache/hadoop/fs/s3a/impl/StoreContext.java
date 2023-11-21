@@ -26,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,6 +37,7 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.S3ObjectStorageClassFilter;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
@@ -117,6 +117,8 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
   /** Is client side encryption enabled? */
   private final boolean isCSEEnabled;
 
+  private final S3ObjectStorageClassFilter s3ObjectStorageClassFilter;
+
   /**
    * Instantiate.
    */
@@ -137,7 +139,8 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
       final boolean useListV1,
       final ContextAccessors contextAccessors,
       final AuditSpanSource<AuditSpanS3A> auditor,
-      final boolean isCSEEnabled) {
+      final boolean isCSEEnabled,
+      final S3ObjectStorageClassFilter s3ObjectStorageClassFilter) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -158,6 +161,7 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
     this.contextAccessors = contextAccessors;
     this.auditor = auditor;
     this.isCSEEnabled = isCSEEnabled;
+    this.s3ObjectStorageClassFilter = s3ObjectStorageClassFilter;
   }
 
   public URI getFsURI() {
@@ -410,5 +414,13 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
+  }
+
+  /**
+   * Return the S3ObjectStorageClassFilter object for S3A, whose value is set according to the config {@code fs.s3a.glacier.read.restored.objects}
+   * @return  {@link S3ObjectStorageClassFilter} object
+   */
+  public S3ObjectStorageClassFilter getS3ObjectsStorageClassFilter() {
+    return s3ObjectStorageClassFilter;
   }
 }

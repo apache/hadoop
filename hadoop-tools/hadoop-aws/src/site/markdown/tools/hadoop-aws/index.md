@@ -928,6 +928,20 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<!--
+The switch to control how S3A handles glacier storage classes.
+-->
+<property>
+<name>fs.s3a.glacier.read.restored.objects</name>
+<value>READ_ALL</value>
+<description>
+  The config can have 3 values:
+
+  * READ_ALL: Retrieval of Glacier files will fail with InvalidObjectStateException: The operation is not valid for the object's storage class.
+  * SKIP_ALL_GLACIER: If this value is set then this will ignore any S3 Objects which are tagged with Glacier storage classes and retrieve the others.
+  * READ_RESTORED_GLACIER_OBJECTS: If this value is set then restored status of the Glacier object will be checked, if restored the objects would be read like normal S3 objects else they will be ignored as the objects would not have been retrieved from the S3 Glacier.
+</description>
+</property>
 ```
 ## <a name="retry_and_recovery"></a>Retry and Recovery
 
