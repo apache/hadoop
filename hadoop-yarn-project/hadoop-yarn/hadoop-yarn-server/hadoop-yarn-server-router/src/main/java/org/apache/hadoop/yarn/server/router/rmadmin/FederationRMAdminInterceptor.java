@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplica
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -121,8 +122,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   private static final String COLON = ":";
 
   private static final List<String> SUPPORT_WEIGHT_MANAGERS =
-      new ArrayList<>(Arrays.asList(WeightedLocalityPolicyManager.class.getSimpleName(),
-      PriorityBroadcastPolicyManager.class.getSimpleName()));
+      new ArrayList<>(Arrays.asList(WeightedLocalityPolicyManager.class.getName(),
+      PriorityBroadcastPolicyManager.class.getName(), WeightedHomePolicyManager.class.getName()));
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -937,7 +938,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
       routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
       RouterServerUtil.logAndThrowException(policyManagerClassName +
-          "does not support the use of queue weights.", null);
+          " does not support the use of queue weights.", null);
     }
 
     String amRmWeight = federationQueueWeight.getAmrmWeight();
