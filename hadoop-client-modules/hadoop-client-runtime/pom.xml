@@ -60,6 +60,12 @@
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
     <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
     <dependency>
       <groupId>org.xerial.snappy</groupId>
