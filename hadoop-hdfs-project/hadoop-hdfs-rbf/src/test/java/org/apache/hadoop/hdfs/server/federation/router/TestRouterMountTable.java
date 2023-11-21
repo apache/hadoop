@@ -356,22 +356,29 @@ public class TestRouterMountTable {
     String child = "testA";
     Path childPath = new Path(src, child);
     HdfsFileStatus dirStatus =
-        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0, true);
     assertEquals(child, dirStatus.getLocalName());
 
     String src1 = "/testA";
     String child1 = "testB";
     Path childPath1 = new Path(src1, child1);
     HdfsFileStatus dirStatus1 =
-        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0, true);
     assertEquals(child1, dirStatus1.getLocalName());
 
     String src2 = "/testA/testB";
     String child2 = "testC";
     Path childPath2 = new Path(src2, child2);
     HdfsFileStatus dirStatus2 =
-        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, true);
     assertEquals(child2, dirStatus2.getLocalName());
+
+    String src3 = "/testA/testB";
+    String child3 = "testC";
+    Path childPath3 = new Path(src2, child2);
+    HdfsFileStatus dirStatus3 =
+        clientProtocol.getMountPointStatus(childPath3.toString(), 0, 0, false);
+    assertTrue(dirStatus3.isEmptyLocalName());
   }
   /**
    * GetListing of testPath through router.
@@ -663,6 +670,25 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testlist/tmp0"), true);
       nnFs1.delete(new Path("/testlist/tmp1"), true);
+    }
+  }
+
+  @Test
+  public void testGetFileInfoWithMountPoint() throws IOException {
+    try {
+      // Add mount table entry
+      MountTable addEntry = MountTable.newInstance("/testgetfileinfo/ns1/dir",
+          Collections.singletonMap("ns1", "/testgetfileinfo/ns1/dir"));
+      assertTrue(addMountTable(addEntry));
+      nnFs1.mkdirs(new Path("/testgetfileinfo/ns1/dir"));
+
+      FileStatus fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1"));
+      assertTrue(fileStatus.getPath().toString().endsWith("/testgetfileinfo/ns1"));
+
+      FileStatus fileStatus1 = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1/dir"));
+      assertTrue(fileStatus1.getPath().toString().endsWith("/testgetfileinfo/ns1/dir"));
+    } finally {
+      nnFs1.delete(new Path("/testgetfileinfo/ns1/dir"), true);
     }
   }
 
