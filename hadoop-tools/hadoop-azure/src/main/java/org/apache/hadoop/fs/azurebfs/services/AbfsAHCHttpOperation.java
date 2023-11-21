@@ -143,68 +143,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 //    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
 //        connection.getHeaderFields());
 
-    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
-      // If it is HEAD, and it is ERROR
-      return;
-    }
-
-    startTime = System.nanoTime();
-
-    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
-      processStorageErrorResponse();
-//      this.recvResponseTimeMs += elapsedTimeMs(startTime);
-      String contentLength = getResponseHeader(
-          HttpHeaderConfigurations.CONTENT_LENGTH);
-      if(contentLength != null) {
-        this.bytesReceived = Long.parseLong(contentLength);
-      } else {
-        this.bytesReceived = 0L;
-      }
-
-    } else {
-      // consume the input stream to release resources
-      int totalBytesRead = 0;
-
-      try (InputStream stream = getContentInputStream(httpResponse)) {
-        if (isNullInputStream(stream)) {
-          return;
-        }
-        boolean endOfStream = false;
-
-        // this is a list operation and need to retrieve the data
-        // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
-        } else {
-          if (buffer != null) {
-            while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
-              if (bytesRead == -1) {
-                endOfStream = true;
-                break;
-              }
-              totalBytesRead += bytesRead;
-            }
-          }
-          if (!endOfStream && stream.read() != -1) {
-            // read and discard
-            int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
-              totalBytesRead += bytesRead;
-            }
-          }
-        }
-      } catch (IOException ex) {
-//        LOG.warn("IO/Network error: {} {}: {}",
-//            method, getMaskedUrl(), ex.getMessage());
-        LOG.debug("IO Error: ", ex);
-        throw ex;
-      } finally {
-//        this.recvResponseTimeMs += elapsedTimeMs(startTime);
-        this.bytesReceived = totalBytesRead;
-      }
-    }
+    parseResponse(buffer, offset, length);
   }
 
   @Override
@@ -230,23 +169,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     return null;
   }
 
-
-
-  private InputStream getContentInputStream(final HttpResponse httpResponse)
+  @Override
+  InputStream getContentInputStream()
       throws IOException {
+    if(httpResponse == null) {
+      return null;
+    }
     HttpEntity entity = httpResponse.getEntity();
     if(entity != null) {
       return httpResponse.getEntity().getContent();
     }
     return null;
-  }
-
-  /**
-   * Check null stream, this is to pass findbugs's redundant check for NULL
-   * @param stream InputStream
-   */
-  private boolean isNullInputStream(InputStream stream) {
-    return stream == null ? true : false;
   }
 
   public void sendRequest(final byte[] buffer,

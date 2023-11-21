@@ -256,6 +256,11 @@ public class AbfsHttpOperation extends HttpOperation {
     return connection.getRequestProperties();
   }
 
+  @Override
+  InputStream getContentInputStream() throws IOException {
+    return connection.getInputStream();
+  }
+
   /**
    * Gets and processes the HTTP response.
    *
@@ -291,54 +296,7 @@ public class AbfsHttpOperation extends HttpOperation {
 
     startTime = System.nanoTime();
 
-    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
-      processStorageErrorResponse();
-      this.recvResponseTimeMs += elapsedTimeMs(startTime);
-      this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
-    } else {
-      // consume the input stream to release resources
-      int totalBytesRead = 0;
-
-      try (InputStream stream = this.connection.getInputStream()) {
-        if (isNullInputStream(stream)) {
-          return;
-        }
-        boolean endOfStream = false;
-
-        // this is a list operation and need to retrieve the data
-        // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
-        } else {
-          if (buffer != null) {
-            while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
-              if (bytesRead == -1) {
-                endOfStream = true;
-                break;
-              }
-              totalBytesRead += bytesRead;
-            }
-          }
-          if (!endOfStream && stream.read() != -1) {
-            // read and discard
-            int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
-              totalBytesRead += bytesRead;
-            }
-          }
-        }
-      } catch (IOException ex) {
-        LOG.warn("IO/Network error: {} {}: {}",
-            method, getMaskedUrl(), ex.getMessage());
-        LOG.debug("IO Error: ", ex);
-        throw ex;
-      } finally {
-        this.recvResponseTimeMs += elapsedTimeMs(startTime);
-        this.bytesReceived = totalBytesRead;
-      }
-    }
+    parseResponse(buffer, offset, length);
   }
 
   public void setRequestProperty(String key, String value) {
@@ -362,21 +320,6 @@ public class AbfsHttpOperation extends HttpOperation {
   @Override
   protected InputStream getErrorStream() {
     return connection.getErrorStream();
-  }
-
-  /**
-   * Returns the elapsed time in milliseconds.
-   */
-  private long elapsedTimeMs(final long startTime) {
-    return (System.nanoTime() - startTime) / ONE_MILLION;
-  }
-
-  /**
-   * Check null stream, this is to pass findbugs's redundant check for NULL
-   * @param stream InputStream
-   */
-  private boolean isNullInputStream(InputStream stream) {
-    return stream == null ? true : false;
   }
 
   /**

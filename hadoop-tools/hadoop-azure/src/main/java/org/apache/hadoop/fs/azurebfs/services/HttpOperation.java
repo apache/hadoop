@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
@@ -204,6 +205,77 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
 
   public abstract  void setRequestProperty(String key, String value);
 
+  void parseResponse(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    long startTime;
+    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
+      // If it is HEAD, and it is ERROR
+      return;
+    }
+
+    startTime = System.nanoTime();
+
+    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      processStorageErrorResponse();
+      this.recvResponseTimeMs += elapsedTimeMs(startTime);
+      String contentLength = getResponseHeader(
+          HttpHeaderConfigurations.CONTENT_LENGTH);
+      if(contentLength != null) {
+        this.bytesReceived = Long.parseLong(contentLength);
+      } else {
+        this.bytesReceived = 0L;
+      }
+
+    } else {
+      // consume the input stream to release resources
+      int totalBytesRead = 0;
+
+      try (InputStream stream = getContentInputStream()) {
+        if (isNullInputStream(stream)) {
+          return;
+        }
+        boolean endOfStream = false;
+
+        // this is a list operation and need to retrieve the data
+        // need a better solution
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+          parseListFilesResponse(stream);
+        } else {
+          if (buffer != null) {
+            while (totalBytesRead < length) {
+              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
+                  - totalBytesRead);
+              if (bytesRead == -1) {
+                endOfStream = true;
+                break;
+              }
+              totalBytesRead += bytesRead;
+            }
+          }
+          if (!endOfStream && stream.read() != -1) {
+            // read and discard
+            int bytesRead = 0;
+            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+            while ((bytesRead = stream.read(b)) >= 0) {
+              totalBytesRead += bytesRead;
+            }
+          }
+        }
+      } catch (IOException ex) {
+        LOG.warn("IO/Network error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        LOG.debug("IO Error: ", ex);
+        throw ex;
+      } finally {
+        this.recvResponseTimeMs += elapsedTimeMs(startTime);
+        this.bytesReceived = totalBytesRead;
+      }
+    }
+  }
+
+  abstract InputStream getContentInputStream() throws IOException;
+
   /**
    * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
@@ -288,6 +360,21 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
       LOG.error("Unable to deserialize list results", ex);
       throw ex;
     }
+  }
+
+  /**
+   * Returns the elapsed time in milliseconds.
+   */
+  long elapsedTimeMs(final long startTime) {
+    return (System.nanoTime() - startTime) / ONE_MILLION;
+  }
+
+  /**
+   * Check null stream, this is to pass findbugs's redundant check for NULL
+   * @param stream InputStream
+   */
+  boolean isNullInputStream(InputStream stream) {
+    return stream == null ? true : false;
   }
 
   /**
