@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.commit;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -495,7 +496,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   public void testUploadSmallFile() throws Throwable {
     File tempFile = File.createTempFile("commit", ".txt");
     String text = "hello, world";
-    FileUtils.write(tempFile, text, "UTF-8");
+    FileUtils.write(tempFile, text, StandardCharsets.UTF_8);
     CommitOperations actions = newCommitOperations();
     Path dest = methodSubPath("testUploadSmallFile");
     S3AFileSystem fs = getFileSystem();

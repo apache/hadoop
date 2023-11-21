@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -333,7 +334,7 @@ public final class PmemVolumeManager {
 
     String uuidStr = UUID.randomUUID().toString();
     String testFilePath = realPmemDir.getPath() + "/.verify.pmem." + uuidStr;
-    byte[] contents = uuidStr.getBytes("UTF-8");
+    byte[] contents = uuidStr.getBytes(StandardCharsets.UTF_8);
     RandomAccessFile testFile = null;
     MappedByteBuffer out = null;
     try {

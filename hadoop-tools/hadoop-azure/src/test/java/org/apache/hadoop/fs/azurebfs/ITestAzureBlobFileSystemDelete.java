@@ -29,10 +29,14 @@ import java.util.concurrent.Future;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
@@ -60,7 +64,6 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.Delet
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-
 
 /**
  * Test delete operation.
@@ -257,14 +260,15 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
-    AbfsRestOperation idempotencyRetOp = ITestAbfsClient.getRestOp(
+    AbfsRestOperation idempotencyRetOp = Mockito.spy(ITestAbfsClient.getRestOp(
         DeletePath, mockClient, HTTP_METHOD_DELETE,
         ITestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
-        ITestAbfsClient.getTestRequestHeaders(mockClient));
+        ITestAbfsClient.getTestRequestHeaders(mockClient)));
     idempotencyRetOp.hardSetResult(HTTP_OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);
+    doReturn(tracingContext).when(idempotencyRetOp).createNewTracingContext(any());
     when(mockClient.deletePath("/NonExistingPath", false, null, tracingContext))
         .thenCallRealMethod();
 
@@ -283,4 +287,25 @@ public class ITestAzureBlobFileSystemDelete extends
     mockStore.delete(new Path("/NonExistingPath"), false, getTestTracingContext(fs, false));
   }
 
+  @Test
+  public void deleteBlobDirParallelThreadToDeleteOnDifferentTracingContext()
+      throws Exception {
+    Configuration configuration = getRawConfiguration();
+    AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(configuration));
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+
+    Mockito.doReturn(spiedStore).when(fs).getAbfsStore();
+    spiedStore.setClient(spiedClient);
+
+    fs.mkdirs(new Path("/testDir"));
+    fs.create(new Path("/testDir/file1"));
+    fs.create(new Path("/testDir/file2"));
+
+    AbfsClientTestUtil.hookOnRestOpsForTracingContextSingularity(spiedClient);
+
+    fs.delete(new Path("/testDir"), true);
+    fs.close();
+  }
 }

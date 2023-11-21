@@ -107,7 +107,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
-        AUTHORITATIVE_PATH);
+        AUTHORITATIVE_PATH,
+        FS_S3A_CREATE_PERFORMANCE);
     // directory marker options
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
@@ -234,6 +235,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     getFileSystem().create(path, overwrite).close();
     return path;
   }
+
+  /**
+   * Create a file with a specific body, returning its path.
+   * @param path path to file.
+   * @param overwrite overwrite flag
+   * @param body body of file
+   * @return path of new file
+   */
+  protected Path file(Path path, final boolean overwrite, byte[] body)
+      throws IOException {
+    ContractTestUtils.createFile(getFileSystem(), path, overwrite, body);
+    return path;
+  }
+
+
 
   /**
    * Touch a file, overwriting.
