@@ -199,7 +199,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         url,
         requestHeaders, buffer,
         appendRequestParameters.getoffset(),
-        appendRequestParameters.getLength(), null, abfsConfig));
+        appendRequestParameters.getLength(), null, abfsConfig, "clientId"));
 
     AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders));
 

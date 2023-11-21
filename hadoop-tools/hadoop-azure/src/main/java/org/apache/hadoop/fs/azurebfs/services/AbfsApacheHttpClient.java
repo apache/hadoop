@@ -3,13 +3,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ProtocolException;
 import java.net.Socket;
-import java.net.URL;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.ConnectionReuseStrategy;
@@ -21,25 +17,23 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.ConnectionPoolTimeoutException;
-import org.apache.http.conn.ConnectionRequest;
+import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.DefaultClientConnectionReuseStrategy;
+import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestExecutor;
 
@@ -52,6 +46,31 @@ public class AbfsApacheHttpClient {
     public Long connectTime;
     public Long readTime;
     public Boolean expect100;
+  }
+
+  public static class AbfsKeepAliveStrategy implements ConnectionKeepAliveStrategy {
+    private final long keepIdleTime;
+
+    public AbfsKeepAliveStrategy(AbfsConfiguration abfsConfiguration) {
+      keepIdleTime = abfsConfiguration.getHttpClientConnMaxIdleTime();
+    }
+
+    @Override
+    public long getKeepAliveDuration(final HttpResponse response,
+        final HttpContext context) {
+      // If there's a Keep-Alive timeout directive in the response and it's
+      // shorter than our configured max, honor that. Otherwise go with the
+      // configured maximum.
+
+      long duration = DefaultConnectionKeepAliveStrategy.INSTANCE
+          .getKeepAliveDuration(response, context);
+
+      if (0 < duration && duration < keepIdleTime) {
+        return duration;
+      }
+
+      return keepIdleTime;
+    }
   }
 
   public static class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
@@ -209,8 +228,9 @@ public class AbfsApacheHttpClient {
 
   private static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
-    public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory) {
+    public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
+      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -273,18 +293,20 @@ public class AbfsApacheHttpClient {
 
   final HttpClient httpClient;
 
-  public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory) {
+  public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
+      final AbfsConfiguration abfsConfiguration) {
     final AbfsConnMgr connMgr;
     if(delegatingSSLSocketFactory == null) {
-      connMgr = new AbfsConnMgr(null);
+      connMgr = new AbfsConnMgr(null, abfsConfiguration);
     } else {
       connMgr = new AbfsConnMgr(
-          new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null));
+          new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null), abfsConfiguration);
     }
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsHttpRequestExecutor())
         .setConnectionReuseStrategy(connectionReuseStrategy)
+        .setKeepAliveStrategy(new AbfsKeepAliveStrategy(abfsConfiguration))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()

@@ -338,6 +338,12 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HTTP_CLIENT_MAX_CONN, DefaultValue = -1)
+  private int httpClientMaxConn;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HTTP_CLIENT_MAX_CONN_IDLE_TIME, DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
+  private long httpClientConnMaxIdleTime;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -796,6 +802,17 @@ public class AbfsConfiguration{
 
   public HttpOperationType getPreferredHttpOperationType() {
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
+  }
+
+  public int getHttpClientMaxConn() {
+    if(httpClientMaxConn != -1) {
+      return httpClientMaxConn;
+    }
+    return getWriteMaxConcurrentRequestCount() + 8;
+  }
+
+  public long getHttpClientConnMaxIdleTime() {
+    return httpClientConnMaxIdleTime;
   }
 
   /**

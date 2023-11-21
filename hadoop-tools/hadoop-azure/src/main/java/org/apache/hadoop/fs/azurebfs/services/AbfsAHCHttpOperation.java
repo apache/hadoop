@@ -2,25 +2,19 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -48,27 +42,44 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsAHCHttpOperation.class);
 
-  private static AbfsApacheHttpClient abfsApacheHttpClient;
+  private static Map<String, AbfsApacheHttpClient> abfsApacheHttpClientMap = new HashMap<>();
+
+  private AbfsApacheHttpClient abfsApacheHttpClient;
 
   public HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
 
-  private synchronized void setAbfsApacheHttpClient() {
-    if(abfsApacheHttpClient == null) {
-      abfsApacheHttpClient = new AbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory());
+  private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
+    AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
+    if(client == null) {
+      client = new AbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory(), abfsConfiguration);
+      abfsApacheHttpClientMap.put(clientId, abfsApacheHttpClient);
     }
+    abfsApacheHttpClient = client;
   }
 
+  static void removeClient(final String clientId) {
+    abfsApacheHttpClientMap.remove(clientId);
+  }
+
+  private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) {
+    super(LOG);
+    this.url = url;
+    this.method = method;
+    this.requestHeaders = requestHeaders;
+  }
 
   public AbfsAHCHttpOperation(final URL url,
       final String method,
-      final List<AbfsHttpHeader> requestHeaders) {
+      final List<AbfsHttpHeader> requestHeaders,
+      final AbfsConfiguration abfsConfiguration,
+      final String clientId) {
     super(LOG);
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
-    setAbfsApacheHttpClient();
+    setAbfsApacheHttpClient(abfsConfiguration, clientId);
   }
 
 

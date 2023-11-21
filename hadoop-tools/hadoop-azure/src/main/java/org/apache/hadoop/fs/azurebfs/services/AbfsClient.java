@@ -87,6 +87,8 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
  */
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
+
+  private static final String clientId = UUID.randomUUID().toString();
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
 
   private final URL baseUrl;
@@ -207,6 +209,7 @@ public class AbfsClient implements Closeable {
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
     }
+    AbfsAHCHttpOperation.removeClient(clientId);
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
   }
 
@@ -973,7 +976,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders, abfsConfiguration);
+            requestHeaders, abfsConfiguration, clientId);
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -1442,7 +1445,7 @@ public class AbfsClient implements Closeable {
         bufferOffset,
         bufferLength,
         sasTokenForReuse,
-        abfsConfiguration);
+        abfsConfiguration, clientId);
   }
 
   /**
@@ -1464,7 +1467,8 @@ public class AbfsClient implements Closeable {
         httpMethod,
         url,
         requestHeaders,
-        abfsConfiguration
+        abfsConfiguration,
+        clientId
     );
   }
 
@@ -1488,6 +1492,6 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse, abfsConfiguration);
+        requestHeaders, sasTokenForReuse, abfsConfiguration, filesystem);
   }
 }

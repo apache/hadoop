@@ -90,6 +90,8 @@ public class AbfsRestOperation {
    */
   private TracingContext lastUsedTracingContext;
 
+  private final String clientId;
+
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -144,8 +146,10 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final AbfsConfiguration abfsConfiguration) {
-    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration);
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration,
+        clientId);
   }
 
   /**
@@ -163,7 +167,9 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
                     final String sasToken,
-                    final AbfsConfiguration abfsConfiguration) {
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this.clientId = clientId;
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -201,8 +207,10 @@ public class AbfsRestOperation {
                     int bufferOffset,
                     int bufferLength,
                     String sasToken,
-                    final AbfsConfiguration abfsConfiguration) {
-    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration);
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration,
+        clientId);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -421,7 +429,8 @@ public class AbfsRestOperation {
   HttpOperation createHttpOperation() throws IOException {
     HttpOperationType httpOperationType = abfsConfiguration.getPreferredHttpOperationType();
     if(httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT) {
-      return new AbfsAHCHttpOperation(url, method, requestHeaders);
+      return new AbfsAHCHttpOperation(url, method, requestHeaders, abfsConfiguration,
+          clientId);
     }
     return new AbfsHttpOperation(url, method, requestHeaders);
   }

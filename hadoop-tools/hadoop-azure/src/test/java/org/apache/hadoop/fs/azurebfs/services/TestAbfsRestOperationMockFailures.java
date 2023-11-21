@@ -175,7 +175,8 @@ public class TestAbfsRestOperationMockFailures {
         "PUT",
         null,
         new ArrayList<>(),
-        Mockito.mock(AbfsConfiguration.class)
+        Mockito.mock(AbfsConfiguration.class),
+        "clientId"
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
@@ -237,7 +238,8 @@ public class TestAbfsRestOperationMockFailures {
         "PUT",
         null,
         new ArrayList<>(),
-        Mockito.mock(AbfsConfiguration.class)
+        Mockito.mock(AbfsConfiguration.class),
+        "clientId"
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);

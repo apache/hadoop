@@ -56,6 +56,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -237,7 +238,9 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(FileNotFoundException.class,
         () -> {
           try (FilterOutputStream fos = new FilterOutputStream(out)) {
-            fos.write('a');
+            byte[] bytes = new byte[8*ONE_MB];
+            fos.write(bytes);
+            fos.write(bytes);
             fos.flush();
             out.hsync();
             fs.delete(testPath, false);
