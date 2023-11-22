@@ -1976,19 +1976,23 @@ public class DFSUtil {
    * @param read bytes read
    * @param durationInNS read duration in nanoseconds
    */
-  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long durationInNS) {
+  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read,
+      final long durationInNS) {
     metrics.addReadTransferRate(getTransferRateInBytesPerSecond(read, durationInNS));
   }
 
   /**
+   * Calculate the transfer rate in bytes per second.
+   *
    * We have the read duration in nanoseconds for precision for transfers taking a few nanoseconds.
-   * We treat shorter durations below 1 ns as 1 ns as we also want to capture reads taking less than a nanosecond.
-   * To calculate transferRate in bytes per second, we avoid multiplying bytes read by 10^9 to avoid overflow.
-   * Instead we first calculate the duration in seconds in double to keep the decimal values for smaller durations.
-   * We then divide bytes read by durationInSeconds to get the transferRate in bytes per second.
-   * @param bytes
-   * @param durationInNS
-   * @return
+   * We treat shorter durations below 1 ns as 1 ns as we also want to capture reads taking less
+   * than a nanosecond. To calculate transferRate in bytes per second, we avoid multiplying bytes
+   * read by 10^9 to avoid overflow. Instead, we first calculate the duration in seconds in double
+   * to keep the decimal values for smaller durations. We then divide bytes read by
+   * durationInSeconds to get the transferRate in bytes per second.
+   * @param bytes bytes read
+   * @param durationInNS read duration in nanoseconds
+   * @return bytes per second
    */
   public static long getTransferRateInBytesPerSecond(final long bytes, long durationInNS) {
     durationInNS = Math.max(durationInNS, 1);

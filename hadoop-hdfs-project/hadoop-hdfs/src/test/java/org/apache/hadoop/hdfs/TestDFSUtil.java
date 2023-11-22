@@ -1140,8 +1140,9 @@ public class TestDFSUtil {
 
   @Test
   public void testGetTransferRateInBytesPerSecond() {
-      assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 1L));
-      assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 0L));
-      assertEquals(102_400_000, DFSUtil.getTransferRateInBytesPerSecond(512_000_000L, 5_000_000_000L));
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 1L));
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 0L));
+    assertEquals(102_400_000,
+        DFSUtil.getTransferRateInBytesPerSecond(512_000_000L, 5_000_000_000L));
   }
 }
