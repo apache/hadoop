@@ -4,6 +4,7 @@ import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
@@ -43,9 +44,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 public class AbfsApacheHttpClient {
 
   public static class AbfsHttpClientContext extends HttpClientContext {
-    public Long connectTime;
-    public Long readTime;
-    public Boolean expect100;
+    Long connectTime;
+    Long readTime;
+    Long sendTime;
+    HttpClientConnection httpClientConnection;
+    Long expect100HeaderSendTime = 0L;
+    Long expect100ResponseTime;
+
+    Long keepAliveTime;
   }
 
   public static class AbfsKeepAliveStrategy implements ConnectionKeepAliveStrategy {
@@ -66,9 +72,14 @@ public class AbfsApacheHttpClient {
           .getKeepAliveDuration(response, context);
 
       if (0 < duration && duration < keepIdleTime) {
+        if(context instanceof AbfsHttpClientContext) {
+          ((AbfsHttpClientContext) context).keepAliveTime = duration;
+        }
         return duration;
       }
-
+      if(context instanceof AbfsHttpClientContext) {
+        ((AbfsHttpClientContext) context).keepAliveTime = keepIdleTime;
+      }
       return keepIdleTime;
     }
   }
@@ -86,8 +97,18 @@ public class AbfsApacheHttpClient {
 
     private ManagedHttpClientConnection httpClientConnection;
 
+    private AbfsHttpClientContext abfsHttpClientContext;
+
     public AbfsApacheHttpConnection(ManagedHttpClientConnection clientConnection) {
       this.httpClientConnection = clientConnection;
+    }
+
+    public void setAbfsHttpClientContext(AbfsHttpClientContext abfsHttpClientContext) {
+      this.abfsHttpClientContext = abfsHttpClientContext;
+    }
+
+    public void removeAbfsHttpClientContext() {
+      this.abfsHttpClientContext = null;
     }
 
     @Override
@@ -127,15 +148,25 @@ public class AbfsApacheHttpClient {
 
     @Override
     public boolean isResponseAvailable(final int timeout) throws IOException {
-      return httpClientConnection.isResponseAvailable(timeout);
+      Long start = System.currentTimeMillis();
+      boolean val = httpClientConnection.isResponseAvailable(timeout);
+      if(abfsHttpClientContext != null) {
+        abfsHttpClientContext.expect100ResponseTime += (System.currentTimeMillis() - start);
+      }
+      return val;
     }
 
     @Override
     public void sendRequestHeader(final HttpRequest request)
         throws HttpException, IOException {
-      Long start = System.currentTimeMillis();
+      long start = System.currentTimeMillis();
       httpClientConnection.sendRequestHeader(request);
-      System.out.println("BLA BLA" + (System.currentTimeMillis() - start));
+      long elapsed = System.currentTimeMillis() - start;
+      if(request instanceof HttpEntityEnclosingRequest && ((HttpEntityEnclosingRequest) request).expectContinue()) {
+        if(abfsHttpClientContext != null && abfsHttpClientContext.expect100HeaderSendTime == 0L) {
+          abfsHttpClientContext.expect100HeaderSendTime = elapsed;
+        }
+      }
     }
 
     @Override
@@ -147,7 +178,12 @@ public class AbfsApacheHttpClient {
     @Override
     public HttpResponse receiveResponseHeader()
         throws HttpException, IOException {
-      return httpClientConnection.receiveResponseHeader();
+      long start = System.currentTimeMillis();
+      HttpResponse response = httpClientConnection.receiveResponseHeader();
+      if(abfsHttpClientContext != null) {
+        abfsHttpClientContext.expect100ResponseTime += System.currentTimeMillis() - start;
+      }
+      return response;
     }
 
     @Override
@@ -230,7 +266,7 @@ public class AbfsApacheHttpClient {
 
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
-      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
+      setDefaultMaxPerRoute(1);
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -269,7 +305,12 @@ public class AbfsApacheHttpClient {
       final HttpResponse res = super.doSendRequest(request, conn, context);
       long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
-        ((AbfsHttpClientContext) context).readTime = elapsed;
+        if(conn instanceof AbfsApacheHttpConnection) {
+          ((AbfsApacheHttpConnection) conn).setAbfsHttpClientContext(
+              (AbfsHttpClientContext) context);
+        }
+        ((AbfsHttpClientContext) context).httpClientConnection = conn;
+        ((AbfsHttpClientContext) context).sendTime = elapsed;
       }
       if(request != null && request.containsHeader(EXPECT) && res != null && res.getStatusLine().getStatusCode() != 200) {
         throw new AbfsApacheHttpExpect100Exception("Server rejected operation", res);
@@ -293,9 +334,10 @@ public class AbfsApacheHttpClient {
 
   final HttpClient httpClient;
 
+  private final AbfsConnMgr connMgr;
+
   public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final AbfsConfiguration abfsConfiguration) {
-    final AbfsConnMgr connMgr;
     if(delegatingSSLSocketFactory == null) {
       connMgr = new AbfsConnMgr(null, abfsConfiguration);
     } else {
@@ -314,14 +356,22 @@ public class AbfsApacheHttpClient {
     httpClient = builder.build();
   }
 
-  public HttpResponse execute(HttpRequestBase httpRequest) throws IOException {
+  public void releaseConn(HttpClientConnection clientConnection, AbfsHttpClientContext context) {
+    connMgr.releaseConnection(clientConnection, context.getUserToken(), context.keepAliveTime, TimeUnit.MILLISECONDS);
+  }
+
+  public void destroyConn(HttpClientConnection httpClientConnection)
+      throws IOException {
+    httpClientConnection.close();
+  }
+
+  public HttpResponse execute(HttpRequestBase httpRequest, final AbfsHttpClientContext abfsHttpClientContext) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
-//        .setConnectionRequestTimeout(20_000)
         .setConnectTimeout(30_000)
         .setSocketTimeout(30_000);
     httpRequest.setConfig(requestConfigBuilder.build());
-    return httpClient.execute(httpRequest, new AbfsHttpClientContext());
+    return httpClient.execute(httpRequest, abfsHttpClientContext);
   }
 
 

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   public HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
+
+  private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext
+      = new AbfsApacheHttpClient.AbfsHttpClientContext();
 
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
@@ -130,7 +134,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final int offset,
       final int length) throws IOException {
     try {
-      httpResponse = abfsApacheHttpClient.execute(httpRequestBase);
+      long startTime = 0;
+      startTime = System.nanoTime();
+      httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
+      sendRequestTimeMs = abfsHttpClientContext.sendTime;
+      recvResponseTimeMs = abfsHttpClientContext.readTime;
     } catch (AbfsApacheHttpExpect100Exception ex) {
       LOG.debug(
           "Getting output stream failed with expect header enabled, returning back ",
@@ -142,7 +150,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     startTime = System.nanoTime();
 
     this.statusCode = httpResponse.getStatusLine().getStatusCode();
-    this.recvResponseTimeMs = 0L;
 
     this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
 
@@ -151,10 +158,34 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
     // dump the headers
-//    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
-//        connection.getHeaderFields());
+    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
+        getResponseHeaders(httpResponse));
 
     parseResponse(buffer, offset, length);
+
+//    if(shouldKillConn()) {
+//      abfsApacheHttpClient.destroyConn(
+//          abfsHttpClientContext.httpClientConnection);
+//    } else {
+//      abfsApacheHttpClient.releaseConn(
+//          abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
+//    }
+  }
+
+  private boolean shouldKillConn() {
+    return false;
+  }
+
+  private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {
+    if(httpResponse == null || httpResponse.getAllHeaders() == null) {
+      return new HashMap<>();
+    }
+    Map<String, List<String>> map = new HashMap<>();
+    for(Header header : httpResponse.getAllHeaders()) {
+      map.put(header.getName(), new ArrayList<String>(
+          Collections.singleton(header.getValue())));
+    }
+    return map;
   }
 
   @Override
