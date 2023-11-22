@@ -40,6 +40,12 @@
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>compile</scope>
+    </dependency>
     <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
     <dependency>
       <groupId>org.xerial.snappy</groupId>
@@ -396,14 +402,6 @@
       </exclusions>
     </dependency>
 
-    <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>${mockito.version}</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:servlet-api because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->

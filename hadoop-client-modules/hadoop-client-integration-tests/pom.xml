@@ -79,6 +79,12 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client-minicluster</artifactId>
           <scope>test</scope>
+          <exclusions>
+          <exclusion>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+          </exclusion>
+        </exclusions>
         </dependency>
         <dependency>
           <groupId>org.bouncycastle</groupId>
