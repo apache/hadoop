@@ -814,7 +814,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
         .orElse(false);
     int footerReadBufferSize = options.map(c -> c.getInt(
-        AZURE_FOOTER_READ_BUFFER_SIZE, DEFAULT_FOOTER_READ_BUFFER_SIZE))
+        AZURE_FOOTER_READ_BUFFER_SIZE, abfsConfiguration.getFooterReadBufferSize()))
         .orElse(abfsConfiguration.getFooterReadBufferSize());
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
