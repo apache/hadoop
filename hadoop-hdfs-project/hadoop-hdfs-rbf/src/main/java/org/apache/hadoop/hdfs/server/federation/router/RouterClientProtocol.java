@@ -943,7 +943,7 @@ public class RouterClientProtocol implements ClientProtocol {
       }
     }
 
-    if (!namenodeListingExists && nnListing.size() == 0) {
+    if (!namenodeListingExists && nnListing.size() == 0 && children == null) {
       // NN returns a null object if the directory cannot be found and has no
       // listing. If we didn't retrieve any NN listing data, and there are no
       // mount points here, return null.
