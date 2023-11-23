@@ -22,9 +22,36 @@ public class MetricPercentile {
   private static final Map<String, MetricPercentile> rcvPercentileMap = new HashMap<>();
   private static final Map<String, MetricPercentile> totalPercentileMap = new HashMap<>();
 
+  static {
+    for(AbfsRestOperationType operationType : AbfsRestOperationType.values()) {
+      sendPercentileMap.put(operationType.name(), new MetricPercentile(1000));
+      rcvPercentileMap.put(operationType.name(), new MetricPercentile(1000));
+      totalPercentileMap.put(operationType.name(), new MetricPercentile(1000));
+    }
+  }
 
-  public static void addDataPoint(String operation, Long timeDuration) {
+  public static void addSendDataPoint(AbfsRestOperationType abfsRestOperationType, Long timeDuration) {
+    sendPercentileMap.get(abfsRestOperationType.name()).push(timeDuration);
+  }
 
+  public static void addRcvDataPoint(AbfsRestOperationType abfsRestOperationType, Long timeDuration) {
+    rcvPercentileMap.get(abfsRestOperationType.name()).push(timeDuration);
+  }
+
+  public static void addTotalDataPoint(AbfsRestOperationType abfsRestOperationType, Long timeDuration) {
+    totalPercentileMap.get(abfsRestOperationType.name()).push(timeDuration);
+  }
+
+  public static Long getSendPercentileVal(AbfsRestOperationType abfsRestOperationType, Double percentile) {
+    return sendPercentileMap.get(abfsRestOperationType.name()).percentile(percentile);
+  }
+
+  public static Long getRcvPercentileVal(AbfsRestOperationType abfsRestOperationType, Double percentile) {
+    return rcvPercentileMap.get(abfsRestOperationType.name()).percentile(percentile);
+  }
+
+  public static Long getTotalPercentileVal(AbfsRestOperationType abfsRestOperationType, Double percentile) {
+    return totalPercentileMap.get(abfsRestOperationType.name()).percentile(percentile);
   }
 
 

@@ -31,7 +31,6 @@ import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.conn.EofSensorInputStream;
 import org.apache.http.entity.ByteArrayEntity;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
@@ -57,9 +56,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
 
-  static final MetricPercentile sendPercentiles = new MetricPercentile(1000);
-  static final MetricPercentile receivePercentiles = new MetricPercentile(1000);
-  static final MetricPercentile totalPercentiles = new MetricPercentile(1000);
+  private final AbfsRestOperationType abfsRestOperationType;
 
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
@@ -74,8 +71,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     abfsApacheHttpClientMap.remove(clientId);
   }
 
-  private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) {
+  private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
+      final AbfsRestOperationType abfsRestOperationType) {
     super(LOG);
+    this.abfsRestOperationType = abfsRestOperationType;
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
@@ -86,9 +85,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final String method) {
     final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
     if(HTTP_METHOD_GET.equals(method)) {
-      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(true);
+      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(true, abfsRestOperationType);
     } else {
-      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(false);
+      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(false, abfsRestOperationType);
     }
     return abfsHttpClientContext;
   }
@@ -97,8 +96,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final AbfsConfiguration abfsConfiguration,
-      final String clientId) {
+      final String clientId, final AbfsRestOperationType abfsRestOperationType) {
     super(LOG);
+    this.abfsRestOperationType = abfsRestOperationType;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
@@ -111,7 +111,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final URL url,
       final String method,
       final int httpStatus) {
-    AbfsAHCHttpOperation abfsApacheHttpClientHttpOperation = new AbfsAHCHttpOperation(url, method, new ArrayList<>());
+    AbfsAHCHttpOperation abfsApacheHttpClientHttpOperation = new AbfsAHCHttpOperation(url, method, new ArrayList<>(), null);
     abfsApacheHttpClientHttpOperation.statusCode = httpStatus;
     return abfsApacheHttpClientHttpOperation;
   }
@@ -161,9 +161,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       sendRequestTimeMs = abfsHttpClientContext.sendTime;
       recvResponseTimeMs = abfsHttpClientContext.readTime;
 
-      sendPercentiles.push(sendRequestTimeMs);
-      receivePercentiles.push(recvResponseTimeMs);
-      totalPercentiles.push(sendRequestTimeMs + recvResponseTimeMs);
+      MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
+      MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
+      MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
+
     } catch (AbfsApacheHttpExpect100Exception ex) {
       LOG.debug(
           "Getting output stream failed with expect header enabled, returning back ",

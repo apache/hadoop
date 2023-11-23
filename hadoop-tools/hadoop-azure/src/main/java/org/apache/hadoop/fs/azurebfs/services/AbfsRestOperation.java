@@ -430,7 +430,7 @@ public class AbfsRestOperation {
     HttpOperationType httpOperationType = abfsConfiguration.getPreferredHttpOperationType();
     if(httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT) {
       return new AbfsAHCHttpOperation(url, method, requestHeaders, abfsConfiguration,
-          clientId);
+          clientId, operationType);
     }
     return new AbfsHttpOperation(url, method, requestHeaders);
   }

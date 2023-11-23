@@ -55,16 +55,18 @@ public class AbfsApacheHttpClient {
 
     Boolean isBeingRead = false;
     final Boolean isReadable;
+    final AbfsRestOperationType abfsRestOperationType;
 
-    public AbfsHttpClientContext(Boolean isReadable) {
+    public AbfsHttpClientContext(Boolean isReadable, AbfsRestOperationType operationType) {
       this.isReadable = isReadable;
+      this.abfsRestOperationType = operationType;
     }
 
     public boolean shouldKillConn() {
-      if(sendTime > AbfsAHCHttpOperation.sendPercentiles.percentile(99.9)) {
+      if(sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
         return true;
       }
-      if(readTime > AbfsAHCHttpOperation.receivePercentiles.percentile(99.9)) {
+      if(readTime > MetricPercentile.getRcvPercentileVal(abfsRestOperationType, 99.9)) {
         return true;
       }
       return false;
