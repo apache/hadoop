@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -237,5 +238,20 @@ public final class InternalConstants {
   public static final Set<String> CREATE_FILE_KEYS =
       Collections.unmodifiableSet(
           new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
+
+  /**
+   * This is the minimum operation duration unless programmatically set.
+   * It ensures that even if a configuration has mistaken a millisecond
+   * option for seconds, a viable duration will actually be used.
+   */
+  public static final Duration MINIMUM_OPERATION_DURATION = Duration.ofSeconds(10);
+
+  /**
+   * Should the idle connection reaper be used?
+   * It is hard to see why it would not be; this constant
+   * is here to make explicit where the option is set in case
+   * anyone ever wishes to experiment with it.
+   */
+  public static final boolean USE_IDLE_HTTP_CONNECTION_REAPER = true;
 
 }

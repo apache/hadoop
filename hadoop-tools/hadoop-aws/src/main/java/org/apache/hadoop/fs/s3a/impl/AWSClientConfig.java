@@ -24,6 +24,8 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -37,6 +39,7 @@ import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.SignerFactory;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -65,6 +68,9 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MINIMUM_OPERATION_DURATION;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.USE_IDLE_HTTP_CONNECTION_REAPER;
+
 
 /**
  * Methods for configuring the S3 client.
@@ -72,7 +78,17 @@ import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
  * {@link software.amazon.awssdk.services.s3.S3Client} which communicates with the S3 service.
  */
 public final class AWSClientConfig {
+
   private static final Logger LOG = LoggerFactory.getLogger(AWSClientConfig.class);
+
+  /** Log to warn of range issues on a timeout. */
+  private static final LogExactlyOnce TIMEOUT_WARN_LOG = new LogExactlyOnce(LOG);
+
+  /**
+   * The minimum operation duration.
+   */
+  public static final Duration minimumOperationDuration = MINIMUM_OPERATION_DURATION;
+
 
   private AWSClientConfig() {
   }
@@ -99,6 +115,108 @@ public final class AWSClientConfig {
   }
 
   /**
+   * All the connection settings, wrapped as a class for use by
+   * both the sync and async clients.
+   */
+  static class ConnectionSettings {
+    private final int maxConnections;
+    private final Duration establishTimeout;
+    private final Duration socketTimeout;
+    private final Duration connectionTTL;
+    private final Duration acquisitionTimeout;
+    private final Duration maxIdleTime;
+    private final Duration apiCallTimeout;
+
+    ConnectionSettings(
+        int maxConnections,
+        Duration establishTimeout,
+        Duration socketTimeout,
+        Duration connectionTTL,
+        Duration acquisitionTimeout,
+        Duration maxIdleTime, final Duration apiCallTimeout) {
+      this.maxConnections = maxConnections;
+      this.establishTimeout = establishTimeout;
+      this.socketTimeout = socketTimeout;
+      this.connectionTTL = connectionTTL;
+      this.acquisitionTimeout = acquisitionTimeout;
+      this.maxIdleTime = maxIdleTime;
+      this.apiCallTimeout = apiCallTimeout;
+    }
+
+    int getMaxConnections() {
+      return maxConnections;
+    }
+
+    Duration getEstablishTimeout() {
+      return establishTimeout;
+    }
+
+    Duration getSocketTimeout() {
+      return socketTimeout;
+    }
+
+    Duration getConnectionTTL() {
+      return connectionTTL;
+    }
+
+    Duration getAcquisitionTimeout() {
+      return acquisitionTimeout;
+    }
+
+    Duration getMaxIdleTime() {
+      return maxIdleTime;
+    }
+
+    Duration getApiCallTimeout() {
+      return apiCallTimeout;
+    }
+  }
+
+  /**
+   * Build a connection settings object from the configuration.
+   * @param conf configuration to evaluate
+   * @return connection settings.
+   */
+  static ConnectionSettings createConnectionSettings(Configuration conf) {
+    int maxConnections = S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
+        DEFAULT_MAXIMUM_CONNECTIONS, 1);
+
+    Duration establishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS,
+        minimumOperationDuration);
+
+    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
+        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS,
+        minimumOperationDuration);
+
+    // set the connection TTL irrespective of whether the connection is in use or not.
+    // this can balance requests over different S3 servers, and avoid failed
+    // connections. See HADOOP-18845.
+    Duration ttl = getDuration(conf, CONNECTION_TTL,
+        DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS,
+        null);
+
+    Duration acquisitionTimeout = getDuration(conf, REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, minimumOperationDuration);
+
+    // currently setting to request timeout. Good? Bad?
+    Duration maxIdleTime = getDuration(conf, REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, null);
+
+    Duration apiCallTimeout = getDuration(conf, REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.MILLISECONDS, null);
+
+    if (apiCallTimeout.compareTo(Duration.ZERO) > 0) {
+      apiCallTimeout = enforceMinimumDuration(REQUEST_TIMEOUT, minimumOperationDuration,
+          apiCallTimeout);
+    }
+    
+
+    return new ConnectionSettings(maxConnections, establishTimeout, socketTimeout, ttl,
+        acquisitionTimeout, maxIdleTime, apiCallTimeout);
+  }
+
+  /**
    * Configures the http client.
    *
    * @param conf The Hadoop configuration
@@ -107,26 +225,15 @@ public final class AWSClientConfig {
    */
   public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf)
       throws IOException {
+    final ConnectionSettings conn = createConnectionSettings(conf);
     ApacheHttpClient.Builder httpClientBuilder =
-        ApacheHttpClient.builder();
-
-    httpClientBuilder.maxConnections(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1));
-
-    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    // set the connection TTL irrespective of whether the connection is in use or not.
-    // this can balance requests over different S3 servers, and avoid failed
-    // connections. See HADOOP-18845.
-    Duration ttl = getDuration(conf, CONNECTION_TTL, (int)DEFAULT_CONNECTION_TTL, TimeUnit.SECONDS);
-
-    httpClientBuilder.connectionTimeout(connectionEstablishTimeout);
-    httpClientBuilder.socketTimeout(socketTimeout);
-    httpClientBuilder.connectionTimeToLive(ttl);
+        ApacheHttpClient.builder()
+            .maxConnections(conn.getMaxConnections())
+            .connectionAcquisitionTimeout(conn.getAcquisitionTimeout())
+            .connectionTimeout(conn.getEstablishTimeout())
+            .useIdleConnectionReaper(USE_IDLE_HTTP_CONNECTION_REAPER)
+            .socketTimeout(conn.getSocketTimeout())
+            .connectionTimeToLive(conn.getConnectionTTL());
 
     NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
@@ -140,26 +247,17 @@ public final class AWSClientConfig {
    * @return Http client builder
    */
   public static NettyNioAsyncHttpClient.Builder createAsyncHttpClientBuilder(Configuration conf) {
+    final ConnectionSettings conn = createConnectionSettings(conf);
+
     NettyNioAsyncHttpClient.Builder httpClientBuilder =
-        NettyNioAsyncHttpClient.builder();
-
-    httpClientBuilder.maxConcurrency(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    Duration connectionEstablishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    // set the connection TTL irrespective of whether the connection is in use or not.
-    // this can balance requests over different S3 servers, and avoid failed
-    // connections. See HADOOP-18845.
-    Duration ttl = getDuration(conf, CONNECTION_TTL, (int)DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS);
-
-    httpClientBuilder.connectionTimeout(connectionEstablishTimeout);
-    httpClientBuilder.readTimeout(socketTimeout);
-    httpClientBuilder.writeTimeout(socketTimeout);
-    httpClientBuilder.connectionTimeToLive(ttl);
+        NettyNioAsyncHttpClient.builder()
+            .maxConcurrency(conn.getMaxConnections())
+            .connectionAcquisitionTimeout(conn.getAcquisitionTimeout())
+            .connectionTimeToLive(conn.getConnectionTTL())
+            .connectionTimeout(conn.getEstablishTimeout())
+            .readTimeout(conn.getSocketTimeout())
+            .writeTimeout(conn.getSocketTimeout())
+            .useIdleConnectionReaper(USE_IDLE_HTTP_CONNECTION_REAPER);
 
     // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
@@ -388,11 +486,14 @@ public final class AWSClientConfig {
    */
   private static void initRequestTimeout(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
-    final Duration requestTimeoutMillis = getDuration(conf, REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS);
+    // recalculate all the connection settings, even though only the API
+    // timeouts are being used
+    final ConnectionSettings conn = createConnectionSettings(conf);
+    final Duration callTimeout = conn.getApiCallTimeout();
 
-    if (requestTimeoutMillis.toMillis() > 0) {
-      clientConfig.apiCallAttemptTimeout(requestTimeoutMillis);
+    if (callTimeout.toMillis() > 0) {
+      clientConfig.apiCallAttemptTimeout(callTimeout);
+      clientConfig.apiCallTimeout(callTimeout);
     }
   }
 
@@ -400,27 +501,55 @@ public final class AWSClientConfig {
    * Get duration. This may be negative; callers must check.
    * If the config option is greater than {@code Integer.MAX_VALUE} milliseconds,
    * it is set to that max.
+   * If {@code minimumDuration} is set, and the value is less than that, then
+   * the minimum is used.
    * Logs the value for diagnostics.
    * @param conf config
    * @param name option name
    * @param defVal default value
    * @param defaultUnit unit of default value
+   * @param minimumDuration optional minimum duration;
    * @return duration. may be negative.
    */
-  private static Duration getDuration(final Configuration conf,
+  static Duration getDuration(final Configuration conf,
       final String name,
-      final int defVal,
-      final TimeUnit defaultUnit) {
+      final long defVal,
+      final TimeUnit defaultUnit,
+      @Nullable final Duration minimumDuration) {
     long timeMillis = conf.getTimeDuration(name,
         defVal, defaultUnit, TimeUnit.MILLISECONDS);
 
     if (timeMillis > Integer.MAX_VALUE) {
-      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          timeMillis, Integer.MAX_VALUE);
+      TIMEOUT_WARN_LOG.warn("Option {} is too high({} ms). Setting to {} ms instead",
+          name, timeMillis, Integer.MAX_VALUE);
+      LOG.debug("Option {} is too high({} ms). Setting to {} ms instead",
+          name, timeMillis, Integer.MAX_VALUE);
       timeMillis = Integer.MAX_VALUE;
     }
-    final Duration duration = Duration.ofMillis(timeMillis);
+
+    Duration duration = Duration.ofMillis(timeMillis);
+    duration = enforceMinimumDuration(name, minimumDuration, duration);
     LOG.debug("Duration of {} = {}", name, duration);
+    return duration;
+  }
+
+  /**
+   * Enforce a minimum duration of a timeout
+   * @param name option name
+   * @param minimumDuration minimum duration; may be null
+   * @param duration duration to check
+   * @return a duration which, if the minimum duration is set, is at least that value.
+   */
+  private static Duration enforceMinimumDuration(final String name,
+      final Duration minimumDuration,
+      Duration duration) {
+    if (minimumDuration != null && duration.compareTo(minimumDuration) < 0) {
+      TIMEOUT_WARN_LOG.warn("Option {} is too low({} ms). Setting to {} ms instead",
+          name, duration.toMillis(), minimumDuration.toMillis());
+      LOG.debug("Option {} is too low({} ms). Setting to {} ms instead",
+          name, duration.toMillis(), minimumDuration.toMillis());
+      return minimumDuration;
+    }
     return duration;
   }
 }

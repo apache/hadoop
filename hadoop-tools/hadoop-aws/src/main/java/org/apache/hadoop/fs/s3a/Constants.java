@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -161,10 +162,8 @@ public final class Constants {
 
   /**
    * Default value for {@code CONNECTION_TTL}: {@value}.
-   * Even this is a long, this is only to ensure the type doesn't change
-   * with older versions. It is cast to an int before use.
    */
-  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
+  public static final long DEFAULT_CONNECTION_TTL = Duration.ofMinutes(5).toMillis();
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
