@@ -57,6 +57,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
 
+  static final MetricPercentile sendPercentiles = new MetricPercentile(1000);
+  static final MetricPercentile receivePercentiles = new MetricPercentile(1000);
+  static final MetricPercentile totalPercentiles = new MetricPercentile(1000);
+
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
     if(client == null) {
@@ -156,6 +160,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
       sendRequestTimeMs = abfsHttpClientContext.sendTime;
       recvResponseTimeMs = abfsHttpClientContext.readTime;
+
+      sendPercentiles.push(sendRequestTimeMs);
+      receivePercentiles.push(recvResponseTimeMs);
+      totalPercentiles.push(sendRequestTimeMs + recvResponseTimeMs);
     } catch (AbfsApacheHttpExpect100Exception ex) {
       LOG.debug(
           "Getting output stream failed with expect header enabled, returning back ",
@@ -187,17 +195,13 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     if(isExpect100Error) {
       return;
     }
-    if(shouldKillConn()) {
+    if(abfsHttpClientContext.shouldKillConn()) {
       abfsApacheHttpClient.destroyConn(
           abfsHttpClientContext.httpClientConnection);
     } else {
       abfsApacheHttpClient.releaseConn(
           abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
     }
-  }
-
-  private boolean shouldKillConn() {
-    return true;
   }
 
   private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {

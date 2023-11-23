@@ -59,6 +59,16 @@ public class AbfsApacheHttpClient {
     public AbfsHttpClientContext(Boolean isReadable) {
       this.isReadable = isReadable;
     }
+
+    public boolean shouldKillConn() {
+      if(sendTime > AbfsAHCHttpOperation.sendPercentiles.percentile(99.9)) {
+        return true;
+      }
+      if(readTime > AbfsAHCHttpOperation.receivePercentiles.percentile(99.9)) {
+        return true;
+      }
+      return false;
+    }
   }
 
   public static class AbfsKeepAliveStrategy implements ConnectionKeepAliveStrategy {
@@ -307,10 +317,13 @@ public class AbfsApacheHttpClient {
     public boolean keepAlive(final HttpResponse response,
         final HttpContext context) {
 //      response.
-      if(context instanceof AbfsHttpClientContext && ((AbfsHttpClientContext) context).isReadable) {
+      if(context instanceof AbfsHttpClientContext) {
+        if(!((AbfsHttpClientContext) context).isReadable && ((AbfsHttpClientContext) context).shouldKillConn()) {
+          return false;
+        }
         return super.keepAlive(response, context);
       }
-      return false;
+      return super.keepAlive(response, context);
     }
   }
 
