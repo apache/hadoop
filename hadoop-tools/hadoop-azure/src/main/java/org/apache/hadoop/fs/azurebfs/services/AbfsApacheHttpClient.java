@@ -52,6 +52,8 @@ public class AbfsApacheHttpClient {
     Long expect100ResponseTime;
 
     Long keepAliveTime;
+
+    Boolean isBeingRead = false;
   }
 
   public static class AbfsKeepAliveStrategy implements ConnectionKeepAliveStrategy {
@@ -280,6 +282,17 @@ public class AbfsApacheHttpClient {
         ((AbfsHttpClientContext) context).connectTime = timeElapsed;
       }
     }
+
+    @Override
+    public void releaseConnection(final HttpClientConnection managedConn,
+        final Object state,
+        final long keepalive,
+        final TimeUnit timeUnit) {
+      if(AbfsAHCHttpOperation.connThatCantBeClosed.contains(managedConn)) {
+        return;
+      }
+      super.releaseConnection(managedConn, state, keepalive, timeUnit);
+    }
   }
 
   public static class AhcConnReuseStrategy extends
@@ -363,6 +376,8 @@ public class AbfsApacheHttpClient {
   public void destroyConn(HttpClientConnection httpClientConnection)
       throws IOException {
     httpClientConnection.close();
+    connMgr.releaseConnection(
+        httpClientConnection, null, 0, TimeUnit.MILLISECONDS);
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest, final AbfsHttpClientContext abfsHttpClientContext) throws IOException {

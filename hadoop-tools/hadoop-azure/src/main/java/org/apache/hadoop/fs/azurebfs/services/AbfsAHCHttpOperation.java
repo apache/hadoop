@@ -6,8 +6,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
+import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -28,6 +31,7 @@ import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.conn.EofSensorInputStream;
 import org.apache.http.entity.ByteArrayEntity;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
@@ -58,7 +62,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
     if(client == null) {
       client = new AbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory(), abfsConfiguration);
-      abfsApacheHttpClientMap.put(clientId, abfsApacheHttpClient);
+      abfsApacheHttpClientMap.put(clientId, client);
     }
     abfsApacheHttpClient = client;
   }
@@ -129,10 +133,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   String getConnResponseMessage() throws IOException {
     return null;
   }
-
+ public final static Set<HttpClientConnection> connThatCantBeClosed = new HashSet<>();
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
+    Boolean isExpect100Error = false;
     try {
       long startTime = 0;
       startTime = System.nanoTime();
@@ -143,6 +148,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       LOG.debug(
           "Getting output stream failed with expect header enabled, returning back ",
           ex);
+      isExpect100Error = true;
       httpResponse = ex.getHttpResponse();
     }
     // get the response
@@ -161,19 +167,25 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         getResponseHeaders(httpResponse));
 
+    connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
     parseResponse(buffer, offset, length);
+    connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
+    abfsHttpClientContext.isBeingRead = false;
 
-//    if(shouldKillConn()) {
-//      abfsApacheHttpClient.destroyConn(
-//          abfsHttpClientContext.httpClientConnection);
-//    } else {
-//      abfsApacheHttpClient.releaseConn(
-//          abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
-//    }
+    if(isExpect100Error) {
+      return;
+    }
+    if(shouldKillConn()) {
+      abfsApacheHttpClient.destroyConn(
+          abfsHttpClientContext.httpClientConnection);
+    } else {
+      abfsApacheHttpClient.releaseConn(
+          abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
+    }
   }
 
   private boolean shouldKillConn() {
-    return false;
+    return true;
   }
 
   private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {
