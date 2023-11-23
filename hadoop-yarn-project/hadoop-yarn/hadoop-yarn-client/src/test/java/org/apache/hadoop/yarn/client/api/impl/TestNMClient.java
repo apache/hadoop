@@ -194,7 +194,7 @@ public class TestNMClient {
   public void tearDown() throws InterruptedException {
     rmClient.stop();
     yarnClient.stop();
-    yarnCluster.asyncStop(this);
+    yarnCluster.stop();
   }
 
   @Test (timeout = 180_000)
