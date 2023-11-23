@@ -51,9 +51,14 @@ public class AbfsApacheHttpClient {
     Long expect100HeaderSendTime = 0L;
     Long expect100ResponseTime;
 
-    Long keepAliveTime;
+    long keepAliveTime;
 
     Boolean isBeingRead = false;
+    final Boolean isReadable;
+
+    public AbfsHttpClientContext(Boolean isReadable) {
+      this.isReadable = isReadable;
+    }
   }
 
   public static class AbfsKeepAliveStrategy implements ConnectionKeepAliveStrategy {
@@ -302,7 +307,10 @@ public class AbfsApacheHttpClient {
     public boolean keepAlive(final HttpResponse response,
         final HttpContext context) {
 //      response.
-      return super.keepAlive(response, context);
+      if(context instanceof AbfsHttpClientContext && ((AbfsHttpClientContext) context).isReadable) {
+        return super.keepAlive(response, context);
+      }
+      return false;
     }
   }
 

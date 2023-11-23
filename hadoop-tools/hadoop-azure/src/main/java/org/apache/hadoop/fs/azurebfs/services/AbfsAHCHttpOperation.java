@@ -55,8 +55,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private HttpResponse httpResponse;
 
-  private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext
-      = new AbfsApacheHttpClient.AbfsHttpClientContext();
+  private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
 
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
@@ -76,6 +75,18 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
+    abfsHttpClientContext = setFinalAbfsClientContext(method);
+  }
+
+  private AbfsApacheHttpClient.AbfsHttpClientContext setFinalAbfsClientContext(
+      final String method) {
+    final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
+    if(HTTP_METHOD_GET.equals(method)) {
+      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(true);
+    } else {
+      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(false);
+    }
+    return abfsHttpClientContext;
   }
 
   public AbfsAHCHttpOperation(final URL url,
@@ -88,6 +99,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.requestHeaders = requestHeaders;
     setAbfsApacheHttpClient(abfsConfiguration, clientId);
+    abfsHttpClientContext = setFinalAbfsClientContext(method);
   }
 
 

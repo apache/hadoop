@@ -1492,6 +1492,6 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse, abfsConfiguration, filesystem);
+        requestHeaders, sasTokenForReuse, abfsConfiguration, clientId);
   }
 }
