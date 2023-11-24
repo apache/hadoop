@@ -24,6 +24,10 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.util.List;
 
+/**
+ * This class is used for handling queue policy deletion requests,
+ * which include the queues that need to be removed.
+ */
 @Private
 @Unstable
 public abstract class DeleteFederationQueuePoliciesRequest {
@@ -38,22 +42,19 @@ public abstract class DeleteFederationQueuePoliciesRequest {
     return request;
   }
 
- /**
-  * Retrieves a list of queues.
-  *
-  * This part contains exact matches,
-  * which will match the queues contained in the list.
-  *
-  * @return A list of queue names or identifiers.
-  */
+  /**
+   * To obtain the list of queues to be deleted.
+   *
+   * @return list of queue names.
+   */
   @Public
   @Unstable
   public abstract List<String> getQueues();
 
   /**
-   * Sets to delete of queues to the specified values.
+   * Set the list of queues to be deleted.
    *
-   * @param queues A list of queue names or identifiers to set.
+   * @param queues list of queue names.
    */
   @Private
   @Unstable

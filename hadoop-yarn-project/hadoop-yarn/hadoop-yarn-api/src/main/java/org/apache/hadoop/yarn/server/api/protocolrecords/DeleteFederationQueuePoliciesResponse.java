@@ -22,6 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * This class is utilized for responding to queue deletion requests
+ * and includes the provision of return information.
+ */
 @Private
 @Unstable
 public abstract class DeleteFederationQueuePoliciesResponse {

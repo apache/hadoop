@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRes
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
@@ -591,6 +593,7 @@ public class RouterCLI extends Configured implements Tool {
       if (StringUtils.isBlank(queue)) {
         queue = cliParser.getOptionValue(OPTION_DELETE);
       }
+      // Delete Policy.
       return handDeletePolicy(queue);
     } else {
       // printUsage
@@ -905,7 +908,24 @@ public class RouterCLI extends Configured implements Tool {
    * @return 0, success; 1, failed.
    */
   protected int handDeletePolicy(String queue) {
-    return 1;
+    LOG.info("Delete {} Policy.", queue);
+    try {
+      if (StringUtils.isBlank(queue)) {
+        System.err.println("Queue cannot be empty.");
+      }
+      List<String> queues = new ArrayList<>();
+      queues.add(queue);
+      DeleteFederationQueuePoliciesRequest request =
+          DeleteFederationQueuePoliciesRequest.newInstance(queues);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      DeleteFederationQueuePoliciesResponse response =
+          adminProtocol.deleteFederationQueuePoliciesByQueues(request);
+      System.out.println(response.getMessage());
+      return EXIT_SUCCESS;
+    } catch (Exception e) {
+      LOG.error("handDeletePolicy queue = {} error.", queue, e);
+      return EXIT_ERROR;
+    }
   }
 
   @Override
