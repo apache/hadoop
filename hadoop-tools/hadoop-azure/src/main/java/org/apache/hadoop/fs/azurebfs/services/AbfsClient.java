@@ -831,7 +831,8 @@ public class AbfsClient implements Closeable {
 
     catch (AzureBlobFileSystemException e) {
       // Any server side issue will be returned as AbfsRestOperationException and will be handled above.
-      LOG.debug("Append request failed with non server issues");
+      LOG.debug("Append request failed with non server issues for path: {}, offset: {}, position: {}",
+          path, reqParams.getoffset(), reqParams.getPosition());
       throw e;
     }
 
