@@ -1122,4 +1122,10 @@ public final class FederationStateStoreFacade {
   public void deleteStore() throws Exception {
     stateStore.deleteStateStore();
   }
+
+  public void deletePolicyConfigurations(List<String> queues) {
+    for (String queue : queues) {
+
+    }
+  }
 }

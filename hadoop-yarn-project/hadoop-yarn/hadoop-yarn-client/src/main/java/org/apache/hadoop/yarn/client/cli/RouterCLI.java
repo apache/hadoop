@@ -148,6 +148,9 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_CURRENT_PAGE = "currentPage";
   private static final String OPTION_QUEUE = "queue";
   private static final String OPTION_QUEUES = "queues";
+  // delete policy
+  private static final String OPTION_D = "d";
+  private static final String OPTION_DELETE = "delete";
 
   private static final String XML_TAG_SUBCLUSTERIDINFO = "subClusterIdInfo";
   private static final String XML_TAG_AMRMPOLICYWEIGHTS = "amrmPolicyWeights";
@@ -501,6 +504,8 @@ public class RouterCLI extends Configured implements Tool {
         "the queue we need to filter. example: root.a");
     Option queuesOpt = new Option(null, "queues", true,
         "list of queues to filter. example: root.a,root.b,root.c");
+    Option deleteOpt = new Option(OPTION_D, OPTION_DELETE, true, "");
+
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
     opts.addOption(formatOpt);
@@ -510,6 +515,7 @@ public class RouterCLI extends Configured implements Tool {
     opts.addOption(currentPageOpt);
     opts.addOption(queueOpt);
     opts.addOption(queuesOpt);
+    opts.addOption(deleteOpt);
 
     // Parse command line arguments.
     CommandLine cliParser;
@@ -580,6 +586,12 @@ public class RouterCLI extends Configured implements Tool {
 
       // List Policies.
       return handListPolicies(pageSize, currentPage, queue, queues);
+    } else if (cliParser.hasOption(OPTION_D) || cliParser.hasOption(OPTION_DELETE)) {
+      String queue = cliParser.getOptionValue(OPTION_D);
+      if (StringUtils.isBlank(queue)) {
+        queue = cliParser.getOptionValue(OPTION_DELETE);
+      }
+      return handDeletePolicy(queue);
     } else {
       // printUsage
       printUsage(args[0]);
@@ -884,6 +896,16 @@ public class RouterCLI extends Configured implements Tool {
     }
 
     return 0;
+  }
+
+  /**
+   * Delete queue weight information.
+   *
+   * @param queue Queue whose policy needs to be deleted.
+   * @return 0, success; 1, failed.
+   */
+  protected int handDeletePolicy(String queue) {
+    return 1;
   }
 
   @Override
