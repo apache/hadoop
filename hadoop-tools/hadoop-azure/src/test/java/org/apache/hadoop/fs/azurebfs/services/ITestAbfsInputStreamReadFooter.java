@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -376,42 +377,45 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   @Test
   public void testFooterReadBufferSizeConfiguration() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    Path testFilePath = createPathAndFileWithContent(fs, 0, ONE_KB);
-    final int footerReadBufferSizeConfig = 4 * ONE_KB;
-    final int footerReadBufferSizeBuilder = 5 * ONE_KB;
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.unset(AZURE_FOOTER_READ_BUFFER_SIZE);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(config)){
+      Path testFilePath = createPathAndFileWithContent(fs, 0, ONE_KB);
+      final int footerReadBufferSizeConfig = 4 * ONE_KB;
+      final int footerReadBufferSizeBuilder = 5 * ONE_KB;
 
-    // Verify that default value is used if nothing is set explicitly
-    FSDataInputStream iStream = fs.open(testFilePath);
-    verifyConfigValueInStream(iStream, DEFAULT_FOOTER_READ_BUFFER_SIZE);
+      // Verify that default value is used if nothing is set explicitly
+      FSDataInputStream iStream = fs.open(testFilePath);
+      verifyConfigValueInStream(iStream, DEFAULT_FOOTER_READ_BUFFER_SIZE);
 
-    // Verify that value set in config is used if not builder is not used
-    getAbfsStore(fs).getAbfsConfiguration()
-        .setFooterReadBufferSize(footerReadBufferSizeConfig);
-    iStream = fs.open(testFilePath);
-    verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
+      // Verify that value set in config is used if not builder is not used
+      getAbfsStore(fs).getAbfsConfiguration()
+          .setFooterReadBufferSize(footerReadBufferSizeConfig);
+      iStream = fs.open(testFilePath);
+      verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
 
-    // Verify that when builder is used value set in parameters is used
-    FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
-    builder.opt(ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE,
-        footerReadBufferSizeBuilder);
-    iStream = builder.build().get();
-    verifyConfigValueInStream(iStream, footerReadBufferSizeBuilder);
+      // Verify that when builder is used value set in parameters is used
+      FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
+      builder.opt(AZURE_FOOTER_READ_BUFFER_SIZE,
+          footerReadBufferSizeBuilder);
+      iStream = builder.build().get();
+      verifyConfigValueInStream(iStream, footerReadBufferSizeBuilder);
 
-    // Verify that when builder is used value set in parameters is used
-    // even if config is set
-    getAbfsStore(fs).getAbfsConfiguration()
-        .setFooterReadBufferSize(footerReadBufferSizeConfig);
-    iStream = builder.build().get();
-    verifyConfigValueInStream(iStream, footerReadBufferSizeBuilder);
+      // Verify that when builder is used value set in parameters is used
+      // even if config is set
+      getAbfsStore(fs).getAbfsConfiguration()
+          .setFooterReadBufferSize(footerReadBufferSizeConfig);
+      iStream = builder.build().get();
+      verifyConfigValueInStream(iStream, footerReadBufferSizeBuilder);
 
-    // Verify that when the builder is used and parameter in builder is not set,
-    // the value set in configuration is used
-    getAbfsStore(fs).getAbfsConfiguration()
-        .setFooterReadBufferSize(footerReadBufferSizeConfig);
-    builder = fs.openFile(testFilePath);
-    iStream = builder.build().get();
-    verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
+      // Verify that when the builder is used and parameter in builder is not set,
+      // the value set in configuration is used
+      getAbfsStore(fs).getAbfsConfiguration()
+          .setFooterReadBufferSize(footerReadBufferSizeConfig);
+      builder = fs.openFile(testFilePath);
+      iStream = builder.build().get();
+      verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
+    }
   }
 
   private void verifyConfigValueInStream(final FSDataInputStream inputStream,
@@ -433,7 +437,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   private FutureDataInputStreamBuilder getParameterizedBuilder(final Path path,
       final AzureBlobFileSystem fs, int footerReadBufferSize) throws Exception {
     FutureDataInputStreamBuilder builder = fs.openFile(path);
-    builder.opt(ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE,
+    builder.opt(AZURE_FOOTER_READ_BUFFER_SIZE,
         footerReadBufferSize);
     return builder;
   }
