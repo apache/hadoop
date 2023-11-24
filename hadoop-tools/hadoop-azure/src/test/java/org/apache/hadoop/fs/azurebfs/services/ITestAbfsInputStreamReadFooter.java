@@ -388,13 +388,14 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       FSDataInputStream iStream = fs.open(testFilePath);
       verifyConfigValueInStream(iStream, DEFAULT_FOOTER_READ_BUFFER_SIZE);
 
-      // Verify that value set in config is used if not builder is not used
+      // Verify that value set in config is used if builder is not used
       getAbfsStore(fs).getAbfsConfiguration()
           .setFooterReadBufferSize(footerReadBufferSizeConfig);
       iStream = fs.open(testFilePath);
       verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
 
       // Verify that when builder is used value set in parameters is used
+      getAbfsStore(fs).getAbfsConfiguration().unset(AZURE_FOOTER_READ_BUFFER_SIZE);
       FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
       builder.opt(AZURE_FOOTER_READ_BUFFER_SIZE,
           footerReadBufferSizeBuilder);
