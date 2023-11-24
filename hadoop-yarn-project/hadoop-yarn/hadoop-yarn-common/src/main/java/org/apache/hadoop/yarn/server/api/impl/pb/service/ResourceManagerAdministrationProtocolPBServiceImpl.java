@@ -93,6 +93,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
@@ -131,6 +133,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.QueryFederation
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.QueryFederationQueuePoliciesResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationApplicationRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationApplicationResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationQueuePoliciesRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationQueuePoliciesResponsePBImpl;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
@@ -472,8 +476,18 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
 
   @Override
   public DeleteFederationQueuePoliciesResponseProto deleteFederationQueuePoliciesByQueues(
-      RpcController controller, DeleteFederationQueuePoliciesRequestProto request) throws ServiceException {
-    return null;
+      RpcController controller, DeleteFederationQueuePoliciesRequestProto proto)
+      throws ServiceException {
+    DeleteFederationQueuePoliciesRequest requet =
+        new DeleteFederationQueuePoliciesRequestPBImpl(proto);
+    try {
+      DeleteFederationQueuePoliciesResponse response =
+          real.deleteFederationQueuePoliciesByQueues(requet);
+      return ((DeleteFederationQueuePoliciesResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
-
 }
