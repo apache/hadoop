@@ -5,11 +5,13 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,6 +151,14 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   String getConnResponseMessage() throws IOException {
     return null;
   }
+
+  private static final Stack<ConnInfo> connInfoStack = new Stack<>();
+
+  private static class ConnInfo {
+    long connTime;
+    AbfsRestOperationType operationType;
+  }
+
  public final static Set<HttpClientConnection> connThatCantBeClosed = new HashSet<>();
   public void processResponse(final byte[] buffer,
       final int offset,
@@ -192,6 +202,13 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     parseResponse(buffer, offset, length);
     connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
     abfsHttpClientContext.isBeingRead = false;
+
+    if(abfsHttpClientContext.connectTime != null) {
+      ConnInfo connInfo = new ConnInfo();
+      connInfo.connTime = abfsHttpClientContext.connectTime;
+      connInfo.operationType = abfsRestOperationType;
+      connInfoStack.push(connInfo);
+    }
 
     if(isExpect100Error) {
       return;
@@ -289,6 +306,18 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         }
       }
       translateHeaders(httpRequestBase, requestHeaders);
+      try {
+        ConnInfo connInfo = connInfoStack.pop();
+        if (httpRequestBase.containsHeader(X_MS_CLIENT_REQUEST_ID)) {
+          StringBuilder stringBuilder = new StringBuilder("_").append(
+              connInfo.operationType).append("_").append(connInfo.connTime);
+          httpRequestBase.setHeader(X_MS_CLIENT_REQUEST_ID,
+              httpRequestBase.getFirstHeader(X_MS_CLIENT_REQUEST_ID).getValue()
+                  + stringBuilder.toString());
+        }
+      } catch (EmptyStackException ex) {
+
+      }
       this.httpRequestBase = httpRequestBase;
     } catch (Exception e) {
       throw new IOException(e);
