@@ -303,7 +303,8 @@ public class SaslDataTransferServer {
       saslProps = saslPropsResolver.getServerProperties(
               getPeerAddress(peer));
     } else if (dnConf.getUnsafeAcceptSasl()) {
-      // This path provides a way to accept encrypted connections even we don't make them (saslPropsResolver == null)
+      // This path provides a way to accept encrypted connections even we don't make them
+      // (saslPropsResolver == null)
       // In this mode, all QOPs are accepted.
       saslProps = createSaslPropertiesAllQops(dnConf.getEncryptionAlgorithm());
     } else {
@@ -379,8 +380,8 @@ public class SaslDataTransferServer {
 
     DataInputStream in;
     if (dnConf.getUnsafeAcceptSasl()) {
-      // If necessary by configuration, create an InputStream with the ability to check the first four
-      // bytes and then back up and replay them.
+      // If necessary by configuration, create an InputStream with the ability to check the
+      // first four bytes and then back up and replay them.
       BufferedInputStream bufferedIn = new BufferedInputStream(underlyingIn);
       in = new DataInputStream(bufferedIn);
       in.mark(4);

@@ -2092,7 +2092,8 @@ public class DataNode extends ReconfigurableBase
     ExportedBlockKeys keys = bpRegistration.getExportedKeys();
     if (getConf().getBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY,
         DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_DEFAULT)) {
-      LOG.info("Block access token migration enabled - ignoring blockTokenEnabled=" + keys.isBlockTokenEnabled() + " value from NameNode");
+      LOG.info("Block access token migration enabled - ignoring blockTokenEnabled=" +
+          keys.isBlockTokenEnabled() + " value from NameNode");
       return;
     }
     if (!hasAnyBlockPoolRegistered) {

@@ -398,7 +398,8 @@ public class TestBlockTokenWithDFS {
       // we have migration mode enabled, they are able to proceed with re-registry.
       //
       for (int i = 0; i < cluster.getNumNameNodes(); i++) {
-        cluster.getConfiguration(i).setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+        cluster.getConfiguration(i).setBoolean(
+            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
         cluster.restartNameNode(i);
       }
       cluster.triggerHeartbeats();
@@ -406,8 +407,7 @@ public class TestBlockTokenWithDFS {
       //
       // Do a test read, which confirms that migration mode is working
       //
-
-      doTestRead(conf, cluster, false);
+      doSimpleTestRead(conf, cluster);
 
       //
       // Now that access tokens are enabled on the NameNode without downtime, we can
@@ -427,12 +427,25 @@ public class TestBlockTokenWithDFS {
       // with fully enabled block access tokens.
       //
 
-      doTestRead(conf, cluster, false);
+      doSimpleTestRead(conf, cluster);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+
+  protected void doSimpleTestRead(Configuration conf, MiniDFSCluster cluster) throws IOException {
+    final NameNode nn = cluster.getNameNode();
+    final NamenodeProtocols nnProto = nn.getRpcServer();
+    Path fileToRead = new Path(FILE_TO_READ);
+    FileSystem fs = cluster.getFileSystem();
+    byte[] expected = generateBytes(FILE_SIZE);
+    createFile(fs, fileToRead, expected);
+    List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
+        FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
+    LocatedBlock lblock = locatedBlocks.get(0); // first block
+    tryRead(conf, lblock, true);
   }
 
   protected void doTestRead(Configuration conf, MiniDFSCluster cluster,

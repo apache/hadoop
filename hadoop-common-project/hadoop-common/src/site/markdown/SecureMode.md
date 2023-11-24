@@ -475,7 +475,7 @@ The following is a recommended set of steps for converting a non-secure cluster 
 1. Require SASL for incoming connections in `SaslDataTransferServer` within DataNodes. This ensures that no insecure data transfer protocol connections will be allowed.
     - Remove `dfs.datanode.unsafe.sasl.allowed-not-required` or set it to `false`
     - Gracefully restart your DataNodes
-1. Enable Kerberos on all other nodes in your cluster, for example YARN NodeManagers and ResourceManagers. 
+1. Enable Kerberos on all other nodes in your cluster, for example YARN NodeManagers and ResourceManagers.
    - Set `hadoop.security.authentication` = `kerberos`
    - Set `hadoop.security.authorization` = `true`
    - Set whatever settings are appropriate to point to your keytab file and set your Kerberos principal.

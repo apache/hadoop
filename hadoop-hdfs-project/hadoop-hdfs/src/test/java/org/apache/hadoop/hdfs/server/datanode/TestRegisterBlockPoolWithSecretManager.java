@@ -46,7 +46,8 @@ public class TestRegisterBlockPoolWithSecretManager {
     conf = new HdfsConfiguration();
   }
 
-  private BPOfferService bpOfferServiceForMiniCluster(Configuration conf) throws IOException {
+  private static BPOfferService bpOfferServiceForMiniCluster(Configuration conf)
+      throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     DataNode dn = cluster.getDataNodes().get(0);
@@ -99,7 +100,8 @@ public class TestRegisterBlockPoolWithSecretManager {
     BPOfferService service = bpOfferServiceForMiniCluster(conf);
     BPServiceActor actor = service.getBPServiceActors().get(0);
     DatanodeRegistration originalBpRegistration = actor.getBpRegistration();
-    DatanodeRegistration noTokensBpRegistration = new DatanodeRegistration(originalBpRegistration.getDatanodeUuid(), originalBpRegistration);
+    DatanodeRegistration noTokensBpRegistration =
+        new DatanodeRegistration(originalBpRegistration.getDatanodeUuid(), originalBpRegistration);
     exception.expect(RuntimeException.class);
     exception.expectMessage("Inconsistent configuration of block access tokens");
 
@@ -112,7 +114,8 @@ public class TestRegisterBlockPoolWithSecretManager {
   @Test
   public void testFirstBpWithTokensMigrationMode() throws IOException {
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY,
+        true);
     BPOfferService service = bpOfferServiceForMiniCluster(conf);
     BPServiceActor actor = service.getBPServiceActors().get(0);
     DatanodeRegistration bpRegistration = actor.getBpRegistration();
@@ -134,11 +137,13 @@ public class TestRegisterBlockPoolWithSecretManager {
   @Test
   public void testSecondBpWithTokensMigrationMode() throws IOException {
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY,
+        true);
     BPOfferService service = bpOfferServiceForMiniCluster(conf);
     BPServiceActor actor = service.getBPServiceActors().get(0);
     DatanodeRegistration originalBpRegistration = actor.getBpRegistration();
-    DatanodeRegistration noTokensBpRegistration = new DatanodeRegistration(originalBpRegistration.getDatanodeUuid(), originalBpRegistration);
+    DatanodeRegistration noTokensBpRegistration =
+        new DatanodeRegistration(originalBpRegistration.getDatanodeUuid(), originalBpRegistration);
 
     GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
         LoggerFactory.getLogger(DataNode.class));
