@@ -343,7 +343,14 @@ public class RMAdminCLI extends HAAdmin {
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshQueuesRequest request = 
       recordFactory.newRecordInstance(RefreshQueuesRequest.class);
-    adminProtocol.refreshQueues(request);
+    try {
+      adminProtocol.refreshQueues(request);
+    } catch (Exception e) {
+      System.out.println("Unable to refresh queue due to exception: "
+          + e.toString());
+      throw e;
+    }
+    System.out.println("Queue was refreshed successfully.");
     return 0;
   }
 
