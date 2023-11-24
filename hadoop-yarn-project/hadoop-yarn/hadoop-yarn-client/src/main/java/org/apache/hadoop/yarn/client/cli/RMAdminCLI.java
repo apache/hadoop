@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioning
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
@@ -120,6 +121,8 @@ public class RMAdminCLI extends HAAdmin {
               + " will immediately decommission if an RM HA failover occurs."))
           .put("-refreshNodesResources", new UsageInfo("",
               "Refresh resources of NodeManagers at the ResourceManager."))
+          .put("-refreshLoadLimitConfiguration", new UsageInfo("",
+              "Refresh the NodeManager load limit information at the ResourceManager."))
           .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",
               "Refresh superuser proxy groups mappings"))
           .put("-refreshUserToGroupsMappings", new UsageInfo("",
@@ -271,6 +274,7 @@ public class RMAdminCLI extends HAAdmin {
         + " [-refreshQueues]"
         + " [-refreshNodes [-g|graceful [timeout in seconds] -client|server]]"
         + " [-refreshNodesResources]"
+        + " [-refreshLoadLimitConfiguration]"
         + " [-refreshSuperUserGroupsConfiguration]"
         + " [-refreshUserToGroupsMappings]"
         + " [-refreshAdminAcls]"
@@ -344,6 +348,15 @@ public class RMAdminCLI extends HAAdmin {
     RefreshQueuesRequest request = 
       recordFactory.newRecordInstance(RefreshQueuesRequest.class);
     adminProtocol.refreshQueues(request);
+    return 0;
+  }
+
+  private int refreshLoadLimitConfiguration() throws IOException, YarnException {
+    // Refresh the queue properties
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    RefreshLoadConfRequest request =
+        recordFactory.newRecordInstance(RefreshLoadConfRequest.class);
+    adminProtocol.refreshLoadConf(request);
     return 0;
   }
 
@@ -753,6 +766,8 @@ public class RMAdminCLI extends HAAdmin {
     try {
       if ("-refreshQueues".equals(cmd)) {
         exitCode = refreshQueues();
+      } else if ("-refreshLoadLimitConfiguration".equals(cmd)) {
+        exitCode = refreshLoadLimitConfiguration();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = handleRefreshNodes(args, cmd, isHAEnabled);
       } else if ("-refreshNodesResources".equals(cmd)) {
