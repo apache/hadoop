@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -183,6 +185,12 @@ public final class S3AUtils {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
       }
+      if (exception instanceof ApiCallTimeoutException
+       || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // It's not clear why there are two; they are both remapped.
+        return new AWSApiCallTimeoutException(message, exception);
+      }
       // if the exception came from the auditor, hand off translation
       // to it.
       IOException ioe = maybeTranslateAuditException(path, exception);
@@ -291,6 +299,11 @@ public final class S3AUtils {
       case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
       case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // gateway timeout
+      case SC_504_GATEWAY_TIMEOUT:
+        ioe = new AWSApiCallTimeoutException(message, ase);
         break;
 
       // internal error

@@ -173,6 +173,9 @@ public final class InternalConstants {
   /** 503 status code: Service Unavailable. on AWS S3: throttle response. */
   public static final int SC_503_SERVICE_UNAVAILABLE = 503;
 
+  /** 504 Gateway Timeout. AWS SDK considers retryable. */
+  public static final int SC_504_GATEWAY_TIMEOUT = 504;
+
   /** Name of the log for throttling events. Value: {@value}. */
   public static final String THROTTLE_LOG_NAME =
       "org.apache.hadoop.fs.s3a.throttled";
@@ -244,14 +247,6 @@ public final class InternalConstants {
    * It ensures that even if a configuration has mistaken a millisecond
    * option for seconds, a viable duration will actually be used.
    */
-  public static final Duration MINIMUM_OPERATION_DURATION = Duration.ofSeconds(10);
-
-  /**
-   * Should the idle connection reaper be used?
-   * It is hard to see why it would not be; this constant
-   * is here to make explicit where the option is set in case
-   * anyone ever wishes to experiment with it.
-   */
-  public static final boolean USE_IDLE_HTTP_CONNECTION_REAPER = true;
+  public static final Duration MINIMUM_OPERATION_DURATION = Duration.ofSeconds(15);
 
 }

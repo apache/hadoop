@@ -152,7 +152,7 @@ public final class Constants {
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
 
   /**
    * Configuration option to configure expiration time of
@@ -163,7 +163,7 @@ public final class Constants {
   /**
    * Default value for {@code CONNECTION_TTL}: {@value}.
    */
-  public static final long DEFAULT_CONNECTION_TTL = Duration.ofMinutes(5).toMillis();
+  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -265,19 +265,84 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // milliseconds until we give up trying to establish a connection to s3
+  /**
+   * Milliseconds until a connection is established: {@value}.
+   */
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
+
+  /**
+   * Default establish timeout: {@value}.
+   */
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 5_000;
 
-  // milliseconds until we give up on a connection to s3
+  /**
+   * Milliseconds until we give up on a connection to s3: {@value}.
+   */
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
+
+  /**
+   * Default socket timeout: {@value}.
+   */
   public static final int DEFAULT_SOCKET_TIMEOUT = 200_000;
 
-  // milliseconds until a request is timed-out
+  /**
+   * Milliseconds until a request is timed-out: {@value}.
+   * If zero, there is no timeout.
+   */
   public static final String REQUEST_TIMEOUT =
       "fs.s3a.connection.request.timeout";
+
+  /**
+   * Default duration of a request before it is timed out: {@value}.
+   */
   public static final int DEFAULT_REQUEST_TIMEOUT = 0;
+
+  /**
+   * Acquisition timeout for connections from the pool:
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String CONNECTION_ACQUISITION_TIMEOUT =
+      "fs.s3a.connection.acquisition.timeout";
+
+  /**
+   * Default acquisition timeout (unless set in core-default.xml -check!).
+   */
+  public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT =
+      Duration.ofSeconds(60);
+
+  /**
+   * Should TCP Keepalive be enabled on the socket?
+   * This adds some network IO, but finds failures faster.
+   * {@value}.
+   */
+  public static final String CONNECTION_KEEPALIVE =
+      "fs.s3a.connection.keepalive";
+
+  /**
+   * Default value of {@link #CONNECTION_KEEPALIVE}: {@value}.
+   */
+  public static final boolean DEFAULT_CONNECTION_KEEPALIVE = false;
+
+  /**
+   * Maximum idle time for connections in the pool
+   * {@value}.
+   * <p>
+   * Too low: overhead of creating connections.
+   * Too high, risk of stale connections and inability to use the
+   * adaptive load balancing of the S3 front end.
+   * <p>
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String CONNECTION_IDLE_TIME =
+      "fs.s3a.connection.idle.time";
+
+  /**
+   * Default idle time (unless set in core-default.xml -check!).
+   */
+  public static final Duration DEFAULT_CONNECTION_IDLE_TIME =
+      Duration.ofSeconds(60);
 
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
@@ -295,7 +360,10 @@ public final class Constants {
   public static final String MAX_THREADS = "fs.s3a.threads.max";
   public static final int DEFAULT_MAX_THREADS = 10;
 
-  // the time an idle thread waits before terminating
+  /**
+   * The time an idle thread waits before terminating: {@value}.
+   * This is in SECONDS.
+   */
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
 
@@ -1202,8 +1270,7 @@ public final class Constants {
    * Default value for create performance in an S3A FS.
    * Value {@value}.
    */
-  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = true;
-
+  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = false;
 
   /**
    * Capability to indicate that the FS has been instantiated with
