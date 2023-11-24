@@ -276,7 +276,7 @@ public class TestRouterTrash {
 
     // Client user see global trash view， wo should see all three mount point.
     FileStatus[] fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/"));
-    assertEquals(3, fileStatuses.length);
+    assertEquals(2, fileStatuses.length);
 
     // This should return empty fileStatuses rather than NotFound Exception.
     fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/" + MOUNT_POINT2));

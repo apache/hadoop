@@ -24,12 +24,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
@@ -391,6 +391,11 @@ public class MockResolver
       }
     }
     return FileSubclusterResolver.getMountPoints(path, mountPoints);
+  }
+
+  @Override
+  public IdentityHashMap<String, String> getMountPointsWithSrc(String path) throws IOException {
+    return null;
   }
 
   @Override
