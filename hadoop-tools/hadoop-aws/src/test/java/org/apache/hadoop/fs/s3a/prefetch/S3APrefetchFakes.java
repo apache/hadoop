@@ -31,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
+
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -40,7 +42,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockCache;
-import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.BlockManager;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
@@ -363,15 +366,9 @@ public final class S3APrefetchFakes {
       extends S3ACachingBlockManager {
 
     public FakeS3ACachingBlockManager(
-        ExecutorServiceFuturePool futurePool,
-        S3ARemoteObjectReader reader,
-        BlockData blockData,
-        int bufferPoolSize,
-        Configuration conf,
-        LocalDirAllocator localDirAllocator) {
-      super(futurePool, reader, blockData, bufferPoolSize,
-          new EmptyS3AStatisticsContext().newInputStreamStatistics(),
-          conf, localDirAllocator);
+        @Nonnull final BlockManagerParameters blockManagerParameters,
+        final S3ARemoteObjectReader reader) {
+      super(blockManagerParameters, reader);
     }
 
     @Override
@@ -409,15 +406,10 @@ public final class S3APrefetchFakes {
     }
 
     @Override
-    protected S3ACachingBlockManager createBlockManager(
-        ExecutorServiceFuturePool futurePool,
-        S3ARemoteObjectReader reader,
-        BlockData blockData,
-        int bufferPoolSize,
-        Configuration conf,
-        LocalDirAllocator localDirAllocator) {
-      return new FakeS3ACachingBlockManager(futurePool, reader, blockData,
-          bufferPoolSize, conf, localDirAllocator);
+    protected BlockManager createBlockManager(
+        @Nonnull final BlockManagerParameters blockManagerParameters,
+        final S3ARemoteObjectReader reader) {
+      return new FakeS3ACachingBlockManager(blockManagerParameters, reader);
     }
   }
 }
