@@ -791,7 +791,34 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
       DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    return null;
+    FederationPolicyStoreInputValidator.validate(request);
+    List<String> queues = request.getQueues();
+    for (String queue : queues) {
+      deletePolicyConfigurationByQueue(queue);
+    }
+    return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+  }
+
+  private void deletePolicyConfigurationByQueue(String queue) {
+    String policyZNode = getNodePath(policiesZNode, queue);
+
+    boolean exists = false;
+    try {
+      exists = zkManager.exists(policyZNode);
+    } catch (Exception e) {
+      LOG.error("An error occurred when checking whether the queue = {} policy exists.", queue, e);
+    }
+
+    if (!exists) {
+      LOG.error("The policy of the queue = {} does not exist.", queue);
+      return;
+    }
+
+    try {
+      zkManager.delete(policyZNode);
+    } catch (Exception e) {
+      LOG.error("Queue {} policy cannot be deleted.", queue, e);
+    }
   }
 
   @Override

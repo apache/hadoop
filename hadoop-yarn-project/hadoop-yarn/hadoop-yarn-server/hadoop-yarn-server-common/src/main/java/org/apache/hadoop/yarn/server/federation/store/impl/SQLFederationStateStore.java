@@ -1076,6 +1076,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
       DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    FederationPolicyStoreInputValidator.validate(request);
     return null;
   }
 

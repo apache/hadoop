@@ -405,7 +405,14 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
       DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    return null;
+    FederationPolicyStoreInputValidator.validate(request);
+    for (String queue : request.getQueues()) {
+      if (policies.containsKey(queue)) {
+        policies.remove(queue);
+        LOG.info("The queue = {} policy has been deleted.", queue);
+      }
+    }
+    return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
   }
 
   @Override
