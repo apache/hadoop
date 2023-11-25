@@ -196,6 +196,12 @@ message DeleteReservationHomeSubClusterRequestProto {
 message DeleteReservationHomeSubClusterResponseProto {
 }
 
+message DeleteSubClusterPoliciesConfigurationsRequestProto {
+  repeated string queues = 1;
+}
+
+message DeleteSubClusterPoliciesConfigurationsResponseProto {
+}
 
 //----- configurations ---
 

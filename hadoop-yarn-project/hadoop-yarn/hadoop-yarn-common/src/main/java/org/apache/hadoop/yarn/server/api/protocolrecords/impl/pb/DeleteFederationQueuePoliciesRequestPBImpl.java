@@ -27,6 +27,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePo
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Protocol buffer based implementation of {@link DeleteFederationQueuePoliciesRequest}.
+ */
 @Private
 @Unstable
 public class DeleteFederationQueuePoliciesRequestPBImpl

@@ -1118,11 +1118,11 @@ public class AdminService extends CompositeService implements
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     throw new YarnException("It is not allowed to call the RM's " +
         " deleteFederationQueuePoliciesByQueues. " +
-        " Please call Router's deleteFederationQueuePoliciesByQueues to list Policies.");
+        " Please call Router's deleteFederationQueuePoliciesByQueues to delete Policies.");
   }
 
   private void validateAttributesExists(

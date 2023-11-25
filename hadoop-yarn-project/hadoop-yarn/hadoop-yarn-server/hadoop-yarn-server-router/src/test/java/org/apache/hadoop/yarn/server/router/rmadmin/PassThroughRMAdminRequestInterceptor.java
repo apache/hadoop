@@ -197,8 +197,8 @@ public class PassThroughRMAdminRequestInterceptor
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
-    return getNextInterceptor().deleteFederationQueuePoliciesByQueues(request);
+    return getNextInterceptor().deleteFederationPoliciesByQueues(request);
   }
 }

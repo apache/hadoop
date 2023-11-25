@@ -432,9 +432,9 @@ public class RouterRMAdminService extends AbstractService
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
-    return pipeline.getRootInterceptor().deleteFederationQueuePoliciesByQueues(request);
+    return pipeline.getRootInterceptor().deleteFederationPoliciesByQueues(request);
   }
 }

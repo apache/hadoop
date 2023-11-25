@@ -246,8 +246,8 @@ public class DefaultRMAdminRequestInterceptor
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
-    return rmAdminProxy.deleteFederationQueuePoliciesByQueues(request);
+    return rmAdminProxy.deleteFederationPoliciesByQueues(request);
   }
 }

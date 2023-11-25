@@ -24,6 +24,9 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Delet
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationQueuePoliciesResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 
+/**
+ * Protocol buffer based implementation of {@link DeleteFederationQueuePoliciesResponse}.
+ */
 @Private
 @Unstable
 public class DeleteFederationQueuePoliciesResponsePBImpl

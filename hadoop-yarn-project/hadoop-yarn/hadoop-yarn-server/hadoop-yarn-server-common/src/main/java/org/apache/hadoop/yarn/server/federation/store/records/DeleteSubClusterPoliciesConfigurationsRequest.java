@@ -24,6 +24,9 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.util.List;
 
+/**
+ * This class is used to respond to queue deletion requests and contains a list of queues.
+ */
 @Private
 @Unstable
 public abstract class DeleteSubClusterPoliciesConfigurationsRequest {
@@ -38,10 +41,20 @@ public abstract class DeleteSubClusterPoliciesConfigurationsRequest {
     return request;
   }
 
+  /**
+   * To obtain the list of queues to be deleted.
+   *
+   * @return list of queue names.
+   */
   @Public
   @Unstable
   public abstract List<String> getQueues();
 
+  /**
+   * Set the list of queues to be deleted.
+   *
+   * @param queues list of queue names.
+   */
   @Private
   @Unstable
   public abstract void setQueues(List<String> queues);

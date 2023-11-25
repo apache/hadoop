@@ -19,8 +19,17 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * DeleteSubClusterPoliciesConfigurationsResponse contains the answer from the
+ * {@code FederationPolicyStore} to a request to delete policy configurations
+ * for given queues.
+ */
 @Private
 @Unstable
 public abstract class DeleteSubClusterPoliciesConfigurationsResponse {
+  public static DeleteSubClusterPoliciesConfigurationsResponse newInstance() {
+    return Records.newRecord(DeleteSubClusterPoliciesConfigurationsResponse.class);
+  }
 }

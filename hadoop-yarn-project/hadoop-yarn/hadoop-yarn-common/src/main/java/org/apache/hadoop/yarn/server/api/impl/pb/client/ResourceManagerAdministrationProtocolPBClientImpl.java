@@ -446,13 +446,13 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     DeleteFederationQueuePoliciesRequestProto requestProto =
         ((DeleteFederationQueuePoliciesRequestPBImpl) request).getProto();
     try {
       return new DeleteFederationQueuePoliciesResponsePBImpl(
-          proxy.deleteFederationQueuePoliciesByQueues(null, requestProto));
+          proxy.deleteFederationPoliciesByQueues(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
     }

@@ -919,7 +919,7 @@ public class RouterCLI extends Configured implements Tool {
           DeleteFederationQueuePoliciesRequest.newInstance(queues);
       ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
       DeleteFederationQueuePoliciesResponse response =
-          adminProtocol.deleteFederationQueuePoliciesByQueues(request);
+          adminProtocol.deleteFederationPoliciesByQueues(request);
       System.out.println(response.getMessage());
       return EXIT_SUCCESS;
     } catch (Exception e) {

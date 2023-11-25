@@ -81,7 +81,7 @@ public interface FederationPolicyStore {
    *
    * @param request
    * @return
-   * @throws YarnException
+   * @throws YarnException if the request is invalid/fails
    */
   DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
       DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException;

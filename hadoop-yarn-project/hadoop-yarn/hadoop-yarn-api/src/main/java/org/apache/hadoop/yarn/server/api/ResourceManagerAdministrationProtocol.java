@@ -246,6 +246,6 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    */
   @Private
   @Idempotent
-  DeleteFederationQueuePoliciesResponse deleteFederationQueuePoliciesByQueues(
+  DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException;
 }

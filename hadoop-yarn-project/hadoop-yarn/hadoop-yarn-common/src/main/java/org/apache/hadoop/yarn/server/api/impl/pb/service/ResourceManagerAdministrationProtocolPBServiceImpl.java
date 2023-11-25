@@ -475,14 +475,14 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   }
 
   @Override
-  public DeleteFederationQueuePoliciesResponseProto deleteFederationQueuePoliciesByQueues(
+  public DeleteFederationQueuePoliciesResponseProto deleteFederationPoliciesByQueues(
       RpcController controller, DeleteFederationQueuePoliciesRequestProto proto)
       throws ServiceException {
     DeleteFederationQueuePoliciesRequest requet =
         new DeleteFederationQueuePoliciesRequestPBImpl(proto);
     try {
       DeleteFederationQueuePoliciesResponse response =
-          real.deleteFederationQueuePoliciesByQueues(requet);
+          real.deleteFederationPoliciesByQueues(requet);
       return ((DeleteFederationQueuePoliciesResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
