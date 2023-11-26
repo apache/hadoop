@@ -99,10 +99,10 @@ public class DeleteSubClusterPoliciesConfigurationsRequestPBImpl extends
   @Override
   public boolean equals(Object other) {
     if (other == null) {
-        return false;
+      return false;
     }
     if (other.getClass().isAssignableFrom(this.getClass())) {
-        return this.getProto().equals(this.getClass().cast(other).getProto());
+      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
   }
@@ -126,7 +126,7 @@ public class DeleteSubClusterPoliciesConfigurationsRequestPBImpl extends
       return;
     }
     if (this.queues == null) {
-        this.queues = new ArrayList<>();
+      this.queues = new ArrayList<>();
     }
     this.queues.clear();
     this.queues.addAll(pQueues);

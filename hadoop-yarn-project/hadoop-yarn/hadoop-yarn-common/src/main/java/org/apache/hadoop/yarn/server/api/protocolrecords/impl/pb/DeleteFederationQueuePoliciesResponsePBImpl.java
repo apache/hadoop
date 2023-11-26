@@ -42,7 +42,7 @@ public class DeleteFederationQueuePoliciesResponsePBImpl
   }
 
   public DeleteFederationQueuePoliciesResponsePBImpl(
-     DeleteFederationQueuePoliciesResponseProto proto) {
+      DeleteFederationQueuePoliciesResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }

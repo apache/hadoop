@@ -313,7 +313,7 @@ public final class RouterMetrics {
   private MutableRate totalSucceededListFederationQueuePoliciesFailedRetrieved;
   @Metric("Total number of successful Retrieved DeleteFederationApplication and latency(ms)")
   private MutableRate totalSucceededDeleteFederationApplicationFailedRetrieved;
-  @Metric("Total number of successful Retrieved DeleteFederationQueuePoliciesByQueues and latency(ms)")
+  @Metric("Total number of successful Retrieved DeleteFederationPoliciesByQueues and latency(ms)")
   private MutableRate totalSucceededDeleteFederationPoliciesByQueuesFailedRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;

@@ -41,35 +41,35 @@ public class DeleteSubClusterPoliciesConfigurationsResponsePBImpl
   }
 
   public DeleteSubClusterPoliciesConfigurationsResponsePBImpl(
-    DeleteSubClusterPoliciesConfigurationsResponseProto proto) {
-    this.proto = proto;
-    viaProto = true;
+      DeleteSubClusterPoliciesConfigurationsResponseProto proto) {
+      this.proto = proto;
+      viaProto = true;
   }
 
   public DeleteSubClusterPoliciesConfigurationsResponseProto getProto() {
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
-    return proto;
+      proto = viaProto ? proto : builder.build();
+      viaProto = true;
+      return proto;
   }
 
- @Override
- public int hashCode() {
-   return getProto().hashCode();
- }
+  @Override
+  public int hashCode() {
+      return getProto().hashCode();
+  }
 
- @Override
- public boolean equals(Object other) {
-   if (other == null) {
-     return false;
-   }
-   if (other.getClass().isAssignableFrom(this.getClass())) {
-     return this.getProto().equals(this.getClass().cast(other).getProto());
-   }
-   return false;
- }
+  @Override
+  public boolean equals(Object other) {
+      if (other == null) {
+        return false;
+      }
+      if (other.getClass().isAssignableFrom(this.getClass())) {
+        return this.getProto().equals(this.getClass().cast(other).getProto());
+      }
+      return false;
+  }
 
- @Override
- public String toString() {
-   return TextFormat.shortDebugString(getProto());
- }
+  @Override
+  public String toString() {
+      return TextFormat.shortDebugString(getProto());
+  }
 }
