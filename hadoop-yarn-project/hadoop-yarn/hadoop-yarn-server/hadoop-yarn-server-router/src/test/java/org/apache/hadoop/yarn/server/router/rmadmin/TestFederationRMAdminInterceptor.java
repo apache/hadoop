@@ -647,7 +647,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     FederationQueueWeight federationQueueWeight2 = FederationQueueWeight.newInstance(
         "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
     SaveFederationQueuePolicyRequest request2 =
-        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "TestPolicyManager");
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2,
+        "TestPolicyManager");
     LambdaTestUtils.intercept(YarnException.class,
         "TestPolicyManager does not support the use of queue weights.",
         () -> interceptor.saveFederationQueuePolicy(request2));
@@ -658,7 +659,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     FederationQueueWeight federationQueueWeight3 = FederationQueueWeight.newInstance(
         "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
     SaveFederationQueuePolicyRequest request3 =
-        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight3, policyTypeName);
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight3,
+        policyTypeName);
     LambdaTestUtils.intercept(YarnException.class,
         "The sum of ratios for all subClusters must be equal to 1.",
         () -> interceptor.saveFederationQueuePolicy(request3));
