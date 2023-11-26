@@ -218,6 +218,20 @@ public class RouterCLI extends Configured implements Tool {
   protected final static String POLICY_LIST_USAGE_EXAMPLE_2 =
       "yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b";
 
+  protected final static UsageInfo POLICY_DELETE_USAGE = new UsageInfo(
+      "-d|--delete [--queue]",
+      "This command is used to delete the policy of the queue.");
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE_DESC =
+      "We delete the weight information of root.a. \\" +
+      "We can use --queue to specify the name of the queue.";
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE1 =
+      "yarn routeradmin -policy -d --queue root.a";
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE2 =
+      "yarn routeradmin -policy --delete --queue root.a";
+
   protected final static RouterCmdUsageInfos POLICY_USAGEINFOS = new RouterCmdUsageInfos()
        // Policy Save
       .addUsageInfo(POLICY_SAVE_USAGE)
@@ -233,7 +247,12 @@ public class RouterCLI extends Configured implements Tool {
       .addUsageInfo(POLICY_LIST_USAGE)
       .addExampleDescs(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_DESC)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_1)
-      .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2);
+      .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2)
+       // Policy Delete
+      .addUsageInfo(POLICY_DELETE_USAGE)
+      .addExampleDescs(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE_DESC)
+      .addExample(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE1)
+      .addExample(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE2);
 
   // Command3: application
   private static final String CMD_APPLICATION = "-application";
@@ -506,7 +525,7 @@ public class RouterCLI extends Configured implements Tool {
         "the queue we need to filter. example: root.a");
     Option queuesOpt = new Option(null, "queues", true,
         "list of queues to filter. example: root.a,root.b,root.c");
-    Option deleteOpt = new Option(OPTION_D, OPTION_DELETE, true, "");
+    Option deleteOpt = new Option(OPTION_D, OPTION_DELETE, false, "");
 
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
@@ -589,10 +608,7 @@ public class RouterCLI extends Configured implements Tool {
       // List Policies.
       return handListPolicies(pageSize, currentPage, queue, queues);
     } else if (cliParser.hasOption(OPTION_D) || cliParser.hasOption(OPTION_DELETE)) {
-      String queue = cliParser.getOptionValue(OPTION_D);
-      if (StringUtils.isBlank(queue)) {
-        queue = cliParser.getOptionValue(OPTION_DELETE);
-      }
+      String queue = cliParser.getOptionValue(OPTION_QUEUE);
       // Delete Policy.
       return handDeletePolicy(queue);
     } else {

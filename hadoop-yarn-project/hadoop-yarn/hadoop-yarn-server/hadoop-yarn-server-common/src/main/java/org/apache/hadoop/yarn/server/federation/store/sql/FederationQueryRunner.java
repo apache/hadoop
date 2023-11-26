@@ -51,7 +51,7 @@ public class FederationQueryRunner {
   public final static String UPDATE_SEQUENCE_TABLE_SQL =
       "UPDATE sequenceTable SET nextVal = %d WHERE sequenceName = %s";
 
-  public final static String DELETE_QUEUE_SQL = "DELETE policies WHERE queue = %s";
+  public final static String DELETE_QUEUE_SQL = "DELETE FROM policies WHERE queue = %s";
 
   public static final Logger LOG = LoggerFactory.getLogger(FederationQueryRunner.class);
 

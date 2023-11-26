@@ -79,8 +79,8 @@ public interface FederationPolicyStore {
   /**
    * Delete PoliciesConfigurations.
    *
-   * @param request
-   * @return
+   * @param request List containing delete queues.
+   * @return response empty means the queue list has been deleted successfully.
    * @throws YarnException if the request is invalid/fails
    */
   DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
