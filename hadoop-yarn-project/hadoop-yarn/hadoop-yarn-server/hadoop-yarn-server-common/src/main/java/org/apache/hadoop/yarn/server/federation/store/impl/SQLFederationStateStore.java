@@ -1077,6 +1077,27 @@ public class SQLFederationStateStore implements FederationStateStore {
   public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
       DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
     FederationPolicyStoreInputValidator.validate(request);
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String queue : request.getQueues()) {
+        LOG.info("delete queue = {} policy start.", queue);
+        runner.deletePolicyByQueue(connection, queue);
+        LOG.info("delete queue = {} policy finished.", queue);
+      }
+      return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+    } catch (Exception e) {
+      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
+          "Could not delete queue policy!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
     return null;
   }
 
