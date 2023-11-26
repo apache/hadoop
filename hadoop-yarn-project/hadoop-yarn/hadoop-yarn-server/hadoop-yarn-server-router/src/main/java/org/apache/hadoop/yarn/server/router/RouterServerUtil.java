@@ -822,4 +822,12 @@ public final class RouterServerUtil {
     return conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PROXY_ENABLE,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE);
   }
+
+  public static boolean checkPolicyManagerValid(String policyManager,
+      List<String> supportWeightList) throws YarnException {
+    if (supportWeightList.contains(policyManager)) {
+      return true;
+    }
+    return false;
+  }
 }
