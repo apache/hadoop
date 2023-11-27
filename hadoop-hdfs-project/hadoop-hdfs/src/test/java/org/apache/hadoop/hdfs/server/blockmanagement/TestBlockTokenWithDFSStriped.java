@@ -97,6 +97,17 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     }
   }
 
+
+  /**
+   * Tests migrating without downtime into enabling block access tokens.
+   */
+  @Override
+  @Test
+  public void testReadWithMigration() throws Exception {
+    conf = getConf();
+    doTestReadWithMigration(conf, numDNs, true);
+  }
+
   /**
    * tested at {@link org.apache.hadoop.hdfs.TestDFSStripedOutputStreamWithFailure#testBlockTokenExpired()}
    */

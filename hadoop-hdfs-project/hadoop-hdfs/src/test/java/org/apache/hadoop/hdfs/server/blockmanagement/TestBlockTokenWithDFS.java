@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -371,9 +372,13 @@ public class TestBlockTokenWithDFS {
    */
   @Test
   public void testReadWithMigration() throws Exception {
+    doTestReadWithMigration(getConf(2), 2, false);
+  }
+
+  protected void doTestReadWithMigration(Configuration conf, int numDataNodes, boolean isStriped)
+      throws Exception {
     MiniDFSCluster cluster = null;
-    int numDataNodes = 2;
-    Configuration conf = getConf(numDataNodes);
+
     //
     // At first, migration mode is enabled and access tokens disabled.
     // Namenodes will start up without access tokens, but DN's will be prepared to ignore
@@ -385,12 +390,19 @@ public class TestBlockTokenWithDFS {
     try {
       // prefer non-ephemeral port to avoid port collision on restartNameNode
       cluster = new MiniDFSCluster.Builder(conf)
-              .nameNodePort(ServerSocketUtil.getPort(18020, 100))
-              .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
-              .numDataNodes(numDataNodes)
-              .build();
+          .nameNodePort(ServerSocketUtil.getPort(18020, 100))
+          .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
+          .numDataNodes(numDataNodes)
+          .build();
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
+
+      if (isStriped) {
+        cluster.getFileSystem().enableErasureCodingPolicy(
+            StripedFileTestUtil.getDefaultECPolicy().getName());
+        cluster.getFileSystem().getClient()
+            .setErasureCodingPolicy("/", StripedFileTestUtil.getDefaultECPolicy().getName());
+      }
 
       //
       // Now we enable access tokens on the namenodes. Previously, DataNodes would
@@ -411,13 +423,13 @@ public class TestBlockTokenWithDFS {
 
       //
       // Now that access tokens are enabled on the NameNode without downtime, we can
-      // turn off migration mode and rolling restart datanodes. When they start up,
+      // turn off migration mode and restart datanodes. When they start up,
       // they will register and get the block access tokens and use them going forward.
       //
 
       conf.setBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, false);
-      for (int idx = 0; idx < cluster.getDataNodes().size(); idx++) {
-        cluster.stopDataNode(idx);
+      while (cluster.getDataNodes().size() > 0) {
+        cluster.stopDataNode(0);
       }
       cluster.startDataNodes(conf, numDataNodes, true, null, null);
       cluster.waitActive();

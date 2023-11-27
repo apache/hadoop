@@ -180,7 +180,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
     GenericTestUtils.assertMatches(logs.getOutput(), "SASL server doing general handshake");
     GenericTestUtils.assertMatches(logs.getOutput(),
-        "Because dfs.datanode.unsafe.sasl.allowed-not-required is true,"
+        "Because dfs.datanode.unsafe.sasl.allowed-not-required is true, "
             + "skipping handshake and using plaintext connection.");
   }
 
