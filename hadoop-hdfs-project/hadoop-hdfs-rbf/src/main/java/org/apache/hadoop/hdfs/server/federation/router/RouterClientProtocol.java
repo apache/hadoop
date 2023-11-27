@@ -915,7 +915,7 @@ public class RouterClientProtocol implements ClientProtocol {
         }
         Path childPath = new Path(src, child);
         HdfsFileStatus dirStatus =
-            getMountPointStatus(childPath.toString(), 0, date, true);
+            getMountPointStatus(childPath.toString(), 0, date);
 
         // if there is no subcluster path, always add mount point
         byte[] bChild = DFSUtil.string2Bytes(child);
@@ -2180,6 +2180,20 @@ public class RouterClientProtocol implements ClientProtocol {
         mask.getGroupAction(),
         mask.getOtherAction());
     return ret;
+  }
+
+  /**
+   * Create a new file status for a mount point.
+   *
+   * @param name Name of the mount point.
+   * @param childrenNum Number of children.
+   * @param date Map with the dates.
+   * @return New HDFS file status representing a mount point.
+   */
+  @VisibleForTesting
+  HdfsFileStatus getMountPointStatus(
+      String name, int childrenNum, long date) {
+    return getMountPointStatus(name, childrenNum, date, true);
   }
 
   /**

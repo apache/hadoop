@@ -356,21 +356,21 @@ public class TestRouterMountTable {
     String child = "testA";
     Path childPath = new Path(src, child);
     HdfsFileStatus dirStatus =
-        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0, true);
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
     assertEquals(child, dirStatus.getLocalName());
 
     String src1 = "/testA";
     String child1 = "testB";
     Path childPath1 = new Path(src1, child1);
     HdfsFileStatus dirStatus1 =
-        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0, true);
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
     assertEquals(child1, dirStatus1.getLocalName());
 
     String src2 = "/testA/testB";
     String child2 = "testC";
     Path childPath2 = new Path(src2, child2);
     HdfsFileStatus dirStatus2 =
-        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, true);
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
     assertEquals(child2, dirStatus2.getLocalName());
 
     String src3 = "/testA/testB";
