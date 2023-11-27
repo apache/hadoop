@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;

@@ -34,7 +34,14 @@ import java.util.concurrent.TimeUnit;
  * as deprecated and simply ignored.
  *
  * All S3Guard related constants are marked as Deprecated and either ignored (ddb config)
- * or rejected (setting the metastore to anything other than the null store)
+ * or rejected (setting the metastore to anything other than the null store).
+ * <p>
+ * Timeout default values are declared as integers or long values in milliseconds and
+ * occasionally seconds.
+ * There are now {@code Duration} constants for these default values; the original
+ * fields are retained for compatibility, and derive their value from the Duration equivalent.
+ * <p>
+ * New timeout/duration constants do not get the equivalent integer/long fields.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -145,13 +152,28 @@ public final class Constants {
       SimpleAWSCredentialsProvider.NAME;
 
 
-  // the maximum number of tasks cached if all threads are already uploading
+  /**
+   * The maximum number of tasks queued (other than prefetcher tasks) if all threads are
+   * busy: {@value}.
+   */
   public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
 
+  /**
+   * Default value for {@link #MAX_TOTAL_TASKS}: {@value}.
+   */
   public static final int DEFAULT_MAX_TOTAL_TASKS = 32;
 
-  // number of simultaneous connections to s3
+  /**
+   * Number of simultaneous connections to S3: {@value}.
+   */
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
+
+  /**
+   * Default value for {@link #MAXIMUM_CONNECTIONS}: {@value}.
+   * Note this value gets increased over time as more connections are used
+   * in parallel operations.
+   * Keep in sync with the value in {@code core-default.xml}
+   */
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
 
   /**
@@ -161,10 +183,17 @@ public final class Constants {
   public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
 
   /**
-   * Default value in millis for {@code CONNECTION_TTL}: {@value}.
+   * Default value in millis for {@link #CONNECTION_TTL}: 5 minutes.
+   */
+  public static final Duration DEFAULT_CONNECTION_TTL_DURATION =
+      Duration.ofMinutes(5);
+
+  /**
+   * Default value in millis for {@link #CONNECTION_TTL}: 5 minutes.
+   * @deprecated use {@link #DEFAULT_CONNECTION_TTL_DURATION}
    */
   public static final long DEFAULT_CONNECTION_TTL =
-      Duration.ofMinutes(5).toMillis();
+      DEFAULT_CONNECTION_TTL_DURATION.toMillis();
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -281,9 +310,16 @@ public final class Constants {
       "fs.s3a.connection.establish.timeout";
 
   /**
-   * Default establish timeout in millis: 30 seconds.
+   * Default TCP/(and TLS?) establish timeout: 30 seconds.
    */
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = (int)Duration.ofSeconds(30).toMillis();
+  public static final Duration DEFAULT_ESTABLISH_TIMEOUT_DURATION = Duration.ofSeconds(30);
+
+  /**
+   * Default establish timeout in millis: 30 seconds.
+   * @deprecated use {@link #DEFAULT_ESTABLISH_TIMEOUT_DURATION}
+   */
+  public static final int DEFAULT_ESTABLISH_TIMEOUT =
+      (int)DEFAULT_ESTABLISH_TIMEOUT_DURATION.toMillis();
 
   /**
    * Milliseconds until we give up on a connection to s3: {@value}.
@@ -291,9 +327,15 @@ public final class Constants {
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
 
   /**
-   * Default socket timeout in millis: {@value}.
+   * Default socket timeout: 200 seconds.
    */
-  public static final int DEFAULT_SOCKET_TIMEOUT = 200_000;
+  public static final Duration DEFAULT_SOCKET_TIMEOUT_DURATION = Duration.ofSeconds(200);
+
+  /**
+   * Default socket timeout: {@link #DEFAULT_SOCKET_TIMEOUT_DURATION}.
+   * @deprecated use {@link #DEFAULT_SOCKET_TIMEOUT_DURATION}
+   */
+  public static final int DEFAULT_SOCKET_TIMEOUT = (int)DEFAULT_SOCKET_TIMEOUT_DURATION.toMillis();
 
   /**
    * Milliseconds until a request is timed-out: {@value}.
@@ -335,8 +377,7 @@ public final class Constants {
   public static final boolean DEFAULT_CONNECTION_KEEPALIVE = false;
 
   /**
-   * Maximum idle time for connections in the pool
-   * {@value}.
+   * Maximum idle time for connections in the pool: {@value}.
    * <p>
    * Too low: overhead of creating connections.
    * Too high, risk of stale connections and inability to use the
@@ -350,7 +391,7 @@ public final class Constants {
   /**
    * Default idle time: 60 seconds.
    */
-  public static final Duration DEFAULT_CONNECTION_IDLE_TIME =
+  public static final Duration DEFAULT_CONNECTION_IDLE_TIME_DURATION =
       Duration.ofSeconds(60);
 
   // socket send buffer to be used in Amazon client
@@ -383,9 +424,15 @@ public final class Constants {
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
 
   /**
-   * Default value of {@link #KEEPALIVE_TIME}: {@value}.
+   * Default value of {@link #KEEPALIVE_TIME}: 60s.
    */
-  public static final int DEFAULT_KEEPALIVE_TIME = 60;
+  public static final Duration DEFAULT_KEEPALIVE_TIME_DURATION = Duration.ofSeconds(60);
+
+  /**
+   * Default value of {@link #KEEPALIVE_TIME}: 60s.
+   * @deprecated use {@link #DEFAULT_KEEPALIVE_TIME_DURATION}
+   */
+  public static final int DEFAULT_KEEPALIVE_TIME = (int)DEFAULT_KEEPALIVE_TIME_DURATION.getSeconds();
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";

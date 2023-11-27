@@ -47,14 +47,14 @@ import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL_DURATION;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
@@ -596,19 +596,19 @@ public final class AWSClientConfig {
     // this can balance requests over different S3 servers, and avoid failed
     // connections. See HADOOP-18845.
     Duration connectionTTL = getDuration(conf, CONNECTION_TTL,
-        DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS,
+        DEFAULT_CONNECTION_TTL_DURATION, TimeUnit.MILLISECONDS,
         null);
 
     Duration establishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS,
+        DEFAULT_ESTABLISH_TIMEOUT_DURATION, TimeUnit.MILLISECONDS,
         minimumOperationDuration);
 
     // limit on the time a connection can be idle in the pool
     Duration maxIdleTime = getDuration(conf, CONNECTION_IDLE_TIME,
-        DEFAULT_CONNECTION_IDLE_TIME, TimeUnit.MILLISECONDS, Duration.ZERO);
+        DEFAULT_CONNECTION_IDLE_TIME_DURATION, TimeUnit.MILLISECONDS, Duration.ZERO);
 
     Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS,
+        DEFAULT_SOCKET_TIMEOUT_DURATION, TimeUnit.MILLISECONDS,
         minimumOperationDuration);
 
     return new ConnectionSettings(

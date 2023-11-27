@@ -214,7 +214,7 @@ everything uses the same HTTP connection pool.
 | `fs.s3a.threads.max`           | `96`    | Threads in the thread pool               |
 | `fs.s3a.threads.keepalivetime` | `60s`   | Threads in the thread pool               |
 | `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation |
-| `fs.s3a.max.total.tasks`       | `16`    | Maximum threads for any single operation |
+| `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued          |
 
 
 Network timeout options can be tuned to make the client fail faster *or* retry more.
@@ -244,7 +244,8 @@ Units:
 3. `fs.s3a.threads.keepalivetime` has a default unit of seconds on all hadoop releases.
 4. Options flagged as "V2" are new with the AWS V2 SDK; they are ignored on V1 releases.
 
---- 
+---
+
 There are some hard tuning decisions related to pool size and expiry.
 As servers add more cores and services add many more worker threads, a larger pool size is more and more important:
 the default values in `core-default.xml` have been slowly increased over time but should be treated as
@@ -254,18 +255,22 @@ and stream prefetching performing background block prefetch, larger pool and thr
 
 In large hive deployments, thread and connection pools of thousands have been known to have been set.
 
-Small pool: small value in `fs.s3a.connection.maximum`. Cost of having many S3A instances in the same process low. But: limit on how many connections can be open at at a time. 
+Small pool: small value in `fs.s3a.connection.maximum`.
+* Keeps network/memory cost of having many S3A instances in the same process low.
+* But: limit on how many connections can be open at at a time.
 
-Large Pool. More HTTP connections can be created and kept, but cost of keeping network connections increases
+* Large Pool. More HTTP connections can be created and kept, but cost of keeping network connections increases
 unless idle time is reduced through `fs.s3a.connection.idle.time`.
 
 If exceptions are raised with about timeouts acquiring connections from the pool, this can be a symptom of
 * Heavy load. Increase pool size and acquisition timeout `fs.s3a.connection.acquisition.timeout`
-* Process failing to close open input streams from the S3 store. Fix: Find uses of `open()`/`openFile()` and make sure that the streams are being `close()d`j
+* Process failing to close open input streams from the S3 store.
+  Fix: Find uses of `open()`/`openFile()` and make sure that the streams are being `close()d`
 
 *Retirement of HTTP Connections.*
 
-Connections are retired from the pool by `fs.s3a.connection.idle.time`, the maximum time for idle connections, and `fs.s3a.connection.ttl`, the maximum life of any connection in the pool, even if it repeatedly reused.
+Connections are retired from the pool by `fs.s3a.connection.idle.time`, the maximum time for idle connections,
+and `fs.s3a.connection.ttl`, the maximum life of any connection in the pool, even if it repeatedly reused.
 
 Limiting idle time saves on network connections, at the cost of requiring new connections on subsequent S3 operations.
 
@@ -277,7 +282,7 @@ connection problems, including those caused by proxies.
 If set, this sets an upper limit on any non-streaming API call (i.e. everything but `GET`).
 
 A timeout is good to detect and recover from failures.
-However, it also sets a limit on the duration of a POST/PUT of data 
+However, it also sets a limit on the duration of a POST/PUT of data
 -which, if after a timeout, will only be repeated, ultimately to failure.
 
 

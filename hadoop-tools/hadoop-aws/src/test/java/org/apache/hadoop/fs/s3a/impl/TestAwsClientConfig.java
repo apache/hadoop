@@ -35,12 +35,12 @@ import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL_DURATION;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MINIMUM_NETWORK_OPERATION_DURATION;
@@ -67,7 +67,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a new empty configuration
+   * Create a new empty configuration.
    * @return configuration.
    */
   private Configuration conf() {
@@ -94,16 +94,23 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
         .isEqualTo(s1);
   }
 
+  /**
+   * When loading a connection settings from an empty configuration, the
+   * correct default values are loaded.
+   */
   @Test
   public void testLoadUnsetValues() {
     final AWSClientConfig.ConnectionSettings conn = createConnectionSettings(conf());
     assertDuration(CONNECTION_ACQUISITION_TIMEOUT, DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
         conn.getAcquisitionTimeout());
-    assertDuration(CONNECTION_TTL, DEFAULT_CONNECTION_TTL,
+    assertDuration(CONNECTION_TTL, DEFAULT_CONNECTION_TTL_DURATION,
         conn.getConnectionTTL());
-    assertDuration(CONNECTION_IDLE_TIME, DEFAULT_CONNECTION_IDLE_TIME, conn.getMaxIdleTime());
-    assertDuration(ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, conn.getEstablishTimeout());
-    assertDuration(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, conn.getSocketTimeout());
+    assertDuration(CONNECTION_IDLE_TIME, DEFAULT_CONNECTION_IDLE_TIME_DURATION,
+        conn.getMaxIdleTime());
+    assertDuration(ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT_DURATION,
+        conn.getEstablishTimeout());
+    assertDuration(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT_DURATION,
+        conn.getSocketTimeout());
     Assertions.assertThat(conn.getMaxConnections())
         .describedAs(MAXIMUM_CONNECTIONS)
         .isEqualTo(DEFAULT_MAXIMUM_CONNECTIONS);
@@ -134,7 +141,8 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
 
     assertDuration(ESTABLISH_TIMEOUT, MINIMUM_NETWORK_OPERATION_DURATION,
         conn.getEstablishTimeout());
-    assertDuration(SOCKET_TIMEOUT, MINIMUM_NETWORK_OPERATION_DURATION, conn.getSocketTimeout());
+    assertDuration(SOCKET_TIMEOUT, MINIMUM_NETWORK_OPERATION_DURATION,
+        conn.getSocketTimeout());
 
     // those options with a minimum of zero
     final Duration s1 = Duration.ofSeconds(1);
@@ -142,20 +150,24 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     assertDuration(CONNECTION_IDLE_TIME, s1, conn.getMaxIdleTime());
   }
 
-  private void assertDuration(String name, long expected, Duration duration) {
-    Assertions.assertThat(duration.toMillis())
-        .describedAs(name)
+  /**
+   * Assert that a a duration has the expected value.
+   * @param name option name for assertion text
+   * @param expected expected duration
+   * @param actual actual duration
+   */
+  private void assertDuration(String name, Duration expected, Duration actual) {
+    Assertions.assertThat(actual)
+        .describedAs("Duration of %s", name)
         .isEqualTo(expected);
   }
 
-  private void assertDuration(String name, Duration expected, Duration duration) {
-    Assertions.assertThat(duration)
-        .describedAs("option %s with value %d ms", name, duration.toMillis())
-        .isEqualTo(expected);
-  }
-
+  /**
+   * Test that {@link AWSClientConfig#createApiConnectionSettings(Configuration)}
+   * loads the subset of options needed for setting up the client config builder.
+   */
   @Test
-  public void testCreateApiConnectionSettings() throws Throwable {
+  public void testCreateApiConnectionSettings() {
     final Configuration conf = conf();
     conf.set(REQUEST_TIMEOUT, "1h");
     final AWSClientConfig.ConnectionSettings conn =
