@@ -1646,14 +1646,14 @@
 
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>64</value>
+  <value>96</value>
   <description>The total number of threads available in the filesystem for data
     uploads *or any other queued filesystem operation*.</description>
 </property>
 
 <property>
   <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
+  <value>60s</value>
   <description>Number of seconds a thread can be idle before being
     terminated.</description>
 </property>
@@ -1733,7 +1733,7 @@
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>

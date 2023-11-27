@@ -281,7 +281,7 @@ public final class Constants {
       "fs.s3a.connection.establish.timeout";
 
   /**
-   * Default establish timeout in millis: {@value}.
+   * Default establish timeout in millis: 30 seconds.
    */
   public static final int DEFAULT_ESTABLISH_TIMEOUT = (int)Duration.ofSeconds(30).toMillis();
 
@@ -316,7 +316,7 @@ public final class Constants {
       "fs.s3a.connection.acquisition.timeout";
 
   /**
-   * Default acquisition timeout (unless set in core-default.xml -check!).
+   * Default acquisition timeout: 60 seconds.
    */
   public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT =
       Duration.ofSeconds(60);
@@ -348,7 +348,7 @@ public final class Constants {
       "fs.s3a.connection.idle.time";
 
   /**
-   * Default idle time (unless set in core-default.xml -check!).
+   * Default idle time: 60 seconds.
    */
   public static final Duration DEFAULT_CONNECTION_IDLE_TIME =
       Duration.ofSeconds(60);
@@ -365,15 +365,26 @@ public final class Constants {
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;
 
-  // the maximum number of threads to allow in the pool used by TransferManager
+  /**
+   * The maximum number of threads to allow in the pool used by S3A.
+   * Value: {@value}.
+   */
   public static final String MAX_THREADS = "fs.s3a.threads.max";
-  public static final int DEFAULT_MAX_THREADS = 64;
+
+  /**
+   * Default value of {@link #MAX_THREADS}: {@value}.
+   */
+  public static final int DEFAULT_MAX_THREADS = 96;
 
   /**
    * The time an idle thread waits before terminating: {@value}.
-   * This is in SECONDS.
+   * This is in SECONDS unless the optional unit is given.
    */
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
+
+  /**
+   * Default value of {@link #KEEPALIVE_TIME}: {@value}.
+   */
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
 
   // size of each of or multipart pieces in bytes
@@ -579,10 +590,17 @@ public final class Constants {
       "fs.s3a.multipart.purge";
   public static final boolean DEFAULT_PURGE_EXISTING_MULTIPART = false;
 
-  // purge any multipart uploads older than this number of seconds
+  /**
+   * purge any multipart uploads older than this number of seconds.
+   */
   public static final String PURGE_EXISTING_MULTIPART_AGE =
       "fs.s3a.multipart.purge.age";
-  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
+
+  /**
+   * Default Age.
+   */
+  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE =
+      Duration.ofDays(1).getSeconds();
 
   /**
    * s3 server-side encryption, see

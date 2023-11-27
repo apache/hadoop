@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -45,9 +46,11 @@ import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsMillis;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -55,6 +58,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test for timeout generation/handling, especially those related to connection
  * pools.
+ * This test has proven a bit brittle to parallel test runs, so test cases should
+ * create their own FS instances.
  */
 public class ITestConnectionTimeouts extends AbstractS3ATestBase {
 
@@ -64,9 +69,9 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
    */
   public static final int FILE_SIZE = 1024;
 
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+
+  private Configuration timingOutConfiguration() {
+    Configuration conf = new Configuration(getConfiguration());
     removeBaseAndBucketOverrides(conf,
         CONNECTION_TTL,
         CONNECTION_ACQUISITION_TIMEOUT,
@@ -74,6 +79,7 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
         ESTABLISH_TIMEOUT,
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
+        PREFETCH_ENABLED_KEY,
         REQUEST_TIMEOUT,
         SOCKET_TIMEOUT,
         FS_S3A_CREATE_PERFORMANCE
@@ -81,20 +87,17 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
 
     // only one connection is allowed, and the establish timeout is low
     conf.setInt(MAXIMUM_CONNECTIONS, 1);
-    conf.setInt(MAX_ERROR_RETRIES, 1);
-    conf.setInt(RETRY_LIMIT, 1);
+    conf.setInt(MAX_ERROR_RETRIES, 0);
+    // needed to ensure that streams are kept open.
+    // without this the tests is unreliable in batch runs.
+    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    conf.setInt(RETRY_LIMIT, 0);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
     final Duration ms10 = Duration.ofMillis(10);
     setDurationAsMillis(conf, CONNECTION_ACQUISITION_TIMEOUT, ms10);
     setDurationAsMillis(conf, ESTABLISH_TIMEOUT, ms10);
 
     return conf;
-  }
-
-  @Override
-  public void setup() throws Exception {
-    AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
-    super.setup();
   }
 
   @Override
@@ -109,13 +112,15 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
   @Test
   public void testGeneratePoolTimeouts() throws Throwable {
     byte[] data = dataset(FILE_SIZE, '0', 10);
-    S3AFileSystem fs = getFileSystem();
+    AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
+    Configuration conf = timingOutConfiguration();
     Path path = methodPath();
-    ContractTestUtils.createFile(fs, path, true, data);
-    final FileStatus st = fs.getFileStatus(path);
-    int streamsToCreate = 20;
+    int streamsToCreate = 100;
     List<FSDataInputStream> streams = new ArrayList<>(streamsToCreate);
-    try {
+    getFileSystem();
+    try (FileSystem fs = FileSystem.newInstance(getFileSystem().getUri(), conf)) {
+      ContractTestUtils.createFile(fs, path, true, data);
+      final FileStatus st = fs.getFileStatus(path);
       intercept(ConnectTimeoutException.class, () -> {
         for (int i = 0; i < streamsToCreate; i++) {
           FutureDataInputStreamBuilder b = fs.openFile(path);

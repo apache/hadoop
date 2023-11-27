@@ -205,16 +205,28 @@ The default pool sizes are intended to strike a balance between performance
 and memory/thread use.
 
 You can have a larger pool of (reused) HTTP connections and threads
-for parallel IO (especially uploads) by setting the properties
+for parallel IO (especially uploads, prefetching and vector reads) by setting the appropriate
+properties. Note: S3A Connectors have their own thread pools for job commit, but
+everything uses the same HTTP connection pool.
+
+| Property                       | Default | Meaning                                  |
+|--------------------------------|---------|------------------------------------------|
+| `fs.s3a.threads.max`           | `96`    | Threads in the thread pool               |
+| `fs.s3a.threads.keepalivetime` | `60s`   | Threads in the thread pool               |
+| `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation |
+| `fs.s3a.max.total.tasks`       | `16`    | Maximum threads for any single operation |
+
 
 Network timeout options can be tuned to make the client fail faster *or* retry more.
 The choice is yours. Generally recovery is better, but sometimes fail-fast is more useful.
 
 
-
 | Property                                | Default | V2  | Meaning                                               |
 |-----------------------------------------|---------|:----|-------------------------------------------------------|
-| `fs.s3a.threads.max`                    | `64`    |     | Threads in the thread pool                            |
+| `fs.s3a.threads.max`                    | `96`    |     | Threads in the thread pool                            |
+| `fs.s3a.threads.keepalivetime`          | `60s`   |     | Threads in the thread pool                            |
+| `fs.s3a.executor.capacity`              | `16`    |     | Maximum threads for any single operation              |
+| `fs.s3a.max.total.tasks`                | `16`    |     | Maximum threads for any single operation              |
 | `fs.s3a.connection.maximum`             | `200`   |     | Connection pool size                                  |
 | `fs.s3a.connection.keepalive`           | `false` | `*` | Use TCP keepalive on open channels                    |
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
@@ -226,10 +238,11 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 
 
 Units:
-1. The default unit for all these options is milliseconds, unless a time suffix is declared.
+1. The default unit for all these options except for `fs.s3a.threads.keepalivetime` is milliseconds, unless a time suffix is declared.
 2. Versions of Hadoop built with the AWS V1 SDK *only* support milliseconds rather than suffix values.
    If configurations are intended to apply across hadoop releases, you MUST use milliseconds without a suffix.
-3. Options flagged as "V2" are new with the AWS V2 SDK; they are ignored on V1 releases.
+3. `fs.s3a.threads.keepalivetime` has a default unit of seconds on all hadoop releases.
+4. Options flagged as "V2" are new with the AWS V2 SDK; they are ignored on V1 releases.
 
 --- 
 There are some hard tuning decisions related to pool size and expiry.
@@ -243,7 +256,8 @@ In large hive deployments, thread and connection pools of thousands have been kn
 
 Small pool: small value in `fs.s3a.connection.maximum`. Cost of having many S3A instances in the same process low. But: limit on how many connections can be open at at a time. 
 
-Large Pool. More HTTP connections can be created and kept, but cost of keeping network connections increases.
+Large Pool. More HTTP connections can be created and kept, but cost of keeping network connections increases
+unless idle time is reduced through `fs.s3a.connection.idle.time`.
 
 If exceptions are raised with about timeouts acquiring connections from the pool, this can be a symptom of
 * Heavy load. Increase pool size and acquisition timeout `fs.s3a.connection.acquisition.timeout`
@@ -363,18 +377,6 @@ efficient in terms of HTTP connection use, and reduce the IOP rate against
 the S3 bucket/shard.
 
 ```xml
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>20</value>
-</property>
-
-<property>
-  <name>fs.s3a.connection.maximum</name>
-  <value>30</value>
-  <descriptiom>
-   Make greater than both fs.s3a.threads.max and -numListstatusThreads
-   </descriptiom>
-</property>
 
 <property>
   <name>fs.s3a.experimental.input.fadvise</name>
