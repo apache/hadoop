@@ -144,7 +144,6 @@ public final class DataTransferSaslUtil {
    * transition from an unsecured cluster to a secured cluster.
    *
    * @param encryptionAlgorithm to use for SASL negotation
-   * @return properties of encrypted SASL negotiation
    */
   public static Map<String, String> createSaslPropertiesAllQops(
           String encryptionAlgorithm) {
