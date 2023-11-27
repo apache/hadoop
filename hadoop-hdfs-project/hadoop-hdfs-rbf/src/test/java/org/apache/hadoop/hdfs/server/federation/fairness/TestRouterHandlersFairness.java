@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -129,12 +130,10 @@ public class TestRouterHandlersFairness {
     DFSClient client = routerContext.getClient();
     int availablePermits =
         rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0");
-    try {
+    LambdaTestUtils.intercept(IOException.class,  () -> {
       LOG.info("Use getFileInfo test invokeSequential.");
       client.getFileInfo("/test.txt");
-    }catch (IOException ioe) {
-      assertExceptionContains("Cannot locate a registered namenode", ioe);
-    }
+    });
     // Ensure that the semaphore is not acquired.
     assertEquals(availablePermits,
         rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0"));
@@ -148,12 +147,10 @@ public class TestRouterHandlersFairness {
         new Object[]{null, null});
     availablePermits =
         rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0");
-    try {
+    LambdaTestUtils.intercept(IOException.class,  () -> {
       LOG.info("Use renewLease test invokeConcurrent.");
       rpcClient.invokeConcurrent(locations, renewLease);
-    }catch (IOException ioe) {
-      assertExceptionContains("Cannot locate a registered namenode", ioe);
-    }
+    });
     // Ensure that the semaphore is not acquired.
     assertEquals(availablePermits,
         rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0"));
