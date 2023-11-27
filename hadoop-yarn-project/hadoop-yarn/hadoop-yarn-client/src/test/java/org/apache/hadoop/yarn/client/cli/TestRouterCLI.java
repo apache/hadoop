@@ -283,7 +283,7 @@ public class TestRouterCLI {
   @Test
   public void testBuildHelpMsg() throws Exception {
     Map<String, RouterCLI.RouterCmdUsageInfos> adminUsage = rmAdminCLI.getAdminUsage();
-    assertEquals(4, adminUsage.size());
+    assertEquals(3, adminUsage.size());
 
     RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
         adminUsage.get("-deregisterSubCluster");
@@ -299,7 +299,7 @@ public class TestRouterCLI {
     assertNotNull(policyUsageInfos);
     Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
     assertNotNull(policyExamplesMap);
-    assertEquals(3, policyExamplesMap.size());
+    assertEquals(4, policyExamplesMap.size());
     policyExamplesMap.forEach((cmd, cmdExamples) -> {
       assertEquals(2, cmdExamples.size());
     });
