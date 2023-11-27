@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolic
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 
 /**
  * The FederationPolicyStore provides a key-value interface to access the
@@ -74,4 +76,13 @@ public interface FederationPolicyStore {
   GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException;
 
+  /**
+   * Delete all queue-to-policy configurations.
+   *
+   * @param request delete request.
+   * @return If the response is empty, the queue-to-policy configurations are deleted successfully.
+   * @throws Exception if the request is invalid/fails
+   */
+  DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception;
 }
