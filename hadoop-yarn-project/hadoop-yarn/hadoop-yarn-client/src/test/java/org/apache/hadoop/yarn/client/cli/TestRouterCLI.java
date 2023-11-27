@@ -283,7 +283,7 @@ public class TestRouterCLI {
   @Test
   public void testBuildHelpMsg() throws Exception {
     Map<String, RouterCLI.RouterCmdUsageInfos> adminUsage = rmAdminCLI.getAdminUsage();
-    assertEquals(3, adminUsage.size());
+    assertEquals(4, adminUsage.size());
 
     RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
         adminUsage.get("-deregisterSubCluster");
