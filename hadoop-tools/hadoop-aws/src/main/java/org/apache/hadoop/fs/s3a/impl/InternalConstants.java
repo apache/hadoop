@@ -242,11 +242,4 @@ public final class InternalConstants {
       Collections.unmodifiableSet(
           new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
 
-  /**
-   * This is the minimum operation duration unless programmatically set.
-   * It ensures that even if a configuration has mistaken a millisecond
-   * option for seconds, a viable duration will actually be used.
-   */
-  public static final Duration MINIMUM_OPERATION_DURATION = Duration.ofSeconds(15);
-
 }

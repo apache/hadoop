@@ -58,6 +58,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
+import static org.apache.hadoop.fs.s3a.Constants.MINIMUM_NETWORK_OPERATION_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_DOMAIN;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PASSWORD;
@@ -73,7 +74,6 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.getDuration;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MINIMUM_OPERATION_DURATION;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 
@@ -92,12 +92,20 @@ public final class AWSClientConfig {
   /**
    * The minimum operation duration.
    */
-  public static Duration minimumOperationDuration = MINIMUM_OPERATION_DURATION;
+  private static Duration minimumOperationDuration = MINIMUM_NETWORK_OPERATION_DURATION;
 
 
   private AWSClientConfig() {
   }
 
+  /**
+   * Create the config for a given service...the service identifier is used
+   * to determine signature implementation.
+   * @param conf configuration
+   * @param awsServiceIdentifier service
+   * @return the builder inited with signer, timeouts and UA.
+   * @throws IOException failure.
+   */
   public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf,
       String awsServiceIdentifier) throws IOException {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
@@ -120,7 +128,10 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures the http client.
+   * Create and configure the http client-based connector with timeouts for:
+   * connection acquisition, max idle, timeout, TTL, socket and keepalive.
+   * SSL channel mode is set up via
+   * {@link NetworkBinding#bindSSLChannelMode(Configuration, ApacheHttpClient.Builder)}.
    *
    * @param conf The Hadoop configuration
    * @return Http client builder
@@ -138,8 +149,7 @@ public final class AWSClientConfig {
             .maxConnections(conn.getMaxConnections())
             .socketTimeout(conn.getSocketTimeout())
             .tcpKeepAlive(conn.isKeepAlive())
-            .useIdleConnectionReaper(true)  // true by default in the SDK
-        ;
+            .useIdleConnectionReaper(true);  // true by default in the SDK
 
     NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
@@ -147,10 +157,11 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures the async http client.
-   *
+   * Create and configure the async http client with timeouts for:
+   * connection acquisition, max idle, timeout, TTL, socket and keepalive.
+   * This is netty based and does not allow for the SSL channel mode to be set.
    * @param conf The Hadoop configuration
-   * @return Http client builder
+   * @return Async Http client builder
    */
   public static NettyNioAsyncHttpClient.Builder createAsyncHttpClientBuilder(Configuration conf) {
     final ConnectionSettings conn = createConnectionSettings(conf);
@@ -165,8 +176,7 @@ public final class AWSClientConfig {
             .readTimeout(conn.getSocketTimeout())
             .tcpKeepAlive(conn.isKeepAlive())
             .useIdleConnectionReaper(true)  // true by default in the SDK
-            .writeTimeout(conn.getSocketTimeout())
-        ;
+            .writeTimeout(conn.getSocketTimeout());
 
     // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
@@ -257,7 +267,9 @@ public final class AWSClientConfig {
 
   /**
    * Configures the proxy for the async http client.
-   *
+   * <p>
+   * Although this is netty specific, it is part of the AWS SDK public API
+   * and not any shaded netty internal class.
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return Proxy configuration
@@ -363,6 +375,13 @@ public final class AWSClientConfig {
     clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
   }
 
+  /**
+   * Initializes the signer override for the given service.
+   * @param conf hadoop configuration
+   * @param clientConfig client configuration to update
+   * @param awsServiceIdentifier service name
+   * @throws IOException failure.
+   */
   private static void initSigner(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier)
       throws IOException {
@@ -388,16 +407,17 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures request timeout.
+   * Configures request timeout in the client configuration.
+   * This is independent of the timeouts set in the sync and async HTTP clients;
+   * the same method
    *
    * @param conf Hadoop configuration
    * @param clientConfig AWS SDK configuration to update
    */
   private static void initRequestTimeout(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
-    // recalculate all the connection settings, even though only the API
-    // timeouts are being used
-    final ConnectionSettings conn = createConnectionSettings(conf);
+    // Get the connection settings
+    final ConnectionSettings conn = createApiConnectionSettings(conf);
     final Duration callTimeout = conn.getApiCallTimeout();
 
     if (callTimeout.toMillis() > 0) {
@@ -414,7 +434,7 @@ public final class AWSClientConfig {
    * called {@link #setMinimumOperationDuration(Duration)}.
    */
   public static void resetMinimumOperationDuration() {
-    setMinimumOperationDuration(MINIMUM_OPERATION_DURATION);
+    setMinimumOperationDuration(MINIMUM_NETWORK_OPERATION_DURATION);
   }
 
   /**
@@ -435,12 +455,20 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Get the current minimum operation duration.
+   * @return current duration.
+   */
+  public static Duration getMinimumOperationDuration() {
+    return minimumOperationDuration;
+  }
+
+  /**
    * All the connection settings, wrapped as a class for use by
-   * both the sync and async clients.
+   * both the sync and async clients, and connection client builder.
    */
   static class ConnectionSettings {
     private final int maxConnections;
-    public final boolean keepAlive;
+    private final boolean keepAlive;
     private final Duration acquisitionTimeout;
     private final Duration apiCallTimeout;
     private final Duration connectionTTL;
@@ -498,41 +526,31 @@ public final class AWSClientConfig {
     Duration getSocketTimeout() {
       return socketTimeout;
     }
+
+    @Override
+    public String toString() {
+      return "ConnectionSettings{" +
+          "maxConnections=" + maxConnections +
+          ", keepAlive=" + keepAlive +
+          ", acquisitionTimeout=" + acquisitionTimeout +
+          ", apiCallTimeout=" + apiCallTimeout +
+          ", connectionTTL=" + connectionTTL +
+          ", establishTimeout=" + establishTimeout +
+          ", maxIdleTime=" + maxIdleTime +
+          ", socketTimeout=" + socketTimeout +
+          '}';
+    }
   }
 
+
   /**
-   * Build a connection settings object from the configuration.
+   * Build a connection settings object with only the settings used
+   * for the ClientConfig only.
+   * All other fields are null and MUST NOT be used.
    * @param conf configuration to evaluate
    * @return connection settings.
    */
-  static ConnectionSettings createConnectionSettings(Configuration conf) {
-
-    int maxConnections = S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1);
-
-    Duration establishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS,
-        minimumOperationDuration);
-
-    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS,
-        minimumOperationDuration);
-
-    // set the connection TTL irrespective of whether the connection is in use or not.
-    // this can balance requests over different S3 servers, and avoid failed
-    // connections. See HADOOP-18845.
-    Duration connectionTTL = getDuration(conf, CONNECTION_TTL,
-        DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS,
-        null);
-
-    // time to acquire a connection from the pool
-    Duration acquisitionTimeout = getDuration(conf, CONNECTION_ACQUISITION_TIMEOUT,
-        DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, TimeUnit.MILLISECONDS,
-        minimumOperationDuration);
-
-    // limit on the time a connection can be idle in the pool
-    Duration maxIdleTime = getDuration(conf, CONNECTION_IDLE_TIME,
-        DEFAULT_CONNECTION_IDLE_TIME, TimeUnit.MILLISECONDS, Duration.ZERO);
+  static ConnectionSettings createApiConnectionSettings(Configuration conf) {
 
     Duration apiCallTimeout = getDuration(conf, REQUEST_TIMEOUT,
         DEFAULT_REQUEST_TIMEOUT, TimeUnit.MILLISECONDS, Duration.ZERO);
@@ -542,9 +560,56 @@ public final class AWSClientConfig {
       apiCallTimeout = enforceMinimumDuration(REQUEST_TIMEOUT,
           apiCallTimeout, minimumOperationDuration);
     }
+    return new ConnectionSettings(
+        0,
+        false,
+        apiCallTimeout,
+        null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  /**
+   * Build the HTTP connection settings object from the configuration.
+   * All settings are calculated, including the api call timeout.
+   * @param conf configuration to evaluate
+   * @return connection settings.
+   */
+  static ConnectionSettings createConnectionSettings(Configuration conf) {
+
+    int maxConnections = S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
+        DEFAULT_MAXIMUM_CONNECTIONS, 1);
 
     final boolean keepAlive = conf.getBoolean(CONNECTION_KEEPALIVE,
         DEFAULT_CONNECTION_KEEPALIVE);
+
+    Duration apiCallTimeout = createApiConnectionSettings(conf).getApiCallTimeout();
+
+    // time to acquire a connection from the pool
+    Duration acquisitionTimeout = getDuration(conf, CONNECTION_ACQUISITION_TIMEOUT,
+        DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, TimeUnit.MILLISECONDS,
+        minimumOperationDuration);
+
+    // set the connection TTL irrespective of whether the connection is in use or not.
+    // this can balance requests over different S3 servers, and avoid failed
+    // connections. See HADOOP-18845.
+    Duration connectionTTL = getDuration(conf, CONNECTION_TTL,
+        DEFAULT_CONNECTION_TTL, TimeUnit.MILLISECONDS,
+        null);
+
+    Duration establishTimeout = getDuration(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, TimeUnit.MILLISECONDS,
+        minimumOperationDuration);
+
+    // limit on the time a connection can be idle in the pool
+    Duration maxIdleTime = getDuration(conf, CONNECTION_IDLE_TIME,
+        DEFAULT_CONNECTION_IDLE_TIME, TimeUnit.MILLISECONDS, Duration.ZERO);
+
+    Duration socketTimeout = getDuration(conf, SOCKET_TIMEOUT,
+        DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS,
+        minimumOperationDuration);
 
     return new ConnectionSettings(
         maxConnections,

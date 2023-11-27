@@ -161,9 +161,10 @@ public final class Constants {
   public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
 
   /**
-   * Default value for {@code CONNECTION_TTL}: {@value}.
+   * Default value in millis for {@code CONNECTION_TTL}: {@value}.
    */
-  public static final long DEFAULT_CONNECTION_TTL = 5 * 60_000;
+  public static final long DEFAULT_CONNECTION_TTL =
+      Duration.ofMinutes(5).toMillis();
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -266,15 +267,23 @@ public final class Constants {
       true;
 
   /**
+   * This is the minimum operation duration unless programmatically set.
+   * It ensures that even if a configuration has mistaken a millisecond
+   * option for seconds, a viable duration will actually be used.
+   * Value: 15s.
+   */
+  public static final Duration MINIMUM_NETWORK_OPERATION_DURATION = Duration.ofSeconds(15);
+
+  /**
    * Milliseconds until a connection is established: {@value}.
    */
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
 
   /**
-   * Default establish timeout: {@value}.
+   * Default establish timeout in millis: {@value}.
    */
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 5_000;
+  public static final int DEFAULT_ESTABLISH_TIMEOUT = (int)Duration.ofSeconds(30).toMillis();
 
   /**
    * Milliseconds until we give up on a connection to s3: {@value}.
@@ -282,7 +291,7 @@ public final class Constants {
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
 
   /**
-   * Default socket timeout: {@value}.
+   * Default socket timeout in millis: {@value}.
    */
   public static final int DEFAULT_SOCKET_TIMEOUT = 200_000;
 
@@ -358,7 +367,7 @@ public final class Constants {
 
   // the maximum number of threads to allow in the pool used by TransferManager
   public static final String MAX_THREADS = "fs.s3a.threads.max";
-  public static final int DEFAULT_MAX_THREADS = 10;
+  public static final int DEFAULT_MAX_THREADS = 64;
 
   /**
    * The time an idle thread waits before terminating: {@value}.

@@ -186,7 +186,7 @@ public final class S3AUtils {
         return (EOFException)new EOFException(message).initCause(exception);
       }
       if (exception instanceof ApiCallTimeoutException
-       || exception instanceof ApiCallAttemptTimeoutException) {
+          || exception instanceof ApiCallAttemptTimeoutException) {
         // An API call to an AWS service timed out.
         // It's not clear why there are two; they are both remapped.
         return new AWSApiCallTimeoutException(message, exception);

@@ -39,7 +39,7 @@ public final class ConfigurationHelper {
   private static final Logger LOG = LoggerFactory.getLogger(ConfigurationHelper.class);
 
   /** Log to warn of range issues on a timeout. */
-  private static final LogExactlyOnce TIMEOUT_WARN_LOG = new LogExactlyOnce(LOG);
+  private static final LogExactlyOnce DURATION_WARN_LOG = new LogExactlyOnce(LOG);
 
   private ConfigurationHelper() {
   }
@@ -91,7 +91,7 @@ public final class ConfigurationHelper {
         defVal, defaultUnit, TimeUnit.MILLISECONDS);
 
     if (timeMillis > Integer.MAX_VALUE) {
-      TIMEOUT_WARN_LOG.warn("Option {} is too high({} ms). Setting to {} ms instead",
+      DURATION_WARN_LOG.warn("Option {} is too high({} ms). Setting to {} ms instead",
           name, timeMillis, Integer.MAX_VALUE);
       LOG.debug("Option {} is too high({} ms). Setting to {} ms instead",
           name, timeMillis, Integer.MAX_VALUE);
@@ -142,10 +142,10 @@ public final class ConfigurationHelper {
       final String name,
       final Duration duration, @Nullable final Duration minimumDuration) {
     if (minimumDuration != null && duration.compareTo(minimumDuration) < 0) {
-      TIMEOUT_WARN_LOG.warn("Option {} is too low({} ms). Setting to {} ms instead",
+      String message = String.format("Option %s is too low (%,d ms). Setting to %,d ms instead",
           name, duration.toMillis(), minimumDuration.toMillis());
-      LOG.debug("Option {} is too low({} ms). Setting to {} ms instead",
-          name, duration.toMillis(), minimumDuration.toMillis());
+      DURATION_WARN_LOG.warn(message);
+      LOG.debug(message);
       return minimumDuration;
     }
     return duration;

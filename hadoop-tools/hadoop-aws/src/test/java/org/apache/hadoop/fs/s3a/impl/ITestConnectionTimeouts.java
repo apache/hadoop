@@ -126,16 +126,12 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
           streams.add(in);
           // kick off the read so forcing a GET.
           in.read();
-
         }
       });
     } finally {
-       streams.forEach(s -> {
-         IOUtils.cleanupWithLogger(LOG, s);
-       });
-
+      streams.forEach(s -> {
+        IOUtils.cleanupWithLogger(LOG, s);
+      });
     }
-
-
   }
 }
