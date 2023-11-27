@@ -236,7 +236,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public void setRequestProperty(final String key, final String value) {
-    setHeader(key, value);
+    StringBuilder stringBuilder = new StringBuilder(value);
+    if (X_MS_CLIENT_REQUEST_ID.equals(key)) {
+      try {
+        ConnInfo connInfo = connInfoStack.pop();
+        stringBuilder.append("_").append(
+            connInfo.operationType).append("_").append(connInfo.connTime);
+      } catch (EmptyStackException ignored) {}
+    }
+    setHeader(key, stringBuilder.toString());
   }
 
   @Override
@@ -306,18 +314,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         }
       }
       translateHeaders(httpRequestBase, requestHeaders);
-      try {
-        ConnInfo connInfo = connInfoStack.pop();
-        if (httpRequestBase.containsHeader(X_MS_CLIENT_REQUEST_ID)) {
-          StringBuilder stringBuilder = new StringBuilder("_").append(
-              connInfo.operationType).append("_").append(connInfo.connTime);
-          httpRequestBase.setHeader(X_MS_CLIENT_REQUEST_ID,
-              httpRequestBase.getFirstHeader(X_MS_CLIENT_REQUEST_ID).getValue()
-                  + stringBuilder.toString());
-        }
-      } catch (EmptyStackException ex) {
-
-      }
       this.httpRequestBase = httpRequestBase;
     } catch (Exception e) {
       throw new IOException(e);
