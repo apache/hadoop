@@ -344,14 +344,14 @@ public final class Constants {
       "fs.s3a.connection.request.timeout";
 
   /**
-   * Default duration of a request before it is timed out: {@value}.
+   * Default duration of a request before it is timed out: Zero.
    */
   public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ZERO;
 
   /**
-   * Default duration of a request before it is timed out: {@value}.
+   * Default duration of a request before it is timed out: Zero.
+   * @deprecated use {@link #DEFAULT_REQUEST_TIMEOUT_DURATION}
    */
-  @Deprecated
   public static final int DEFAULT_REQUEST_TIMEOUT =
       (int)DEFAULT_REQUEST_TIMEOUT_DURATION.toMillis();
 
