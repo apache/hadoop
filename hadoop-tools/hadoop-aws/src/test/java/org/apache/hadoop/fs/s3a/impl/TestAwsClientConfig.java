@@ -34,7 +34,7 @@ import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_ACQUISITION_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL_DURATION;
@@ -87,7 +87,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
         .describedAs("10s")
         .isEqualTo(s10);
 
-    // and a null check
+    // and a null checkNo it's kind of like get out the wayI am
     Assertions.assertThat(enforceMinimumDuration("key",
            s1, null))
         .describedAs("10s")
@@ -101,7 +101,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   @Test
   public void testLoadUnsetValues() {
     final AWSClientConfig.ConnectionSettings conn = createConnectionSettings(conf());
-    assertDuration(CONNECTION_ACQUISITION_TIMEOUT, DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
+    assertDuration(CONNECTION_ACQUISITION_TIMEOUT, DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION,
         conn.getAcquisitionTimeout());
     assertDuration(CONNECTION_TTL, DEFAULT_CONNECTION_TTL_DURATION,
         conn.getConnectionTTL());

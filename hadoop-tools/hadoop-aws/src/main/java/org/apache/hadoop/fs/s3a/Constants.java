@@ -338,7 +338,7 @@ public final class Constants {
   public static final int DEFAULT_SOCKET_TIMEOUT = (int)DEFAULT_SOCKET_TIMEOUT_DURATION.toMillis();
 
   /**
-   * Milliseconds until a request is timed-out: {@value}.
+   * Time until a request is timed-out: {@value}.
    * If zero, there is no timeout.
    */
   public static final String REQUEST_TIMEOUT =
@@ -347,7 +347,14 @@ public final class Constants {
   /**
    * Default duration of a request before it is timed out: {@value}.
    */
-  public static final int DEFAULT_REQUEST_TIMEOUT = 0;
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ZERO;
+
+  /**
+   * Default duration of a request before it is timed out: {@value}.
+   */
+  @Deprecated
+  public static final int DEFAULT_REQUEST_TIMEOUT =
+      (int)DEFAULT_REQUEST_TIMEOUT_DURATION.toMillis();
 
   /**
    * Acquisition timeout for connections from the pool:
@@ -360,7 +367,7 @@ public final class Constants {
   /**
    * Default acquisition timeout: 60 seconds.
    */
-  public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT =
+  public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION =
       Duration.ofSeconds(60);
 
   /**

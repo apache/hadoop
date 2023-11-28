@@ -54,7 +54,7 @@ public final class ConfigurationHelper {
    * @param conf config
    * @param name option name
    * @param defaultDuration default duration
-   * @param defaultUnit unit of default value
+   * @param defaultUnit default unit on the config option if not declared.
    * @param minimumDuration optional minimum duration;
    * @return duration. may be negative.
    */
@@ -64,31 +64,8 @@ public final class ConfigurationHelper {
       final Duration defaultDuration,
       final TimeUnit defaultUnit,
       @Nullable final Duration minimumDuration) {
-    return getDuration(conf, name, defaultDuration.toMillis(), defaultUnit, minimumDuration);
-  }
-
-  /**
-   * Get duration. This may be negative; callers must check or set a minimum of zero.
-   * If the config option is greater than {@code Integer.MAX_VALUE} milliseconds,
-   * it is set to that max.
-   * If {@code minimumDuration} is set, and the value is less than that, then
-   * the minimum is used.
-   * Logs the value for diagnostics.
-   * @param conf config
-   * @param name option name
-   * @param defVal default duration in the default unit
-   * @param defaultUnit unit of default value
-   * @param minimumDuration optional minimum duration;
-   * @return duration. may be negative.
-   */
-  public static Duration getDuration(
-      final Configuration conf,
-      final String name,
-      final long defVal,
-      final TimeUnit defaultUnit,
-      @Nullable final Duration minimumDuration) {
     long timeMillis = conf.getTimeDuration(name,
-        defVal, defaultUnit, TimeUnit.MILLISECONDS);
+        defaultDuration.toMillis(), defaultUnit, TimeUnit.MILLISECONDS);
 
     if (timeMillis > Integer.MAX_VALUE) {
       DURATION_WARN_LOG.warn("Option {} is too high({} ms). Setting to {} ms instead",
@@ -140,7 +117,9 @@ public final class ConfigurationHelper {
    */
   public static Duration enforceMinimumDuration(
       final String name,
-      final Duration duration, @Nullable final Duration minimumDuration) {
+      final Duration duration,
+      @Nullable final Duration minimumDuration) {
+
     if (minimumDuration != null && duration.compareTo(minimumDuration) < 0) {
       String message = String.format("Option %s is too low (%,d ms). Setting to %,d ms instead",
           name, duration.toMillis(), minimumDuration.toMillis());
