@@ -417,8 +417,7 @@ public final class AWSClientConfig {
   private static void initRequestTimeout(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
     // Get the connection settings
-    final ConnectionSettings conn = createApiConnectionSettings(conf);
-    final Duration callTimeout = conn.getApiCallTimeout();
+    final Duration callTimeout = createApiConnectionSettings(conf).getApiCallTimeout();
 
     if (callTimeout.toMillis() > 0) {
       clientConfig.apiCallAttemptTimeout(callTimeout);
@@ -428,11 +427,12 @@ public final class AWSClientConfig {
 
   /**
    * Reset the minimum operation duration to the default.
-   * Logs at INFO.
+   * For test use only; Logs at INFO.
    * <p>
    * This MUST be called in test teardown in any test suite which
    * called {@link #setMinimumOperationDuration(Duration)}.
    */
+  @VisibleForTesting
   public static void resetMinimumOperationDuration() {
     setMinimumOperationDuration(MINIMUM_NETWORK_OPERATION_DURATION);
   }
@@ -463,23 +463,43 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Settings for the AWS client, rather than the http client.
+   */
+  static class ClientSettings {
+    private final Duration apiCallTimeout;
+
+    private ClientSettings(final Duration apiCallTimeout) {
+      this.apiCallTimeout = apiCallTimeout;
+    }
+
+    Duration getApiCallTimeout() {
+      return apiCallTimeout;
+    }
+
+    @Override
+    public String toString() {
+      return "ClientSettings{" +
+          "apiCallTimeout=" + apiCallTimeout +
+          '}';
+    }
+  }
+
+  /**
    * All the connection settings, wrapped as a class for use by
-   * both the sync and async clients, and connection client builder.
+   * both the sync and async client.
    */
   static class ConnectionSettings {
     private final int maxConnections;
     private final boolean keepAlive;
     private final Duration acquisitionTimeout;
-    private final Duration apiCallTimeout;
     private final Duration connectionTTL;
     private final Duration establishTimeout;
     private final Duration maxIdleTime;
     private final Duration socketTimeout;
 
-    ConnectionSettings(
+    private ConnectionSettings(
         final int maxConnections,
         final boolean keepAlive,
-        final Duration apiCallTimeout,
         final Duration acquisitionTimeout,
         final Duration connectionTTL,
         final Duration establishTimeout,
@@ -488,7 +508,6 @@ public final class AWSClientConfig {
       this.maxConnections = maxConnections;
       this.keepAlive = keepAlive;
       this.acquisitionTimeout = acquisitionTimeout;
-      this.apiCallTimeout = apiCallTimeout;
       this.connectionTTL = connectionTTL;
       this.establishTimeout = establishTimeout;
       this.maxIdleTime = maxIdleTime;
@@ -505,10 +524,6 @@ public final class AWSClientConfig {
 
     Duration getAcquisitionTimeout() {
       return acquisitionTimeout;
-    }
-
-    Duration getApiCallTimeout() {
-      return apiCallTimeout;
     }
 
     Duration getConnectionTTL() {
@@ -533,7 +548,6 @@ public final class AWSClientConfig {
           "maxConnections=" + maxConnections +
           ", keepAlive=" + keepAlive +
           ", acquisitionTimeout=" + acquisitionTimeout +
-          ", apiCallTimeout=" + apiCallTimeout +
           ", connectionTTL=" + connectionTTL +
           ", establishTimeout=" + establishTimeout +
           ", maxIdleTime=" + maxIdleTime +
@@ -542,15 +556,12 @@ public final class AWSClientConfig {
     }
   }
 
-
   /**
-   * Build a connection settings object with only the settings used
-   * for the ClientConfig only.
-   * All other fields are null and MUST NOT be used.
+   * Build a client settings object.
    * @param conf configuration to evaluate
    * @return connection settings.
    */
-  static ConnectionSettings createApiConnectionSettings(Configuration conf) {
+  static ClientSettings createApiConnectionSettings(Configuration conf) {
 
     Duration apiCallTimeout = getDuration(conf, REQUEST_TIMEOUT,
         DEFAULT_REQUEST_TIMEOUT_DURATION, TimeUnit.MILLISECONDS, Duration.ZERO);
@@ -560,15 +571,7 @@ public final class AWSClientConfig {
       apiCallTimeout = enforceMinimumDuration(REQUEST_TIMEOUT,
           apiCallTimeout, minimumOperationDuration);
     }
-    return new ConnectionSettings(
-        0,
-        false,
-        apiCallTimeout,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return new ClientSettings(apiCallTimeout);
   }
 
   /**
@@ -584,8 +587,6 @@ public final class AWSClientConfig {
 
     final boolean keepAlive = conf.getBoolean(CONNECTION_KEEPALIVE,
         DEFAULT_CONNECTION_KEEPALIVE);
-
-    Duration apiCallTimeout = createApiConnectionSettings(conf).getApiCallTimeout();
 
     // time to acquire a connection from the pool
     Duration acquisitionTimeout = getDuration(conf, CONNECTION_ACQUISITION_TIMEOUT,
@@ -614,7 +615,6 @@ public final class AWSClientConfig {
     return new ConnectionSettings(
         maxConnections,
         keepAlive,
-        apiCallTimeout,
         acquisitionTimeout,
         connectionTTL,
         establishTimeout,

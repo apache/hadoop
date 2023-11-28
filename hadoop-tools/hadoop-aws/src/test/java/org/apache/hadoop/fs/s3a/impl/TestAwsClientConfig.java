@@ -87,7 +87,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
         .describedAs("10s")
         .isEqualTo(s10);
 
-    // and a null checkNo it's kind of like get out the wayI am
+    // and a null check
     Assertions.assertThat(enforceMinimumDuration("key",
            s1, null))
         .describedAs("10s")
@@ -163,17 +163,16 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   }
 
   /**
-   * Test that {@link AWSClientConfig#createApiConnectionSettings(Configuration)}
-   * loads the subset of options needed for setting up the client config builder.
+   * Test {@link AWSClientConfig#createApiConnectionSettings(Configuration)}.
    */
   @Test
   public void testCreateApiConnectionSettings() {
     final Configuration conf = conf();
     conf.set(REQUEST_TIMEOUT, "1h");
-    final AWSClientConfig.ConnectionSettings conn =
+    final AWSClientConfig.ClientSettings settings =
         createApiConnectionSettings(conf);
-    Assertions.assertThat(conn.getApiCallTimeout())
-        .describedAs("%s in %s", REQUEST_TIMEOUT, conn)
+    Assertions.assertThat(settings.getApiCallTimeout())
+        .describedAs("%s in %s", REQUEST_TIMEOUT, settings)
         .isEqualTo(Duration.ofHours(1));
   }
 

@@ -199,8 +199,10 @@ Fix: Use one of the dedicated [S3A Committers](committers.md).
 ### <a name="pooling"></a> Thread and connection pool settings.
 
 Each S3A client interacting with a single bucket, as a single user, has its
-own dedicated pool of open HTTP 1.1 connections alongside a pool of threads used
-for upload and copy operations.
+own dedicated pool of open HTTP connections alongside a pool of threads used
+for background/parallel operations in addition to the worker threads of the
+actual application.
+
 The default pool sizes are intended to strike a balance between performance
 and memory/thread use.
 
@@ -209,12 +211,12 @@ for parallel IO (especially uploads, prefetching and vector reads) by setting th
 properties. Note: S3A Connectors have their own thread pools for job commit, but
 everything uses the same HTTP connection pool.
 
-| Property                       | Default | Meaning                                  |
-|--------------------------------|---------|------------------------------------------|
-| `fs.s3a.threads.max`           | `96`    | Threads in the thread pool               |
-| `fs.s3a.threads.keepalivetime` | `60s`   | Threads in the thread pool               |
-| `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation |
-| `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued          |
+| Property                       | Default | Meaning                                                          |
+|--------------------------------|---------|------------------------------------------------------------------|
+| `fs.s3a.threads.max`           | `96`    | Threads in the thread pool                                       |
+| `fs.s3a.threads.keepalivetime` | `60s`   | Expiry time for idle threads in the thread pool                  |
+| `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation                         |
+| `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued excluding prefetching operations |
 
 
 Network timeout options can be tuned to make the client fail faster *or* retry more.
@@ -223,10 +225,6 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 
 | Property                                | Default | V2  | Meaning                                               |
 |-----------------------------------------|---------|:----|-------------------------------------------------------|
-| `fs.s3a.threads.max`                    | `96`    |     | Threads in the thread pool                            |
-| `fs.s3a.threads.keepalivetime`          | `60s`   |     | Threads in the thread pool                            |
-| `fs.s3a.executor.capacity`              | `16`    |     | Maximum threads for any single operation              |
-| `fs.s3a.max.total.tasks`                | `16`    |     | Maximum threads for any single operation              |
 | `fs.s3a.connection.maximum`             | `200`   |     | Connection pool size                                  |
 | `fs.s3a.connection.keepalive`           | `false` | `*` | Use TCP keepalive on open channels                    |
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |

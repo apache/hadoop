@@ -175,6 +175,11 @@ public final class S3AUtils {
         exception);
 
     // timeout issues
+    // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+    // ApiCallTimeoutException: a request with any configured retries failed.
+    // The ApiCallTimeoutException exception should be the only one seen in
+    // the S3A code, but for due diligence both are handled and mapped to
+    // our own AWSApiCallTimeoutException.
     if (exception instanceof ApiCallTimeoutException
         || exception instanceof ApiCallAttemptTimeoutException) {
       // An API call to an AWS service timed out.
@@ -184,7 +189,7 @@ public final class S3AUtils {
       return new AWSApiCallTimeoutException(message, exception);
     }
     if (!(exception instanceof AwsServiceException)) {
-      // exceptions raised client-side: connectivity, auth, network problems...p
+      // exceptions raised client-side: connectivity, auth, network problems...
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class

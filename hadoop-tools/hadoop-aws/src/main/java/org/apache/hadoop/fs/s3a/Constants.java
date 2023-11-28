@@ -170,20 +170,19 @@ public final class Constants {
 
   /**
    * Default value for {@link #MAXIMUM_CONNECTIONS}: {@value}.
-   * Note this value gets increased over time as more connections are used
-   * in parallel operations.
+   * Future releases are likely to increase this value.
    * Keep in sync with the value in {@code core-default.xml}
    */
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
 
   /**
    * Configuration option to configure expiration time of
-   * s3 http connection from the connection pool in milliseconds: {@value}.
+   * S3 http connection from the connection pool: {@value}.
    */
   public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
 
   /**
-   * Default value in millis for {@link #CONNECTION_TTL}: 5 minutes.
+   * Default duration for {@link #CONNECTION_TTL}: 5 minutes.
    */
   public static final Duration DEFAULT_CONNECTION_TTL_DURATION =
       Duration.ofMinutes(5);
