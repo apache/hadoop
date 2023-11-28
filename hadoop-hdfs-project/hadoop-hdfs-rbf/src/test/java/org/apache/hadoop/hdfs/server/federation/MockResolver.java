@@ -417,4 +417,9 @@ public class MockResolver
     }
     return defaultNamespace;
   }
+
+  @Override
+  public Set<String> getAllNamespaces() {
+    return null;
+  }
 }
