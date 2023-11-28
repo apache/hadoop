@@ -247,7 +247,6 @@ public class TestRouterTrash {
     assertTrue(addMountTable(addEntry1));
     assertTrue(addMountTable(addEntry2));
 
-    // current user client
     DFSClient client = nnContext.getClient();
     client.setOwner("/", TEST_USER, TEST_USER);
 
@@ -257,36 +256,35 @@ public class TestRouterTrash {
 
     UserGroupInformation ugi = UserGroupInformation.
         createRemoteUser(TEST_USER);
-    // test user client
+
     client = nnContext.getClient(ugi);
     client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
     client.create(FILE, true);
 
     client1 = nnContext1.getClient(ugi);
-    client1.mkdirs("/user", new FsPermission("777"), true);
     client1.mkdirs(MOUNT_POINT1, new FsPermission("777"), true);
     client1.create(FILE1, true);
     client1.mkdirs(MOUNT_POINT2, new FsPermission("777"), true);
 
-    // move to Trash
+    //Move two different nameservice file to trash.
     Configuration routerConf = routerContext.getConf();
     FileSystem fs =
         DFSTestUtil.getFileSystemAs(ugi, routerConf);
 
-    Trash trash = new Trash(fs , routerConf);
+    Trash trash = new Trash(fs, routerConf);
     assertTrue(trash.moveToTrash(new Path(FILE)));
     assertTrue(trash.moveToTrash(new Path(FILE1)));
 
 
-    //Client user see gloabl trash view， wo should see all three mount point
+    //Client user see global trash view， wo should see all three mount point.
     FileStatus[] fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/"));
     assertEquals(3, fileStatuses.length);
 
-    //This should return fileStatuses rather than Not found Exception
-    fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/"+MOUNT_POINT2));
+    //This should return empty fileStatuses rather than NotFound Exception.
+    fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/" + MOUNT_POINT2));
     assertEquals(0, fileStatuses.length);
 
-    client1.delete("/user",true);
+    client1.delete("/user", true);
   }
 
   @Test
