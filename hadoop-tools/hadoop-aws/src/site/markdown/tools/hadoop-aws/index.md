@@ -703,11 +703,11 @@ to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
 and various minor options.
 
-Here are the S3A properties for use in production; 
+Here are some the S3A properties for use in production.
 
 * See [Performance](./performance.html) for performance related settings including
   thread and network pool options.
-* some testing-related options are covered in [Testing](./testing.md).
+* Testing-related options are covered in [Testing](./testing.md).
 
 
 ```xml
@@ -2194,7 +2194,7 @@ age. Documented in the [S3Guard](./s3guard.html) section.
 If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
 If an S3A committer job is halted partway through, again, there may be
-many incomplete multipart uploads in the output directory. 
+many incomplete multipart uploads in the output directory.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
 and setting a purge time in seconds, such as 24 hours.

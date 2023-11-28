@@ -432,7 +432,8 @@ public final class Constants {
    * Default value of {@link #KEEPALIVE_TIME}: 60s.
    * @deprecated use {@link #DEFAULT_KEEPALIVE_TIME_DURATION}
    */
-  public static final int DEFAULT_KEEPALIVE_TIME = (int)DEFAULT_KEEPALIVE_TIME_DURATION.getSeconds();
+  public static final int DEFAULT_KEEPALIVE_TIME =
+      (int)DEFAULT_KEEPALIVE_TIME_DURATION.getSeconds();
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
