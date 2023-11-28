@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.ConnectTimeoutException;
 
@@ -58,16 +59,23 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * pools.
  * This test has proven a bit brittle to parallel test runs, so test cases should
  * create their own FS instances.
+ * The likely cause is actually -Dprefetch test runs as these return connections to
+ * the pool.
+ * However, it is also important to have a non-brittle FS for creating the test file
+ * and teardow, again, this makes for a flaky test..
  */
 public class ITestConnectionTimeouts extends AbstractS3ATestBase {
-
 
   /**
    * How big a file to create?
    */
   public static final int FILE_SIZE = 1024;
 
-
+  /**
+   * Create a configuration for an FS which has timeouts set to very low values
+   * and no retries.
+   * @return a configuration to use for the brittle FS.
+   */
   private Configuration timingOutConfiguration() {
     Configuration conf = new Configuration(getConfiguration());
     removeBaseAndBucketOverrides(conf,
@@ -94,7 +102,6 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
     final Duration ms10 = Duration.ofMillis(10);
     setDurationAsMillis(conf, CONNECTION_ACQUISITION_TIMEOUT, ms10);
     setDurationAsMillis(conf, ESTABLISH_TIMEOUT, ms10);
-
     return conf;
   }
 
@@ -115,13 +122,15 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
     Path path = methodPath();
     int streamsToCreate = 100;
     List<FSDataInputStream> streams = new ArrayList<>(streamsToCreate);
-    getFileSystem();
-    try (FileSystem fs = FileSystem.newInstance(getFileSystem().getUri(), conf)) {
-      ContractTestUtils.createFile(fs, path, true, data);
-      final FileStatus st = fs.getFileStatus(path);
+    final S3AFileSystem fs = getFileSystem();
+    // create the test file using the good fs, to avoid connection timeouts
+    // during setup.
+    ContractTestUtils.createFile(fs, path, true, data);
+    final FileStatus st = fs.getFileStatus(path);
+    try (FileSystem brittleFS = FileSystem.newInstance(fs.getUri(), conf)) {
       intercept(ConnectTimeoutException.class, () -> {
         for (int i = 0; i < streamsToCreate; i++) {
-          FutureDataInputStreamBuilder b = fs.openFile(path);
+          FutureDataInputStreamBuilder b = brittleFS.openFile(path);
           b.withFileStatus(st);
           b.opt(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE);
 

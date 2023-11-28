@@ -173,9 +173,18 @@ public final class S3AUtils {
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
-    if (!(exception instanceof AwsServiceException)) {
-      // exceptions raised client-side: connectivity, auth, network problems...
 
+    // timeout issues
+    if (exception instanceof ApiCallTimeoutException
+        || exception instanceof ApiCallAttemptTimeoutException) {
+      // An API call to an AWS service timed out.
+      // This is a subclass of ConnectTimeoutException so
+      // all retry logic for that exception is handled without
+      // having to look down the stack for a
+      return new AWSApiCallTimeoutException(message, exception);
+    }
+    if (!(exception instanceof AwsServiceException)) {
+      // exceptions raised client-side: connectivity, auth, network problems...p
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -184,12 +193,6 @@ public final class S3AUtils {
       if (isMessageTranslatableToEOF(exception)) {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
-      }
-      if (exception instanceof ApiCallTimeoutException
-          || exception instanceof ApiCallAttemptTimeoutException) {
-        // An API call to an AWS service timed out.
-        // It's not clear why there are two; they are both remapped.
-        return new AWSApiCallTimeoutException(message, exception);
       }
       // if the exception came from the auditor, hand off translation
       // to it.
