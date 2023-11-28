@@ -1607,4 +1607,21 @@ public final class Constants {
    */
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
+  /**
+   * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
+   * going to be loaded from the same classloader that loaded
+   * the {@link S3AFileSystem}?
+   * It is useful to turn classloader isolation off for Apache Spark applications
+   * that might load {@link S3AFileSystem} from the Spark distribution (Launcher classloader)
+   * while users might want to provide custom extensions (loaded by Spark MutableClassloader).
+   * Value: {@value}.
+   */
+  public static final String AWS_S3_CLASSLOADER_ISOLATION =
+            "fs.s3a.classloader.isolation";
+
+  /**
+   * Default value for {@link #AWS_S3_CLASSLOADER_ISOLATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
 }

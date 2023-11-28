@@ -559,8 +559,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // fix up the classloader of the configuration to be whatever
       // classloader loaded this filesystem.
-      // See: HADOOP-17372
-      conf.setClassLoader(this.getClass().getClassLoader());
+      // See: HADOOP-17372 and follow-up on HADOOP-18993
+      S3AUtils.maybeIsolateClassloader(conf, this.getClass().getClassLoader());
 
       // patch the Hadoop security providers
       patchSecurityCredentialProviders(conf);
