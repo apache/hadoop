@@ -253,7 +253,6 @@ public class TestRouterTrash {
     DFSClient client1 = nnContext1.getClient();
     client1.setOwner("/", TEST_USER, TEST_USER);
 
-
     UserGroupInformation ugi = UserGroupInformation.
         createRemoteUser(TEST_USER);
 
@@ -266,7 +265,7 @@ public class TestRouterTrash {
     client1.create(FILE1, true);
     client1.mkdirs(MOUNT_POINT2, new FsPermission("777"), true);
 
-    //Move two different nameservice file to trash.
+    // Move two different nameservice file to trash.
     Configuration routerConf = routerContext.getConf();
     FileSystem fs =
         DFSTestUtil.getFileSystemAs(ugi, routerConf);
@@ -275,12 +274,11 @@ public class TestRouterTrash {
     assertTrue(trash.moveToTrash(new Path(FILE)));
     assertTrue(trash.moveToTrash(new Path(FILE1)));
 
-
-    //Client user see global trash view， wo should see all three mount point.
+    // Client user see global trash view， wo should see all three mount point.
     FileStatus[] fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/"));
     assertEquals(3, fileStatuses.length);
 
-    //This should return empty fileStatuses rather than NotFound Exception.
+    // This should return empty fileStatuses rather than NotFound Exception.
     fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/" + MOUNT_POINT2));
     assertEquals(0, fileStatuses.length);
 
