@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -169,9 +171,23 @@ public final class S3AUtils {
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
+    // timeout issues
+    // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+    // ApiCallTimeoutException: a request with any configured retries failed.
+    // The ApiCallTimeoutException exception should be the only one seen in
+    // the S3A code, but for due diligence both are handled and mapped to
+    // our own AWSApiCallTimeoutException.
+    if (exception instanceof ApiCallTimeoutException
+        || exception instanceof ApiCallAttemptTimeoutException) {
+      // An API call to an AWS service timed out.
+      // This is a subclass of ConnectTimeoutException so
+      // all retry logic for that exception is handled without
+      // having to look down the stack for a
+      return new AWSApiCallTimeoutException(message, exception);
+    }
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
-
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -289,6 +305,11 @@ public final class S3AUtils {
       case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
       case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // gateway timeout
+      case SC_504_GATEWAY_TIMEOUT:
+        ioe = new AWSApiCallTimeoutException(message, ase);
         break;
 
       // internal error

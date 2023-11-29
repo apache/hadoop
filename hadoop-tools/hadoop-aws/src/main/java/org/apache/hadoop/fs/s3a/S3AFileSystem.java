@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -122,6 +123,7 @@ import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.s3a.impl.CreateFileBuilder;
@@ -821,8 +823,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     int totalTasks = intOption(conf,
         MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
-    long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
-        DEFAULT_KEEPALIVE_TIME, 0);
+    // keepalive time takes a time suffix; default unit is seconds
+    long keepAliveTime = ConfigurationHelper.getDuration(conf,
+            KEEPALIVE_TIME,
+            Duration.ofSeconds(DEFAULT_KEEPALIVE_TIME),
+            TimeUnit.SECONDS,
+            Duration.ZERO).getSeconds();
+
     int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
 
     int activeTasksForBoundedThreadPool = maxThreads;
@@ -1218,12 +1225,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void initMultipartUploads(Configuration conf) throws IOException {
     boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART,
         DEFAULT_PURGE_EXISTING_MULTIPART);
-    long purgeExistingMultipartAge = longOption(conf,
-        PURGE_EXISTING_MULTIPART_AGE, DEFAULT_PURGE_EXISTING_MULTIPART_AGE, 0);
 
     if (purgeExistingMultipart) {
       try {
-        abortOutstandingMultipartUploads(purgeExistingMultipartAge);
+        Duration purgeDuration = ConfigurationHelper.getDuration(conf,
+            PURGE_EXISTING_MULTIPART_AGE,
+            Duration.ofSeconds(DEFAULT_PURGE_EXISTING_MULTIPART_AGE),
+            TimeUnit.SECONDS,
+            Duration.ZERO);
+        abortOutstandingMultipartUploads(purgeDuration.getSeconds());
       } catch (AccessDeniedException e) {
         instrumentation.errorIgnored();
         LOG.debug("Failed to purge multipart uploads against {}," +

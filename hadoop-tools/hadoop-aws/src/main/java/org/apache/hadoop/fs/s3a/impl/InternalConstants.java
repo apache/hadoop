@@ -172,6 +172,9 @@ public final class InternalConstants {
   /** 503 status code: Service Unavailable. on AWS S3: throttle response. */
   public static final int SC_503_SERVICE_UNAVAILABLE = 503;
 
+  /** 504 Gateway Timeout. AWS SDK considers retryable. */
+  public static final int SC_504_GATEWAY_TIMEOUT = 504;
+
   /** Name of the log for throttling events. Value: {@value}. */
   public static final String THROTTLE_LOG_NAME =
       "org.apache.hadoop.fs.s3a.throttled";
