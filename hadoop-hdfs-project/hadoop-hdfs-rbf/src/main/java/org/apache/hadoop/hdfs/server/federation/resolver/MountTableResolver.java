@@ -24,6 +24,8 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDE
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.io.IOException;
@@ -46,6 +48,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 
@@ -90,6 +93,8 @@ public class MountTableResolver
   private final StateStoreService stateStore;
   /** Interface to the mount table store. */
   private MountTableStore mountTableStore;
+  /** Configuration for the RPC server. */
+  private Configuration conf;
 
   /** If the tree has been initialized. */
   private boolean init = false;
@@ -131,6 +136,7 @@ public class MountTableResolver
   public MountTableResolver(Configuration conf, Router routerService,
       StateStoreService store) {
     this.router = routerService;
+    this.conf = conf;
     if (store != null) {
       this.stateStore = store;
     } else if (this.router != null) {
@@ -370,6 +376,23 @@ public class MountTableResolver
   }
 
   /**
+   * Get trash current path.
+   *
+   * @param path A path.
+   * @return a path that matches TrashCurrent.
+   * @throws IOException
+   */
+  private static String getTrashCurrentPath(String path) throws IOException {
+    Pattern pattern = Pattern.compile(
+        "^" + getTrashRoot() + TRASH_PATTERN + "/");
+    Matcher matcher = pattern.matcher(path);
+    if (matcher.find()) {
+      return matcher.group(0).replaceAll("/$", "");
+    }
+    return null;
+  }
+
+  /**
    * Subtract a TrashCurrent to get a new path.
    *
    * @param path a path.
@@ -460,9 +483,13 @@ public class MountTableResolver
         this.getLocCacheAccess().increment();
       }
       if (isTrashPath(path)) {
+        boolean trashWithMP = conf.getBoolean(
+            DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT,
+            DFS_ROUTER_TRASH_PATH_CREATED_BY_MOUNT_POINT_DEFAULT);
         List<RemoteLocation> remoteLocations = new ArrayList<>();
         for (RemoteLocation remoteLocation : res.getDestinations()) {
-          remoteLocations.add(new RemoteLocation(remoteLocation, path));
+          remoteLocations.add(new RemoteLocation(remoteLocation,
+              trashWithMP ? path : getTrashCurrentPath(path) + remoteLocation.getDest()));
         }
         return new PathLocation(path, remoteLocations,
             res.getDestinationOrder());
