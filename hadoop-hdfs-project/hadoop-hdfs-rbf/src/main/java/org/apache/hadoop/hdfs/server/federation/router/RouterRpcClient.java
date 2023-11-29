@@ -1452,8 +1452,15 @@ public class RouterRpcClient {
    */
   private String getNameserviceForBlockPoolId(final String bpId)
       throws IOException {
+      String fixedBpId = bpId;
+      if (bpId.startsWith("BP-huawei")) {
+        int index = bpId.indexOf('|');
+        if (index != -1) {
+          fixedBpId = bpId.substring(0, index);
+        }
+      }
     List<? extends FederationNamenodeContext> namenodes =
-        getNamenodesForBlockPoolId(bpId);
+        getNamenodesForBlockPoolId(fixedBpId);
     FederationNamenodeContext namenode = namenodes.get(0);
     return namenode.getNameserviceId();
   }
