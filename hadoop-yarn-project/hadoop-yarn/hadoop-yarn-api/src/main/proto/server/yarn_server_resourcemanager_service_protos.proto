@@ -211,6 +211,13 @@ message DeleteFederationApplicationResponseProto {
   optional string message = 1;
 }
 
+message GetSubClustersRequestProto {
+}
+
+message GetSubClustersResponseProto {
+  repeated SubClustersProto subClusters = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

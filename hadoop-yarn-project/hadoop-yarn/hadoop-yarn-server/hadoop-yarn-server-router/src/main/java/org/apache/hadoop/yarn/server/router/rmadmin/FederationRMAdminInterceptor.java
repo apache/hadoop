@@ -74,6 +74,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
@@ -1138,6 +1140,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     throw new YarnException("Unable to deleteFederationApplication.");
+  }
+
+  @Override
+  public GetSubClustersResponse getSubClusters(GetSubClustersRequest request)
+       throws YarnException, IOException {
+    return null;
   }
 
   /**

@@ -66,6 +66,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -241,5 +243,11 @@ public class DefaultRMAdminRequestInterceptor
       DeleteFederationApplicationRequest request)
       throws YarnException, IOException {
     return rmAdminProxy.deleteFederationApplication(request);
+  }
+
+  @Override
+  public GetSubClustersResponse getSubClusters(
+      GetSubClustersRequest request) throws YarnException, IOException {
+    return null;
   }
 }
