@@ -71,6 +71,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_INTERNAL_PROXY_PORT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT;
 
 /**
  * Data node HTTP Server Class.
@@ -144,7 +146,9 @@ public class DatanodeHttpServer implements Closeable {
     confForCreate.set(FsPermission.UMASK_LABEL, "000");
 
     this.bossGroup = new NioEventLoopGroup();
-    this.workerGroup = new NioEventLoopGroup();
+    int workerThreads = conf.getInt(DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY,
+        DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT);
+    this.workerGroup = new NioEventLoopGroup(workerThreads);
     this.externalHttpChannel = externalHttpChannel;
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
     final ChannelHandler[] handlers = getFilterHandlers(conf);
