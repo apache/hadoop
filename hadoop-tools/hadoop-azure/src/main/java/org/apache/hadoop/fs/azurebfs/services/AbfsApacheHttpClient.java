@@ -393,14 +393,19 @@ public class AbfsApacheHttpClient {
   }
 
   public void releaseConn(HttpClientConnection clientConnection, AbfsHttpClientContext context) {
-    connMgr.releaseConnection(clientConnection, context.getUserToken(), context.keepAliveTime, TimeUnit.MILLISECONDS);
+    if(clientConnection != null) {
+      connMgr.releaseConnection(clientConnection, context.getUserToken(),
+          context.keepAliveTime, TimeUnit.MILLISECONDS);
+    }
   }
 
   public void destroyConn(HttpClientConnection httpClientConnection)
       throws IOException {
-    httpClientConnection.close();
-    connMgr.releaseConnection(
-        httpClientConnection, null, 0, TimeUnit.MILLISECONDS);
+    if(httpClientConnection != null) {
+      httpClientConnection.close();
+      connMgr.releaseConnection(
+          httpClientConnection, null, 0, TimeUnit.MILLISECONDS);
+    }
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest, final AbfsHttpClientContext abfsHttpClientContext) throws IOException {

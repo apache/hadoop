@@ -165,60 +165,62 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final int length) throws IOException {
     Boolean isExpect100Error = false;
     try {
+      try {
+        long startTime = 0;
+        startTime = System.nanoTime();
+        httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
+        sendRequestTimeMs = abfsHttpClientContext.sendTime;
+        recvResponseTimeMs = abfsHttpClientContext.readTime;
+
+        MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
+        MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
+        MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
+
+      } catch (AbfsApacheHttpExpect100Exception ex) {
+        LOG.debug(
+            "Getting output stream failed with expect header enabled, returning back ",
+            ex);
+        isExpect100Error = true;
+        httpResponse = ex.getHttpResponse();
+      }
+      // get the response
       long startTime = 0;
       startTime = System.nanoTime();
-      httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
-      sendRequestTimeMs = abfsHttpClientContext.sendTime;
-      recvResponseTimeMs = abfsHttpClientContext.readTime;
 
-      MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
-      MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
-      MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
+      this.statusCode = httpResponse.getStatusLine().getStatusCode();
 
-    } catch (AbfsApacheHttpExpect100Exception ex) {
-      LOG.debug(
-          "Getting output stream failed with expect header enabled, returning back ",
-          ex);
-      isExpect100Error = true;
-      httpResponse = ex.getHttpResponse();
-    }
-    // get the response
-    long startTime = 0;
-    startTime = System.nanoTime();
+      this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
 
-    this.statusCode = httpResponse.getStatusLine().getStatusCode();
+      this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+      if (this.requestId == null) {
+        this.requestId = AbfsHttpConstants.EMPTY_STRING;
+      }
+      // dump the headers
+      AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
+          getResponseHeaders(httpResponse));
 
-    this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
+      connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
+      parseResponse(buffer, offset, length);
+      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
+      abfsHttpClientContext.isBeingRead = false;
 
-    this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (this.requestId == null) {
-      this.requestId = AbfsHttpConstants.EMPTY_STRING;
-    }
-    // dump the headers
-    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
-        getResponseHeaders(httpResponse));
-
-    connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
-    parseResponse(buffer, offset, length);
-    connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
-    abfsHttpClientContext.isBeingRead = false;
-
-    if(abfsHttpClientContext.connectTime != null) {
-      ConnInfo connInfo = new ConnInfo();
-      connInfo.connTime = abfsHttpClientContext.connectTime;
-      connInfo.operationType = abfsRestOperationType;
-      connInfoStack.push(connInfo);
-    }
-
-    if(isExpect100Error) {
-      return;
-    }
-    if(abfsHttpClientContext.shouldKillConn()) {
-      abfsApacheHttpClient.destroyConn(
-          abfsHttpClientContext.httpClientConnection);
-    } else {
-      abfsApacheHttpClient.releaseConn(
-          abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
+      if(abfsHttpClientContext.connectTime != null) {
+        ConnInfo connInfo = new ConnInfo();
+        connInfo.connTime = abfsHttpClientContext.connectTime;
+        connInfo.operationType = abfsRestOperationType;
+        connInfoStack.push(connInfo);
+      }
+    } finally {
+      if(isExpect100Error) {
+        return;
+      }
+      if(abfsHttpClientContext.shouldKillConn()) {
+        abfsApacheHttpClient.destroyConn(
+            abfsHttpClientContext.httpClientConnection);
+      } else {
+        abfsApacheHttpClient.releaseConn(
+            abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
+      }
     }
   }
 
