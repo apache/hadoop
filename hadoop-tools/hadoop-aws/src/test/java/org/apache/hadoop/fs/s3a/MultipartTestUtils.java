@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertFileHasLength;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 
 /**

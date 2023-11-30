@@ -1524,8 +1524,7 @@ public class ContractTestUtils extends Assert {
    */
   private static TreeScanResults treeWalk(FileSystem fs,
       FileStatus dir,
-      TreeScanResults results) throws IOException {;
-
+      TreeScanResults results) throws IOException {
 
     Path path = dir.getPath();
 

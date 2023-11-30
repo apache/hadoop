@@ -55,8 +55,8 @@ import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.PRODUCT_NAME;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.hasS3ExpressSuffix;
-import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isAwsEndpoint;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_BAD_CONFIGURATION;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
@@ -78,11 +78,6 @@ public final class BucketTool extends S3GuardTool {
    */
   public static final String PURPOSE =
       "View and manipulate S3 buckets";
-
-  /**
-   * Error text when too few arguments are found.
-   */
-  static final String E_ARGUMENTS = "Wrong number of arguments: %d";
 
   /**
    * create command.
@@ -129,8 +124,7 @@ public final class BucketTool extends S3GuardTool {
 
   public BucketTool(final Configuration conf) {
     super(conf, 1, 1,
-        CREATE,
-        VERBOSE);
+        CREATE);
     CommandFormat format = getCommandFormat();
     format.addOptionWithValue(OPT_REGION);
     format.addOptionWithValue(OPT_ENDPOINT);
@@ -143,8 +137,6 @@ public final class BucketTool extends S3GuardTool {
         + "[-" + OPT_ENDPOINT + " <endpoint>] "
         + "[-" + OPT_REGION + " <region>] "
         + "[-" + OPT_ZONE + " <zone>] "
-        + "[-" + VERBOSE + "] "
-
         + " <s3a-URL>";
   }
 
@@ -159,10 +151,8 @@ public final class BucketTool extends S3GuardTool {
 
   @VisibleForTesting
   int exec(final String...args) throws Exception {
-
     return run(args, System.out);
   }
-
 
   @Override
   public int run(final String[] args, final PrintStream out)
@@ -173,8 +163,7 @@ public final class BucketTool extends S3GuardTool {
 
     CommandFormat command = getCommandFormat();
     boolean create = command.getOpt(CREATE);
-    // not yet used.
-    boolean verbose = command.getOpt(VERBOSE);
+
     Optional<String> endpoint = getOptionalString(OPT_ENDPOINT);
     Optional<String> region = getOptionalString(OPT_REGION);
     Optional<String> zone = getOptionalString(OPT_ZONE);
@@ -247,8 +236,8 @@ public final class BucketTool extends S3GuardTool {
 
       if (fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE)) {
         //  S3 Express store requires a zone and some other other settings
-        final String az =
-            zone.orElseThrow(() -> new ExitUtil.ExitException(EXIT_USAGE, NO_ZONE_SUPPLIED + bucket));
+        final String az = zone.orElseThrow(() ->
+            new ExitUtil.ExitException(EXIT_USAGE, NO_ZONE_SUPPLIED + bucket));
         builder.location(LocationInfo.builder()
                 .type(LocationType.AVAILABILITY_ZONE).name(az).build())
             .bucket(software.amazon.awssdk.services.s3.model.BucketInfo.builder()

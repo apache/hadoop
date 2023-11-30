@@ -269,7 +269,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
         LOG.info("Store value for bucket {} is {}", bucketName,
-            (lastStoreValue == null) ? "unset" : "set" );
+            (lastStoreValue == null) ? "unset" : "set");
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi " + e, e);
       }

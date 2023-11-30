@@ -23,9 +23,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.extractZone;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isS3ExpressStore;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test S3 Express Storage methods.
@@ -38,8 +36,6 @@ public class TestS3ExpressStorage extends AbstractHadoopTestBase {
   @Test
   public void testS3ExpressStateDefaultEndpoint() {
     assertS3ExpressState(S3EXPRESS_BUCKET, true, "");
-//    assertS3ExpressState("--usw2-az2--x-s3", false, "");
-//    assertS3ExpressState("--x-s3", false, "");
     assertS3ExpressState("bucket", false, "");
   }
 
@@ -48,7 +44,8 @@ public class TestS3ExpressStorage extends AbstractHadoopTestBase {
     assertS3ExpressState(S3EXPRESS_BUCKET, true, "s3.amazonaws.com");
     assertS3ExpressState(S3EXPRESS_BUCKET, true, "s3.cn-northwest-1.amazonaws.com.cn");
     assertS3ExpressState(S3EXPRESS_BUCKET, true, "s3-fips.us-gov-east-1.amazonaws.com");
-    assertS3ExpressState(S3EXPRESS_BUCKET, true, "s3-accesspoint-fips.dualstack.us-east-1.amazonaws.com");
+    assertS3ExpressState(S3EXPRESS_BUCKET, true,
+        "s3-accesspoint-fips.dualstack.us-east-1.amazonaws.com");
     assertS3ExpressState(S3EXPRESS_BUCKET, true, "s3.ca-central-1.amazonaws.com");
   }
 
@@ -63,16 +60,4 @@ public class TestS3ExpressStorage extends AbstractHadoopTestBase {
         .isEqualTo(expected);
   }
 
-  @Test
-  public void testZoneExtraction() {
-    Assertions.assertThat(extractZone(S3EXPRESS_BUCKET))
-        .isEqualTo(AZ);
-  }
-
-  @Test
-  public void testRejectSimpleBucket() throws Throwable {
-    intercept(IllegalArgumentException.class, () ->
-        extractZone("bucket"));
-
-  }
 }

@@ -126,8 +126,8 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
 
   /**
    * Create a directory methodPath()/src with a magic upload underneath,
-   * using with the uplaod pointing at {@code src/subdir/file.txt}
-   * @return the dirctory createds
+   * with the upload pointing at {@code src/subdir/file.txt}.
+   * @return the directory created
    * @throws IOException creation problems
    */
   private Path createDirWithUpload() throws IOException {
@@ -209,7 +209,6 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     fs.mkdirs(new Path(src, "child"));
     final Path base = methodPath();
     touch(fs, new Path(base, "file"));
-    ContentSummary summary = fs.getContentSummary(base);
     assertContentSummary(base, 3, 1);
   }
 
@@ -344,7 +343,9 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
   }
 
   /**
-   * CTU is also doing treewalking, though it's test only.
+   * Globber is already resilient to missing directories; a relic
+   * of the time when HEAD requests on s3 objects could leave the
+   * 404 in S3 front end cache.
    */
   @Test
   public void testGlobberTreewalk() throws Throwable {
@@ -362,8 +363,6 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
       assertGlob(fs, new Path(base, "*/*"), subdir, monday);
     } else {
       assertGlob(fs, new Path(base, "*"), src, dest);
-
-      //assertGlob(fs, new Path(base, "*"), dest);
       assertGlob(fs, new Path(base, "*/*"), monday);
     }
   }

@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
-import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
+import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -1033,7 +1033,7 @@ public final class S3ATestUtils {
    */
   public static void assumeStoreAwsHosted(final FileSystem fs) {
     assume("store is not AWS S3",
-        !S3ExpressStorage.isAwsEndpoint(fs.getConf()
+        !NetworkBinding.isAwsEndpoint(fs.getConf()
             .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
   }
 

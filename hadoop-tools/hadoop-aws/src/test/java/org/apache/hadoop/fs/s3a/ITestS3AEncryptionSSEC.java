@@ -105,8 +105,6 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    disableFilesystemCaching(conf);
-    skipIfEncryptionTestsDisabled(conf);
     String bucketName = getTestBucketName(conf);
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,

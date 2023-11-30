@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
@@ -65,17 +66,6 @@ public final class S3ExpressStorage {
   }
 
   /**
-   * Is this an AWS endpoint? looks at end of FQDN.
-   * @param endpoint endpoint
-   * @return true if the endpoint matches the requirements for an aws endpoint.
-   */
-  public static boolean isAwsEndpoint(final String endpoint) {
-    return (endpoint.isEmpty()
-        || endpoint.endsWith(".amazonaws.com")
-        || endpoint.endsWith(".amazonaws.com.cn"));
-  }
-
-  /**
    * Check for a bucket name matching -does not look at endpoint.
    * @param bucket bucket to probe.
    * @return true if the suffix is present
@@ -84,16 +74,4 @@ public final class S3ExpressStorage {
     return bucket.endsWith(S3EXPRESS_STORE_SUFFIX);
   }
 
-  /**
-   * Extract the zone information.
-   * @param bucket bucket to probe
-   * @return zone
-   * @throws IllegalArgumentException if it is not an S3 Express store.
-   */
-  public static String extractZone(String bucket) {
-    checkArgument(hasS3ExpressSuffix(bucket), "Not an S3 Express store: %s", bucket);
-    String suffix =
-        bucket.substring(bucket.length() - ZONE_LENGTH - S3EXPRESS_STORE_SUFFIX.length() - 1);
-    return suffix.substring(1, ZONE_LENGTH + 1);
-  }
 }

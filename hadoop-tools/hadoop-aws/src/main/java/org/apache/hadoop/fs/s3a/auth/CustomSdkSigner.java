@@ -40,15 +40,9 @@ import org.apache.hadoop.security.UserGroupInformation;
  * and then the full test suite run with it.
  * Derived from the inner class of {@code ITestCustomSigner}.
  * <pre>
- * <property>
- *   <name>fs.s3a.custom.signers</name>
- *   <value>CustomSdkSigner:org.apache.hadoop.fs.s3a.auth.CustomSdkSigner</value>
- * </property>
+ * fs.s3a.custom.signers=CustomSdkSigner:org.apache.hadoop.fs.s3a.auth.CustomSdkSigner
  *
- * <property>
- *   <name>fs.s3a.s3.signing-algorithm</name>
- *   <value>CustomSdkSigner</value>
- * </property>
+ * fs.s3a.s3.signing-algorithm=CustomSdkSigner
  * </pre>
  */
 public class CustomSdkSigner  extends AbstractAwsS3V4Signer implements Signer {
@@ -113,7 +107,7 @@ public class CustomSdkSigner  extends AbstractAwsS3V4Signer implements Signer {
    * @param host hostname
    * @return the parsed bucket name; if "kms" is KMS signing.
    */
-   static String parseBucketFromHost(String host) {
+  static String parseBucketFromHost(String host) {
     String[] hostBits = host.split("\\.");
     String bucketName = hostBits[0];
     String service = hostBits[1];

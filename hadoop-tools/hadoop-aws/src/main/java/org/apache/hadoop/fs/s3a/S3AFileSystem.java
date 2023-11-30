@@ -614,7 +614,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ? conf.getTrimmed(AWS_REGION)
           : accessPoint.getRegion();
 
-      // is this an S3Exprss store?
+      // is this an S3Express store?
       s3ExpressStore = isS3ExpressStore(bucket, endpoint);
 
       // should the delete also purge uploads?
@@ -1477,7 +1477,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public long abortMultipartUploads(final Path path) throws IOException {
       final String prefix = pathToKey(path);
-      try (final AuditSpan span = createSpan("object_multipart_bulk_abort", prefix, null)) {
+      try (AuditSpan span = createSpan("object_multipart_bulk_abort", prefix, null)) {
         return S3AFileSystem.this.abortMultipartUploadsUnderPrefix(
             createStoreContext(),
             span,
