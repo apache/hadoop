@@ -216,8 +216,6 @@ com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.amazonaws:aws-java-sdk-bundle:1.12.499
-com.cedarsoftware:java-util:1.9.0
-com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
 com.fasterxml.jackson.core:jackson-core:2.12.7
 com.fasterxml.jackson.core:jackson-databind:2.12.7.1
@@ -249,7 +247,7 @@ commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
 commons-io:commons-io:2.14.0
 commons-net:commons-net:3.9.0
-de.ruedigermoeller:fst:2.50
+de.ruedigermoeller:fst:2.57
 io.grpc:grpc-api:1.26.0
 io.grpc:grpc-context:1.26.0
 io.grpc:grpc-core:1.26.0
