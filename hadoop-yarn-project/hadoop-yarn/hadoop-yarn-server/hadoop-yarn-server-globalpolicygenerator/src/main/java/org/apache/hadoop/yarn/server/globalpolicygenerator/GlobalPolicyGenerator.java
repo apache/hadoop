@@ -373,6 +373,7 @@ public class GlobalPolicyGenerator extends CompositeService {
       System.out.println("Federation policy state store has been cleaned.");
       facade.deleteAllPoliciesConfigurations();
     } catch (Exception e) {
+      LOG.error("Delete Federation policy state store error.", e);
       System.err.println("Delete Federation policy state store error, exception = " + e);
     }
   }

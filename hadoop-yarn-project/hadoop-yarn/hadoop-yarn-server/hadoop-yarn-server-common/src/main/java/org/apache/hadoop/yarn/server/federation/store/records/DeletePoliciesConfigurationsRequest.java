@@ -16,9 +16,18 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
-public class DeletePoliciesConfigurationsRequest {
+/**
+ * This class is used for handling queue policy deletion requests.
+ * We will delete all PoliciesConfigurations.
+ */
+public abstract class DeletePoliciesConfigurationsRequest {
+
+  @Private
+  @Unstable
   public static DeletePoliciesConfigurationsRequest newInstance() {
     return Records.newRecord(DeletePoliciesConfigurationsRequest.class);
   }

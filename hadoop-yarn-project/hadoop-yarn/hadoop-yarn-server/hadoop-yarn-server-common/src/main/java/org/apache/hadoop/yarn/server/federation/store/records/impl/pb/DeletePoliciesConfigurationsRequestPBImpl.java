@@ -39,7 +39,7 @@ public class DeletePoliciesConfigurationsRequestPBImpl
   }
 
   public DeletePoliciesConfigurationsRequestPBImpl(
-    DeletePoliciesConfigurationsRequestProto proto) {
+      DeletePoliciesConfigurationsRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }

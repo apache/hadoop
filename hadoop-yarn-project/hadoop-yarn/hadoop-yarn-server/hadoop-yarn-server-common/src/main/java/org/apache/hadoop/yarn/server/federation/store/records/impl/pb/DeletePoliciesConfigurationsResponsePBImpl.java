@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.DeletePoliciesConfigurationsResponseProto;
 import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 
+
 @Private
 @Unstable
 public class DeletePoliciesConfigurationsResponsePBImpl
@@ -39,7 +40,7 @@ public class DeletePoliciesConfigurationsResponsePBImpl
   }
 
   public DeletePoliciesConfigurationsResponsePBImpl(
-    DeletePoliciesConfigurationsResponseProto proto) {
+      DeletePoliciesConfigurationsResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
