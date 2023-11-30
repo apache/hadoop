@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
-import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Anything needed to support Amazon S3 Express One Zone Storage.
