@@ -45,6 +45,8 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import alluxio.hadoop.LocalCacheFileSystem;
+
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -390,6 +392,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT);
     lastDirScannerNotifyTime = System.currentTimeMillis();
+
+    fs = new LocalFileSystem();
+    fs.initialize(URI.create("file:///"), conf);
+    fs = new LocalCacheFileSystem(fs);
+    try {
+      fs.initialize(URI.create("file:///"), conf);
+      LOG.info("alluxio local cache is {}",
+          fs.getConf().getTrimmed("alluxio.user.shimfs.client.cache.enable"));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -830,7 +843,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (info == null) {
       throw new IOException("No data exists for block " + b);
     }
-    return getBlockInputStreamWithCheckingPmemCache(info, b, seekOffset);
+    if (conf.getBoolean("alluxio.user.shimfs.client.cache.enable", false)) {
+      org.apache.hadoop.fs.FSDataInputStream is =
+          fs.open(new Path("file://" + info.getBlockURI().getPath()));
+      is.seek(seekOffset);
+      return is;
+    } else {
+      return getBlockInputStreamWithCheckingPmemCache(info, b, seekOffset);
+    }
   }
 
   /**
