@@ -459,4 +459,9 @@ public abstract class FilterFs extends AbstractFileSystem {
       throws IOException {
     return myFs.createMultipartUploader(basePath);
   }
+
+  @Override
+  public Path getEnclosingRoot(Path path) throws IOException {
+    return myFs.getEnclosingRoot(path);
+  }
 }

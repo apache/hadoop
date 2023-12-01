@@ -83,6 +83,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -865,13 +866,25 @@ public class TestDFSUtil {
 
   @Test (timeout=15000)
   public void testIsValidName() {
-    assertFalse(DFSUtil.isValidName("/foo/../bar"));
-    assertFalse(DFSUtil.isValidName("/foo/./bar"));
-    assertFalse(DFSUtil.isValidName("/foo//bar"));
-    assertTrue(DFSUtil.isValidName("/"));
-    assertTrue(DFSUtil.isValidName("/bar/"));
-    assertFalse(DFSUtil.isValidName("/foo/:/bar"));
-    assertFalse(DFSUtil.isValidName("/foo:bar"));
+    String validPaths[] = new String[]{"/", "/bar/"};
+    for (String path : validPaths) {
+      assertTrue("Should have been accepted '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String invalidPaths[] =
+        new String[]{"/foo/../bar", "/foo/./bar", "/foo//bar", "/foo/:/bar", "/foo:bar"};
+    for (String path : invalidPaths) {
+      assertFalse("Should have been rejected '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String windowsPath = "/C:/foo/bar";
+    if (Shell.WINDOWS) {
+      assertTrue("Should have been accepted '" + windowsPath + "' in windows os.",
+          DFSUtil.isValidName(windowsPath));
+    } else {
+      assertFalse("Should have been rejected '" + windowsPath + "' in unix os.",
+          DFSUtil.isValidName(windowsPath));
+    }
   }
   
   @Test(timeout=5000)

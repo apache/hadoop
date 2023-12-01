@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.IOUtils;
 
@@ -51,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsSeconds;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ABORTED;
@@ -119,16 +122,23 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     // now create a new FS with minimal http capacity and recovery
     // a separate one is used to avoid test teardown suffering
     // from the lack of http connections and short timeouts.
-    Configuration conf = getConfiguration();
-    // kick off async drain for any data
-    conf.setInt(ASYNC_DRAIN_THRESHOLD, 1);
-    conf.setInt(MAXIMUM_CONNECTIONS, 2);
-    conf.setInt(MAX_ERROR_RETRIES, 1);
-    conf.setInt(ESTABLISH_TIMEOUT, 1000);
-    conf.setInt(READAHEAD_RANGE, READAHEAD);
-    conf.setInt(RETRY_LIMIT, 1);
+    try {
+      // allow small durations.
+      AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
+      Configuration conf = getConfiguration();
+      // kick off async drain for any data
+      conf.setInt(ASYNC_DRAIN_THRESHOLD, 1);
+      conf.setInt(MAXIMUM_CONNECTIONS, 2);
+      conf.setInt(MAX_ERROR_RETRIES, 1);
+      conf.setInt(READAHEAD_RANGE, READAHEAD);
+      conf.setInt(RETRY_LIMIT, 1);
+      setDurationAsSeconds(conf, ESTABLISH_TIMEOUT,
+          Duration.ofSeconds(1));
 
-    brittleFS = FileSystem.newInstance(getFileSystem().getUri(), conf);
+      brittleFS = FileSystem.newInstance(getFileSystem().getUri(), conf);
+    } finally {
+      AWSClientConfig.resetMinimumOperationDuration();
+    }
   }
 
   @Override

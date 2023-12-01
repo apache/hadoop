@@ -30,6 +30,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -117,7 +118,7 @@ public class TestHarFileSystemBasics {
     final FSDataOutputStream fsdos = localFileSystem.create(masterIndexPath);
     try {
       String versionString = version + "\n";
-      fsdos.write(versionString.getBytes("UTF-8"));
+      fsdos.write(versionString.getBytes(StandardCharsets.UTF_8));
       fsdos.flush();
     } finally {
       fsdos.close();

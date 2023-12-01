@@ -92,6 +92,11 @@ public class AbfsRestOperation {
   private String failureReason;
 
   /**
+   * This variable stores the tracing context used for last Rest Operation.
+   */
+  private TracingContext lastUsedTracingContext;
+
+  /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
    */
@@ -211,12 +216,15 @@ public class AbfsRestOperation {
    */
   public void execute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
+    // Since this might be a sub-sequential or parallel rest operation
+    // triggered by a single file system call, using a new tracing context.
+    lastUsedTracingContext = createNewTracingContext(tracingContext);
     try {
       abfsCounters.getLastExecutionTime().set(now());
       client.timerOrchestrator(TimerFunctionality.RESUME, null);
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
-          () -> completeExecute(tracingContext));
+          () -> completeExecute(lastUsedTracingContext));
     } catch (AzureBlobFileSystemException aze) {
       throw aze;
     } catch (IOException e) {
@@ -230,7 +238,7 @@ public class AbfsRestOperation {
    * HTTP operations.
    * @param tracingContext TracingContext instance to track correlation IDs
    */
-  private void completeExecute(TracingContext tracingContext)
+  void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = getClientLatency();
@@ -488,11 +496,25 @@ public class AbfsRestOperation {
     }
   }
 
+  /**
+   * Updates the count metrics based on the provided retry count.
+   * @param retryCount The retry count used to determine the metrics category.
+   *
+   * This method increments the number of succeeded requests for the specified retry count.
+   */
   private void updateCount(int retryCount){
       String retryCounter = getKey(retryCount);
       metricsMap.get(retryCounter).getNumberOfRequestsSucceeded().getAndIncrement();
   }
 
+  /**
+   * Updates backoff time metrics based on the provided retry count and sleep duration.
+   * @param retryCount    The retry count used to determine the metrics category.
+   * @param sleepDuration The duration of sleep during backoff.
+   *
+   * This method calculates and updates various backoff time metrics, including minimum, maximum,
+   * and total backoff time, as well as the total number of requests for the specified retry count.
+   */
   private void updateBackoffTimeMetrics(int retryCount, long sleepDuration){
       String retryCounter = getKey(retryCount);
       long minBackoffTime = Math.min(metricsMap.get(retryCounter).getMinBackoff().get(), sleepDuration);
@@ -505,17 +527,44 @@ public class AbfsRestOperation {
       metricsMap.get(retryCounter).getTotalRequests().set(totalRequests);
     }
 
-    private String getKey(int retryCount) {
-      String retryCounter;
-      if (retryCount >= 1 && retryCount <= 4) {
-        retryCounter = Integer.toString(retryCount);
-      } else if (retryCount >= 5 && retryCount < 15) {
-        retryCounter = "5_15";
-      } else if (retryCount >= 15 && retryCount < 25) {
-        retryCounter = "15_25";
-      } else {
-        retryCounter = "25AndAbove";
-      }
-      return retryCounter;
+  /**
+   * Generates a key based on the provided retry count to categorize metrics.
+   *
+   * @param retryCount The retry count used to determine the key.
+   * @return A string key representing the metrics category for the given retry count.
+   *
+   * This method categorizes retry counts into different ranges and assigns a corresponding key.
+   */
+  private String getKey(int retryCount) {
+    if (retryCount >= 1 && retryCount <= 4) {
+      return Integer.toString(retryCount);
+    } else if (retryCount >= 5 && retryCount < 15) {
+      return "5_15";
+    } else if (retryCount >= 15 && retryCount < 25) {
+      return "15_25";
+    } else {
+      return "25AndAbove";
     }
+  }
+
+  /**
+   * Creates a new Tracing context before entering the retry loop of a rest operation.
+   * This will ensure all rest operations have unique
+   * tracing context that will be used for all the retries.
+   * @param tracingContext original tracingContext.
+   * @return tracingContext new tracingContext object created from original one.
+   */
+  @VisibleForTesting
+  public TracingContext createNewTracingContext(final TracingContext tracingContext) {
+    return new TracingContext(tracingContext);
+  }
+
+  /**
+   * Returns the tracing contest used for last rest operation made.
+   * @return tracingContext lasUserTracingContext.
+   */
+  @VisibleForTesting
+  public final TracingContext getLastTracingContext() {
+    return lastUsedTracingContext;
+  }
 }

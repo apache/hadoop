@@ -106,7 +106,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices
  * main difference with AMRMProxyService is the protocol they implement.
  **/
 @Singleton
-@Path("/ws/v1/cluster")
+@Path(RMWSConsts.RM_WEB_SERVICE_PATH)
 public class RouterWebServices implements RMWebServiceProtocol {
 
   private static final Logger LOG =
@@ -424,7 +424,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
-      @QueryParam(RMWSConsts.APP_ID) String appId,
+      @PathParam(RMWSConsts.APPID) String appId,
       @QueryParam(RMWSConsts.MAX_TIME) String time,
       @QueryParam(RMWSConsts.REQUEST_PRIORITIES) Set<String> requestPriorities,
       @QueryParam(RMWSConsts.ALLOCATION_REQUEST_IDS)

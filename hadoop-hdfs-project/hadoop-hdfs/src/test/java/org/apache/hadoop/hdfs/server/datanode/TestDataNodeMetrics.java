@@ -553,7 +553,7 @@ public class TestDataNodeMetrics {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       Path p = new Path("/testShouldThrowTMP");
-      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      DFSTestUtil.writeFile(fs, p, "testdata");
       //Before DN throws too many open files
       verifyBlockLocations(fs, p, 1);
       Mockito.doThrow(new FileNotFoundException("Too many open files")).

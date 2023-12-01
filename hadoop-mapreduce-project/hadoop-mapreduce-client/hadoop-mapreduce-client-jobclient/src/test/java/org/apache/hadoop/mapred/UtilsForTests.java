@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -180,7 +181,7 @@ public class UtilsForTests {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }
@@ -194,7 +195,7 @@ public class UtilsForTests {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }

@@ -43,6 +43,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,7 +83,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -2903,7 +2903,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         LOG.info("found resource " + name + " at " + url);
       }
 
-      return new InputStreamReader(url.openStream(), Charsets.UTF_8);
+      return new InputStreamReader(url.openStream(), StandardCharsets.UTF_8);
     } catch (Exception e) {
       return null;
     }

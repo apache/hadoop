@@ -21,21 +21,24 @@ package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
-import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 
@@ -80,13 +83,19 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
 
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
-    this.blockManager = this.createBlockManager(
-        this.getContext().getFuturePool(),
-        this.getReader(),
-        this.getBlockData(),
-        bufferPoolSize,
-        conf,
-        localDirAllocator);
+    BlockManagerParameters blockManagerParamsBuilder =
+        new BlockManagerParameters()
+            .withFuturePool(this.getContext().getFuturePool())
+            .withBlockData(this.getBlockData())
+            .withBufferPoolSize(bufferPoolSize)
+            .withConf(conf)
+            .withLocalDirAllocator(localDirAllocator)
+            .withMaxBlocksCount(
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPrefetchingStatistics(getS3AStreamStatistics())
+            .withTrackerFactory(getS3AStreamStatistics());
+    this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
+        this.getReader());
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
         fileSize);
@@ -180,18 +189,8 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   }
 
   protected BlockManager createBlockManager(
-      ExecutorServiceFuturePool futurePool,
-      S3ARemoteObjectReader reader,
-      BlockData blockData,
-      int bufferPoolSize,
-      Configuration conf,
-      LocalDirAllocator localDirAllocator) {
-    return new S3ACachingBlockManager(futurePool,
-        reader,
-        blockData,
-        bufferPoolSize,
-        getS3AStreamStatistics(),
-        conf,
-        localDirAllocator);
+      @Nonnull final BlockManagerParameters blockManagerParameters,
+      final S3ARemoteObjectReader reader) {
+    return new S3ACachingBlockManager(blockManagerParameters, reader);
   }
 }

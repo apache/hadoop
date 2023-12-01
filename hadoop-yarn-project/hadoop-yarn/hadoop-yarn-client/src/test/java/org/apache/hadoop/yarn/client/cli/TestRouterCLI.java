@@ -94,6 +94,7 @@ public class TestRouterCLI {
           return QueryFederationQueuePoliciesResponse.newInstance(1, 1, 1, 10, weights);
         });
 
+
     Configuration config = new Configuration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
 
@@ -271,7 +272,7 @@ public class TestRouterCLI {
   @Test
   public void testBuildHelpMsg() throws Exception {
     Map<String, RouterCLI.RouterCmdUsageInfos> adminUsage = rmAdminCLI.getAdminUsage();
-    assertEquals(2, adminUsage.size());
+    assertEquals(3, adminUsage.size());
 
     RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
         adminUsage.get("-deregisterSubCluster");
@@ -291,5 +292,11 @@ public class TestRouterCLI {
     policyExamplesMap.forEach((cmd, cmdExamples) -> {
       assertEquals(2, cmdExamples.size());
     });
+
+    RouterCLI.RouterCmdUsageInfos applicationUsageInfos = adminUsage.get("-application");
+    assertNotNull(applicationUsageInfos);
+    Map<String, List<String>> applicationExamplesMap = applicationUsageInfos.getExamples();
+    assertNotNull(applicationExamplesMap);
+    assertEquals(1, applicationExamplesMap.size());
   }
 }

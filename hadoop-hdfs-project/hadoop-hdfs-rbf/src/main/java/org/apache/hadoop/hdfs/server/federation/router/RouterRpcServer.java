@@ -1610,6 +1610,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getSlowDatanodeReport();
   }
 
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src) throws IOException {
+    return clientProto.getEnclosingRoot(src);
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
       long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
