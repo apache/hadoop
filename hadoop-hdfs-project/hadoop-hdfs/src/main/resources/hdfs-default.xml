@@ -6563,15 +6563,16 @@
     <name>dfs.client.congestion.backoff.mean.time</name>
     <value>5000</value>
     <description>
-      The mean milliseconds which is used to compute client congestion backoff sleep time.
+      The mean time in milliseconds which is used to compute
+      client congestion backoff sleep time.
     </description>
   </property>
   <property>
     <name>dfs.client.congestion.backoff.max.time</name>
     <value>50000</value>
     <description>
-      The max milliseconds which is used to
-      restrict the upper limit backoff sleep time for client.
+      The max time in milliseconds which is used to restrict
+      the upper limit backoff sleep time for client.
     </description>
   </property>
   <property>
