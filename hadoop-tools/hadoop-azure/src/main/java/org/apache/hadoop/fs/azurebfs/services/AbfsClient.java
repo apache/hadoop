@@ -1569,10 +1569,6 @@ public class AbfsClient implements Closeable {
   }
 
   class TimerTaskImpl extends TimerTask {
-    /**
-     * Periodically analyzes a snapshot of the blob storage metrics and updates
-     * the sleepDuration in order to appropriately throttle storage operations.
-     */
     @Override
     public void run() {
       try {

@@ -61,6 +61,7 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String metricResults = EMPTY_STRING;
+  private String header_metric = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -185,21 +186,22 @@ public class TracingContext {
               + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure);
-      header += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      header_metric += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
-      header += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      header_metric += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     default:
       //case SINGLE_ID_FORMAT
       header = clientRequestId;
-      header += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      header_metric += !(metricResults.trim().isEmpty()) ? metricResults  : "";
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_FECLIENT_METRICS, header_metric);
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
     * API call (previousFailure shall be null), maintain the last part of clientRequestId's

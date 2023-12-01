@@ -43,6 +43,7 @@ public final class HttpHeaderConfigurations {
   public static final String USER_AGENT = "User-Agent";
   public static final String X_HTTP_METHOD_OVERRIDE = "X-HTTP-Method-Override";
   public static final String X_MS_CLIENT_REQUEST_ID = "x-ms-client-request-id";
+  public static final String X_MS_FECLIENT_METRICS = "x-ms-feclient-metrics";
   public static final String X_MS_EXISTING_RESOURCE_TYPE = "x-ms-existing-resource-type";
   public static final String X_MS_DATE = "x-ms-date";
   public static final String X_MS_REQUEST_ID = "x-ms-request-id";

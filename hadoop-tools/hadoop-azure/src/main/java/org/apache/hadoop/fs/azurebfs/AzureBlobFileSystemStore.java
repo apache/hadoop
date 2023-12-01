@@ -150,6 +150,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -2021,8 +2022,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Sends a metric using the provided TracingContext.
+   *
+   * @param tracingContextMetric The TracingContext used for sending the metric.
+   * @throws AzureBlobFileSystemException If an error occurs while sending the metric.
+   *
+   * <p>
+   * This method retrieves filesystem properties using the specified TracingContext. The metrics are sent
+   * via this call in the header x-ms-feclient-metrics. As part of next iteration this additional call will be removed.
+   * </p>
+   */
   public void sendMetric(TracingContext tracingContextMetric)
       throws AzureBlobFileSystemException {
-    client.getPathStatus("/..$$@@", true, tracingContextMetric); // Will sent a GFS calls that will fail to register in MDM x-ms-client-metric
+    getFilesystemProperties(tracingContextMetric);
   }
 }

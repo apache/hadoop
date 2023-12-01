@@ -297,7 +297,7 @@ public class AbfsCountersImpl implements AbfsCounters {
     if (abfsBackoffMetrics != null) {
       AtomicLong totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
       if (totalNoRequests.get() > 0) {
-        metric += ":BO:" + getAbfsBackoffMetrics().toString();
+        metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }
     if (abfsReadFooterMetrics != null) {
@@ -305,7 +305,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       if (metricsMap != null && !(metricsMap.isEmpty())) {
         String readFooterMetric = getAbfsReadFooterMetrics().toString();
         if (!readFooterMetric.equals("")) {
-          metric += ":FO:" + getAbfsReadFooterMetrics().toString();
+          metric += "#FO:" + getAbfsReadFooterMetrics().toString();
         }
       }
     }
