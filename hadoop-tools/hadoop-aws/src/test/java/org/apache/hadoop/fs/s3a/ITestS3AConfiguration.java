@@ -131,7 +131,7 @@ public class ITestS3AConfiguration {
         S3ATestConstants.CONFIGURATION_TEST_ENDPOINT, "");
     if (endpoint.isEmpty()) {
       LOG.warn("Custom endpoint test skipped as " +
-          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + "config " +
+          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + " config " +
           "setting was not detected");
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
