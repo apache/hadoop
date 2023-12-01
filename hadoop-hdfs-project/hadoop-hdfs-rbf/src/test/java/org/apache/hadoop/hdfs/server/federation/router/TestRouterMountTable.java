@@ -373,11 +373,8 @@ public class TestRouterMountTable {
         clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
     assertEquals(child2, dirStatus2.getLocalName());
 
-    String src3 = "/testA/testB";
-    String child3 = "testC";
-    Path childPath3 = new Path(src2, child2);
     HdfsFileStatus dirStatus3 =
-        clientProtocol.getMountPointStatus(childPath3.toString(), 0, 0, false);
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, false);
     assertTrue(dirStatus3.isEmptyLocalName());
   }
   /**
@@ -683,10 +680,10 @@ public class TestRouterMountTable {
       nnFs1.mkdirs(new Path("/testgetfileinfo/ns1/dir"));
 
       FileStatus fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1"));
-      assertTrue(fileStatus.getPath().toString().endsWith("/testgetfileinfo/ns1"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1");
 
-      FileStatus fileStatus1 = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1/dir"));
-      assertTrue(fileStatus1.getPath().toString().endsWith("/testgetfileinfo/ns1/dir"));
+      fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1/dir"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1/dir");
     } finally {
       nnFs1.delete(new Path("/testgetfileinfo/ns1/dir"), true);
     }
