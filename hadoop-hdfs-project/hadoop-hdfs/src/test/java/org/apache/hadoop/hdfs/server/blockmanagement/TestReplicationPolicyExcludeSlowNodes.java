@@ -151,20 +151,19 @@ public class TestReplicationPolicyExcludeSlowNodes
       SlowPeerTracker tracker = dnManager.getSlowPeerTracker();
       assert tracker != null;
       OutlierMetrics outlierMetrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
-      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[1].getInfoAddr(),
+      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[3].getInfoAddr(),
           outlierMetrics);
-      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[1].getInfoAddr(),
+      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[3].getInfoAddr(),
           outlierMetrics);
-      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[1].getInfoAddr(),
+      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[3].getInfoAddr(),
           outlierMetrics);
 
       // waiting for slow nodes collector run
       Thread.sleep(3000);
 
-      // fetch slow nodes
-      Set<String> slowPeers = dnManager.getSlowPeersUuidSet();
+      // check slow nodes
       assertFalse(dnManager.isSlowPeerCollectorInitialized());
-      assertEquals(3, slowPeers.size());
+      assertEquals(3, DatanodeManager.getSlowNodesUuidSet().size());
 
       // reconfig
       namenode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY,
