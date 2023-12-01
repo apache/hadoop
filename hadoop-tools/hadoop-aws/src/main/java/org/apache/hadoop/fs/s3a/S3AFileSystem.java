@@ -1045,7 +1045,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartCopyEnabled(isMultipartCopyEnabled)
         .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
-        .withRegion(configuredRegion);
+        .withRegion(configuredRegion)
+        .withExpressCreateSession(
+            conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT));
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
@@ -4498,6 +4500,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // way to predict read keys, and not worried about granting
     // too much encryption access.
     statements.add(STATEMENT_ALLOW_KMS_RW);
+    if (s3ExpressStore) {
+      // tODO
+      //statements.add()
+    }
 
     return statements;
   }

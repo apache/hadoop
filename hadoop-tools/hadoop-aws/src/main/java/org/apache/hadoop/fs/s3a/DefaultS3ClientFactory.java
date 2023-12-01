@@ -166,6 +166,7 @@ public class DefaultS3ClientFactory extends Configured
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
         .credentialsProvider(parameters.getCredentialSet())
+        .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
   }
 

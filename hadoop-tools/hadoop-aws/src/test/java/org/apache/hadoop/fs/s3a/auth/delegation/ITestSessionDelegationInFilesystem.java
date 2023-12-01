@@ -161,7 +161,8 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         Constants.S3_ENCRYPTION_ALGORITHM,
         Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        SERVER_SIDE_ENCRYPTION_KEY);
+        SERVER_SIDE_ENCRYPTION_KEY,
+        S3EXPRESS_CREATE_SESSION);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
@@ -174,9 +175,15 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
-    // turn on ACLs so as to verify role DT permissions include
-    // write access.
-    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+
+    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false)) {
+      // turn on ACLs so as to verify role DT permissions include
+      // write access.
+      conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+    }
+    // disable create session so there's no need to
+    // add a role policy for it.
+    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
     return conf;
   }
 
