@@ -619,8 +619,10 @@ public class ITestCommitOperations extends AbstractCommitITest {
       commits.add(commit1);
     }
 
-    assertPathDoesNotExist("destination dir", destDir);
-    assertPathDoesNotExist("subdirectory", subdir);
+    if (!isS3ExpressStorage(fs)) {
+      assertPathDoesNotExist("destination dir", destDir);
+      assertPathDoesNotExist("subdirectory", subdir);
+    }
     LOG.info("Initiating commit operations");
     try (CommitContext commitContext
              = actions.createCommitContextForTesting(destDir, JOB_ID, 0)) {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -56,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.hadoop.fs.FileUtil.maybeIgnoreMissingDirectory;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
@@ -304,23 +306,27 @@ public class LocatedFileStatusFetcher implements IOStatisticsSource {
       Result result = new Result();
       result.fs = fs;
       LOG.debug("ProcessInputDirCallable {}", fileStatus);
-      if (fileStatus.isDirectory()) {
-        RemoteIterator<LocatedFileStatus> iter = fs
-            .listLocatedStatus(fileStatus.getPath());
-        while (iter.hasNext()) {
-          LocatedFileStatus stat = iter.next();
-          if (inputFilter.accept(stat.getPath())) {
-            if (recursive && stat.isDirectory()) {
-              result.dirsNeedingRecursiveCalls.add(stat);
-            } else {
-              result.locatedFileStatuses.add(stat);
+      try {
+        if (fileStatus.isDirectory()) {
+          RemoteIterator<LocatedFileStatus> iter = fs
+              .listLocatedStatus(fileStatus.getPath());
+          while (iter.hasNext()) {
+            LocatedFileStatus stat = iter.next();
+            if (inputFilter.accept(stat.getPath())) {
+              if (recursive && stat.isDirectory()) {
+                result.dirsNeedingRecursiveCalls.add(stat);
+              } else {
+                result.locatedFileStatuses.add(stat);
+              }
             }
           }
+          // aggregate any stats
+          result.stats = retrieveIOStatistics(iter);
+        } else {
+          result.locatedFileStatuses.add(fileStatus);
         }
-        // aggregate any stats
-        result.stats = retrieveIOStatistics(iter);
-      } else {
-        result.locatedFileStatuses.add(fileStatus);
+      } catch (FileNotFoundException e) {
+        maybeIgnoreMissingDirectory(fs, fileStatus.getPath(), e);
       }
       return result;
     }

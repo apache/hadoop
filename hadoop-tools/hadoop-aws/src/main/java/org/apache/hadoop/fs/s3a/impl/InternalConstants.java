@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,7 +31,24 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
+import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_CHECKSUMS;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_MULTIPART_UPLOADER;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
+import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -142,6 +160,9 @@ public final class InternalConstants {
   /** 405 status code: Method Not Allowed. */
   public static final int SC_405_METHOD_NOT_ALLOWED = 405;
 
+  /** 409 status code: Conflict. Example: creating a bucket twice. */
+  public static final int SC_409_CONFLICT = 409;
+
   /** 410 status code: Gone. */
   public static final int SC_410_GONE = 410;
 
@@ -239,6 +260,30 @@ public final class InternalConstants {
    */
   public static final Set<String> CREATE_FILE_KEYS =
       Collections.unmodifiableSet(
-          new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
+          new HashSet<>(Arrays.asList(FS_S3A_CREATE_PERFORMANCE)));
 
+  /**
+   * Dynamic Path capabilities to be evaluated
+   * in the BucketInfo tool.
+   */
+  public static final List<String> S3A_DYNAMIC_CAPABILITIES =
+      Collections.unmodifiableList(Arrays.asList(
+          ETAGS_AVAILABLE,
+          FS_CHECKSUMS,
+          FS_MULTIPART_UPLOADER,
+          DIRECTORY_LISTING_INCONSISTENT,
+
+          // s3 specific
+          STORE_CAPABILITY_AWS_V2,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+          STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
+          STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
+          STORE_CAPABILITY_MAGIC_COMMITTER,
+          STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED,
+          STORE_CAPABILITY_S3_EXPRESS_STORAGE,
+          FS_S3A_CREATE_PERFORMANCE_ENABLED,
+          DIRECTORY_OPERATIONS_PURGE_UPLOADS,
+          ENABLE_MULTI_DELETE));
 }

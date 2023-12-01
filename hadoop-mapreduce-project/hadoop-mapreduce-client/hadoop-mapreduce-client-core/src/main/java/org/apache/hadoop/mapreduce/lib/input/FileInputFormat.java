@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -48,8 +49,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import static org.apache.hadoop.fs.FileUtil.maybeIgnoreMissingDirectory;
 
-/** 
+/**
  * A base class for file-based {@link InputFormat}s.
  *
  * <p><code>FileInputFormat</code> is the base class for all file-based 
@@ -357,16 +359,26 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   protected void addInputPathRecursively(List<FileStatus> result,
       FileSystem fs, Path path, PathFilter inputFilter) 
       throws IOException {
-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
-    while (iter.hasNext()) {
-      LocatedFileStatus stat = iter.next();
-      if (inputFilter.accept(stat.getPath())) {
-        if (stat.isDirectory()) {
-          addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-        } else {
-          result.add(stat);
+    // FNFE exceptions are caught whether raised in the list call,
+    // or in the hasNext() or next() calls, where async reporting
+    // may take place.
+    try {
+      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
+      while (iter.hasNext()) {
+        LocatedFileStatus stat = iter.next();
+        if (inputFilter.accept(stat.getPath())) {
+          if (stat.isDirectory()) {
+            addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
+          } else {
+            result.add(stat);
+          }
         }
       }
+    } catch (FileNotFoundException e) {
+      // unless the store is capabile of list inconsistencies, rethrow.
+      // because this is recursive, the caller method may also end up catching
+      // and rethrowing, which is slighly inefficient but harmless.
+      maybeIgnoreMissingDirectory(fs, path, e);
     }
   }
   

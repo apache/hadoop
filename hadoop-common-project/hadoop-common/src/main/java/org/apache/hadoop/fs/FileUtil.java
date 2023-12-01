@@ -76,6 +76,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
@@ -2057,5 +2058,33 @@ public class FileUtil {
   public static void rename(FileSystem srcFs, Path src, Path dst,
       final Options.Rename... options) throws IOException {
     srcFs.rename(src, dst, options);
+  }
+
+  /**
+   * Method to call after a FNFE has been raised on a treewalk, so as to
+   * decide whether to throw the exception (default), or, if the FS
+   * supports inconsistent directory listings, to log and ignore it.
+   * If this returns then the caller should ignore the failure and continue.
+   * @param fs filesystem
+   * @param path path
+   * @param e exception caught
+   * @throws FileNotFoundException the exception passed in, if rethrown.
+   */
+  public static void maybeIgnoreMissingDirectory(FileSystem fs,
+      Path path,
+      FileNotFoundException e) throws FileNotFoundException {
+    final boolean b;
+    try {
+      b = !fs.hasPathCapability(path, DIRECTORY_LISTING_INCONSISTENT);
+    } catch (IOException ex) {
+      // something went wrong; rethrow the existing exception
+      e.addSuppressed(ex);
+      throw e;
+    }
+    if (b) {
+      throw e;
+    }
+    LOG.info("Ignoring missing directory {}", path);
+    LOG.debug("Directory missing", e);
   }
 }

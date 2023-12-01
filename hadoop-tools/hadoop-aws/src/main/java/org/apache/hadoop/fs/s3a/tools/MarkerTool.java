@@ -237,13 +237,7 @@ public final class MarkerTool extends S3GuardTool {
   public int run(final String[] args, final PrintStream stream)
       throws ExitUtil.ExitException, Exception {
     this.out = stream;
-    final List<String> parsedArgs;
-    try {
-      parsedArgs = parseArgs(args);
-    } catch (CommandFormat.UnknownOptionException e) {
-      errorln(getUsage());
-      throw new ExitUtil.ExitException(EXIT_USAGE, e.getMessage(), e);
-    }
+    final List<String> parsedArgs = parseArgsWithErrorReporting(args);
     if (parsedArgs.size() != 1) {
       errorln(getUsage());
       println(out, "Supplied arguments: ["

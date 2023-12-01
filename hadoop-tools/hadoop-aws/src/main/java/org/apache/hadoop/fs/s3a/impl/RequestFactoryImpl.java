@@ -599,7 +599,7 @@ public class RequestFactoryImpl implements RequestFactory {
     return prepareRequest(DeleteObjectsRequest
         .builder()
         .bucket(bucket)
-        .delete(d -> d.objects(keysToDelete).quiet(true)));
+        .delete(d -> d.objects(keysToDelete).quiet(!LOG.isTraceEnabled())));
   }
 
   @Override

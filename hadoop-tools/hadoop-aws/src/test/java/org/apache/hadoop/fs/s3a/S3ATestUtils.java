@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -57,6 +59,8 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningE
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
@@ -89,6 +93,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -98,6 +103,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 import static org.junit.Assert.*;
 
 /**
@@ -982,6 +989,54 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Given a RemoteIterator to a list of file statuses, return a list of paths.
+   * @param i iterator
+   * @return list of paths
+   * @param <T> type of status
+   * @throws IOException failure retrieving values from the iterator
+   */
+  public static <T extends FileStatus> List<Path> toPathList(RemoteIterator<T> i)
+      throws IOException {
+    return toList(mappingRemoteIterator(i, FileStatus::getPath));
+  }
+
+  /**
+   * Expect an error code from the exception.
+   * @param code error code
+   * @param error exception
+   */
+  public static void expectErrorCode(final int code, final ExitUtil.ExitException error) {
+    if (error.getExitCode() != code) {
+      throw error;
+    }
+  }
+
+  /**
+   * Require a test case to be against Amazon S3 Express store.
+   */
+  public static void assumeS3ExpressFileSystem(final FileSystem fs) throws IOException {
+    assume("store is not S3 Express: " + fs.getUri(),
+        fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE));
+  }
+
+  /**
+   * Require a test case to be against a standard S3 store.
+   */
+  public static void assumeNotS3ExpressFileSystem(final FileSystem fs) throws IOException {
+    assume("store is S3 Express: " + fs.getUri(),
+        !fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE));
+  }
+
+  /**
+   * Require a store to be hosted by Amazon -i.e. not a third party store.
+   */
+  public static void assumeStoreAwsHosted(final FileSystem fs) {
+    assume("store is not AWS S3",
+        !NetworkBinding.isAwsEndpoint(fs.getConf()
+            .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -1566,5 +1621,26 @@ public final class S3ATestUtils {
     return fs.hasPathCapability(new Path("/"), FS_S3A_CREATE_PERFORMANCE_ENABLED);
   }
 
+  /**
+   * Is the filesystem connector bonded to S3Express storage?
+   * @param fs filesystem.
+   * @return true if the store has the relevant path capability.
+   * @throws IOException IO failure
+   */
+  public static boolean isS3ExpressStorage(FileSystem fs) throws IOException {
+    return fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE);
+  }
 
+  /**
+   * Get an etag from a FileStatus which must implement
+   * the {@link EtagSource} interface -which S3AFileStatus does.
+   *
+   * @param status the status.
+   * @return the etag
+   */
+  public static String etag(FileStatus status) {
+    Preconditions.checkArgument(status instanceof EtagSource,
+        "Not an EtagSource: %s", status);
+    return ((EtagSource) status).getEtag();
+  }
 }

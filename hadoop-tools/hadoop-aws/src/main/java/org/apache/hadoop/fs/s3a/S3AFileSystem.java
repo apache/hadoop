@@ -220,6 +220,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -250,6 +251,8 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isS3ExpressStore;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
@@ -289,11 +292,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public static final int DEFAULT_BLOCKSIZE = 32 * 1024 * 1024;
 
   private URI uri;
+
   private Path workingDir;
+
   private String username;
+
   private S3Client s3Client;
+
   /** Async client is used for transfer manager and s3 select. */
   private S3AsyncClient s3AsyncClient;
+
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninitialized filesystem.
@@ -470,6 +478,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private boolean optimizedCopyFromLocal;
 
+  /**
+   * Is this an S3 Express store?
+   */
+  private boolean s3ExpressStore;
+
+  /**
+   * Store endpoint from configuration info or access point ARN.
+   */
+  private String endpoint;
+
+  /**
+   * Region from configuration info or access point ARN.
+   */
+  private String configuredRegion;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -581,9 +604,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       //check but do not store the block size
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
-      // should the delete also purge uploads.
+
+      // determine and cache the endpoints
+      endpoint = accessPoint == null
+          ? conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)
+          : accessPoint.getEndpoint();
+
+      configuredRegion = accessPoint == null
+          ? conf.getTrimmed(AWS_REGION)
+          : accessPoint.getRegion();
+
+      // is this an S3Express store?
+      s3ExpressStore = isS3ExpressStore(bucket, endpoint);
+
+      // should the delete also purge uploads?
+      // happens if explicitly enabled, or if the store is S3Express storage.
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
-          DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT);
+          s3ExpressStore);
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
@@ -995,14 +1032,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
-
-    String endpoint = accessPoint == null
-        ? conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)
-        : accessPoint.getEndpoint();
-
-    String configuredRegion = accessPoint == null
-        ? conf.getTrimmed(AWS_REGION)
-        : accessPoint.getRegion();
 
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
@@ -1445,7 +1474,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public boolean isMultipartCopyEnabled() {
       return S3AFileSystem.this.isMultipartUploadEnabled;
     }
-  }
+
+    @Override
+    public long abortMultipartUploads(final Path path) throws IOException {
+      final String prefix = pathToKey(path);
+      try (AuditSpan span = createSpan("object_multipart_bulk_abort", prefix, null)) {
+        return S3AFileSystem.this.abortMultipartUploadsUnderPrefix(
+            createStoreContext(),
+            span,
+            prefix);
+      }
+    }
+
+  } // end S3AInternals
 
   /**
    * Get the input policy for this FS instance.
@@ -2483,18 +2524,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Retries.RetryTranslated
     public long abortMultipartUploadsUnderPrefix(String prefix)
         throws IOException {
-      getAuditSpan().activate();
-      // this deactivates the audit span somehow
-      final RemoteIterator<MultipartUpload> uploads =
-          S3AFileSystem.this.listUploadsUnderPrefix(storeContext, prefix);
-      // so reactivate it.
-      getAuditSpan().activate();
-      return foreach(uploads, upload ->
-              invoker.retry("Aborting multipart commit", upload.key(), true, () ->
-                  S3AFileSystem.this.abortMultipartUpload(upload)));
+      return S3AFileSystem.this.abortMultipartUploadsUnderPrefix(storeContext, auditSpan, prefix);
     }
 
   }  // end OperationCallbacksImpl
+
+  /**
+   * Abort multipart uploads under a prefix.
+   * @param storeContext store context
+   * @param span span for the operations
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  private long abortMultipartUploadsUnderPrefix(StoreContext storeContext,
+      AuditSpan span,
+      String prefix) throws IOException {
+
+    span.activate();
+    // this deactivates the audit span somehow
+    final RemoteIterator<MultipartUpload> uploads =
+        listUploadsUnderPrefix(storeContext, prefix);
+    // so reactivate it.
+    span.activate();
+    return foreach(uploads, upload ->
+            invoker.retry("Aborting multipart commit", upload.key(), true, () ->
+                abortMultipartUpload(upload)));
+  }
 
   /**
    * Callbacks from {@link Listing}.
@@ -3327,7 +3383,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Initiating delete operation for {} objects",
           keysToDelete.size());
       for (ObjectIdentifier objectIdentifier : keysToDelete) {
-        LOG.debug(" {} {}", objectIdentifier.key(),
+        LOG.debug(" \"{}\" {}", objectIdentifier.key(),
             objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
       }
     }
@@ -5400,9 +5456,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
+      // multi object delete flag
+    case ENABLE_MULTI_DELETE:
+      return enableMultiObjectsDelete;
+
       // Do directory operations purge uploads.
     case DIRECTORY_OPERATIONS_PURGE_UPLOADS:
       return dirOperationsPurgeUploads;
+
+      // this is a v2 sdk release.
+    case STORE_CAPABILITY_AWS_V2:
+      return true;
+
+      // is this store S3 Express?
+      // if so, note that directory listings may be inconsistent
+    case STORE_CAPABILITY_S3_EXPRESS_STORAGE:
+    case DIRECTORY_LISTING_INCONSISTENT:
+      return s3ExpressStore;
 
     // etags are avaialable in listings, but they
     // are not consistent across renames.

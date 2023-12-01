@@ -270,6 +270,11 @@ public final class S3AUtils {
         }
         break;
 
+      // Caused by duplicate create bucket call.
+      case SC_409_CONFLICT:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // this also surfaces sometimes and is considered to
       // be ~ a not found exception.
       case SC_410_GONE:
@@ -280,10 +285,16 @@ public final class S3AUtils {
       // errors which stores can return from requests which
       // the store does not support.
       case SC_405_METHOD_NOT_ALLOWED:
-      case SC_412_PRECONDITION_FAILED:
       case SC_415_UNSUPPORTED_MEDIA_TYPE:
       case SC_501_NOT_IMPLEMENTED:
         ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        break;
+
+      // precondition failure: the object is there, but the precondition
+      // (e.g. etag) didn't match. Assume remote file change during
+      // rename or status passed in to openfile had an etag which didn't match.
+      case SC_412_PRECONDITION_FAILED:
+        ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
 
       // out of range. This may happen if an object is overwritten with
@@ -860,7 +871,7 @@ public final class S3AUtils {
    */
   public static String stringify(S3Object s3Object) {
     StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
-    builder.append(s3Object.key()).append(' ');
+    builder.append("\"").append(s3Object.key()).append("\" ");
     builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
@@ -1633,4 +1644,5 @@ public final class S3AUtils {
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
   }
+
 }
