@@ -32,7 +32,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -134,6 +136,44 @@ public class TestReplicationPolicyExcludeSlowNodes
       namenode.getNamesystem().writeUnlock();
     }
     NameNode.LOG.info("Done working on it");
+  }
+
+  @Test
+  public void testSlowPeerTrackerEnabledClearSlowNodes() throws Exception {
+    namenode.getNamesystem().writeLock();
+    try {
+      // add nodes
+      for (DatanodeDescriptor dataNode : dataNodes) {
+        dnManager.addDatanode(dataNode);
+      }
+
+      // mock slow nodes
+      SlowPeerTracker tracker = dnManager.getSlowPeerTracker();
+      assert tracker != null;
+      OutlierMetrics outlierMetrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
+      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[1].getInfoAddr(),
+          outlierMetrics);
+      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[1].getInfoAddr(),
+          outlierMetrics);
+      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[1].getInfoAddr(),
+          outlierMetrics);
+
+      // waiting for slow nodes collector run
+      Thread.sleep(3000);
+
+      // fetch slow nodes
+      Set<String> slowPeers = dnManager.getSlowPeersUuidSet();
+      assertFalse(dnManager.isSlowPeerCollectorInitialized());
+      assertEquals(3, slowPeers.size());
+
+      // reconfig
+      namenode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+          "false");
+      assertTrue(dnManager.isSlowPeerCollectorInitialized());
+      assertEquals(0, DatanodeManager.getSlowNodesUuidSet().size());
+    } finally {
+      namenode.getNamesystem().writeUnlock();
+    }
   }
 
 }
