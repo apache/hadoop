@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -28,7 +29,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
@@ -187,19 +187,17 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
-    INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
-        .asDirectory();
-    assertTrue("The children list of root should be empty", 
+    final INodeDirectory rootNode = fsn.dir.getRoot();
+    assertTrue("The children list of root should be empty",
         rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     // one snapshot on root: s1
     DiffList<DirectoryDiff> diffList = rootNode.getDiffs().asList();
@@ -214,9 +212,9 @@ public class TestFSImageWithSnapshot {
     assertEquals(root, sdirs[0].getFullPath());
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
@@ -408,9 +406,9 @@ public class TestFSImageWithSnapshot {
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));      
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -432,9 +430,9 @@ public class TestFSImageWithSnapshot {
     out.close();
     
     // save namespace
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     // append to the empty file
     out = hdfs.append(file);
@@ -502,9 +500,9 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     
     // save namespace to fsimage
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -584,9 +582,9 @@ public class TestFSImageWithSnapshot {
   void restartCluster() throws Exception {
     final File before = dumpTree2File("before.txt");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -643,9 +641,9 @@ public class TestFSImageWithSnapshot {
     hdfs.delete(renamePath1, true);
     hdfs.deleteSnapshot(dir1, "s1");
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
             .numDataNodes(NUM_DATANODES).build();
@@ -688,9 +686,9 @@ public class TestFSImageWithSnapshot {
         new Path("/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -729,9 +727,9 @@ public class TestFSImageWithSnapshot {
     assertTrue(hdfs.exists(file1));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -774,9 +772,9 @@ public class TestFSImageWithSnapshot {
         "/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -819,9 +817,9 @@ public class TestFSImageWithSnapshot {
         new Path("/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)

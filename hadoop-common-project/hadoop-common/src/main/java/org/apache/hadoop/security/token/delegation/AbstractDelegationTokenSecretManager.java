@@ -19,7 +19,9 @@
 package org.apache.hadoop.security.token.delegation;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -41,6 +43,8 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -77,15 +81,19 @@ extends AbstractDelegationTokenIdentifier>
       = DelegationTokenSecretManagerMetrics.create();
 
   private String formatTokenId(TokenIdent id) {
-    return "(" + id + ")";
+    try {
+      return "(" + id + ")";
+    } catch (Exception e) {
+      LOG.warn("Exception in formatTokenId", e);
+    }
+    return "( SequenceNumber=" + id.getSequenceNumber() + " )";
   }
 
   /** 
    * Cache of currently valid tokens, mapping from DelegationTokenIdentifier 
    * to DelegationTokenInformation. Protected by this object lock.
    */
-  protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
-      = new ConcurrentHashMap<>();
+  protected Map<TokenIdent, DelegationTokenInformation> currentTokens;
 
   /**
    * Map of token real owners to its token count. This is used to generate
@@ -112,12 +120,12 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Access to currentKey is protected by this object lock
    */
-  private DelegationKey currentKey;
+  private volatile DelegationKey currentKey;
   
-  private long keyUpdateInterval;
-  private long tokenMaxLifetime;
-  private long tokenRemoverScanInterval;
-  private long tokenRenewInterval;
+  private final long keyUpdateInterval;
+  private final long tokenMaxLifetime;
+  private final long tokenRemoverScanInterval;
+  private final long tokenRenewInterval;
   /**
    * Whether to store a token's tracking ID in its TokenInformation.
    * Can be overridden by a subclass.
@@ -151,6 +159,7 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
     this.storeTokenTrackingId = false;
+    this.currentTokens = new ConcurrentHashMap<>();
   }
 
   /**
@@ -184,6 +193,14 @@ extends AbstractDelegationTokenIdentifier>
    */
   public long getCurrentTokensSize() {
     return currentTokens.size();
+  }
+
+  /**
+   * Interval for tokens to be renewed.
+   * @return Renew interval in milliseconds.
+   */
+  protected long getTokenRenewInterval() {
+    return this.tokenRenewInterval;
   }
 
   /** 
@@ -441,8 +458,9 @@ extends AbstractDelegationTokenIdentifier>
   /** 
    * Update the current master key for generating delegation tokens 
    * It should be called only by tokenRemoverThread.
+   * @throws IOException raised on errors performing I/O.
    */
-  void rollMasterKey() throws IOException {
+  protected void rollMasterKey() throws IOException {
     synchronized (this) {
       removeExpiredKeys();
       /* set final expiry date for retiring currentKey */
@@ -473,17 +491,18 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  protected synchronized byte[] createPassword(TokenIdent identifier) {
+  protected byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
     long now = Time.now();
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
-    identifier.setMasterKeyId(currentKey.getKeyId());
+    DelegationKey delegationCurrentKey = currentKey;
+    identifier.setMasterKeyId(delegationCurrentKey.getKeyId());
     identifier.setSequenceNumber(sequenceNum);
     LOG.info("Creating password for identifier: " + formatTokenId(identifier)
-        + ", currentKey: " + currentKey.getKeyId());
-    byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+        + ", currentKey: " + delegationCurrentKey.getKeyId());
+    byte[] password = createPassword(identifier.getBytes(), delegationCurrentKey.getKey());
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
@@ -508,7 +527,6 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
-    assert Thread.holdsLock(this);
     DelegationTokenInformation info = getTokenInfo(identifier);
     String err;
     if (info == null) {
@@ -528,7 +546,7 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  public synchronized byte[] retrievePassword(TokenIdent identifier)
+  public byte[] retrievePassword(TokenIdent identifier)
       throws InvalidToken {
     return checkToken(identifier).getPassword();
   }
@@ -540,7 +558,7 @@ extends AbstractDelegationTokenIdentifier>
     return null;
   }
 
-  public synchronized String getTokenTrackingId(TokenIdent identifier) {
+  public String getTokenTrackingId(TokenIdent identifier) {
     DelegationTokenInformation info = getTokenInfo(identifier);
     if (info == null) {
       return null;
@@ -554,7 +572,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param password Password in the token.
    * @throws InvalidToken InvalidToken.
    */
-  public synchronized void verifyToken(TokenIdent identifier, byte[] password)
+  public void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     byte[] storedPassword = retrievePassword(identifier);
     if (!MessageDigest.isEqual(password, storedPassword)) {
@@ -571,7 +589,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws InvalidToken if the token is invalid
    * @throws AccessControlException if the user can't renew token
    */
-  public synchronized long renewToken(Token<TokenIdent> token,
+  public long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -633,7 +651,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws InvalidToken for invalid token
    * @throws AccessControlException if the user isn't allowed to cancel
    */
-  public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
+  public TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -677,10 +695,14 @@ extends AbstractDelegationTokenIdentifier>
 
   /** Class to encapsulate a token's renew date and password. */
   @InterfaceStability.Evolving
-  public static class DelegationTokenInformation {
+  public static class DelegationTokenInformation implements Writable {
     long renewDate;
     byte[] password;
     String trackingId;
+
+    public DelegationTokenInformation() {
+      this(0, null);
+    }
 
     public DelegationTokenInformation(long renewDate, byte[] password) {
       this(renewDate, password, null);
@@ -711,6 +733,29 @@ extends AbstractDelegationTokenIdentifier>
     public String getTrackingId() {
       return trackingId;
     }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      WritableUtils.writeVLong(out, renewDate);
+      if (password == null) {
+        WritableUtils.writeVInt(out, -1);
+      } else {
+        WritableUtils.writeVInt(out, password.length);
+        out.write(password);
+      }
+      WritableUtils.writeString(out, trackingId);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      renewDate = WritableUtils.readVLong(in);
+      int len = WritableUtils.readVInt(in);
+      if (len > -1) {
+        password = new byte[len];
+        in.readFully(password);
+      }
+      trackingId = WritableUtils.readString(in);
+    }
   }
   
   /** Remove expired delegation tokens from cache */
@@ -719,7 +764,7 @@ extends AbstractDelegationTokenIdentifier>
     Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
-          currentTokens.entrySet().iterator();
+          getCandidateTokensForCleanup().entrySet().iterator();
       while (i.hasNext()) {
         Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
         long renewDate = entry.getValue().getRenewDate();
@@ -734,13 +779,21 @@ extends AbstractDelegationTokenIdentifier>
     logExpireTokens(expiredTokens);
   }
 
+  protected Map<TokenIdent, DelegationTokenInformation> getCandidateTokensForCleanup() {
+    return this.currentTokens;
+  }
+
   protected void logExpireTokens(
       Collection<TokenIdent> expiredTokens) throws IOException {
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
       LOG.info("Removing expired token " + formatTokenId(ident));
-      removeStoredToken(ident);
+      removeExpiredStoredToken(ident);
     }
+  }
+
+  protected void removeExpiredStoredToken(TokenIdent ident) throws IOException {
+    removeStoredToken(ident);
   }
 
   public void stopThreads() {
@@ -866,9 +919,9 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Add token stats to the owner to token count mapping.
    *
-   * @param id
+   * @param id token id.
    */
-  private void addTokenForOwnerStats(TokenIdent id) {
+  protected void addTokenForOwnerStats(TokenIdent id) {
     String realOwner = getTokenRealOwner(id);
     tokenOwnerStats.put(realOwner,
         tokenOwnerStats.getOrDefault(realOwner, 0L)+1);

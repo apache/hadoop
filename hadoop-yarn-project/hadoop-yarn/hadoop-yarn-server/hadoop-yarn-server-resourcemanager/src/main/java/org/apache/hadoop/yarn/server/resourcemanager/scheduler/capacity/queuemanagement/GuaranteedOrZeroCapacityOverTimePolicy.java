@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
@@ -31,7 +32,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCrea
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueManagementPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -251,7 +251,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @Override
-  public void init(final ParentQueue parentQueue) throws IOException {
+  public void init(final AbstractParentQueue parentQueue) throws IOException {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -304,7 +304,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
    *
    * @return List of Queue Management change suggestions which could potentially
    * be committed/rejected by the scheduler due to validation failures
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when compute queueManagement changes fails.
    */
   @Override
   public List<QueueManagementChange> computeQueueManagementChanges()
@@ -415,7 +415,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     try {
       CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(
           policy.leafQueueTemplate.getQueueCapacities(),
-          parentQueueCapacities, policy.leafQueueTemplateNodeLabels);
+          parentQueueCapacities, policy.leafQueueTemplateNodeLabels,
+          managedParentQueue.getQueueContext().getConfiguration().isLegacyQueueMode());
       policy.leafQueueTemplateCapacities =
           policy.leafQueueTemplate.getQueueCapacities();
     } finally {
@@ -533,7 +534,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
    * queues
    */
   private Map<String, QueueCapacities> deactivateLeafQueuesIfInActive(
-      ParentQueue parentQueue, String nodeLabel,
+      AbstractParentQueue parentQueue, String nodeLabel,
       LeafQueueEntitlements leafQueueEntitlements)
       throws SchedulerDynamicEditException {
     Map<String, QueueCapacities> deactivatedQueues = new HashMap<>();
@@ -658,7 +659,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @Override
-  public void reinitialize(final ParentQueue parentQueue) throws IOException {
+  public void reinitialize(final AbstractParentQueue parentQueue) throws IOException {
     if (!(parentQueue instanceof ManagedParentQueue)) {
       throw new IllegalStateException(
           "Expected instance of type " + ManagedParentQueue.class + " found  "

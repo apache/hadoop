@@ -25,14 +25,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 
 /**
  *
- * Implementors need to provide the ability to serliaze a policy and its
+ * Implementors need to provide the ability to serialize a policy and its
  * configuration as a {@link SubClusterPolicyConfiguration}, as well as provide
  * (re)initialization mechanics for the underlying
  * {@link FederationAMRMProxyPolicy} and {@link FederationRouterPolicy}.
  *
  * The serialization aspects are used by admin APIs or a policy engine to store
  * a serialized configuration in the {@code FederationStateStore}, while the
- * getters methods are used to obtain a propertly inizialized policy in the
+ * getters methods are used to obtain a properly initialized policy in the
  * {@code Router} and {@code AMRMProxy} respectively.
  *
  * This interface by design binds together {@link FederationAMRMProxyPolicy} and
@@ -48,7 +48,7 @@ public interface FederationPolicyManager {
    * instance of {@link FederationAMRMProxyPolicy} reinitialized with the
    * current context, otherwise a new instance initialized with the current
    * context is provided. If the instance is compatible with the current class
-   * the implementors should attempt to reinitalize (retaining state). To affect
+   * the implementors should attempt to reinitialize (retaining state). To affect
    * a complete policy reset oldInstance should be null.
    *
    * @param policyContext the current context
@@ -70,15 +70,15 @@ public interface FederationPolicyManager {
    * instance of {@link FederationRouterPolicy} reinitialized with the current
    * context, otherwise a new instance initialized with the current context is
    * provided. If the instance is compatible with the current class the
-   * implementors should attempt to reinitalize (retaining state). To affect a
-   * complete policy reset oldInstance shoulb be set to null.
+   * implementors should attempt to reinitialize (retaining state). To affect a
+   * complete policy reset oldInstance should be set to null.
    *
    * @param policyContext the current context
    * @param oldInstance the existing (possibly null) instance.
    *
    * @return an updated {@link FederationRouterPolicy}.
    *
-   * @throws FederationPolicyInitializationException if the initalization cannot
+   * @throws FederationPolicyInitializationException if the initialization cannot
    *           be completed properly. The oldInstance should be still valid in
    *           case of failed initialization.
    */

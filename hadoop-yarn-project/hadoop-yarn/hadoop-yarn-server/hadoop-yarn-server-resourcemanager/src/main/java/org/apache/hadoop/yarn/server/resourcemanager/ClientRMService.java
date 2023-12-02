@@ -199,6 +199,7 @@ import org.apache.hadoop.yarn.util.UTCClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -888,6 +889,16 @@ public class ClientRMService extends AbstractService implements
     final Set<ApplicationId> runningAppsFilteredByQueues =
         getRunningAppsFilteredByQueues(apps, queues);
 
+    Set<String> queuePaths = new HashSet<>();
+    for (String queue : queues) {
+      String queuePath = rmAppManager.getQueuePath(queue);
+      if (queuePath != null) {
+        queuePaths.add(queuePath);
+      } else {
+        queuePaths.add(queue);
+      }
+    }
+
     Iterator<RMApp> appsIter = apps.values().iterator();
     
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
@@ -900,9 +911,9 @@ public class ClientRMService extends AbstractService implements
         continue;
       }
 
-      if (queues != null && !queues.isEmpty()) {
+      if (queuePaths != null && !queuePaths.isEmpty()) {
         if (!runningAppsFilteredByQueues.contains(application.getApplicationId()) &&
-            !queues.contains(application.getQueue())) {
+            !queuePaths.contains(application.getQueue())) {
           continue;
         }
       }
@@ -1086,7 +1097,7 @@ public class ClientRMService extends AbstractService implements
   private NodeReport createNodeReports(RMNode rmNode) {
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
-    Resource used = BuilderUtils.newResource(0, 0);
+    Resource used = Resources.createResource(0);
     int numContainers = 0;
     if (schedulerNodeReport != null) {
       used = schedulerNodeReport.getUsedResource();

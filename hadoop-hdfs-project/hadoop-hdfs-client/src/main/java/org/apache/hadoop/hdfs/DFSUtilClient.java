@@ -63,6 +63,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -595,7 +596,7 @@ public class DFSUtilClient {
     if (ports == null || ports.length == 0) {
       return address;
     }
-    LOG.info("Using server auxiliary ports " + Arrays.toString(ports));
+    LOG.info("Using server auxiliary ports {}", Arrays.toString(ports));
     URI uri;
     try {
       uri = new URI(address);
@@ -604,7 +605,7 @@ public class DFSUtilClient {
       // happens in unit test, as MiniDFSCluster sets the value to
       // 127.0.0.1:0, without schema (i.e. "hdfs://"). While in practice, this
       // should not be the case. So log a warning message here.
-      LOG.warn("NameNode address is not a valid uri:" + address);
+      LOG.warn("NameNode address is not a valid uri:{}", address);
       return address;
     }
     // Ignore the port, only take the schema(e.g. hdfs) and host (e.g.
@@ -660,6 +661,10 @@ public class DFSUtilClient {
     String[] components = StringUtils.split(src, '/');
     for (int i = 0; i < components.length; i++) {
       String element = components[i];
+      // For Windows, we must allow the : in the drive letter.
+      if (Shell.WINDOWS && i == 1 && element.endsWith(":")) {
+        continue;
+      }
       if (element.equals(".")  ||
           (element.contains(":"))  ||
           (element.contains("/"))) {
@@ -1056,8 +1061,8 @@ public class DFSUtilClient {
         @Override
         public void rejectedExecution(Runnable runnable,
             ThreadPoolExecutor e) {
-          LOG.info(threadNamePrefix + " task is rejected by " +
-                  "ThreadPoolExecutor. Executing it in current thread.");
+          LOG.info("{} task is rejected by " +
+              "ThreadPoolExecutor. Executing it in current thread.", threadNamePrefix);
           // will run in the current thread
           super.rejectedExecution(runnable, e);
         }

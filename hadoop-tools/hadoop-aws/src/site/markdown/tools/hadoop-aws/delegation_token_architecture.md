@@ -89,7 +89,7 @@ of:
 * A set of AWS session credentials
   (`fs.s3a.access.key`, `fs.s3a.secret.key`, `fs.s3a.session.token`).
 
-These credentials are obtained from the AWS Secure Token Service (STS) when the the token is issued.
+These credentials are obtained from the AWS Secure Token Service (STS) when the token is issued.
 * A set of AWS session credentials binding the user to a specific AWS IAM Role,
 further restricted to only access the S3 bucket.
 Again, these credentials are requested when the token is issued.

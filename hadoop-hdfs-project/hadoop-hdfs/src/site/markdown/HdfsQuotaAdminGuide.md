@@ -109,7 +109,7 @@ Quotas are managed by a set of commands available only to the administrator.
 Reporting Command
 -----------------
 
-An an extension to the count command of the HDFS shell reports quota values and the current count of names and bytes in use.
+An extension to the count command of the HDFS shell reports quota values and the current count of names and bytes in use.
 
 *   `hadoop fs -count -q [-h] [-v] [-t [comma-separated list of storagetypes]] <directory>...<directory>`
 

@@ -14,7 +14,7 @@
 
 # S3 Select
 
-**Experimental Feature**
+**Deprecated Feature**
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
@@ -59,6 +59,20 @@ Record Readers.
 * Structured source file formats like Apache Parquet.
 It's better here to directly use the Apache Spark, Hive, Impala, Flink or
 similar, which all use the latest ASF-supported libraries.
+
+## Dependencies: eventstream JAR
+
+To use S3 Select through the S3A connector, an extra JAR MUST be added to the classpath of your application,
+`eventstream-1.0.1.jar`.a
+For command line tool use, this should be done by adding it to `share/hadoop/common/lib/`
+
+```xml
+<dependency>
+  <groupId>software.amazon.eventstream</groupId>
+  <artifactId>eventstream</artifactId>
+  <version>1.0.1</version>
+</dependency>
+```
 
 ## Enabling/Disabling S3 Select
 
@@ -288,10 +302,12 @@ hadoop s3guard \
 ```
 
 
-## Use in MR/Analytics queries: Work in Progress
+## Use in MR/Analytics queries: Partially Supported
 
-S3 Select support in analytics queries is a work in progress. It does
-not work reliably with large source files where the work is split up.
+S3 Select support in analytics queries is only partially supported.
+It does not work reliably with large source files where the work is split up,
+and as the various query engines all assume that .csv and .json formats are splittable,
+things go very wrong, fast.
 
 As a proof of concept *only*, S3 Select queries can be made through
 MapReduce jobs which use any Hadoop `RecordReader`
@@ -663,6 +679,24 @@ to the `get()` call: do it.
 
 ## Troubleshooting
 
+### `NoClassDefFoundError: software/amazon/eventstream/MessageDecoder`
+
+Select operation failing with a missing eventstream class.
+
+```
+java.io.IOException: java.lang.NoClassDefFoundError: software/amazon/eventstream/MessageDecoder
+at org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper.select(SelectObjectContentHelper.java:75)
+at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$select$10(WriteOperationHelper.java:660)
+at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62)
+at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+```
+
+The eventstream JAR is not on the classpath/not in sync with the version of the full "bundle.jar" JDK
+
+Fix: get a compatible version of the JAR on the classpath.
+
+### SQL errors
+
 Getting S3 Select code to work is hard, though those knowledgeable in SQL
 will find it easier.
 
@@ -673,7 +707,6 @@ Problems can be split into:
 1. Datatype casting issues
 1. Bad records/data in source files.
 1. Failure to configure MR jobs to work correctly.
-1. Failure of MR jobs due to
 
 The exceptions here are all based on the experience during writing tests;
 more may surface with broader use.
@@ -738,7 +771,7 @@ at org.apache.hadoop.mapreduce.lib.input.LineRecordReader.nextKeyValue(LineRecor
 ```
 
 The underlying problem is that the gzip decompressor is automatically enabled
-when the the source file ends with the ".gz" extension. Because S3 Select
+when the source file ends with the ".gz" extension. Because S3 Select
 returns decompressed data, the codec fails.
 
 The workaround here is to declare that the job should add the "Passthrough Codec"

@@ -27,9 +27,11 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelsStore;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 
 public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
   Map<NodeId, Set<String>> lastNodeToLabels = null;
@@ -97,5 +99,25 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
     // always enable node labels while using MemoryRMNodeLabelsManager
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     super.serviceInit(conf);
+  }
+
+  public void setResourceForLabel(String label, Resource resource) {
+    if (label.equals(NO_LABEL)) {
+      noNodeLabel = new FakeLabel(resource);
+      return;
+    }
+
+    labelCollections.put(label, new FakeLabel(label, resource));
+  }
+
+  private static class FakeLabel extends RMNodeLabel {
+
+    FakeLabel(String label, Resource resource) {
+      super(label, resource, 1, false);
+    }
+
+    FakeLabel(Resource resource) {
+      super(NO_LABEL, resource, 1, false);
+    }
   }
 }

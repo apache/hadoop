@@ -44,7 +44,7 @@ public class BlockManagerTestUtil {
 
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
-    blockManager.maxReplicationStreams = limit;
+    blockManager.setMaxReplicationStreams(limit, false);
   }
 
   /** @return the datanode descriptor for the given the given storageID. */

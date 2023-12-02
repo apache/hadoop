@@ -24,8 +24,14 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.junit.Test;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /** Unit tests for WritableName. */
@@ -63,6 +69,28 @@ public class TestWritableName {
     }
   }
 
+  private static class SimpleSerializable {
+
+  }
+
+  private static class SimpleSerializer implements Serialization<SimpleSerializable> {
+
+    @Override
+    public boolean accept(Class<?> c) {
+      return c.equals(SimpleSerializable.class);
+    }
+
+    @Override
+    public Serializer<SimpleSerializable> getSerializer(Class<SimpleSerializable> c) {
+      return null;
+    }
+
+    @Override
+    public Deserializer<SimpleSerializable> getDeserializer(Class<SimpleSerializable> c) {
+      return null;
+    }
+  }
+
   private static final String testName = "mystring";
 
   @Test
@@ -95,7 +123,27 @@ public class TestWritableName {
     // check original name still works
     test = WritableName.getClass(testName, conf);
     assertTrue(test.equals(SimpleWritable.class));
+  }
 
+  @Test
+  public void testAddNameSerializable() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, SimpleSerializer.class.getName());
+    SerializationFactory serializationFactory =
+        new SerializationFactory(conf);
+
+    String altName = testName + ".alt";
+
+    WritableName.addName(SimpleSerializable.class, altName);
+
+    Class<?> test = WritableName.getClass(altName, conf);
+    assertEquals(test, SimpleSerializable.class);
+    assertNotNull(serializationFactory.getSerialization(test));
+
+    // check original name still works
+    test = WritableName.getClass(SimpleSerializable.class.getName(), conf);
+    assertEquals(test, SimpleSerializable.class);
+    assertNotNull(serializationFactory.getSerialization(test));
   }
 
   @Test

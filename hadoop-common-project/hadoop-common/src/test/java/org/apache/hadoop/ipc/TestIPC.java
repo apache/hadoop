@@ -82,6 +82,7 @@ import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
@@ -162,9 +163,15 @@ public class TestIPC {
   static LongWritable call(Client client, LongWritable param,
       InetSocketAddress addr, int rpcTimeout, Configuration conf)
           throws IOException {
+    return call(client, param, addr, rpcTimeout, conf, null);
+  }
+
+  static LongWritable call(Client client, LongWritable param,
+      InetSocketAddress addr, int rpcTimeout, Configuration conf, AlignmentContext alignmentContext)
+      throws IOException {
     final ConnectionId remoteId = getConnectionId(addr, rpcTimeout, conf);
     return (LongWritable)client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
-        RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        RPC.RPC_SERVICE_CLASS_DEFAULT, null, alignmentContext);
   }
 
   static class TestServer extends Server {
@@ -1168,6 +1175,10 @@ public class TestIPC {
 
     call(client, addr, serviceClass, conf);
     Connection connection = server.getConnections()[0];
+    LOG.info("Connection is from: {}", connection);
+    assertEquals(
+        "Connection string representation should include both IP address and Host name", 2,
+        connection.toString().split(" / ").length);
     int serviceClass2 = connection.getServiceClass();
     assertFalse(noChanged ^ serviceClass == serviceClass2);
     client.stop();
@@ -1326,6 +1337,37 @@ public class TestIPC {
       server.stop();
     }
   }
+
+  /**
+   * Verify that stateID is received into call before
+   * caller is notified.
+   * @throws IOException
+   */
+  @Test(timeout=60000)
+  public void testReceiveStateBeforeCallerNotification() throws IOException {
+    AtomicBoolean stateReceived = new AtomicBoolean(false);
+    AlignmentContext alignmentContext = Mockito.mock(AlignmentContext.class);
+    Mockito.doAnswer((Answer<Void>) invocation -> {
+      Thread.sleep(1000);
+      stateReceived.set(true);
+      return null;
+    }).when(alignmentContext)
+        .receiveResponseState(any(RpcHeaderProtos.RpcResponseHeaderProto.class));
+
+    final Client client = new Client(LongWritable.class, conf);
+    final TestServer server = new TestServer(1, false);
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      call(client, new LongWritable(RANDOM.nextLong()), addr,
+          0, conf, alignmentContext);
+      Assert.assertTrue(stateReceived.get());
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
   
   /** A dummy protocol */
   interface DummyProtocol {
@@ -1336,7 +1378,7 @@ public class TestIPC {
   /**
    * Test the retry count while used in a retry proxy.
    */
-  @Test(timeout=60000)
+  @Test(timeout=100000)
   public void testRetryProxy() throws IOException {
     final Client client = new Client(LongWritable.class, conf);
     
@@ -1722,6 +1764,47 @@ public class TestIPC {
   @Test
   public void testProxyUserBinding() throws Exception {
     checkUserBinding(true);
+  }
+
+  @Test(timeout=60000)
+  public void testUpdateAddressEnsureResolved() throws Exception {
+    // start server
+    Server server = new TestServer(1, false);
+    server.start();
+
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory)
+        .createSocket();
+    Client client = new Client(LongWritable.class, conf, mockFactory);
+    InetSocketAddress address =
+        new InetSocketAddress("localhost", NetUtils.getFreeSocketPort());
+    ConnectionId remoteId = getConnectionId(address, 100, conf);
+    try {
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
+
+      assertFalse(address.isUnresolved());
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+
+      NetUtils.addStaticResolution("localhost", "host.invalid");
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
+
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+    } finally {
+      client.stop();
+      server.stop();
+    }
   }
 
   private void checkUserBinding(boolean asProxy) throws Exception {

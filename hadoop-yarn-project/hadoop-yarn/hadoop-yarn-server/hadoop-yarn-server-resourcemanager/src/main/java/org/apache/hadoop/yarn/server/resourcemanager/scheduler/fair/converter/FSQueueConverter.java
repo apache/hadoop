@@ -17,13 +17,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
@@ -48,7 +45,7 @@ public class FSQueueConverter {
   private static final String FIFO_POLICY = "fifo";
 
   private final FSConfigToCSConfigRuleHandler ruleHandler;
-  private Configuration capacitySchedulerConfig;
+  private CapacitySchedulerConfiguration capacitySchedulerConfig;
   private final boolean preemptionEnabled;
   private final boolean sizeBasedWeight;
   @SuppressWarnings("unused")
@@ -82,13 +79,13 @@ public class FSQueueConverter {
     emitMaxParallelApps(queueName, queue);
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
-    emitDefaultUserLimitFactor(queueName, children);
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
     emitSizeBasedWeight(queueName);
     emitOrderingPolicy(queueName, queue);
     checkMaxChildCapacitySetting(queue);
+    emitDefaultUserLimitFactor(queueName, children);
 
     for (FSQueue childQueue : children) {
       convertQueueHierarchy(childQueue);
@@ -104,11 +101,10 @@ public class FSQueueConverter {
     ruleHandler.handleChildQueueCount(queueName, children.size());
 
     if (children.size() > 0) {
-      String childQueues = children.stream()
+      List<String> childQueues = children.stream()
           .map(child -> getQueueShortName(child.getName()))
-          .collect(Collectors.joining(","));
-
-      capacitySchedulerConfig.set(PREFIX + queueName + ".queues", childQueues);
+          .collect(Collectors.toList());
+      capacitySchedulerConfig.setQueues(queueName, childQueues.toArray(new String[0]));
     }
   }
 
@@ -125,14 +121,14 @@ public class FSQueueConverter {
     if (queueMaxAmShare != 0.0f
         && queueMaxAmShare != queueMaxAMShareDefault
         && queueMaxAmShare != QUEUE_MAX_AM_SHARE_DISABLED) {
-      capacitySchedulerConfig.setFloat(PREFIX + queueName +
-          ".maximum-am-resource-percent", queueMaxAmShare);
+      capacitySchedulerConfig.setMaximumApplicationMasterResourcePerQueuePercent(
+          queueName, queueMaxAmShare);
     }
 
     if (queueMaxAmShare == QUEUE_MAX_AM_SHARE_DISABLED
         && queueMaxAmShare != queueMaxAMShareDefault) {
-      capacitySchedulerConfig.setFloat(PREFIX + queueName +
-          ".maximum-am-resource-percent", 1.0f);
+      capacitySchedulerConfig.setMaximumApplicationMasterResourcePerQueuePercent(
+          queueName, 1.0f);
     }
   }
 
@@ -145,7 +141,7 @@ public class FSQueueConverter {
   private void emitMaxParallelApps(String queueName, FSQueue queue) {
     if (queue.getMaxRunningApps() != MAX_RUNNING_APPS_UNSET
         && queue.getMaxRunningApps() != queueMaxAppsDefault) {
-      capacitySchedulerConfig.set(PREFIX + queueName + ".max-parallel-apps",
+      capacitySchedulerConfig.setMaxParallelAppsForQueue(queueName,
           String.valueOf(queue.getMaxRunningApps()));
     }
   }
@@ -165,8 +161,8 @@ public class FSQueueConverter {
       ruleHandler.handleMaxResources();
     }
 
-    capacitySchedulerConfig.set(PREFIX + queueName + ".maximum-capacity",
-        "100");
+    capacitySchedulerConfig.setMaximumCapacity(queueName,
+        100.0f);
   }
 
   /**
@@ -180,7 +176,7 @@ public class FSQueueConverter {
     Resource maxAllocation = queue.getMaximumContainerAllocation();
 
     if (isNotUnboundedResource(maxAllocation)) {
-      long parentMaxVcores = Integer.MIN_VALUE;
+      int parentMaxVcores = Integer.MIN_VALUE;
       long parentMaxMemory = Integer.MIN_VALUE;
 
       if (queue.getParent() != null) {
@@ -192,16 +188,16 @@ public class FSQueueConverter {
         }
       }
 
-      long maxVcores = maxAllocation.getVirtualCores();
+      int maxVcores = maxAllocation.getVirtualCores();
       long maxMemory = maxAllocation.getMemorySize();
 
       // only emit max allocation if it differs from the parent's setting
       if (maxVcores != parentMaxVcores || maxMemory != parentMaxMemory) {
-        capacitySchedulerConfig.set(PREFIX + queueName +
-            ".maximum-allocation-mb", String.valueOf(maxMemory));
+        capacitySchedulerConfig.setQueueMaximumAllocationMb(
+            queueName, (int) maxMemory);
 
-        capacitySchedulerConfig.set(PREFIX + queueName +
-            ".maximum-allocation-vcores", String.valueOf(maxVcores));
+        capacitySchedulerConfig.setQueueMaximumAllocationVcores(
+            queueName, maxVcores);
       }
     }
   }
@@ -214,17 +210,14 @@ public class FSQueueConverter {
    */
   private void emitPreemptionDisabled(String queueName, FSQueue queue) {
     if (preemptionEnabled && !queue.isPreemptable()) {
-      capacitySchedulerConfig.set(PREFIX + queueName + ".disable_preemption",
-          "true");
+      capacitySchedulerConfig.setPreemptionDisabled(queueName, true);
     }
   }
 
   public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
-    if (children.isEmpty()) {
-      capacitySchedulerConfig.setFloat(
-              CapacitySchedulerConfiguration.
-                      PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
-              -1.0f);
+    if (children.isEmpty() &&
+            !capacitySchedulerConfig.isAutoQueueCreationV2Enabled(queueName)) {
+      capacitySchedulerConfig.setUserLimitFactor(queueName, -1.0f);
     }
   }
 
@@ -253,19 +246,16 @@ public class FSQueueConverter {
 
       switch (policy) {
       case DominantResourceFairnessPolicy.NAME:
-        capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FAIR_POLICY);
+        capacitySchedulerConfig.setOrderingPolicy(queueName, FAIR_POLICY);
         break;
       case FairSharePolicy.NAME:
-        capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FAIR_POLICY);
+        capacitySchedulerConfig.setOrderingPolicy(queueName, FAIR_POLICY);
         if (drfUsed) {
           ruleHandler.handleFairAsDrf(queueName);
         }
         break;
       case FifoPolicy.NAME:
-        capacitySchedulerConfig.set(PREFIX + queueName
-            + ".ordering-policy", FIFO_POLICY);
+        capacitySchedulerConfig.setOrderingPolicy(queueName, FIFO_POLICY);
         break;
       default:
         String msg = String.format("Unexpected ordering policy " +

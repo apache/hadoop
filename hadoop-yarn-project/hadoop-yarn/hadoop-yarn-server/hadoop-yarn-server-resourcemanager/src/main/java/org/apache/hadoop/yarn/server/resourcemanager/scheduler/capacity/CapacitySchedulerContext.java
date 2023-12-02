@@ -58,6 +58,7 @@ public interface CapacitySchedulerContext {
 
   /**
    * Get the yarn configuration.
+   * @return yarn configuration.
    */
   Configuration getConf();
 

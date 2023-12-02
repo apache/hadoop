@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.store.DataBlocks;
 
 /**
@@ -32,6 +33,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int writeBufferSize;
 
   private boolean enableFlush;
+
+  private boolean enableExpectHeader;
 
   private boolean enableSmallWriteOptimization;
 
@@ -63,6 +66,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private TracingContext tracingContext;
 
+  /** A BackReference to the FS instance that created this OutputStream. */
+  private BackReference fsBackRef;
+
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -75,6 +81,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamContext enableFlush(final boolean enableFlush) {
     this.enableFlush = enableFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext enableExpectHeader(final boolean enableExpectHeader) {
+    this.enableExpectHeader = enableExpectHeader;
     return this;
   }
 
@@ -150,6 +161,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withAbfsBackRef(
+      final BackReference fsBackRef) {
+    this.fsBackRef = fsBackRef;
+    return this;
+  }
+
   public AbfsOutputStreamContext build() {
     // Validation of parameters to be done here.
     if (streamStatistics == null) {
@@ -182,6 +199,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableFlush() {
     return enableFlush;
+  }
+
+  public boolean isExpectHeaderEnabled() {
+    return enableExpectHeader;
   }
 
   public boolean isDisableOutputStreamFlush() {
@@ -249,5 +270,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public TracingContext getTracingContext() {
     return tracingContext;
+  }
+
+  public BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }

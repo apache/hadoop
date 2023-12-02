@@ -193,8 +193,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
         synchronized (appIdToContainerId) {
           Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
           if (masterContainers == null) {
-            LOG.info("Stop container for " + containerId
-                + " is called before initializing container.");
+            LOG.info("Stop container for {}"
+                + " is called before initializing container.", containerId);
             return;
           }
           masterContainers.remove(containerId);

@@ -97,6 +97,7 @@ public class ConnectionManager {
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
+   * @param routerStateIdContext Federated namespace context for router.
    */
   public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
@@ -481,7 +482,7 @@ public class ConnectionManager {
                   pool.getMaxSize(), pool);
             }
           } catch (IOException e) {
-            LOG.error("Cannot create a new connection", e);
+            LOG.error("Cannot create a new connection for {} {}", pool, e);
           }
         } catch (InterruptedException e) {
           LOG.error("The connection creator was interrupted");

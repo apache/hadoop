@@ -1,4 +1,4 @@
-.DS_Store
+*.DS_Store
 *.iml
 *.ipr
 *.iws
@@ -11,6 +11,7 @@
 *.patch
 *.diff
 .idea
+.vscode
 .svn
 .classpath
 .project

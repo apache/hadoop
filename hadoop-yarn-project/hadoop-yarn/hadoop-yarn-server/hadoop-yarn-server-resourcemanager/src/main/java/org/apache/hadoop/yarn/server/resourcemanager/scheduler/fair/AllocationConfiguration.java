@@ -108,7 +108,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    *                        configuration.
    * @param allocationFileParser The allocation file parser
    * @param globalReservationQueueConfig The reservation queue config
-   * @throws AllocationConfigurationException
+   * @throws AllocationConfigurationException for any errors.
    */
   public AllocationConfiguration(QueueProperties queueProperties,
       AllocationFileParser allocationFileParser,
@@ -202,6 +202,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   /**
    * Get a queue's min share preemption timeout configured in the allocation
    * file, in milliseconds. Return -1 if not set.
+   *
+   * @param queueName queue name.
+   * @return min share preemption timeout, return -1f if not set.
    */
   public long getMinSharePreemptionTimeout(String queueName) {
     Long minSharePreemptionTimeout = minSharePreemptionTimeouts.get(queueName);
@@ -211,6 +214,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   /**
    * Get a queue's fair share preemption timeout configured in the allocation
    * file, in milliseconds. Return -1 if not set.
+   *
+   * @param queueName queue Name.
+   * @return fair share preemption timeout, return -1f if not set.
    */
   public long getFairSharePreemptionTimeout(String queueName) {
     Long fairSharePreemptionTimeout = fairSharePreemptionTimeouts.get(queueName);
@@ -221,6 +227,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   /**
    * Get a queue's fair share preemption threshold in the allocation file.
    * Return -1f if not set.
+   *
+   * @param queueName queue Name.
+   * @return preemption threshold, return -1f if not set.
    */
   public float getFairSharePreemptionThreshold(String queueName) {
     Float fairSharePreemptionThreshold =

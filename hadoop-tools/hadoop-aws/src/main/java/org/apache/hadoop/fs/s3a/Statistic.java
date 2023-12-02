@@ -242,7 +242,10 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
       TYPE_DURATION),
-  OBJECT_PUT_REQUESTS(
+  OBJECT_MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_LIST,
+      "Object multipart list request issued",
+      TYPE_DURATION),  OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
       TYPE_DURATION),
@@ -447,6 +450,16 @@ public enum Statistic {
       "Total queue duration of all block uploads",
       TYPE_DURATION),
 
+  /* Stream prefetch file cache eviction */
+  STREAM_EVICT_BLOCKS_FROM_FILE_CACHE(
+      StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
+      "Count of blocks evicted from the disk cache",
+      TYPE_COUNTER),
+  STREAM_FILE_CACHE_EVICTION(
+      StreamStatisticNames.STREAM_FILE_CACHE_EVICTION,
+      "Duration of the eviction of an element from LRU cache that holds disk cache blocks",
+      TYPE_DURATION),
+
   /* committer stats */
   COMMITTER_COMMITS_CREATED(
       "committer_commits_created",
@@ -567,7 +580,7 @@ public enum Statistic {
       TYPE_COUNTER),
   MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
       StoreStatisticNames.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
-      "Multipart Upload Abort Unner Path Invoked",
+      "Multipart Upload Abort Under Path Invoked",
       TYPE_COUNTER),
   MULTIPART_UPLOAD_COMPLETED(
       StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,

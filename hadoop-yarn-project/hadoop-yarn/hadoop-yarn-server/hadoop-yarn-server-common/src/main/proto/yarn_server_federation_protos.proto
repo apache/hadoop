@@ -98,6 +98,7 @@ message ApplicationHomeSubClusterProto {
   optional ApplicationIdProto application_id = 1;
   optional SubClusterIdProto home_sub_cluster = 2;
   optional int64 create_time = 3;
+  optional ApplicationSubmissionContextProto app_submit_context = 4;
 }
 
 message AddApplicationHomeSubClusterRequestProto {
@@ -106,6 +107,14 @@ message AddApplicationHomeSubClusterRequestProto {
 
 message AddApplicationHomeSubClusterResponseProto {
   optional SubClusterIdProto home_sub_cluster = 1;
+}
+
+message GetApplicationClusterDataRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationClusterDataResponseProto {
+  optional ApplicationHomeSubClusterProto app_home_subcluster = 1;
 }
 
 message UpdateApplicationHomeSubClusterRequestProto {
@@ -117,6 +126,7 @@ message UpdateApplicationHomeSubClusterResponseProto {
 
 message GetApplicationHomeSubClusterRequestProto {
   optional ApplicationIdProto application_id = 1;
+  optional bool contains_app_submission_context = 2 [default = false];
 }
 
 message GetApplicationHomeSubClusterResponseProto {
@@ -234,6 +244,7 @@ message RouterMasterKeyResponseProto {
 message RouterStoreTokenProto {
   optional YARNDelegationTokenIdentifierProto token_identifier = 1;
   optional int64 renew_date = 2;
+  optional string token_info = 3;
 }
 
 message RouterRMTokenRequestProto {

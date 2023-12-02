@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
@@ -39,7 +40,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,7 +89,9 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -119,6 +121,9 @@ public class TestBPOfferService {
   static {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
+
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
 
   private DatanodeProtocolClientSideTranslatorPB mockNN1;
   private DatanodeProtocolClientSideTranslatorPB mockNN2;
@@ -1187,8 +1192,9 @@ public class TestBPOfferService {
                 // just reject and wait until DN request for a new leaseId
                 if(leaseId == 1) {
                   firstLeaseId = leaseId;
-                  throw new ConnectException(
-                          "network is not reachable for test. ");
+                  InvalidBlockReportLeaseException e =
+                      new InvalidBlockReportLeaseException(context.getReportId(), 1);
+                  throw new RemoteException(e.getClass().getName(), e.getMessage());
                 } else {
                   secondLeaseId = leaseId;
                   return null;
@@ -1253,8 +1259,7 @@ public class TestBPOfferService {
   @Test(timeout = 15000)
   public void testCommandProcessingThread() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
@@ -1271,19 +1276,14 @@ public class TestBPOfferService {
       // Check new metric result about processedCommandsOp.
       // One command send back to DataNode here is #FinalizeCommand.
       assertCounter("ProcessedCommandsOpNumOps", 1L, mrb);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 
   @Test(timeout = 5000)
   public void testCommandProcessingThreadExit() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
-        numDataNodes(1).build();
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).
+        numDataNodes(1).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode dataNode = datanodes.get(0);
       List<BPOfferService> allBpOs = dataNode.getAllBpOs();
@@ -1293,10 +1293,6 @@ public class TestBPOfferService {
       // Stop and wait util actor exit.
       actor.stopCommandProcessingThread();
       GenericTestUtils.waitFor(() -> !actor.isAlive(), 100, 3000);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 }

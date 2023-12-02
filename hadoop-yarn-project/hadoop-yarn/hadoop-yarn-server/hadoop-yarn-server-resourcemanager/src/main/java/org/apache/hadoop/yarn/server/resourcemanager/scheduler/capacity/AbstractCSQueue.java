@@ -68,12 +68,15 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.WEIGHT;
 
 /**
  * Provides implementation of {@code CSQueue} methods common for every queue class in Capacity
@@ -115,6 +118,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacityConfigType.NONE;
 
   protected Map<String, QueueCapacityVector> configuredCapacityVectors;
+  protected Map<String, QueueCapacityVector> configuredMaxCapacityVectors;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -319,6 +323,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+      configuredMaxCapacityVectors.put(NO_LABEL, QueueCapacityVector.of(
+                    maximumCapacity * 100, PERCENTAGE));
     } finally {
       writeLock.unlock();
     }
@@ -343,7 +349,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.acls = configuration.getAcls(getQueuePath());
 
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
-        setDynamicQueueProperties();
+        parseAndSetDynamicTemplates();
         setDynamicQueueACLProperties();
       }
 
@@ -354,7 +360,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Initialize the queue capacities
       setupConfigurableCapacities();
       updateAbsoluteCapacities();
-      updateCapacityConfigType();
 
       // Fetch minimum/maximum resource limits for this queue if
       // configured
@@ -379,6 +384,34 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
+      this.configuredMaxCapacityVectors = configuration
+          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(),
+              this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
+              QueueCapacityVector.newInstance());
+
+      for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+        // Manually sets the capacity vector for:
+        // 1. Dynamic queues that have no configured capacity vectors defined by templates
+        // 2. ReservationQueue and PlanQueue instances which have their capacities set by entitlements and need to be
+        //    preserved during a restart, see: ReservationSystem.md
+        overrideCapacityVectorsForSpecialQueues(label);
+
+        // Re-adjust weight when mixed capacity type is used. 5w == [memory=5w, vcores=5w]
+        final QueueCapacityVector capacityVector = configuredCapacityVectors.get(label);
+        final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
+            capacityVector.getDefinedCapacityTypes();
+        if (definedCapacityTypes.size() == 1 && definedCapacityTypes.iterator().next() == WEIGHT) {
+          Set<Double> weights = new HashSet<>();
+          for (String resourceName : capacityVector.getResourceNames()) {
+            weights.add(capacityVector.getResource(resourceName).getResourceValue());
+          }
+          if (weights.size() == 1) {
+            queueCapacities.setWeight(label, weights.iterator().next().floatValue());
+          }
+        }
+      }
+
+      updateCapacityConfigType();
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -404,29 +437,45 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Set properties specific to dynamic queues.
    */
-  protected void setDynamicQueueProperties() {
-    // Set properties from parent template
-    if (parent instanceof ParentQueue) {
-      ((ParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
+  protected void parseAndSetDynamicTemplates() {
+    // Set the template properties from the parent to the queuepath of the child
+    ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
+        .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
+                this instanceof AbstractLeafQueue);
 
-      String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
-          AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
-      parentTemplate = parentTemplate.substring(0, parentTemplate.lastIndexOf(
-          DOT));
-      Set<String> parentNodeLabels = queueContext.getQueueManager()
-          .getConfiguredNodeLabelsForAllQueues()
-          .getLabelsByQueue(parentTemplate);
+    String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
+        AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
+    parentTemplate = parentTemplate.substring(0, parentTemplate.lastIndexOf(
+        DOT));
+    Set<String> parentNodeLabels = queueContext.getQueueManager()
+        .getConfiguredNodeLabelsForAllQueues()
+        .getLabelsByQueue(parentTemplate);
 
-      if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-        queueContext.getQueueManager()
-            .getConfiguredNodeLabelsForAllQueues()
-            .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
-      }
+    if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
+      queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
+              .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
     }
   }
 
   protected void setDynamicQueueACLProperties() {
+  }
+
+  protected void overrideCapacityVectorsForSpecialQueues(String label) {
+    if (this instanceof ReservationQueue || this instanceof PlanQueue) {
+        setConfiguredMinCapacityVector(label,
+                QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100,
+                        QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+        setConfiguredMaxCapacityVector(label,
+                QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100,
+                        QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+    } else if (isDynamicQueue()) {
+      if (this.configuredCapacityVectors == null || this.configuredCapacityVectors.get(label).isEmpty()) {
+        setConfiguredMinCapacityVector(label, QueueCapacityVector.of(1,
+                QueueCapacityVector.ResourceUnitCapacityType.WEIGHT));
+        setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(100,
+                QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+      }
+    }
   }
 
   private UserWeights getUserWeightsFromHierarchy() {
@@ -465,9 +514,30 @@ public abstract class AbstractCSQueue implements CSQueue {
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
 
-      CapacityConfigType localType = checkConfigTypeIsAbsoluteResource(
-          getQueuePath(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
-          : CapacityConfigType.PERCENTAGE;
+      CapacityConfigType localType = CapacityConfigType.NONE;
+
+      if (queueContext.getConfiguration().isLegacyQueueMode()) {
+        localType = checkConfigTypeIsAbsoluteResource(
+                getQueuePath(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
+                : CapacityConfigType.PERCENTAGE;
+      } else {
+        // TODO: revisit this later
+        //  AbstractCSQueue.CapacityConfigType has only None, Percentage and Absolute mode
+        final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
+                getConfiguredCapacityVector(label).getDefinedCapacityTypes();
+        if (definedCapacityTypes.size() == 1) {
+          QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
+          if (Objects.requireNonNull(next) == PERCENTAGE) {
+            localType = CapacityConfigType.PERCENTAGE;
+          } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
+            localType = CapacityConfigType.ABSOLUTE_RESOURCE;
+          } else if (next == WEIGHT) {
+            localType = CapacityConfigType.PERCENTAGE;
+          }
+        } else { // Mixed type
+          localType = CapacityConfigType.PERCENTAGE;
+        }
+      }
 
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
         this.capacityConfigType = localType;
@@ -533,7 +603,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   private void validateAbsoluteVsPercentageCapacityConfig(
       CapacityConfigType localType) {
     if (!queuePath.isRoot()
-        && !this.capacityConfigType.equals(localType)) {
+        && !this.capacityConfigType.equals(localType) &&
+        queueContext.getConfiguration().isLegacyQueueMode()) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()
           + "' should use either percentage based capacity"
           + " configuration or absolute resource.");
@@ -572,9 +643,23 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public QueueCapacityVector getConfiguredCapacityVector(
-      String label) {
+  public QueueCapacityVector getConfiguredCapacityVector(String label) {
     return configuredCapacityVectors.get(label);
+  }
+
+  @Override
+  public QueueCapacityVector getConfiguredMaxCapacityVector(String label) {
+    return configuredMaxCapacityVectors.get(label);
+  }
+
+  @Override
+  public void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector) {
+    configuredCapacityVectors.put(label, minCapacityVector);
+  }
+
+  @Override
+  public void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector) {
+    configuredMaxCapacityVectors.put(label, maxCapacityVector);
   }
 
   protected QueueInfo getQueueInfo() {
@@ -640,6 +725,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Returns whether we should continue to look at all heart beating nodes even
    * after the reservation limit was hit.
+   *
+   * @return true,
+   * continue to look at all heart beating nodes even after the reservation limit was hit.
+   * otherwise false.
    */
   @Private
   public boolean isReservationsContinueLooking() {
@@ -689,6 +778,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public ReentrantReadWriteLock.ReadLock getReadLock() {
     return readLock;
+  }
+
+  @Override
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
   }
 
   private Resource getCurrentLimitResource(String nodePartition,
@@ -825,6 +919,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       readLock.unlock();
     }
 
+  }
+
+  @Override
+  public Set<String> getConfiguredNodeLabels() {
+    return queueNodeLabelsSettings.getConfiguredNodeLabels();
   }
 
   private static String ensurePartition(String partition) {
@@ -1136,7 +1235,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
 
     CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(queueCapacities,
-        parentQueueCapacities, queueCapacities.getExistingNodeLabels());
+        parentQueueCapacities, queueCapacities.getExistingNodeLabels(),
+        queueContext.getConfiguration().isLegacyQueueMode());
   }
 
   private Resource createNormalizedMinResource(Resource minResource,
@@ -1229,7 +1329,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatio(label));
+            ((AbstractParentQueue) parent).getEffectiveMinRatio(label));
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's

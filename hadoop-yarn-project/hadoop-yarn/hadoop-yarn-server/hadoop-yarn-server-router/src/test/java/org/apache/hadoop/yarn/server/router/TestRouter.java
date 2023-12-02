@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,21 +28,29 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.http.CrossOriginFilter;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -137,7 +146,7 @@ public class TestRouter {
     WebAppContext webAppContext = httpServer2.getWebAppContext();
     ServletHandler servletHandler = webAppContext.getServletHandler();
     FilterHolder holder = servletHandler.getFilter("Cross Origin Filter");
-    CrossOriginFilter filter = CrossOriginFilter.class.cast(holder.getFilter());
+    CrossOriginFilter filter = (CrossOriginFilter) holder.getFilter();
 
     // 1. Simulate [example.com] for access
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
@@ -180,20 +189,219 @@ public class TestRouter {
     router.stop();
   }
 
-  private class HttpServletResponseForRouterTest extends HttpServletResponseImpl {
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    String errMsg = "Invalid attribute value for " +
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION + " of DUMMYAUTH";
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "DUMMYAUTH");
+    Router router = new Router();
+    LambdaTestUtils.intercept(IllegalArgumentException.class, errMsg,
+        () -> router.init(dummyConf));
+    router.stop();
+  }
+
+  private class HttpServletResponseForRouterTest implements HttpServletResponse {
     private final Map<String, String> headers = new HashMap<>(1);
+
+    @Override
+    public void addCookie(Cookie cookie) {
+
+    }
+
+    @Override
+    public boolean containsHeader(String name) {
+      return false;
+    }
+
+    @Override
+    public String encodeURL(String url) {
+      return null;
+    }
+
+    @Override
+    public String encodeRedirectURL(String url) {
+      return null;
+    }
+
+    @Override
+    public String encodeUrl(String url) {
+      return null;
+    }
+
+    @Override
+    public String encodeRedirectUrl(String url) {
+      return null;
+    }
+
+    @Override
+    public void sendError(int sc, String msg) throws IOException {
+
+    }
+
+    @Override
+    public void sendError(int sc) throws IOException {
+
+    }
+
+    @Override
+    public void sendRedirect(String location) throws IOException {
+
+    }
+
+    @Override
+    public void setDateHeader(String name, long date) {
+
+    }
+
+    @Override
+    public void addDateHeader(String name, long date) {
+
+    }
+
     @Override
     public void setHeader(String name, String value) {
       headers.put(name, value);
+    }
+
+    @Override
+    public void addHeader(String name, String value) {
+
+    }
+
+    @Override
+    public void setIntHeader(String name, int value) {
+
+    }
+
+    @Override
+    public void addIntHeader(String name, int value) {
+
+    }
+
+    @Override
+    public void setStatus(int sc) {
+
+    }
+
+    @Override
+    public void setStatus(int sc, String sm) {
+
+    }
+
+    @Override
+    public int getStatus() {
+      return 0;
     }
 
     public String getHeader(String name) {
       return headers.get(name);
     }
 
+    @Override
+    public Collection<String> getHeaders(String name) {
+      return null;
+    }
+
+    @Override
+    public Collection<String> getHeaderNames() {
+      return null;
+    }
+
     public Map<String, String> getHeaders() {
       return headers;
     }
+
+    @Override
+    public String getCharacterEncoding() {
+      return null;
+    }
+
+    @Override
+    public String getContentType() {
+      return null;
+    }
+
+    @Override
+    public ServletOutputStream getOutputStream() throws IOException {
+      return null;
+    }
+
+    @Override
+    public PrintWriter getWriter() throws IOException {
+      return null;
+    }
+
+    @Override
+    public void setCharacterEncoding(String charset) {
+
+    }
+
+    @Override
+    public void setContentLength(int len) {
+
+    }
+
+    @Override
+    public void setContentLengthLong(long len) {
+
+    }
+
+    @Override
+    public void setContentType(String type) {
+
+    }
+
+    @Override
+    public void setBufferSize(int size) {
+
+    }
+
+    @Override
+    public int getBufferSize() {
+      return 0;
+    }
+
+    @Override
+    public void flushBuffer() throws IOException {
+
+    }
+
+    @Override
+    public void resetBuffer() {
+
+    }
+
+    @Override
+    public boolean isCommitted() {
+      return false;
+    }
+
+    @Override
+    public void reset() {
+
+    }
+
+    @Override
+    public void setLocale(Locale loc) {
+
+    }
+
+    @Override
+    public Locale getLocale() {
+      return null;
+    }
   }
 
+  @Test
+  public void testRouterCLI() {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    Router.main(new String[]{"-help", "-format-state-store"});
+    assertTrue(dataErr.toString().contains(
+        "Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]"));
+  }
 }

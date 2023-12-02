@@ -24,7 +24,7 @@ Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
 Azure ABFS: Critical Stream Prefetch Fix
----------------------------------------------
+----------------------------------------
 
 The abfs has a critical bug fix
 [HADOOP-18546](https://issues.apache.org/jira/browse/HADOOP-18546).
@@ -62,7 +62,10 @@ possibly in parallel, with results potentially coming in out-of-order.
 Benchmarking of enhanced Apache ORC and Apache Parquet clients through `file://` and `s3a://`
 show significant improvements in query performance.
 
-Further Reading: [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
+Further Reading:
+* [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
+* [Hadoop Vectored IO: Your Data Just Got Faster!](https://apachecon.com/acasia2022/sessions/bigdata-1148.html)
+  Apachecon 2022 talk.
 
 Mapreduce: Manifest Committer for Azure ABFS and google GCS
 ----------------------------------------------------------
@@ -88,14 +91,6 @@ More details are available in the
 documentation.
 
 
-HDFS: Router Based Federation
------------------------------
-
-A lot of effort has been invested into stabilizing/improving the HDFS Router Based Federation feature.
-
-1. HDFS-13522, HDFS-16767 & Related Jiras: Allow Observer Reads in HDFS Router Based Federation.
-2. HDFS-13248: RBF supports Client Locality
-
 HDFS: Dynamic Datanode Reconfiguration
 --------------------------------------
 
@@ -120,25 +115,76 @@ be vulnerable, and the ugprades should also reduce the number of false
 positives security scanners report.
 
 We have not been able to upgrade every single dependency to the latest
-version there is. Some of those changes are just going to be incompatible.
-If you have concerns about the state of a specific library, consult the pache JIRA
-issue tracker to see whether a JIRA has been filed, discussions have taken place about
+version there is. Some of those changes are fundamentally incompatible.
+If you have concerns about the state of a specific library, consult the Apache JIRA
+issue tracker to see if an issue has been filed, discussions have taken place about
 the library in question, and whether or not there is already a fix in the pipeline.
 *Please don't file new JIRAs about dependency-X.Y.Z having a CVE without
 searching for any existing issue first*
 
-As an open source project, contributions in this area are always welcome,
+As an open-source project, contributions in this area are always welcome,
 especially in testing the active branches, testing applications downstream of
 those branches and of whether updated dependencies trigger regressions.
+
+
+Security Advisory
+=================
+
+Hadoop HDFS is a distributed filesystem allowing remote
+callers to read and write data.
+
+Hadoop YARN is a distributed job submission/execution
+engine allowing remote callers to submit arbitrary
+work into the cluster.
+
+Unless a Hadoop cluster is deployed with
+[caller authentication with Kerberos](./hadoop-project-dist/hadoop-common/SecureMode.html),
+anyone with network access to the servers has unrestricted access to the data
+and the ability to run whatever code they want in the system.
+
+In production, there are generally three deployment patterns which
+can, with care, keep data and computing resources private.
+1. Physical cluster: *configure Hadoop security*, usually bonded to the
+   enterprise Kerberos/Active Directory systems.
+   Good.
+1. Cloud: transient or persistent single or multiple user/tenant cluster
+   with private VLAN *and security*.
+   Good.
+   Consider [Apache Knox](https://knox.apache.org/) for managing remote
+   access to the cluster.
+1. Cloud: transient single user/tenant cluster with private VLAN
+   *and no security at all*.
+   Requires careful network configuration as this is the sole
+   means of securing the cluster..
+   Consider [Apache Knox](https://knox.apache.org/) for managing
+   remote access to the cluster.
+
+*If you deploy a Hadoop cluster in-cloud without security, and without configuring a VLAN
+to restrict access to trusted users, you are implicitly sharing your data and
+computing resources with anyone with network access*
+
+If you do deploy an insecure cluster this way then port scanners will inevitably
+find it and submit crypto-mining jobs. If this happens to you, please do not report
+this as a CVE or security issue: it is _utterly predictable_. Secure *your cluster* if
+you want to remain exclusively *your cluster*.
+
+Finally, if you are using Hadoop as a service deployed/managed by someone else,
+do determine what security their products offer and make sure it meets your requirements.
+
 
 Getting Started
 ===============
 
 The Hadoop documentation includes the information you need to get started using
-Hadoop. Begin with the 
+Hadoop. Begin with the
 [Single Node Setup](./hadoop-project-dist/hadoop-common/SingleCluster.html)
 which shows you how to set up a single-node Hadoop installation.
 Then move on to the
 [Cluster Setup](./hadoop-project-dist/hadoop-common/ClusterSetup.html)
 to learn how to set up a multi-node Hadoop installation.
+
+Before deploying Hadoop in production, read
+[Hadoop in Secure Mode](./hadoop-project-dist/hadoop-common/SecureMode.html),
+and follow its instructions to secure your cluster.
+
 

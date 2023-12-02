@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.state;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -190,7 +190,7 @@ public class Graph {
 
   public void save(String filepath) throws IOException {
     try (OutputStreamWriter fout = new OutputStreamWriter(
-        new FileOutputStream(filepath), Charset.forName("UTF-8"))) {
+        new FileOutputStream(filepath), StandardCharsets.UTF_8)) {
       fout.write(generateGraphViz());
     }
   }

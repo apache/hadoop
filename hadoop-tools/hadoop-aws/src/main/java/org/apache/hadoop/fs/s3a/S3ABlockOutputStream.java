@@ -31,15 +31,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
+import org.apache.hadoop.fs.s3a.impl.ProgressListener;
+import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
@@ -69,6 +70,7 @@ import org.apache.hadoop.util.Progressable;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -101,7 +103,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final String key;
 
   /** Size of all blocks. */
-  private final int blockSize;
+  private final long blockSize;
 
   /** IO Statistics. */
   private final IOStatistics iostatistics;
@@ -169,6 +171,9 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Thread level IOStatistics Aggregator. */
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
+  /** Is multipart upload enabled? */
+  private final boolean isMultipartUploadEnabled;
+
   /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
@@ -181,7 +186,6 @@ class S3ABlockOutputStream extends OutputStream implements
     this.builder = builder;
     this.key = builder.key;
     this.blockFactory = builder.blockFactory;
-    this.blockSize = (int) builder.blockSize;
     this.statistics = builder.statistics;
     // test instantiations may not provide statistics;
     this.iostatistics = statistics.getIOStatistics();
@@ -190,22 +194,31 @@ class S3ABlockOutputStream extends OutputStream implements
     this.executorService = MoreExecutors.listeningDecorator(
         builder.executorService);
     this.multiPartUpload = null;
-    final Progressable progress = builder.progress;
+    Progressable progress = builder.progress;
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
     downgradeSyncableExceptions = builder.downgradeSyncableExceptions;
-    // create that first block. This guarantees that an open + close sequence
-    // writes a 0-byte entry.
-    createBlockIfNeeded();
-    LOG.debug("Initialized S3ABlockOutputStream for {}" +
-        " output to {}", key, activeBlock);
+
+    // look for multipart support.
+    this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
+    // block size is infinite if multipart is disabled, so ignore
+    // what was passed in from the builder.
+    this.blockSize = isMultipartUploadEnabled
+        ? builder.blockSize
+        : -1;
+
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
     this.threadIOStatisticsAggregator = builder.ioStatisticsAggregator;
+    // create that first block. This guarantees that an open + close sequence
+    // writes a 0-byte entry.
+    createBlockIfNeeded();
+    LOG.debug("Initialized S3ABlockOutputStream for {}" +
+        " output to {}", key, activeBlock);
   }
 
   /**
@@ -318,7 +331,15 @@ class S3ABlockOutputStream extends OutputStream implements
     statistics.writeBytes(len);
     S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
-    int remainingCapacity = block.remainingCapacity();
+    if (!isMultipartUploadEnabled) {
+      // no need to check for space as multipart uploads
+      // are not available...everything is saved to a single
+      // (disk) block.
+      return;
+    }
+    // look to see if another block is needed to complete
+    // the upload or exactly a block was written.
+    int remainingCapacity = (int) block.remainingCapacity();
     if (written < len) {
       // not everything was written —the block has run out
       // of capacity
@@ -369,6 +390,8 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
+    Preconditions.checkState(isMultipartUploadEnabled,
+        "multipart upload is disabled");
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
       multiPartUpload = new MultiPartUpload(key);
@@ -418,7 +441,7 @@ class S3ABlockOutputStream extends OutputStream implements
           uploadCurrentBlock(true);
         }
         // wait for the partial uploads to finish
-        final List<PartETag> partETags =
+        final List<CompletedPart> partETags =
             multiPartUpload.waitForAllPartUploads();
         bytes = bytesSubmitted;
 
@@ -558,41 +581,46 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
-   * Upload the current block as a single PUT request; if the buffer
-   * is empty a 0-byte PUT will be invoked, as it is needed to create an
-   * entry at the far end.
-   * @throws IOException any problem.
-   * @return number of bytes uploaded. If thread was interrupted while
-   * waiting for upload to complete, returns zero with interrupted flag set
-   * on this thread.
+   * Upload the current block as a single PUT request; if the buffer is empty a
+   * 0-byte PUT will be invoked, as it is needed to create an entry at the far
+   * end.
+   * @return number of bytes uploaded. If thread was interrupted while waiting
+   * for upload to complete, returns zero with interrupted flag set on this
+   * thread.
+   * @throws IOException
+   * any problem.
    */
-  private int putObject() throws IOException {
+  private long putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
     final S3ADataBlocks.DataBlock block = getActiveBlock();
-    int size = block.dataSize();
+    long size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
         writeOperationHelper.createPutObjectRequest(
             key,
-            uploadData.getFile(),
-            builder.putOptions)
+            uploadData.getFile().length(),
+            builder.putOptions,
+            true)
         : writeOperationHelper.createPutObjectRequest(
             key,
-            uploadData.getUploadStream(),
             size,
-            builder.putOptions);
-    BlockUploadProgress callback =
-        new BlockUploadProgress(
-            block, progressListener,  now());
-    putObjectRequest.setGeneralProgressListener(callback);
+            builder.putOptions,
+        false);
+
+    BlockUploadProgress progressCallback =
+        new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
-    ListenableFuture<PutObjectResult> putObjectResult =
+    ListenableFuture<PutObjectResponse> putObjectResult =
         executorService.submit(() -> {
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions);
+            PutObjectResponse response =
+                writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
+                    uploadData.hasFile(), statistics);
+            progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
+            return response;
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -617,6 +645,7 @@ class S3ABlockOutputStream extends OutputStream implements
         "S3ABlockOutputStream{");
     sb.append(writeOperationHelper.toString());
     sb.append(", blockSize=").append(blockSize);
+    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     // unsynced access; risks consistency in exchange for no risk of deadlock.
     S3ADataBlocks.DataBlock block = activeBlock;
     if (block != null) {
@@ -735,7 +764,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private class MultiPartUpload {
     private final String uploadId;
-    private final List<ListenableFuture<PartETag>> partETagsFutures;
+    private final List<ListenableFuture<CompletedPart>> partETagsFutures;
     private int partsSubmitted;
     private int partsUploaded;
     private long bytesSubmitted;
@@ -835,23 +864,24 @@ class S3ABlockOutputStream extends OutputStream implements
       Preconditions.checkNotNull(uploadId, "Null uploadId");
       maybeRethrowUploadFailure();
       partsSubmitted++;
-      final int size = block.dataSize();
+      final long size = block.dataSize();
       bytesSubmitted += size;
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request;
       final S3ADataBlocks.BlockUploadData uploadData;
+      final RequestBody requestBody;
       try {
         uploadData = block.startUpload();
-        request = writeOperationHelper.newUploadPartRequest(
+        requestBody = uploadData.hasFile()
+            ? RequestBody.fromFile(uploadData.getFile())
+            : RequestBody.fromInputStream(uploadData.getUploadStream(), size);
+
+        request = writeOperationHelper.newUploadPartRequestBuilder(
             key,
             uploadId,
             currentPartNumber,
-            size,
-            uploadData.getUploadStream(),
-            uploadData.getFile(),
-            0L);
-        request.setLastPart(isLast);
-      } catch (SdkBaseException aws) {
+            size).build();
+      } catch (SdkException aws) {
         // catch and translate
         IOException e = translateException("upload", key, aws);
         // failure to start the upload.
@@ -862,28 +892,38 @@ class S3ABlockOutputStream extends OutputStream implements
         noteUploadFailure(e);
         throw e;
       }
-      BlockUploadProgress callback =
-          new BlockUploadProgress(
-              block, progressListener, now());
-      request.setGeneralProgressListener(callback);
+
+      BlockUploadProgress progressCallback =
+          new BlockUploadProgress(block, progressListener, now());
+
       statistics.blockUploadQueued(block.dataSize());
-      ListenableFuture<PartETag> partETagFuture =
+      ListenableFuture<CompletedPart> partETagFuture =
           executorService.submit(() -> {
             // this is the queued upload operation
             // do the upload
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
-              PartETag partETag = writeOperationHelper.uploadPart(request)
-                  .getPartETag();
+
+              progressCallback.progressChanged(TRANSFER_PART_STARTED_EVENT);
+
+              UploadPartResponse response = writeOperationHelper
+                  .uploadPart(request, requestBody, statistics);
               LOG.debug("Completed upload of {} to part {}",
-                  block, partETag.getETag());
+                  block, response.eTag());
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
-              return partETag;
+
+              progressCallback.progressChanged(TRANSFER_PART_COMPLETED_EVENT);
+
+              return CompletedPart.builder()
+                  .eTag(response.eTag())
+                  .partNumber(currentPartNumber)
+                  .build();
             } catch (IOException e) {
               // save immediately.
               noteUploadFailure(e);
+              progressCallback.progressChanged(TRANSFER_PART_FAILED_EVENT);
               throw e;
             } finally {
               // close the stream and block
@@ -898,7 +938,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * @return list of results
      * @throws IOException IO Problems
      */
-    private List<PartETag> waitForAllPartUploads() throws IOException {
+    private List<CompletedPart> waitForAllPartUploads() throws IOException {
       LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         return Futures.allAsList(partETagsFutures).get();
@@ -922,7 +962,7 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private void cancelAllActiveFutures() {
       LOG.debug("Cancelling futures");
-      for (ListenableFuture<PartETag> future : partETagsFutures) {
+      for (ListenableFuture<CompletedPart> future : partETagsFutures) {
         future.cancel(true);
       }
     }
@@ -934,7 +974,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * @param partETags list of partial uploads
      * @throws IOException on any problem
      */
-    private void complete(List<PartETag> partETags)
+    private void complete(List<CompletedPart> partETags)
         throws IOException {
       maybeRethrowUploadFailure();
       AtomicInteger errorCount = new AtomicInteger(0);
@@ -979,22 +1019,24 @@ class S3ABlockOutputStream extends OutputStream implements
     }
   }
 
+
   /**
    * The upload progress listener registered for events returned
    * during the upload of a single block.
    * It updates statistics and handles the end of the upload.
    * Transfer failures are logged at WARN.
    */
-  private final class BlockUploadProgress implements ProgressListener {
+  private final class BlockUploadProgress  {
+
     private final S3ADataBlocks.DataBlock block;
     private final ProgressListener nextListener;
     private final Instant transferQueueTime;
     private Instant transferStartTime;
+    private long size;
 
     /**
      * Track the progress of a single block upload.
      * @param block block to monitor
-     * @param nextListener optional next progress listener
      * @param transferQueueTime time the block was transferred
      * into the queue
      */
@@ -1003,20 +1045,17 @@ class S3ABlockOutputStream extends OutputStream implements
         Instant transferQueueTime) {
       this.block = block;
       this.transferQueueTime = transferQueueTime;
+      this.size = block.dataSize();
       this.nextListener = nextListener;
     }
 
-    @Override
-    public void progressChanged(ProgressEvent progressEvent) {
-      ProgressEventType eventType = progressEvent.getEventType();
-      long bytesTransferred = progressEvent.getBytesTransferred();
+    public void progressChanged(ProgressListenerEvent eventType) {
 
-      int size = block.dataSize();
       switch (eventType) {
 
       case REQUEST_BYTE_TRANSFER_EVENT:
         // bytes uploaded
-        statistics.bytesTransferred(bytesTransferred);
+        statistics.bytesTransferred(size);
         break;
 
       case TRANSFER_PART_STARTED_EVENT:
@@ -1031,6 +1070,7 @@ class S3ABlockOutputStream extends OutputStream implements
         statistics.blockUploadCompleted(
             Duration.between(transferStartTime, now()),
             size);
+        statistics.bytesTransferred(size);
         break;
 
       case TRANSFER_PART_FAILED_EVENT:
@@ -1045,13 +1085,13 @@ class S3ABlockOutputStream extends OutputStream implements
       }
 
       if (nextListener != null) {
-        nextListener.progressChanged(progressEvent);
+        nextListener.progressChanged(eventType, size);
       }
     }
   }
 
   /**
-   * Bridge from AWS {@code ProgressListener} to Hadoop {@link Progressable}.
+   * Bridge from {@link ProgressListener} to Hadoop {@link Progressable}.
    */
   private static class ProgressableListener implements ProgressListener {
     private final Progressable progress;
@@ -1060,7 +1100,7 @@ class S3ABlockOutputStream extends OutputStream implements
       this.progress = progress;
     }
 
-    public void progressChanged(ProgressEvent progressEvent) {
+    public void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {
       if (progress != null) {
         progress.progress();
       }
@@ -1125,6 +1165,11 @@ class S3ABlockOutputStream extends OutputStream implements
      * thread-level IOStatistics Aggregator.
      */
     private IOStatisticsAggregator ioStatisticsAggregator;
+
+    /**
+     * Is Multipart Uploads enabled for the given upload.
+     */
+    private boolean isMultipartUploadEnabled;
 
     private BlockOutputStreamBuilder() {
     }
@@ -1274,6 +1319,12 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withIOStatisticsAggregator(
         final IOStatisticsAggregator value) {
       ioStatisticsAggregator = value;
+      return this;
+    }
+
+    public BlockOutputStreamBuilder withMultipartEnabled(
+        final boolean value) {
+      isMultipartUploadEnabled = value;
       return this;
     }
   }

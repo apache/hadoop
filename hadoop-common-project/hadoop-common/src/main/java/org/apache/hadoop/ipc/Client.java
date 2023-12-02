@@ -590,9 +590,8 @@ public class Client implements AutoCloseable {
       InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
 
-      if (!server.equals(currentAddr)) {
-        LOG.warn("Address change detected. Old: " + server.toString() +
-                                 " New: " + currentAddr.toString());
+      if (!currentAddr.isUnresolved() && !server.equals(currentAddr)) {
+        LOG.warn("Address change detected. Old: {} New: {}", server, currentAddr);
         server = currentAddr;
         // Update the remote address so that reconnections are with the updated address.
         // This avoids thrashing.
@@ -704,7 +703,7 @@ public class Client implements AutoCloseable {
      * handle that, a relogin is attempted.
      */
     private synchronized void handleSaslConnectionFailure(
-        final int currRetries, final int maxRetries, final Exception ex,
+        final int currRetries, final int maxRetries, final IOException ex,
         final Random rand, final UserGroupInformation ugi) throws IOException,
         InterruptedException {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -715,10 +714,7 @@ public class Client implements AutoCloseable {
           disposeSasl();
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
-              if(LOG.isDebugEnabled()) {
-                LOG.debug("Exception encountered while connecting to "
-                    + "the server : " + ex);
-              }
+              LOG.debug("Exception encountered while connecting to the server {}", remoteId, ex);
               // try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();
@@ -736,7 +732,11 @@ public class Client implements AutoCloseable {
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
                   + remoteId;
               LOG.warn(msg, ex);
-              throw (IOException) new IOException(msg).initCause(ex);
+              throw NetUtils.wrapException(remoteId.getAddress().getHostName(),
+                  remoteId.getAddress().getPort(),
+                  NetUtils.getHostname(),
+                  0,
+                  ex);
             }
           } else {
             // With RequestHedgingProxyProvider, one rpc call will send multiple
@@ -744,11 +744,9 @@ public class Client implements AutoCloseable {
             // all other requests will be interrupted. It's not a big problem,
             // and should not print a warning log.
             if (ex instanceof InterruptedIOException) {
-              LOG.debug("Exception encountered while connecting to the server",
-                  ex);
+              LOG.debug("Exception encountered while connecting to the server {}", remoteId, ex);
             } else {
-              LOG.warn("Exception encountered while connecting to the server ",
-                  ex);
+              LOG.warn("Exception encountered while connecting to the server {}", remoteId, ex);
             }
           }
           if (ex instanceof RemoteException)
@@ -1182,7 +1180,14 @@ public class Client implements AutoCloseable {
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
-      rpcRequestQueue.put(Pair.of(call, buf));
+      // Wait for the message to be sent. We offer with timeout to
+      // prevent a race condition between checking the shouldCloseConnection
+      // and the stopping of the polling thread
+      while (!shouldCloseConnection.get()) {
+        if (rpcRequestQueue.offer(Pair.of(call, buf), 1, TimeUnit.SECONDS)) {
+          break;
+        }
+      }
     }
 
     /* Receive a response.
@@ -1209,10 +1214,10 @@ public class Client implements AutoCloseable {
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
-          call.setRpcResponse(value);
           if (call.alignmentContext != null) {
             call.alignmentContext.receiveResponseState(header);
           }
+          call.setRpcResponse(value);
         }
         // verify that packet length was correct
         if (packet.remaining() > 0) {

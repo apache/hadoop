@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ACLsTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -108,7 +108,7 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
     ApplicationId applicationId = submitterClient
         .getNewApplication(newAppRequest).getApplicationId();
 
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
 
     ContainerLaunchContext amContainerSpec = ContainerLaunchContext
         .newInstance(null, null, null, null, null, null);

@@ -33,4 +33,27 @@ public abstract class RefreshAdminAclsRequest {
         Records.newRecord(RefreshAdminAclsRequest.class);
     return request;
   }
+
+  @Public
+  @Stable
+  public static RefreshAdminAclsRequest newInstance(String subClusterId) {
+    RefreshAdminAclsRequest request =
+        Records.newRecord(RefreshAdminAclsRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  public abstract void setSubClusterId(String subClusterId);
 }

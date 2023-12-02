@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.InMemoryAliasMapFailoverProxyProvider;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.slf4j.Logger;
@@ -54,6 +52,7 @@ import static org.apache.hadoop.hdfs.DFSUtilClient.getNameServiceIds;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.*;
 import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.*;
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate requests made to the
@@ -136,29 +135,24 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
       builder.setMarker(PBHelperClient.convert(marker.get()));
     }
     ListRequestProto request = builder.build();
-    try {
-      ListResponseProto response = rpcProxy.list(null, request);
-      List<KeyValueProto> fileRegionsList = response.getFileRegionsList();
+    ListResponseProto response = ipc(() -> rpcProxy.list(null, request));
+    List<KeyValueProto> fileRegionsList = response.getFileRegionsList();
 
-      List<FileRegion> fileRegions = fileRegionsList
-          .stream()
-          .map(kv -> new FileRegion(
-              PBHelperClient.convert(kv.getKey()),
-              PBHelperClient.convert(kv.getValue())
-          ))
-          .collect(Collectors.toList());
-      BlockProto nextMarker = response.getNextMarker();
+    List<FileRegion> fileRegions = fileRegionsList
+        .stream()
+        .map(kv -> new FileRegion(
+            PBHelperClient.convert(kv.getKey()),
+            PBHelperClient.convert(kv.getValue())
+        ))
+        .collect(Collectors.toList());
+    BlockProto nextMarker = response.getNextMarker();
 
-      if (nextMarker.isInitialized()) {
-        return new InMemoryAliasMap.IterationResult(fileRegions,
-            Optional.of(PBHelperClient.convert(nextMarker)));
-      } else {
-        return new InMemoryAliasMap.IterationResult(fileRegions,
-            Optional.empty());
-      }
-
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+    if (nextMarker.isInitialized()) {
+      return new InMemoryAliasMap.IterationResult(fileRegions,
+          Optional.of(PBHelperClient.convert(nextMarker)));
+    } else {
+      return new InMemoryAliasMap.IterationResult(fileRegions,
+          Optional.empty());
     }
   }
 
@@ -175,19 +169,15 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
             .newBuilder()
             .setKey(PBHelperClient.convert(block))
             .build();
-    try {
-      ReadResponseProto response = rpcProxy.read(null, request);
+    ReadResponseProto response = ipc(() -> rpcProxy.read(null, request));
 
-      ProvidedStorageLocationProto providedStorageLocation =
-          response.getValue();
-      if (providedStorageLocation.isInitialized()) {
-        return Optional.of(PBHelperClient.convert(providedStorageLocation));
-      }
-      return Optional.empty();
-
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+    ProvidedStorageLocationProto providedStorageLocation =
+        response.getValue();
+    if (providedStorageLocation.isInitialized()) {
+      return Optional.of(PBHelperClient.convert(providedStorageLocation));
     }
+    return Optional.empty();
+
   }
 
   @Override
@@ -206,22 +196,14 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
                 .build())
             .build();
 
-    try {
-      rpcProxy.write(null, request);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.write(null, request));
   }
 
   @Override
   public String getBlockPoolId() throws IOException {
-    try {
-      BlockPoolResponseProto response = rpcProxy.getBlockPoolId(null,
-          BlockPoolRequestProto.newBuilder().build());
-      return response.getBlockPoolId();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    BlockPoolResponseProto response = ipc(() -> rpcProxy.getBlockPoolId(null,
+        BlockPoolRequestProto.newBuilder().build()));
+    return response.getBlockPoolId();
   }
 
   @Override

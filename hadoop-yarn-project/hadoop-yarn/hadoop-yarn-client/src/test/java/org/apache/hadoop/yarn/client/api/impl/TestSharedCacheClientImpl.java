@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -76,7 +77,7 @@ public class TestSharedCacheClientImpl {
         localFs.close();
       }
     } catch (IOException ioe) {
-      LOG.info("IO exception in closing file system)");
+      LOG.info("IO exception in closing file system");
       ioe.printStackTrace();
     }
   }
@@ -173,7 +174,7 @@ public class TestSharedCacheClientImpl {
     DataOutputStream out = null;
     try {
       out = localFs.create(file);
-      out.write(input.getBytes("UTF-8"));
+      out.write(input.getBytes(StandardCharsets.UTF_8));
     } finally {
       if(out != null) {
         out.close();

@@ -35,7 +35,6 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Checksum;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
@@ -58,6 +57,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 
@@ -73,7 +73,7 @@ import org.slf4j.Logger;
  **/
 class BlockReceiver implements Closeable {
   public static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger CLIENT_TRACE_LOG = DataNode.CLIENT_TRACE_LOG;
 
   @VisibleForTesting
   static long CACHE_DROP_LAG_BYTES = 8 * 1024 * 1024;
@@ -275,10 +275,9 @@ class BlockReceiver implements Closeable {
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
       } 
-    } catch (ReplicaAlreadyExistsException bae) {
-      throw bae;
-    } catch (ReplicaNotFoundException bne) {
-      throw bne;
+    } catch (ReplicaAlreadyExistsException | ReplicaNotFoundException
+        | DiskOutOfSpaceException e) {
+      throw e;
     } catch(IOException ioe) {
       if (replicaInfo != null) {
         replicaInfo.releaseAllBytesReserved();
@@ -1398,7 +1397,7 @@ class BlockReceiver implements Closeable {
     public void run() {
       datanode.metrics.incrDataNodePacketResponderCount();
       boolean lastPacketInBlock = false;
-      final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
+      final long startTime = CLIENT_TRACE_LOG.isInfoEnabled() ? System.nanoTime() : 0;
       while (isRunning() && !lastPacketInBlock) {
         long totalAckTimeNanos = 0;
         boolean isInterrupted = false;
@@ -1553,7 +1552,7 @@ class BlockReceiver implements Closeable {
       // Hold a volume reference to finalize block.
       try (ReplicaHandler handler = BlockReceiver.this.claimReplicaHandler()) {
         BlockReceiver.this.close();
-        endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
+        endTime = CLIENT_TRACE_LOG.isInfoEnabled() ? System.nanoTime() : 0;
         block.setNumBytes(replicaInfo.getNumBytes());
         datanode.data.finalizeBlock(block, dirSyncOnFinalize);
       }
@@ -1564,11 +1563,11 @@ class BlockReceiver implements Closeable {
       
       datanode.closeBlock(block, null, replicaInfo.getStorageUuid(),
           replicaInfo.isOnTransientStorage());
-      if (ClientTraceLog.isInfoEnabled() && isClient) {
+      if (CLIENT_TRACE_LOG.isInfoEnabled() && isClient) {
         long offset = 0;
         DatanodeRegistration dnR = datanode.getDNRegistrationForBP(block
             .getBlockPoolId());
-        ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT, inAddr,
+        CLIENT_TRACE_LOG.info(String.format(DN_CLIENTTRACE_FORMAT, inAddr,
             myAddr, replicaInfo.getVolume(), block.getNumBytes(),
             "HDFS_WRITE", clientname, offset, dnR.getDatanodeUuid(),
             block, endTime - startTime));

@@ -19,14 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
@@ -39,8 +39,7 @@ import static org.junit.Assert.assertEquals;
  *
  */
 public class TestShellDecryptionKeyProvider {
-  public static final Log LOG = LogFactory
-      .getLog(TestShellDecryptionKeyProvider.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestShellDecryptionKeyProvider.class);
   private static final File TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "TestShellDecryptionKeyProvider");
 
@@ -76,7 +75,7 @@ public class TestShellDecryptionKeyProvider {
     // expected result (so that we validate both script input and output)
     File scriptFile = new File(TEST_ROOT_DIR, "testScript.cmd");
     FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult,
-        Charset.forName("UTF-8"));
+        StandardCharsets.UTF_8);
 
     ShellDecryptionKeyProvider provider = new ShellDecryptionKeyProvider();
     Configuration conf = new Configuration();

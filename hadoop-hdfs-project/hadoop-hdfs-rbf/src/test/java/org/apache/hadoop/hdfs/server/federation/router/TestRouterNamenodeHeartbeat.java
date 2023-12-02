@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RP
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMESERVICES;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -36,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.router.SecurityConfUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeCon
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -317,5 +320,34 @@ public class TestRouterNamenodeHeartbeat {
         MockDomainNameResolver.DOMAIN + ":" + webAddressPort);
 
     return conf;
+  }
+
+  @Test
+  public void testNamenodeHeartbeatWithSecurity() throws Exception {
+    Configuration conf = SecurityConfUtil.initSecurity();
+    MiniRouterDFSCluster testCluster = null;
+    try {
+      testCluster = new MiniRouterDFSCluster(true, 1, conf);
+      // Start Namenodes and routers
+      testCluster.startCluster(conf);
+      testCluster.startRouters();
+
+      // Register Namenodes to generate a NamenodeStatusReport
+      testCluster.registerNamenodes();
+      testCluster.waitNamenodeRegistration();
+
+      for (MiniRouterDFSCluster.RouterContext routerContext : testCluster.getRouters()) {
+        ActiveNamenodeResolver resolver = routerContext.getRouter().getNamenodeResolver();
+        // Validate that NamenodeStatusReport has been registered
+        assertNotNull(resolver.getNamespaces());
+        assertFalse(resolver.getNamespaces().isEmpty());
+      }
+    } finally {
+      if (testCluster != null) {
+        testCluster.shutdown();
+      }
+      UserGroupInformation.reset();
+      SecurityConfUtil.destroy();
+    }
   }
 }

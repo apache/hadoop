@@ -106,9 +106,9 @@ public class TestFileAppend4 {
 
     // set the soft limit to be 1 second so that the
     // namenode triggers lease recovery upon append request
-    cluster.setLeasePeriod(1,
+    cluster.setLeasePeriod(1000,
         conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
-            DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT));
+            DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
 
     // Trying recovery
     int tries = 60;

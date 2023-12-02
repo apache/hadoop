@@ -24,6 +24,9 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
@@ -33,7 +36,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.router.webapp.TestFederationInterceptorREST.getReservationSubmissionRequestInfo;
 import static org.junit.Assert.assertEquals;
@@ -121,5 +127,38 @@ public class TestRouterServerUtil {
     LambdaTestUtils.intercept(RuntimeException.class,
         "definitionInfo Or ReservationRequests is Null.",
         () -> RouterServerUtil.convertReservationDefinition(definitionInfo3));
+  }
+
+  @Test
+  public void testLoadFederationPolicyManager() throws Exception {
+
+    // In this unit test, we have configured the yarn-site.xml file with
+    // the yarn.federation.policy-manager-params parameter,
+    // and subsequently, we parse this parameter.
+    // We have configured two subclusters, SC-1 and SC-2,
+    // with routerPolicyWeights set to SC-1:0.7 and SC-2:0.3,
+    // and amrmPolicyWeights set to SC-1:0.6 and SC-2:0.4.
+    // Additionally, headroomAlpha is set to 1.0.
+
+    YarnConfiguration conf = new YarnConfiguration();
+    String defaultPolicyParamString = conf.get(YarnConfiguration.FEDERATION_POLICY_MANAGER_PARAMS,
+        YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS);
+    assertNotNull(defaultPolicyParamString);
+    ByteBuffer defaultPolicyParam = ByteBuffer.wrap(
+        defaultPolicyParamString.getBytes(StandardCharsets.UTF_8));
+    WeightedPolicyInfo policyInfo = WeightedPolicyInfo.fromByteBuffer(defaultPolicyParam);
+    float headroomAlpha = policyInfo.getHeadroomAlpha();
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = policyInfo.getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights = policyInfo.getAMRMPolicyWeights();
+
+    SubClusterIdInfo sc1 = new SubClusterIdInfo("SC-1");
+    SubClusterIdInfo sc2 = new SubClusterIdInfo("SC-2");
+
+    assertEquals(1.0, headroomAlpha, 0.001);
+    assertEquals(0.7, routerPolicyWeights.get(sc1), 0.001);
+    assertEquals(0.3, routerPolicyWeights.get(sc2), 0.001);
+
+    assertEquals(0.6, amrmPolicyWeights.get(sc1), 0.001);
+    assertEquals(0.4, amrmPolicyWeights.get(sc2), 0.001);
   }
 }

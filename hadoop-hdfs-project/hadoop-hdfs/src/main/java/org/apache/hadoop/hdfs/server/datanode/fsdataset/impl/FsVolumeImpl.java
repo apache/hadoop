@@ -171,7 +171,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.usage = usage;
     if (this.usage != null) {
       reserved = new ReservedSpaceCalculator.Builder(conf)
-          .setUsage(this.usage).setStorageType(storageType).build();
+          .setUsage(this.usage).setStorageType(storageType)
+          .setDir(currentDir != null ? currentDir.getParent() : "NULL").build();
       boolean fixedSizeVolume = conf.getBoolean(
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
@@ -350,7 +351,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
-  File getCurrentDir() {
+  public File getCurrentDir() {
     return currentDir;
   }
 
@@ -499,7 +500,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         return used;
       }
     }
-    return getDfUsed() - getDfsUsed();
+    return Math.max(getDfUsed() - getDfsUsed(), 0L);
   }
 
   /**

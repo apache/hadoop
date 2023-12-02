@@ -30,7 +30,7 @@ Hadoop has an option parsing framework that employs parsing generic options as w
 |:---- |:---- |
 | SHELL\_OPTIONS | The common set of shell options. These are documented on the [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Shell_Options) page. |
 | GENERIC\_OPTIONS | The common set of options supported by multiple commands. See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options) for more information. |
-| COMMAND COMMAND\_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands). |
+| COMMAND\_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands). |
 
 User Commands
 -------------
@@ -292,6 +292,8 @@ Usage:
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
               [-asService]
+              [-sortTopNodes]
+              [-hotBlockTimeInterval <specified time interval>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -304,6 +306,7 @@ Usage:
 | `-idleiterations` \<iterations\> | Maximum number of idle iterations before exit. This overwrites the default idleiterations(5). |
 | `-runDuringUpgrade` | Whether to run the balancer during an ongoing HDFS upgrade. This is usually not desired since it will not affect used space on over-utilized machines. |
 | `-asService` | Run Balancer as a long running service. |
+| `-sortTopNodes` | Sort datanodes based on the utilization so that highly utilized datanodes get scheduled first. |
 | `-hotBlockTimeInterval` | Prefer moving cold blocks i.e blocks associated with files accessed or modified before the specified time interval. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 
@@ -387,6 +390,7 @@ Usage:
         hdfs dfsadmin [-fetchImage <local directory>]
         hdfs dfsadmin [-allowSnapshot <snapshotDir>]
         hdfs dfsadmin [-disallowSnapshot <snapshotDir>]
+        hdfs dfsadmin [-provisionSnapshotTrash <snapshotDir> [-all]]
         hdfs dfsadmin [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
         hdfs dfsadmin [-evictWriters <datanode_host:ipc_port>]
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
@@ -425,6 +429,7 @@ Usage:
 | `-fetchImage` \<local directory\> | Downloads the most recent fsimage from the NameNode and saves it in the specified local directory. |
 | `-allowSnapshot` \<snapshotDir\> | Allowing snapshots of a directory to be created. If the operation completes successfully, the directory becomes snapshottable. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-disallowSnapshot` \<snapshotDir\> | Disallowing snapshots of a directory to be created. All snapshots of the directory must be deleted before disallowing snapshots. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
+| `-provisionSnapshotTrash` \<snapshotDir\> [-all] | Provision trash root in one or all snapshottable directories. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-shutdownDatanode` \<datanode\_host:ipc\_port\> [upgrade] | Submit a shutdown request for the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-shutdownDatanode) for the detail. |
 | `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
@@ -447,6 +452,7 @@ Usage:
 
       hdfs dfsrouteradmin
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-addAll <source1> <nameservice1,nameservice2,...> <destination1> [-readonly] [-faulttolerant][-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner1> -group <group1> -mode <mode1> , <source2> <nameservice1,nameservice2,...> <destination2> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner2> -group <group2> -mode <mode2> , ...]
           [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls [-d] <path>]
@@ -455,6 +461,7 @@ Usage:
           [-setStorageTypeQuota <path> -storageType <storage type> <quota in bytes or quota size string>]
           [-clrQuota <path>]
           [-clrStorageTypeQuota <path>]
+          [-dumpState]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
@@ -512,7 +519,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policyName> -path <path> [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
@@ -713,11 +720,13 @@ Recover the lease on the specified path. The path must reside on an HDFS file sy
 
 ### `verifyEC`
 
-Usage: `hdfs debug verifyEC -file <file>`
+Usage: `hdfs debug verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | [`-file` *EC-file*] | HDFS EC file to be verified. |
+| [`-blockId` *blk_Id*] | Specify the blk_Id to verify a block group of the file. |
+| [`-skipFailureBlocks`] | Specify will skip any block group failures during verify and continues verify all block groups of the file, the default is not to skip failure blocks . |
 
 Verify the correctness of erasure coding on an erasure coded file.
 

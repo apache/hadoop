@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -925,7 +926,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     Text key = new Text("secret1");
     assertTrue("Secrets missing from credentials object", cs
         .getAllSecretKeys().contains(key));
-    assertEquals("mysecret", new String(cs.getSecretKey(key), "UTF-8"));
+    assertEquals("mysecret", new String(cs.getSecretKey(key), StandardCharsets.UTF_8));
 
     // Check LogAggregationContext
     ApplicationSubmissionContext asc = app.getApplicationSubmissionContext();
@@ -1066,7 +1067,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
             .constructWebResource("apps", app.getApplicationId().toString(),
               "queue").accept(contentType).get(ClientResponse.class);
       assertResponseStatusCode(Status.OK, response.getStatusInfo());
-      String expectedQueue = "default";
+      String expectedQueue = "root.default";
       if(!isCapacityScheduler) {
         expectedQueue = "root." + webserviceUserName;
       }
@@ -1230,10 +1231,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
           continue;
         }
         assertResponseStatusCode(Status.OK, response.getStatusInfo());
-        String expectedQueue = "test";
-        if(!isCapacityScheduler) {
-          expectedQueue = "root.test";
-        }
+        String expectedQueue = "root.test";
         if (mediaType.contains(MediaType.APPLICATION_JSON)) {
           verifyAppQueueJson(response, expectedQueue);
         } else {
@@ -1256,7 +1254,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               .put(ClientResponse.class);
         assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
         if(isCapacityScheduler) {
-          Assert.assertEquals("default", app.getQueue());
+          Assert.assertEquals("root.default", app.getQueue());
         }
         else {
           Assert.assertEquals("root.someuser", app.getQueue());

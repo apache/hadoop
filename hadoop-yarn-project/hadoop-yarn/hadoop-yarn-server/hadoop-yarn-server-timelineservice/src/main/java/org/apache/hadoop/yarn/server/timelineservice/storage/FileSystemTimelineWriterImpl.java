@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -139,10 +140,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
 
       byte[] record =  new StringBuilder()
               .append(TimelineUtils.dumpTimelineRecordtoJSON(entity))
-              .append("\n").toString().getBytes("UTF-8");
+              .append("\n").toString().getBytes(StandardCharsets.UTF_8);
       writeFileWithRetries(filePath, record);
     } catch (Exception ioe) {
-      LOG.warn("Interrupted operation:" + ioe.getMessage());
+      LOG.warn("Interrupted operation:{}", ioe.getMessage());
       TimelineWriteError error = createTimelineWriteError(entity);
       /*
        * TODO: set an appropriate error code after PoC could possibly be:
@@ -274,8 +275,8 @@ public class FileSystemTimelineWriterImpl extends AbstractService
             LOG.info("Maxed out FS retries. Giving up!");
             throw e;
           }
-          LOG.info("Will retry operation on FS. Retry no. " + retry +
-              " after sleeping for " + fsRetryInterval + " seconds");
+          LOG.info("Will retry operation on FS. Retry no. {}" +
+              " after sleeping for {} seconds", retry, fsRetryInterval);
           Thread.sleep(fsRetryInterval);
         }
       }

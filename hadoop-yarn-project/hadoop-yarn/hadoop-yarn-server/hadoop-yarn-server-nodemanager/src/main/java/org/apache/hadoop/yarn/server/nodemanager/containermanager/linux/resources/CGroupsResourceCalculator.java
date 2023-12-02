@@ -35,7 +35,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -316,7 +316,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
       throws YarnException {
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
     try (InputStreamReader fReader = new InputStreamReader(
-        new FileInputStream(file), Charset.forName("UTF-8"))) {
+        new FileInputStream(file), StandardCharsets.UTF_8)) {
       try (BufferedReader in = new BufferedReader(fReader)) {
         try {
           String str;

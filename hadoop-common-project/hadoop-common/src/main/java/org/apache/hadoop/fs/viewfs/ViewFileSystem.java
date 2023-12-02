@@ -1370,6 +1370,24 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public Path getEnclosingRoot(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+    } catch (FileNotFoundException ex) {
+      NotInMountpointException mountPointEx =
+          new NotInMountpointException(path,
+              String.format("getEnclosingRoot - %s", ex.getMessage()));
+      mountPointEx.initCause(ex);
+      throw mountPointEx;
+    }
+    Path mountPath = new Path(res.resolvedPath);
+    Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));
+    return fixRelativePart(this.makeQualified(enclosingPath.depth() > mountPath.depth()
+        ?  enclosingPath : mountPath));
+  }
+
   /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
@@ -1919,11 +1937,50 @@ public class ViewFileSystem extends FileSystem {
       }
       return allPolicies;
     }
+
+    @Override
+    public Path getEnclosingRoot(Path path) throws IOException {
+      InodeTree.ResolveResult<FileSystem> res;
+      try {
+        res = fsState.resolve((path.toString()), true);
+      } catch (FileNotFoundException ex) {
+        NotInMountpointException mountPointEx =
+            new NotInMountpointException(path,
+            String.format("getEnclosingRoot - %s", ex.getMessage()));
+        mountPointEx.initCause(ex);
+        throw mountPointEx;
+      }
+      Path fullPath = new Path(res.resolvedPath);
+      Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+      return enclosingPath.depth() > fullPath.depth()
+          ?  enclosingPath
+          : fullPath;
+    }
   }
 
   enum RenameStrategy {
     SAME_MOUNTPOINT, SAME_TARGET_URI_ACROSS_MOUNTPOINT,
     SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+  }
+
+  private void closeChildFileSystems(FileSystem fs) {
+    if (fs != null) {
+      FileSystem[] childFs = fs.getChildFileSystems();
+      for (FileSystem child : childFs) {
+        if (child != null) {
+          String disableCacheName = String.format("fs.%s.impl.disable.cache",
+              child.getUri().getScheme());
+          if (config.getBoolean(disableCacheName, false)) {
+            try {
+              child.close();
+            } catch (IOException e) {
+              LOG.info("Fail closing ViewFileSystem's child filesystem " + fs,
+                  e);
+            }
+          }
+        }
+      }
+    }
   }
 
   @Override
@@ -1932,6 +1989,20 @@ public class ViewFileSystem extends FileSystem {
     if (enableInnerCache && cache != null) {
       cache.closeAll();
       cache.clear();
+    }
+
+    if (!enableInnerCache) {
+      for (InodeTree.MountPoint<FileSystem> mountPoint :
+          fsState.getMountPoints()) {
+        FileSystem targetFs = mountPoint.target.getTargetFileSystemForClose();
+        closeChildFileSystems(targetFs);
+      }
+
+      if (fsState.isRootInternalDir() &&
+          fsState.getRootFallbackLink() != null) {
+        closeChildFileSystems(
+            fsState.getRootFallbackLink().getTargetFileSystem());
+      }
     }
   }
 }

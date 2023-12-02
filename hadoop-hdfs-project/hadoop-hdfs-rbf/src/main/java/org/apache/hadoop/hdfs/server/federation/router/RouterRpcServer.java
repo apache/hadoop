@@ -333,7 +333,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setBindAddress(confRpcAddress.getHostName())
         .setPort(confRpcAddress.getPort())
         .setNumHandlers(handlerCount)
-        .setnumReaders(readerCount)
+        .setNumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
         .setAlignmentContext(routerStateIdContext)
@@ -341,11 +341,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .build();
 
     // Add all the RPC protocols that the Router implements
-    DFSUtil.addPBProtocol(
+    DFSUtil.addInternalPBProtocol(
         conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
         refreshUserMappingService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, GetUserMappingsProtocolPB.class,
         getUserMappingService, this.rpcServer);
 
     // Set service-level authorization security policy
@@ -1610,11 +1610,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getSlowDatanodeReport();
   }
 
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src) throws IOException {
+    return clientProto.getEnclosingRoot(src);
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+      long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
     return nnProto.getBlocks(datanode, size, minBlockSize,
-            hotBlockTimeInterval);
+            hotBlockTimeInterval, storageType);
   }
 
   @Override // NamenodeProtocol
@@ -1830,18 +1835,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If the path is in a read only mount point.
    */
   private boolean isPathReadOnly(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null && entry.isReadOnly()) {
-          return true;
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isReadOnly();
   }
 
   /**
@@ -1940,18 +1935,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should be in all subclusters.
    */
   boolean isPathAll(final String path) {
-    if (subclusterResolver instanceof MountTableResolver) {
-      try {
-        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isAll();
-        }
-      } catch (IOException e) {
-        LOG.error("Cannot get mount point", e);
-      }
-    }
-    return false;
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isAll();
   }
 
   /**
@@ -1961,18 +1946,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return If a path should support failed subclusters.
    */
   boolean isPathFaultTolerant(final String path) {
+    MountTable entry = getMountTable(path);
+    return entry != null && entry.isFaultTolerant();
+  }
+
+  private MountTable getMountTable(final String path){
     if (subclusterResolver instanceof MountTableResolver) {
       try {
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(path);
-        if (entry != null) {
-          return entry.isFaultTolerant();
-        }
+        return mountTable.getMountPoint(path);
       } catch (IOException e) {
         LOG.error("Cannot get mount point", e);
       }
     }
-    return false;
+    return null;
   }
 
   /**

@@ -698,7 +698,7 @@ public class TestFileUtil {
     OutputStream os = new FileOutputStream(simpleTar);
     try (TarOutputStream tos = new TarOutputStream(os)) {
       TarEntry te = new TarEntry("/bar/foo");
-      byte[] data = "some-content".getBytes("UTF-8");
+      byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       te.setSize(data.length);
       tos.putNextEntry(te);
       tos.write(data);
@@ -782,7 +782,7 @@ public class TestFileUtil {
         ZipArchiveList.add(new ZipArchiveEntry("foo_" + i));
         ZipArchiveEntry archiveEntry = ZipArchiveList.get(i);
         archiveEntry.setUnixMode(count += 0100);
-        byte[] data = "some-content".getBytes("UTF-8");
+        byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
         archiveEntry.setSize(data.length);
         tos.putArchiveEntry(archiveEntry);
         tos.write(data);
@@ -1321,16 +1321,16 @@ public class TestFileUtil {
         if (wildcardPath.equals(classPath)) {
           // add wildcard matches
           for (File wildcardMatch: wildcardMatches) {
-            expectedClassPaths.add(wildcardMatch.toURI().toURL()
+            expectedClassPaths.add(wildcardMatch.getCanonicalFile().toURI().toURL()
               .toExternalForm());
           }
         } else {
           File fileCp = null;
           if(!new Path(classPath).isAbsolute()) {
-            fileCp = new File(tmp, classPath);
+            fileCp = new File(tmp, classPath).getCanonicalFile();
           }
           else {
-            fileCp = new File(classPath);
+            fileCp = new File(classPath).getCanonicalFile();
           }
           if (nonExistentSubdir.equals(classPath)) {
             // expect to maintain trailing path separator if present in input, even
@@ -1385,7 +1385,8 @@ public class TestFileUtil {
     for (Path jar: jars) {
       URL url = jar.toUri().toURL();
       assertTrue("the jar should match either of the jars",
-          url.equals(jar1.toURI().toURL()) || url.equals(jar2.toURI().toURL()));
+          url.equals(jar1.getCanonicalFile().toURI().toURL()) ||
+          url.equals(jar2.getCanonicalFile().toURI().toURL()));
     }
   }
 

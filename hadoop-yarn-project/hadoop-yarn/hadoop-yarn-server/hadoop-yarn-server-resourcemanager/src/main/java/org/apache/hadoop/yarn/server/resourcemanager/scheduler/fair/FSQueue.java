@@ -234,6 +234,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive) {
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setSchedulerType("FairScheduler");
     queueInfo.setQueueName(getQueueName());
 
     if (scheduler.getClusterResource().getMemorySize() == 0) {
@@ -250,7 +251,37 @@ public abstract class FSQueue implements Queue, Schedulable {
           getFairShare().getMemorySize());
     }
 
-    ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();
+    // set Weight
+    queueInfo.setWeight(getWeight());
+
+    // set MinShareResource
+    Resource minShareResource = getMinShare();
+    queueInfo.setMinResourceVCore(minShareResource.getVirtualCores());
+    queueInfo.setMinResourceMemory(minShareResource.getMemorySize());
+
+    // set MaxShareResource
+    Resource maxShareResource =
+        Resources.componentwiseMin(getMaxShare(), scheduler.getClusterResource());
+    queueInfo.setMaxResourceVCore(maxShareResource.getVirtualCores());
+    queueInfo.setMaxResourceMemory(maxShareResource.getMemorySize());
+
+    // set ReservedResource
+    Resource newReservedResource = getReservedResource();
+    queueInfo.setReservedResourceVCore(newReservedResource.getVirtualCores());
+    queueInfo.setReservedResourceMemory(newReservedResource.getMemorySize());
+
+    // set SteadyFairShare
+    Resource newSteadyFairShare = getSteadyFairShare();
+    queueInfo.setSteadyFairShareVCore(newSteadyFairShare.getVirtualCores());
+    queueInfo.setSteadyFairShareMemory(newSteadyFairShare.getMemorySize());
+
+    // set MaxRunningApp
+    queueInfo.setMaxRunningApp(getMaxRunningApps());
+
+    // set Preemption
+    queueInfo.setPreemptionDisabled(isPreemptable());
+
+    ArrayList<QueueInfo> childQueueInfos = new ArrayList<>();
     if (includeChildQueues) {
       Collection<FSQueue> childQueues = getChildQueues();
       for (FSQueue child : childQueues) {
@@ -304,7 +335,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     LOG.debug("The updated fairShare for {} is {}", getName(), fairShare);
   }
 
-  /** Get the steady fair share assigned to this Schedulable. */
+  /**
+   * Get the steady fair share assigned to this Schedulable.
+   * @return the steady fair share assigned to this Schedulable.
+   */
   public Resource getSteadyFairShare() {
     return steadyFairShare;
   }
@@ -364,7 +398,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * To be called holding the scheduler writelock.
    *
-   * @param fairShare
+   * @param fairShare queue's fairshare.
    */
   public void update(Resource fairShare) {
     setFairShare(fairShare);
@@ -407,6 +441,8 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Gets the children of this queue, if any.
+   *
+   * @return the children of this queue.
    */
   public abstract List<FSQueue> getChildQueues();
   
@@ -420,6 +456,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   /**
    * Return the number of apps for which containers can be allocated.
    * Includes apps in subqueues.
+   *
+   * @return the number of apps.
    */
   public abstract int getNumRunnableApps();
   
@@ -447,6 +485,8 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Returns true if queue has at least one app running.
+   *
+   * @return true, if queue has at least one app running; otherwise, false;
    */
   public boolean isActive() {
     return getNumRunnableApps() > 0;

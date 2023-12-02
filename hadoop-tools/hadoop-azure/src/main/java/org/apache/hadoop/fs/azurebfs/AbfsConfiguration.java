@@ -117,6 +117,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
 
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
+      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
+  private boolean isExpectHeaderEnabled;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED)
   private boolean accountThrottlingEnabled;
@@ -327,6 +332,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
+  private boolean renameResilience;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
@@ -704,6 +713,10 @@ public class AbfsConfiguration{
 
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
+  }
+
+  public boolean isExpectHeaderEnabled() {
+    return this.isExpectHeaderEnabled;
   }
 
   public boolean accountThrottlingEnabled() {
@@ -1130,4 +1143,11 @@ public class AbfsConfiguration{
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
 
+  public boolean getRenameResilience() {
+    return renameResilience;
+  }
+
+  void setRenameResilience(boolean actualResilience) {
+    renameResilience = actualResilience;
+  }
 }

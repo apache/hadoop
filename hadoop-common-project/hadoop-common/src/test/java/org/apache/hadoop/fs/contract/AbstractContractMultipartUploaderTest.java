@@ -22,13 +22,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -596,8 +596,8 @@ public abstract class AbstractContractMultipartUploaderTest extends
     abortUpload(uploadHandle, file);
 
     String contents = "ThisIsPart49\n";
-    int len = contents.getBytes(Charsets.UTF_8).length;
-    InputStream is = IOUtils.toInputStream(contents, "UTF-8");
+    int len = contents.getBytes(StandardCharsets.UTF_8).length;
+    InputStream is = IOUtils.toInputStream(contents, StandardCharsets.UTF_8);
 
     intercept(IOException.class,
         () -> awaitFuture(
@@ -624,7 +624,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
   public void testAbortUnknownUpload() throws Exception {
     Path file = methodPath();
     ByteBuffer byteBuffer = ByteBuffer.wrap(
-        "invalid-handle".getBytes(Charsets.UTF_8));
+        "invalid-handle".getBytes(StandardCharsets.UTF_8));
     intercept(FileNotFoundException.class,
         () -> abortUpload(BBUploadHandle.from(byteBuffer), file));
   }

@@ -45,6 +45,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.http.HttpConfig;
@@ -81,6 +83,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -863,13 +866,25 @@ public class TestDFSUtil {
 
   @Test (timeout=15000)
   public void testIsValidName() {
-    assertFalse(DFSUtil.isValidName("/foo/../bar"));
-    assertFalse(DFSUtil.isValidName("/foo/./bar"));
-    assertFalse(DFSUtil.isValidName("/foo//bar"));
-    assertTrue(DFSUtil.isValidName("/"));
-    assertTrue(DFSUtil.isValidName("/bar/"));
-    assertFalse(DFSUtil.isValidName("/foo/:/bar"));
-    assertFalse(DFSUtil.isValidName("/foo:bar"));
+    String validPaths[] = new String[]{"/", "/bar/"};
+    for (String path : validPaths) {
+      assertTrue("Should have been accepted '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String invalidPaths[] =
+        new String[]{"/foo/../bar", "/foo/./bar", "/foo//bar", "/foo/:/bar", "/foo:bar"};
+    for (String path : invalidPaths) {
+      assertFalse("Should have been rejected '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String windowsPath = "/C:/foo/bar";
+    if (Shell.WINDOWS) {
+      assertTrue("Should have been accepted '" + windowsPath + "' in windows os.",
+          DFSUtil.isValidName(windowsPath));
+    } else {
+      assertFalse("Should have been rejected '" + windowsPath + "' in unix os.",
+          DFSUtil.isValidName(windowsPath));
+    }
   }
   
   @Test(timeout=5000)
@@ -1107,5 +1122,19 @@ public class TestDFSUtil {
             + " is not configured.";
     LambdaTestUtils.intercept(IOException.class, expectedErrorMessage,
         ()->DFSUtil.getNNServiceRpcAddressesForCluster(conf));
+  }
+
+  @Test
+  public void testAddTransferRateMetricForValidValues() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
+    verify(mockMetrics).addReadTransferRate(10000);
+  }
+
+  @Test
+  public void testAddTransferRateMetricForInvalidValue() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
+    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
   }
 }

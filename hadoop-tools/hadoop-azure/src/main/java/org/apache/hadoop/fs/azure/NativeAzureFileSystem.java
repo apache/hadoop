@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
@@ -93,6 +92,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystemHelper.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -178,7 +178,7 @@ public class NativeAzureFileSystem extends FileSystem {
             "Error reading pending rename file contents -- "
                 + "maximum file size exceeded");
       }
-      String contents = new String(bytes, 0, l, Charset.forName("UTF-8"));
+      String contents = new String(bytes, 0, l, StandardCharsets.UTF_8);
 
       // parse the JSON
       JsonNode json = null;
@@ -301,7 +301,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Write file.
       try {
         output = fs.createInternal(path, FsPermission.getFileDefault(), false, null);
-        output.write(contents.getBytes(Charset.forName("UTF-8")));
+        output.write(contents.getBytes(StandardCharsets.UTF_8));
       } catch (IOException e) {
         throw new IOException("Unable to write RenamePending file for folder rename from "
             + srcKey + " to " + dstKey, e);
@@ -3149,7 +3149,7 @@ public class NativeAzureFileSystem extends FileSystem {
       OpenFileParameters parameters) throws IOException {
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
         parameters.getMandatoryKeys(),
-        Collections.emptySet(),
+        FS_OPTION_OPENFILE_STANDARD_OPTIONS,
         "for " + path);
     return LambdaUtils.eval(
         new CompletableFuture<>(), () ->

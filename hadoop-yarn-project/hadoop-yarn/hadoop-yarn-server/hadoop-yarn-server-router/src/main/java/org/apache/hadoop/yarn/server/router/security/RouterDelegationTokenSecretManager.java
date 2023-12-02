@@ -19,15 +19,19 @@ package org.apache.hadoop.yarn.server.router.security;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.security.token.delegation.RouterDelegationTokenSupport;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Base64;
 
 /**
  * A Router specific delegation token secret manager.
@@ -62,13 +67,14 @@ public class RouterDelegationTokenSecretManager
    * @param delegationTokenRenewInterval       how often the tokens must be renewed
    *                                           in milliseconds
    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
+   * @param conf Configuration.
    */
   public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
-      long delegationTokenRemoverScanInterval) {
+      long delegationTokenRemoverScanInterval, Configuration conf) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Override
@@ -138,6 +144,29 @@ public class RouterDelegationTokenSecretManager
   }
 
   /**
+   * The Router Supports Store new Token.
+   *
+   * @param identifier RMDelegationToken.
+   * @param tokenInfo DelegationTokenInformation.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      DelegationTokenInformation tokenInfo) {
+    try {
+      String token =
+          RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
+      long renewDate = tokenInfo.getRenewDate();
+
+      federationFacade.storeNewToken(identifier, renewDate, token);
+    } catch (Exception e) {
+      if (!shouldIgnoreException(e)) {
+        LOG.error("Error in storing RMDelegationToken with sequence number: {}.",
+            identifier.getSequenceNumber());
+        ExitUtil.terminate(1, e);
+      }
+    }
+  }
+
+  /**
    * The Router Supports Update Token.
    *
    * @param id RMDelegationToken
@@ -152,6 +181,27 @@ public class RouterDelegationTokenSecretManager
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in updating persisted RMDelegationToken with sequence number: {}.",
             id.getSequenceNumber());
+        ExitUtil.terminate(1, e);
+      }
+    }
+  }
+
+  /**
+   * The Router Supports Update Token.
+   *
+   * @param identifier RMDelegationToken.
+   * @param tokenInfo DelegationTokenInformation.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      DelegationTokenInformation tokenInfo) {
+    try {
+      long renewDate = tokenInfo.getRenewDate();
+      String token = RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
+      federationFacade.updateStoredToken(identifier, renewDate, token);
+    } catch (Exception e) {
+      if (!shouldIgnoreException(e)) {
+        LOG.error("Error in updating persisted RMDelegationToken with sequence number: {}.",
+            identifier.getSequenceNumber());
         ExitUtil.terminate(1, e);
       }
     }
@@ -265,6 +315,42 @@ public class RouterDelegationTokenSecretManager
   @Override
   protected synchronized int incrementDelegationTokenSeqNum() {
     return federationFacade.incrementDelegationTokenSeqNum();
+  }
+
+  @Override
+  protected void storeToken(RMDelegationTokenIdentifier rmDelegationTokenIdentifier,
+      DelegationTokenInformation tokenInfo) throws IOException {
+    this.currentTokens.put(rmDelegationTokenIdentifier, tokenInfo);
+    this.addTokenForOwnerStats(rmDelegationTokenIdentifier);
+    storeNewToken(rmDelegationTokenIdentifier, tokenInfo);
+  }
+
+  @Override
+  protected void updateToken(RMDelegationTokenIdentifier rmDelegationTokenIdentifier,
+      DelegationTokenInformation tokenInfo) throws IOException {
+    this.currentTokens.put(rmDelegationTokenIdentifier, tokenInfo);
+    updateStoredToken(rmDelegationTokenIdentifier, tokenInfo);
+  }
+
+  @Override
+  protected DelegationTokenInformation getTokenInfo(
+      RMDelegationTokenIdentifier ident) {
+    // First check if I have this..
+    DelegationTokenInformation tokenInfo = currentTokens.get(ident);
+    if (tokenInfo == null) {
+      try {
+        RouterRMTokenResponse response = federationFacade.getTokenByRouterStoreToken(ident);
+        RouterStoreToken routerStoreToken = response.getRouterStoreToken();
+        String tokenStr = routerStoreToken.getTokenInfo();
+        byte[] tokenBytes = Base64.getUrlDecoder().decode(tokenStr);
+        tokenInfo = RouterDelegationTokenSupport.decodeDelegationTokenInformation(tokenBytes);
+      } catch (Exception e) {
+        LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
+            + "] from StateStore.", e);
+        throw new YarnRuntimeException(e);
+      }
+    }
+    return tokenInfo;
   }
 
   @Override

@@ -501,7 +501,7 @@ Where
       def blocks(FS, p, s, s +  l)  = a list of the blocks containing data(FS, path)[s:s+l]
 
 
-Note that that as `length(FS, f) ` is defined as `0` if `isDir(FS, f)`, the result
+Note that as `length(FS, f) ` is defined as `0` if `isDir(FS, f)`, the result
 of `getFileBlockLocations()` on a directory is `[]`
 
 
@@ -601,7 +601,40 @@ on the filesystem.
 
 1. The outcome of this operation MUST be identical to the value of
    `getFileStatus(P).getBlockSize()`.
-1. By inference, it MUST be > 0 for any file of length > 0.
+2. By inference, it MUST be > 0 for any file of length > 0.
+
+###  `Path getEnclosingRoot(Path p)`
+
+This method is used to find a root directory for a path given. This is useful for creating
+staging and temp directories in the same enclosing root directory. There are constraints around how
+renames are allowed to atomically occur (ex. across hdfs volumes or across encryption zones).
+
+For any two paths p1 and p2 that do not have the same enclosing root, `rename(p1, p2)` is expected to fail or will not
+be atomic.
+
+For object stores, even with the same enclosing root, there is no guarantee file or directory rename is atomic
+
+The following statement is always true:
+`getEnclosingRoot(p) == getEnclosingRoot(getEnclosingRoot(p))`
+
+
+```python
+path in ancestors(FS, p) or path == p:
+isDir(FS, p)
+```
+
+#### Preconditions
+
+The path does not have to exist, but the path does need to be valid and reconcilable by the filesystem
+* if a linkfallback is used all paths are reconcilable
+* if a linkfallback is not used there must be a mount point covering the path
+
+
+#### Postconditions
+
+* The path returned will not be null, if there is no deeper enclosing root, the root path ("/") will be returned.
+* The path returned is a directory
+
 
 ## <a name="state_changing_operations"></a> State Changing Operations
 
@@ -707,7 +740,7 @@ This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
 and potentially confuse file/directory logic. In particular, using `create()` to acquire
 an exclusive lock on a file (whoever creates the file without an error is considered
-the holder of the lock) may not not a safe algorithm to use when working with object stores.
+the holder of the lock) may not be a safe algorithm to use when working with object stores.
 
 * Object stores may create an empty file as a marker when a file is created.
 However, object stores with `overwrite=true` semantics may not implement this atomically,

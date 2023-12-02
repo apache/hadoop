@@ -21,56 +21,110 @@
 USE [FederationStateStore]
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_addApplicationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_updateApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_updateApplicationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_updateApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getApplicationsHomeSubCluster];
+IF OBJECT_ID ('[sp_getApplicationsHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getApplicationsHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_getApplicationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_deleteApplicationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_registerSubCluster];
+IF OBJECT_ID ('[sp_registerSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_registerSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getSubClusters];
+IF OBJECT_ID ('[sp_getSubClusters]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getSubClusters];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getSubCluster];
+IF OBJECT_ID ('[sp_getSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_subClusterHeartbeat];
+IF OBJECT_ID ('[sp_subClusterHeartbeat]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_subClusterHeartbeat];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deregisterSubCluster];
+IF OBJECT_ID ('[sp_deregisterSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deregisterSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_setPolicyConfiguration];
+IF OBJECT_ID ('[sp_setPolicyConfiguration]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_setPolicyConfiguration];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getPolicyConfiguration];
+IF OBJECT_ID ('[sp_getPolicyConfiguration]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getPolicyConfiguration];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getPoliciesConfigurations];
+IF OBJECT_ID ('[sp_getPoliciesConfigurations]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getPoliciesConfigurations];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_addReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_updateReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_updateReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_updateReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getReservationsHomeSubCluster];
+IF OBJECT_ID ('[sp_getReservationsHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getReservationsHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_getReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_deleteReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteReservationHomeSubCluster];
+GO
+
+IF OBJECT_ID ('[sp_addMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addMasterKey];
+GO
+
+IF OBJECT_ID ('[sp_getMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getMasterKey];
+GO
+
+IF OBJECT_ID ('[sp_deleteMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteMasterKey];
+GO
+
+IF OBJECT_ID ('[sp_addDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addDelegationToken];
+GO
+
+IF OBJECT_ID ('[sp_getDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getDelegationToken];
+GO
+
+IF OBJECT_ID ('[sp_updateDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_updateDelegationToken];
+GO
+
+IF OBJECT_ID ('[sp_deleteDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteDelegationToken];
+GO
+
+IF OBJECT_ID ('[sp_storeVersion]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_storeVersion];
+GO
+
+IF OBJECT_ID ('[sp_getVersion]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getVersion];
 GO

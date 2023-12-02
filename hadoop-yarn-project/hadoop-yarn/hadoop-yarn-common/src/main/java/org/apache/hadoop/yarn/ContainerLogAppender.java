@@ -94,7 +94,6 @@ public class ContainerLogAppender extends FileAppender
    *
    * @return containerLogDir.
    */
-  
   public String getContainerLogDir() {
     return this.containerLogDir;
   }
@@ -112,7 +111,7 @@ public class ContainerLogAppender extends FileAppender
   }
 
   private static final long EVENT_SIZE = 100;
-  
+
   public long getTotalLogFileSize() {
     return maxEvents * EVENT_SIZE;
   }

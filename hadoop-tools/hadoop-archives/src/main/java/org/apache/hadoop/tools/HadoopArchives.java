@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,6 +38,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Parser;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.security.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -71,8 +74,6 @@ import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * a archive creation utility.
@@ -487,6 +488,11 @@ public class HadoopArchives implements Tool {
           + " should be a directory but is a file");
     }
     conf.set(DST_DIR_LABEL, outputPath.toString());
+    Credentials credentials = conf.getCredentials();
+    Path[] allPaths = new Path[] {parentPath, dest};
+    TokenCache.obtainTokensForNamenodes(credentials, allPaths, conf);
+    conf.setCredentials(credentials);
+
     Path stagingArea;
     try {
       stagingArea = JobSubmissionFiles.getStagingDir(new Cluster(conf), 
@@ -498,11 +504,11 @@ public class HadoopArchives implements Tool {
         NAME+"_"+Integer.toString(new Random().nextInt(Integer.MAX_VALUE), 36));
     FsPermission mapredSysPerms = 
       new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
-    FileSystem.mkdirs(jobDirectory.getFileSystem(conf), jobDirectory,
-                      mapredSysPerms);
+    FileSystem jobfs = jobDirectory.getFileSystem(conf);
+    FileSystem.mkdirs(jobfs, jobDirectory,
+        mapredSysPerms);
     conf.set(JOB_DIR_LABEL, jobDirectory.toString());
     //get a tmp directory for input splits
-    FileSystem jobfs = jobDirectory.getFileSystem(conf);
     Path srcFiles = new Path(jobDirectory, "_har_src_files");
     conf.set(SRC_LIST_LABEL, srcFiles.toString());
     SequenceFile.Writer srcWriter = SequenceFile.createWriter(jobfs, conf,
@@ -747,7 +753,7 @@ public class HadoopArchives implements Tool {
         indexStream = fs.create(index);
         outStream = fs.create(masterIndex);
         String version = VERSION + " \n";
-        outStream.write(version.getBytes(Charsets.UTF_8));
+        outStream.write(version.getBytes(StandardCharsets.UTF_8));
         
       } catch(IOException e) {
         throw new RuntimeException(e);
@@ -766,7 +772,7 @@ public class HadoopArchives implements Tool {
       while(values.hasNext()) {
         Text value = values.next();
         String towrite = value.toString() + "\n";
-        indexStream.write(towrite.getBytes(Charsets.UTF_8));
+        indexStream.write(towrite.getBytes(StandardCharsets.UTF_8));
         written++;
         if (written > numIndexes -1) {
           // every 1000 indexes we report status
@@ -775,7 +781,7 @@ public class HadoopArchives implements Tool {
           endIndex = keyVal;
           String masterWrite = startIndex + " " + endIndex + " " + startPos 
                               +  " " + indexStream.getPos() + " \n" ;
-          outStream.write(masterWrite.getBytes(Charsets.UTF_8));
+          outStream.write(masterWrite.getBytes(StandardCharsets.UTF_8));
           startPos = indexStream.getPos();
           startIndex = endIndex;
           written = 0;
@@ -788,7 +794,7 @@ public class HadoopArchives implements Tool {
       if (written > 0) {
         String masterWrite = startIndex + " " + keyVal + " " + startPos  +
                              " " + indexStream.getPos() + " \n";
-        outStream.write(masterWrite.getBytes(Charsets.UTF_8));
+        outStream.write(masterWrite.getBytes(StandardCharsets.UTF_8));
       }
       // close the streams
       outStream.close();
