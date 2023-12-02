@@ -910,7 +910,6 @@ public class RouterClientProtocol implements ClientProtocol {
     // Sort the list as the entries from subcluster are also sorted
     if (childrenMountTableWithSrc != null) {
       children = new ArrayList<>(childrenMountTableWithSrc.keySet());
-      Collections.sort(children);
     }
     if (children != null) {
       // Get the dates for each mount point

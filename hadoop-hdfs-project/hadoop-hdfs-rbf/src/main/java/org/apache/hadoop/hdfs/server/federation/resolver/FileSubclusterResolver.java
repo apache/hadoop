@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeSet;
@@ -157,7 +158,8 @@ public interface FileSubclusterResolver {
       MountTable> tree) {
     IdentityHashMap<String,String> childWithSourcePaths = new IdentityHashMap<>();
     boolean exists = false;
-    for (String subPath : tree.keySet()) {
+    for (Map.Entry<String, MountTable> record : tree.entrySet()) {
+      String subPath = record.getKey();
       String child = subPath;
 
       // Special case for /
@@ -181,7 +183,7 @@ public interface FileSubclusterResolver {
           child = child.substring(0, fin);
         }
         if (!child.isEmpty()) {
-          childWithSourcePaths.put(child, tree.get(subPath).getSourcePath());
+          childWithSourcePaths.put(child, record.getValue().getSourcePath());
         }
       }
     }
