@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Timer;
 
 /**
