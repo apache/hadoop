@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -150,7 +151,8 @@ public class TestReplicationPolicyExcludeSlowNodes
 
       // mock slow nodes
       SlowPeerTracker tracker = dnManager.getSlowPeerTracker();
-      assert tracker != null;
+      Assert.assertNotNull(tracker);
+
       OutlierMetrics outlierMetrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
       tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[3].getInfoAddr(),
           outlierMetrics);
@@ -163,7 +165,6 @@ public class TestReplicationPolicyExcludeSlowNodes
       assertFalse(dnManager.isSlowPeerCollectorInitialized());
       GenericTestUtils.waitFor(
           () -> DatanodeManager.getSlowNodesUuidSet().size() == 3, 100, 3000);
-      assertEquals(3, DatanodeManager.getSlowNodesUuidSet().size());
 
       // reconfig
       namenode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY,
