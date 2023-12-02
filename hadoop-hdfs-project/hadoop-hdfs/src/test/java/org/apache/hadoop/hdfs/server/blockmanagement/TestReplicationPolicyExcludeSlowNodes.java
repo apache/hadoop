@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -158,11 +159,10 @@ public class TestReplicationPolicyExcludeSlowNodes
       tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[3].getInfoAddr(),
           outlierMetrics);
 
-      // waiting for slow nodes collector run
-      Thread.sleep(3000);
-
       // check slow nodes
       assertFalse(dnManager.isSlowPeerCollectorInitialized());
+      GenericTestUtils.waitFor(
+          () -> DatanodeManager.getSlowNodesUuidSet().size() == 3, 100, 3000);
       assertEquals(3, DatanodeManager.getSlowNodesUuidSet().size());
 
       // reconfig
