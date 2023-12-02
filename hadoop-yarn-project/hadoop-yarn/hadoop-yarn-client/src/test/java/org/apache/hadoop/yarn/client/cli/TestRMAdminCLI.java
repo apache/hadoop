@@ -1099,4 +1099,27 @@ public class TestRMAdminCLI {
     assertFalse(errOut.contains("-failover"));
     dataErr.reset();
   }
+
+  @Test
+  public void testParseSubClusterId() throws Exception {
+    rmAdminCLI.getConf().setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+
+    // replaceLabelsOnNode
+    String[] replaceLabelsOnNodeArgs = {"-replaceLabelsOnNode",
+        "node1:8000,x node2:8000=y node3,x node4=Y", "-subClusterId", "SC-1"};
+    assertEquals(0, rmAdminCLI.run(replaceLabelsOnNodeArgs));
+
+    String[] refreshQueuesArgs = {"-refreshQueues", "-subClusterId", "SC-1"};
+    assertEquals(0, rmAdminCLI.run(refreshQueuesArgs));
+
+    String[] refreshNodesResourcesArgs = {"-refreshNodesResources", "-subClusterId", "SC-1"};
+    assertEquals(0, rmAdminCLI.run(refreshNodesResourcesArgs));
+
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes = "memory-mb=1024Mi,vcores=1,resource2";
+    String[] updateNodeResourceArgs = {"-updateNodeResource", nodeIdStr,
+        resourceTypes, "-subClusterId", "SC-1"};
+    rmAdminCLI.parseSubClusterId(updateNodeResourceArgs, false);
+    assertEquals(-1, rmAdminCLI.run(updateNodeResourceArgs));
+  }
 }

@@ -77,6 +77,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePo
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
+import org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -94,6 +97,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
@@ -109,6 +113,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.yarn.server.router.RouterServerUtil.checkPolicyManagerValid;
+
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
   private static final Logger LOG =
@@ -116,6 +122,10 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   private static final String COMMA = ",";
   private static final String COLON = ":";
+
+  private static final List<String> SUPPORT_WEIGHT_MANAGERS =
+      new ArrayList<>(Arrays.asList(WeightedLocalityPolicyManager.class.getName(),
+      PriorityBroadcastPolicyManager.class.getName(), WeightedHomePolicyManager.class.getName()));
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -926,6 +936,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RouterServerUtil.logAndThrowException("Missing Queue information.", null);
     }
 
+    String policyManagerClassName = request.getPolicyManagerClassName();
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+          " does not support the use of queue weights.", null);
+    }
+
     String amRmWeight = federationQueueWeight.getAmrmWeight();
     FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
 
@@ -937,9 +954,6 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     try {
       long startTime = clock.getTime();
-      // Step1, get parameters.
-      String policyManagerClassName = request.getPolicyManagerClassName();
-
 
       // Step2, parse amRMPolicyWeights.
       Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
@@ -1386,6 +1400,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     if (StringUtils.isBlank(policyManagerClassName)) {
       RouterServerUtil.logAndThrowException("Missing PolicyManagerClassName information.", null);
+    }
+
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+              "does not support the use of queue weights.", null);
     }
 
     String amRmWeight = federationQueueWeight.getAmrmWeight();

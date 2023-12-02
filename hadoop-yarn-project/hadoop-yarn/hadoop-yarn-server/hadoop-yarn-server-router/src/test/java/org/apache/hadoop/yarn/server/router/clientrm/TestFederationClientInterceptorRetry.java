@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -409,5 +410,22 @@ public class TestFederationClientInterceptorRetry
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId 1 exec getClusterMetrics error RM is stopped.",
         () -> interceptor.getClusterMetrics(request));
+  }
+
+  @Test
+  public void testGetClusterMetricsOneBadOneGoodNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with one bad and one good SubCluster.");
+    setupCluster(Arrays.asList(bad1, good));
+    GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
+
+    GetClusterMetricsResponse clusterMetrics = interceptor.getClusterMetrics(request);
+    Assert.assertNotNull(clusterMetrics);
+
+    // If partial results are not allowed to be returned, an exception will be thrown.
+    interceptor.setAllowPartialResult(false);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 1 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+    interceptor.setAllowPartialResult(true);
   }
 }

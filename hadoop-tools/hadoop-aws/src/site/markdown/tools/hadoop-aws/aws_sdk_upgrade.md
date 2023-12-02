@@ -288,6 +288,16 @@ public interface S3AInternals {
   HeadObjectResponse getObjectMetadata(Path path) throws IOException;
 
   AWSCredentialProviderList shareCredentials(final String purpose);
+
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  HeadBucketResponse getBucketMetadata() throws IOException;
+
+  boolean isMultipartCopyEnabled();
+
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  long abortMultipartUploads(Path path) throws IOException;
 }
 ```
 

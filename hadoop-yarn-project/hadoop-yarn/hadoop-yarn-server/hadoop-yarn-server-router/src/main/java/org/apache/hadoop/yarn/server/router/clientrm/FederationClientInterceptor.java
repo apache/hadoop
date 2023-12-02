@@ -208,6 +208,7 @@ public class FederationClientInterceptor
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private long submitIntervalTime;
+  private boolean allowPartialResult;
 
   @Override
   public void init(String userName) {
@@ -263,6 +264,10 @@ public class FederationClientInterceptor
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
   }
 
   @Override
@@ -895,8 +900,10 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      throw new YarnException("invokeConcurrent Failed = " +
-          StringUtils.join(exceptions.values(), ","));
+      if (!allowPartialResult || exceptions.keySet().size() == subClusterIds.size()) {
+        throw new YarnException("invokeConcurrent Failed = " +
+            StringUtils.join(exceptions.values(), ","));
+      }
     }
 
     // return result
@@ -2349,5 +2356,10 @@ public class FederationClientInterceptor
   @VisibleForTesting
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
+  }
+
+  @VisibleForTesting
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }
