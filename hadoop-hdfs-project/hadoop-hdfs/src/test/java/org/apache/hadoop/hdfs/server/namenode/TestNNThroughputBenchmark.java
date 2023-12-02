@@ -60,6 +60,18 @@ public class TestNNThroughputBenchmark {
     NNThroughputBenchmark.runBenchmark(conf, new String[] {"-op", "all"});
   }
 
+  @Test
+  public void testNNThroughputWithBaseDir() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        nameDir.getAbsolutePath());
+    DFSTestUtil.formatNameNode(conf);
+    NNThroughputBenchmark.runBenchmark(conf,
+        new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
+  }
+
   /**
    * This test runs all benchmarks defined in {@link NNThroughputBenchmark},
    * with explicit local -fs option.
