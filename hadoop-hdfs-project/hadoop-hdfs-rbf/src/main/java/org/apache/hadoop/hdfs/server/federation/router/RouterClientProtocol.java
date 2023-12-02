@@ -929,7 +929,6 @@ public class RouterClientProtocol implements ClientProtocol {
             continue;
           }
         }
-        
         long date = 0;
         if (dates != null && dates.containsKey(child)) {
           date = dates.get(child);
