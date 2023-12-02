@@ -512,7 +512,7 @@ public class TestNameNodeReconfigure {
     assertTrue(datanodeManager.isSlowPeerCollectorInitialized());
 
     try {
-      nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "non-boolean");
+      nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "non-boolean");
       fail("should not reach here");
     } catch (ReconfigurationException e) {
       assertEquals(
@@ -520,12 +520,12 @@ public class TestNameNodeReconfigure {
           e.getMessage());
     }
 
-    nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
     assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
         datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
     assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
 
-    nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
     assertFalse("SlowNode tracker is still enabled. Reconfiguration could not be successful",
         datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
 
