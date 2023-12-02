@@ -1118,9 +1118,11 @@ public class AdminService extends CompositeService implements
   }
 
   @Override
-  public GetSubClustersResponse getSubClusters(
+  public GetSubClustersResponse getFederationSubClusters(
       GetSubClustersRequest request) throws YarnException, IOException {
-    return null;
+    throw new YarnException("It is not allowed to call the RM's " +
+        " getFederationSubClusters. " +
+        " Please call Router's getFederationSubClusters to get SubClusters.");
   }
 
   private void validateAttributesExists(

@@ -638,6 +638,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed ListFederationQueuePolicies call");
       metrics.incrListFederationQueuePoliciesFailedRetrieved();
     }
+
+    public void getFederationSubClustersFailedRetrieved() {
+      LOG.info("Mocked: failed GetFederationSubClusters call");
+      metrics.incrGetFederationSubClustersFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -2310,5 +2315,13 @@ public class TestRouterMetrics {
         metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededListFederationQueuePoliciesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetFederationSubClustersFailedRetrieved() {
+    long totalBadBefore = metrics.getFederationSubClustersFailedRetrieved();
+    badSubCluster.getFederationSubClustersFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getFederationSubClustersFailedRetrieved());
   }
 }

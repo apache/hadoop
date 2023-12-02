@@ -215,7 +215,7 @@ message GetSubClustersRequestProto {
 }
 
 message GetSubClustersResponseProto {
-  repeated SubClustersProto subClusters = 1;
+  repeated FederationSubClusterProto subClusters = 1;
 }
 
 //////////////////////////////////////////////////////////////////

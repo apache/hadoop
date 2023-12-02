@@ -236,9 +236,16 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   DeleteFederationApplicationResponse deleteFederationApplication(
       DeleteFederationApplicationRequest request) throws YarnException, IOException;
 
-
+  /**
+   * In YARN-Federation mode, this method provides a way to get federation subcluster list.
+   *
+   * @param request GetSubClustersRequest Request.
+   * @return Response from getFederationSubClusters.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
   @Private
   @Idempotent
-  GetSubClustersResponse getSubClusters(GetSubClustersRequest request)
+  GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException;
 }

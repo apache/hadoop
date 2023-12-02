@@ -17,30 +17,50 @@
  */
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.util.List;
-
-@Public
+/**
+ * Federation SubClusters.
+ */
+@Private
 @Unstable
-public abstract class GetSubClustersResponse {
-  @Public
-  @Stable
-  public static GetSubClustersResponse newInstance(List<FederationSubCluster> subClustersList) {
-    GetSubClustersResponse response = Records.newRecord(GetSubClustersResponse.class);
-    response.setFederationSubClusters(subClustersList);
-    return response;
+public abstract class FederationSubCluster {
+
+  @Private
+  @Unstable
+  public static FederationSubCluster newInstance(String subClusterId, String state,
+      String lastHeartBeatTime) {
+    FederationSubCluster subCluster = Records.newRecord(FederationSubCluster.class);
+    subCluster.setSubClusterId(subClusterId);
+    subCluster.setSubClusterState(state);
+    subCluster.setLastHeartBeatTime(lastHeartBeatTime);
+    return subCluster;
   }
 
   @Public
   @Unstable
-  public abstract List<FederationSubCluster> getFederationSubClusters();
+  public abstract String getSubClusterId();
 
   @Private
   @Unstable
-  public abstract void setFederationSubClusters(List<FederationSubCluster> federationSubClusters);
+  public abstract void setSubClusterId(String subClusterId);
+
+  @Public
+  @Unstable
+  public abstract String getSubClusterState();
+
+  @Public
+  @Unstable
+  public abstract void setSubClusterState(String state);
+
+  @Public
+  @Unstable
+  public abstract String getLastHeartBeatTime();
+
+  @Public
+  @Unstable
+  public abstract void setLastHeartBeatTime(String lastHeartBeatTime);
 }

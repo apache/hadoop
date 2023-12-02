@@ -999,7 +999,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   }
 
   @Override
-  public GetSubClustersResponse getSubClusters(GetSubClustersRequest request)
+  public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException {
     return null;
   }

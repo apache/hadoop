@@ -448,7 +448,7 @@ message FederationQueueWeightProto {
   optional string policyManagerClassName = 5;
 }
 
-message SubClustersProto {
+message FederationSubClusterProto {
   optional string subClusterId = 1;
   optional string lastHeartBeatTime = 2;
   optional string subClusterState = 3;

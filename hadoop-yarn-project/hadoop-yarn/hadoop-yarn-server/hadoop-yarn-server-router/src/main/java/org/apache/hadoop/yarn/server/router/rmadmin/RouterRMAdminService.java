@@ -432,8 +432,9 @@ public class RouterRMAdminService extends AbstractService
   }
 
   @Override
-  public GetSubClustersResponse getSubClusters(
+  public GetSubClustersResponse getFederationSubClusters(
       GetSubClustersRequest request) throws YarnException, IOException {
-    return null;
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().getFederationSubClusters(request);
   }
 }

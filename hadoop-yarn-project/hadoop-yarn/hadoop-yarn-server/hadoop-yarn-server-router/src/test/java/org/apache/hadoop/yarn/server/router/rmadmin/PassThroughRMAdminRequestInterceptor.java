@@ -197,8 +197,8 @@ public class PassThroughRMAdminRequestInterceptor
   }
 
   @Override
-  public GetSubClustersResponse getSubClusters(GetSubClustersRequest request)
+  public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException {
-    return null;
+    return getNextInterceptor().getFederationSubClusters(request);
   }
 }

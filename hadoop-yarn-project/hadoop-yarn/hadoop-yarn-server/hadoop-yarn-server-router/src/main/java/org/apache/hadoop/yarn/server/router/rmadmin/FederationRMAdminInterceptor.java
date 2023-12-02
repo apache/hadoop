@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterReq
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
@@ -1142,10 +1143,51 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     throw new YarnException("Unable to deleteFederationApplication.");
   }
 
+  /**
+   * Get federation subcluster list.
+   *
+   * @param request GetSubClustersRequest Request.
+   * @return SubClusters Response.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
-  public GetSubClustersResponse getSubClusters(GetSubClustersRequest request)
+  public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
        throws YarnException, IOException {
-    return null;
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getFederationSubClusters Request.", null);
+    }
+
+    // Step1. Get all subClusters of the cluster.
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(false);
+
+    // Step2. Get FederationSubCluster data.
+    List<FederationSubCluster> federationSubClusters = new ArrayList<>();
+    long startTime = clock.getTime();
+    for (Map.Entry<SubClusterId, SubClusterInfo> subCluster : subClusters.entrySet()) {
+      SubClusterId subClusterId = subCluster.getKey();
+      try {
+        SubClusterInfo subClusterInfo = subCluster.getValue();
+        long lastHeartBeat = subClusterInfo.getLastHeartBeat();
+        Date lastHeartBeatDate = new Date(lastHeartBeat);
+        FederationSubCluster federationSubCluster = FederationSubCluster.newInstance(
+            subClusterId.getId(), subClusterInfo.getState().name(),lastHeartBeatDate.toString());
+        federationSubClusters.add(federationSubCluster);
+      } catch (Exception e) {
+        routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+        LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetFederationSubClustersFailedRetrieved(stopTime - startTime);
+
+    // Step3. Return results.
+    return GetSubClustersResponse.newInstance(federationSubClusters);
   }
 
   /**

@@ -246,8 +246,8 @@ public class DefaultRMAdminRequestInterceptor
   }
 
   @Override
-  public GetSubClustersResponse getSubClusters(
+  public GetSubClustersResponse getFederationSubClusters(
       GetSubClustersRequest request) throws YarnException, IOException {
-    return null;
+    return rmAdminProxy.getFederationSubClusters(request);
   }
 }
