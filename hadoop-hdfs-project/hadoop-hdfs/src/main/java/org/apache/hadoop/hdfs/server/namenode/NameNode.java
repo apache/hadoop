@@ -2663,8 +2663,6 @@ public class NameNode extends ReconfigurableBase implements
             DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT :
             Boolean.parseBoolean(newVal);
         result = Boolean.toString(peerStatsEnabled);
-        getConf().setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY,
-            peerStatsEnabled);
         datanodeManager.initSlowPeerTracker(getConf(), timer, peerStatsEnabled);
         break;
       }
