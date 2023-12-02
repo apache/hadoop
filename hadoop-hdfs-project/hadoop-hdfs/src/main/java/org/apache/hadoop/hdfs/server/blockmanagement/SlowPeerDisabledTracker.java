@@ -46,6 +46,11 @@ public class SlowPeerDisabledTracker extends SlowPeerTracker {
 
   public SlowPeerDisabledTracker(Configuration conf, Timer timer) {
     super(conf, timer);
+    final boolean dataNodePeerStatsEnabledVal =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+            DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+    Preconditions.checkArgument(!dataNodePeerStatsEnabledVal,
+        "SlowPeerDisabledTracker should only be used for disabled slow peer stats.");
   }
 
   @Override
