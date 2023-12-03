@@ -75,6 +75,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
@@ -122,6 +124,7 @@ public abstract class FederationStateStoreBaseTest {
   @After
   public void after() throws Exception {
     testDeleteStateStore();
+    testDeletePolicyStore();
     stateStore.close();
   }
 
@@ -1135,5 +1138,26 @@ public abstract class FederationStateStoreBaseTest {
     List<ApplicationHomeSubCluster> appsHomeSubClusters = result.getAppsHomeSubClusters();
     assertNotNull(appsHomeSubClusters);
     assertEquals(0, appsHomeSubClusters.size());
+  }
+
+  public void testDeletePolicyStore() throws Exception {
+    // Step1. We delete all Policies Configurations.
+    FederationStateStore federationStateStore = this.getStateStore();
+    DeletePoliciesConfigurationsRequest request =
+        DeletePoliciesConfigurationsRequest.newInstance();
+    DeletePoliciesConfigurationsResponse response =
+        federationStateStore.deleteAllPoliciesConfigurations(request);
+    assertNotNull(response);
+
+    // Step2. We check the Policies size, the size should be 0 at this time.
+    GetSubClusterPoliciesConfigurationsRequest request1 =
+         GetSubClusterPoliciesConfigurationsRequest.newInstance();
+    GetSubClusterPoliciesConfigurationsResponse response1 =
+        stateStore.getPoliciesConfigurations(request1);
+    assertNotNull(response1);
+    List<SubClusterPolicyConfiguration> policiesConfigs =
+        response1.getPoliciesConfigs();
+    assertNotNull(policiesConfigs);
+    assertEquals(0, policiesConfigs.size());
   }
 }

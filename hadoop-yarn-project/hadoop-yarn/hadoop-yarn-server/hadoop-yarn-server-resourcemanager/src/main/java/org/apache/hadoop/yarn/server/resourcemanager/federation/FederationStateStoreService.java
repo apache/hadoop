@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationH
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
@@ -319,6 +321,16 @@ public class FederationStateStoreService extends AbstractService
         new FederationClientMethod<>("getPoliciesConfigurations",
         GetSubClusterPoliciesConfigurationsRequest.class, request,
         GetSubClusterPoliciesConfigurationsResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
+  }
+
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    FederationClientMethod<DeletePoliciesConfigurationsResponse> clientMethod =
+        new FederationClientMethod<>("deleteAllPoliciesConfigurations",
+        DeletePoliciesConfigurationsRequest.class, request,
+        DeletePoliciesConfigurationsResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
   }
 

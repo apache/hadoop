@@ -196,6 +196,11 @@ message DeleteReservationHomeSubClusterRequestProto {
 message DeleteReservationHomeSubClusterResponseProto {
 }
 
+message DeletePoliciesConfigurationsRequestProto {
+}
+
+message DeletePoliciesConfigurationsResponseProto {
+}
 
 //----- configurations ---
 
