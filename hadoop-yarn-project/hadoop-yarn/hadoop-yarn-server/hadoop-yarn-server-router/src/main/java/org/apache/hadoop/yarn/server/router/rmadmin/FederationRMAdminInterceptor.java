@@ -1156,14 +1156,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // Parameter validation.
     if (request == null) {
-      routerMetrics.incrDeleteFederationQueuePoliciesByQueuesFailedRetrieved();
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing deleteFederationQueuePoliciesByQueues Request.", null);
     }
 
     List<String> queues = request.getQueues();
     if (CollectionUtils.isEmpty(queues)) {
-      routerMetrics.incrDeleteFederationQueuePoliciesByQueuesFailedRetrieved();
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
       RouterServerUtil.logAndThrowException("queues cannot be null.", null);
     }
 
@@ -1172,7 +1172,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       long startTime = clock.getTime();
       federationFacade.deletePolicyConfigurations(queues);
       long stopTime = clock.getTime();
-      routerMetrics.succeededDeleteFederationPoliciesByQueuesFailedRetrieved(stopTime - startTime);
+      routerMetrics.succeededDeleteFederationPoliciesByQueuesRetrieved(stopTime - startTime);
       return DeleteFederationQueuePoliciesResponse.newInstance(
          "queues = " + StringUtils.join(queues, ",") + " delete success.");
     } catch (Exception e) {

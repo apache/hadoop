@@ -157,8 +157,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numListFederationQueuePoliciesFailedRetrieved;
   @Metric("# of deleteFederationApplication failed to be retrieved")
   private MutableGaugeInt numDeleteFederationApplicationFailedRetrieved;
-  @Metric("# of deleteFederationQueuePoliciesByQueues failed to be retrieved")
-  private MutableGaugeInt numDeleteFederationQueuePoliciesByQueuesFailedRetrieved;
+  @Metric("# of deleteFederationPoliciesByQueues failed to be retrieved")
+  private MutableGaugeInt numDeleteFederationPoliciesByQueuesRetrieved;
   @Metric("# of refreshAdminAcls failed to be retrieved")
   private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
   @Metric("# of refreshServiceAcls failed to be retrieved")
@@ -314,7 +314,7 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved DeleteFederationApplication and latency(ms)")
   private MutableRate totalSucceededDeleteFederationApplicationFailedRetrieved;
   @Metric("Total number of successful Retrieved DeleteFederationPoliciesByQueues and latency(ms)")
-  private MutableRate totalSucceededDeleteFederationPoliciesByQueuesFailedRetrieved;
+  private MutableRate totalSucceededDeleteFederationPoliciesByQueuesRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;
   @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
@@ -986,8 +986,8 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public long getNumSucceededDeleteFederationPoliciesByQueuesFailedRetrieved() {
-    return totalSucceededDeleteFederationPoliciesByQueuesFailedRetrieved.lastStat().numSamples();
+  public long getNumSucceededDeleteFederationPoliciesByQueuesRetrieved() {
+    return totalSucceededDeleteFederationPoliciesByQueuesRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1356,8 +1356,8 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public double getLatencySucceededDeleteFederationPoliciesByQueuesFailedRetrieved() {
-    return totalSucceededDeleteFederationPoliciesByQueuesFailedRetrieved.lastStat().mean();
+  public double getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved() {
+    return totalSucceededDeleteFederationPoliciesByQueuesRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -1671,8 +1671,8 @@ public final class RouterMetrics {
     return numDeleteFederationApplicationFailedRetrieved.value();
   }
 
-  public int getDeleteFederationQueuePoliciesByQueuesFailedRetrieved() {
-    return numDeleteFederationQueuePoliciesByQueuesFailedRetrieved.value();
+  public int getDeleteFederationPoliciesByQueuesRetrieved() {
+    return numDeleteFederationPoliciesByQueuesRetrieved.value();
   }
 
   public int getNumRefreshAdminAclsFailedRetrieved() {
@@ -2047,8 +2047,8 @@ public final class RouterMetrics {
     deleteFederationApplicationLatency.add(duration);
   }
 
-  public void succeededDeleteFederationPoliciesByQueuesFailedRetrieved(long duration) {
-    totalSucceededDeleteFederationPoliciesByQueuesFailedRetrieved.add(duration);
+  public void succeededDeleteFederationPoliciesByQueuesRetrieved(long duration) {
+    totalSucceededDeleteFederationPoliciesByQueuesRetrieved.add(duration);
     deleteFederationPoliciesByQueuesLatency.add(duration);
   }
 
@@ -2346,8 +2346,8 @@ public final class RouterMetrics {
     numDeleteFederationApplicationFailedRetrieved.incr();
   }
 
-  public void incrDeleteFederationQueuePoliciesByQueuesFailedRetrieved() {
-    numDeleteFederationQueuePoliciesByQueuesFailedRetrieved.incr();
+  public void incrDeleteFederationPoliciesByQueuesRetrieved() {
+    numDeleteFederationPoliciesByQueuesRetrieved.incr();
   }
 
   public void incrRefreshAdminAclsFailedRetrieved() {
