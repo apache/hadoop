@@ -30,9 +30,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
 @Unstable
 public class GetSubClustersRequestPBImpl extends GetSubClustersRequest {
 
-  GetSubClustersRequestProto proto = GetSubClustersRequestProto.getDefaultInstance();
-  GetSubClustersRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private GetSubClustersRequestProto proto = GetSubClustersRequestProto.getDefaultInstance();
+  private GetSubClustersRequestProto.Builder builder = null;
+  private boolean viaProto = false;
 
   public GetSubClustersRequestPBImpl() {
     builder = GetSubClustersRequestProto.newBuilder();
@@ -56,8 +56,9 @@ public class GetSubClustersRequestPBImpl extends GetSubClustersRequest {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }

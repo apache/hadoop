@@ -990,6 +990,12 @@ public class TestRouterMetrics {
           " call with duration {}", duration);
       metrics.succeededListFederationQueuePoliciesRetrieved(duration);
     }
+
+    public void getFederationSubClustersRetrieved(long duration) {
+      LOG.info("Mocked: successful GetFederationSubClustersRetrieved " +
+          " call with duration {}", duration);
+      metrics.succeededGetFederationSubClustersRetrieved(duration);
+    }
   }
 
   @Test
@@ -2323,5 +2329,20 @@ public class TestRouterMetrics {
     badSubCluster.getFederationSubClustersFailedRetrieved();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getFederationSubClustersFailedRetrieved());
+  }
+
+  @Test
+  public void testGetFederationSubClustersRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetFederationSubClustersRetrieved();
+    goodSubCluster.getFederationSubClustersRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetFederationSubClustersRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getFederationSubClustersRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetFederationSubClustersRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

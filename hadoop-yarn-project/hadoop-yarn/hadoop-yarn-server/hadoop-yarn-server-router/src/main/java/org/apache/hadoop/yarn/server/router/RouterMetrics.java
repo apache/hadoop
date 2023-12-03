@@ -986,7 +986,7 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public long getNumSucceededGetFederationSubClustersFailedRetrieved() {
+  public long getNumSucceededGetFederationSubClustersRetrieved() {
     return totalSucceededGetFederationSubClustersRetrieved.lastStat().numSamples();
   }
 
@@ -1353,6 +1353,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededDeleteFederationApplicationFailedRetrieved() {
     return totalSucceededDeleteFederationApplicationFailedRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetFederationSubClustersRetrieved() {
+    return totalSucceededGetFederationSubClustersRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -2042,7 +2047,7 @@ public final class RouterMetrics {
     deleteFederationApplicationLatency.add(duration);
   }
 
-  public void succeededGetFederationSubClustersFailedRetrieved(long duration) {
+  public void succeededGetFederationSubClustersRetrieved(long duration) {
     totalSucceededGetFederationSubClustersRetrieved.add(duration);
     getFederationSubClustersLatency.add(duration);
   }

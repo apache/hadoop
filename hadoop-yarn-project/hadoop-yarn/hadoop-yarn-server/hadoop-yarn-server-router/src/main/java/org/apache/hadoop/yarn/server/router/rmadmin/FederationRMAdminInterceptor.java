@@ -1176,7 +1176,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         long lastHeartBeat = subClusterInfo.getLastHeartBeat();
         Date lastHeartBeatDate = new Date(lastHeartBeat);
         FederationSubCluster federationSubCluster = FederationSubCluster.newInstance(
-            subClusterId.getId(), subClusterInfo.getState().name(),lastHeartBeatDate.toString());
+            subClusterId.getId(), subClusterInfo.getState().name(), lastHeartBeatDate.toString());
         federationSubClusters.add(federationSubCluster);
       } catch (Exception e) {
         routerMetrics.incrGetFederationSubClustersFailedRetrieved();
@@ -1184,7 +1184,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     }
     long stopTime = clock.getTime();
-    routerMetrics.succeededGetFederationSubClustersFailedRetrieved(stopTime - startTime);
+    routerMetrics.succeededGetFederationSubClustersRetrieved(stopTime - startTime);
 
     // Step3. Return results.
     return GetSubClustersResponse.newInstance(federationSubClusters);

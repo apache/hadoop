@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.FederationSubClusterProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.FederationSubClusterProto;
-import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
 
 public class FederationSubClusterPBImpl extends FederationSubCluster {
@@ -117,7 +116,7 @@ public class FederationSubClusterPBImpl extends FederationSubCluster {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof FederationQueueWeight)) {
+    if (!(other instanceof FederationSubCluster)) {
       return false;
     }
     FederationSubClusterPBImpl otherImpl = this.getClass().cast(other);
