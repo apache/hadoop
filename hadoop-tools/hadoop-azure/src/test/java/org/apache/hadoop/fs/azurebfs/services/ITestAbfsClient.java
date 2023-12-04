@@ -356,6 +356,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       AbfsConfiguration abfsConfig) throws Exception {
     AuthType currentAuthType = abfsConfig.getAuthType(
         abfsConfig.getAccountName());
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
 
     org.junit.Assume.assumeTrue(
         (currentAuthType == AuthType.SharedKey)
@@ -383,6 +384,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         AbfsThrottlingInterceptFactory.getInstance(
             abfsConfig.getAccountName().substring(0,
                 abfsConfig.getAccountName().indexOf(DOT)), abfsConfig));
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
 
     // override baseurl
     client = ITestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
