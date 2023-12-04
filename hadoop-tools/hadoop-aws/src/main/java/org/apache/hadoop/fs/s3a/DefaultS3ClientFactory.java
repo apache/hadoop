@@ -166,8 +166,11 @@ public class DefaultS3ClientFactory extends Configured
   @VisibleForTesting
   public static boolean maybeTurnOnSdkLogging() {
     if (LOG_SDK.isDebugEnabled()) {
-      LOG_SDK.debug("Enabling SDK logging at {} level", SDK_LOG_LEVEL);
+      LOG_SDK.debug("Enabling SDK logging at {}", SDK_LOG_LEVEL);
       return enableLogging(SDK_LOG_LEVEL, SDK_LOGS);
+    } else if (LOG_SDK.isTraceEnabled()) {
+      LOG_SDK.debug("Enabling SDK logging at {}", LogControl.LogLevel.TRACE);
+      return enableLogging(LogControl.LogLevel.TRACE, SDK_LOGS);
     }
     return false;
   }
