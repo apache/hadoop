@@ -822,7 +822,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       LOG.error("Queue {} policy cannot be deleted.", queue, e);
     }
   }
-  
+
   @Override
   public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
       DeletePoliciesConfigurationsRequest request) throws Exception {

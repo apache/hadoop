@@ -1188,7 +1188,7 @@ public abstract class FederationStateStoreBaseTest {
       Assert.assertFalse(deleteQueues.contains(policyConfig.getQueue()));
     }
   }
-  
+
   @Test
   public void testDeletePolicyStore() throws Exception {
     // Step1. We delete all Policies Configurations.

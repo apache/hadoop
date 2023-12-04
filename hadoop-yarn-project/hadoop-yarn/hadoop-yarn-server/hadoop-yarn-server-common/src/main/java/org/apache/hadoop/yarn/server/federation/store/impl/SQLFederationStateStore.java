@@ -1101,9 +1101,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       }
     }
     return null;
-  
   }
-  
+
   @Override
   public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
       DeletePoliciesConfigurationsRequest request) throws Exception {

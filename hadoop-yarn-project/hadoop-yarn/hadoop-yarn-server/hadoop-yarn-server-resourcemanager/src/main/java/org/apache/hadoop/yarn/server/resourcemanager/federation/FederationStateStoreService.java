@@ -333,9 +333,9 @@ public class FederationStateStoreService extends AbstractService
         new FederationClientMethod<>("deletePoliciesConfigurations",
         DeleteSubClusterPoliciesConfigurationsRequest.class, request,
         DeleteSubClusterPoliciesConfigurationsResponse.class, stateStoreClient, clock);
-    return clientMethod.invoke();    
+    return clientMethod.invoke();
   }
-  
+
   @Override
   public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
       DeletePoliciesConfigurationsRequest request) throws Exception {

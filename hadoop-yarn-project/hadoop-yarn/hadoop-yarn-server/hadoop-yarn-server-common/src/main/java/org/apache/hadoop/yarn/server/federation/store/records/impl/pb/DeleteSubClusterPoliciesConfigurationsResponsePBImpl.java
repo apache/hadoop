@@ -41,7 +41,7 @@ public class DeleteSubClusterPoliciesConfigurationsResponsePBImpl
   }
 
   public DeleteSubClusterPoliciesConfigurationsResponsePBImpl(
-    DeleteSubClusterPoliciesConfigurationsResponseProto proto) {
+      DeleteSubClusterPoliciesConfigurationsResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }

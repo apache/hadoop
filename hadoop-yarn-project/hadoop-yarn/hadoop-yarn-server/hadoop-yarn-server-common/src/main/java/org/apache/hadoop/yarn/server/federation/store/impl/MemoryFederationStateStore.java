@@ -416,7 +416,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
     }
     return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
   }
-  
+
   @Override
   public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
       DeletePoliciesConfigurationsRequest request) throws Exception {
