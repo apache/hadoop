@@ -1990,11 +1990,15 @@ public class DFSUtil {
    * read by 10^9 to avoid overflow. Instead, we first calculate the duration in seconds in double
    * to keep the decimal values for smaller durations. We then divide bytes read by
    * durationInSeconds to get the transferRate in bytes per second.
+   *
+   * We also replace a negative value for transferred bytes with 0 byte.
+   *
    * @param bytes bytes read
    * @param durationInNS read duration in nanoseconds
    * @return bytes per second
    */
-  public static long getTransferRateInBytesPerSecond(final long bytes, long durationInNS) {
+  public static long getTransferRateInBytesPerSecond(long bytes, long durationInNS) {
+    bytes = Math.max(bytes, 0);
     durationInNS = Math.max(durationInNS, 1);
     double durationInSeconds = (double) durationInNS / TimeUnit.SECONDS.toNanos(1);
     return (long) (bytes / durationInSeconds);

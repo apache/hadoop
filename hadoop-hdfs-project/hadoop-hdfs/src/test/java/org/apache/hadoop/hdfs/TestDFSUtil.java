@@ -1132,10 +1132,24 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testAddTransferRateMetricFor0Nanosecond() {
+  public void testAddTransferRateMetricForZeroNSTransferDuration() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
     DFSUtil.addTransferRateMetric(mockMetrics, 1L, 0);
     verify(mockMetrics).addReadTransferRate(999_999_999L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricNegativeTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricZeroTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
   }
 
   @Test
