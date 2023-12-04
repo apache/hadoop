@@ -1,6 +1,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class MetricPercentile {
@@ -15,7 +18,7 @@ public class MetricPercentile {
 
   private int capacity; // maximum capacity of the queue
 
-  private LinkedList<Long> list; // sorted list to store the elements
+  private List<Long> list; // sorted list to store the elements
 
 
   private static final Map<String, MetricPercentile> sendPercentileMap = new HashMap<>();
@@ -24,9 +27,9 @@ public class MetricPercentile {
 
   static {
     for(AbfsRestOperationType operationType : AbfsRestOperationType.values()) {
-      sendPercentileMap.put(operationType.name(), new MetricPercentile(1000));
-      rcvPercentileMap.put(operationType.name(), new MetricPercentile(1000));
-      totalPercentileMap.put(operationType.name(), new MetricPercentile(1000));
+      sendPercentileMap.put(operationType.name(), new MetricPercentile(10000));
+      rcvPercentileMap.put(operationType.name(), new MetricPercentile(10000));
+      totalPercentileMap.put(operationType.name(), new MetricPercentile(10000));
     }
   }
 
@@ -58,32 +61,61 @@ public class MetricPercentile {
 
   // constructor
   public MetricPercentile(int capacity) {
+    refresh(capacity);
+  }
+
+  private void refresh(final int capacity) {
     this.array = new long[capacity];
     this.head = 0;
     this.tail = -1;
     this.size = 0;
     this.capacity = capacity;
-    this.list = new LinkedList<>();
+    this.list = new ArrayList<>();
+  }
+
+  long lastEpoch = -1;
+  long lastPercentile = Long.MAX_VALUE;
+
+  private void setPercentile() {
+    if(System.currentTimeMillis() - lastPercentile <= 60_000l) {
+      return;
+    }
+    List<Long> copy = new ArrayList<>(list);
+    if(copy.size() == 0) {
+      return;
+    }
+    Collections.sort(copy);
+    int index = (int) (copy.size()* 0.95);
+    if(index < copy.size()) {
+      lastPercentile = copy.get(index);
+      lastEpoch = System.currentTimeMillis();
+    }
   }
 
   // add an element to the queue
-  public void push(long element) {
+  public void push(Long element) {
     // if the queue is full, remove the oldest element
-    if (size == capacity) {
-      pop();
+    if(element == null) {
+      return;
     }
-    // increment the tail index and wrap around if necessary
-    tail = (tail + 1) % capacity;
-    // store the element in the array
-    array[tail] = element;
-    // insert the element in the sorted list
-    insert(element);
-    // increment the size
-    size++;
+    if (size == capacity) {
+      refresh(capacity);
+    }
+
+    list.add(element);
+
+//    // increment the tail index and wrap around if necessary
+//    tail = (tail + 1) % capacity;
+//    // store the element in the array
+//    array[tail] = element;
+//    // insert the element in the sorted list
+//    insert(element);
+//    // increment the size
+//    size++;
   }
 
   // remove the oldest element from the queue
-  public long pop() {
+  private long pop() {
     // if the queue is empty, throw an exception
     if (size == 0) {
       throw new RuntimeException("Queue is empty");
@@ -112,19 +144,26 @@ public class MetricPercentile {
 
   // get the percentile value of the queue
   public long percentile(double p) {
+    long lastPercentile = this.lastPercentile;
+    if(System.currentTimeMillis() - lastEpoch > (60_000l)) {
+      setPercentile();
+    }
+    lastPercentile = this.lastPercentile;
+    return lastPercentile;
+
     // if the queue is empty, throw an exception
-    if (size == 0) {
-      return Long.MAX_VALUE;
-    }
-    // if the percentile is out of range, throw an exception
-    if (p < 0 || p > 100) {
-      throw new IllegalArgumentException(
-          "Percentile must be between 0 and 100");
-    }
-    // calculate the index of the percentile element in the sorted list
-    int index = (int) Math.ceil(p / 100.0 * size) - 1;
-    // return the element at that index
-    return list.get(index);
+//    if (size == 0) {
+//      return Long.MAX_VALUE;
+//    }
+//    // if the percentile is out of range, throw an exception
+//    if (p < 0 || p > 100) {
+//      throw new IllegalArgumentException(
+//          "Percentile must be between 0 and 100");
+//    }
+//    // calculate the index of the percentile element in the sorted list
+//    int index = (int) Math.ceil(p / 100.0 * size) - 1;
+//    // return the element at that index
+//    return list.get(index);
   }
 
   // insert an element in the sorted list

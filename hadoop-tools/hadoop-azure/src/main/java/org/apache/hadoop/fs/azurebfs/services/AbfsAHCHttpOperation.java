@@ -201,7 +201,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
       connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
       parseResponse(buffer, offset, length);
-      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
       abfsHttpClientContext.isBeingRead = false;
 
       if(abfsHttpClientContext.connectTime != null) {
@@ -211,6 +210,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         connInfoStack.push(connInfo);
       }
     } finally {
+      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
       if(isExpect100Error) {
         return;
       }

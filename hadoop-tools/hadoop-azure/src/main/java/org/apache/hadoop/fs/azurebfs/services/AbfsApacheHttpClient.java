@@ -63,13 +63,13 @@ public class AbfsApacheHttpClient {
     }
 
     public boolean shouldKillConn() {
-      if(sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
+      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
         return true;
       }
-      if(readTime > MetricPercentile.getRcvPercentileVal(abfsRestOperationType, 99.9)) {
+      if(readTime != null && readTime > MetricPercentile.getRcvPercentileVal(abfsRestOperationType, 99.9)) {
         return true;
       }
-      return false;
+      return true;
     }
   }
 
@@ -285,7 +285,7 @@ public class AbfsApacheHttpClient {
 
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
-      setDefaultMaxPerRoute(1);
+      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
