@@ -941,7 +941,7 @@ class DataStreamer extends Daemon {
                 LOG.error("No ack received, took {}ms (threshold={}ms). "
                     + "File being written: {}, block: {}, "
                     + "Write pipeline datanodes: {}.",
-                    duration / NANOSECONDS_PER_MILLISECOND , writeTimeout, src, block, nodes);
+                    duration / NANOSECONDS_PER_MILLISECOND, writeTimeout, src, block, nodes);
                 throw new InterruptedIOException("No ack received after " +
                     duration / 1000 / NANOSECONDS_PER_MILLISECOND + "s and a timeout of " +
                     writeTimeout / 1000 + "s");
