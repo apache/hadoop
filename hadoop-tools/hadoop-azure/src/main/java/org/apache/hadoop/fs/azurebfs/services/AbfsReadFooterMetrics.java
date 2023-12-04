@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 
 public class AbfsReadFooterMetrics {
-  private String filePath;
   private final AtomicBoolean isParquetFile;
   private final AtomicBoolean isParquetEvaluated;
   private final AtomicBoolean isLenUpdated;
@@ -59,11 +58,6 @@ public class AbfsReadFooterMetrics {
     this.collectLenMetrics = new AtomicBoolean(false);
     this.dataLenRequested = new AtomicLong(0);
     this.metricsMap = new ConcurrentHashMap<>();
-  }
-
-  public AbfsReadFooterMetrics(String filePath) {
-    this();
-    this.filePath = filePath;
   }
 
   public Map<String, AbfsReadFooterMetrics> getMetricsMap() {
@@ -150,7 +144,7 @@ public class AbfsReadFooterMetrics {
    */
   public void updateMap(String filePathIdentifier) {
     // If the file is not already in the metrics map, add it with a new AbfsReadFooterMetrics object.
-    metricsMap.computeIfAbsent(filePathIdentifier, key -> new AbfsReadFooterMetrics(filePathIdentifier));
+    metricsMap.computeIfAbsent(filePathIdentifier, key -> new AbfsReadFooterMetrics());
   }
 
   /**
@@ -165,7 +159,7 @@ public class AbfsReadFooterMetrics {
   public void checkMetricUpdate(final String filePathIdentifier, final int len, final long contentLength,
       final long nextReadPos) {
     AbfsReadFooterMetrics readFooterMetrics = metricsMap.computeIfAbsent(
-            filePathIdentifier, key -> new AbfsReadFooterMetrics(filePathIdentifier));
+            filePathIdentifier, key -> new AbfsReadFooterMetrics());
     if (readFooterMetrics.getReadCount().get() == 0
         || (readFooterMetrics.getReadCount().get() >= 1
         && readFooterMetrics.getCollectMetrics().get())) {

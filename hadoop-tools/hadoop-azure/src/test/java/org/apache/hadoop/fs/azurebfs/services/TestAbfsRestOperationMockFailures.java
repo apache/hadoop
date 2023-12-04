@@ -23,7 +23,6 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -266,7 +265,6 @@ public class TestAbfsRestOperationMockFailures {
       count[0]++;
       return null;
     }).when(tracingContext).constructHeader(any(), any());
-
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(len + 1);
   }

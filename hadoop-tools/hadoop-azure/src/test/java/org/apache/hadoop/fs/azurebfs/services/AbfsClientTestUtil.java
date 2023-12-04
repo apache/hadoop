@@ -20,12 +20,17 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -37,6 +42,7 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
+import static org.apache.hadoop.util.Time.now;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -100,9 +106,13 @@ public final class AbfsClientTestUtil {
    * @throws IOException
    */
   public static void addGeneralMockBehaviourToAbfsClient(final AbfsClient abfsClient,
-                                                         final ExponentialRetryPolicy retryPolicy) throws IOException {
+                                                         final ExponentialRetryPolicy retryPolicy) throws IOException, URISyntaxException {
     Mockito.doReturn(OAuth).when(abfsClient).getAuthType();
     Mockito.doReturn("").when(abfsClient).getAccessToken();
+    AbfsConfiguration abfsConfiguration = Mockito.mock(AbfsConfiguration.class);
+    Mockito.doReturn(abfsConfiguration).when(abfsClient).getAbfsConfiguration();
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    Mockito.doReturn(abfsCounters).when(abfsClient).getAbfsCounters();
     AbfsThrottlingIntercept intercept = Mockito.mock(
         AbfsThrottlingIntercept.class);
     Mockito.doReturn(intercept).when(abfsClient).getIntercept();
