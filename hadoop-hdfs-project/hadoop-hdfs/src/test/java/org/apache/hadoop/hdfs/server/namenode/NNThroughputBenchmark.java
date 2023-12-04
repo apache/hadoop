@@ -746,7 +746,7 @@ public class NNThroughputBenchmark implements Tool {
     static final String OP_OPEN_NAME = "open";
     static final String OP_USAGE_ARGS = 
         " [-threads T] [-files N] [-blockSize S] [-filesPerDir P]"
-        + " [-baseDirName D] [-useExisting]";
+        + " [-useExisting] [-baseDirName D]";
     static final String OP_OPEN_USAGE = 
       "-op " + OP_OPEN_NAME + OP_USAGE_ARGS;
 
@@ -1361,9 +1361,9 @@ public class NNThroughputBenchmark implements Tool {
   class ReplicationStats extends OperationStatsBase {
     static final String OP_REPLICATION_NAME = "replication";
     static final String OP_REPLICATION_USAGE = 
-        "-op replication [-datanodes T] [-nodesToDecommission D] " +
+        "-op replication [-datanodes T] [-nodesToDecommission N] " +
         "[-nodeReplicationLimit C] [-totalBlocks B] [-blockSize S] "
-        + "[-replication R] [-baseDirName N]";
+        + "[-replication R] [-baseDirName D]";
 
     private final BlockReportStats blockReportObject;
     private int numDatanodes;

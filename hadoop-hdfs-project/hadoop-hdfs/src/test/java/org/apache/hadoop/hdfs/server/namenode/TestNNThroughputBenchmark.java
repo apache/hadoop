@@ -60,18 +60,6 @@ public class TestNNThroughputBenchmark {
     NNThroughputBenchmark.runBenchmark(conf, new String[] {"-op", "all"});
   }
 
-  @Test
-  public void testNNThroughputWithBaseDir() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
-    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        nameDir.getAbsolutePath());
-    DFSTestUtil.formatNameNode(conf);
-    NNThroughputBenchmark.runBenchmark(conf,
-        new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
-  }
-
   /**
    * This test runs all benchmarks defined in {@link NNThroughputBenchmark},
    * with explicit local -fs option.
@@ -197,6 +185,62 @@ public class TestNNThroughputBenchmark {
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[]{"-fs", cluster.getURI().toString(), "-op",
               "blockReport", "-datanodes", "3", "-reports", "2"});
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * with explicit -baseDirName option.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputWithBaseDir() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "create", "-keepResults", "-files", "3", "-baseDirName",
+              "/nnThroughputBenchmark1", "-close"});
+      FSNamesystem fsNamesystem = cluster.getNamesystem();
+      DirectoryListing listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
+      Boolean b_dir_exist1 = false;
+      Boolean b_dir_exist2 = false;
+      for (HdfsFileStatus f : listing.getPartialListing()) {
+        if (f.getFullName("/").equals("/nnThroughputBenchmark1")) {
+          b_dir_exist1 = true;
+        }
+        if (f.getFullName("/").equals("/nnThroughputBenchmark")) {
+          b_dir_exist2 = true;
+        }
+      }
+      Assert.assertEquals(b_dir_exist1, true);
+      Assert.assertEquals(b_dir_exist2, false);
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
+      listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
+      b_dir_exist1 = false;
+      b_dir_exist2 = false;
+      for (HdfsFileStatus f : listing.getPartialListing()) {
+        if (f.getFullName("/").equals("/nnThroughputBenchmark1")) {
+          b_dir_exist1 = true;
+        }
+        if (f.getFullName("/").equals("/nnThroughputBenchmark")) {
+          b_dir_exist2 = true;
+        }
+      }
+      Assert.assertEquals(b_dir_exist1, true);
+      Assert.assertEquals(b_dir_exist2, false);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
