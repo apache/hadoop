@@ -585,9 +585,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
 
     URI landsat = new URI(DEFAULT_CSVTEST_FILE);
     DefaultS3ClientFactory factory
-        = new DefaultS3ClientFactory();
-    Configuration conf = delegatedFS.getConf();
-    factory.setConf(conf);
+        = new DefaultS3ClientFactory(delegatedFS.getConf());
     String host = landsat.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()

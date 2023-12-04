@@ -274,8 +274,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     interceptors.add(new RegionInterceptor(endpoint, expectedRegion));
 
     DefaultS3ClientFactory factory
-        = new DefaultS3ClientFactory();
-    factory.setConf(conf);
+        = new DefaultS3ClientFactory(conf);
     S3ClientFactory.S3ClientCreationParameters parameters
         = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(new AnonymousAWSCredentialsProvider())

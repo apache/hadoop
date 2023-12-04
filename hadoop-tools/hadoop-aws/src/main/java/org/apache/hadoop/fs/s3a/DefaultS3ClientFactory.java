@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.impl.logging.LogControl;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
@@ -56,6 +58,7 @@ import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.impl.logging.LogControllerFactory.enableLogging;
 
 
 /**
@@ -79,6 +82,18 @@ public class DefaultS3ClientFactory extends Configured
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
   /**
+   * Name of special log used to drive SDK logging.
+   */
+  public static final String SDK_LOG_NAME = "org.apache.hadoop.fs.s3a.logging.sdk";
+
+  /**
+   * Special internal log which is used to drive whether or not
+   * internal logs are enabled.
+   */
+  private static final Logger LOG_SDK =
+      LoggerFactory.getLogger(SDK_LOG_NAME);
+
+  /**
    * A one-off warning of default region chains in use.
    */
   private static final LogExactlyOnce WARN_OF_DEFAULT_REGION_CHAIN =
@@ -92,8 +107,41 @@ public class DefaultS3ClientFactory extends Configured
           + " the SDK region resolution chain.";
 
 
+  /**
+   * Logs to turn on to debug level for debugging IO, where
+   * the shaded JAR doesn't pick up the normal SLF4J bindings.
+   */
+  private static final String[] SDK_LOGS = {
+      "org.apache.http",
+      "software.amazon.awssdk.request",
+      "software.amazon.awssdk.thirdparty.org.apache.http",
+  };
+
+  /**
+   * Log level to use for SDK logging.
+   */
+  @VisibleForTesting
+  public static final LogControl.LogLevel SDK_LOG_LEVEL = LogControl.LogLevel.DEBUG;
+
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
+
+  /**
+   * This is the constructor used for reflection instantiation.
+   * @param conf configuration.
+   */
+  public DefaultS3ClientFactory(final Configuration conf) {
+    super(conf);
+    maybeTurnOnSdkLogging();
+  }
+
+  /**
+   * Some tests use this constructor.
+   * @deprecated use {@link #DefaultS3ClientFactory(Configuration)}
+   */
+  public DefaultS3ClientFactory() {
+    this(null);
+  }
 
   @Override
   public S3Client createS3Client(
@@ -109,6 +157,19 @@ public class DefaultS3ClientFactory extends Configured
     return configureClientBuilder(S3Client.builder(), parameters, conf, bucket)
         .httpClientBuilder(httpClientBuilder)
         .build();
+  }
+
+  /**
+   * Turn on SDK logging if the {@link #LOG_SDK} log is enabled.
+   * Revisit if/when the bundle.jar loads logs differently.
+   */
+  @VisibleForTesting
+  public static boolean maybeTurnOnSdkLogging() {
+    if (LOG_SDK.isDebugEnabled()) {
+      LOG_SDK.debug("Enabling SDK logging at {} level", SDK_LOG_LEVEL);
+      return enableLogging(SDK_LOG_LEVEL, SDK_LOGS);
+    }
+    return false;
   }
 
   @Override

@@ -53,7 +53,22 @@ As before: the exact set of dependencies used by the S3A connector
 is neither defined nor comes with any commitments of stability
 or compatibility of dependent libraries.
 
+### Logging
 
+The `bundle.jar` shading somehow stops its embedded SLF4J version from binding to SLF4J back ends
+
+```
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+```
+
+To mitigate this, if the log `org.apache.hadoop.fs.s3a.logging.sdk`
+
+```properties
+# AWS v2 low level logging
+log4j.logger.org.apache.hadoop.fs.s3a.logging.sdk=DEBUG
+```
 
 ## Credential Provider changes and migration
 
