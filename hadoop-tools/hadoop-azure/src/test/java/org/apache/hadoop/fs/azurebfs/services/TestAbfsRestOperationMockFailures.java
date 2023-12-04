@@ -187,7 +187,7 @@ public class TestAbfsRestOperationMockFailures {
     int[] statusCount = new int[1];
     statusCount[0] = 0;
     Mockito.doAnswer(answer -> {
-      if (statusCount[0] <= 5) {
+      if (statusCount[0] <= 10) {
         statusCount[0]++;
         return status;
       }
