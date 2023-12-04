@@ -174,20 +174,6 @@ public final class S3AUtils {
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
 
-    // timeout issues
-    // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
-    // ApiCallTimeoutException: a request with any configured retries failed.
-    // The ApiCallTimeoutException exception should be the only one seen in
-    // the S3A code, but for due diligence both are handled and mapped to
-    // our own AWSApiCallTimeoutException.
-    if (exception instanceof ApiCallTimeoutException
-        || exception instanceof ApiCallAttemptTimeoutException) {
-      // An API call to an AWS service timed out.
-      // This is a subclass of ConnectTimeoutException so
-      // all retry logic for that exception is handled without
-      // having to look down the stack for a
-      return new AWSApiCallTimeoutException(message, exception);
-    }
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
       Exception innerCause = containsInterruptedException(exception);
@@ -213,6 +199,20 @@ public final class S3AUtils {
       ioe = maybeExtractIOException(path, exception);
       if (ioe != null) {
         return ioe;
+      }
+      // timeout issues
+      // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+      // ApiCallTimeoutException: a request with any configured retries failed.
+      // The ApiCallTimeoutException exception should be the only one seen in
+      // the S3A code, but for due diligence both are handled and mapped to
+      // our own AWSApiCallTimeoutException.
+      if (exception instanceof ApiCallTimeoutException
+          || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // This is a subclass of ConnectTimeoutException so
+        // all retry logic for that exception is handled without
+        // having to look down the stack for a
+        return new AWSApiCallTimeoutException(message, exception);
       }
       // no custom handling.
       return new AWSClientIOException(message, exception);

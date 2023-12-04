@@ -4501,8 +4501,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // too much encryption access.
     statements.add(STATEMENT_ALLOW_KMS_RW);
     if (s3ExpressStore) {
-      // tODO
-      //statements.add()
+      LOG.warn("S3Express store polices not yet implemented");
     }
 
     return statements;
