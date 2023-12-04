@@ -67,7 +67,6 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.codahale.metrics.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

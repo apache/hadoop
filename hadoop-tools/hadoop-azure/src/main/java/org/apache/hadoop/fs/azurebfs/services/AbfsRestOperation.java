@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
-import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.util.Time.now;
 

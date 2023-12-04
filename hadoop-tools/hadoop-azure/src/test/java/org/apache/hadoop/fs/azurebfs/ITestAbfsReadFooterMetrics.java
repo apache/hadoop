@@ -26,7 +26,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 
-import com.codahale.metrics.Metric;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 
@@ -130,8 +129,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     final byte[] b = new byte[fileSize];
     new Random().nextBytes(b);
 
-    String TEST_PATH = "/testfile";
-    Path testPath = path(TEST_PATH);
+    Path testPath = path("/testfile");
     FSDataOutputStream stream = fs.create(testPath);
     try {
       stream.write(b);
@@ -165,8 +163,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
     final byte[] b1 = new byte[2 * bufferSize1];
     new Random().nextBytes(b1);
-    String TEST_PATH1 = "/testfile1";
-    Path testPath1 = path(TEST_PATH1);
+    Path testPath1 = path("/testfile1");
     FSDataOutputStream stream1 = fs.create(testPath1);
     try {
       stream1.write(b1);
@@ -246,7 +243,8 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
                   .getStreamID()));
       inputStream.seek(bufferSize);
       inputStream.read(readBuffer, bufferSize, bufferSize);
-      Thread.sleep(90000);
+      int sleepPeriod = 90000;
+      Thread.sleep(sleepPeriod);
 
       //to test tracingHeader for case with bypassReadAhead == true
       inputStream.seek(0);
@@ -264,7 +262,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
         readFooterMetric = abfsReadFooterMetrics.toString();
       }
       assertEquals("$NonParquet:$FR=16384.000_16384.000$SR=1.000_16384.000$FL=32768.000$RL=16384.000", readFooterMetric);
-      Thread.sleep(90000);
+      Thread.sleep(sleepPeriod);
     }
   }
 }

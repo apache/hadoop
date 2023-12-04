@@ -20,10 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.List;
-import java.util.ArrayList;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -243,11 +242,11 @@ public class AbfsReadFooterMetrics {
    * @return True if the metrics meet the criteria for being marked as a Parquet file, false otherwise.
    */
   private boolean shouldMarkAsParquet(AbfsReadFooterMetrics metrics) {
-    return metrics.getCollectMetrics().get() &&
-            metrics.getReadCount().get() >= 2 &&
-            !metrics.getIsParquetEvaluated().get() &&
-            haveEqualValues(metrics.getSizeReadByFirstRead()) &&
-            haveEqualValues(metrics.getOffsetDiffBetweenFirstAndSecondRead());
+    return metrics.getCollectMetrics().get()
+            && metrics.getReadCount().get() >= 2
+            && !metrics.getIsParquetEvaluated().get()
+            && haveEqualValues(metrics.getSizeReadByFirstRead())
+            && haveEqualValues(metrics.getOffsetDiffBetweenFirstAndSecondRead());
   }
 
   /**
@@ -297,15 +296,14 @@ public class AbfsReadFooterMetrics {
    * @param metricsMap A map containing metrics for different files with unique identifiers.
    */
   private void updateLenRequested(Map<String, AbfsReadFooterMetrics> metricsMap) {
-    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet())
-    {
+    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) {
       AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
       if (readFooterMetrics.getCollectMetrics().get() && readFooterMetrics.getReadCount().get() > 2) {
         if (!readFooterMetrics.getIsLenUpdated().get()) {
-            int readReqCount = readFooterMetrics.getReadCount().get() - 2;
-            readFooterMetrics.setAvgReadLenRequested(
-                (double) readFooterMetrics.getDataLenRequested().get()
-                    / readReqCount);
+          int readReqCount = readFooterMetrics.getReadCount().get() - 2;
+          readFooterMetrics.setAvgReadLenRequested(
+                  (double) readFooterMetrics.getDataLenRequested().get()
+                          / readReqCount);
         }
         readFooterMetrics.getIsLenUpdated().set(true);
         metricsMap.replace(entry.getKey(), readFooterMetrics);
@@ -432,24 +430,24 @@ public class AbfsReadFooterMetrics {
 
   @Override
   public String toString() {
-      Map<String, AbfsReadFooterMetrics> metricsMap = getMetricsMap();
-      List<AbfsReadFooterMetrics> readFooterMetricsList = new ArrayList<>();
-      if (metricsMap != null && !(metricsMap.isEmpty())) {
-        checkIsParquet(metricsMap);
-        updateLenRequested(metricsMap);
-        for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
-        {
-          AbfsReadFooterMetrics abfsReadFooterMetrics = entry.getValue();
-          if(abfsReadFooterMetrics.getCollectMetrics().get()) {
-            readFooterMetricsList.add(entry.getValue());
-          }
+    Map<String, AbfsReadFooterMetrics> metricsMap = getMetricsMap();
+    List<AbfsReadFooterMetrics> readFooterMetricsList = new ArrayList<>();
+    if (metricsMap != null && !(metricsMap.isEmpty())) {
+      checkIsParquet(metricsMap);
+      updateLenRequested(metricsMap);
+      for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
+      {
+        AbfsReadFooterMetrics abfsReadFooterMetrics = entry.getValue();
+        if (abfsReadFooterMetrics.getCollectMetrics().get()) {
+          readFooterMetricsList.add(entry.getValue());
         }
       }
-      String readFooterMetric = "";
-      if (!readFooterMetricsList.isEmpty()) {
-        readFooterMetric = getFooterMetrics(readFooterMetricsList, readFooterMetric);
-      }
-      return readFooterMetric;
     }
+    String readFooterMetric = "";
+    if (!readFooterMetricsList.isEmpty()) {
+      readFooterMetric = getFooterMetrics(readFooterMetricsList, readFooterMetric);
+    }
+    return readFooterMetric;
+  }
 }
 

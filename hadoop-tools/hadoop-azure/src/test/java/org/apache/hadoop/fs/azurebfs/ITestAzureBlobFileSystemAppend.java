@@ -45,7 +45,6 @@ import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_DISK;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Closed;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test append operations.
