@@ -1111,12 +1111,9 @@ public class SQLFederationStateStore implements FederationStateStore {
     try {
       connection = getConnection(false);
       FederationQueryRunner runner = new FederationQueryRunner();
-      for (String queue : request.getQueues()) {
-        LOG.info("delete queue = {} policy start.", queue);
-        runner.deletePolicyByQueue(connection, queue);
-        LOG.info("delete queue = {} policy finished.", queue);
-      }
-      return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+      LOG.info("delete table = policies start.");
+      runner.truncateTable(connection, "policies");
+      LOG.info("delete table = policies finished.");
     } catch (Exception e) {
       throw new RuntimeException("Could not delete table (policies)!", e);
     } finally {
