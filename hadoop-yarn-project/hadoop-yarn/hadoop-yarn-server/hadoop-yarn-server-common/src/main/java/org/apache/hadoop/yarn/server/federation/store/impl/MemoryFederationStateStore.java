@@ -87,6 +87,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
@@ -413,6 +415,13 @@ public class MemoryFederationStateStore implements FederationStateStore {
       }
     }
     return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+  }
+  
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    policies.clear();
+    return DeletePoliciesConfigurationsResponse.newInstance();
   }
 
   @Override

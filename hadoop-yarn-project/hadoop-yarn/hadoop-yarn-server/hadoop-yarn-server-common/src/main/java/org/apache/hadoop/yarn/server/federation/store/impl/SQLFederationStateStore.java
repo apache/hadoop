@@ -89,6 +89,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHom
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
@@ -1099,6 +1101,33 @@ public class SQLFederationStateStore implements FederationStateStore {
       }
     }
     return null;
+  
+  }
+  
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String queue : request.getQueues()) {
+        LOG.info("delete queue = {} policy start.", queue);
+        runner.deletePolicyByQueue(connection, queue);
+        LOG.info("delete queue = {} policy finished.", queue);
+      }
+      return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Could not delete table (policies)!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
+    return DeletePoliciesConfigurationsResponse.newInstance();
   }
 
   @Override

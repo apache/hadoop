@@ -203,6 +203,12 @@ message DeleteSubClusterPoliciesConfigurationsRequestProto {
 message DeleteSubClusterPoliciesConfigurationsResponseProto {
 }
 
+message DeletePoliciesConfigurationsRequestProto {
+}
+
+message DeletePoliciesConfigurationsResponseProto {
+}
+
 //----- configurations ---
 
 message SubClusterPolicyConfigurationProto {

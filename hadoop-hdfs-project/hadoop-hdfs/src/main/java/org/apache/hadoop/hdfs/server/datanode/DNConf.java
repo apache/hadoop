@@ -220,10 +220,10 @@ public class DNConf {
         DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
         TimeUnit.MILLISECONDS);
     long confLifelineIntervalMs =
-        getConf().getLong(DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY,
-        3 * getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
-        DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
-            TimeUnit.MILLISECONDS));
+        getConf().getTimeDuration(DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY,
+            3 * getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
+                DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS),
+            TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     if (confLifelineIntervalMs <= heartBeatInterval) {
       confLifelineIntervalMs = 3 * heartBeatInterval;
       DataNode.LOG.warn(
