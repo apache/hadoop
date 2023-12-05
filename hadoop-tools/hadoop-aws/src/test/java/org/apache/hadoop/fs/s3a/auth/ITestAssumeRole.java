@@ -191,7 +191,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
     // disable create session so there's no need to
     // add a role policy for it.
-    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
+    disableCreateSession(conf);
+
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
   }
@@ -748,12 +749,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
-
     bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
+
+    // getBucketLocation fails with error
+    assumeNotS3ExpressFileSystem(roleFS);
     forbidden("",
         () -> roleFS.getBucketLocation());
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);

@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
@@ -66,8 +67,10 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isS3ExpressTestBucket;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -147,15 +150,9 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
-    String s3EncryptionMethod;
-    try {
-      s3EncryptionMethod =
-          getEncryptionAlgorithm(getTestBucketName(conf), conf).getMethod();
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to lookup encryption algorithm.",
-          e);
-    }
-    String s3EncryptionKey = getS3EncryptionKey(getTestBucketName(conf), conf);
+    final String bucket = getTestBucketName(conf);
+    final boolean isS3Express = isS3ExpressTestBucket(conf);
+
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         Constants.S3_ENCRYPTION_ALGORITHM,
@@ -168,7 +165,17 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to CSE-KMS(if specified) else SSE-KMS.
-    if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
+    if (!isS3Express && conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
+      String s3EncryptionMethod;
+      try {
+        s3EncryptionMethod =
+            getEncryptionAlgorithm(bucket, conf).getMethod();
+      } catch (IOException e) {
+        throw new UncheckedIOException("Failed to lookup encryption algorithm.",
+            e);
+      }
+      String s3EncryptionKey = getS3EncryptionKey(bucket, conf);
+
       conf.set(Constants.S3_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
       // KMS key ID a must if CSE-KMS is being tested.
       conf.set(Constants.S3_ENCRYPTION_KEY, s3EncryptionKey);
@@ -176,17 +183,17 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
 
-    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false)) {
+    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false)
+      && !isS3Express) {
       // turn on ACLs so as to verify role DT permissions include
       // write access.
       conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     }
     // disable create session so there's no need to
     // add a role policy for it.
-    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
+    disableCreateSession(conf);
     return conf;
   }
-
 
   @Override
   public void setup() throws Exception {

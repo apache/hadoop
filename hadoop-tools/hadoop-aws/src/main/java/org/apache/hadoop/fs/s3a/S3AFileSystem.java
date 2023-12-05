@@ -5445,7 +5445,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case SelectConstants.S3_SELECT_CAPABILITY:
       // select is only supported if enabled and client side encryption is
       // disabled.
-      return !isCSEEnabled && SelectBinding.isSelectEnabled(getConf());
+      return !isCSEEnabled
+          && SelectBinding.isSelectEnabled(getConf())
+          && !s3ExpressStore;
 
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration

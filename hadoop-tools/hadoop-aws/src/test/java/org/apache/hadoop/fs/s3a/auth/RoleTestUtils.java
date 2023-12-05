@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
@@ -165,8 +166,7 @@ public final class RoleTestUtils {
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
     // force in bucket resolution during startup
     conf.setInt(S3A_BUCKET_PROBE, 1);
-    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
-
+    disableCreateSession(conf);
     disableFilesystemCaching(conf);
     return conf;
   }
