@@ -68,6 +68,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplica
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -248,4 +250,17 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException;
+  
+  /** 
+   * In YARN-Federation mode, this method provides a way to delete queue weight policies.
+   *
+   * @param request DeleteFederationQueuePoliciesRequest Request.
+   * @return Response from DeleteFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Idempotent
+  DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException;
 }

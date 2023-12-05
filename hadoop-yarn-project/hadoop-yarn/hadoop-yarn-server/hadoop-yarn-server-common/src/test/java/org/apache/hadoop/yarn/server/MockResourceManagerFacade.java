@@ -185,6 +185,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
@@ -1001,6 +1003,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException {
+    return null;
+  }
+  
+  @Override    
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     return null;
   }
 

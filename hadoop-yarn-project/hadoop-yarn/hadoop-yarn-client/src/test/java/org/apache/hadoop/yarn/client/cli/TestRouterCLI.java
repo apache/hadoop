@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -112,6 +114,15 @@ public class TestRouterCLI {
           return GetSubClustersResponse.newInstance(subClustersList);
         });
 
+    when(admin.deleteFederationPoliciesByQueues(any(DeleteFederationQueuePoliciesRequest.class)))
+        .thenAnswer((Answer<DeleteFederationQueuePoliciesResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          Object obj = invocationOnMock.getArgument(0);
+          DeleteFederationQueuePoliciesRequest request = (DeleteFederationQueuePoliciesRequest) obj;
+          List<String> queues = request.getQueues();
+          return DeleteFederationQueuePoliciesResponse.newInstance("queues = " +
+              StringUtils.join(queues, ",") + " delete success.");
+        });
 
     Configuration config = new Configuration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -308,7 +319,7 @@ public class TestRouterCLI {
     assertNotNull(policyUsageInfos);
     Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
     assertNotNull(policyExamplesMap);
-    assertEquals(3, policyExamplesMap.size());
+    assertEquals(4, policyExamplesMap.size());
     policyExamplesMap.forEach((cmd, cmdExamples) -> {
       assertEquals(2, cmdExamples.size());
     });
@@ -326,8 +337,17 @@ public class TestRouterCLI {
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     System.setOut(new PrintStream(dataOut));
     oldOutPrintStream.println(dataOut);
-
     String[] args = {"-subCluster", "-getSubClusters"};
+    assertEquals(0, rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+    String[] args = {"-policy", "-d", "--queue", "root.a"};
     assertEquals(0, rmAdminCLI.run(args));
   }
 }

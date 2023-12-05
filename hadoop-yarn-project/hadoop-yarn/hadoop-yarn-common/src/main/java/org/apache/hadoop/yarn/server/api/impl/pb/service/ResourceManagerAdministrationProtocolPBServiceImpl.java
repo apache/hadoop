@@ -64,6 +64,8 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Delet
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationApplicationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetSubClustersRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetSubClustersResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationQueuePoliciesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DeleteFederationQueuePoliciesResponseProto;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
@@ -95,6 +97,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplica
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
@@ -135,6 +139,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederatio
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationApplicationResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.GetSubClustersRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.GetSubClustersResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationQueuePoliciesRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DeleteFederationQueuePoliciesResponsePBImpl;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
@@ -481,6 +487,23 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
     try {
       GetSubClustersResponse response = real.getFederationSubClusters(request);
       return ((GetSubClustersResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
+  @Override
+  public DeleteFederationQueuePoliciesResponseProto deleteFederationPoliciesByQueues(
+      RpcController controller, DeleteFederationQueuePoliciesRequestProto proto)
+      throws ServiceException {
+    DeleteFederationQueuePoliciesRequest requet =
+        new DeleteFederationQueuePoliciesRequestPBImpl(proto);
+    try {
+      DeleteFederationQueuePoliciesResponse response =
+          real.deleteFederationPoliciesByQueues(requet);
+      return ((DeleteFederationQueuePoliciesResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {

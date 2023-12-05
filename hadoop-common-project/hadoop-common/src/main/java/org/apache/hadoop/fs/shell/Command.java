@@ -38,6 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.FileUtil.maybeIgnoreMissingDirectory;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
 /**
@@ -448,12 +449,16 @@ abstract public class Command extends Configured {
   protected void recursePath(PathData item) throws IOException {
     try {
       depth++;
-      if (isSorted()) {
-        // use the non-iterative method for listing because explicit sorting is
-        // required. Iterators not guaranteed to return sorted elements
-        processPaths(item, item.getDirectoryContents());
-      } else {
-        processPaths(item, item.getDirectoryContentsIterator());
+      try {
+        if (isSorted()) {
+          // use the non-iterative method for listing because explicit sorting is
+          // required. Iterators not guaranteed to return sorted elements
+          processPaths(item, item.getDirectoryContents());
+        } else {
+          processPaths(item, item.getDirectoryContentsIterator());
+        }
+      } catch (FileNotFoundException e) {
+        maybeIgnoreMissingDirectory(item.fs, item.path, e);
       }
     } finally {
       depth--;
