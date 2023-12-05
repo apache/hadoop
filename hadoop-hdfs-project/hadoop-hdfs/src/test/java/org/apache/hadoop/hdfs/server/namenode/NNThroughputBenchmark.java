@@ -162,11 +162,11 @@ public class NNThroughputBenchmark implements Tool {
    * specific name-node operation.
    */
   abstract class OperationStatsBase {
-    protected String baseDirName = "/nnThroughputBenchmark";
+    private String baseDirName = "/nnThroughputBenchmark";
     protected static final String OP_ALL_NAME = "all";
     protected static final String OP_ALL_USAGE = "-op all <other ops options>";
 
-    protected String baseDir;
+    private String baseDir;
     protected short replication;
     protected int blockSize;
     protected int  numThreads = 0;        // number of threads
@@ -295,7 +295,12 @@ public class NNThroughputBenchmark implements Tool {
         clientProto.saveNamespace(0, 0);
       }
     }
-
+    public String getBaseDirName() {
+      return baseDirName;
+    }
+    public void setBaseDirName(String baseDirName) {
+      this.baseDirName = baseDirName;
+    }
     int getNumOpsExecuted() {
       return numOpsExecuted;
     }
@@ -316,9 +321,13 @@ public class NNThroughputBenchmark implements Tool {
       return elapsedTime == 0 ? 0 : 1000*(double)numOpsExecuted / elapsedTime;
     }
 
-    String getBaseDir() {
-      baseDir = baseDirName + "/" + getOpName();
+    public String getBaseDir() {
+      setBaseDir(baseDirName + "/" + getOpName());
       return baseDir;
+    }
+
+    public void setBaseDir(String baseDir) {
+      this.baseDir = baseDir;
     }
 
     String getClientName(int idx) {
@@ -495,7 +504,7 @@ public class NNThroughputBenchmark implements Tool {
       clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
       long start = Time.now();
-      clientProto.delete(baseDirName, true);
+      clientProto.delete(getBaseDirName(), true);
       long end = Time.now();
       return end-start;
     }
@@ -503,7 +512,7 @@ public class NNThroughputBenchmark implements Tool {
     @Override
     void printResults() {
       LOG.info("--- " + getOpName() + " inputs ---");
-      LOG.info("Remove directory " + baseDirName);
+      LOG.info("Remove directory " + getBaseDirName());
       printStats();
     }
   }
@@ -555,8 +564,10 @@ public class NNThroughputBenchmark implements Tool {
           if(i+1 == args.size())  printUsage();
           nrFilesPerDir = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
-          if(i+1 == args.size())  printUsage();
-          baseDirName = args.get(++i);
+          if (i + 1 == args.size()) {
+            printUsage();
+          }
+          setBaseDirName(args.get(++i));
         } else if(args.get(i).equals("-close")) {
           closeUponCreate = true;
         } else if(!ignoreUnrelatedOptions)
@@ -671,8 +682,10 @@ public class NNThroughputBenchmark implements Tool {
           if(i+1 == args.size())  printUsage();
           nrDirsPerDir = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
-          if(i+1 == args.size())  printUsage();
-          baseDirName = args.get(++i);
+          if (i + 1 == args.size()) {
+            printUsage();
+          }
+          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -775,14 +788,14 @@ public class NNThroughputBenchmark implements Tool {
     void generateInputs(int[] opsPerThread) throws IOException {
       // create files using opsPerThread
       String[] createArgs = new String[] {
-              "-op", "create", 
-              "-threads", String.valueOf(this.numThreads), 
-              "-files", String.valueOf(numOpsRequired),
-              "-blockSize", String.valueOf(blockSize),
-              "-filesPerDir", 
-              String.valueOf(nameGenerator.getFilesPerDirectory()),
-              "-baseDirName", this.baseDirName,
-              "-close"};
+          "-op", "create",
+          "-threads", String.valueOf(this.numThreads),
+          "-files", String.valueOf(numOpsRequired),
+          "-blockSize", String.valueOf(blockSize),
+          "-filesPerDir",
+          String.valueOf(nameGenerator.getFilesPerDirectory()),
+          "-baseDirName", getBaseDirName(),
+          "-close"};
       CreateFileStats opCreate =  new CreateFileStats(Arrays.asList(createArgs));
 
       if(!useExisting) {  // create files if they were not created before
@@ -1147,8 +1160,8 @@ public class NNThroughputBenchmark implements Tool {
   class BlockReportStats extends OperationStatsBase {
     static final String OP_BLOCK_REPORT_NAME = "blockReport";
     static final String OP_BLOCK_REPORT_USAGE =
-      "-op blockReport [-datanodes T] [-reports N] " +
-      "[-blocksPerReport B] [-blocksPerFile F] [-blockSize S] [-baseDirName D]";
+        "-op blockReport [-datanodes T] [-reports N] " +
+        "[-blocksPerReport B] [-blocksPerFile F] [-blockSize S] [-baseDirName D]";
 
     private int blocksPerReport;
     private int blocksPerFile;
@@ -1199,8 +1212,10 @@ public class NNThroughputBenchmark implements Tool {
           if(i+1 == args.size())  printUsage();
           blockSize = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
-          if(i+1 == args.size())  printUsage();
-          baseDirName = args.get(++i);
+          if (i + 1 == args.size()) {
+            printUsage();
+          }
+          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1361,7 +1376,7 @@ public class NNThroughputBenchmark implements Tool {
   class ReplicationStats extends OperationStatsBase {
     static final String OP_REPLICATION_NAME = "replication";
     static final String OP_REPLICATION_USAGE = 
-        "-op replication [-datanodes T] [-nodesToDecommission N] " +
+        "-op replication [-datanodes T] [-nodesToDecommission D] " +
         "[-nodeReplicationLimit C] [-totalBlocks B] [-blockSize S] "
         + "[-replication R] [-baseDirName D]";
 
@@ -1393,7 +1408,7 @@ public class NNThroughputBenchmark implements Tool {
           "-blocksPerReport", String.valueOf(totalBlocks*replication/numDatanodes),
           "-blocksPerFile", String.valueOf(numDatanodes),
           "-blockSize", String.valueOf(blockSize),
-          "-baseDirName", baseDirName};
+          "-baseDirName", getBaseDirName()};
       blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
       numPendingBlocks = 0;
@@ -1427,8 +1442,10 @@ public class NNThroughputBenchmark implements Tool {
           if(i+1 == args.size())  printUsage();
           blockSize = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
-          if(i+1 == args.size())  printUsage();
-          baseDirName = args.get(++i);
+          if (i + 1 == args.size()) {
+            printUsage();
+          }
+          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }

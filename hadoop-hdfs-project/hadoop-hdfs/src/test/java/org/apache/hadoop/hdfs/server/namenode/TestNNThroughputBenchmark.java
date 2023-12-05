@@ -22,8 +22,10 @@ import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -203,40 +205,18 @@ public class TestNNThroughputBenchmark {
       final Configuration benchConf = new HdfsConfiguration();
       benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
       FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      DistributedFileSystem fs = cluster.getFileSystem();
 
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[] {"-op", "create", "-keepResults", "-files", "3", "-baseDirName",
               "/nnThroughputBenchmark1", "-close"});
-      FSNamesystem fsNamesystem = cluster.getNamesystem();
-      DirectoryListing listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
-      Boolean b_dir_exist1 = false;
-      Boolean b_dir_exist2 = false;
-      for (HdfsFileStatus f : listing.getPartialListing()) {
-        if (f.getFullName("/").equals("/nnThroughputBenchmark1")) {
-          b_dir_exist1 = true;
-        }
-        if (f.getFullName("/").equals("/nnThroughputBenchmark")) {
-          b_dir_exist2 = true;
-        }
-      }
-      Assert.assertEquals(b_dir_exist1, true);
-      Assert.assertEquals(b_dir_exist2, false);
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
 
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
-      listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
-      b_dir_exist1 = false;
-      b_dir_exist2 = false;
-      for (HdfsFileStatus f : listing.getPartialListing()) {
-        if (f.getFullName("/").equals("/nnThroughputBenchmark1")) {
-          b_dir_exist1 = true;
-        }
-        if (f.getFullName("/").equals("/nnThroughputBenchmark")) {
-          b_dir_exist2 = true;
-        }
-      }
-      Assert.assertEquals(b_dir_exist1, true);
-      Assert.assertEquals(b_dir_exist2, false);
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
