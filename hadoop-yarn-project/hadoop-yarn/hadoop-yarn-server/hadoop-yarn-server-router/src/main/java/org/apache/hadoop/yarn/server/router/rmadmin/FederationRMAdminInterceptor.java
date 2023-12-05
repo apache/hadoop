@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
@@ -1138,6 +1140,46 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     throw new YarnException("Unable to deleteFederationApplication.");
+  }
+
+  /**
+   * Delete Policies based on the provided queue list.
+   *
+   * @param request DeleteFederationQueuePoliciesRequest Request.
+   * @return If the deletion is successful, the queue deletion success message will be returned.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationQueuePoliciesByQueues Request.", null);
+    }
+
+    List<String> queues = request.getQueues();
+    if (CollectionUtils.isEmpty(queues)) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException("queues cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      federationFacade.deletePolicyConfigurations(queues);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationPoliciesByQueuesRetrieved(stopTime - startTime);
+      return DeleteFederationQueuePoliciesResponse.newInstance(
+         "queues = " + StringUtils.join(queues, ",") + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationPoliciesByQueues due to exception. " + e.getMessage());
+    }
+    throw new YarnException("Unable to deleteFederationPoliciesByQueues.");
   }
 
   /**

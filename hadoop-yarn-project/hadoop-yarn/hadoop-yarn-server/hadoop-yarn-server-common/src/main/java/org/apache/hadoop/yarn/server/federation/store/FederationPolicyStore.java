@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolic
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 
@@ -75,6 +77,16 @@ public interface FederationPolicyStore {
    */
   GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException;
+
+  /**
+   * Delete PoliciesConfigurations.
+   *
+   * @param request List containing delete queues.
+   * @return response empty means the queue list has been deleted successfully.
+   * @throws YarnException if the request is invalid/fails
+   */
+  DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
+      DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException;
 
   /**
    * Delete all queue-to-policy configurations.

@@ -638,6 +638,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed ListFederationQueuePolicies call");
       metrics.incrListFederationQueuePoliciesFailedRetrieved();
     }
+
+    public void getDeleteFederationPoliciesByQueuesFailedRetrieved() {
+      LOG.info("Mocked: failed DeleteFederationPoliciesByQueues call");
+      metrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -984,6 +989,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful ListFederationQueuePoliciesRetrieved " +
           " call with duration {}", duration);
       metrics.succeededListFederationQueuePoliciesRetrieved(duration);
+    }
+
+    public void deleteFederationPoliciesByQueuesRetrieved(long duration) {
+      LOG.info("Mocked: successful DeleteFederationPoliciesByQueuesRetrieved " +
+              " call with duration {}", duration);
+      metrics.succeededDeleteFederationPoliciesByQueuesRetrieved(duration);
     }
   }
 
@@ -2310,5 +2321,30 @@ public class TestRouterMetrics {
         metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededListFederationQueuePoliciesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueuesFailedRetrieved() {
+    long totalBadBefore = metrics.getDeleteFederationPoliciesByQueuesRetrieved();
+    badSubCluster.getDeleteFederationPoliciesByQueuesFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDeleteFederationPoliciesByQueuesRetrieved());
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueuesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved();
+    goodSubCluster.deleteFederationPoliciesByQueuesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
+    goodSubCluster.deleteFederationPoliciesByQueuesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
   }
 }

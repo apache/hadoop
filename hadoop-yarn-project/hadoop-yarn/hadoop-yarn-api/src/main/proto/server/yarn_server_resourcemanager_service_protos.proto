@@ -211,6 +211,14 @@ message DeleteFederationApplicationResponseProto {
   optional string message = 1;
 }
 
+message DeleteFederationQueuePoliciesRequestProto {
+  repeated string queues = 1;
+}
+
+message DeleteFederationQueuePoliciesResponseProto {
+  required string message = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

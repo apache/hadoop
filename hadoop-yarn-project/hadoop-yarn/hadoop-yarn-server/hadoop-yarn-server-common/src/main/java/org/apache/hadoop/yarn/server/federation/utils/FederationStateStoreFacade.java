@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregist
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -1127,5 +1128,14 @@ public final class FederationStateStoreFacade {
 
   public void deleteStore() throws Exception {
     stateStore.deleteStateStore();
+  }
+
+  public void deletePolicyConfigurations(List<String> queuesList) throws YarnException {
+    if (CollectionUtils.isEmpty(queuesList)) {
+      throw new YarnException("queuesList cannot be empty!");
+    }
+    DeleteSubClusterPoliciesConfigurationsRequest request =
+        DeleteSubClusterPoliciesConfigurationsRequest.newInstance(queuesList);
+    stateStore.deletePoliciesConfigurations(request);
   }
 }

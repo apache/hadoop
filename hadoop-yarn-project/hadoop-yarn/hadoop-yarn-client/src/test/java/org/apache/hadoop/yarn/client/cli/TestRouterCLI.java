@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -94,6 +96,15 @@ public class TestRouterCLI {
           return QueryFederationQueuePoliciesResponse.newInstance(1, 1, 1, 10, weights);
         });
 
+    when(admin.deleteFederationPoliciesByQueues(any(DeleteFederationQueuePoliciesRequest.class)))
+        .thenAnswer((Answer<DeleteFederationQueuePoliciesResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          Object obj = invocationOnMock.getArgument(0);
+          DeleteFederationQueuePoliciesRequest request = (DeleteFederationQueuePoliciesRequest) obj;
+          List<String> queues = request.getQueues();
+          return DeleteFederationQueuePoliciesResponse.newInstance("queues = " +
+              StringUtils.join(queues, ",") + " delete success.");
+        });
 
     Configuration config = new Configuration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -288,7 +299,7 @@ public class TestRouterCLI {
     assertNotNull(policyUsageInfos);
     Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
     assertNotNull(policyExamplesMap);
-    assertEquals(3, policyExamplesMap.size());
+    assertEquals(4, policyExamplesMap.size());
     policyExamplesMap.forEach((cmd, cmdExamples) -> {
       assertEquals(2, cmdExamples.size());
     });
@@ -298,5 +309,16 @@ public class TestRouterCLI {
     Map<String, List<String>> applicationExamplesMap = applicationUsageInfos.getExamples();
     assertNotNull(applicationExamplesMap);
     assertEquals(1, applicationExamplesMap.size());
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+
+    String[] args = {"-policy", "-d", "--queue", "root.a"};
+    assertEquals(0, rmAdminCLI.run(args));
   }
 }

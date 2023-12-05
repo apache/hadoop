@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRes
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
@@ -148,6 +150,9 @@ public class RouterCLI extends Configured implements Tool {
   private static final String OPTION_CURRENT_PAGE = "currentPage";
   private static final String OPTION_QUEUE = "queue";
   private static final String OPTION_QUEUES = "queues";
+  // delete policy
+  private static final String OPTION_D = "d";
+  private static final String OPTION_DELETE = "delete";
 
   private static final String XML_TAG_SUBCLUSTERIDINFO = "subClusterIdInfo";
   private static final String XML_TAG_AMRMPOLICYWEIGHTS = "amrmPolicyWeights";
@@ -213,6 +218,20 @@ public class RouterCLI extends Configured implements Tool {
   protected final static String POLICY_LIST_USAGE_EXAMPLE_2 =
       "yarn routeradmin -policy -list --pageSize 20 --currentPage 1 --queues root.a,root.b";
 
+  protected final static UsageInfo POLICY_DELETE_USAGE = new UsageInfo(
+      "-d|--delete [--queue]",
+      "This command is used to delete the policy of the queue.");
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE_DESC =
+      "We delete the weight information of root.a. \\" +
+      "We can use --queue to specify the name of the queue.";
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE1 =
+      "yarn routeradmin -policy -d --queue root.a";
+
+  protected final static String POLICY_DELETE_USAGE_EXAMPLE2 =
+      "yarn routeradmin -policy --delete --queue root.a";
+
   protected final static RouterCmdUsageInfos POLICY_USAGEINFOS = new RouterCmdUsageInfos()
        // Policy Save
       .addUsageInfo(POLICY_SAVE_USAGE)
@@ -228,7 +247,12 @@ public class RouterCLI extends Configured implements Tool {
       .addUsageInfo(POLICY_LIST_USAGE)
       .addExampleDescs(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_DESC)
       .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_1)
-      .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2);
+      .addExample(POLICY_LIST_USAGE.args, POLICY_LIST_USAGE_EXAMPLE_2)
+       // Policy Delete
+      .addUsageInfo(POLICY_DELETE_USAGE)
+      .addExampleDescs(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE_DESC)
+      .addExample(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE1)
+      .addExample(POLICY_DELETE_USAGE.args, POLICY_DELETE_USAGE_EXAMPLE2);
 
   // Command3: application
   private static final String CMD_APPLICATION = "-application";
@@ -501,6 +525,8 @@ public class RouterCLI extends Configured implements Tool {
         "the queue we need to filter. example: root.a");
     Option queuesOpt = new Option(null, "queues", true,
         "list of queues to filter. example: root.a,root.b,root.c");
+    Option deleteOpt = new Option(OPTION_D, OPTION_DELETE, false, "");
+
     opts.addOption(saveOpt);
     opts.addOption(batchSaveOpt);
     opts.addOption(formatOpt);
@@ -510,6 +536,7 @@ public class RouterCLI extends Configured implements Tool {
     opts.addOption(currentPageOpt);
     opts.addOption(queueOpt);
     opts.addOption(queuesOpt);
+    opts.addOption(deleteOpt);
 
     // Parse command line arguments.
     CommandLine cliParser;
@@ -580,6 +607,10 @@ public class RouterCLI extends Configured implements Tool {
 
       // List Policies.
       return handListPolicies(pageSize, currentPage, queue, queues);
+    } else if (cliParser.hasOption(OPTION_D) || cliParser.hasOption(OPTION_DELETE)) {
+      String queue = cliParser.getOptionValue(OPTION_QUEUE);
+      // Delete Policy.
+      return handDeletePolicy(queue);
     } else {
       // printUsage
       printUsage(args[0]);
@@ -884,6 +915,33 @@ public class RouterCLI extends Configured implements Tool {
     }
 
     return 0;
+  }
+
+  /**
+   * Delete queue weight information.
+   *
+   * @param queue Queue whose policy needs to be deleted.
+   * @return 0, success; 1, failed.
+   */
+  protected int handDeletePolicy(String queue) {
+    LOG.info("Delete {} Policy.", queue);
+    try {
+      if (StringUtils.isBlank(queue)) {
+        System.err.println("Queue cannot be empty.");
+      }
+      List<String> queues = new ArrayList<>();
+      queues.add(queue);
+      DeleteFederationQueuePoliciesRequest request =
+          DeleteFederationQueuePoliciesRequest.newInstance(queues);
+      ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+      DeleteFederationQueuePoliciesResponse response =
+          adminProtocol.deleteFederationPoliciesByQueues(request);
+      System.out.println(response.getMessage());
+      return EXIT_SUCCESS;
+    } catch (Exception e) {
+      LOG.error("handDeletePolicy queue = {} error.", queue, e);
+      return EXIT_ERROR;
+    }
   }
 
   @Override
