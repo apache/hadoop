@@ -87,8 +87,7 @@ public class TestDFSStripedInputStreamWithTimeout {
 
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY, 1000);
     // SET CONFIG FOR HDFS CLIENT
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
-    conf.setInt(HdfsClientConfigKeys.StripedRead.DATANODE_MAX_ATTEMPTS, 3);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
 
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
@@ -132,7 +131,6 @@ public class TestDFSStripedInputStreamWithTimeout {
 
     LocatedBlocks lbs = fs.getClient().namenode.
         getBlockLocations(filePath.toString(), 0, fileSize);
-
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
       assert lb instanceof LocatedStripedBlock;
       LocatedStripedBlock bg = (LocatedStripedBlock) (lb);
@@ -145,24 +143,42 @@ public class TestDFSStripedInputStreamWithTimeout {
             bg.getBlock().getBlockPoolId());
       }
     }
-
-    DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
-        filePath.toString(), false, ecPolicy, null);
-    int bufLen = 1024 * 100;
-    byte[] buf = new byte[bufLen];
-    int readTotal = 0;
     try {
-      while (readTotal < fileSize) {
-        in.seek(readTotal);
-        int nread = in.read(buf, 0, bufLen);
-        readTotal += nread;
-        // Simulated time-consuming processing operations, such as UDF.
-        Thread.sleep(10);
-      }
-      Assert.assertEquals("Success to read striped file.", fileSize, readTotal);
+      testReadFileWithAttempt(1);
+      Assert.fail("It Should fail to read striped time out with 1 attempt . ");
     } catch (Exception e) {
-      Assert.fail("Fail to read striped time out. ");
+      Assert.assertTrue(
+          "Throw IOException error message with 4 missing blocks. ",
+          e.getMessage().contains("4 missing blocks"));
     }
-    in.close();
+
+    try {
+      testReadFileWithAttempt(3);
+    } catch (Exception e) {
+      Assert.fail("It Should successfully read striped file with 3 attempts. ");
+    }
+  }
+
+  private  void testReadFileWithAttempt(int attempt) throws Exception {
+    cluster.getConfiguration(0)
+        .setInt(HdfsClientConfigKeys.StripedRead.DATANODE_MAX_ATTEMPTS,
+            attempt);
+    DistributedFileSystem fs =
+        (DistributedFileSystem) cluster.getNewFileSystemInstance(0);
+    try(DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
+        filePath.toString(), false, ecPolicy, null)){
+      int bufLen = 1024 * 100;
+      byte[] buf = new byte[bufLen];
+      int readTotal = 0;
+      in.seek(readTotal);
+      int nread = in.read(buf, 0, bufLen);
+      // Simulated time-consuming processing operations, such as UDF.
+      Thread.sleep(2000);
+      in.seek(nread);
+      // StripeRange 6MB
+      bufLen = 1024 * 1024 * 6;
+      buf = new byte[bufLen];
+      in.read(buf, 0, bufLen);
+    }
   }
 }
