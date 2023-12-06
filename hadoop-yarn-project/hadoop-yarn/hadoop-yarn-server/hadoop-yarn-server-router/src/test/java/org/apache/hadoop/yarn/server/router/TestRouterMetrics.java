@@ -643,7 +643,6 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed GetFederationSubClusters call");
       metrics.incrGetFederationSubClustersFailedRetrieved();
     }
-    
     public void getDeleteFederationPoliciesByQueuesFailedRetrieved() {
       LOG.info("Mocked: failed DeleteFederationPoliciesByQueues call");
       metrics.incrDeleteFederationPoliciesByQueuesRetrieved();
@@ -1001,7 +1000,6 @@ public class TestRouterMetrics {
           " call with duration {}", duration);
       metrics.succeededGetFederationSubClustersRetrieved(duration);
     }
-    
     public void deleteFederationPoliciesByQueuesRetrieved(long duration) {
       LOG.info("Mocked: successful DeleteFederationPoliciesByQueuesRetrieved " +
           " call with duration {}", duration);
@@ -2356,8 +2354,8 @@ public class TestRouterMetrics {
     Assert.assertEquals(225,
         metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
-  
-  @Test  
+
+  @Test
   public void testDeleteFederationPoliciesByQueuesFailedRetrieved() {
     long totalBadBefore = metrics.getDeleteFederationPoliciesByQueuesRetrieved();
     badSubCluster.getDeleteFederationPoliciesByQueuesFailedRetrieved();

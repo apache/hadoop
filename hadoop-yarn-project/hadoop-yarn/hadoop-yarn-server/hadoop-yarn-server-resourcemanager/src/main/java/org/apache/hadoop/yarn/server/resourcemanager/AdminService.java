@@ -1126,7 +1126,7 @@ public class AdminService extends CompositeService implements
         " getFederationSubClusters. " +
         " Please call Router's getFederationSubClusters to get SubClusters.");
   }
-  
+
   @Override
   public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {

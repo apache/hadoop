@@ -252,7 +252,7 @@ public class DefaultRMAdminRequestInterceptor
       GetSubClustersRequest request) throws YarnException, IOException {
     return rmAdminProxy.getFederationSubClusters(request);
   }
-  
+
   @Override
   public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {

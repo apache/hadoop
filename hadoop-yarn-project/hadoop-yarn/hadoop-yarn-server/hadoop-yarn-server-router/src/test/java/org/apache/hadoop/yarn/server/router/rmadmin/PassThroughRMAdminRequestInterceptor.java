@@ -203,7 +203,7 @@ public class PassThroughRMAdminRequestInterceptor
       throws YarnException, IOException {
     return getNextInterceptor().getFederationSubClusters(request);
   }
-  
+
   @Override
   public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {

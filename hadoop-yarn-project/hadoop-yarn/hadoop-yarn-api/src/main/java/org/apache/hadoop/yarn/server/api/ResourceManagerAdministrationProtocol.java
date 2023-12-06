@@ -250,8 +250,8 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
       throws YarnException, IOException;
-  
-  /** 
+
+  /**
    * In YARN-Federation mode, this method provides a way to delete queue weight policies.
    *
    * @param request DeleteFederationQueuePoliciesRequest Request.

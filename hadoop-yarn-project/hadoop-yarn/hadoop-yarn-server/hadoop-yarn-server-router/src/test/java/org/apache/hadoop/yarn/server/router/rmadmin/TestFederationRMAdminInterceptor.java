@@ -1049,7 +1049,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     assertNotNull(federationSubClustersList);
     assertEquals(4, federationSubClustersList.size());
   }
-  
+
   @Test
   public void testDeleteFederationPoliciesByQueues() throws IOException, YarnException {
     // subClusters

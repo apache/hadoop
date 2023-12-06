@@ -1005,8 +1005,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       throws YarnException, IOException {
     return null;
   }
-  
-  @Override    
+
+  @Override
   public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     return null;

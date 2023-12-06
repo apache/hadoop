@@ -340,7 +340,7 @@ public class TestRouterCLI {
     String[] args = {"-subCluster", "-getSubClusters"};
     assertEquals(0, rmAdminCLI.run(args));
   }
-  
+
   @Test
   public void testDeleteFederationPoliciesByQueues() throws Exception {
     PrintStream oldOutPrintStream = System.out;

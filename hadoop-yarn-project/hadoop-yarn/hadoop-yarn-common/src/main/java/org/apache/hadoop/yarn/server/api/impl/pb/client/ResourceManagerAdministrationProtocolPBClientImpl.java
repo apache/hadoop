@@ -462,8 +462,8 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
     }
     return null;
   }
-  
-  @Override    
+
+  @Override
   public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
       DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
     DeleteFederationQueuePoliciesRequestProto requestProto =

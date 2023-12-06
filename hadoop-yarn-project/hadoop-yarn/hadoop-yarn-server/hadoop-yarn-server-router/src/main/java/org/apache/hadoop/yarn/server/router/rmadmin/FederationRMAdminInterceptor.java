@@ -1191,7 +1191,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     // Step3. Return results.
     return GetSubClustersResponse.newInstance(federationSubClusters);
   }
-  
+
   /**
    * Delete Policies based on the provided queue list.
    *

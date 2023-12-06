@@ -493,7 +493,7 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
       throw new ServiceException(e);
     }
   }
-  
+
   @Override
   public DeleteFederationQueuePoliciesResponseProto deleteFederationPoliciesByQueues(
       RpcController controller, DeleteFederationQueuePoliciesRequestProto proto)
