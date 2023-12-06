@@ -84,10 +84,7 @@ public class TestDFSStripedInputStreamWithTimeout {
 
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
-
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY, 1000);
-    // SET CONFIG FOR HDFS CLIENT
-    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
 
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
@@ -160,12 +157,15 @@ public class TestDFSStripedInputStreamWithTimeout {
   }
 
   private  void testReadFileWithAttempt(int attempt) throws Exception {
+    // set dfs client config
     cluster.getConfiguration(0)
         .setInt(HdfsClientConfigKeys.StripedRead.DATANODE_MAX_ATTEMPTS,
             attempt);
-    DistributedFileSystem fs =
+    cluster.getConfiguration(0)
+        .setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
+    DistributedFileSystem newFs =
         (DistributedFileSystem) cluster.getNewFileSystemInstance(0);
-    try(DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
+    try(DFSStripedInputStream in = new DFSStripedInputStream(newFs.getClient(),
         filePath.toString(), false, ecPolicy, null)){
       int bufLen = 1024 * 100;
       byte[] buf = new byte[bufLen];
@@ -173,7 +173,7 @@ public class TestDFSStripedInputStreamWithTimeout {
       in.seek(readTotal);
       int nread = in.read(buf, 0, bufLen);
       // Simulated time-consuming processing operations, such as UDF.
-      Thread.sleep(2000);
+      Thread.sleep(10000);
       in.seek(nread);
       // StripeRange 6MB
       bufLen = 1024 * 1024 * 6;
