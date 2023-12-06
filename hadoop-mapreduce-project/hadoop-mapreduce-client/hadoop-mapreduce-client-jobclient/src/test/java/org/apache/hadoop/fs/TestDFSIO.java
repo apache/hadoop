@@ -131,7 +131,7 @@ public class TestDFSIO implements Tool {
       "test.io.erasure.code.policy";
   private ExecutorService excutorService = Executors.newFixedThreadPool(
       2 * Runtime.getRuntime().availableProcessors());
-  CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService); 
+  CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService);
 
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
@@ -371,7 +371,7 @@ public class TestDFSIO implements Tool {
         throw new IOException(e.getLocalizedMessage());
       }
     }
-    
+
     boolean isSuccess = false;
     int count = 0;
     for (int i = 0; i < nrFiles; i++) {
