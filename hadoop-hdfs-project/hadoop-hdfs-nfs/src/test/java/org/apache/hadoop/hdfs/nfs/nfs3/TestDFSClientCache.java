@@ -31,8 +31,15 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
+import org.junit.AfterClass;
 
 public class TestDFSClientCache {
+
+  @AfterClass
+  public static void cleanup() {
+    UserGroupInformation.reset();
+  }
+  
   @Test
   public void testEviction() throws IOException {
     NfsConfiguration conf = new NfsConfiguration();
