@@ -29,15 +29,22 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -124,6 +131,7 @@ public class TestDFSIO implements Tool {
       "test.io.erasure.code.policy";
   private ExecutorService excutorService = Executors.newFixedThreadPool(
       2 * Runtime.getRuntime().availableProcessors());
+  CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService); 
 
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
@@ -297,34 +305,34 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_TRUNCATE, execTime);
   }
 
-  private class ControlFileCreateTask implements Callable<Void> {
+  private class ControlFileCreateTask implements Runnable {
     private SequenceFile.Writer writer = null;
     private String name;
     private long nrBytes;
-    private CountDownLatch latch;
 
     ControlFileCreateTask(SequenceFile.Writer writer, String name,
-                                 long nrBytes, CountDownLatch countDownLatch) {
+        long nrBytes) {
       this.writer = writer;
       this.name = name;
       this.nrBytes = nrBytes;
-      this.latch = countDownLatch;
     }
 
     @Override
-    public Void call() throws Exception {
+    public void run() {
       try {
         writer.append(new Text(name), new LongWritable(nrBytes));
-        latch.countDown();
       } catch (Exception e) {
-        throw new IOException(e.getLocalizedMessage());
+        LOG.error(e.getLocalizedMessage());
       } finally {
         if (writer != null) {
-          writer.close();
+          try {
+            writer.close();
+          } catch (IOException e) {
+            LOG.error(e.toString());
+          }
         }
         writer = null;
       }
-      return null;
     }
   }
 
@@ -332,7 +340,7 @@ public class TestDFSIO implements Tool {
   private void createControlFile(FileSystem fs,
                                   long nrBytes, // in bytes
                                   int nrFiles
-                                ) throws IOException, InterruptedException {
+                                ) throws IOException {
     LOG.info("creating control file: " + nrBytes + " bytes, " + nrFiles + " files");
     final int maxDirItems = config.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
@@ -347,7 +355,7 @@ public class TestDFSIO implements Tool {
 
     fs.delete(controlDir, true);
 
-    CountDownLatch countDownLatch = new CountDownLatch(nrFiles);
+    List<Future<String>> futureList = new ArrayList<>();
     for (int i = 0; i < nrFiles; i++) {
       String name = getFileName(i);
       Path controlFile = new Path(controlDir, "in_file_" + name);
@@ -356,18 +364,39 @@ public class TestDFSIO implements Tool {
         writer = SequenceFile.createWriter(fs, config, controlFile,
                                            Text.class, LongWritable.class,
                                            CompressionType.NONE);
-        Callable controlFileCreateTask = new ControlFileCreateTask(writer, name,
-            nrBytes, countDownLatch);
-        excutorService.submit(controlFileCreateTask);
+        Runnable controlFileCreateTask = new ControlFileCreateTask(writer, name, nrBytes);
+        Future<String> createTaskFuture = completionService.submit(controlFileCreateTask, "success");
+        futureList.add(createTaskFuture);
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       }
     }
-    boolean isSuccess = countDownLatch.await(10, TimeUnit.MINUTES);
-    if (isSuccess) {
-      LOG.info("created control files for: " + nrFiles + " files");
-    } else {
-      throw new IOException("Create control files timeout. Beyond 10 minutes.");
+    
+    boolean isSuccess = false;
+    int count = 0;
+    for (int i = 0; i < nrFiles; i++) {
+      try {
+        // Since control file is quiet small, we use 3 minutes here.
+        Future<String> future = completionService.poll(3, TimeUnit.MINUTES);
+        if (future != null) {
+          future.get(3, TimeUnit.MINUTES);
+          count++;
+        } else {
+          break;
+        }
+      } catch (ExecutionException | InterruptedException | TimeoutException e) {
+        throw new IOException(e);
+      }
+
+      if (count == nrFiles) {
+        isSuccess = true;
+      }
+
+      if (isSuccess) {
+        LOG.info("created control files for: " + nrFiles + " files");
+      } else {
+        throw new IOException("Create control files timeout.");
+      }
     }
   }
 
@@ -909,8 +938,8 @@ public class TestDFSIO implements Tool {
     }
     try {
       createControlFile(fs, nrBytes, nrFiles);
-    } catch (InterruptedException e) {
-      LOG.warn(e.getLocalizedMessage());
+    } catch (IOException e) {
+      LOG.warn(e.toString());
       throw new IOException(e);
     }
     long tStart = System.currentTimeMillis();
