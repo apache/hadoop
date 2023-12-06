@@ -108,7 +108,7 @@ def runForAll(csv_file):
 
             coverageData_C=get_coverage_details_from_html(module_path + jacoco_path)
             runData_C = getTestRunNumber(log_file2)
-            writeCSV(test_name, coverageData, runData, coverageData_C, runData_C, paramNumberInfo)
+            writeCSV(test_name, module_path, coverageData, runData, coverageData_C, runData_C, paramNumberInfo)
 
             clean_jacoco(module_path)
             modify_test(testFullPath, False)
@@ -132,7 +132,7 @@ def modify_test_back(file_path):
             # For example, replace a line with a new one
             print(line.replace('import org.junit.runners.Parameterized;', 'import edu.illinois.Parameterized;'), end='')
 
-def writeCSV(test_name, coverageData, runData, coverageData_C, runData_C, paramNumberInfo):
+def writeCSV(test_name,module_path , coverageData, runData, coverageData_C, runData_C, paramNumberInfo):
     csv_filename = f"put_data.csv"
     with open(csv_filename, "w", newline="") as csvfile:
         fieldnames = ["Project URL", "Module Path", "Fully-Qualified Test Name","ParameterCombinations",
@@ -142,7 +142,7 @@ def writeCSV(test_name, coverageData, runData, coverageData_C, runData_C, paramN
         writer.writeheader()
         writer.writerow({
             "Project URL": "Hadoop",
-            "Module Path": "module_path",
+            "Module Path": module_path,
             "Fully-Qualified Test Name": test_name,
             "ParameterCombinations": paramNumberInfo,
             "CoveredInstructions": coverageData[0],
@@ -159,13 +159,7 @@ def writeCSV(test_name, coverageData, runData, coverageData_C, runData_C, paramN
             "Skipped_C": runData_C[3],
         })
 
-
-
 if __name__ == "__main__":
-    module_path = 'hadoop-common-project/hadoop-common'
-    clean_jacoco(module_path)
-    file_path = module_path + jacoco_path
     csv_file = 'hadoop_common_puts_2.csv'
-#     print(get_coverage_details_from_html(file_path))
     runForAll(csv_file)
 
