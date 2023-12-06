@@ -126,7 +126,7 @@ Native Shared Libraries
 
 You can load any native shared library using DistributedCache for distributing and symlinking the library files.
 
-This example shows you how to distribute a shared library, mylib.so, and load it from a MapReduce task.
+This example shows you how to distribute a shared library in Unix-like systems, mylib.so, and load it from a MapReduce task.
 
 1.  First copy the library to the HDFS: `bin/hadoop fs -copyFromLocal libmyexample.so.1 /libraries/libmyexample.so.1`
 2.  The job launching program should contain the following: `DistributedCache.createSymlink(conf);` `DistributedCache.addCacheFile("hdfs://host:port/libraries/libmyexample.so.1#libmyexample.so", conf);`
