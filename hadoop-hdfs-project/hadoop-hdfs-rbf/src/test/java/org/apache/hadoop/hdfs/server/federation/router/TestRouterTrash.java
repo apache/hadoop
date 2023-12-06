@@ -287,7 +287,8 @@ public class TestRouterTrash {
     client1.mkdirs(trashPath, new FsPermission("770"),
         true);
     fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash"));
-    assertEquals(2, fileStatuses.length);
+    assertEquals(trashPath, fileStatuses[0].getPath().toUri().getPath());
+    assertEquals("/user/test-trash/.Trash/Current", fileStatuses[1].getPath().toUri().getPath());
 
     client1.delete("/user", true);
   }
