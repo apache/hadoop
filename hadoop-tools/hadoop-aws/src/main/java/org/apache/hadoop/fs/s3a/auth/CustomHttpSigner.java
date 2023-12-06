@@ -38,7 +38,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
  * <pre>
  *   fs.s3a.http.signer.enabled = true
  *   fs.s3a.http.signer.class = org.apache.hadoop.fs.s3a.auth.CustomHttpSigner
- * <pre>
+ * </pre>
  */
 public final class CustomHttpSigner implements HttpSigner<AwsCredentialsIdentity> {
   private static final Logger LOG = LoggerFactory
@@ -61,7 +61,9 @@ public final class CustomHttpSigner implements HttpSigner<AwsCredentialsIdentity
   }
 
   @Override
-  public CompletableFuture<AsyncSignedRequest> signAsync(final AsyncSignRequest<? extends AwsCredentialsIdentity> request) {
+  public CompletableFuture<AsyncSignedRequest> signAsync(
+      final AsyncSignRequest<? extends AwsCredentialsIdentity> request) {
+
     LOG.trace("Signing async request:{}", request.request());
     return delegateSigner.signAsync(request);
   }

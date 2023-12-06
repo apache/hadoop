@@ -1558,5 +1558,5 @@ public final class Constants {
    * Classname of the http signer to use when {@link #HTTP_SIGNER_ENABLED}
    * is true: {@value}.
    */
-  public static String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
+  public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
 }

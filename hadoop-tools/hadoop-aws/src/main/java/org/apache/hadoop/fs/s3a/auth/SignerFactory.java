@@ -134,15 +134,18 @@ public final class SignerFactory {
    * @param signer signer
    * @return the auth scheme
    */
-  public static AuthScheme<AwsCredentialsIdentity> createAuthScheme(String schemeId,
+  public static AuthScheme<AwsCredentialsIdentity> createAuthScheme(
+      String schemeId,
       HttpSigner<AwsCredentialsIdentity> signer) {
+
     return new AuthScheme<AwsCredentialsIdentity>() {
       @Override
       public String schemeId() {
         return schemeId;
       }
       @Override
-      public IdentityProvider<AwsCredentialsIdentity> identityProvider(IdentityProviders providers) {
+      public IdentityProvider<AwsCredentialsIdentity> identityProvider(
+          IdentityProviders providers) {
         return providers.identityProvider(AwsCredentialsIdentity.class);
       }
       @Override

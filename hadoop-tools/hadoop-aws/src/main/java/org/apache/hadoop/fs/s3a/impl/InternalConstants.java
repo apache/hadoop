@@ -288,7 +288,7 @@ public final class InternalConstants {
           ENABLE_MULTI_DELETE));
 
   /**
-   * AWS V4 Auth Scheme to use when creating signers.
+   * AWS V4 Auth Scheme to use when creating signers: {@value}.
    */
   public static final String AUTH_SCHEME_AWS_SIGV_4 = "aws.auth#sigv4";
 
