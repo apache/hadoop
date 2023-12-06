@@ -115,7 +115,7 @@ public class JspHelper {
     final String remoteUser;
    
     if (UserGroupInformation.isSecurityEnabled()) {
-      remoteUser = request.getRemoteUser();
+      remoteUser = request.getUserPrincipal().getName();
       final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
 
