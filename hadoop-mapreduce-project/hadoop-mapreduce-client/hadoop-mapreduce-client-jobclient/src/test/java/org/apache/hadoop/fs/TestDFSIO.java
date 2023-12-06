@@ -34,9 +34,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -131,7 +129,7 @@ public class TestDFSIO implements Tool {
       "test.io.erasure.code.policy";
   private ExecutorService excutorService = Executors.newFixedThreadPool(
       2 * Runtime.getRuntime().availableProcessors());
-  CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService);
+  private CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService);
 
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
@@ -365,8 +363,8 @@ public class TestDFSIO implements Tool {
                                            Text.class, LongWritable.class,
                                            CompressionType.NONE);
         Runnable controlFileCreateTask = new ControlFileCreateTask(writer, name, nrBytes);
-        Future<String> createTaskFuture = completionService.submit(controlFileCreateTask, "success");
-        futureList.add(createTaskFuture);
+        Future<String> createFuture = completionService.submit(controlFileCreateTask, "success");
+        futureList.add(createFuture);
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       }
