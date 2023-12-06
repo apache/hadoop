@@ -562,13 +562,13 @@ public final class S3ATestUtils {
       throw new UncheckedIOException(e);
     }
   }  /**
-   * Skip a test if the filesystem lacks a required capability.
+   * Skip a test if the filesystem has a required capability.
    * @param fs filesystem
    * @param capability capability
    */
   public static void assumePathCapabilityFalse(FileSystem fs, String capability) {
     try {
-      assume("Filesystem lacks capability " + capability,
+      assume("Filesystem has capability " + capability,
           !fs.hasPathCapability(new Path("/"), capability));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
