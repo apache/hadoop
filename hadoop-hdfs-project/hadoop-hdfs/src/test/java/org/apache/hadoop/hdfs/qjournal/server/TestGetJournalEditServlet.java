@@ -67,6 +67,8 @@ public class TestGetJournalEditServlet {
    */
   @Test
   public void testWithoutUser() throws IOException {
+    CONF.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(CONF);
     // Test: Make a request without specifying a user
     HttpServletRequest request = mock(HttpServletRequest.class);
     boolean isValid = SERVLET.isValidRequestor(request, CONF);

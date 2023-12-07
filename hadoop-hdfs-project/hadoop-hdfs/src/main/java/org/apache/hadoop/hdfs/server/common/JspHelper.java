@@ -112,10 +112,12 @@ public class JspHelper {
     UserGroupInformation ugi = null;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
-    final String remoteUser;
+    String remoteUser = null;
    
     if (UserGroupInformation.isSecurityEnabled()) {
-      remoteUser = request.getUserPrincipal().getName();
+      if (request.getUserPrincipal() != null) {
+        remoteUser = request.getUserPrincipal().getName();
+      }
       final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
 

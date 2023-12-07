@@ -364,7 +364,7 @@ public class TestWebHdfsTokens {
   private void validateLazyTokenFetch(UserGroupInformation ugi,
       final Configuration clusterConf) throws Exception {
 
-    String testUser = ugi.getShortUserName();
+    String testUser = ugi.getUserName();
 
     WebHdfsFileSystem fs = ugi.doAs(
         new PrivilegedExceptionAction<WebHdfsFileSystem>() {
