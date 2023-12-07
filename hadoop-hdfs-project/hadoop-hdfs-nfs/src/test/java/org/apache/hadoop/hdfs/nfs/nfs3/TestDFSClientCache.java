@@ -34,12 +34,11 @@ import org.junit.Test;
 import org.junit.AfterClass;
 
 public class TestDFSClientCache {
-
   @AfterClass
   public static void cleanup() {
     UserGroupInformation.reset();
   }
-  
+
   @Test
   public void testEviction() throws IOException {
     NfsConfiguration conf = new NfsConfiguration();
