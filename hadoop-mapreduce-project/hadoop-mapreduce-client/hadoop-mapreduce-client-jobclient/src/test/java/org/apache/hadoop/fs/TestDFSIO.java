@@ -109,7 +109,8 @@ public class TestDFSIO implements Tool {
                     " [-size Size[B|KB|MB|GB|TB]]" +
                     " [-resFile resultFileName] [-bufferSize Bytes]" +
                     " [-storagePolicy storagePolicyName]" +
-                    " [-erasureCodePolicy erasureCodePolicyName]";
+                    " [-erasureCodePolicy erasureCodePolicyName]" +
+                    " [-sequential]";
 
   private Configuration config;
   private static final String STORAGE_POLICY_NAME_KEY =
@@ -287,6 +288,62 @@ public class TestDFSIO implements Tool {
     bench.createControlFile(fs, DEFAULT_NR_BYTES / 2, DEFAULT_NR_FILES);
     long execTime = bench.truncateTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_TRUNCATE, execTime);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialWrite() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.sequentialTest(fs, TestType.TEST_TYPE_WRITE,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialRead() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.sequentialTest(fs, TestType.TEST_TYPE_READ,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialReadRandom() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.getConf().setLong("test.io.skip.size", 0);
+    bench.sequentialTest(fs, TestType.TEST_TYPE_READ_RANDOM,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialAppend() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.getConf().setLong("test.io.skip.size", 0);
+    bench.sequentialTest(fs, TestType.TEST_TYPE_READ_RANDOM,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialReadBackward() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.getConf().setLong("test.io.skip.size", -DEFAULT_BUFFER_SIZE);
+    bench.sequentialTest(fs, TestType.TEST_TYPE_READ_RANDOM,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test (timeout = 10000)
+  public void testSequentialReadSkip() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    bench.sequentialTest(fs, TestType.TEST_TYPE_APPEND,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+  }
+
+  @Test(timeout = 60000)
+  public void testSequentialTruncate() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    // given DEFAULT_NR_BYTES files to be truncated
+    bench.sequentialTest(fs, TestType.TEST_TYPE_WRITE,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+    // test truncate
+    bench.sequentialTest(fs, TestType.TEST_TYPE_TRUNCATE,
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
   }
 
   @SuppressWarnings("deprecation")
@@ -730,10 +787,18 @@ public class TestDFSIO implements Tool {
     default:
       return;
     }
-    for(int i=0; i < nrFiles; i++)
-      ioer.doIO(Reporter.NULL,
-                BASE_FILE_NAME+Integer.toString(i), 
-                fileSize);
+    for (int i = 0; i < nrFiles; i++) {
+      ioer.configure(new JobConf(config, TestDFSIO.class));
+      String fileName = getFileName(i);
+      ioer.stream = ioer.getIOStream(fileName);
+      try {
+        ioer.doIO(Reporter.NULL, fileName, fileSize);
+      } finally {
+        if (ioer.stream != null) {
+          ioer.stream.close();
+        }
+      }
+    }
   }
 
   public static void main(String[] args) {
