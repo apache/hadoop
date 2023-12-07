@@ -48,6 +48,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.Principal;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -150,6 +151,9 @@ public class TestJspHelper {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     ServletContext context = mock(ServletContext.class);
     String realUser = "TheDoctor";
+    String fullUserName = String.format("%s/localhost@REALM.TLD", realUser);
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0](.*@REALM\\.TLD)s/@.*//\nDEFAULT");
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -158,7 +162,7 @@ public class TestJspHelper {
     
     Text ownerText = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
-        ownerText, ownerText, new Text(realUser));
+        ownerText, ownerText, new Text(fullUserName));
     Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
         dtId, new DummySecretManager(0, 0, 0, 0));
     String tokenString = token.encodeToUrlString();
@@ -170,16 +174,18 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
     // token with auth-ed user
-    request = getMockRequest(realUser, null, null);
+    request = getMockRequest(fullUserName, null, null);
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
     
@@ -190,6 +196,7 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
     
@@ -200,6 +207,7 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
 
@@ -211,6 +219,7 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
@@ -222,6 +231,7 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
@@ -233,6 +243,7 @@ public class TestJspHelper {
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
@@ -243,6 +254,9 @@ public class TestJspHelper {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     ServletContext context = mock(ServletContext.class);
     String realUser = "TheDoctor";
+    String fullUserName = String.format("%s/localhost@REALM.TLD", realUser);
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0](.*@REALM\\.TLD)s/@.*//\nDEFAULT");
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -270,24 +284,27 @@ public class TestJspHelper {
     }
     
     // ugi for remote user
-    request = getMockRequest(realUser, null, null);
+    request = getMockRequest(fullUserName, null, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getUserName(), fullUserName);
     checkUgiFromAuth(ugi);
     
     // ugi for remote user = real user
-    request = getMockRequest(realUser, realUser, null);
+    request = getMockRequest(fullUserName, realUser, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getUserName(), fullUserName);
     checkUgiFromAuth(ugi);
     
     // if there is remote user via SPNEGO, ignore user.name param
-    request = getMockRequest(realUser, user, null);
+    request = getMockRequest(fullUserName, user, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getUserName(), fullUserName);
     checkUgiFromAuth(ugi);
   }
   
@@ -296,6 +313,9 @@ public class TestJspHelper {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     ServletContext context = mock(ServletContext.class);
     String realUser = "TheDoctor";
+    String fullUserName = String.format("%s/localhost@REALM.TLD", realUser);
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0](.*@REALM\\.TLD)s/@.*//\nDEFAULT");
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     
@@ -329,26 +349,29 @@ public class TestJspHelper {
     }
     
     // proxy ugi for user via remote user
-    request = getMockRequest(realUser, null, user);
+    request = getMockRequest(fullUserName, null, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
     
     // proxy ugi for user vi a remote user = real user
-    request = getMockRequest(realUser, realUser, user);
+    request = getMockRequest(fullUserName, realUser, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
 
     // if there is remote user via SPNEGO, ignore user.name, doas param
-    request = getMockRequest(realUser, user, user);
+    request = getMockRequest(fullUserName, user, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
     Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assert.assertEquals(ugi.getRealUser().getUserName(), fullUserName);
     Assert.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
 
@@ -380,6 +403,9 @@ public class TestJspHelper {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     ServletContext context = mock(ServletContext.class);
     String realUser = "TheDoctor";
+    String fullUserName = String.format("%s/localhost@REALM.TLD", realUser);
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0](.*@REALM\\.TLD)s/@.*//\nDEFAULT");
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -387,14 +413,14 @@ public class TestJspHelper {
 
     Text ownerText = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
-        ownerText, ownerText, new Text(realUser));
+        ownerText, ownerText, new Text(fullUserName));
     Token<DelegationTokenIdentifier> token =
         new Token<DelegationTokenIdentifier>(dtId,
             new DummySecretManager(0, 0, 0, 0));
     String tokenString = token.encodeToUrlString();
 
     // token with auth-ed user
-    request = getMockRequest(realUser, null, null);
+    request = getMockRequest(fullUserName, null, null);
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
 
@@ -414,7 +440,9 @@ public class TestJspHelper {
     if (doAs != null) {
       when(request.getParameter(DoAsParam.NAME)).thenReturn(doAs);
     }
-    when(request.getRemoteUser()).thenReturn(remoteUser);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(remoteUser);
+    when(request.getUserPrincipal()).thenReturn(principal);
     return request;
   }
   
