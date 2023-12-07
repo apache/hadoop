@@ -165,6 +165,8 @@
                       <exclude>org.xerial.snappy:*</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
+                      <!-- exclude jettison classes -->
+                      <exclude>org.codehaus.jettison:jettison:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
