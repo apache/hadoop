@@ -353,7 +353,6 @@ public class TestDFSIO implements Tool {
 
     fs.delete(controlDir, true);
 
-    List<Future<String>> futureList = new ArrayList<>();
     for (int i = 0; i < nrFiles; i++) {
       String name = getFileName(i);
       Path controlFile = new Path(controlDir, "in_file_" + name);
@@ -363,8 +362,7 @@ public class TestDFSIO implements Tool {
                                            Text.class, LongWritable.class,
                                            CompressionType.NONE);
         Runnable controlFileCreateTask = new ControlFileCreateTask(writer, name, nrBytes);
-        Future<String> createFuture = completionService.submit(controlFileCreateTask, "success");
-        futureList.add(createFuture);
+        completionService.submit(controlFileCreateTask, "success");
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       }
