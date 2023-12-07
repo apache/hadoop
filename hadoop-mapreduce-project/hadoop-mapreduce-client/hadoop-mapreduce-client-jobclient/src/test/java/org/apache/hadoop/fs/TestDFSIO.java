@@ -29,10 +29,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -129,7 +127,8 @@ public class TestDFSIO implements Tool {
       "test.io.erasure.code.policy";
   private ExecutorService excutorService = Executors.newFixedThreadPool(
       2 * Runtime.getRuntime().availableProcessors());
-  private CompletionService<String> completionService = new ExecutorCompletionService<>(excutorService);
+  private CompletionService<String> completionService =
+      new ExecutorCompletionService<>(excutorService);
 
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
