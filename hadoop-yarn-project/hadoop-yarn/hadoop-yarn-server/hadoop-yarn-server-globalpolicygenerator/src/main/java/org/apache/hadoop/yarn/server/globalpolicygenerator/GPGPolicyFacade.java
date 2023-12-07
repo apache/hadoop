@@ -22,6 +22,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.manager.HomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
@@ -100,24 +102,28 @@ public class GPGPolicyFacade {
   public FederationPolicyManager getPolicyManager(String queueName)
       throws YarnException {
     FederationPolicyManager policyManager = policyManagerMap.get(queueName);
+
     // If we don't have the policy manager cached, pull configuration
     // from the FederationStateStore to create and cache it
     if (policyManager == null) {
       try {
+
         // If we don't have the configuration cached, pull it
         // from the stateStore
         SubClusterPolicyConfiguration conf = policyConfMap.get(queueName);
+
         if (conf == null) {
           conf = stateStore.getPolicyConfiguration(queueName);
         }
+
         // If configuration is still null, it does not exist in the
         // FederationStateStore
         if (conf == null) {
-          LOG.info("Read null policy for queue {}", queueName);
+          LOG.info("Read null policy for queue {}.", queueName);
           return null;
         }
-        policyManager =
-            FederationPolicyUtils.instantiatePolicyManager(conf.getType());
+
+        policyManager = FederationPolicyUtils.instantiatePolicyManager(conf.getType());
         policyManager.setQueue(queueName);
 
         // TODO there is currently no way to cleanly deserialize a policy
@@ -127,14 +133,12 @@ public class GPGPolicyFacade {
               WeightedPolicyInfo.fromByteBuffer(conf.getParams());
           WeightedLocalityPolicyManager wlpmanager =
               (WeightedLocalityPolicyManager) policyManager;
-          LOG.info("Updating policy for queue {} to configured weights router: "
-                  + "{}, amrmproxy: {}", queueName,
-              wpinfo.getRouterPolicyWeights(),
-              wpinfo.getAMRMPolicyWeights());
+          LOG.info("Updating policy for queue {} to configured weights router: {}, amrmproxy: {}",
+              queueName, wpinfo.getRouterPolicyWeights(), wpinfo.getAMRMPolicyWeights());
           wlpmanager.setWeightedPolicyInfo(wpinfo);
         } else {
-          LOG.warn("Warning: FederationPolicyManager of unsupported type {}, "
-              + "initialization may be incomplete ", policyManager.getClass());
+          LOG.warn("Warning: FederationPolicyManager of unsupported type {}, initialization may be incomplete.",
+              policyManager.getClass());
         }
 
         policyManagerMap.put(queueName, policyManager);
@@ -146,6 +150,37 @@ public class GPGPolicyFacade {
       }
     }
     return policyManager;
+  }
+
+  private void instantiatePolicyManager(String queue,
+      SubClusterPolicyConfiguration conf, WeightedPolicyInfo wpinfo)
+      throws FederationPolicyInitializationException {
+    switch (conf.getType()) {
+      case "WeightedLocalityPolicyManager":
+        break;
+      case "WeightedHomePolicyManager":
+        break;
+      case "PriorityBroadcastPolicyManager":
+        break;
+      case "HomePolicyManager":
+      case "RejectAllPolicyManager":
+      case "UniformBroadcastPolicyManager":
+      case "HashBroadcastPolicyManager":
+        LOG.warn("Warning: FederationPolicyManager of unsupported type {}, " +
+            "initialization may be incomplete.", conf.getType());
+        break;
+      default:
+        break;
+    }
+  }
+
+  private void handWeightedLocalityPolicyManager(String queue,
+      FederationPolicyManager policyManager, WeightedPolicyInfo weightedPolicyInfo) {
+    WeightedLocalityPolicyManager weightedLocalityPolicyManager =
+        (WeightedLocalityPolicyManager) policyManager;
+    LOG.info("Updating policy for queue {} to configured weights router: {}, amrmproxy: {}",
+        queue, weightedPolicyInfo.getRouterPolicyWeights(), weightedPolicyInfo.getAMRMPolicyWeights());
+    weightedLocalityPolicyManager.setWeightedPolicyInfo(weightedPolicyInfo);
   }
 
   /**

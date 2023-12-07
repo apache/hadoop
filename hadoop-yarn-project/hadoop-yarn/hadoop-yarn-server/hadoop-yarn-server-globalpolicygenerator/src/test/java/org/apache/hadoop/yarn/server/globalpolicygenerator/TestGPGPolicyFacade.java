@@ -26,8 +26,13 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
+import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
@@ -196,6 +201,12 @@ public class TestGPGPolicyFacade {
     policyFacade.setPolicyManager(manager);
     verify(stateStore, times(0)).setPolicyConfiguration(
         Matchers.any(SetSubClusterPolicyConfigurationRequest.class));
+  }
+
+  @Test
+  public void textXXX(){
+    FederationPolicyManager pm1 = new HashBroadcastPolicyManager();
+    System.out.println(pm1.getClass().getSimpleName());
   }
 
 }
