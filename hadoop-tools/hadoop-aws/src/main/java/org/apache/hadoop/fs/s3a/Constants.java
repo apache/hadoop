@@ -1299,4 +1299,16 @@ public final class Constants {
    */
   public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
+  /**
+   * Is the higher performance copy from local file to S3 enabled?
+   * This switch allows for it to be disabled if there are problems.
+   * Value: {@value}.
+   */
+  public static final String OPTIMIZED_COPY_FROM_LOCAL = "fs.s3a.optimized.copy.from.local.enabled";
+
+  /**
+   * Default value for {@link #OPTIMIZED_COPY_FROM_LOCAL}.
+   * Value: {@value}.
+   */
+  public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
 }
