@@ -383,18 +383,19 @@ public class TestDFSIO implements Tool {
       } catch (ExecutionException | InterruptedException | TimeoutException e) {
         throw new IOException(e);
       }
+    }
 
-      if (count == nrFiles) {
-        isSuccess = true;
-      }
+    if (count == nrFiles) {
+      isSuccess = true;
+    }
 
-      if (isSuccess) {
-        LOG.info("created control files for: " + nrFiles + " files");
-      } else {
-        throw new IOException("Create control files timeout.");
-      }
+    if (isSuccess) {
+      LOG.info("created control files for: " + nrFiles + " files");
+    } else {
+      throw new IOException("Create control files timeout.");
     }
   }
+
 
   private static String getFileName(int fIdx) {
     return BASE_FILE_NAME + Integer.toString(fIdx);
