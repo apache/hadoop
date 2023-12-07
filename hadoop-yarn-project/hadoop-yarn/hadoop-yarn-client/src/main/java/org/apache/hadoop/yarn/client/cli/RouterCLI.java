@@ -54,6 +54,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -103,31 +106,54 @@ public class RouterCLI extends Configured implements Tool {
   // Constant
   private static final String OPTION_SC = "sc";
   private static final String OPTION_SUBCLUSTERID = "subClusterId";
-  private static final String CMD_DEREGISTERSUBCLUSTER = "-deregisterSubCluster";
+  private static final String OPTION_GET_SUBCLUSTERS = "getSubClusters";
+  private static final String OPTION_DEREGISTER_SUBCLUSTER = "deregisterSubCluster";
+  private static final String CMD_SUBCLUSTER = "-subCluster";
+  private static final String CMD_DEREGISTER_SUBCLUSTER = "-deregisterSubCluster";
 
   // DeregisterSubCluster Command Parameters
-  protected final static UsageInfo SUBCLUSTER_ID = new UsageInfo("<-sc|--subClusterId>",
-      "'-sc' option allows you to specify the sub-cluster to operate on, " +
-      "while the '--subClusterId' option is the long format of -sc and serves the same purpose.");
+  protected final static UsageInfo DEREGISTER_SUBCLUSTER_USAGE = new UsageInfo(
+      "-deregisterSubCluster <-sc|--subClusterId>",
+      "This command is used to deregister subCluster, " +
+      "If the interval between the heartbeat time of the subCluster and" +
+      "the current time exceeds the timeout period, set the state of the subCluster to SC_LOST.");
 
   // DeregisterSubCluster Command Examples
   protected final static String DEREGISTER_SUBCLUSTER_EXAMPLE_1 =
-      "yarn routeradmin -deregisterSubCluster -sc SC-1";
+      "yarn routeradmin -subCluster -deregisterSubCluster -sc SC-1";
   protected final static String DEREGISTER_SUBCLUSTER_EXAMPLE_2 =
-      "yarn routeradmin -deregisterSubCluster --subClusterId SC-1";
+      "yarn routeradmin -subCluster -deregisterSubCluster --subClusterId SC-1";
 
   // DeregisterSubCluster Command Help Information
   protected final static String DEREGISTER_SUBCLUSTER_HELP_INFO =
       "deregister subCluster, If the interval between the heartbeat time of the subCluster and" +
       "the current time exceeds the timeout period, set the state of the subCluster to SC_LOST.";
 
-  protected final static RouterCmdUsageInfos DEREGISTER_SUBCLUSTER_USAGEINFOS =
+  protected final static UsageInfo GET_SUBCLUSTER_USAGE = new UsageInfo("-getSubClusters",
+      "This command is used to get information about all subclusters.");
+
+  private static final String GET_SUBCLUSTER_TITLE = "Yarn Federation SubCluster";
+
+  // Columns information
+  private static final List<String> GET_SUBCLUSTER_HEADER = Arrays.asList(
+      "SubCluster Id", "SubCluster State", "Last HeartBeatTime");
+
+  // GetSubCluster Command Examples
+  protected final static String GET_SUBCLUSTER_EXAMPLE =
+      "yarn routeradmin -subCluster -getSubClusters";
+
+  protected final static RouterCmdUsageInfos SUBCLUSTER_USAGEINFOS =
       new RouterCmdUsageInfos()
-      .addUsageInfo(SUBCLUSTER_ID)
-      .addHelpInfo(DEREGISTER_SUBCLUSTER_HELP_INFO)
-      .addExampleDescs(CMD_DEREGISTERSUBCLUSTER, "If we want to deregisterSubCluster SC-1")
-      .addExample(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER_EXAMPLE_1)
-      .addExample(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER_EXAMPLE_2);
+      // deregisterSubCluster
+      .addUsageInfo(DEREGISTER_SUBCLUSTER_USAGE)
+      .addExampleDescs(DEREGISTER_SUBCLUSTER_USAGE.args, "If we want to deregisterSubCluster SC-1")
+      .addExample(DEREGISTER_SUBCLUSTER_USAGE.args, DEREGISTER_SUBCLUSTER_EXAMPLE_1)
+      .addExample(DEREGISTER_SUBCLUSTER_USAGE.args, DEREGISTER_SUBCLUSTER_EXAMPLE_2)
+      // getSubCluster
+      .addUsageInfo(GET_SUBCLUSTER_USAGE)
+      .addExampleDescs(GET_SUBCLUSTER_USAGE.args,
+      "If we want to get information about all subClusters in Federation")
+      .addExample(GET_SUBCLUSTER_USAGE.args, GET_SUBCLUSTER_EXAMPLE);
 
   // Command2: policy
 
@@ -279,8 +305,8 @@ public class RouterCLI extends Configured implements Tool {
 
   protected final static Map<String, RouterCmdUsageInfos> ADMIN_USAGE =
       ImmutableMap.<String, RouterCmdUsageInfos>builder()
-      // Command1: deregisterSubCluster
-      .put(CMD_DEREGISTERSUBCLUSTER, DEREGISTER_SUBCLUSTER_USAGEINFOS)
+      // Command1: subCluster
+      .put(CMD_SUBCLUSTER, SUBCLUSTER_USAGEINFOS)
       // Command2: policy
       .put(CMD_POLICY, POLICY_USAGEINFOS)
       // Command3: application
@@ -408,27 +434,19 @@ public class RouterCLI extends Configured implements Tool {
     ToolRunner.printGenericCommandUsage(System.err);
   }
 
-  /**
-   * According to the parameter Deregister SubCluster.
-   *
-   * @param args parameter array.
-   * @return If the Deregister SubCluster operation is successful,
-   * it will return 0. Otherwise, it will return -1.
-   *
-   * @throws IOException raised on errors performing I/O.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws ParseException Exceptions thrown during parsing of a command-line.
-   */
-  private int handleDeregisterSubCluster(String[] args)
-      throws IOException, YarnException, ParseException {
-
+  private int handleSubCluster(String[] args) throws ParseException, IOException, YarnException {
     // Prepare Options.
     Options opts = new Options();
+    opts.addOption("subCluster", false,
+         "We provide a set of commands for SubCluster Include deregisterSubCluster, " +
+         "get SubClusters.");
     opts.addOption("deregisterSubCluster", false,
         "Deregister YARN subCluster, if subCluster Heartbeat Timeout.");
+    opts.addOption("getSubClusters", false,
+        "Get information about all subClusters of Federation.");
     Option subClusterOpt = new Option(OPTION_SC, OPTION_SUBCLUSTERID, true,
         "The subCluster can be specified using either the '-sc' or '--subCluster' option. " +
-         " If the subCluster's Heartbeat Timeout, it will be marked as 'SC_LOST'.");
+        " If the subCluster's Heartbeat Timeout, it will be marked as 'SC_LOST'.");
     subClusterOpt.setOptionalArg(true);
     opts.addOption(subClusterOpt);
 
@@ -442,14 +460,60 @@ public class RouterCLI extends Configured implements Tool {
       return EXIT_ERROR;
     }
 
-    // Try to parse the subClusterId.
-    String subClusterId = null;
-    if (cliParser.hasOption(OPTION_SC) || cliParser.hasOption(OPTION_SUBCLUSTERID)) {
-      subClusterId = cliParser.getOptionValue(OPTION_SC);
-      if (subClusterId == null) {
-        subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+    // deregister subCluster
+    if (cliParser.hasOption(OPTION_DEREGISTER_SUBCLUSTER)) {
+      String subClusterId = null;
+      if (cliParser.hasOption(OPTION_SC) || cliParser.hasOption(OPTION_SUBCLUSTERID)) {
+        subClusterId = cliParser.getOptionValue(OPTION_SC);
+        if (subClusterId == null) {
+          subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+        }
       }
+      return handleDeregisterSubCluster(subClusterId);
+    } else if (cliParser.hasOption(OPTION_GET_SUBCLUSTERS)) {
+      // get subClusters
+      return handleGetSubClusters();
+    } else {
+      // printUsage
+      printUsage(args[0]);
     }
+
+    return EXIT_ERROR;
+  }
+
+  private int handleGetSubClusters() throws IOException, YarnException {
+    PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+        System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    GetSubClustersRequest request = GetSubClustersRequest.newInstance();
+    GetSubClustersResponse response = adminProtocol.getFederationSubClusters(request);
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(GET_SUBCLUSTER_TITLE)
+        .addHeaders(GET_SUBCLUSTER_HEADER);
+    List<FederationSubCluster> federationSubClusters = response.getFederationSubClusters();
+    federationSubClusters.forEach(federationSubCluster -> {
+      String responseSubClusterId = federationSubCluster.getSubClusterId();
+      String state = federationSubCluster.getSubClusterState();
+      String lastHeartBeatTime = federationSubCluster.getLastHeartBeatTime();
+      formattingCLIUtils.addLine(responseSubClusterId, state, lastHeartBeatTime);
+    });
+    writer.print(formattingCLIUtils.render());
+    writer.flush();
+    return EXIT_SUCCESS;
+  }
+
+  /**
+   * According to the parameter Deregister SubCluster.
+   *
+   * @param subClusterId subClusterId.
+   * @return If the Deregister SubCluster operation is successful,
+   * it will return 0. Otherwise, it will return -1.
+   *
+   * @throws IOException raised on errors performing I/O.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws ParseException Exceptions thrown during parsing of a command-line.
+   */
+  private int handleDeregisterSubCluster(String subClusterId)
+      throws IOException, YarnException, ParseException {
 
     // If subClusterId is not empty, try deregisterSubCluster subCluster,
     // otherwise try deregisterSubCluster all subCluster.
@@ -965,8 +1029,8 @@ public class RouterCLI extends Configured implements Tool {
         printHelp();
       }
       return EXIT_SUCCESS;
-    } else if (CMD_DEREGISTERSUBCLUSTER.equals(cmd)) {
-      return handleDeregisterSubCluster(args);
+    } else if (CMD_SUBCLUSTER.equals(cmd)) {
+      return handleSubCluster(args);
     } else if (CMD_POLICY.equals(cmd)) {
       return handlePolicy(args);
     } else if (CMD_APPLICATION.equals(cmd)) {

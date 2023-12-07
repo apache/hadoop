@@ -639,6 +639,10 @@ public class TestRouterMetrics {
       metrics.incrListFederationQueuePoliciesFailedRetrieved();
     }
 
+    public void getFederationSubClustersFailedRetrieved() {
+      LOG.info("Mocked: failed GetFederationSubClusters call");
+      metrics.incrGetFederationSubClustersFailedRetrieved();
+    }
     public void getDeleteFederationPoliciesByQueuesFailedRetrieved() {
       LOG.info("Mocked: failed DeleteFederationPoliciesByQueues call");
       metrics.incrDeleteFederationPoliciesByQueuesRetrieved();
@@ -991,9 +995,14 @@ public class TestRouterMetrics {
       metrics.succeededListFederationQueuePoliciesRetrieved(duration);
     }
 
+    public void getFederationSubClustersRetrieved(long duration) {
+      LOG.info("Mocked: successful GetFederationSubClustersRetrieved " +
+          " call with duration {}", duration);
+      metrics.succeededGetFederationSubClustersRetrieved(duration);
+    }
     public void deleteFederationPoliciesByQueuesRetrieved(long duration) {
       LOG.info("Mocked: successful DeleteFederationPoliciesByQueuesRetrieved " +
-              " call with duration {}", duration);
+          " call with duration {}", duration);
       metrics.succeededDeleteFederationPoliciesByQueuesRetrieved(duration);
     }
   }
@@ -2321,6 +2330,29 @@ public class TestRouterMetrics {
         metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededListFederationQueuePoliciesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetFederationSubClustersFailedRetrieved() {
+    long totalBadBefore = metrics.getFederationSubClustersFailedRetrieved();
+    badSubCluster.getFederationSubClustersFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getFederationSubClustersFailedRetrieved());
+  }
+
+  @Test
+  public void testGetFederationSubClustersRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetFederationSubClustersRetrieved();
+    goodSubCluster.getFederationSubClustersRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetFederationSubClustersRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getFederationSubClustersRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetFederationSubClustersRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
   @Test

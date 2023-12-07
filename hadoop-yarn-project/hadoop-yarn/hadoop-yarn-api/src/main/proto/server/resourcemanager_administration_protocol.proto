@@ -52,5 +52,6 @@ service ResourceManagerAdministrationProtocolService {
   rpc batchSaveFederationQueuePolicies(BatchSaveFederationQueuePoliciesRequestProto) returns (BatchSaveFederationQueuePoliciesResponseProto);
   rpc listFederationQueuePolicies(QueryFederationQueuePoliciesRequestProto) returns (QueryFederationQueuePoliciesResponseProto);
   rpc deleteFederationApplication(DeleteFederationApplicationRequestProto) returns (DeleteFederationApplicationResponseProto);
+  rpc getFederationSubClusters(GetSubClustersRequestProto) returns (GetSubClustersResponseProto);
   rpc deleteFederationPoliciesByQueues(DeleteFederationQueuePoliciesRequestProto) returns (DeleteFederationQueuePoliciesResponseProto);
 }

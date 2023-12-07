@@ -211,6 +211,13 @@ message DeleteFederationApplicationResponseProto {
   optional string message = 1;
 }
 
+message GetSubClustersRequestProto {
+}
+
+message GetSubClustersResponseProto {
+  repeated FederationSubClusterProto subClusters = 1;
+}
+
 message DeleteFederationQueuePoliciesRequestProto {
   repeated string queues = 1;
 }
