@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
@@ -183,8 +182,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
 
-    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false)
-      && !isS3Express) {
+    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false) && !isS3Express) {
       // turn on ACLs so as to verify role DT permissions include
       // write access.
       conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
