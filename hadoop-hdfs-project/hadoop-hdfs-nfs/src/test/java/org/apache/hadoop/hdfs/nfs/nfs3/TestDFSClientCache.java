@@ -34,8 +34,8 @@ import org.junit.Test;
 import org.junit.AfterClass;
 
 public class TestDFSClientCache {
-  @AfterClass
-  public static void cleanup() {
+  @After
+  public void cleanup() {
     UserGroupInformation.reset();
   }
 
