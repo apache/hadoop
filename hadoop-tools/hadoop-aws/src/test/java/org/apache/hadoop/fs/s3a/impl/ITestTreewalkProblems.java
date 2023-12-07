@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.toPathList;
 import static org.apache.hadoop.fs.s3a.S3AUtils.HIDDEN_FILE_FILTER;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.ToolRunner.run;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
@@ -307,9 +308,18 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     final Path src = createDirWithUpload();
     final Path dest = new Path(base, "dest");
     file(new Path(src, "real-file"));
-    // distcp fails if uploads are visible
-    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
-        "-useiterator -update -delete -direct", getConfiguration());
+    final String options = "-useiterator -update -delete -direct";
+    if (!fs.hasPathCapability(base, DIRECTORY_LISTING_INCONSISTENT)) {
+      DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
+          options, getConfiguration());
+    } else {
+      // distcp fails if uploads are visible
+      intercept(org.junit.ComparisonFailure.class, () -> {
+        DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
+            options, getConfiguration());
+      });
+    }
+
   }
 
   @Test
@@ -321,9 +331,18 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     final Path dest = new Path(base, "dest");
     file(new Path(src, "real-file"));
 
-    // distcp fails if uploads are visible
-    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
-        "-update -delete -direct", getConfiguration());
+    final String options = "-update -delete -direct";
+    if (!fs.hasPathCapability(base, DIRECTORY_LISTING_INCONSISTENT)) {
+      DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
+          options, getConfiguration());
+    } else {
+      // distcp fails if uploads are visible
+      intercept(org.junit.ComparisonFailure.class, () -> {
+        DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
+            options, getConfiguration());
+      });
+    }
+
   }
 
   /**

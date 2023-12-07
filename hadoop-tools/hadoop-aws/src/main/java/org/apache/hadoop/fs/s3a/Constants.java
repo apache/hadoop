@@ -1525,4 +1525,22 @@ public final class Constants {
   public static final String STORE_CAPABILITY_AWS_V2 =
       "fs.s3a.capability.aws.v2";
 
+  /**
+   * Use the S3 Express createSession() operation to authenticate with
+   * S3Express storage?
+   * <p>
+   * Value: {@value}.
+   * <p>
+   * This is preferred as it is faster, but it does require extra IAM
+   * permissions and is not suited to some deployments, including some
+   * of the hadoop-aws test suites.
+   */
+  public static final String S3EXPRESS_CREATE_SESSION =
+      "fs.s3a.s3express.create.session";
+
+  /**
+   * Default value of {@link #S3EXPRESS_CREATE_SESSION}.
+   * Value: {@value}.
+   */
+  public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
 }

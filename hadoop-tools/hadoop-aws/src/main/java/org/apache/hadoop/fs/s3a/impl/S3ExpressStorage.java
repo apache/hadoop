@@ -57,7 +57,7 @@ public final class S3ExpressStorage {
    * This may get confused against third party stores, so takes the endpoint
    * and only supports aws endpoints round the world.
    * @param bucket bucket to probe
-   * @param endpoint endpoint string.
+   * @param endpoint endpoint string. If empty, this is considered an AWS endpoint.
    * @return true if the store is S3 Express.
    */
   public static boolean isS3ExpressStore(String bucket, final String endpoint) {

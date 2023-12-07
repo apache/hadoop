@@ -1045,7 +1045,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartCopyEnabled(isMultipartCopyEnabled)
         .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
-        .withRegion(configuredRegion);
+        .withRegion(configuredRegion)
+        .withExpressCreateSession(
+            conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT));
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
@@ -4498,6 +4500,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // way to predict read keys, and not worried about granting
     // too much encryption access.
     statements.add(STATEMENT_ALLOW_KMS_RW);
+    if (s3ExpressStore) {
+      LOG.warn("S3Express store polices not yet implemented");
+    }
 
     return statements;
   }
@@ -5440,7 +5445,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case SelectConstants.S3_SELECT_CAPABILITY:
       // select is only supported if enabled and client side encryption is
       // disabled.
-      return !isCSEEnabled && SelectBinding.isSelectEnabled(getConf());
+      return !isCSEEnabled
+          && SelectBinding.isSelectEnabled(getConf())
+          && !s3ExpressStore;
 
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration

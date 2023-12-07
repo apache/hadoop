@@ -86,6 +86,9 @@ public class ITestBucketTool extends AbstractS3ATestBase {
    */
   public static final String USWEST_AZ_2 = "usw2-az2";
 
+  public static final String INVALID_LOCATION =
+      "Invalid Name value for Location configuration";
+
   private String bucketName;
 
   private boolean s3ExpressStore;
@@ -118,7 +121,10 @@ public class ITestBucketTool extends AbstractS3ATestBase {
             fsURI));
     if (ex instanceof AWSBadRequestException) {
       // owned error
-      assertExceptionContains(OWNED, ex);
+      if (!ex.getMessage().contains(OWNED)
+          && !ex.getMessage().contains(INVALID_LOCATION)) {
+        throw ex;
+      }
     } else if (ex instanceof UnknownHostException) {
       // endpoint region stuff, expect the error to include the s3express endpoint
       // name

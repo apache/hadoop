@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
+import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -76,6 +77,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -470,12 +472,24 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if encryption tests are disabled.
+   * Disable S3Express createSession calls.
+   * @param conf configuration to patch
+   * @return the configuration.
+   */
+  public static Configuration disableCreateSession(Configuration conf) {
+    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
+    return conf;
+  }
+
+  /**
+   * Skip a test if encryption tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfEncryptionTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_ENCRYPTION_TESTS, "Skipping encryption tests");
+    skipIfS3ExpressBucket(configuration);
   }
 
   /**
@@ -493,23 +507,72 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if storage class tests are disabled.
+   * Skip a test if storage class tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfStorageClassTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_STORAGE_CLASS_TESTS_ENABLED,
         "Skipping storage class tests");
+    skipIfS3ExpressBucket(configuration);
   }
 
   /**
-   * Skip a test if ACL class tests are disabled.
+   * Skip a test if ACL class tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfACLTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_ACL_TESTS_ENABLED,
         "Skipping storage class ACL tests");
+    skipIfS3ExpressBucket(configuration);
+  }
+
+  /**
+   * Skip a test if the test bucket is an S3Express bucket.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfS3ExpressBucket(
+      Configuration configuration) {
+    assume("Skipping test as bucket is an S3Express bucket",
+        !isS3ExpressTestBucket(configuration));
+  }
+
+  /**
+   * Is the test bucket an S3Express bucket?
+   * @param conf configuration
+   * @return true if the bucket is an S3Express bucket.
+   */
+  public static boolean isS3ExpressTestBucket(final Configuration conf) {
+    return S3ExpressStorage.isS3ExpressStore(getTestBucketName(conf), "");
+  }
+
+  /**
+   * Skip a test if the filesystem lacks a required capability.
+   * @param fs filesystem
+   * @param capability capability
+   */
+  public static void assumePathCapability(FileSystem fs, String capability) {
+    try {
+      assume("Filesystem lacks capability " + capability,
+          fs.hasPathCapability(new Path("/"), capability));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }  /**
+   * Skip a test if the filesystem has a required capability.
+   * @param fs filesystem
+   * @param capability capability
+   */
+  public static void assumePathCapabilityFalse(FileSystem fs, String capability) {
+    try {
+      assume("Filesystem has capability " + capability,
+          !fs.hasPathCapability(new Path("/"), capability));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -1016,16 +1079,14 @@ public final class S3ATestUtils {
    * Require a test case to be against Amazon S3 Express store.
    */
   public static void assumeS3ExpressFileSystem(final FileSystem fs) throws IOException {
-    assume("store is not S3 Express: " + fs.getUri(),
-        fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE));
+    assumePathCapability(fs, STORE_CAPABILITY_S3_EXPRESS_STORAGE);
   }
 
   /**
    * Require a test case to be against a standard S3 store.
    */
-  public static void assumeNotS3ExpressFileSystem(final FileSystem fs) throws IOException {
-    assume("store is S3 Express: " + fs.getUri(),
-        !fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE));
+  public static void assumeNotS3ExpressFileSystem(final FileSystem fs) {
+    assumePathCapabilityFalse(fs, STORE_CAPABILITY_S3_EXPRESS_STORAGE);
   }
 
   /**
