@@ -57,11 +57,11 @@ import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
-import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
 
 

@@ -5760,10 +5760,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .build();
   }
 
-  public CreateSessionResponse createSessionInternal(CreateSessionRequest createSessionRequest){
-    return this.s3Client.createSession(createSessionRequest);
-  }
-
   /**
    * Create a marker tools operations binding for this store.
    * Auditing:
