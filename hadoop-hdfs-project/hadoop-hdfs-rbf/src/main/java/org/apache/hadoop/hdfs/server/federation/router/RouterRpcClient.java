@@ -1119,10 +1119,10 @@ public class RouterRpcClient {
     // Invoke in priority order
     for (final RemoteLocationContext loc : locations) {
       String ns = loc.getNameserviceId();
-      acquirePermit(ns, ugi, remoteMethod, controller);
       boolean isObserverRead = isObserverReadEligible(ns, m);
       List<? extends FederationNamenodeContext> namenodes =
           getOrderedNamenodes(ns, isObserverRead);
+      acquirePermit(ns, ugi, remoteMethod, controller);
       try {
         Class<?> proto = remoteMethod.getProtocol();
         Object[] params = remoteMethod.getParams(loc);
@@ -1482,11 +1482,11 @@ public class RouterRpcClient {
       // Shortcut, just one call
       T location = locations.iterator().next();
       String ns = location.getNameserviceId();
-      RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-      acquirePermit(ns, ugi, method, controller);
       boolean isObserverRead = isObserverReadEligible(ns, m);
       final List<? extends FederationNamenodeContext> namenodes =
           getOrderedNamenodes(ns, isObserverRead);
+      RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
+      acquirePermit(ns, ugi, method, controller);
       try {
         Class<?> proto = method.getProtocol();
         Object[] paramList = method.getParams(location);
