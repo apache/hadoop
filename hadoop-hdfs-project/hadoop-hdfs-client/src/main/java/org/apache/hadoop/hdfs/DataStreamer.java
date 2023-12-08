@@ -959,7 +959,8 @@ class DataStreamer extends Daemon {
       if (TimeUnit.NANOSECONDS.toMillis(duration) > dfsclientSlowLogThresholdMs) {
         LOG.warn("Slow waitForAckedSeqno took {}ms (threshold={}ms). File being"
                 + " written: {}, block: {}, Write pipeline datanodes: {}.",
-            TimeUnit.NANOSECONDS.toMillis(duration), dfsclientSlowLogThresholdMs, src, block, nodes);
+            TimeUnit.NANOSECONDS.toMillis(duration), dfsclientSlowLogThresholdMs,
+            src, block, nodes);
       }
     }
   }
