@@ -26,17 +26,17 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
-import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
-import org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
-import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.After;
 import org.junit.Assert;
@@ -207,10 +207,11 @@ public class TestGPGPolicyFacade {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(new Configuration());
 
-    // ###
-    Map<SubClusterIdInfo, Float> amRMPolicyWeights = new HashMap<>();
-    amRMPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.7f);
-    amRMPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.3f);
+    // root.a uses WeightedLocalityPolicyManager.
+    // Step1. Prepare amRMPolicyWeights.
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
+    amrmPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.7f);
+    amrmPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.3f);
 
     Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
     routerPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.6f);
@@ -218,19 +219,40 @@ public class TestGPGPolicyFacade {
 
     WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
     weightedPolicyInfo.setHeadroomAlpha(1);
-    weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+    weightedPolicyInfo.setAMRMPolicyWeights(amrmPolicyWeights);
     weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
 
+    // Step2. Set PolicyConfiguration.
     String policyManagerType = WeightedLocalityPolicyManager.class.getName();
     SubClusterPolicyConfiguration config = SubClusterPolicyConfiguration.newInstance("root.a",
-        policyManagerType,weightedPolicyInfo.toByteBuffer());
+        policyManagerType, weightedPolicyInfo.toByteBuffer());
     SetSubClusterPolicyConfigurationRequest request =
         SetSubClusterPolicyConfigurationRequest.newInstance(config);
     stateStore.setPolicyConfiguration(request);
 
+    // Step3. Get FederationPolicyManager using policyFacade.
     facade.reinitialize(stateStore, conf);
     policyFacade = new GPGPolicyFacade(facade, conf);
     FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.a");
     Assert.assertNotNull(policyManager);
+    Assert.assertTrue(policyManager.isSupportWeightedPolicyInfo());
+    WeightedPolicyInfo weightedPolicyInfo1 = policyManager.getWeightedPolicyInfo();
+    Assert.assertNotNull(weightedPolicyInfo1);
+
+    // Step4. Confirm amrmPolicyWeight is accurate.
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights1 = weightedPolicyInfo1.getAMRMPolicyWeights();
+    Assert.assertNotNull(amrmPolicyWeights1);
+    Float sc1Float = amrmPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
+    Float sc2Float = amrmPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
+    Assert.assertEquals(0.7, sc1Float, 0.001);
+    Assert.assertEquals(0.3, sc2Float, 0.001);
+
+    // Step5. Confirm amrmPolicyWeight is accurate.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights1 = weightedPolicyInfo1.getRouterPolicyWeights();
+    Assert.assertNotNull(routerPolicyWeights1);
+    Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
+    Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
+    Assert.assertEquals(0.6, sc1Float1, 0.001);
+    Assert.assertEquals(0.4, sc2Float2, 0.001);
   }
 }
