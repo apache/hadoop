@@ -161,7 +161,7 @@ public class TestClientProtocolForPipelineRecovery {
     MiniDFSCluster cluster = null;
 
     try {
-      int numDataNodes = 3;
+      int numDataNodes = 5;
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
       FileSystem fileSys = cluster.getFileSystem();
@@ -934,7 +934,7 @@ public class TestClientProtocolForPipelineRecovery {
       int count = 0;
       Random r = new Random();
       byte[] b = new byte[oneWriteSize];
-      while (count < threshold) {
+      while (count < threshold + 1) {
         r.nextBytes(b);
         o.write(b);
         count++;

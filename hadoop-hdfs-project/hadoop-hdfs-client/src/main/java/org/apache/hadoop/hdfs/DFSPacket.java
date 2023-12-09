@@ -42,7 +42,7 @@ public class DFSPacket {
   public static final long HEART_BEAT_SEQNO = -1L;
   private static final SpanContext[] EMPTY = new SpanContext[0];
   private final long seqno; // sequence number of buffer in block
-  private final long offsetInBlock; // offset in block
+  private long offsetInBlock; // offset in block
   private boolean syncBlock; // this packet forces the current block to disk
   private int numChunks; // number of chunks currently in packet
   private final int maxChunks; // max chunks in packet
@@ -359,5 +359,13 @@ public class DFSPacket {
 
   public Span getSpan() {
     return span;
+  }
+
+  public void setOffsetInBlock(long offsetInBlock) {
+    this.offsetInBlock = offsetInBlock;
+  }
+
+  public long getOffsetInBlock() {
+    return offsetInBlock;
   }
 }
