@@ -1368,7 +1368,50 @@ public class TestIPC {
       server.stop();
     }
   }
-  
+
+  /**
+   * Test if the callCreateTime set at the client is passed to the server.
+   * @throws IOException
+   */
+  @Test(timeout=60000)
+  public void testClientCallCreateTime() throws IOException {
+    final long callCreateTime = 10;
+
+    // Override client to store the call info and check response
+    final Client client = new Client(LongWritable.class, conf) {
+      @Override
+      Call createCall(RpcKind rpcKind, Writable rpcRequest) {
+        final Call call = super.createCall(rpcKind, rpcRequest, callCreateTime);
+        return call;
+      }
+
+      @Override
+      void checkResponse(RpcResponseHeaderProto header) throws IOException {
+        super.checkResponse(header);
+      }
+    };
+
+    // Attach a listener that tracks every call received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        Assert.assertEquals(callCreateTime, Server.getClientCallCreateTime());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
   /** A dummy protocol */
   interface DummyProtocol {
     @Idempotent
