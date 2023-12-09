@@ -71,4 +71,9 @@ public class HomePolicyManager extends AbstractPolicyManager {
     throw new NotImplementedException(
         "HomePolicyManager does not implement setWeightedPolicyInfo.");
   }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
+  }
 }

@@ -50,4 +50,9 @@ public class RejectAllPolicyManager extends AbstractPolicyManager {
     throw new NotImplementedException(
         "RejectAllPolicyManager does not implement setWeightedPolicyInfo.");
   }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
+  }
 }

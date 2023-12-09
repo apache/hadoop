@@ -48,4 +48,9 @@ public class HashBroadcastPolicyManager extends AbstractPolicyManager {
     throw new NotImplementedException(
         "HashBroadcastPolicyManager does not implement setWeightedPolicyInfo.");
   }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
+  }
 }

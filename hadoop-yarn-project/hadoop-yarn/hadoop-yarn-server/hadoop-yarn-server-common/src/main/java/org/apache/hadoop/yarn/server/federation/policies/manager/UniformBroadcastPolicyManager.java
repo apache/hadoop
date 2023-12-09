@@ -54,4 +54,9 @@ public class UniformBroadcastPolicyManager extends AbstractPolicyManager {
     throw new NotImplementedException(
         "UniformBroadcastPolicyManager does not implement setWeightedPolicyInfo.");
   }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
+  }
 }

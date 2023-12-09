@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -123,22 +124,27 @@ public class GPGPolicyFacade {
           return null;
         }
 
-        policyManager = FederationPolicyUtils.instantiatePolicyManager(conf.getType());
+        // Generate PolicyManager based on PolicyManagerType.
+        String policyManagerType = conf.getType();
+        policyManager = FederationPolicyUtils.instantiatePolicyManager(policyManagerType);
         policyManager.setQueue(queueName);
 
-        // TODO there is currently no way to cleanly deserialize a policy
-        // manager sub type from just the configuration
-        if (policyManager instanceof WeightedLocalityPolicyManager) {
-          WeightedPolicyInfo wpinfo =
+        // If PolicyManager supports Weighted PolicyInfo, it means that
+        // we need to use this parameter to determine which sub-cluster the router goes to
+        // or which sub-cluster the container goes to.
+        if (policyManager.isSupportWeightedPolicyInfo()) {
+          ByteBuffer weightedPolicyInfoParams = conf.getParams();
+          if (weightedPolicyInfoParams == null) {
+            LOG.warn("Warning: Queue = {}, FederationPolicyManager {} WeightedPolicyInfo is empty.",
+                queueName, policyManagerType);
+            return null;
+          }
+          WeightedPolicyInfo weightedPolicyInfo =
               WeightedPolicyInfo.fromByteBuffer(conf.getParams());
-          WeightedLocalityPolicyManager wlpmanager =
-              (WeightedLocalityPolicyManager) policyManager;
-          LOG.info("Updating policy for queue {} to configured weights router: {}, amrmproxy: {}",
-              queueName, wpinfo.getRouterPolicyWeights(), wpinfo.getAMRMPolicyWeights());
-          wlpmanager.setWeightedPolicyInfo(wpinfo);
+          policyManager.setWeightedPolicyInfo(weightedPolicyInfo);
         } else {
-          LOG.warn("Warning: FederationPolicyManager of unsupported type {}, initialization may be incomplete.",
-              policyManager.getClass());
+          LOG.warn("Warning: FederationPolicyManager of unsupported WeightedPolicyInfo type {}, " +
+              "initialization may be incomplete.", policyManager.getClass());
         }
 
         policyManagerMap.put(queueName, policyManager);
@@ -150,37 +156,6 @@ public class GPGPolicyFacade {
       }
     }
     return policyManager;
-  }
-
-  private void instantiatePolicyManager(String queue,
-      SubClusterPolicyConfiguration conf, WeightedPolicyInfo wpinfo)
-      throws FederationPolicyInitializationException {
-    switch (conf.getType()) {
-      case "WeightedLocalityPolicyManager":
-        break;
-      case "WeightedHomePolicyManager":
-        break;
-      case "PriorityBroadcastPolicyManager":
-        break;
-      case "HomePolicyManager":
-      case "RejectAllPolicyManager":
-      case "UniformBroadcastPolicyManager":
-      case "HashBroadcastPolicyManager":
-        LOG.warn("Warning: FederationPolicyManager of unsupported type {}, " +
-            "initialization may be incomplete.", conf.getType());
-        break;
-      default:
-        break;
-    }
-  }
-
-  private void handWeightedLocalityPolicyManager(String queue,
-      FederationPolicyManager policyManager, WeightedPolicyInfo weightedPolicyInfo) {
-    WeightedLocalityPolicyManager weightedLocalityPolicyManager =
-        (WeightedLocalityPolicyManager) policyManager;
-    LOG.info("Updating policy for queue {} to configured weights router: {}, amrmproxy: {}",
-        queue, weightedPolicyInfo.getRouterPolicyWeights(), weightedPolicyInfo.getAMRMPolicyWeights());
-    weightedLocalityPolicyManager.setWeightedPolicyInfo(weightedPolicyInfo);
   }
 
   /**

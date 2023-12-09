@@ -204,9 +204,8 @@ public class TestGPGPolicyFacade {
   }
 
   @Test
-  public void textXXX(){
-    FederationPolicyManager pm1 = new HashBroadcastPolicyManager();
-    System.out.println(pm1.getClass().getSimpleName());
+  public void textGetPolicyManager() throws YarnException {
+    policyFacade = new GPGPolicyFacade(facade, conf);
+    policyFacade.getPolicyManager("root.a");
   }
-
 }
