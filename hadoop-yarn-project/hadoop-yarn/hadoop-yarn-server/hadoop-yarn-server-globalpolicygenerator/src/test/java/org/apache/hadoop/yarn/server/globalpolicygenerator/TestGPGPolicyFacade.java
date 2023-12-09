@@ -23,12 +23,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.HomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.RejectAllPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
@@ -44,9 +51,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -203,12 +212,12 @@ public class TestGPGPolicyFacade {
   }
 
   @Test
-  public void textGetPolicyManager() throws YarnException {
+  public void testGetWeightedLocalityPolicyManager() throws YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(new Configuration());
 
     // root.a uses WeightedLocalityPolicyManager.
-    // Step1. Prepare amRMPolicyWeights.
+    // Step1. Prepare amRMPolicyWeights and routerPolicyWeights
     Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
     amrmPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.7f);
     amrmPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.3f);
@@ -238,6 +247,7 @@ public class TestGPGPolicyFacade {
     Assert.assertTrue(policyManager.isSupportWeightedPolicyInfo());
     WeightedPolicyInfo weightedPolicyInfo1 = policyManager.getWeightedPolicyInfo();
     Assert.assertNotNull(weightedPolicyInfo1);
+    Assert.assertTrue(policyManager instanceof WeightedLocalityPolicyManager);
 
     // Step4. Confirm amrmPolicyWeight is accurate.
     Map<SubClusterIdInfo, Float> amrmPolicyWeights1 = weightedPolicyInfo1.getAMRMPolicyWeights();
@@ -254,5 +264,91 @@ public class TestGPGPolicyFacade {
     Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
     Assert.assertEquals(0.6, sc1Float1, 0.001);
     Assert.assertEquals(0.4, sc2Float2, 0.001);
+  }
+
+  @Test
+  public void testGetWeightedHomePolicyManager() throws YarnException {
+    stateStore = new MemoryFederationStateStore();
+    stateStore.init(new Configuration());
+
+    // root.b uses WeightedHomePolicyManager.
+    // Step1. Prepare routerPolicyWeights.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
+    routerPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.8f);
+    routerPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.2f);
+
+    WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+    weightedPolicyInfo.setHeadroomAlpha(1);
+    weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+    // Step2. Set PolicyConfiguration.
+    String policyManagerType = WeightedHomePolicyManager.class.getName();
+    SubClusterPolicyConfiguration config = SubClusterPolicyConfiguration.newInstance("root.b",
+        policyManagerType, weightedPolicyInfo.toByteBuffer());
+    SetSubClusterPolicyConfigurationRequest request =
+        SetSubClusterPolicyConfigurationRequest.newInstance(config);
+    stateStore.setPolicyConfiguration(request);
+
+    // Step3. Get FederationPolicyManager using policyFacade.
+    facade.reinitialize(stateStore, conf);
+    policyFacade = new GPGPolicyFacade(facade, conf);
+    FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.b");
+    Assert.assertNotNull(policyManager);
+    Assert.assertTrue(policyManager.isSupportWeightedPolicyInfo());
+    WeightedPolicyInfo weightedPolicyInfo1 = policyManager.getWeightedPolicyInfo();
+    Assert.assertNotNull(weightedPolicyInfo1);
+
+    // Step4. Confirm amrmPolicyWeight is accurate.
+    Map<SubClusterIdInfo, Float> amrmPolicyWeights1 = weightedPolicyInfo1.getAMRMPolicyWeights();
+    Assert.assertNotNull(amrmPolicyWeights1);
+    Assert.assertEquals(0, amrmPolicyWeights1.size());
+
+    // Step5. Confirm amrmPolicyWeight is accurate.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights1 = weightedPolicyInfo1.getRouterPolicyWeights();
+    Assert.assertNotNull(routerPolicyWeights1);
+    Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
+    Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
+    Assert.assertEquals(0.8, sc1Float1, 0.001);
+    Assert.assertEquals(0.2, sc2Float2, 0.001);
+  }
+
+  @Test
+  public void testGetUniformBroadcastPolicyManager() throws Exception {
+    stateStore = new MemoryFederationStateStore();
+    stateStore.init(new Configuration());
+
+    List<String> notSupportWeightedPolicyInfos = new ArrayList<>();
+    notSupportWeightedPolicyInfos.add(HashBroadcastPolicyManager.class.getName());
+    notSupportWeightedPolicyInfos.add(UniformBroadcastPolicyManager.class.getName());
+    notSupportWeightedPolicyInfos.add(HomePolicyManager.class.getName());
+    notSupportWeightedPolicyInfos.add(RejectAllPolicyManager.class.getName());
+    String prefix = "org.apache.hadoop.yarn.server.federation.policies.manager.";
+
+    for (String policyManagerType : notSupportWeightedPolicyInfos) {
+      // root.c uses UniformBroadcastPolicyManager.
+      // Step1. Prepare routerPolicyWeights.
+      WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+      weightedPolicyInfo.setHeadroomAlpha(1);
+
+      // Step2. Set PolicyConfiguration.
+      SubClusterPolicyConfiguration config = SubClusterPolicyConfiguration.newInstance("root.c",
+          policyManagerType, weightedPolicyInfo.toByteBuffer());
+      SetSubClusterPolicyConfigurationRequest request =
+          SetSubClusterPolicyConfigurationRequest.newInstance(config);
+      stateStore.setPolicyConfiguration(request);
+
+      // Step3. Get FederationPolicyManager using policyFacade.
+      facade.reinitialize(stateStore, conf);
+      policyFacade = new GPGPolicyFacade(facade, conf);
+      FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.c");
+      Assert.assertNotNull(policyManager);
+      Assert.assertFalse(policyManager.isSupportWeightedPolicyInfo());
+      String policyManagerTypeSimple = policyManagerType.replace(prefix,"");
+      // Verify that PolicyManager is initialized successfully,
+      // but getWeightedPolicyInfo is not supported.
+      LambdaTestUtils.intercept(NotImplementedException.class,
+          policyManagerTypeSimple + " does not implement getWeightedPolicyInfo.",
+          () -> policyManager.getWeightedPolicyInfo());
+    }
   }
 }

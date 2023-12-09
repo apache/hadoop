@@ -135,7 +135,8 @@ public interface FederationPolicyManager {
   /**
    * PolicyManager Whether to support WeightedPolicyInfo.
    * Some of PolicyManagers do not support WeightedPolicyInfo.
-   * @return
+   * @return true, supports WeightedPolicyInfo;
+   * false, WeightedPolicyInfo is not supported
    */
   boolean isSupportWeightedPolicyInfo();
 }
