@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.manager.HashBroadcastPolicyManager;
@@ -35,11 +36,7 @@ import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalit
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,7 +44,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -205,7 +204,33 @@ public class TestGPGPolicyFacade {
 
   @Test
   public void textGetPolicyManager() throws YarnException {
+    stateStore = new MemoryFederationStateStore();
+    stateStore.init(new Configuration());
+
+    // ###
+    Map<SubClusterIdInfo, Float> amRMPolicyWeights = new HashMap<>();
+    amRMPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.7f);
+    amRMPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.3f);
+
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
+    routerPolicyWeights.put(new SubClusterIdInfo("SC-1"), 0.6f);
+    routerPolicyWeights.put(new SubClusterIdInfo("SC-2"), 0.4f);
+
+    WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+    weightedPolicyInfo.setHeadroomAlpha(1);
+    weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+    weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+    String policyManagerType = WeightedLocalityPolicyManager.class.getName();
+    SubClusterPolicyConfiguration config = SubClusterPolicyConfiguration.newInstance("root.a",
+        policyManagerType,weightedPolicyInfo.toByteBuffer());
+    SetSubClusterPolicyConfigurationRequest request =
+        SetSubClusterPolicyConfigurationRequest.newInstance(config);
+    stateStore.setPolicyConfiguration(request);
+
+    facade.reinitialize(stateStore, conf);
     policyFacade = new GPGPolicyFacade(facade, conf);
-    policyFacade.getPolicyManager("root.a");
+    FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.a");
+    Assert.assertNotNull(policyManager);
   }
 }
