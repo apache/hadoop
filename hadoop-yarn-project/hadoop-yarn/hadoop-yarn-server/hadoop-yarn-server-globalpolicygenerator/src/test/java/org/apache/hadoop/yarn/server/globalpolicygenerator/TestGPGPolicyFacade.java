@@ -258,7 +258,8 @@ public class TestGPGPolicyFacade {
     Assert.assertEquals(0.3, sc2Float, 0.001);
 
     // Step5. Confirm amrmPolicyWeight is accurate.
-    Map<SubClusterIdInfo, Float> routerPolicyWeights1 = weightedPolicyInfo1.getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> routerPolicyWeights1 =
+        weightedPolicyInfo1.getRouterPolicyWeights();
     Assert.assertNotNull(routerPolicyWeights1);
     Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
     Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
@@ -304,7 +305,8 @@ public class TestGPGPolicyFacade {
     Assert.assertEquals(0, amrmPolicyWeights1.size());
 
     // Step5. Confirm amrmPolicyWeight is accurate.
-    Map<SubClusterIdInfo, Float> routerPolicyWeights1 = weightedPolicyInfo1.getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> routerPolicyWeights1 =
+        weightedPolicyInfo1.getRouterPolicyWeights();
     Assert.assertNotNull(routerPolicyWeights1);
     Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
     Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
@@ -343,7 +345,7 @@ public class TestGPGPolicyFacade {
       FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.c");
       Assert.assertNotNull(policyManager);
       Assert.assertFalse(policyManager.isSupportWeightedPolicyInfo());
-      String policyManagerTypeSimple = policyManagerType.replace(prefix,"");
+      String policyManagerTypeSimple = policyManagerType.replace(prefix, "");
       // Verify that PolicyManager is initialized successfully,
       // but getWeightedPolicyInfo is not supported.
       LambdaTestUtils.intercept(NotImplementedException.class,
