@@ -606,15 +606,27 @@ We allow the Router to initiate a separate thread for periodically monitoring th
 
 **Note** We don't need to configure the subCluster deregister checking threads for all Routers; using 1-2 Routers for checking is sufficient.
 
+#### How to configure allow partial result
+
+The Router is used to connect multiple YARN SubClusters and plays a role in merging the returned results from multiple subClusters for certain interfaces. However, if a subcluster undergoes RM upgrade or encounters RM failure, calling that particular RM will not return the correct results. 
+To address this issue, the Router provides configuration that allows returning partial results. When we configure the relevant parameters, the Router will skip the failed subClusters and only return results from the other subClusters. 
+This ensures that we can obtain at least some correct results.
+
+| Property                                              | Example | Description                                   |
+|:------------------------------------------------------|:--------|:----------------------------------------------|
+| `yarn.router.interceptor.allow-partial-result.enable` | `false` | Whether to support returning partial results. |
+
+**Note** It is important to note that even if we configure the parameters, if all sub-clusters return failures, the Router will still throw an exception. This is because there are no available results to return, making it impossible to provide a valid response.
+
 #### How to use Router Command Line
 
-##### Cmd1: deregisterSubCluster
+##### Cmd1: subCluster
 
 This command is used to `deregister subCluster`, If the interval between the heartbeat time of the subCluster, and the current time exceeds the timeout period, set the state of the subCluster to `SC_LOST`.
 
 Usage:
 
-`yarn routeradmin -deregisterSubCluster [-sc|--subClusterId <subCluster Id>]`
+`yarn routeradmin -subCluster -deregisterSubCluster [-sc|--subClusterId <subCluster Id>]`
 
 Options:
 
@@ -627,8 +639,8 @@ Examples:
 If we want to deregisterSubCluster `SC-1`
 
 ```
- yarn routeradmin -deregisterSubCluster -sc SC-1
- yarn routeradmin -deregisterSubCluster --subClusterId SC-1
+ yarn routeradmin -subCluster -deregisterSubCluster -sc SC-1
+ yarn routeradmin -subCluster -deregisterSubCluster --subClusterId SC-1
 ```
 
 ##### Cmd2: policy
