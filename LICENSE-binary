@@ -238,7 +238,7 @@ com.google.j2objc:j2objc-annotations:1.1
 com.google.json-simple:json-simple:1.1.1
 com.google.guava:failureaccess:1.0
 com.google.guava:guava:20.0
-com.google.guava:guava:27.0-jre
+com.google.guava:guava:32.0.1-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.37.2
