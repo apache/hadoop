@@ -1483,7 +1483,7 @@ public class TestRPC extends TestRpcBase {
   }
 
   /**
-   * Test per-type RPC round-trip time metric
+   * Test per-type RPC round-trip time metric.
    */
   @Test
   public void testRpcRTTMetric() throws Exception {
@@ -1517,7 +1517,8 @@ public class TestRPC extends TestRpcBase {
       // Rpc round-trip time should be longer than server-side overall processing time.
       assertCounter("RoundTripLockAndSleepNumOps", 1L, rttRB);
       double rttLockAndSleepAvgTime = getDoubleGauge("RoundTripLockAndSleepAvgTime", rttRB);
-      double serverSideLockAndSleepAvgTime = getDoubleGauge("OverallLockAndSleepAvgTime", overallRB);
+      double serverSideLockAndSleepAvgTime =
+          getDoubleGauge("OverallLockAndSleepAvgTime", overallRB);
       assertTrue(rttLockAndSleepAvgTime > serverSideLockAndSleepAvgTime);
     } finally {
       stop(server, proxy);

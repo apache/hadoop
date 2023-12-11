@@ -287,7 +287,7 @@ public class Client implements AutoCloseable {
     boolean done;               // true when call is done
     private final Object externalHandler;
     private AlignmentContext alignmentContext;
-    final long createTimeNanos;  // creation time for this call at the client
+    private final long createTimeNanos;  // creation time for this call at the client
 
     private Call(RPC.RpcKind rpcKind, Writable param) {
       this(rpcKind, param, Time.monotonicNowNanos());

@@ -194,8 +194,8 @@ public abstract class Server {
   }
 
   /**
-   * ExceptionsHandler manages Exception groups for special handling
-   * e.g., terse exception group for concise logging messages
+   * ExceptionsHandler manages Exception groups for special handling,
+   * such as terse exception group for concise logging messages
    */
   static class ExceptionsHandler {
 
@@ -979,7 +979,7 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
-    long clientCallCreateTimeNanos; // call create time at client side
+    private long clientCallCreateTimeNanos; // call create time at client side
     private final long timestampNanos; // time the call was received
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
