@@ -114,7 +114,7 @@ public class RpcDetailedMetrics {
   }
 
   /**
-   * Add an RPC round-trip time sample
+   * Add an RPC round-trip time sample.
    * @param rpcCallName of the RPC call
    * @param rtt  rpc round-trip time , from call create time at the client to
    *             a response is sent back to the client.
