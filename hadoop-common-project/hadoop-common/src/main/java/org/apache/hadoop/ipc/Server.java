@@ -1003,7 +1003,7 @@ public abstract class Server {
 
     Call(Call call) {
       this(call.callId, call.retryCount, call.rpcKind, call.clientId,
-          call.span, call.callerContext, 0);
+          call.span, call.callerContext, call.clientCallCreateTimeNanos);
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId) {
