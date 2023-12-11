@@ -178,8 +178,9 @@ public class EditLogTailer {
    */
   private Timer timer;
 
-  public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
-    this.tailerThread = new EditLogTailerThread();
+  public EditLogTailer(FSNamesystem namesystem, Configuration conf,
+      boolean shouldTriggerActiveLogRoll) {
+    this.tailerThread = new EditLogTailerThread(shouldTriggerActiveLogRoll);
     this.conf = conf;
     this.namesystem = namesystem;
     this.timer = new Timer();
@@ -476,13 +477,20 @@ public class EditLogTailer {
    */
   private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
+    private final boolean shouldTriggerActiveLogRoll;
     
-    private EditLogTailerThread() {
+    private EditLogTailerThread(boolean shouldTriggerActiveLogRoll) {
       super("Edit log tailer");
+      this.shouldTriggerActiveLogRoll = shouldTriggerActiveLogRoll;
     }
     
     private void setShouldRun(boolean shouldRun) {
       this.shouldRun = shouldRun;
+    }
+
+    @VisibleForTesting
+    public long getLastRollTimeMs(){
+      return lastRollTimeMs;
     }
     
     @Override
@@ -507,7 +515,8 @@ public class EditLogTailer {
           // triggered.
           boolean triggeredLogRoll = false;
           if (tooLongSinceLastLoad() &&
-              lastRollTriggerTxId < lastLoadedTxnId) {
+              lastRollTriggerTxId < lastLoadedTxnId &&
+              shouldTriggerActiveLogRoll) {
             triggerActiveLogRoll();
             triggeredLogRoll = true;
           }
