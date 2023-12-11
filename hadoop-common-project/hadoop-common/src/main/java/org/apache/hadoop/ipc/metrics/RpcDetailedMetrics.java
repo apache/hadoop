@@ -41,7 +41,7 @@ public class RpcDetailedMetrics {
   @Metric MutableRatesWithAggregation rates;
   @Metric MutableRatesWithAggregation deferredRpcRates;
   /**
-   * per-method overall RPC processing time, from request arrival to when the
+   * per-method overall RPC processing time at the server-side, from request enqueuing to when the
    * response is sent back.
    */
   @Metric MutableRatesWithAggregation overallRpcProcessingRates;
