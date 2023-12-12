@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.TestLeaseRecoveryStriped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1125,5 +1126,34 @@ public class TestDatanodeManager {
     public MockDfsNetworkTopology(){
       super();
     }
+  }
+
+  @Test
+  public void testComputeReconstructedTaskNum() {
+    int xmitsInProgress = 13000000;
+    int maxReplicationStreams = 200;
+    int ecBlocksToBeReplicated = 200;
+    int totalBlocks = 500;
+    int maxTransfers = maxReplicationStreams - xmitsInProgress;
+
+    // When maxTransfers is negative, the returned result should also be negative.
+    Assert.assertTrue(checkNumReconstructedTasksFixed(ecBlocksToBeReplicated,
+        maxTransfers, totalBlocks) < 0);
+
+    Assert.assertTrue(checkNumReconstructedTasksOrigin(ecBlocksToBeReplicated,
+        maxTransfers, totalBlocks) > 0);
+  }
+
+  private int checkNumReconstructedTasksFixed(int ecBlocksToBeErasureCoded, int maxTransfers,
+      int totalBlocks) {
+    return (int) Math.ceil(
+        (double) ecBlocksToBeErasureCoded * maxTransfers / totalBlocks);
+
+  }
+
+  private int checkNumReconstructedTasksOrigin(int ecBlocksToBeErasureCoded, int maxTransfers,
+      int totalBlocks) {
+    return (int) Math.ceil(
+        (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
   }
 }
