@@ -287,6 +287,9 @@ public interface HdfsClientConfigKeys {
       "dfs.client.output.stream.uniq.default.key";
   String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
 
+  String DFS_CLIENT_WEBHDFS_USE_BASE_PATH_KEY = "dfs.client.webhdfs.use-base-path";
+  boolean DFS_CLIENT_WEBHDFS_USE_BASE_PATH_DEFAULT = false;
+
   /**
    * These are deprecated config keys to client code.
    */

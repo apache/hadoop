@@ -373,7 +373,7 @@ public class TestWebHdfsUrl {
   }
 
   private WebHdfsFileSystem getWebHdfsFileSystem(UserGroupInformation ugi,
-      Configuration conf) throws IOException {
+      Configuration conf, URI fsUri) throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
           ugi.getUserName()), null, null);
@@ -384,11 +384,16 @@ public class TestWebHdfsUrl {
       Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
           dtId, dtSecretManager);
       SecurityUtil.setTokenService(
-          token, NetUtils.createSocketAddr(uri.getAuthority()));
+          token, NetUtils.createSocketAddr(fsUri.getAuthority()));
       token.setKind(WebHdfsConstants.WEBHDFS_TOKEN_KIND);
       ugi.addToken(token);
     }
-    return (WebHdfsFileSystem) FileSystem.get(uri, conf);
+    return (WebHdfsFileSystem) FileSystem.get(fsUri, conf);
+  }
+
+  private WebHdfsFileSystem getWebHdfsFileSystem(UserGroupInformation ugi,
+                                                 Configuration conf) throws IOException {
+    return getWebHdfsFileSystem(ugi, conf, uri);
   }
 
   private static final String SPECIAL_CHARACTER_FILENAME =
@@ -533,5 +538,71 @@ public class TestWebHdfsUrl {
       assertEquals(percent.getName(),
           dfs.getFileStatus(percent).getPath().getName());
     }
+  }
+
+  @Test(timeout=60000)
+  public void testPathInUrlIgnored() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(
+        ugi, conf, new URI("webhdfs://localhost/test")
+    );
+    Path fsPath = new Path("/test-file");
+
+    URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
+    assertEquals("/webhdfs/v1/test-file", fileStatusUrl.getPath());
+  }
+
+  @Test(timeout=60000)
+  public void testUseBasePathEnabledWithoutPath() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean("dfs.client.webhdfs.use-base-path", true);
+
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
+    Path fsPath = new Path("/test-file");
+
+    URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
+    assertEquals("/webhdfs/v1/test-file", fileStatusUrl.getPath());
+  }
+
+  @Test(timeout=60000)
+  public void testUseBasePathEnabled() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    conf.setBoolean("dfs.client.webhdfs.use-base-path", true);
+
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(
+        ugi, conf, new URI("webhdfs://localhost/base-path/test/")
+    );
+    Path fsPath = new Path("/test-file");
+
+    URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
+    assertEquals("/base-path/test/webhdfs/v1/test-file", fileStatusUrl.getPath());
+  }
+
+  @Test(timeout=60000)
+  public void testApiPrefixInBasePathIgnored() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    conf.setBoolean("dfs.client.webhdfs.use-base-path", true);
+
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(
+        ugi, conf, new URI("webhdfs://localhost/base-path/test/webhdfs/v1")
+    );
+    Path fsPath = new Path("/test-file");
+
+    URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
+    assertEquals("/base-path/test/webhdfs/v1/test-file", fileStatusUrl.getPath());
   }
 }

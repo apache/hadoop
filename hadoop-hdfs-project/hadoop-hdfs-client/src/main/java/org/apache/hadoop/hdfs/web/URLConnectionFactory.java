@@ -77,7 +77,7 @@ public class URLConnectionFactory {
   public static URLConnectionFactory newDefaultURLConnectionFactory(
       Configuration conf) {
     ConnectionConfigurator conn = getSSLConnectionConfiguration(
-        DEFAULT_SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, conf);
+        DEFAULT_SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, conf, null);
 
     return new URLConnectionFactory(conn);
   }
@@ -89,12 +89,28 @@ public class URLConnectionFactory {
   public static URLConnectionFactory newDefaultURLConnectionFactory(
       int connectTimeout, int readTimeout, Configuration conf) {
     ConnectionConfigurator conn = getSSLConnectionConfiguration(
-        connectTimeout, readTimeout, conf);
+        connectTimeout, readTimeout, conf, null);
+    return new URLConnectionFactory(conn);
+  }
+
+  /**
+   * Construct a new URLConnectionFactory based on the configuration. It will
+   * honor connecTimeout and readTimeout when they are specified and allows
+   * specifying credentials for HTTP Basic Authentication in "username:password" format.
+   */
+  public static URLConnectionFactory newDefaultURLConnectionFactory(
+      int connectTimeout, int readTimeout, Configuration conf, String basicAuthCredentials) {
+    ConnectionConfigurator conn = getSSLConnectionConfiguration(
+        connectTimeout, readTimeout, conf, basicAuthCredentials);
     return new URLConnectionFactory(conn);
   }
 
   private static ConnectionConfigurator getSSLConnectionConfiguration(
-      final int connectTimeout, final int readTimeout, Configuration conf) {
+      final int connectTimeout,
+      final int readTimeout,
+      Configuration conf,
+      String basicAuthCredentials
+  ) {
     ConnectionConfigurator conn;
     try {
       conn = new SSLConnectionConfigurator(connectTimeout, readTimeout, conf);
@@ -120,7 +136,7 @@ public class URLConnectionFactory {
       }
     }
 
-    return conn;
+    return createBasicAuthConfigurator(conn, basicAuthCredentials);
   }
 
   /**
@@ -129,6 +145,17 @@ public class URLConnectionFactory {
    */
   public static URLConnectionFactory newOAuth2URLConnectionFactory(
       int connectTimeout, int readTimeout, Configuration conf)
+      throws IOException {
+    return newOAuth2URLConnectionFactory(connectTimeout, readTimeout, conf, null);
+  }
+
+  /**
+   * Construct a new URLConnectionFactory that supports OAuth-based connections.
+   * It will also try to load the SSL configuration when they are specified. Furthermore, it allows
+   * specifying credentials for HTTP Basic Authentication in "username:password" format.
+   */
+  public static URLConnectionFactory newOAuth2URLConnectionFactory(
+      int connectTimeout, int readTimeout, Configuration conf, String basicAuthCredentials)
       throws IOException {
     ConnectionConfigurator conn;
     try {
@@ -139,6 +166,7 @@ public class URLConnectionFactory {
     } catch (Exception e) {
       throw new IOException("Unable to load OAuth2 connection factory.", e);
     }
+    conn = createBasicAuthConfigurator(conn, basicAuthCredentials);
     return new URLConnectionFactory(conn);
   }
 
@@ -210,9 +238,30 @@ public class URLConnectionFactory {
     connection.setReadTimeout(readTimeout);
   }
 
+  /**
+   * Create a new ConnectionConfigurator wrapping the given one with HTTP Basic Authentication.
+   * It will return the original configurator if no credentials are specified.
+   *
+   * @param configurator  Parent connection configurator.
+   * @param basicAuthCred Credentials for HTTP Basic Authentication in "username:password" format,
+   *                      or null / empty string if no credentials are to be used.
+   */
+  private static ConnectionConfigurator createBasicAuthConfigurator(
+      ConnectionConfigurator configurator, String basicAuthCred
+  ) {
+    if (basicAuthCred != null && !basicAuthCred.isEmpty()) {
+      return new BasicAuthConfigurator(configurator, basicAuthCred);
+    } else {
+      return configurator;
+    }
+  }
+
   public void destroy() {
     if (connConfigurator instanceof SSLConnectionConfigurator) {
       ((SSLConnectionConfigurator) connConfigurator).destroy();
+    }
+    if (connConfigurator instanceof BasicAuthConfigurator) {
+      ((BasicAuthConfigurator) connConfigurator).destroy();
     }
   }
 }
