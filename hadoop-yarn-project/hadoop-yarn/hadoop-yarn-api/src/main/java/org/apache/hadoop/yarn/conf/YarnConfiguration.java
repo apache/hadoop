@@ -2225,6 +2225,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE =
       NM_PREFIX + "health-checker.%s.interval-ms";
 
+  /** The admin JVM options used on forking ContainerLocalizer process
+   by container executor. */
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY =
+      NM_PREFIX + "container-localizer.admin.java.opts";
+
   /** The JVM options used on forking ContainerLocalizer process
       by container executor. */
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY =
