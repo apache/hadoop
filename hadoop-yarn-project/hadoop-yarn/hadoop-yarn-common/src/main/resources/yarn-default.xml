@@ -1490,12 +1490,11 @@
 
   <property>
     <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
     </description>
     <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
     <value></value>
-    <description>The admin JVM options used on forking ContainerLocalizer process
-      by the container executor.
-    </description>
   </property>
 
   <property>
