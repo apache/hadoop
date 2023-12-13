@@ -1061,8 +1061,8 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private String reconfSlowIoWarningThresholdParameters(String property,
-      String newVal) throws ReconfigurationException {
+  private String reconfSlowIoWarningThresholdParameters(String property, String newVal)
+      throws ReconfigurationException {
     String result;
     try {
       LOG.info("Reconfiguring {} to {}", property, newVal);
@@ -1075,8 +1075,7 @@ public class DataNode extends ReconfigurableBase
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
     } catch (IllegalArgumentException e) {
-      throw new ReconfigurationException(property, newVal,
-          getConf().get(property), e);
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
   }
 

@@ -526,7 +526,7 @@ public class DNConf {
 
   public void setDatanodeSlowIoWarningThresholdMs(long threshold) {
     Preconditions.checkArgument(threshold > 0,
-        DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY + " should be larger than 0");
+        DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY + " should be greater than 0");
     datanodeSlowIoWarningThresholdMs = threshold;
   }
 }
