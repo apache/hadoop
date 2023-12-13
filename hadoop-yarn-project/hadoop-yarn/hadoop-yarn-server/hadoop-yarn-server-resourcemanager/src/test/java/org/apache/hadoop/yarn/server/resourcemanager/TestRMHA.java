@@ -18,23 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.util.function.Supplier;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
-import javax.ws.rs.core.MediaType;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -47,6 +34,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -54,23 +42,36 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFencedException;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
+import javax.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestRMHA {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
@@ -110,6 +111,7 @@ public class TestRMHA {
     configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     ClusterMetrics.destroy();
     QueueMetrics.clearQueueMetrics();
+    DefaultMetricsSystem.setMiniClusterMode(true);
     DefaultMetricsSystem.shutdown();
   }
 
@@ -529,6 +531,220 @@ public class TestRMHA {
     checkStandbyRMFunctionality();
     rm.stop();
   }
+
+  @Test
+  public void testLessEpochRMFatalToStandbyRunnerShouldNotExecute() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore() {
+      @Override
+      public void updateApplicationState(ApplicationStateData appState) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    };
+
+    memStore.init(conf);
+    rm = new MockRM(conf, memStore);
+
+    rm.init(conf);
+    final StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
+        rm.adminService.getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+    // 1. Transition to Active.
+    rm.adminService.transitionToActive(requestInfo);
+
+    //2. RMFatalToStandbyRunner -->  AdminServiceToActiveRunner(switch to next epoch)
+    // --> RMFatalToStandbyRunner (Shouldn't Execute)
+    List<TransitionToActiveStandbyRunner> toActiveStandbyRunnerList = new ArrayList<>();
+    toActiveStandbyRunnerList.add(rm.crateRMFatalToStandbyRunner());
+    toActiveStandbyRunnerList.add(rm.adminService.createAdminServiceToActiveRunner(
+        ResourceManager.getClusterTimeStamp(), requestInfo));
+    toActiveStandbyRunnerList.add(rm.crateRMFatalToStandbyRunner());
+
+    rm.getToActiveStandbyExecutor().invokeAll(toActiveStandbyRunnerList);
+
+    //3. check result
+    checkActiveRMFunctionality();
+    rm.stop();
+  }
+
+  /**
+   * Testcase for YARN-11625
+   * Test to verify the bug fix. After a TRANSITION_TO_ACTIVE_FAILED
+   * event occurred in the ResourceManager,multiple failovers resulted
+   * in the Active ResourceManager getting stuck.
+   * */
+  @Test
+  public void testTransitionToActiveFailedAfterToStandbyNotSkip() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore() {
+      @Override
+      public void updateApplicationState(ApplicationStateData appState) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    };
+    memStore.init(conf);
+
+    rm = new MockRM(conf, memStore);
+
+    rm.init(conf);
+    final StateChangeRequestInfo requestInfo =
+            new StateChangeRequestInfo(
+                    HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
+            .getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+            rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 1. Simulate TRANSITION_TO_ACTIVE_FAILED.
+    rm.getRmDispatcher().getEventHandler().handle(
+        new RMFatalEvent(RMFatalEventType.TRANSITION_TO_ACTIVE_FAILED, new Exception(),
+            "Simulate TRANSITION_TO_ACTIVE_FAILED"));
+
+    // 2.Transition to Active.
+    rm.adminService.transitionToActive(requestInfo);
+
+    //3. Simulate  STATE_STORE_FENCED to Standby
+    rm.getRMContext().getStateStore().updateApplicationState(null);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return HAServiceState.STANDBY.equals(rm.getRMContext().getHAServiceState());
+      }
+    }, 100, 3000);
+
+    checkStandbyRMFunctionality();
+    rm.stop();
+  }
+
+
+  /*
+   * Testcase for YARN-11622
+   * ResourceManager asynchronous switch from Standy to Active exception
+   * */
+  @Test
+  public void testTransitionedToStandbyShouldNotNPE() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    //1. Add a temporary class
+    class InnerMockRM extends MockRM {
+
+      private boolean hasInToStandBy = false;
+      private boolean happendNPE = false;
+
+      InnerMockRM(Configuration conf, RMStateStore store) {
+        super(conf, store);
+      }
+
+      @Override
+      void stopActiveServices() {
+        try {
+          super.stopActiveServices();
+          Thread.sleep(1000);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      void handleTransitionToStandByInNewThread() {
+        try {
+          super.handleTransitionToStandByInNewThread();
+        } catch (NullPointerException ex) {
+          happendNPE = true;
+          ex.printStackTrace();
+        } finally {
+          hasInToStandBy = true;
+        }
+      }
+
+      public boolean isHasInToStandBy() {
+        return hasInToStandBy;
+      }
+
+      public boolean isHappendNPE() {
+        return happendNPE;
+      }
+    }
+
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore() {
+      @Override
+      public void updateApplicationState(ApplicationStateData appState) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    };
+    memStore.init(conf);
+
+    //2. start RM
+    rm = new InnerMockRM(conf, memStore);
+    rm.init(conf);
+    final StateChangeRequestInfo requestInfo =
+        new StateChangeRequestInfo(HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
+        rm.adminService.getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    //3. Transition to Active.
+    rm.adminService.transitionToActive(requestInfo);
+
+    //4.  Try Transition to standby
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          rm.transitionToStandby(true);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    t.start();
+
+    Thread.sleep(300);
+    //5. STATE_STORE_FENCED to standby
+    rm.getRMContext().getStateStore().updateApplicationState(null);
+
+    GenericTestUtils.waitFor(
+        new org.apache.hadoop.thirdparty.com.google.common.base.Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return ((InnerMockRM) rm).isHasInToStandBy();
+          }
+        }, 100, 3000);
+
+    //6. Check Result
+    Assert.assertEquals(false, ((InnerMockRM) rm).isHappendNPE());
+  }
+
 
   @Test
   public void testFailoverClearsRMContext() throws Exception {
