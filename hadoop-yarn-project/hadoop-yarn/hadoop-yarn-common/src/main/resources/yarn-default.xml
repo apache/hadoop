@@ -1489,6 +1489,16 @@
   </property>
 
   <property>
+    <description>
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
+    <description>The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
     <value>true</value>
     <description>Since on JDK17 it is no longer possible to use the reflection API to

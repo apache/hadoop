@@ -408,7 +408,8 @@ public class ContainerLocalizer {
    * @param conf the configuration properties to launch the resource localizer.
    */
   public static List<String> getJavaOpts(Configuration conf) {
-    String adminOpts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY, "");
+    String adminOpts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_DEFAULT);
     String userOpts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
         YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT);
 
