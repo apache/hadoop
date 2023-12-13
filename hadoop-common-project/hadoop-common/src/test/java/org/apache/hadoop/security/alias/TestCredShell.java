@@ -1,5 +1,6 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software 
+ ation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -163,6 +164,21 @@ public class TestCredShell {
     rc = shell.run(args1);
     assertEquals(outContent.toString(), 1, rc);
     assertTrue(outContent.toString().contains("Passwords don't match"));
+  }
+  
+  @Test
+  public void testPromptForCredentialNotFound() throws Exception {
+    String[] args1 = {"check", "credential1", "-provider",
+        jceksProvider};
+    ArrayList<String> password = new ArrayList<String>();
+    password.add("p@ssw0rd");
+    int rc = 0;
+    CredentialShell shell = new CredentialShell();
+    shell.setConf(new Configuration());
+    shell.setPasswordReader(new MockPasswordReader(password));
+    rc = shell.run(args1);
+    assertEquals(0, rc);
+    assertOutputContains("Password match failed for credential1.");
   }
 
   @Test
