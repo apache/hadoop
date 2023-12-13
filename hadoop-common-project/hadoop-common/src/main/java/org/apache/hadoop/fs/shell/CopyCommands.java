@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -114,7 +115,7 @@ class CopyCommands {
 
     private void writeDelimiter(FSDataOutputStream out) throws IOException {
       if (delimiter != null) {
-        out.write(delimiter.getBytes("UTF-8"));
+        out.write(delimiter.getBytes(StandardCharsets.UTF_8));
       }
     }
 

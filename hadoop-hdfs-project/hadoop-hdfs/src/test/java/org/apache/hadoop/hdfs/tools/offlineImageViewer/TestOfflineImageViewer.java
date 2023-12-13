@@ -405,7 +405,7 @@ public class TestOfflineImageViewer {
   @Test(expected = IOException.class)
   public void testTruncatedFSImage() throws IOException {
     File truncatedFile = new File(tempDir, "truncatedFsImage");
-    PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
+    PrintStream output = new PrintStream(NullOutputStream.INSTANCE);
     copyPartOfFile(originalFsimage, truncatedFile);
     try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
       new FileDistributionCalculator(new Configuration(), 0, 0, false, output)

@@ -22,7 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -247,7 +247,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       fReader = new InputStreamReader(
           Files.newInputStream(Paths.get(procfsMemFile)),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (IOException f) {
       // shouldn't happen....
@@ -319,7 +319,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       fReader =
           new InputStreamReader(Files.newInputStream(Paths.get(procfsCpuFile)),
-              Charset.forName("UTF-8"));
+              StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (IOException f) {
       // shouldn't happen....
@@ -380,7 +380,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       fReader = new InputStreamReader(
           Files.newInputStream(Paths.get(procfsStatFile)),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (IOException f) {
       // shouldn't happen....
@@ -435,7 +435,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       fReader = new InputStreamReader(
           Files.newInputStream(Paths.get(procfsNetFile)),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (IOException f) {
       return;
@@ -490,7 +490,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       in = new BufferedReader(new InputStreamReader(
           Files.newInputStream(Paths.get(procfsDisksFile)),
-          Charset.forName("UTF-8")));
+          StandardCharsets.UTF_8));
     } catch (IOException f) {
       return;
     }
@@ -558,7 +558,7 @@ public class SysInfoLinux extends SysInfo {
     try {
       in = new BufferedReader(new InputStreamReader(
           Files.newInputStream(Paths.get(procfsDiskSectorFile)),
-              Charset.forName("UTF-8")));
+              StandardCharsets.UTF_8));
     } catch (IOException f) {
       return defSector;
     }

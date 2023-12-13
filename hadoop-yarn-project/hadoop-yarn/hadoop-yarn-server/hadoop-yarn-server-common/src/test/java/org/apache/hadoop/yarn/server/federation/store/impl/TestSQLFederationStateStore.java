@@ -106,6 +106,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
         DATABASE_URL + System.currentTimeMillis());
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_SQL_MAXCONNECTIONS, 10);
     super.setConf(conf);
     sqlFederationStateStore = new HSQLDBFederationStateStore();
     return sqlFederationStateStore;
@@ -647,6 +648,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     assertEquals(10000, connTimeOut);
     assertEquals("YARN-Federation-DataBasePool", poolName);
     assertEquals(1, minimumIdle);
-    assertEquals(1, maximumPoolSize);
+    assertEquals(10, maximumPoolSize);
   }
 }

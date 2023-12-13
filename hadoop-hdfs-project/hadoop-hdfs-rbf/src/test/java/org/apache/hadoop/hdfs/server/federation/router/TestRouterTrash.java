@@ -64,12 +64,17 @@ public class TestRouterTrash {
   private static MountTableResolver mountTable;
   private static FileSystem routerFs;
   private static FileSystem nnFs;
+  private static FileSystem nnFs1;
   private static final String TEST_USER = "test-trash";
   private static MiniRouterDFSCluster.NamenodeContext nnContext;
+  private static MiniRouterDFSCluster.NamenodeContext nnContext1;
   private static String ns0;
   private static String ns1;
   private static final String MOUNT_POINT = "/home/data";
   private static final String FILE = MOUNT_POINT + "/file1";
+  private static final String MOUNT_POINT1 = "/data1/test1";
+  private static final String MOUNT_POINT2 = "/data2/test2";
+  private static final String FILE1 = MOUNT_POINT1 + "/file1";
   private static final String TRASH_ROOT = "/user/" + TEST_USER + "/.Trash";
   private static final String CURRENT = "/Current";
 
@@ -96,6 +101,8 @@ public class TestRouterTrash {
     routerFs = routerContext.getFileSystem();
     nnContext = cluster.getNamenode(ns0, null);
     nnFs = nnContext.getFileSystem();
+    nnContext1 = cluster.getNamenode(ns1, null);
+    nnFs1 = nnContext1.getFileSystem();
     Router router = routerContext.getRouter();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
@@ -228,6 +235,57 @@ public class TestRouterTrash {
   }
 
   @Test
+  public void testMultipleMountPoint() throws IOException,
+      URISyntaxException, InterruptedException {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns0, MOUNT_POINT));
+    MountTable addEntry1 = MountTable.newInstance(MOUNT_POINT1,
+        Collections.singletonMap(ns1, MOUNT_POINT1));
+    MountTable addEntry2 = MountTable.newInstance(MOUNT_POINT2,
+        Collections.singletonMap(ns1, MOUNT_POINT2));
+    assertTrue(addMountTable(addEntry));
+    assertTrue(addMountTable(addEntry1));
+    assertTrue(addMountTable(addEntry2));
+
+    DFSClient client = nnContext.getClient();
+    client.setOwner("/", TEST_USER, TEST_USER);
+
+    DFSClient client1 = nnContext1.getClient();
+    client1.setOwner("/", TEST_USER, TEST_USER);
+
+    UserGroupInformation ugi = UserGroupInformation.
+        createRemoteUser(TEST_USER);
+
+    client = nnContext.getClient(ugi);
+    client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
+    client.create(FILE, true);
+
+    client1 = nnContext1.getClient(ugi);
+    client1.mkdirs(MOUNT_POINT1, new FsPermission("777"), true);
+    client1.create(FILE1, true);
+    client1.mkdirs(MOUNT_POINT2, new FsPermission("777"), true);
+
+    // Move two different nameservice file to trash.
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs =
+        DFSTestUtil.getFileSystemAs(ugi, routerConf);
+
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(new Path(FILE)));
+    assertTrue(trash.moveToTrash(new Path(FILE1)));
+
+    // Client user see global trash view， wo should see all three mount point.
+    FileStatus[] fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/"));
+    assertEquals(3, fileStatuses.length);
+
+    // This should return empty fileStatuses rather than NotFound Exception.
+    fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/" + MOUNT_POINT2));
+    assertEquals(0, fileStatuses.length);
+
+    client1.delete("/user", true);
+  }
+
+  @Test
   public void testDeleteToTrashExistMountPoint() throws IOException,
       URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
@@ -280,6 +338,8 @@ public class TestRouterTrash {
   public void testIsTrashPath() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     assertNotNull(ugi);
+    assertTrue(MountTableResolver.isTrashPath(
+        "/user/" + ugi.getUserName() + "/.Trash/Current"));
     assertTrue(MountTableResolver.isTrashPath(
         "/user/" + ugi.getUserName() + "/.Trash/Current" + MOUNT_POINT));
     assertTrue(MountTableResolver.isTrashPath(

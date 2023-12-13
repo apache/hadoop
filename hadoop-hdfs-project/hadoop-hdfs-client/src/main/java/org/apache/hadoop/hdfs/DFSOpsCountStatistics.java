@@ -64,6 +64,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     GET_EC_CODECS("op_get_ec_codecs"),
     GET_EC_POLICY("op_get_ec_policy"),
     GET_EC_POLICIES("op_get_ec_policies"),
+    GET_ENCLOSING_ROOT("op_get_enclosing_root"),
     GET_ENCRYPTION_ZONE("op_get_encryption_zone"),
     GET_FILE_BLOCK_LOCATIONS("op_get_file_block_locations"),
     GET_FILE_CHECKSUM(CommonStatisticNames.OP_GET_FILE_CHECKSUM),

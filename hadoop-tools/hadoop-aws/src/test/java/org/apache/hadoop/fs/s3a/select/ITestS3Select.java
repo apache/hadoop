@@ -66,6 +66,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectBinding.expandBackslashChars;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
@@ -98,6 +99,13 @@ public class ITestS3Select extends AbstractS3SelectTest {
 
   /** CSV file with fewer columns than expected, all fields parse badly. */
   private Path brokenCSV;
+
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    skipIfS3ExpressBucket(conf);
+    return conf;
+  }
 
   @Override
   public void setup() throws Exception {

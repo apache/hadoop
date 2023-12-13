@@ -51,4 +51,9 @@ public class NoRouterRpcFairnessPolicyController implements
   public String getAvailableHandlerOnPerNs(){
     return "N/A";
   }
+
+  @Override
+  public int getAvailablePermits(String nsId) {
+    return 0;
+  }
 }

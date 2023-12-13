@@ -29,6 +29,7 @@ public class TestQueuePath {
   private static final String TEST_QUEUE = "root.level_1.level_2.level_3";
   private static final QueuePath TEST_QUEUE_PATH = new QueuePath(TEST_QUEUE);
   private static final QueuePath QUEUE_PATH_WITH_EMPTY_PART = new QueuePath("root..level_2");
+  private static final QueuePath QUEUE_PATH_WITH_EMPTY_LEAF = new QueuePath("root.level_1.");
   private static final QueuePath ROOT_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final QueuePath EMPTY_PATH = new QueuePath("");
   private static final QueuePath ONE_LEVEL_WILDCARDED_TEST_PATH =
@@ -56,6 +57,7 @@ public class TestQueuePath {
   @Test
   public void testEmptyPart() {
     Assert.assertTrue(QUEUE_PATH_WITH_EMPTY_PART.hasEmptyPart());
+    Assert.assertTrue(QUEUE_PATH_WITH_EMPTY_LEAF.hasEmptyPart());
     Assert.assertFalse(TEST_QUEUE_PATH.hasEmptyPart());
   }
 

@@ -60,7 +60,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings("deprecation")
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("core-default.xml");
+    xmlFilename = "core-default.xml";
     configurationClasses = new Class[] {
         CommonConfigurationKeys.class,
         CommonConfigurationKeysPublic.class,
@@ -148,6 +148,10 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
+
+    // Properties in enable callqueue overflow trigger failover for stateless servers.
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.overflow.trigger.failover");
+    xmlPropsToSkipCompare.add("ipc.callqueue.overflow.trigger.failover");
 
     // FairCallQueue configs that includes dynamic ports in its keys
     xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");

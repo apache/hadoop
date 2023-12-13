@@ -245,6 +245,13 @@ public final class StoreStatisticNames {
       "object_multipart_aborted";
 
   /**
+   * Object multipart list request.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_MULTIPART_UPLOAD_LIST =
+      "object_multipart_list";
+
+  /**
    * Object put/multipart upload count.
    * Value :{@value}.
    */

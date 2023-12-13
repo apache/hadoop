@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateSessionRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
@@ -196,7 +197,8 @@ public class AWSRequestAnalyzer {
       isRequestNotAlwaysInSpan(final Object request) {
     return request instanceof UploadPartCopyRequest
         || request instanceof CompleteMultipartUploadRequest
-        || request instanceof GetBucketLocationRequest;
+        || request instanceof GetBucketLocationRequest
+        || request instanceof CreateSessionRequest;
   }
 
   /**

@@ -420,6 +420,7 @@ public class DatanodeManager {
       LOG.error("Slow peers collection thread did not shutdown", e);
     } finally {
       slowPeerCollectorDaemon = null;
+      slowNodesUuidSet.clear();
     }
   }
 

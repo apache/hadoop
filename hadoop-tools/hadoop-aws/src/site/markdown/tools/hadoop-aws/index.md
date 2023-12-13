@@ -703,8 +703,12 @@ to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
 and various minor options.
 
-Here are the S3A properties for use in production; some testing-related
-options are covered in [Testing](./testing.md).
+Here are some the S3A properties for use in production.
+
+* See [Performance](./performance.html) for performance related settings including
+  thread and network pool options.
+* Testing-related options are covered in [Testing](./testing.md).
+
 
 ```xml
 
@@ -831,16 +835,6 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.connection.maximum</name>
-  <value>96</value>
-  <description>Controls the maximum number of simultaneous connections to S3.
-    This must be bigger than the value of fs.s3a.threads.max so as to stop
-    threads being blocked waiting for new HTTPS connections.
-    Why not equal? The AWS SDK transfer manager also uses these connections.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.connection.ssl.enabled</name>
   <value>true</value>
   <description>Enables or disables SSL connections to AWS services.
@@ -909,18 +903,6 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
-</property>
-
-<property>
   <name>fs.s3a.socket.send.buffer</name>
   <value>8192</value>
   <description>Socket send buffer hint to amazon connector. Represented in bytes.</description>
@@ -937,43 +919,6 @@ options are covered in [Testing](./testing.md).
   <value>5000</value>
   <description>How many keys to request from S3 when doing
      directory listings at a time.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>64</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>32</value>
-  <description>The number of operations which can be queued for execution.
-  This is in addition to the number of active threads in fs.s3a.threads.max.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.executor.capacity</name>
-  <value>16</value>
-  <description>The maximum number of submitted tasks which is a single
-    operation (e.g. rename(), delete()) may submit simultaneously for
-    execution -excluding the IO-heavy block uploads, whose capacity
-    is set in "fs.s3a.fast.upload.active.blocks"
-
-    All tasks are submitted to the shared thread pool whose size is
-    set in "fs.s3a.threads.max"; the value of capacity should be less than that
-    of the thread pool itself, as the goal is to stop a single operation
-    from overloading that thread pool.
-  </description>
 </property>
 
 <property>
@@ -2232,43 +2177,33 @@ from VMs running on EC2.
   </description>
 </property>
 
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>10</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>5</value>
-  <description>The number of operations which can be queued for execution</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
 ```
 
 ### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures
 
-There are two mechanisms for cleaning up after leftover multipart
+There are four mechanisms for cleaning up after leftover multipart
 uploads:
+- AWS Lifecycle rules. This is the simplest and SHOULD be used unless there
+  are are good reasons, such as the store not supporting lifecycle rules.
 - Hadoop s3guard CLI commands for listing and deleting uploads by their
 age. Documented in the [S3Guard](./s3guard.html) section.
+- Setting `fs.s3a.directory.operations.purge.uploads` to `true` for automatic
+  scan and delete during directory rename and delete
 - The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
 If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
+If an S3A committer job is halted partway through, again, there may be
+many incomplete multipart uploads in the output directory.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
-and setting a purge time in seconds, such as 86400 seconds —24 hours.
+and setting a purge time in seconds, such as 24 hours.
 When an S3A FileSystem instance is instantiated with the purge time greater
 than zero, it will, on startup, delete all outstanding partition requests
-older than this time.
+older than this time. However, this makes filesystem instantiate slow, especially
+against very large buckets, as a full scan is made.
+
+Consider avoiding this in future.
 
 ```xml
 <property>
@@ -2280,7 +2215,7 @@ older than this time.
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge</description>
 </property>
 ```

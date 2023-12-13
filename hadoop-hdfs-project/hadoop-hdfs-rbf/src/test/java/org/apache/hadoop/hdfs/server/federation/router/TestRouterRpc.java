@@ -1385,9 +1385,11 @@ public class TestRouterRpc {
 
     // Verify that checking that datanode works
     BlocksWithLocations routerBlockLocations =
-        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlocksWithLocations nnBlockLocations =
-        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
     BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
     assertEquals(nnBlocks.length, routerBlocks.length);

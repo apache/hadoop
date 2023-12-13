@@ -397,12 +397,19 @@
   <name>dfs.datanode.du.reserved</name>
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+      Specific directory based reservation is supported. The property can be followed with directory
+      name which is set at 'dfs.datanode.data.dir'. For example, reserved space for /data/hdfs1/data
+      can be configured using property 'dfs.datanode.du.reserved./data/hdfs1/data'. If specific directory
+      reservation is not configured then dfs.datanode.du.reserved will be used.
       Specific storage type based reservation is also supported. The property can be followed with
       corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
       then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
-      as described in dfs.blocksize.
+      as described in dfs.blocksize. Use directory name and storage type based reservation at the
+      same time is also allowed if both are configured.
+      Property priority example: dfs.datanode.du.reserved./data/hdfs1/data.ram_disk >
+      dfs.datanode.du.reserved./data/hdfs1/data > dfs.datanode.du.reserved.ram_disk > dfs.datanode.du.reserved
       Note: In case of using tune2fs to set reserved-blocks-percentage, or other filesystem tools,
       then you can possibly run into out of disk errors because hadoop will not check those
       external tool configurations.
@@ -414,12 +421,19 @@
   <value>0</value>
   <description>Reserved space in percentage. Read dfs.datanode.du.reserved.calculator to see
     when this takes effect. The actual number of bytes reserved will be calculated by using the
-    total capacity of the data directory in question. Specific storage type based reservation
+    total capacity of the data directory in question. Specific directory based reservation is
+    supported. The property can be followed with directory name which is set at 'dfs.datanode.data.dir'.
+    For example, reserved percentage space for /data/hdfs1/data can be configured using property
+    'dfs.datanode.du.reserved.pct./data/hdfs1/data'. If specific directory reservation is not
+    configured then dfs.datanode.du.reserved.pct will be used. Specific storage type based reservation
     is also supported. The property can be followed with corresponding storage types
     ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
     For example, reserved percentage space for RAM_DISK storage can be configured using property
     'dfs.datanode.du.reserved.pct.ram_disk'. If specific storage type reservation is not configured
-    then dfs.datanode.du.reserved.pct will be used.
+    then dfs.datanode.du.reserved.pct will be used. Use directory and storage type based reservation
+    is also allowed if both are configured.
+    Priority example: dfs.datanode.du.reserved.pct./data/hdfs1/data.ram_disk > dfs.datanode.du.reserved.pct./data/hdfs1/data
+    > dfs.datanode.du.reserved.pct.ram_disk > dfs.datanode.du.reserved.pct
   </description>
 </property>
 
@@ -2941,6 +2955,33 @@
 </property>
 
 <property>
+  <name>dfs.namenode.crm.checklocktime.enable</name>
+  <value>false</value>
+  <description>
+    Set to true to enable CacheManager to check amount of time to hold the
+    global rwlock.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.maxlocktime.ms</name>
+  <value>1000</value>
+  <description>
+    The maximum amount of time that CacheManager should hold the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.sleeptime.ms</name>
+  <value>300</value>
+  <description>
+    The amount of time that CacheManager should relase the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.max.locked.memory</name>
   <value>0</value>
   <description>
@@ -3753,6 +3794,16 @@
     tries to get local NN thread dump after local NN becomes
     SERVICE_NOT_RESPONDING or SERVICE_UNHEALTHY.
     If it is set to zero, DFS ZKFC won't get local NN thread dump.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
+    Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+    and this value will be overridden by the value of hadoop.zk.ssl.enabled.
   </description>
 </property>
 
@@ -5371,6 +5422,24 @@
   <description>
     Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout-sec</name>
+  <value>3600</value>
+  <description>
+    Timeout in seconds for excess redundancy block. If this value is 0 or less,
+    then it will default to 3600 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout.check.limit</name>
+  <value>1000</value>
+  <description>
+    Limits number of blocks used to check for excess redundancy timeout.
+    If this value is 0 or less, then it will default to 1000.
   </description>
 </property>
 
