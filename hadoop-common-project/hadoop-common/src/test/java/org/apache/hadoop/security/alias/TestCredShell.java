@@ -1,6 +1,5 @@
 /**
- * Licensed to the Apache Software 
- ation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -165,7 +164,7 @@ public class TestCredShell {
     assertEquals(outContent.toString(), 1, rc);
     assertTrue(outContent.toString().contains("Passwords don't match"));
   }
-  
+
   @Test
   public void testPromptForCredentialNotFound() throws Exception {
     String[] args1 = {"check", "credential1", "-provider",
