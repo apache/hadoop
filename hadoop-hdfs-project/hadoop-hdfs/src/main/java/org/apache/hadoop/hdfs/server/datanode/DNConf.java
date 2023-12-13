@@ -115,7 +115,7 @@ public class DNConf {
   final long ibrInterval;
   volatile long initialBlockReportDelayMs;
   volatile long cacheReportInterval;
-  volatile long datanodeSlowIoWarningThresholdMs;
+  private volatile long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
   final String encryptionAlgorithm;

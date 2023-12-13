@@ -928,19 +928,18 @@ public class TestDataNodeReconfiguration {
       // Verify DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY.
       // Try invalid values.
       LambdaTestUtils.intercept(ReconfigurationException.class,
-          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from '300' to 'text'",
-          () -> dn.reconfigureProperty(
-              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "text"));
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "text"));
       LambdaTestUtils.intercept(ReconfigurationException.class,
-          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from '300' to '-1'",
-          () -> dn.reconfigureProperty(
-              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "-1"));
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to '-1'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "-1"));
 
       // Set value is 500.
       dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
           String.valueOf(slowIoWarningThreshold));
-      assertEquals(slowIoWarningThreshold,
-          dn.getDnConf().getSlowIoWarningThresholdMs());
+      assertEquals(slowIoWarningThreshold, dn.getDnConf().getSlowIoWarningThresholdMs());
 
       // Set default value.
       dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, null);
