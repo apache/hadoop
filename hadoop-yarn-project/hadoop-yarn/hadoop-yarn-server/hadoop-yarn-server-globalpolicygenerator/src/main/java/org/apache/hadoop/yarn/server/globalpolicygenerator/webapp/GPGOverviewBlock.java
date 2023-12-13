@@ -47,14 +47,14 @@ public class GPGOverviewBlock extends HtmlBlock {
   protected void render(Block html) {
     Configuration config = this.globalPolicyGenerator.getConfig();
 
-    String appCleaner = "disable, interval : -1 ms";
+    String appCleaner = "disable";
     long appCleanerIntervalMs = config.getTimeDuration(YarnConfiguration.GPG_APPCLEANER_INTERVAL_MS,
         YarnConfiguration.DEFAULT_GPG_APPCLEANER_INTERVAL_MS, TimeUnit.MILLISECONDS);
     if (appCleanerIntervalMs > 0) {
       appCleaner = "enable, interval : " + appCleanerIntervalMs + " ms";
     }
 
-    String scCleaner = "disable, interval : -1 ms";
+    String scCleaner = "disable";
     long scCleanerIntervalMs = config.getTimeDuration(
         YarnConfiguration.GPG_SUBCLUSTER_CLEANER_INTERVAL_MS,
         YarnConfiguration.DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS, TimeUnit.MILLISECONDS);
@@ -62,7 +62,7 @@ public class GPGOverviewBlock extends HtmlBlock {
       scCleaner = "enable, interval : " + scCleanerIntervalMs + " ms";
     }
 
-    String pgGenerator = "disable, interval : -1 hour";
+    String pgGenerator = "disable";
     long policyGeneratorIntervalMillis = config.getTimeDuration(
         YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL,
         YarnConfiguration.DEFAULT_GPG_POLICY_GENERATOR_INTERVAL, TimeUnit.MILLISECONDS);

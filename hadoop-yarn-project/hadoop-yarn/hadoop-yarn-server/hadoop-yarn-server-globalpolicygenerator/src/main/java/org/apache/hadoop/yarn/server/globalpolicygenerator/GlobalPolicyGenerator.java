@@ -377,4 +377,9 @@ public class GlobalPolicyGenerator extends CompositeService {
       System.err.println("Delete Federation policy state store error, exception = " + e);
     }
   }
+
+  @Override
+  public void setConfig(Configuration conf) {
+    super.setConfig(conf);
+  }
 }
