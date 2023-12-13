@@ -35,7 +35,7 @@ import com.google.inject.Inject;
  */
 public class GPGOverviewBlock extends HtmlBlock {
 
-  GlobalPolicyGenerator globalPolicyGenerator;
+  private GlobalPolicyGenerator globalPolicyGenerator;
 
   @Inject
   GPGOverviewBlock(GlobalPolicyGenerator gpg, ViewContext ctx) {
@@ -71,7 +71,7 @@ public class GPGOverviewBlock extends HtmlBlock {
       pgGenerator = "enable, interval : " + policyGeneratorIntervalMillis + " ms";
     }
 
-    String policy = config.get( YarnConfiguration.GPG_GLOBAL_POLICY_CLASS,
+    String policy = config.get(YarnConfiguration.GPG_GLOBAL_POLICY_CLASS,
         YarnConfiguration.DEFAULT_GPG_GLOBAL_POLICY_CLASS);
 
     info("GPG Details")
