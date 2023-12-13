@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 
@@ -143,8 +143,8 @@ public class TestByteBufferReadWrite {
     Mockito.verify(target).finishSendData();
   }
   
-  private static String toString(byte[] str) throws UnsupportedEncodingException {
-    return new String(str, 0, str.length, "UTF-8");
+  private static String toString(byte[] str) {
+    return new String(str, 0, str.length, StandardCharsets.UTF_8);
   }
   
   private static class MockDataTarget implements NativeDataTarget {

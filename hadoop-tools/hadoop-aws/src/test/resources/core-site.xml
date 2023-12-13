@@ -108,7 +108,7 @@
 
   <property>
     <name>ireland.endpoint</name>
-    <value>s3-eu-west-1.amazonaws.com</value>
+    <value>s3.eu-west-1.amazonaws.com</value>
   </property>
 
   <property>

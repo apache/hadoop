@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -490,7 +490,7 @@ public class NMWebServices {
             }
             sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
                 + "\n\n");
-            os.write(sb.toString().getBytes(Charset.forName("UTF-8")));
+            os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             // If we have aggregated logs for this container,
             // output the aggregation logs as well.
             ApplicationId appId = containerId.getApplicationAttemptId()

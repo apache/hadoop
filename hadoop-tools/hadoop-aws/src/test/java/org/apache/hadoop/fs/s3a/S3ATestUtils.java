@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -37,6 +38,8 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
+import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -52,11 +55,12 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
@@ -73,8 +77,10 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -90,6 +96,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -99,6 +106,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 import static org.junit.Assert.*;
 
 /**
@@ -463,12 +472,24 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if encryption tests are disabled.
+   * Disable S3Express createSession calls.
+   * @param conf configuration to patch
+   * @return the configuration.
+   */
+  public static Configuration disableCreateSession(Configuration conf) {
+    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
+    return conf;
+  }
+
+  /**
+   * Skip a test if encryption tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfEncryptionTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_ENCRYPTION_TESTS, "Skipping encryption tests");
+    skipIfS3ExpressBucket(configuration);
   }
 
   /**
@@ -486,23 +507,72 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if storage class tests are disabled.
+   * Skip a test if storage class tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfStorageClassTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_STORAGE_CLASS_TESTS_ENABLED,
         "Skipping storage class tests");
+    skipIfS3ExpressBucket(configuration);
   }
 
   /**
-   * Skip a test if ACL class tests are disabled.
+   * Skip a test if ACL class tests are disabled,
+   * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe
    */
   public static void skipIfACLTestsDisabled(
       Configuration configuration) {
     skipIfNotEnabled(configuration, KEY_ACL_TESTS_ENABLED,
         "Skipping storage class ACL tests");
+    skipIfS3ExpressBucket(configuration);
+  }
+
+  /**
+   * Skip a test if the test bucket is an S3Express bucket.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfS3ExpressBucket(
+      Configuration configuration) {
+    assume("Skipping test as bucket is an S3Express bucket",
+        !isS3ExpressTestBucket(configuration));
+  }
+
+  /**
+   * Is the test bucket an S3Express bucket?
+   * @param conf configuration
+   * @return true if the bucket is an S3Express bucket.
+   */
+  public static boolean isS3ExpressTestBucket(final Configuration conf) {
+    return S3ExpressStorage.isS3ExpressStore(getTestBucketName(conf), "");
+  }
+
+  /**
+   * Skip a test if the filesystem lacks a required capability.
+   * @param fs filesystem
+   * @param capability capability
+   */
+  public static void assumePathCapability(FileSystem fs, String capability) {
+    try {
+      assume("Filesystem lacks capability " + capability,
+          fs.hasPathCapability(new Path("/"), capability));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }  /**
+   * Skip a test if the filesystem has a required capability.
+   * @param fs filesystem
+   * @param capability capability
+   */
+  public static void assumePathCapabilityFalse(FileSystem fs, String capability) {
+    try {
+      assume("Filesystem has capability " + capability,
+          !fs.hasPathCapability(new Path("/"), capability));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -912,7 +982,7 @@ public final class S3ATestUtils {
     return submit(EXECUTOR, () -> {
       try (DurationInfo ignore =
                new DurationInfo(LOG, false, "Creating %s", path)) {
-        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
+        createFile(fs, path, true, text.getBytes(StandardCharsets.UTF_8));
         return path;
       }
     });
@@ -980,6 +1050,52 @@ public final class S3ATestUtils {
       waitForCompletion(futures);
       return paths;
     }
+  }
+
+  /**
+   * Given a RemoteIterator to a list of file statuses, return a list of paths.
+   * @param i iterator
+   * @return list of paths
+   * @param <T> type of status
+   * @throws IOException failure retrieving values from the iterator
+   */
+  public static <T extends FileStatus> List<Path> toPathList(RemoteIterator<T> i)
+      throws IOException {
+    return toList(mappingRemoteIterator(i, FileStatus::getPath));
+  }
+
+  /**
+   * Expect an error code from the exception.
+   * @param code error code
+   * @param error exception
+   */
+  public static void expectErrorCode(final int code, final ExitUtil.ExitException error) {
+    if (error.getExitCode() != code) {
+      throw error;
+    }
+  }
+
+  /**
+   * Require a test case to be against Amazon S3 Express store.
+   */
+  public static void assumeS3ExpressFileSystem(final FileSystem fs) throws IOException {
+    assumePathCapability(fs, STORE_CAPABILITY_S3_EXPRESS_STORAGE);
+  }
+
+  /**
+   * Require a test case to be against a standard S3 store.
+   */
+  public static void assumeNotS3ExpressFileSystem(final FileSystem fs) {
+    assumePathCapabilityFalse(fs, STORE_CAPABILITY_S3_EXPRESS_STORAGE);
+  }
+
+  /**
+   * Require a store to be hosted by Amazon -i.e. not a third party store.
+   */
+  public static void assumeStoreAwsHosted(final FileSystem fs) {
+    assume("store is not AWS S3",
+        !NetworkBinding.isAwsEndpoint(fs.getConf()
+            .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
   }
 
   /**
@@ -1573,5 +1689,26 @@ public final class S3ATestUtils {
     return fs.hasPathCapability(new Path("/"), FS_S3A_CREATE_PERFORMANCE_ENABLED);
   }
 
+  /**
+   * Is the filesystem connector bonded to S3Express storage?
+   * @param fs filesystem.
+   * @return true if the store has the relevant path capability.
+   * @throws IOException IO failure
+   */
+  public static boolean isS3ExpressStorage(FileSystem fs) throws IOException {
+    return fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE);
+  }
 
+  /**
+   * Get an etag from a FileStatus which must implement
+   * the {@link EtagSource} interface -which S3AFileStatus does.
+   *
+   * @param status the status.
+   * @return the etag
+   */
+  public static String etag(FileStatus status) {
+    Preconditions.checkArgument(status instanceof EtagSource,
+        "Not an EtagSource: %s", status);
+    return ((EtagSource) status).getEtag();
+  }
 }

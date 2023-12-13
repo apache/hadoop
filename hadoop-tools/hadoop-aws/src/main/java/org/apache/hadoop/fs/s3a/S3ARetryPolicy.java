@@ -201,6 +201,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     // Treated as an immediate failure
     policyMap.put(AWSBadRequestException.class, fail);
 
+    // API call timeout.
+    policyMap.put(AWSApiCallTimeoutException.class, retryAwsClientExceptions);
+
     // use specific retry policy for aws client exceptions
     // nested IOExceptions will already have been extracted and used
     // in this map.

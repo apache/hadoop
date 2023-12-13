@@ -607,10 +607,10 @@ class DataXceiver extends Receiver implements Runnable {
       // send op status
       writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
 
-      long beginRead = Time.monotonicNow();
+      long beginReadInNS = Time.monotonicNowNanos();
       // send data
       read = blockSender.sendBlock(out, baseStream, dataXceiverServer.getReadThrottler());
-      long duration = Time.monotonicNow() - beginRead;
+      long durationInNS = Time.monotonicNowNanos() - beginReadInNS;
       if (blockSender.didSendEntireByteRange()) {
         // If we sent the entire range, then we should expect the client
         // to respond with a Status enum.
@@ -633,8 +633,8 @@ class DataXceiver extends Receiver implements Runnable {
       }
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
-      datanode.metrics.incrTotalReadTime(duration);
-      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
+      datanode.metrics.incrTotalReadTime(TimeUnit.NANOSECONDS.toMillis(durationInNS));
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, durationInNS);
     } catch ( SocketException ignored ) {
       LOG.trace("{}:Ignoring exception while serving {} to {}",
           dnR, block, remoteAddress, ignored);
@@ -1117,15 +1117,15 @@ class DataXceiver extends Receiver implements Runnable {
       // send status first
       writeSuccessWithChecksumInfo(blockSender, reply);
 
-      long beginRead = Time.monotonicNow();
+      long beginReadInNS = Time.monotonicNowNanos();
       // send block content to the target
       long read = blockSender.sendBlock(reply, baseStream,
                                         dataXceiverServer.balanceThrottler);
-      long duration = Time.monotonicNow() - beginRead;
+      long durationInNS = Time.monotonicNowNanos() - beginReadInNS;
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
-      datanode.metrics.incrTotalReadTime(duration);
-      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
+      datanode.metrics.incrTotalReadTime(TimeUnit.NANOSECONDS.toMillis(durationInNS));
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, durationInNS);
       
       LOG.info("Copied {} to {}", block, peer.getRemoteAddressString());
     } catch (IOException ioe) {

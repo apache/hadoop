@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -75,7 +75,7 @@ public class TestStatsDMetrics {
       sock.receive(p);
 
       String result =new String(p.getData(), 0, p.getLength(),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       assertTrue(
           "Received data did not match data sent",
           result.equals("host.process.jvm.Context.foo1:1.25|c") ||
@@ -109,7 +109,7 @@ public class TestStatsDMetrics {
       sink.putMetrics(record);
       sock.receive(p);
       String result =
-          new String(p.getData(), 0, p.getLength(), Charset.forName("UTF-8"));
+          new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8);
 
       assertTrue("Received data did not match data sent",
           result.equals("process.jvm.Context.foo1:1|c") ||

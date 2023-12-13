@@ -58,6 +58,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -592,7 +593,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
         .when(testClient)
-        .getAbfsRestOperationForAppend(Mockito.any(),
+        .getAbfsRestOperation(eq(AbfsRestOperationType.Append),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.nullable(int.class), Mockito.nullable(int.class),
             Mockito.any());

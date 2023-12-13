@@ -1167,11 +1167,27 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     QueueInfo queueInfo = response.getQueueInfo();
     Assert.assertNotNull(queueInfo);
-    Assert.assertEquals(queueInfo.getQueueName(),  "root");
-    Assert.assertEquals(queueInfo.getCapacity(), 4.0, 0);
-    Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0, 0);
-    Assert.assertEquals(queueInfo.getChildQueues().size(), 12, 0);
-    Assert.assertEquals(queueInfo.getAccessibleNodeLabels().size(), 1);
+    Assert.assertEquals("root", queueInfo.getQueueName());
+    Assert.assertEquals(4.0, queueInfo.getCapacity(), 0);
+    Assert.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    Assert.assertEquals(12, queueInfo.getChildQueues().size(), 0);
+    Assert.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
+  }
+
+  @Test
+  public void testSubClusterGetQueueInfo() throws IOException, YarnException {
+    // We have set up a unit test where we access queue information for subcluster1.
+    GetQueueInfoResponse response = interceptor.getQueueInfo(
+        GetQueueInfoRequest.newInstance("root", true, true, true, "1"));
+    Assert.assertNotNull(response);
+
+    QueueInfo queueInfo = response.getQueueInfo();
+    Assert.assertNotNull(queueInfo);
+    Assert.assertEquals("root", queueInfo.getQueueName());
+    Assert.assertEquals(1.0, queueInfo.getCapacity(), 0);
+    Assert.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    Assert.assertEquals(3, queueInfo.getChildQueues().size(), 0);
+    Assert.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
   }
 
   @Test

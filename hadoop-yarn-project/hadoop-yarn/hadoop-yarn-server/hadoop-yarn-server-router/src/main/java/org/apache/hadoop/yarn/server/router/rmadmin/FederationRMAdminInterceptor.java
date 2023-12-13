@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -65,13 +66,23 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterReq
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
+import org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -89,6 +100,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
@@ -104,6 +116,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.yarn.server.router.RouterServerUtil.checkPolicyManagerValid;
+
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
   private static final Logger LOG =
@@ -111,6 +125,10 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   private static final String COMMA = ",";
   private static final String COLON = ":";
+
+  private static final List<String> SUPPORT_WEIGHT_MANAGERS =
+      new ArrayList<>(Arrays.asList(WeightedLocalityPolicyManager.class.getName(),
+      PriorityBroadcastPolicyManager.class.getName(), WeightedHomePolicyManager.class.getName()));
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -153,7 +171,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     this.heartbeatExpirationMillis = this.conf.getTimeDuration(
         YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
-        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
@@ -921,6 +939,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RouterServerUtil.logAndThrowException("Missing Queue information.", null);
     }
 
+    String policyManagerClassName = request.getPolicyManagerClassName();
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+          " does not support the use of queue weights.", null);
+    }
+
     String amRmWeight = federationQueueWeight.getAmrmWeight();
     FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
 
@@ -932,9 +957,6 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     try {
       long startTime = clock.getTime();
-      // Step1, get parameters.
-      String policyManagerClassName = request.getPolicyManagerClassName();
-
 
       // Step2, parse amRMPolicyWeights.
       Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
@@ -1086,6 +1108,128 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
     throw new YarnException("Unable to listFederationQueuePolicies.");
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationApplication Request.", null);
+    }
+
+    String application = request.getApplication();
+    if (StringUtils.isBlank(application)) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "ApplicationId cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      ApplicationId applicationId = ApplicationId.fromString(application);
+      federationFacade.deleteApplicationHomeSubCluster(applicationId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationApplicationFailedRetrieved(stopTime - startTime);
+      return DeleteFederationApplicationResponse.newInstance(
+          "applicationId = " + applicationId + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationApplication due to exception. " + e.getMessage());
+    }
+
+    throw new YarnException("Unable to deleteFederationApplication.");
+  }
+
+  /**
+   * Get federation subcluster list.
+   *
+   * @param request GetSubClustersRequest Request.
+   * @return SubClusters Response.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
+       throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getFederationSubClusters Request.", null);
+    }
+
+    // Step1. Get all subClusters of the cluster.
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(false);
+
+    // Step2. Get FederationSubCluster data.
+    List<FederationSubCluster> federationSubClusters = new ArrayList<>();
+    long startTime = clock.getTime();
+    for (Map.Entry<SubClusterId, SubClusterInfo> subCluster : subClusters.entrySet()) {
+      SubClusterId subClusterId = subCluster.getKey();
+      try {
+        SubClusterInfo subClusterInfo = subCluster.getValue();
+        long lastHeartBeat = subClusterInfo.getLastHeartBeat();
+        Date lastHeartBeatDate = new Date(lastHeartBeat);
+        FederationSubCluster federationSubCluster = FederationSubCluster.newInstance(
+            subClusterId.getId(), subClusterInfo.getState().name(), lastHeartBeatDate.toString());
+        federationSubClusters.add(federationSubCluster);
+      } catch (Exception e) {
+        routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+        LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetFederationSubClustersRetrieved(stopTime - startTime);
+
+    // Step3. Return results.
+    return GetSubClustersResponse.newInstance(federationSubClusters);
+  }
+
+  /**
+   * Delete Policies based on the provided queue list.
+   *
+   * @param request DeleteFederationQueuePoliciesRequest Request.
+   * @return If the deletion is successful, the queue deletion success message will be returned.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationQueuePoliciesByQueues Request.", null);
+    }
+
+    List<String> queues = request.getQueues();
+    if (CollectionUtils.isEmpty(queues)) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException("queues cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      federationFacade.deletePolicyConfigurations(queues);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationPoliciesByQueuesRetrieved(stopTime - startTime);
+      return DeleteFederationQueuePoliciesResponse.newInstance(
+         "queues = " + StringUtils.join(queues, ",") + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationPoliciesByQueues due to exception. " + e.getMessage());
+    }
+    throw new YarnException("Unable to deleteFederationPoliciesByQueues.");
   }
 
   /**
@@ -1306,6 +1450,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     if (StringUtils.isBlank(policyManagerClassName)) {
       RouterServerUtil.logAndThrowException("Missing PolicyManagerClassName information.", null);
+    }
+
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+              "does not support the use of queue weights.", null);
     }
 
     String amRmWeight = federationQueueWeight.getAmrmWeight();

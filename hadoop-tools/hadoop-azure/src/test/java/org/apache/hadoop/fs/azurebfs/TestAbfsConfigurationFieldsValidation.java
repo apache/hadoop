@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.codec.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
@@ -99,8 +99,8 @@ public class TestAbfsConfigurationFieldsValidation {
   public TestAbfsConfigurationFieldsValidation() throws Exception {
     super();
     this.accountName = "testaccount1.blob.core.windows.net";
-    this.encodedString = Base64.encode("base64Value".getBytes(Charsets.UTF_8));
-    this.encodedAccountKey = Base64.encode("someAccountKey".getBytes(Charsets.UTF_8));
+    this.encodedString = Base64.encode("base64Value".getBytes(StandardCharsets.UTF_8));
+    this.encodedAccountKey = Base64.encode("someAccountKey".getBytes(StandardCharsets.UTF_8));
     Configuration configuration = new Configuration();
     configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
     configuration.set(INT_KEY, "1234565");
