@@ -400,7 +400,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>${mockito.version}</version>
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
