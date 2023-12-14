@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
@@ -49,6 +50,9 @@ public final class FederationPolicyUtils {
 
   public static final String NO_ACTIVE_SUBCLUSTER_AVAILABLE =
       "No active SubCluster available to submit the request.";
+
+  public static final String FEDERATION_POLICY_LABEL_TAG_PREFIX = "FEDERATION_POLICY_LABEL_TAG";
+  public static final String DEFAULT_POLICY_KEY = "DEFAULT";
 
   private static Random rand = new Random(System.currentTimeMillis());
 
@@ -148,24 +152,27 @@ public final class FederationPolicyUtils {
    * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @param homeSubClusterId home sub-cluster id
+   * @param submissionContext application submission context
    * @return FederationAMRMProxyPolicy recreated
    * @throws FederationPolicyInitializationException if fails
    */
   public static FederationAMRMProxyPolicy loadAMRMPolicy(String queue,
       FederationAMRMProxyPolicy oldPolicy, Configuration conf,
       FederationStateStoreFacade federationFacade,
-      SubClusterId homeSubClusterId)
+      SubClusterId homeSubClusterId, ApplicationSubmissionContext submissionContext)
       throws FederationPolicyInitializationException {
 
     // Local policy and its configuration
     SubClusterPolicyConfiguration configuration =
         loadPolicyConfiguration(queue, conf, federationFacade);
 
+    String tag = getApplicationPolicyTag(submissionContext);
+
     // Instantiate the policyManager and get policy
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(configuration,
             federationFacade.getSubClusterResolver(), federationFacade,
-            homeSubClusterId);
+            homeSubClusterId, tag);
 
     LOG.info("Creating policy manager of type: " + configuration.getType());
     FederationPolicyManager federationPolicyManager =
@@ -174,6 +181,21 @@ public final class FederationPolicyUtils {
     // content of conf), and cache it
     federationPolicyManager.setQueue(configuration.getQueue());
     return federationPolicyManager.getAMRMPolicy(context, oldPolicy);
+  }
+
+  public static String getApplicationPolicyTag(ApplicationSubmissionContext appContext) {
+    if (appContext == null) {
+      return DEFAULT_POLICY_KEY;
+    }
+    String tag = DEFAULT_POLICY_KEY;
+    for (String appTag : appContext.getApplicationTags()) {
+      if (appTag.startsWith(FEDERATION_POLICY_LABEL_TAG_PREFIX + ":") ||
+          appTag.startsWith(FEDERATION_POLICY_LABEL_TAG_PREFIX.toLowerCase() + ":")) {
+        tag = appTag.substring(FEDERATION_POLICY_LABEL_TAG_PREFIX.length() + 1);
+        break;
+      }
+    }
+    return tag;
   }
 
   /**

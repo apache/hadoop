@@ -18,9 +18,17 @@
 package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
+import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.DEFAULT_POLICY_KEY;
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.FEDERATION_POLICY_LABEL_TAG_PREFIX;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit test for {@link FederationPolicyUtils}.
@@ -54,5 +62,16 @@ public class TestFederationPolicyUtils {
               + " expected weight: " + expectedWeights[i],
           Math.abs(actualWeight - expectedWeights[i]) < 0.01);
     }
+  }
+
+  @Test
+  public void testGetApplicationPolicyTag() {
+    Assert.assertEquals(DEFAULT_POLICY_KEY, FederationPolicyUtils.getApplicationPolicyTag(null));
+    ApplicationSubmissionContext context = mock(ApplicationSubmissionContext.class);
+    when(context.getApplicationTags()).thenReturn(new HashSet<>());
+    Assert.assertEquals(DEFAULT_POLICY_KEY, FederationPolicyUtils.getApplicationPolicyTag(context));
+    when(context.getApplicationTags()).thenReturn(
+        Sets.newHashSet(FEDERATION_POLICY_LABEL_TAG_PREFIX + ":LABEL1"));
+    Assert.assertEquals("LABEL1", FederationPolicyUtils.getApplicationPolicyTag(context));
   }
 }

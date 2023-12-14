@@ -23,7 +23,9 @@ import java.util.Map;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.AbstractConfigurableFederationPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo.PolicyWeights;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -39,11 +41,15 @@ public abstract class AbstractAMRMProxyPolicy extends
   public void validate(WeightedPolicyInfo newPolicyInfo)
       throws FederationPolicyInitializationException {
     super.validate(newPolicyInfo);
-    Map<SubClusterIdInfo, Float> newWeights =
-        newPolicyInfo.getAMRMPolicyWeights();
-    if (newWeights == null || newWeights.size() < 1) {
-      throw new FederationPolicyInitializationException(
-          "Weight vector cannot be null/empty.");
+    for (PolicyWeights policyWeights : newPolicyInfo.getAmrmPolicyWeightsMap().values()) {
+      if (policyWeights == null || policyWeights.getWeigths() == null ||
+          policyWeights.getWeigths().size() < 1) {
+        throw new FederationPolicyInitializationException("Weight vector cannot be null/empty.");
+      }
+    }
+    if (!newPolicyInfo.getAmrmPolicyWeightsMap()
+        .containsKey(FederationPolicyUtils.DEFAULT_POLICY_KEY)) {
+      throw new FederationPolicyInitializationException("DEFAULT policy must be set.");
     }
   }
 

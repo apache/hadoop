@@ -57,7 +57,7 @@ public class TestSequentialRouterPolicy extends AbstractRouterPolicy {
   }
 
   @Override
-  protected SubClusterId chooseSubCluster(String queue,
+  protected SubClusterId chooseSubCluster(String queue, String tag,
       Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
     /**
       * This strategy is only suitable for testing. We need to obtain subClusters sequentially.
