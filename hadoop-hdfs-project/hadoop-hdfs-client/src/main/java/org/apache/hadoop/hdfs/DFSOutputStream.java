@@ -370,7 +370,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   private void adjustPacketChunkSize(LocatedBlock lastBlock) throws IOException{
 
-    long usedInLastBlock = lastBlock.getBlockSize() % blockSize;
+    long usedInLastBlock = lastBlock.getBlockSize();
     int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
     // calculate the amount of free space in the pre-existing
