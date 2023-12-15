@@ -20,9 +20,13 @@ package org.apache.hadoop.hdfs.server.federation.fairness;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,9 +36,14 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -98,6 +107,53 @@ public class TestRouterHandlersFairness {
   public void testFairnessControlOn() throws Exception {
     setupCluster(true, false);
     startLoadTest(true);
+  }
+
+  /**
+   * Ensure that the semaphore is not acquired,
+   * when invokeSequential or invokeConcurrent throws any exception.
+   */
+  @Test
+  public void testReleasedWhenExceptionOccurs() throws Exception{
+    setupCluster(true, false);
+    RouterContext routerContext = cluster.getRandomRouter();
+    RouterRpcClient rpcClient =
+        routerContext.getRouter().getRpcServer().getRPCClient();
+    // Mock an ActiveNamenodeResolver and inject it into RouterRpcClient,
+    // so RouterRpcClient's getOrderedNamenodes method will report an exception.
+    ActiveNamenodeResolver mockNamenodeResolver = mock(ActiveNamenodeResolver.class);
+    Field field = rpcClient.getClass().getDeclaredField("namenodeResolver");
+    field.setAccessible(true);
+    field.set(rpcClient, mockNamenodeResolver);
+
+    // Use getFileInfo test invokeSequential.
+    DFSClient client = routerContext.getClient();
+    int availablePermits =
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0");
+    LambdaTestUtils.intercept(IOException.class,  () -> {
+      LOG.info("Use getFileInfo test invokeSequential.");
+      client.getFileInfo("/test.txt");
+    });
+    // Ensure that the semaphore is not acquired.
+    assertEquals(availablePermits,
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0"));
+
+    // Use renewLease test invokeConcurrent.
+    Collection<RemoteLocation> locations = new ArrayList<>();
+    locations.add(new RemoteLocation("ns0", "/", "/"));
+    RemoteMethod renewLease = new RemoteMethod(
+        "renewLease",
+        new Class[]{java.lang.String.class, java.util.List.class},
+        new Object[]{null, null});
+    availablePermits =
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0");
+    LambdaTestUtils.intercept(IOException.class,  () -> {
+      LOG.info("Use renewLease test invokeConcurrent.");
+      rpcClient.invokeConcurrent(locations, renewLease);
+    });
+    // Ensure that the semaphore is not acquired.
+    assertEquals(availablePermits,
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0"));
   }
 
   /**

@@ -287,6 +287,15 @@ public interface HdfsClientConfigKeys {
       "dfs.client.output.stream.uniq.default.key";
   String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
 
+  String DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME =
+      "dfs.client.congestion.backoff.mean.time";
+  int DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT = 5000;
+
+  String DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME =
+      "dfs.client.congestion.backoff.max.time";
+  int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT =
+      DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT * 10;
+
   /**
    * These are deprecated config keys to client code.
    */
