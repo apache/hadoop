@@ -72,14 +72,14 @@ public class Exec {
       stdOut.start();
       stdErr.start();
       retCode = p.waitFor();
+      stdOut.join();
+      stdErr.join();
       if (retCode != 0) {
         mojo.getLog().warn(command + " failed with error code " + retCode);
         for (String s : stdErr.getOutput()) {
           mojo.getLog().debug(s);
         }
       }
-      stdOut.join();
-      stdErr.join();
       output.addAll(stdOut.getOutput());
       if (errors != null) {
         errors.addAll(stdErr.getOutput());
