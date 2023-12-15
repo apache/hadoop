@@ -3133,6 +3133,15 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
+      // Track throttled client backoff count.
+      // Throttled clients are clients in lowest priority queue which are
+      // back off and disconnected.
+      if (cqe.getCause() instanceof RpcServerException) {
+        RpcServerException ex = (RpcServerException) cqe.getCause();
+        if (ex.getRpcStatusProto() == RpcStatusProto.FATAL) {
+          rpcMetrics.incrClientBackoffThrottled();
+        }
+      }
       // unwrap retriable exception.
       throw cqe.getCause();
     }
