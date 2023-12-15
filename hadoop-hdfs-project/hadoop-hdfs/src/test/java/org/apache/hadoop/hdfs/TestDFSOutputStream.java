@@ -275,6 +275,8 @@ public class TestDFSOutputStream {
   public void testCongestionBackoff() throws IOException {
     DfsClientConf dfsClientConf = mock(DfsClientConf.class);
     DFSClient client = mock(DFSClient.class);
+    Configuration conf = mock(Configuration.class);
+    when(client.getConfiguration()).thenReturn(conf);
     when(client.getConf()).thenReturn(dfsClientConf);
     when(client.getTracer()).thenReturn(FsTracer.get(new Configuration()));
     client.clientRunning = true;
@@ -306,6 +308,8 @@ public class TestDFSOutputStream {
   public void testCongestionAckDelay() {
     DfsClientConf dfsClientConf = mock(DfsClientConf.class);
     DFSClient client = mock(DFSClient.class);
+    Configuration conf = mock(Configuration.class);
+    when(client.getConfiguration()).thenReturn(conf);
     when(client.getConf()).thenReturn(dfsClientConf);
     when(client.getTracer()).thenReturn(FsTracer.get(new Configuration()));
     client.clientRunning = true;
@@ -325,7 +329,7 @@ public class TestDFSOutputStream {
     ArrayList<DatanodeInfo> congestedNodes = (ArrayList<DatanodeInfo>)
             Whitebox.getInternalState(stream, "congestedNodes");
     int backOffMaxTime = (int)
-            Whitebox.getInternalState(stream, "CONGESTION_BACK_OFF_MAX_TIME_IN_MS");
+            Whitebox.getInternalState(stream, "congestionBackOffMaxTimeInMs");
     DFSPacket[] packet = new DFSPacket[100];
     AtomicBoolean isDelay = new AtomicBoolean(true);
 
