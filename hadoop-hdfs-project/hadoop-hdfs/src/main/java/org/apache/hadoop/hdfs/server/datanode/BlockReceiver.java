@@ -579,6 +579,7 @@ class BlockReceiver implements Closeable {
       this.dirSyncOnFinalize = true;
     }
 
+    int bytesWritten = 0;
     // update received bytes
     final long firstByteInBlock = offsetInBlock;
     offsetInBlock += len;
@@ -747,7 +748,7 @@ class BlockReceiver implements Closeable {
 
           // Actual number of data bytes to write.
           int numBytesToDisk = (int)(offsetInBlock-onDiskLen);
-          
+          bytesWritten = numBytesToDisk;
           // Write data to disk.
           long begin = Time.monotonicNow();
           streams.writeDataToDisk(dataBuf.array(),
@@ -839,7 +840,7 @@ class BlockReceiver implements Closeable {
           
           replicaInfo.setLastChecksumAndDataLen(offsetInBlock, lastCrc);
 
-          datanode.metrics.incrBytesWritten(len);
+          datanode.metrics.incrBytesWritten(bytesWritten);
           datanode.metrics.incrTotalWriteTime(duration);
 
           manageWriterOsCache(offsetInBlock, seqno);
