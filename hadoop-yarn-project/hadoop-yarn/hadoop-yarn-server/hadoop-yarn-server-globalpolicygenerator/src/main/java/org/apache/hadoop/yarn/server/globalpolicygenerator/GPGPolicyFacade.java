@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
-import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -32,6 +31,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -100,41 +100,48 @@ public class GPGPolicyFacade {
   public FederationPolicyManager getPolicyManager(String queueName)
       throws YarnException {
     FederationPolicyManager policyManager = policyManagerMap.get(queueName);
+
     // If we don't have the policy manager cached, pull configuration
     // from the FederationStateStore to create and cache it
     if (policyManager == null) {
       try {
+
         // If we don't have the configuration cached, pull it
         // from the stateStore
         SubClusterPolicyConfiguration conf = policyConfMap.get(queueName);
+
         if (conf == null) {
           conf = stateStore.getPolicyConfiguration(queueName);
         }
+
         // If configuration is still null, it does not exist in the
         // FederationStateStore
         if (conf == null) {
-          LOG.info("Read null policy for queue {}", queueName);
+          LOG.info("Read null policy for queue {}.", queueName);
           return null;
         }
-        policyManager =
-            FederationPolicyUtils.instantiatePolicyManager(conf.getType());
+
+        // Generate PolicyManager based on PolicyManagerType.
+        String policyManagerType = conf.getType();
+        policyManager = FederationPolicyUtils.instantiatePolicyManager(policyManagerType);
         policyManager.setQueue(queueName);
 
-        // TODO there is currently no way to cleanly deserialize a policy
-        // manager sub type from just the configuration
-        if (policyManager instanceof WeightedLocalityPolicyManager) {
-          WeightedPolicyInfo wpinfo =
+        // If PolicyManager supports Weighted PolicyInfo, it means that
+        // we need to use this parameter to determine which sub-cluster the router goes to
+        // or which sub-cluster the container goes to.
+        if (policyManager.isSupportWeightedPolicyInfo()) {
+          ByteBuffer weightedPolicyInfoParams = conf.getParams();
+          if (weightedPolicyInfoParams == null) {
+            LOG.warn("Warning: Queue = {}, FederationPolicyManager {} WeightedPolicyInfo is empty.",
+                queueName, policyManagerType);
+            return null;
+          }
+          WeightedPolicyInfo weightedPolicyInfo =
               WeightedPolicyInfo.fromByteBuffer(conf.getParams());
-          WeightedLocalityPolicyManager wlpmanager =
-              (WeightedLocalityPolicyManager) policyManager;
-          LOG.info("Updating policy for queue {} to configured weights router: "
-                  + "{}, amrmproxy: {}", queueName,
-              wpinfo.getRouterPolicyWeights(),
-              wpinfo.getAMRMPolicyWeights());
-          wlpmanager.setWeightedPolicyInfo(wpinfo);
+          policyManager.setWeightedPolicyInfo(weightedPolicyInfo);
         } else {
-          LOG.warn("Warning: FederationPolicyManager of unsupported type {}, "
-              + "initialization may be incomplete ", policyManager.getClass());
+          LOG.warn("Warning: FederationPolicyManager of unsupported WeightedPolicyInfo type {}, " +
+              "initialization may be incomplete.", policyManager.getClass());
         }
 
         policyManagerMap.put(queueName, policyManager);

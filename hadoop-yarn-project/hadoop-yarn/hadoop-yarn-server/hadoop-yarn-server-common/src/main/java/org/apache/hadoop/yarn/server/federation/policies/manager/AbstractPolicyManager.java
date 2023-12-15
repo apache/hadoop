@@ -21,6 +21,7 @@ import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationP
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
@@ -187,4 +188,17 @@ public abstract class AbstractPolicyManager implements
                   federationPolicyContext.getHomeSubcluster());
   }
 
+  /**
+   * We get the WeightedPolicyInfo of the subCluster.
+   *
+   * @return WeightedPolicyInfo.
+   */
+  public abstract WeightedPolicyInfo getWeightedPolicyInfo();
+
+  /**
+   * We set the WeightedPolicyInfo of the subCluster.
+   *
+   * @param weightedPolicyInfo weightedPolicyInfo of the subCluster.
+   */
+  public abstract void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo);
 }

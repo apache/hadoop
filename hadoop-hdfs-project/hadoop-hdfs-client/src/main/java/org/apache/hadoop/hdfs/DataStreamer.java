@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -528,9 +529,8 @@ class DataStreamer extends Daemon {
   // are congested
   private final List<DatanodeInfo> congestedNodes = new ArrayList<>();
   private final Map<DatanodeInfo, Integer> slowNodeMap = new HashMap<>();
-  private static final int CONGESTION_BACKOFF_MEAN_TIME_IN_MS = 5000;
-  private static final int CONGESTION_BACK_OFF_MAX_TIME_IN_MS =
-      CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
+  private int congestionBackOffMeanTimeInMs;
+  private int congestionBackOffMaxTimeInMs;
   private int lastCongestionBackoffTime;
   private int maxPipelineRecoveryRetries;
   private int markSlowNodeAsBadNodeThreshold;
@@ -564,6 +564,35 @@ class DataStreamer extends Daemon {
     this.addBlockFlags = flags;
     this.maxPipelineRecoveryRetries = conf.getMaxPipelineRecoveryRetries();
     this.markSlowNodeAsBadNodeThreshold = conf.getMarkSlowNodeAsBadNodeThreshold();
+    congestionBackOffMeanTimeInMs = dfsClient.getConfiguration().getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME,
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT);
+    congestionBackOffMaxTimeInMs = dfsClient.getConfiguration().getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+        HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
+    if (congestionBackOffMeanTimeInMs <= 0) {
+      LOG.warn("Configuration: {} is not appropriate, using default value: {}",
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME,
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT);
+    }
+    if (congestionBackOffMaxTimeInMs <= 0) {
+      LOG.warn("Configuration: {} is not appropriate, using default value: {}",
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT);
+    }
+    if (congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
+      LOG.warn("Configuration: {} can not less than {}, using their default values.",
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME,
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME);
+    }
+    if (congestionBackOffMeanTimeInMs <= 0 || congestionBackOffMaxTimeInMs <= 0 ||
+        congestionBackOffMaxTimeInMs < congestionBackOffMeanTimeInMs) {
+      congestionBackOffMeanTimeInMs =
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT;
+      congestionBackOffMaxTimeInMs =
+          HdfsClientConfigKeys.DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT;
+    }
+
   }
 
   /**
@@ -1998,10 +2027,10 @@ class DataStreamer extends Daemon {
           sb.append(' ').append(i);
         }
         int range = Math.abs(lastCongestionBackoffTime * 3 -
-                                CONGESTION_BACKOFF_MEAN_TIME_IN_MS);
+            congestionBackOffMeanTimeInMs);
         int base = Math.min(lastCongestionBackoffTime * 3,
-                            CONGESTION_BACKOFF_MEAN_TIME_IN_MS);
-        t = Math.min(CONGESTION_BACK_OFF_MAX_TIME_IN_MS,
+            congestionBackOffMeanTimeInMs);
+        t = Math.min(congestionBackOffMaxTimeInMs,
                      (int)(base + Math.random() * range));
         lastCongestionBackoffTime = t;
         sb.append(" are congested. Backing off for ").append(t).append(" ms");
