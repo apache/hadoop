@@ -1481,7 +1481,7 @@ function hadoop_finalize_libpaths
     hadoop_translate_cygwin_path JAVA_LIBRARY_PATH
     hadoop_add_param HADOOP_OPTS java.library.path \
       "-Djava.library.path=${JAVA_LIBRARY_PATH}"
-    export LD_LIBRARY_PATH
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH
   fi
 }
 
