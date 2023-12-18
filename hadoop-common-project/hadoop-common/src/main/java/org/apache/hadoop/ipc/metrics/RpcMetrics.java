@@ -141,8 +141,8 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationSuccesses;
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
-  @Metric("Number of throttled client backoff requests")
-  MutableCounterLong rpcClientBackoffThrottled;
+  @Metric("Number of disconnected client backoff requests")
+  MutableCounterLong rpcClientBackoffDisconnected;
   @Metric("Number of slow RPC calls")
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
@@ -345,11 +345,10 @@ public class RpcMetrics {
   }
 
   /**
-   * Client was backoff due to throttling
+   * Client was backoff due to disconnection
    */
-  //@Override
-  public void incrClientBackoffThrottled() {
-    rpcClientBackoffThrottled.incr();
+  public void incrClientBackoffDisconnected() {
+    rpcClientBackoffDisconnected.incr();
   }
 
 
