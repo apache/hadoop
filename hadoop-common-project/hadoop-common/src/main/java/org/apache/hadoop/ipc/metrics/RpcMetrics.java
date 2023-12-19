@@ -345,7 +345,7 @@ public class RpcMetrics {
   }
 
   /**
-   * Client was backoff due to disconnection
+   * Client was disconnected due to backoff
    */
   public void incrClientBackoffDisconnected() {
     rpcClientBackoffDisconnected.incr();
