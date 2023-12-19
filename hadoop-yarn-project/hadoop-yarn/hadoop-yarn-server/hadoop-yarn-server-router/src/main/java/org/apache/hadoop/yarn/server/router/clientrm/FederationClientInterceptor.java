@@ -666,9 +666,9 @@ public class FederationClientInterceptor
       response = clientRMProxy.forceKillApplication(request);
       // If kill home sub-cluster application is successful,
       // we will try to kill the same application in other sub-clusters.
-      if (response.getIsKillCompleted()) {
+      if (response != null) {
         ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
-            new Class[] {GetApplicationsRequest.class}, new Object[] {request});
+            new Class[]{KillApplicationRequest.class}, new Object[]{request});
         invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
       }
     } catch (Exception e) {
@@ -857,8 +857,8 @@ public class FederationClientInterceptor
     return invokeConcurrent(request, clazz, subClusterIds);
   }
 
-  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz, Collection<SubClusterId> subClusterIds)
-      throws YarnException {
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      Collection<SubClusterId> subClusterIds) throws YarnException {
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
