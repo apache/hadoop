@@ -173,7 +173,7 @@ public final class Constants {
    * Future releases are likely to increase this value.
    * Keep in sync with the value in {@code core-default.xml}
    */
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 500;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
 
   /**
    * Configuration option to configure expiration time of
