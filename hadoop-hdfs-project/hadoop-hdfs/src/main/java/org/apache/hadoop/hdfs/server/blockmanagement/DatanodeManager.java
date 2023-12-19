@@ -211,7 +211,7 @@ public class DatanodeManager {
   private SlowPeerTracker slowPeerTracker;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
-  private final long slowPeerCollectionInterval;
+  private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
 
   @Nullable
@@ -408,7 +408,7 @@ public class DatanodeManager {
     LOG.info("Slow peers collection thread start.");
   }
 
-  public void stopSlowPeerCollector() {
+  private void stopSlowPeerCollector() {
     LOG.info("Slow peers collection thread shutdown");
     if (slowPeerCollectorDaemon == null) {
       return;
@@ -421,6 +421,17 @@ public class DatanodeManager {
     } finally {
       slowPeerCollectorDaemon = null;
       slowNodesUuidSet.clear();
+    }
+  }
+
+  public void restartSlowPeerCollector(long interval) {
+    Preconditions.checkNotNull(slowPeerCollectorDaemon,
+        "slowPeerCollectorDaemon thread is null, not support restart");
+    stopSlowPeerCollector();
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    this.slowPeerCollectionInterval = interval;
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
     }
   }
 
@@ -2288,5 +2299,10 @@ public class DatanodeManager {
   @VisibleForTesting
   public boolean isSlowPeerCollectorInitialized() {
     return slowPeerCollectorDaemon == null;
+  }
+
+  @VisibleForTesting
+  public long getSlowPeerCollectionInterval() {
+    return slowPeerCollectionInterval;
   }
 }
