@@ -142,7 +142,7 @@ public class RpcMetrics {
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
   @Metric("Number of disconnected client backoff requests")
-  MutableCounterLong rpcClientBackoffDisconnected;
+  private MutableCounterLong rpcClientBackoffDisconnected;
   @Metric("Number of slow RPC calls")
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
@@ -207,7 +207,6 @@ public class RpcMetrics {
   // abstract class if we decide to do custom instrumentation classes a la
   // JobTrackerInstrumentation. The methods with //@Override comment are
   // candidates for abstract methods in a abstract instrumentation class.
-
   /**
    * One authentication failure event
    */
