@@ -84,8 +84,8 @@ public class FederationGlobalView implements Cloneable {
    * Returns a FederationQueue matching the queueName
    * from the specified subClusters.
    *
-   * @param queueName
-   * @param subClusterName
+   * @param queueName queue name.
+   * @param subClusterName subCluster name.
    * @return FederationQueue corresponding to the queueName and subCluster
    */
   public FederationQueue getQueue(String queueName, String subClusterName) {
@@ -153,6 +153,7 @@ public class FederationGlobalView implements Cloneable {
    * Produces a quick String representation of all the queues associated
    * with view.
    * Good for printing.
+   * @return quick String representation of all the queues associated with view.
    */
   public String toQuickString() {
     StringBuilder sb = new StringBuilder();

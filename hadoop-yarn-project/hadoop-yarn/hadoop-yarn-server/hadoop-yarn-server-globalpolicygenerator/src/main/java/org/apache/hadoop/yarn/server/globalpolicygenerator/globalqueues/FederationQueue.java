@@ -318,6 +318,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
    * This operation combine every level of the queue and produces a merged tree.
    *
    * @param subClusterQueues the input queues to merge
+   * @param newScope subClusterId
    * @return the root of the merged FederationQueue tree
    */
   public static FederationQueue mergeQueues(
@@ -623,6 +624,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   /**
    * Produces a quick String representation of the queue rooted at this node.
    * Good for printing.
+   * @return quick String representation of the queue rooted at this node.
    */
   public String toQuickString() {
     return this.appendToSB(new StringBuilder(), 0).toString();
@@ -687,7 +689,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * True if the sum of used and pending resources for this queue are smaller
+   * @return True if the sum of used and pending resources for this queue are smaller
    * than the guaranteed resources.
    */
   public boolean isUnderutilized() {
@@ -697,21 +699,21 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Return a stream of the current FederationQueue (uses the FedQueueIterator).
+   * @return Return a stream of the current FederationQueue (uses the FedQueueIterator).
    */
   public Stream<FederationQueue> stream() {
     return StreamSupport.stream(this.spliterator(), false);
   }
 
   /**
-   * Stream all leaf nodes of the FederationQueue hierarchy.
+   * @return Stream all leaf nodes of the FederationQueue hierarchy.
    */
   public Stream<FederationQueue> streamLeafQs() {
     return this.stream().filter(FederationQueue::isLeaf);
   }
 
   /**
-   * Stream all leaf nodes that have non-zero guaranteed capacity.
+   * @return Stream all leaf nodes that have non-zero guaranteed capacity.
    */
   public Stream<FederationQueue> streamNonEmptyLeafQs() {
     return this.streamLeafQs()
@@ -719,7 +721,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Stream all inner nodes of the FederationQueue hierarchy.
+   * @return Stream all inner nodes of the FederationQueue hierarchy.
    */
   public Stream<FederationQueue> streamInnerQs() {
     return this.stream().filter(q -> !q.isLeaf());
