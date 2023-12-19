@@ -337,7 +337,7 @@ org.apache.kerby:kerby-xdr:2.0.3
 org.apache.kerby:token-provider:2.0.3
 org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.7.2
+org.apache.zookeeper:zookeeper:3.8.3
 org.codehaus.jettison:jettison:1.5.4
 org.eclipse.jetty:jetty-annotations:9.4.53.v20231009
 org.eclipse.jetty:jetty-http:9.4.53.v20231009
