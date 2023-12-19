@@ -361,11 +361,11 @@ public class FederationQueue implements Iterable<FederationQueue> {
 
   /**
    * Get child FederationQueue by name.
-   * @param queueName name of the queue.
+   * @param pQueueName name of the queue.
    * @return children FederationQueue.
    */
-  public FederationQueue getChildByName(String queueName) {
-    return recursiveChildByName(this, queueName);
+  public FederationQueue getChildByName(String pQueueName) {
+    return recursiveChildByName(this, pQueueName);
   }
 
   private static FederationQueue recursiveChildByName(FederationQueue f,
@@ -417,7 +417,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get the queue configuration
+   * Get the queue configuration.
    * @return queue configuration
    */
   public Configuration getConf() {
@@ -425,7 +425,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set the queue configuration
+   * Set the queue configuration.
    * @param conf queue configuration
    */
   public void setConf(Configuration conf) {
@@ -433,7 +433,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue guaranteed capacity
+   * Get queue guaranteed capacity.
    * @return queue guaranteed capacity
    */
   public Resource getGuarCap() {
@@ -441,7 +441,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue guaranteed capacity
+   * Set queue guaranteed capacity.
    * @param guarCap queue guaranteed capacity
    */
   public void setGuarCap(Resource guarCap) {
@@ -449,7 +449,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue max capacity
+   * Get queue max capacity.
    * @return queue max capacity
    */
   public Resource getMaxCap() {
@@ -457,7 +457,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue max capacity
+   * Set queue max capacity.
    * @param maxCap max capacity of the queue
    */
   public void setMaxCap(Resource maxCap) {
@@ -465,7 +465,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue used capacity
+   * Get queue used capacity.
    * @return queue used capacity
    */
   public Resource getUsedCap() {
@@ -473,7 +473,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue used capacity
+   * Set queue used capacity.
    * @param usedCap queue used capacity
    */
   public void setUsedCap(Resource usedCap) {
@@ -481,7 +481,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue demand capacity
+   * Get queue demand capacity.
    * @return queue demand capacity
    */
   public Resource getDemandCap() {
@@ -489,7 +489,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue demand capacity
+   * Set queue demand capacity.
    * @param demandCap queue demand capacity
    */
   public void setDemandCap(Resource demandCap) {
@@ -497,7 +497,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue children
+   * Get queue children.
    * @return queue children
    */
   public Map<String, FederationQueue> getChildren() {
@@ -505,7 +505,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue children
+   * Set queue children.
    * @param children queue children
    */
   public void setChildren(Map<String, FederationQueue> children) {
@@ -513,7 +513,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue name
+   * Get queue name.
    * @return queue name
    */
   public String getQueueName() {
@@ -521,7 +521,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue total capacity
+   * Get queue total capacity.
    * @return queue total capacity
    */
   public Resource getTotCap() {
@@ -529,7 +529,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue total capacity
+   * Set queue total capacity.
    * @param totCap queue total capacity
    */
   public void setTotCap(Resource totCap) {
@@ -537,7 +537,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue name
+   * Set queue name.
    * @param queueName queue name
    */
   public void setQueueName(String queueName) {
@@ -545,7 +545,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue ideal allocation
+   * Get queue ideal allocation.
    * @return queue ideal allocation
    */
   public Resource getIdealAlloc() {
@@ -553,7 +553,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue ideal allocation
+   * Set queue ideal allocation.
    * @param idealAlloc queue ideal allocation
    */
   public void setIdealAlloc(Resource idealAlloc) {
@@ -561,7 +561,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue resources to be preempted
+   * Get queue resources to be preempted.
    * @return queue resources to be preempted
    */
   public Resource getToBePreempted() {
@@ -569,7 +569,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue resources to be preempted
+   * Set queue resources to be preempted.
    * @param toBePreempted queue resources to be preempted
    */
   public void setToBePreempted(Resource toBePreempted) {
@@ -577,7 +577,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue subcluster id
+   * Get queue subcluster id.
    * @return queue subcluster id
    */
   public SubClusterId getSubClusterId() {
@@ -585,7 +585,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue subcluster id
+   * Set queue subcluster id.
    * @param subClusterId queue subcluster id
    */
   public void setSubClusterId(SubClusterId subClusterId) {
@@ -593,7 +593,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Set queue type
+   * Set queue type.
    * @param queueType queue type
    */
   public void setQueueType(String queueType) {
@@ -601,7 +601,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue type
+   * Get queue type.
    * @return queue type
    */
   public String getQueueType() {
@@ -609,7 +609,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue expected ideal allocation
+   * Get queue expected ideal allocation.
    * @return queue ideal allocation
    */
   public Resource getExpectedIdealAlloc() {
@@ -659,7 +659,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Count the total child queues
+   * Count the total child queues.
    * @return total child queues
    */
   public long countQueues() {
@@ -671,7 +671,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Checks whether queue is leaf queue
+   * Checks whether queue is leaf queue.
    * @return is queue leaf queue
    */
   public boolean isLeaf() {
@@ -679,7 +679,7 @@ public class FederationQueue implements Iterable<FederationQueue> {
   }
 
   /**
-   * Get queue number of children
+   * Get queue number of children.
    * @return number of queue children
    */
   public int childrenNum() {

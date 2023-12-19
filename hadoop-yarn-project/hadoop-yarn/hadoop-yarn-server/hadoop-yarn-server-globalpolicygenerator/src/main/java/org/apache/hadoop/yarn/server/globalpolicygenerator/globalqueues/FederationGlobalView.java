@@ -99,7 +99,7 @@ public class FederationGlobalView implements Cloneable {
   }
 
   /**
-   * Get name of the FederationGlobalView
+   * Get name of the FederationGlobalView.
    * @return name of the global view
    */
   public String getName() {
@@ -107,7 +107,7 @@ public class FederationGlobalView implements Cloneable {
   }
 
   /**
-   * Set name of the FederationGlobalView
+   * Set name of the FederationGlobalView.
    * @param name global view name
    */
   public void setName(String name) {
@@ -115,7 +115,7 @@ public class FederationGlobalView implements Cloneable {
   }
 
   /**
-   * Get global view subclusters
+   * Get global view subclusters.
    * @return subclusters associated with global view
    */
   public List<FederationQueue> getSubClusters() {
@@ -123,7 +123,7 @@ public class FederationGlobalView implements Cloneable {
   }
 
   /**
-   * Set global view subclusters
+   * Set global view subclusters.
    * @param subClusters subclusters associated with global view
    */
   public void setSubClusters(List<FederationQueue> subClusters) {
@@ -170,7 +170,7 @@ public class FederationGlobalView implements Cloneable {
   }
 
   /**
-   * Set global queue for FederationGlobalView
+   * Set global queue for FederationGlobalView.
    * @param global queue for FederationGlobalView
    */
   public void setGlobal(FederationQueue global) {
