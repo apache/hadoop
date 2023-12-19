@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -127,17 +126,12 @@ import org.apache.log4j.RollingFileAppender;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-<<<<<<< HEAD
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-=======
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.slf4j.LoggerFactory;
->>>>>>> 73eccd6d7c57 (HDFS-16740. Mini cluster test flakiness (#4835))
+
 
 /**
  * A JUnit test for doing fsck.
