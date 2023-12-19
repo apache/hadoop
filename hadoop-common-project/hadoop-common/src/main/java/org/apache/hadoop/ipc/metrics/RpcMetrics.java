@@ -142,7 +142,7 @@ public class RpcMetrics {
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
   @Metric("Number of disconnected client backoff requests")
-  private MutableCounterLong rpcClientBackoffDisconnected;
+  MutableCounterLong rpcClientBackoffDisconnected;
   @Metric("Number of slow RPC calls")
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
