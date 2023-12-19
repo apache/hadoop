@@ -131,6 +131,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.github.pjfanning</groupId>
+            <artifactId>jsr311-compat</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.solr</groupId>
             <artifactId>solr-solrj</artifactId>
             <version>${solr.version}</version>

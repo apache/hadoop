@@ -450,6 +450,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.github.pjfanning</groupId>
+      <artifactId>jsr311-compat</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
       <optional>true</optional>
