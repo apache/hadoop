@@ -268,4 +268,12 @@ public interface FSNamesystemMBean {
    * @return Returns values between 0 and 1 for the progress.
    */
   float getReconstructionQueuesInitProgress();
+
+  /**
+   * Returns a nested JSON object listing the collect slowNodesIpAddr frequency Map,
+   * e.g. {"1.1.1.1":4,"2.2.2.2":3}
+   *
+   * @return JSON string.
+   */
+  String getCollectSlowNodesIpAddrFrequencyMap();
 }

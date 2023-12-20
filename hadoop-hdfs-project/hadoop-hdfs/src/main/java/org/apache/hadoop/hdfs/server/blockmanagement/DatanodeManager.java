@@ -69,6 +69,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -213,6 +214,8 @@ public class DatanodeManager {
   private Daemon slowPeerCollectorDaemon;
   private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
+
+  private final Map<String, Integer> collectSlowNodesIpAddrFrequencyMap = new ConcurrentHashMap<>();
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -421,6 +424,7 @@ public class DatanodeManager {
     } finally {
       slowPeerCollectorDaemon = null;
       slowNodesUuidSet.clear();
+      collectSlowNodesIpAddrFrequencyMap.clear();
     }
   }
 
@@ -2204,8 +2208,19 @@ public class DatanodeManager {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
     List<DatanodeDescriptor> datanodeDescriptors = getDnDescriptorsFromIpAddr(slowNodes);
-    datanodeDescriptors.forEach(
-        datanodeDescriptor -> slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid()));
+    datanodeDescriptors.forEach(datanodeDescriptor -> {
+      slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid());
+      String ipAddr = datanodeDescriptor.getIpAddr();
+      collectSlowNodesIpAddrFrequencyMap.putIfAbsent(ipAddr, 1);
+      collectSlowNodesIpAddrFrequencyMap.computeIfPresent(ipAddr, (k, v) -> v + 1);
+    });
+    // Clean up nodes that are not in the host2DatanodeMap
+    for (String ipAddr : collectSlowNodesIpAddrFrequencyMap.keySet()) {
+      DatanodeDescriptor datanodeByHost = host2DatanodeMap.getDatanodeByHost(ipAddr);
+      if (datanodeByHost == null) {
+        collectSlowNodesIpAddrFrequencyMap.remove(ipAddr);
+      }
+    }
     return slowPeersUuidSet;
   }
 
@@ -2231,6 +2246,14 @@ public class DatanodeManager {
    */
   public static Set<String> getSlowNodesUuidSet() {
     return slowNodesUuidSet;
+  }
+
+  /**
+   * Return the map of the frequency of collecting slow datanodes.
+   * @return map type
+   */
+  public Map<String, Integer> getCollectSlowNodesIpAddrFrequencyMap() {
+    return collectSlowNodesIpAddrFrequencyMap;
   }
 
   /**
