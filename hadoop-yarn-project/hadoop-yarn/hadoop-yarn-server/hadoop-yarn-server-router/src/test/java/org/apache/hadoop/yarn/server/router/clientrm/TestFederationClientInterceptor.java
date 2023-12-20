@@ -441,7 +441,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       ApplicationClientProtocol clientRMProxyForSubCluster =
           interceptor.getClientRMProxyForSubCluster(subCluster);
       GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
-      GetApplicationReportResponse responseGet = clientRMProxyForSubCluster.getApplicationReport(requestGet);
+      GetApplicationReportResponse responseGet =
+          clientRMProxyForSubCluster.getApplicationReport(requestGet);
       Assert.assertNotNull(responseGet);
       ApplicationReport applicationReport = responseGet.getApplicationReport();
       Assert.assertNotNull(applicationReport);
