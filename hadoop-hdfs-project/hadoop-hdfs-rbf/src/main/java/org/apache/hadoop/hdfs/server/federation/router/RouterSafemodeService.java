@@ -133,8 +133,8 @@ public class RouterSafemodeService extends PeriodicService {
 
     // Use same interval as cache update service
     this.setIntervalMs(conf.getTimeDuration(
-        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD,
-        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     this.startupInterval = conf.getTimeDuration(
