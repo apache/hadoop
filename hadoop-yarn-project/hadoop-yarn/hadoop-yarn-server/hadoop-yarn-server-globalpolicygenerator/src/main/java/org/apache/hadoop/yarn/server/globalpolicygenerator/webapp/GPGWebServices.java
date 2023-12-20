@@ -19,18 +19,15 @@ package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.dao.GpgInfo;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
 @Singleton
@@ -41,9 +38,6 @@ public class GPGWebServices {
 
   private GlobalPolicyGenerator gpgGenerator;
   private WebApp webapp;
-
-  private @Context
-  HttpServletResponse response;
 
   @Inject
   public GPGWebServices(final GlobalPolicyGenerator gpg, final WebApp webapp) {
@@ -57,7 +51,6 @@ public class GPGWebServices {
   public GpgInfo get() {
     return new GpgInfo(this.gpgGenerator.getGPGContext());
   }
-
 
   @GET
   @Path("/info")

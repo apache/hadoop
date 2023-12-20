@@ -45,15 +45,15 @@ public class TestGPGWebServices extends JerseyTestBase {
   private static class XWebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
-        bind(JAXBContextResolver.class);
-        bind(GPGWebServices.class);
-        bind(GenericExceptionHandler.class);
-        gpg = new GlobalPolicyGenerator();
-        webApp = new GPGWebApp(gpg);
-        bind(WebApp.class).toInstance(webApp);
-        bind(GlobalPolicyGenerator.class).toInstance(gpg);
-        bind(GPGContext.class).toInstance(gpg.getGPGContext());
-        serve("/*").with(GuiceContainer.class);
+      bind(JAXBContextResolver.class);
+      bind(GPGWebServices.class);
+      bind(GenericExceptionHandler.class);
+      gpg = new GlobalPolicyGenerator();
+      webApp = new GPGWebApp(gpg);
+      bind(WebApp.class).toInstance(webApp);
+      bind(GlobalPolicyGenerator.class).toInstance(gpg);
+      bind(GPGContext.class).toInstance(gpg.getGPGContext());
+      serve("/*").with(GuiceContainer.class);
     }
   }
 
