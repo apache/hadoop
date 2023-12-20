@@ -747,6 +747,7 @@ class BlockReceiver implements Closeable {
 
           // Actual number of data bytes to write.
           int numBytesToDisk = (int)(offsetInBlock-onDiskLen);
+          
           // Write data to disk.
           long begin = Time.monotonicNow();
           streams.writeDataToDisk(dataBuf.array(),
