@@ -1538,7 +1538,7 @@
   </description>
 </property>
 
-  
+
 <property>
   <name>fs.s3a.connection.ssl.enabled</name>
   <value>true</value>
