@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
@@ -59,6 +63,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
@@ -106,6 +111,9 @@ public class TestObserverNode {
     // Observer and immediately try to read from it.
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    conf.setBoolean(IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE, true);
+    conf.setTimeDuration(IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL,
+        TimeUnit.SECONDS.toNanos(10), TimeUnit.NANOSECONDS);
     qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 1, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
@@ -162,6 +170,34 @@ public class TestObserverNode {
 
       observerFsNS.getEditLogTailer().doTailEdits();
       FileStatus fileStatus = scheduledFuture.get(10000, TimeUnit.MILLISECONDS);
+      assertNotNull(fileStatus);
+    } finally {
+      EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
+      observerFsNS.setEditLogTailerForTests(editLogTailer);
+      editLogTailer.start();
+    }
+  }
+
+  @Test
+  public void testObserverStableRpc() throws Exception {
+    FSNamesystem observerFsNS = dfsCluster.getNamesystem(2);
+    try {
+      // Stop EditlogTailer of Observer NameNode.
+      observerFsNS.getEditLogTailer().stop();
+
+      Path tmpTestPath = new Path("/TestObserverStableRpc");
+      dfs.create(tmpTestPath, (short)1).close();
+      assertSentTo(0);
+      // This operation will be blocked in ObserverNameNode
+      // until observer rpc stable time is reached
+      // and then throw ObserverRetryOnActiveException and client will retry to Active NN
+      FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
+      assertSentTo(0);
+      assertNotNull(fileStatus);
+
+      observerFsNS.getEditLogTailer().doTailEdits();
+      fileStatus = dfs.getFileStatus(tmpTestPath);
+      assertSentTo(2);
       assertNotNull(fileStatus);
     } finally {
       EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
