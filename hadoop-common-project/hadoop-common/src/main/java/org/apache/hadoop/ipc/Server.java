@@ -494,6 +494,8 @@ public abstract class Server {
   private int socketSendBufferSize;
   private final int maxDataLength;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  private final boolean rpcStableEnable;
+  private final long rpcStableInterval;
 
   volatile private boolean running = true;         // true while server runs
   private CallQueueManager<Call> callQueue;
@@ -976,6 +978,7 @@ public abstract class Server {
     // Serialized RouterFederatedStateProto message to
     // store last seen states for multiple namespaces.
     private ByteString federatedNamespaceState;
+    private boolean isStale;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -1009,6 +1012,15 @@ public abstract class Server {
       this.callerContext = callerContext;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
+      this.isStale = false;
+    }
+
+    public boolean isStale() {
+      return isStale;
+    }
+
+    public void setStale(boolean stale) {
+      isStale = stale;
     }
 
     /**
@@ -1243,6 +1255,9 @@ public abstract class Server {
       ResponseParams responseParams = new ResponseParams();
 
       try {
+        if (isStale()) {
+          throw new ObserverRetryOnActiveException("The rpc call in observer is stable.");
+        }
         value = call(
             rpcKind, connection.protocolName, rpcRequest, getTimestampNanos());
       } catch (Throwable e) {
@@ -3177,10 +3192,15 @@ public abstract class Server {
              * In case of Observer, it handles only reads, which are
              * commutative.
              */
-            // Re-queue the call and continue
-            requeueCall(call);
-            call = null;
-            continue;
+            if (rpcStableEnable && startTimeNanos - call.timestampNanos > rpcStableInterval) {
+              call.setStale(true);
+              rpcMetrics.incrStableCalls();
+            } else {
+              // Re-queue the call and continue
+              requeueCall(call);
+              call = null;
+              continue;
+            }
           }
           LOG.debug("{}: {} for RpcKind {}.", Thread.currentThread().getName(), call, call.rpcKind);
           CurCall.set(call);
@@ -3340,6 +3360,17 @@ public abstract class Server {
     this.readerPendingConnectionQueue = conf.getInt(
         CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
         CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
+
+    this.rpcStableEnable =
+        conf.getBoolean(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_ENABLE,
+            CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_ENABLE_DEFAULT);
+    if (this.rpcStableEnable) {
+      this.rpcStableInterval =
+          conf.getTimeDuration(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL,
+              CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_DEFAULT, TimeUnit.NANOSECONDS);
+    } else {
+      this.rpcStableInterval = -1;
+    }
 
     // Setup appropriate callqueue
     final String prefix = getQueueClassPrefix();
