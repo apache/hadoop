@@ -132,7 +132,7 @@ public class WebPageUtils {
     Hamlet.UL<Hamlet.DIV<Hamlet>> enabledTools = null;
 
     if (isToolsEnabled) {
-      tools = section.h3("Tools");
+      tools = section.h3("accordion-parent","Tools");
       enabledTools = tools.ul().li().a("/conf", "Configuration").__().
           li().a("/logs", "Local logs").__().
           li().a("/stacks", "Server stacks").__().
