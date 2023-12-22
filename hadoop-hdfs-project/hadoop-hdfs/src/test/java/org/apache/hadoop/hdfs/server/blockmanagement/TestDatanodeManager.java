@@ -1134,7 +1134,7 @@ public class TestDatanodeManager {
     verifyComputeReconstructedTaskNum(100, 100, 150, 250, 100);
     verifyComputeReconstructedTaskNum(200, 100000, 200000, 300000, 400000);
     verifyComputeReconstructedTaskNum(1000000, 100, 150, 250, 100);
-    verifyComputeReconstructedTaskNum(14000000,200, 200, 400, 200);
+    verifyComputeReconstructedTaskNum(14000000, 200, 200, 400, 200);
 
   }
   public void verifyComputeReconstructedTaskNum(int xmitsInProgress, int numReplicationBlocks,
