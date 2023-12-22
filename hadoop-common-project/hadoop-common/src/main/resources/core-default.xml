@@ -1408,6 +1408,12 @@
 </property>
 
 <property>
+  <name>parquet.hadoop.vectored.io.enabled</name>
+  <value>true</value>
+  <description>Enable vectored io for fast reads for parquet files.</description>
+</property>
+
+<property>
   <name>fs.s3a.access.key</name>
   <description>AWS access key ID used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
