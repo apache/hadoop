@@ -20,6 +20,12 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -70,6 +76,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
       "mapreduce.fileoutputcommitter.algorithm.version";
   public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 2;
+  public static final String FILEOUTPUTCOMMITTER_MERGE_PATH_PARALLEL_THRESHOLD =
+          "mapreduce.fileoutputcommitter.parallel.threshold";
+  public static final int FILEOUTPUTCOMMITTER_MERGE_PATH_PARALLEL_THRESHOLD_DEFAULT = 3;
   // Skip cleanup _temporary folders under job's output directory
   public static final String FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED =
       "mapreduce.fileoutputcommitter.cleanup.skipped";
@@ -103,6 +112,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
+  private final int parallelThreshold;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
 
@@ -143,6 +153,8 @@ public class FileOutputCommitter extends PathOutputCommitter {
     if (algorithmVersion != 1 && algorithmVersion != 2) {
       throw new IOException("Only 1 or 2 algorithm version is supported");
     }
+    parallelThreshold = conf.getInt(FILEOUTPUTCOMMITTER_MERGE_PATH_PARALLEL_THRESHOLD,
+                                    FILEOUTPUTCOMMITTER_MERGE_PATH_PARALLEL_THRESHOLD_DEFAULT);
 
     // if skip cleanup
     skipCleanup = conf.getBoolean(
@@ -401,8 +413,34 @@ public class FileOutputCommitter extends PathOutputCommitter {
       FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
 
       if (algorithmVersion == 1) {
-        for (FileStatus stat: getAllCommittedTaskPaths(context)) {
-          mergePaths(fs, stat, finalOutput, context);
+        FileStatus[] allCommittedTaskPaths = getAllCommittedTaskPaths(context);
+        if (allCommittedTaskPaths.length <= parallelThreshold) {
+          for (FileStatus stat : allCommittedTaskPaths) {
+            mergePaths(fs, stat, finalOutput, context);
+          }
+        } else {
+          String message = "commitJobInternal(): parallel mergePaths() for " + allCommittedTaskPaths.length + " paths";
+          LOG.info(message);
+          long mergePathsStartTime = System.currentTimeMillis();
+          ExecutorService executorService = ForkJoinPool.commonPool();
+          List<Future<Void>> futures = new ArrayList<Future<Void>>();
+          for (FileStatus stat : allCommittedTaskPaths) {
+            futures.add(executorService.submit(
+                    () -> {
+                      try {
+                        mergePaths(fs, stat, finalOutput, context);
+                      } catch (IOException e) {
+                        throw new RuntimeException(e);
+                      }
+                      return (Void)null;
+                    }
+            ));
+          }
+          waitAll(message, futures);
+          long millis = System.currentTimeMillis() - mergePathsStartTime;
+          if (millis > 5000) {
+            LOG.info("... done " + message + ", took " + millis + " ms");
+          }
         }
       }
 
@@ -443,6 +481,21 @@ public class FileOutputCommitter extends PathOutputCommitter {
     } else {
       LOG.warn("Output Path is null in commitJob()");
     }
+  }
+
+  private static <T> List<T> waitAll(String message, List<Future<T>> futures) {
+    List<T> res = new ArrayList<T>();
+    for(Future<T> f : futures) {
+      try {
+        T resElt = f.get();
+        res.add(resElt);
+      } catch(ExecutionException ex) {
+        throw new RuntimeException("Failed " + message, ex);
+      } catch(InterruptedException ex) {
+        throw new RuntimeException("Failed " + message, ex);
+      }
+    }
+    return res;
   }
 
   /**
@@ -511,9 +564,36 @@ public class FileOutputCommitter extends PathOutputCommitter {
       }
     } else {
       fs.mkdirs(to);
-      for (FileStatus subFrom : fs.listStatus(from.getPath())) {
-        Path subTo = new Path(to, subFrom.getPath().getName());
-        mergePaths(fs, subFrom, subTo, context);
+      FileStatus[] fileStatuses = fs.listStatus(from.getPath());
+      if (fileStatuses.length <= parallelThreshold) {
+        for (FileStatus subFrom : fileStatuses) {
+          Path subTo = new Path(to, subFrom.getPath().getName());
+          mergePaths(fs, subFrom, subTo, context);
+        }
+      } else {
+        String message = "renameOrMerge(): parallel mergePaths() for " + fileStatuses.length + " paths";
+        LOG.info(message);
+        long mergePathsStartTime = System.currentTimeMillis();
+        ExecutorService executorService = ForkJoinPool.commonPool();
+        List<Future<Void>> futures = new ArrayList<>();
+        for (FileStatus subFrom : fileStatuses) {
+          Path subTo = new Path(to, subFrom.getPath().getName());
+          futures.add(executorService.submit(
+                  () -> {
+                    try {
+                      mergePaths(fs, subFrom, subTo, context);
+                    } catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                    return (Void)null;
+                  }
+          ));
+        }
+        waitAll(message, futures);
+        long millis = System.currentTimeMillis() - mergePathsStartTime;
+        if (millis > 5000) {
+          LOG.info("... done " + message + ", took " + millis + " ms");
+        }
       }
     }
   }
