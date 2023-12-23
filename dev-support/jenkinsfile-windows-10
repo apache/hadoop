@@ -70,7 +70,7 @@ pipeline {
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
                 DOCKER_BUILDKIT = 0
                 IS_OPTIONAL = 0
-                IS_NIGHTLY_BUILD = 1
+                IS_NIGHTLY_BUILD = 0
                 IS_WINDOWS = 1
             }
 
