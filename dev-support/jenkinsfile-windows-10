@@ -37,6 +37,7 @@ pipeline {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
         YETUS_VERSION='rel/0.14.0'
+        BUILD_USER='HadoopBuilder'
     }
 
     parameters {
