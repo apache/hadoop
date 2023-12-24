@@ -302,7 +302,6 @@ TEST(BadDataNodeTest, InternalError) {
   DatanodeIDProto *dnid = di->mutable_id();
   dnid->set_datanodeuuid("foo");
 
-
   char buf[4096] = {
       0,
   };
