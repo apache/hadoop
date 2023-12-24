@@ -15,6 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * This package provides ATS functionality.
+ */
 @InterfaceAudience.Private
 package org.apache.hadoop.yarn.server.timeline;
 import org.apache.hadoop.classification.InterfaceAudience;
