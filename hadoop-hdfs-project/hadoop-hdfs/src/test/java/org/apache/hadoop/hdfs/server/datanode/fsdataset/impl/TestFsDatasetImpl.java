@@ -1713,9 +1713,9 @@ public class TestFsDatasetImpl {
   @Test
   public void testNotifyNamenodeMissingOrNewBlock() throws Exception {
     long blockSize = 1024;
-    int heatbeatInterval = 1;
+    int heartbeatInterval = 1;
     HdfsConfiguration c = new HdfsConfiguration();
-    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heartbeatInterval);
     c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
         numDataNodes(1).build();
@@ -1964,9 +1964,9 @@ public class TestFsDatasetImpl {
   @Test
   public void tesInvalidateMissingBlock() throws Exception {
     long blockSize = 1024;
-    int heatbeatInterval = 1;
+    int heartbeatInterval = 1;
     HdfsConfiguration c = new HdfsConfiguration();
-    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heartbeatInterval);
     c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
         numDataNodes(1).build();

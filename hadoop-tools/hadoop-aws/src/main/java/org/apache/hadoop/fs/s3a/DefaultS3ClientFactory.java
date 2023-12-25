@@ -144,7 +144,9 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Configure a sync or async S3 client builder.
-   * This method handles all shared configuration.
+   * This method handles all shared configuration, including
+   * path style access, credentials and whether or not to use S3Express
+   * CreateSession.
    * @param builder S3 client builder
    * @param parameters parameter object
    * @param conf configuration object
@@ -166,6 +168,7 @@ public class DefaultS3ClientFactory extends Configured
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
         .credentialsProvider(parameters.getCredentialSet())
+        .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
   }
 

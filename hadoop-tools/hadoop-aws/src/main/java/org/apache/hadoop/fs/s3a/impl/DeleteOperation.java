@@ -263,7 +263,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       final CompletableFuture<Long> abortUploads;
       if (dirOperationsPurgeUploads) {
         final StoreContext sc = getStoreContext();
-        final String key = sc.pathToKey(path) + "/";
+        final String key = dirKey;
         LOG.debug("All uploads under {} will be deleted", key);
         abortUploads = submit(sc.getExecutor(), sc.getActiveAuditSpan(), () ->
             callbacks.abortMultipartUploadsUnderPrefix(key));
@@ -439,14 +439,16 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .filter(e -> e.isDirMarker)
             .map(e -> e.objectIdentifier)
             .collect(Collectors.toList());
-        LOG.debug("Deleting of {} directory markers", dirs.size());
-        // This is invoked with deleteFakeDir.
-        Invoker.once("Remove S3 Dir Markers",
-            status.getPath().toString(),
-            () -> callbacks.removeKeys(
-                dirs,
-                true
-            ));
+        if (!dirs.isEmpty()) {
+          LOG.debug("Deleting {} directory markers", dirs.size());
+          // This is invoked with deleteFakeDir.
+          Invoker.once("Remove S3 Dir Markers",
+              status.getPath().toString(),
+              () -> callbacks.removeKeys(
+                  dirs,
+                  true
+              ));
+        }
       }
     }
   }

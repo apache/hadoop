@@ -279,6 +279,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "safemode.expiration";
   public static final long DFS_ROUTER_SAFEMODE_EXPIRATION_DEFAULT =
       3 * DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT;
+  public static final String DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS =
+      FEDERATION_ROUTER_PREFIX + "safemode.checkperiod";
+  public static final long DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
 
   // HDFS Router-based federation mount table entries
   /** Maximum number of cache entries to have. */

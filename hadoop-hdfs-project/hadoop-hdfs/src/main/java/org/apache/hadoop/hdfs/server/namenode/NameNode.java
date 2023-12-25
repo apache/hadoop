@@ -143,6 +143,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_ME
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT;
@@ -380,7 +382,8 @@ public class NameNode extends ReconfigurableBase implements
           IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
           DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
           DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
-          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY));
+          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+          DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2374,7 +2377,8 @@ public class NameNode extends ReconfigurableBase implements
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY)) || (property.equals(
         DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY)) || (property.equals(
         DFS_DATANODE_PEER_STATS_ENABLED_KEY)) || property.equals(
-        DFS_DATANODE_MAX_NODES_TO_REPORT_KEY)) {
+        DFS_DATANODE_MAX_NODES_TO_REPORT_KEY) || property.equals(
+        DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY)) {
       return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else if (property.equals(DFS_BLOCK_INVALIDATE_LIMIT_KEY)) {
       return reconfigureBlockInvalidateLimit(datanodeManager, property, newVal);
@@ -2671,6 +2675,24 @@ public class NameNode extends ReconfigurableBase implements
             ? DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT : Integer.parseInt(newVal));
         result = Integer.toString(maxSlowPeersToReport);
         datanodeManager.setMaxSlowPeersToReport(maxSlowPeersToReport);
+        break;
+      }
+      case DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY: {
+        if (newVal == null) {
+          // set to the value of the current system or default
+          long defaultInterval =
+              getConf().getTimeDuration(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
+                  DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+          datanodeManager.restartSlowPeerCollector(defaultInterval);
+          result = Long.toString(defaultInterval);
+        } else {
+          // set to other value
+          long newInterval =
+              getConf().getTimeDurationHelper(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
+                  newVal, TimeUnit.MILLISECONDS);
+          datanodeManager.restartSlowPeerCollector(newInterval);
+          result = newVal;
+        }
         break;
       }
       default: {

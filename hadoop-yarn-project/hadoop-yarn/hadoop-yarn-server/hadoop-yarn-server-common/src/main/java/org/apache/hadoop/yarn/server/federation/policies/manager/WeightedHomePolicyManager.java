@@ -62,4 +62,9 @@ public class WeightedHomePolicyManager extends AbstractPolicyManager {
       WeightedPolicyInfo weightedPolicyInfo) {
     this.weightedPolicyInfo = weightedPolicyInfo;
   }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return true;
+  }
 }
