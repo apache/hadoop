@@ -99,12 +99,16 @@ pipeline {
                             -v %WORKSPACE%\\src:C:\\src^
                             -v %WORKSPACE%\\yetus:C:\\yetus^
                             -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
-                            -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
-                            -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
-                            -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
-                            -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                             -e BUILD_URL=%BUILD_URL% -e BRANCH_NAME=%BRANCH_NAME%^
                             -e JOB_NAME=%JOB_NAME% -e JENKINS_URL=%JENKINS_URL%^
+                            -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
+                            -e BUILD_NUMBER=%BUILD_NUMBER% -e EXECUTOR_NUMBER=%EXECUTOR_NUMBER%^
+                            -e BUILD_ID=%BUILD_ID% -e GIT_COMMIT=%GIT_COMMIT%^
+                            -e NODE_NAME=%NODE_NAME% -e GIT_URL=%GIT_URL%^
+                            -e BUILD_TAG=%BUILD_TAG% -e GIT_BRANCH=%GIT_BRANCH%^
+                            -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
+                            -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
+                            -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                             -e IS_NIGHTLY_BUILD=%IS_NIGHTLY_BUILD% -e IS_WINDOWS=%IS_WINDOWS%^
                             -e BASH_EXECUTABLE=/c/Git/bin/bash.exe^
                             -e VCPKG_INSTALLED_PACKAGES=/c/vcpkg/installed/x64-windows^
@@ -136,12 +140,16 @@ pipeline {
                                 -v %WORKSPACE%\\src:C:\\src^
                                 -v %WORKSPACE%\\yetus:C:\\yetus^
                                 -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
-                                -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
-                                -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
-                                -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
-                                -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                                 -e BUILD_URL=%BUILD_URL% -e BRANCH_NAME=%BRANCH_NAME%^
                                 -e JOB_NAME=%JOB_NAME% -e JENKINS_URL=%JENKINS_URL%^
+                                -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
+                                -e BUILD_NUMBER=%BUILD_NUMBER% -e EXECUTOR_NUMBER=%EXECUTOR_NUMBER%^
+                                -e BUILD_ID=%BUILD_ID% -e GIT_COMMIT=%GIT_COMMIT%^
+                                -e NODE_NAME=%NODE_NAME% -e GIT_URL=%GIT_URL%^
+                                -e BUILD_TAG=%BUILD_TAG% -e GIT_BRANCH=%GIT_BRANCH%^
+                                -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
+                                -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
+                                -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                                 -e IS_NIGHTLY_BUILD=%IS_NIGHTLY_BUILD% -e IS_WINDOWS=%IS_WINDOWS%^
                                 -e BASH_EXECUTABLE=/c/Git/bin/bash.exe^
                                 -e VCPKG_INSTALLED_PACKAGES=/c/vcpkg/installed/x64-windows^
