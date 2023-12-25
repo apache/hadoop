@@ -673,6 +673,19 @@ public interface MRJobConfig {
   public static final boolean DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
       false;
 
+  public static final String MAPREDUCE_JOB_FAIL_MAP_PRIORITY =
+    "mapreduce.job.fail.map.priority";
+  public static final int DEFAULT_MAPREDUCE_JOB_FAIL_MAP_PRIORITY = 5;
+  public static final String MAPREDUCE_JOB_REDUCE_PRIORITY =
+    "mapreduce.job.reduce.priority";
+  public static final int DEFAULT_MAPREDUCE_JOB_REDUCE_PRIORITY = 10;
+  public static final String MAPREDUCE_JOB_MAP_PRIORITY =
+    "mapreduce.job.map.priority";
+  public static final int DEFAULT_MAPREDUCE_JOB_MAP_PRIORITY = 20;
+  public static final String MAPREDUCE_JOB_OPPORTUNISTIC_MAP_PRIORITY =
+    "mapreduce.job.opportunistic.map.priority";
+  public static final int DEFAULT_MAPREDUCE_JOB_OPPORTUNISTIC_MAP_PRIORITY = 19;
+
   public static final String MR_PREFIX = "yarn.app.mapreduce.";
 
   public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
