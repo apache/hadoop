@@ -41,6 +41,10 @@ public class ProportionRouterRpcFairnessPolicyController extends
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ProportionRouterRpcFairnessPolicyController.class);
+  // For unregistered ns, the default ns is used,
+  // so the configuration can be simplified if the handler ratio of all ns is 1,
+  // and transparent expansion of new ns can be supported.
+  private static final String DEFAULT_NS = "default_ns";
 
   public ProportionRouterRpcFairnessPolicyController(Configuration conf){
     init(conf);
@@ -59,6 +63,9 @@ public class ProportionRouterRpcFairnessPolicyController extends
 
     // Insert the concurrent nameservice into the set to process together
     allConfiguredNS.add(CONCURRENT_NS);
+
+    // Insert the default nameservice into the set to process together
+    allConfiguredNS.add(DEFAULT_NS);
     for (String nsId : allConfiguredNS) {
       double dedicatedHandlerProportion = conf.getDouble(
           DFS_ROUTER_FAIR_HANDLER_PROPORTION_KEY_PREFIX + nsId,
@@ -71,6 +78,24 @@ public class ProportionRouterRpcFairnessPolicyController extends
       }
       insertNameServiceWithPermits(nsId, dedicatedHandlers);
       LOG.info("Assigned {} handlers to nsId {} ", dedicatedHandlers, nsId);
+    }
+  }
+
+  @Override
+  public boolean acquirePermit(String nsId) {
+    if (contains(nsId)) {
+      return super.acquirePermit(nsId);
+    }else {
+      return super.acquirePermit(DEFAULT_NS);
+    }
+  }
+
+  @Override
+  public void releasePermit(String nsId) {
+    if (contains(nsId)) {
+      super.releasePermit(nsId);
+    }else {
+      super.releasePermit(DEFAULT_NS);
     }
   }
 }

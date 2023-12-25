@@ -42,29 +42,42 @@ public class TestProportionRouterRpcFairnessPolicyController {
   private static String nameServices =
       "ns1.nn1, ns1.nn2, ns2.nn1, ns2.nn2";
 
+  /**
+   * Do not configure handlers for ns,
+   * 0.1 of the total number of handlers will be used by default.
+   */
   @Test
   public void testHandlerAllocationDefault() {
     RouterRpcFairnessPolicyController routerRpcFairnessPolicyController
         = getFairnessPolicyController(30);
+    // By default, each ns has 3 (30*0.1) handlers.
+    // So the first 3 requests were successful.
     for (int i=0; i<3; i++) {
       assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns1"));
       assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns2"));
       assertTrue(
           routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
     }
+
+    // The 4th access failed because there was no available handler.
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns2"));
     assertFalse(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
 
+    // Release a handler.
     routerRpcFairnessPolicyController.releasePermit("ns1");
     routerRpcFairnessPolicyController.releasePermit("ns2");
     routerRpcFairnessPolicyController.releasePermit(CONCURRENT_NS);
 
+    // The next request is successful.
     assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns1"));
     assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns2"));
     assertTrue(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
   }
 
+  /**
+   * The number of handlers is configured for ns.
+   */
   @Test
   public void testHandlerAllocationPreconfigured() {
     Configuration conf = createConf(40);
@@ -90,6 +103,9 @@ public class TestProportionRouterRpcFairnessPolicyController {
     assertFalse(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
   }
 
+  /**
+   * The handlers have not been obtained after a certain period of time.
+   */
   @Test
   public void testAcquireTimeout() {
     Configuration conf = createConf(40);
@@ -98,7 +114,7 @@ public class TestProportionRouterRpcFairnessPolicyController {
     RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
 
-    // ns1 should have 30 permits allocated
+    // ns1 should have 20 permits allocated
     for (int i = 0; i < 20; i++) {
       assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns1"));
     }
@@ -110,6 +126,9 @@ public class TestProportionRouterRpcFairnessPolicyController {
     assertTrue(acquireTimeMs >= 100);
   }
 
+  /**
+   * If 0 handlers are configured for ns, one handler will be provided for ns by default.
+   */
   @Test
   public void testAllocationWithZeroProportion() {
     Configuration conf = createConf(40);
@@ -122,6 +141,10 @@ public class TestProportionRouterRpcFairnessPolicyController {
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
   }
 
+  /**
+   * The sum of handlers of all ns is supported to be
+   * greater than the handlers available on the router, so that ns can share idle handlers.
+   */
   @Test
   public void testAllocationHandlersGreaterThanCount() {
     Configuration conf = createConf(40);
@@ -141,6 +164,30 @@ public class TestProportionRouterRpcFairnessPolicyController {
     for (int i=0; i < 40; i++) {
       assertTrue(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
     }
+  }
+
+  /**
+   * When accessing an unregistered ns, it can also be successful.
+   * Therefore, to support cluster expansion with new ns,
+   * you only need to add a mount to the router to access it without reconfiguring handlers.
+   */
+  @Test
+  public void testTransparentExtension() {
+    Configuration conf = createConf(40);
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
+        FederationUtil.newFairnessPolicyController(conf);
+    // Access unregistered ns.
+    // There are 4 (40*0.1) handlers by default.
+    for (int i=0; i<4; i++) {
+      assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns_unregistered"));
+    }
+
+    // The 5th access failed because there was no available handler.
+    assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns_unregistered"));
+
+    // Release a handler, the next request is successful.
+    routerRpcFairnessPolicyController.releasePermit("ns_unregistered");
+    assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns_unregistered"));
   }
 
   private RouterRpcFairnessPolicyController getFairnessPolicyController(

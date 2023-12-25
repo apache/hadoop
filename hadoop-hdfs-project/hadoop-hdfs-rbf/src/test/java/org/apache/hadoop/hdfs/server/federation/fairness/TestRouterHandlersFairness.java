@@ -30,7 +30,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +72,14 @@ public class TestRouterHandlersFairness {
   private int handlerCount;
   private Map<String, String> configuration;
 
+  /**
+   * Initialize test parameters.
+   *
+   * @param policyControllerClass RouterRpcFairnessPolicyController type.
+   * @param handlerCount The total number of handlers in the router.
+   * @param configuration Custom configuration.
+   * @param expectedHandlerPerNs The number of handlers expected for each ns.
+   */
   public TestRouterHandlersFairness(
       Class<RouterRpcFairnessPolicyController> policyControllerClass, int handlerCount,
       Map<String, String> configuration, Map<String, Integer> expectedHandlerPerNs) {
