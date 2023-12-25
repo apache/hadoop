@@ -118,10 +118,12 @@ pipeline {
             post {
                 always {
                     script {
-                        bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out^
+                        bat '''docker run --rm --user ContainerAdministrator^
+                            -v %WORKSPACE%\\out:C:\\out^
                             hadoop-windows-10-builder "/c" "icacls" "C:\\out" "/c" "/t" "/q" "/grant" "Users:F"
                         '''
-                        bat '''docker run --rm -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
+                        bat '''docker run --rm --user ContainerAdministrator^
+                            -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
                             hadoop-windows-10-builder "/c" "icacls" "C:\\Users\\%BUILD_USER%\\.m2" "/c" "/t" "/q" "/grant" "Users:F"
                         '''
 
@@ -152,8 +154,6 @@ pipeline {
                         archiveArtifacts "out/**"
 
                         publishJUnitResults()
-
-                        emailext body: '<p>For more details, see ${BUILD_URL}</p><p style="white-space: pre;">${CHANGES, format="[%d] (%a) %m"}</p>${FILE,path="out/report.html"}', mimeType: 'text/html', subject: 'Apache Hadoop qbt Report: trunk+JDK8 on Windows 10 x64', to: '${RECIPIENTS}'
 
                         // Publish the HTML report so that it can be looked at
                         // Has to be relative to WORKSPACE.
