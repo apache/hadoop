@@ -151,6 +151,8 @@ pipeline {
 
                         archiveArtifacts "out/**"
 
+                        publishJUnitResults()
+
                         emailext body: '<p>For more details, see ${BUILD_URL}</p><p style="white-space: pre;">${CHANGES, format="[%d] (%a) %m"}</p>${FILE,path="out/report.html"}', mimeType: 'text/html', subject: 'Apache Hadoop qbt Report: trunk+JDK8 on Windows 10 x64', to: '${RECIPIENTS}'
 
                         // Publish the HTML report so that it can be looked at
@@ -164,8 +166,6 @@ pipeline {
                                       reportFiles: 'report.html',
                                       reportName: 'Yetus Report'
                         ])
-
-                        publishJUnitResults()
                     }
                 }
 
