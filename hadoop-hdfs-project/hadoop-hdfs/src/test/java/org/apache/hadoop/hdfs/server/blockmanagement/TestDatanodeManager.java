@@ -1184,10 +1184,14 @@ public class TestDatanodeManager {
 
     // Verify that when DN xmitsInProgress exceeds maxTransfers,
     // the number of tasks should be <= 0.
-    if(xmitsInProgress >= maxTransfers){
+    if (xmitsInProgress >= maxTransfers) {
       assertTrue(numReplicationTasks <= 0);
       assertTrue(numEcReplicatedTasks <= 0);
       assertTrue(numECReconstructedTasks <= 0);
+    } else {
+      assertTrue(numReplicationTasks >= 0);
+      assertTrue(numEcReplicatedTasks >= 0);
+      assertTrue(numECReconstructedTasks >= 0);
     }
   }
 }
