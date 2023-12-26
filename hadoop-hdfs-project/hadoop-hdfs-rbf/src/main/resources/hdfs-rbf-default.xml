@@ -531,6 +531,17 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.safemode.checkperiod</name>
+    <value>5s</value>
+    <description>
+      How often the Router should check safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.monitor.namenode</name>
     <value></value>
     <description>

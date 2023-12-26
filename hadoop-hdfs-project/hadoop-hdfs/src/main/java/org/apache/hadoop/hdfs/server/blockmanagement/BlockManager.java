@@ -3425,7 +3425,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // find block by blockId
     BlockInfo storedBlock = getStoredBlock(block);
-    if(storedBlock == null) {
+    if (storedBlock == null) {
       // If blocksMap does not contain reported block id,
       // The replica should be removed from Datanode, and set NumBytes to BlockCommand.No_ACK to
       // avoid useless report to NameNode from Datanode when complete to process it.
@@ -3439,8 +3439,8 @@ public class BlockManager implements BlockStatsMXBean {
     // Block is on the NN
     LOG.debug("In memory blockUCState = {}", ucState);
 
-    // Ignore replicas already scheduled to be removed from the DN
-    if(invalidateBlocks.contains(dn, block)) {
+    // Ignore replicas already scheduled to be removed from the DN or had been deleted
+    if (invalidateBlocks.contains(dn, block) || storedBlock.isDeleted()) {
       return storedBlock;
     }
 

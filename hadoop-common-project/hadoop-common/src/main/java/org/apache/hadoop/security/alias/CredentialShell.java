@@ -25,6 +25,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.commons.lang3.StringUtils;
@@ -365,12 +366,17 @@ public class CredentialShell extends CommandShell {
         } else {
           password = c.readPassword("Enter alias password: ");
         }
-        char[] storePassword =
-            provider.getCredentialEntry(alias).getCredential();
-        String beMatch =
-            Arrays.equals(storePassword, password) ? "success" : "failed";
+        CredentialEntry credentialEntry = provider.getCredentialEntry(alias);
+        if(credentialEntry == null) {
+          // Fail the password match when alias not found
+          getOut().println("Password match failed for " + alias + ".");
+        } else {
+          char[] storePassword = credentialEntry.getCredential();
+          String beMatch =
+              Arrays.equals(storePassword, password) ? "success" : "failed";
 
-        getOut().println("Password match " + beMatch + " for " +  alias + ".");
+          getOut().println("Password match " + beMatch + " for " + alias + ".");
+        }
       } catch (IOException e) {
         getOut().println("Cannot check aliases for CredentialProvider: " +
             provider.toString()
