@@ -181,7 +181,7 @@ public abstract class AbstractContainerAllocator {
    * @param schedulingMode scheduling mode (exclusive or nonexclusive)
    * @param resourceLimits resourceLimits
    * @param reservedContainer reservedContainer
-   * @return CSAssignemnt proposal
+   * @return CSAssignment proposal
    */
   public abstract CSAssignment assignContainers(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
