@@ -4107,8 +4107,12 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     if (!fromScanner && blockScanner.isEnabled()) {
-      blockScanner.markSuspectBlock(data.getVolume(block).getStorageID(),
-          block);
+      FsVolumeSpi volume = data.getVolume(block);
+      if (volume == null) {
+        LOG.warn("Cannot find FsVolumeSpi to handle bad block: {}", block);
+        return;
+      }
+      blockScanner.markSuspectBlock(volume.getStorageID(), block);
     } else {
       try {
         reportBadBlocks(block);
