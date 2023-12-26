@@ -3194,6 +3194,7 @@ public abstract class Server {
              */
             if (rpcStableEnable && startTimeNanos - call.timestampNanos > rpcStableInterval) {
               call.setStable(true);
+              rpcMetrics.incrStableCalls();
             } else {
               // Re-queue the call and continue
               requeueCall(call);

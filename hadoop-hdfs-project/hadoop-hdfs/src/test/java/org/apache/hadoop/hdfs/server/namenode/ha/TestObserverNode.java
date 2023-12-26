@@ -63,7 +63,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
@@ -181,6 +180,8 @@ public class TestObserverNode {
   @Test
   public void testObserverStableRpc() throws Exception {
     FSNamesystem observerFsNS = dfsCluster.getNamesystem(2);
+    RpcMetrics obRpcMetrics = ((NameNodeRpcServer)dfsCluster
+        .getNameNodeRpc(2)).getClientRpcServer().getRpcMetrics();
     try {
       // Stop EditlogTailer of Observer NameNode.
       observerFsNS.getEditLogTailer().stop();
@@ -194,11 +195,13 @@ public class TestObserverNode {
       FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
       assertSentTo(0);
       assertNotNull(fileStatus);
+      assertEquals(1, obRpcMetrics.getRpcStableCalls());
 
       observerFsNS.getEditLogTailer().doTailEdits();
       fileStatus = dfs.getFileStatus(tmpTestPath);
       assertSentTo(2);
       assertNotNull(fileStatus);
+      assertEquals(1, obRpcMetrics.getRpcStableCalls());
     } finally {
       EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
       observerFsNS.setEditLogTailerForTests(editLogTailer);
