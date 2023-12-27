@@ -156,7 +156,7 @@
 
 <property>
   <name>dfs.datanode.netty.worker.threads</name>
-  <value>10</value>
+  <value>0</value>
   <description>
     The number of Datanode http server worker threads.
   </description>
