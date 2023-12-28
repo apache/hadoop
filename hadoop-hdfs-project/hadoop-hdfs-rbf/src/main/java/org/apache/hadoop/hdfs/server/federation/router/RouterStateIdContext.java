@@ -85,7 +85,11 @@ class RouterStateIdContext implements AlignmentContext {
       return;
     }
     RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
-    namespaceIdMap.forEach((k, v) -> builder.putNamespaceStateIds(k, v.get()));
+    namespaceIdMap.forEach((k, v) -> {
+      if (v.get() != Long.MIN_VALUE) {
+        builder.putNamespaceStateIds(k, v.get());
+      }
+    });
     headerBuilder.setRouterFederatedState(builder.build().toByteString());
   }
 
