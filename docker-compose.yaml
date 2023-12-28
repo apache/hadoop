@@ -24,7 +24,7 @@ services:
       env_file:
         - ./config
       environment:
-          ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+          ENSURE_NAMENODE_DIR: "/tmp/hadoop-hadoop/dfs/name"
    datanode:
       build: .
       command: ["hdfs", "datanode"]
