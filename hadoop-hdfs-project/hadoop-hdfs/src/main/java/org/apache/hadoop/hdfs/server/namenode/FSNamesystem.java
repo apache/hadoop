@@ -3815,7 +3815,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
         // We can remove this block and close the file.
-        pendingFile.removeLastBlock(lastBlock);
+        BlockInfo lastBlockInfo = pendingFile.removeLastBlock(lastBlock);
+        if (lastBlockInfo != null) {
+          blockManager.removeBlock(lastBlockInfo);
+        }
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
         if (uc.getNumExpectedLocations() == 0) {
