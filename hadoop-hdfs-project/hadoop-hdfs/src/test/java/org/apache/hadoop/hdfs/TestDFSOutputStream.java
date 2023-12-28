@@ -187,10 +187,10 @@ public class TestDFSOutputStream {
 
   @Test(timeout=60000)
   public void testFirstPacketSizeInNewBlocks() throws IOException {
-    final long BLOCK_SIZE = 1L * 1024 * 1024;
+    final long blockSize = 1L * 1024 * 1024;
     final int numDataNodes = 3;
     final Configuration dfsConf = new Configuration();
-    dfsConf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    dfsConf.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
     MiniDFSCluster dfsCluster = null;
     dfsCluster = new MiniDFSCluster.Builder(dfsConf).numDataNodes(numDataNodes).build();
     dfsCluster.waitActive();
@@ -205,7 +205,7 @@ public class TestDFSOutputStream {
     r.nextBytes(buf);
     fos.write(buf);
     fos.hflush();
-    
+
     while (loop < 20) {
       r.nextBytes(buf);
       fos.write(buf);
@@ -213,7 +213,7 @@ public class TestDFSOutputStream {
       loop++;
       Assert.assertNotEquals(516, ((DFSOutputStream)fos.getWrappedStream()).packetSize);
     }
-    
+
     fos.close();
   }
 
