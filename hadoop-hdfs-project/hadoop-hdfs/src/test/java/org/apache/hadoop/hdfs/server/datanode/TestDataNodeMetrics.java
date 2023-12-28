@@ -760,13 +760,13 @@ public class TestDataNodeMetrics {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       // Test DataNodeWriteActiveXceiversCount Metric
       long writeXceiversCount = MetricsAsserts.getIntGauge("DataNodeWriteActiveXceiversCount",
           getMetrics(datanode.getMetrics().name()));
-      assertEquals(writeXceiversCount, 0);
+      assertEquals(0, writeXceiversCount);
 
       Path path = new Path("/testDataNodeReadWriteXceiversCount.txt");
       try (FSDataOutputStream output = fs.create(path)) {
@@ -793,7 +793,7 @@ public class TestDataNodeMetrics {
       // Test DataNodeReadActiveXceiversCount Metric
       long readXceiversCount = MetricsAsserts.getIntGauge("DataNodeReadActiveXceiversCount",
           getMetrics(datanode.getMetrics().name()));
-      assertEquals(readXceiversCount, 0);
+      assertEquals(0, readXceiversCount);
       try (FSDataInputStream input = fs.open(path)) {
         byte[] byteArray = new byte[1024];
         input.read(byteArray);
