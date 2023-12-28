@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.Checksum;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -58,6 +59,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.DataChecksum;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -198,6 +200,7 @@ public class TestDFSOutputStream {
     DistributedFileSystem fs = dfsCluster.getFileSystem();
     Path fileName = new Path("/testfile.dat");
     FSDataOutputStream fos = fs.create(fileName);
+    DataChecksum crc32c = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 512);
 
     long loop = 0;
     Random r = new Random();
@@ -211,7 +214,8 @@ public class TestDFSOutputStream {
       fos.write(buf);
       fos.hflush();
       loop++;
-      Assert.assertNotEquals(516, ((DFSOutputStream)fos.getWrappedStream()).packetSize);
+      Assert.assertNotEquals(crc32c.getBytesPerChecksum() + crc32c.getChecksumSize(),
+          ((DFSOutputStream)fos.getWrappedStream()).packetSize);
     }
 
     fos.close();
