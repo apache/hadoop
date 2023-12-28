@@ -111,16 +111,13 @@ public class WordMedian extends Configured implements Tool {
    * 
    * @param path
    *          The path to read the HDFS file from (part-r-00000...00001...etc).
-   * @param medianIndex1
-   *          The first length value to look for.
-   * @param medianIndex2
-   *          The second length value to look for (will be the same as the first
-   *          if there are an even number of words total).
+   * @param medianIndex
+   *          The cumulative count corresponding to the median.
    * @throws IOException
    *           If file cannot be found, we throw an exception.
    * */
-  private double readAndFindMedian(String path, int medianIndex1,
-      int medianIndex2, Configuration conf) throws IOException {
+  private double readAndFindMedian(String path, double medianIndex, Configuration conf)
+      throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path file = new Path(path, "part-r-00000");
 
@@ -146,16 +143,15 @@ public class WordMedian extends Configured implements Tool {
         int prevNum = num;
         num += Integer.parseInt(lengthFreq);
 
-        if (medianIndex2 >= prevNum && medianIndex1 <= num) {
+        if (medianIndex >= prevNum && medianIndex < num) {
           System.out.println("The median is: " + currLen);
-          br.close();
           return Double.parseDouble(currLen);
-        } else if (medianIndex2 >= prevNum && medianIndex1 < num) {
+        } else if (medianIndex >= prevNum && medianIndex == num) {
+          st = new StringTokenizer(br.readLine());
           String nextCurrLen = st.nextToken();
           double theMedian = (Integer.parseInt(currLen) + Integer
               .parseInt(nextCurrLen)) / 2.0;
           System.out.println("The median is: " + theMedian);
-          br.close();
           return theMedian;
         }
       }
@@ -200,10 +196,9 @@ public class WordMedian extends Configured implements Tool {
     long totalWords = job.getCounters()
         .getGroup(TaskCounter.class.getCanonicalName())
         .findCounter("MAP_OUTPUT_RECORDS", "Map output records").getValue();
-    int medianIndex1 = (int) Math.ceil((totalWords / 2.0));
-    int medianIndex2 = (int) Math.floor((totalWords / 2.0));
+    double medianIndex = totalWords / 2.0;
 
-    median = readAndFindMedian(args[1], medianIndex1, medianIndex2, conf);
+    median = readAndFindMedian(args[1], medianIndex, conf);
 
     return (result ? 0 : 1);
   }
