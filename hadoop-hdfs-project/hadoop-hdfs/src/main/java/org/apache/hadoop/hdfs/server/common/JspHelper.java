@@ -115,6 +115,8 @@ public class JspHelper {
     String remoteUser = null;
    
     if (UserGroupInformation.isSecurityEnabled()) {
+      // If using RemoteUser GetJournalEditServlet.isValidRequestor, it returns false due to 
+      // inability to verify FQDN for more info refer HDFS-17276.
       if (request.getUserPrincipal() != null) {
         remoteUser = request.getUserPrincipal().getName();
       }
