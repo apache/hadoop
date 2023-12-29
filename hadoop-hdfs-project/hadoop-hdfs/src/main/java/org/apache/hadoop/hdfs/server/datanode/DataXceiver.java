@@ -223,6 +223,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void run() {
     int opsProcessed = 0;
     Op op = null;
+    Op firstOp = null;
 
     try {
       synchronized(this) {
@@ -290,6 +291,11 @@ class DataXceiver extends Receiver implements Runnable {
         }
 
         opStartTime = monotonicNow();
+        // compatible with loop retry requests
+        if (firstOp == null) {
+          firstOp = op;
+          incrReadWriteOpMetrics(op);
+        }
         processOp(op);
         ++opsProcessed;
       } while ((peer != null) &&
@@ -330,6 +336,9 @@ class DataXceiver extends Receiver implements Runnable {
           datanode.getDisplayName(), datanode.getXceiverCount());
       updateCurrentThreadName("Cleaning up");
       if (peer != null) {
+        if (firstOp != null) {
+          decrReadWriteOpMetrics(op);
+        }
         dataXceiverServer.closePeer(peer);
         IOUtils.closeStream(in);
       }
@@ -1464,6 +1473,22 @@ class DataXceiver extends Receiver implements Runnable {
           IOUtils.closeStream(out);
         }
       }
+    }
+  }
+
+  private void incrReadWriteOpMetrics(Op op) {
+    if (Op.READ_BLOCK.equals(op)) {
+      datanode.getMetrics().incrDataNodeReadActiveXceiversCount();
+    } else if (Op.WRITE_BLOCK.equals(op)) {
+      datanode.getMetrics().incrDataNodeWriteActiveXceiversCount();
+    }
+  }
+
+  private void decrReadWriteOpMetrics(Op op) {
+    if (Op.READ_BLOCK.equals(op)) {
+      datanode.getMetrics().decrDataNodeReadActiveXceiversCount();
+    } else if (Op.WRITE_BLOCK.equals(op)) {
+      datanode.getMetrics().decrDataNodeWriteActiveXceiversCount();
     }
   }
 }

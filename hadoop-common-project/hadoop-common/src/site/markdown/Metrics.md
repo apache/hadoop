@@ -425,6 +425,12 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RamDiskBlocksLazyPersistWindows`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of latency between memory write and disk persist in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `FsyncCount` | Total number of fsync |
 | `VolumeFailures` | Total number of volume failures occurred |
+| `DatanodeNetworkErrors` | Count of network errors on the datanode |
+| `DataNodeActiveXceiversCount` | Count of active dataNode xceivers |
+| `DataNodeReadActiveXceiversCount` | Count of read active dataNode xceivers |
+| `DataNodeWriteActiveXceiversCount` | Count of write active dataNode xceivers |
+| `DataNodePacketResponderCount` | Count of active DataNode packetResponder |
+| `DataNodeBlockRecoveryWorkerCount` | Count of active DataNode block recovery worker |
 | `ReadBlockOpNumOps` | Total number of read operations |
 | `ReadBlockOpAvgTime` | Average time of read operations in milliseconds |
 | `WriteBlockOpNumOps` | Total number of write operations |
