@@ -185,7 +185,7 @@ public class DiskBalancer {
       checkDiskBalancerEnabled();
       if ((this.future != null) && (!this.future.isDone())) {
         LOG.error("Disk Balancer - Executing another plan (Plan File: {}, Plan ID: {}), " +
-            "submitPlan failed.", planFile, planId);
+            "submitPlan failed.", planFile, planID);
         throw new DiskBalancerException("Executing another plan",
             DiskBalancerException.Result.PLAN_ALREADY_IN_PROGRESS);
       }
@@ -444,7 +444,7 @@ public class DiskBalancer {
       throws DiskBalancerException {
     final long sha1Length = 40;
     if (plan == null || plan.length() == 0) {
-      LOG.error("Disk Balancer -  Invalid plan ().");
+      LOG.error("Disk Balancer -  Invalid plan.");
       throw new DiskBalancerException("Invalid plan.",
           DiskBalancerException.Result.INVALID_PLAN);
     }
