@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -196,43 +197,34 @@ public class PolicyGenerator implements Runnable, Configurable {
   @VisibleForTesting
   protected Map<SubClusterId, SchedulerInfo> getSchedulerInfo(
       Map<SubClusterId, SubClusterInfo> activeSubClusters) {
-    Map<SubClusterId, SchedulerInfo> schedInfo = new HashMap<>();
+    Map<SubClusterId, SchedulerInfo> schedulerInfo = new HashMap<>();
     Collection<SubClusterInfo> subClusterInfos = activeSubClusters.values();
-
-    subClusterInfos.stream().parallel().map(sci -> {
+    // We use parallelism to get the SchedulerInfo of subCluster.
+    subClusterInfos.stream().parallel().forEach(sci -> {
       SubClusterId subClusterId = sci.getSubClusterId();
       try {
         String rmWebServiceAddress = sci.getRMWebServiceAddress();
-        return GPGUtils.invokeRMWebService(rmWebServiceAddress,
+        SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(rmWebServiceAddress,
             RMWSConsts.SCHEDULER, SchedulerTypeInfo.class, conf);
+        if (sti != null) {
+          schedulerInfo.put(sci.getSubClusterId(), sti.getSchedulerInfo());
+        } else {
+          LOG.warn("Skipped null scheduler info from SubCluster {}.", sci.getSubClusterId());
+        }
       } catch (Exception e) {
-        LOG.error("");
+        LOG.error("Get scheduler info from SubCluster {} error.", subClusterId, e);
       }
-      LOG.warn("Skipped null scheduler info from SubCluster {}.", subClusterId);
-      return null;
-    }).filter(c -> c != null);
+    });
 
-    for (SubClusterInfo sci : activeSubClusters.values()) {
-      String rmWebServiceAddress = sci.getRMWebServiceAddress();
-      SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(rmWebServiceAddress,
-          RMWSConsts.SCHEDULER, SchedulerTypeInfo.class, conf);
-      if(sti != null){
-        schedInfo.put(sci.getSubClusterId(), sti.getSchedulerInfo());
-      } else {
-        LOG.warn("Skipped null scheduler info from SubCluster {}.", sci.getSubClusterId());
-      }
-    }
-
-    return schedInfo;
+    return schedulerInfo;
   }
 
   /**
    * Helper to get a set of blacklisted SubCluster Ids from configuration.
    */
   private Set<SubClusterId> getBlackList() {
-    String blackListParam =
-        conf.get(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST);
-    if(blackListParam == null){
+    String blackListParam = conf.get(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST);
+    if (StringUtils.isBlank(blackListParam)) {
       return Collections.emptySet();
     }
     Set<SubClusterId> blackList = new HashSet<>();
