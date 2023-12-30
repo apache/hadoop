@@ -968,7 +968,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.http.internal-proxy.port";
   public static final String DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY =
       "dfs.datanode.netty.worker.threads";
-  public static final int DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT = 10;
+  public static final int DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT = 0;
   public static final String  DFS_DATANODE_MAX_RECEIVER_THREADS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
   public static final int     DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT = 4096;
