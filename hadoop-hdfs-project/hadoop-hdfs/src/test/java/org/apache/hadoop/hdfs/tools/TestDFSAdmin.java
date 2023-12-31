@@ -1287,11 +1287,10 @@ public class TestDFSAdmin {
 
   @Test
   public void testAllNamenodesReconfig() throws Exception {
-    final int NUM_NS = 2;
     final HdfsConfiguration clusterConf = new HdfsConfiguration();
     clusterConf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 5);
     try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(clusterConf).nnTopology(
-        MiniDFSNNTopology.simpleHAFederatedTopology(NUM_NS)).build()) {
+        MiniDFSNNTopology.simpleHAFederatedTopology(2)).build()) {
       miniCluster.waitActive();
 
       final HdfsConfiguration clientConf = new HdfsConfiguration();
@@ -1301,7 +1300,7 @@ public class TestDFSAdmin {
 
       ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
       // Active and Standby have a total of 4
-      for (int i = 0; i < 2 * NUM_NS; i++) {
+      for (int i = 0; i < 4; i++) {
         NameNode nn = miniCluster.getNameNode(i);
         nn.setReconfigurationUtil(reconfigurationUtil);
       }
