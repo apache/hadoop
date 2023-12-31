@@ -1938,16 +1938,56 @@ public class DFSAdmin extends FsShell {
     if (!"livenodes".equals(address)) {
       return startReconfiguration(nodeType, address, out, err);
     }
-    if (!"datanode".equals(nodeType)) {
-      err.println("Only datanode type supports reconfiguration in bulk.");
-      return 1;
-    }
-    ExecutorService executorService = Executors.newFixedThreadPool(5);
-    DistributedFileSystem dfs = getDFS();
-    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
-    AtomicInteger successCount = new AtomicInteger();
-    AtomicInteger failCount = new AtomicInteger();
-    if (nodes != null) {
+    if ("namenode".equals(nodeType)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(2);
+      Configuration config = getConf();
+      List<DFSUtil.ConfiguredNNAddress> cnnlist =
+          DFSUtil.flattenAddressMap(DFSUtil.getNNServiceRpcAddressesForCluster(config));
+      if (cnnlist.isEmpty()) {
+        err.println("DFS namenode stats could not be retrieved.");
+        return 1;
+      }
+      AtomicInteger successCount = new AtomicInteger();
+      AtomicInteger failCount = new AtomicInteger();
+      for (DFSUtil.ConfiguredNNAddress cnn : cnnlist) {
+        executorService.submit(() -> {
+          InetSocketAddress rpc = cnn.getAddress();
+          String nnAddress = rpc.getHostName() + ":" + rpc.getPort();
+          int status = startReconfiguration(nodeType, nnAddress, out, err);
+          if (status == 0) {
+            successCount.incrementAndGet();
+          } else {
+            failCount.incrementAndGet();
+          }
+        });
+      }
+      while ((successCount.get() + failCount.get()) < cnnlist.size()) {
+        Thread.sleep(1000);
+      }
+      executorService.shutdown();
+      if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
+        err.println("Executor service could not be terminated in 60s. Please wait for"
+            + " sometime before the system cools down.");
+      }
+      String formattedString = String.format(
+          "Starting of reconfiguration task successful on %d nodes, failed on %d nodes.",
+          successCount.get(), failCount.get());
+      out.println(formattedString);
+      if (failCount.get() == 0) {
+        return 0;
+      } else {
+        return 1;
+      }
+    } else if ("datanode".equals(nodeType)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(5);
+      DistributedFileSystem dfs = getDFS();
+      DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+      if (nodes == null) {
+        err.println("DFS datanode stats could not be retrieved.");
+        return 1;
+      }
+      AtomicInteger successCount = new AtomicInteger();
+      AtomicInteger failCount = new AtomicInteger();
       for (DatanodeInfo node : nodes) {
         executorService.submit(() -> {
           int status = startReconfiguration(nodeType, node.getIpcAddr(false), out, err);
@@ -1973,9 +2013,10 @@ public class DFSAdmin extends FsShell {
       } else {
         return 1;
       }
+    } else {
+      err.println("Only namenode and datanode type supports reconfiguration in bulk.");
+      return 1;
     }
-    err.println("DFS datanode stats could not be retrieved.");
-    return 1;
   }
 
   int startReconfiguration(final String nodeType, final String address,
@@ -2025,16 +2066,56 @@ public class DFSAdmin extends FsShell {
     if (!"livenodes".equals(address)) {
       return getReconfigurationStatus(nodeType, address, out, err);
     }
-    if (!"datanode".equals(nodeType)) {
-      err.println("Only datanode type supports reconfiguration in bulk.");
-      return 1;
-    }
-    ExecutorService executorService = Executors.newFixedThreadPool(5);
-    DistributedFileSystem dfs = getDFS();
-    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
-    AtomicInteger successCount = new AtomicInteger();
-    AtomicInteger failCount = new AtomicInteger();
-    if (nodes != null) {
+    if ("namenode".equals(nodeType)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(2);
+      Configuration config = getConf();
+      List<DFSUtil.ConfiguredNNAddress> cnnlist =
+          DFSUtil.flattenAddressMap(DFSUtil.getNNServiceRpcAddressesForCluster(config));
+      if (cnnlist.isEmpty()) {
+        err.println("DFS namenode stats could not be retrieved.");
+        return 1;
+      }
+      AtomicInteger successCount = new AtomicInteger();
+      AtomicInteger failCount = new AtomicInteger();
+      for (DFSUtil.ConfiguredNNAddress cnn : cnnlist) {
+        executorService.submit(() -> {
+          InetSocketAddress rpc = cnn.getAddress();
+          String nnAddress = rpc.getHostName() + ":" + rpc.getPort();
+          int status = getReconfigurationStatus(nodeType, nnAddress, out, err);
+          if (status == 0) {
+            successCount.incrementAndGet();
+          } else {
+            failCount.incrementAndGet();
+          }
+        });
+      }
+      while ((successCount.get() + failCount.get()) < cnnlist.size()) {
+        Thread.sleep(1000);
+      }
+      executorService.shutdown();
+      if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
+        err.println("Executor service could not be terminated in 60s. Please wait for"
+            + " sometime before the system cools down.");
+      }
+      String formattedString = String.format(
+          "Retrieval of reconfiguration status successful on %d nodes, failed on %d nodes.",
+          successCount.get(), failCount.get());
+      out.println(formattedString);
+      if (failCount.get() == 0) {
+        return 0;
+      } else {
+        return 1;
+      }
+    } else if ("datanode".equals(nodeType)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(5);
+      DistributedFileSystem dfs = getDFS();
+      DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+      if (nodes == null) {
+        err.println("DFS datanode stats could not be retrieved.");
+        return 1;
+      }
+      AtomicInteger successCount = new AtomicInteger();
+      AtomicInteger failCount = new AtomicInteger();
       for (DatanodeInfo node : nodes) {
         executorService.submit(() -> {
           int status = getReconfigurationStatus(nodeType, node.getIpcAddr(false), out, err);
@@ -2060,9 +2141,10 @@ public class DFSAdmin extends FsShell {
       } else {
         return 1;
       }
+    } else {
+      err.println("Only namenode and datanode type supports reconfiguration in bulk.");
+      return 1;
     }
-    err.println("DFS datanode stats could not be retrieved.");
-    return 1;
   }
 
   int getReconfigurationStatus(final String nodeType, final String address, final PrintStream out,
