@@ -1313,12 +1313,12 @@ class DataStreamer extends Daemon {
               String exceptionMsg = "Receive reply from slowNode " + slowNode +
                   " for continuous " + markSlowNodeAsBadNodeThreshold +
                   " times, treating it as badNode";
-              errorState.setInternalError();
-              errorState.setBadNodeIndex(index);
               if (!isEndBlockFlag() && getBytesCurBlock() << 1 > dfsClient.getConf().getDefaultBlockSize()) {
                 LOG.warn(exceptionMsg);
                 needEndBlockInAdvance = true;
                 skipHandleSlowNode = true;
+                errorState.setInternalError();
+                errorState.setBadNodeIndex(index);
                 return;
               } else {
                 throw new IOException(exceptionMsg);
