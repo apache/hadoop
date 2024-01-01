@@ -1313,7 +1313,8 @@ class DataStreamer extends Daemon {
               String exceptionMsg = "Receive reply from slowNode " + slowNode +
                   " for continuous " + markSlowNodeAsBadNodeThreshold +
                   " times, treating it as badNode";
-              if (!isEndBlockFlag() && getBytesCurBlock() << 1 > dfsClient.getConf().getDefaultBlockSize()) {
+              if (!isEndBlockFlag() && getBytesCurBlock() << 1
+                  > dfsClient.getConf().getDefaultBlockSize()) {
                 LOG.warn(exceptionMsg);
                 needEndBlockInAdvance = true;
                 skipHandleSlowNode = true;
@@ -1380,7 +1381,7 @@ class DataStreamer extends Daemon {
       return true;
     }
     closeStream();
-    
+
     // move packets from ack queue to front of the data queue
     synchronized (dataQueue) {
       dataQueue.addAll(0, ackQueue);
