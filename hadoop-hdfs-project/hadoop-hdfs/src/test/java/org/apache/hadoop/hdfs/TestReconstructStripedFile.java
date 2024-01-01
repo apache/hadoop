@@ -41,8 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingTestHelper;
 import org.apache.hadoop.io.ElasticByteBufferPool;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -98,9 +96,6 @@ public class TestReconstructStripedFile {
     Any
   }
 
-  @Rule
-  public TemporaryFolder baseDir = new TemporaryFolder();
-
   private Configuration conf;
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
@@ -155,7 +150,8 @@ public class TestReconstructStripedFile {
         getPendingTimeout());
     conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
         isValidationEnabled());
-    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(dnNum)
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
         .build();
     cluster.waitActive();
 
