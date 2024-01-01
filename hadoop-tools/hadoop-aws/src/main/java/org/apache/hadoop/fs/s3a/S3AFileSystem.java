@@ -105,6 +105,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -113,6 +114,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.impl.BulkDeleteSupport;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
@@ -121,6 +123,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
+import org.apache.hadoop.fs.s3a.impl.BulkDeleteApiOperation;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
@@ -284,7 +287,8 @@ import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemot
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource,
-    AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A> {
+    AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A>,
+    BulkDelete {
 
   /**
    * Default blocksize as used in blocksize and FS status queries.
@@ -5523,6 +5527,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case FS_S3A_CREATE_HEADER:
       return true;
 
+    // bulk delete support.
+    case CAPABILITY_BULK_DELETE:
+      return true;
+
     // is the FS configured for create file performance
     case FS_S3A_CREATE_PERFORMANCE_ENABLED:
       return performanceCreation;
@@ -5850,5 +5858,64 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean isMultipartUploadEnabled() {
     return isMultipartUploadEnabled;
   }
+
+  /**
+   * Bulk delete operation.
+   */
+  @Override
+  public BulkDelete.Builder bulkDelete(final Path base, final RemoteIterator<Path> files)
+      throws UnsupportedOperationException, IOException {
+    final Path path = qualify(base);
+
+    AuditSpan span = createSpan(INVOCATION_BULK_DELETE.getSymbol(), path.toString(), null);
+    return new BulkDeleteSupport.BulkDeleteBinding(path, files, builder ->
+        new BulkDeleteApiOperation(createStoreContext(),
+            span,
+            builder,
+            pageSize,
+            createBulkDeleteApiOperationCallbacks(builder, span))
+            .execute());
+    }
+
+  /**
+   * Create the callbacks for the bulk delete operation.
+   *
+   * @param builder builder
+   * @param span span
+   * @return callbacks
+   */
+  protected BulkDeleteApiOperation.BulkDeleteApiOperationCallbacks createBulkDeleteApiOperationCallbacks(
+      final BulkDeleteSupport.BulkDeleteBinding builder,
+      final AuditSpan span) {
+    return new BulkDeleteApiOperationCallbacksImpl(span, builder.getPath());
+  }
+
+  /**
+   * Callbacks for the bulk delete operation.
+   */
+  private class BulkDeleteApiOperationCallbacksImpl implements
+      BulkDeleteApiOperation.BulkDeleteApiOperationCallbacks {
+
+
+    /** Audit Span at time of creation. */
+    private final AuditSpan auditSpan;
+
+    private final Path path;
+
+    private BulkDeleteApiOperationCallbacksImpl(AuditSpan auditSpan, Path path) {
+      this.auditSpan = auditSpan;
+      this.path = path;
+    }
+
+    @Override
+    @Retries.RetryTranslated
+    public void removeKeys(final List<ObjectIdentifier> keysToDelete)
+        throws MultiObjectDeleteException, IOException {
+      auditSpan.activate();
+      once("delete", path.toString(), () ->
+          S3AFileSystem.this.removeKeys(keysToDelete, false));
+    }
+  }
+
 
 }

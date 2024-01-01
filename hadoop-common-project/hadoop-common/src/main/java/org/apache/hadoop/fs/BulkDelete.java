@@ -67,7 +67,8 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
  * <p>
  * Be aware that on some stores (AWS S3) each object listed in a bulk delete counts
  * against the write IOPS limit; large page sizes are counterproductive here.
- * @see <a href="https://issues.apache.org/jira/browse/HADOOP-16823">HADOOP-16823.Large DeleteObject requests are their own Thundering Herd</a>
+ * @see <a href="https://issues.apache.org/jira/browse/HADOOP-16823">HADOOP-16823.
+ *  Large DeleteObject requests are their own Thundering Herd</a>
  * <p>
  * Progress callback: the callback may come from any thread, further work may or may
  * not be blocked during the callback's processing in application code.
@@ -86,7 +87,8 @@ public interface BulkDelete {
 
   /**
    * Initiate a bulk delete operation.
-   * @param base base path for the delete; all files MUST be under this path
+   * @param base base path for the delete; it must belong to the FS and
+   *               all files MUST be under this path
    * @param files iterator of files. If Closeable, it will be closed once complete
    * @return a builder for the operation
    * @throws UnsupportedOperationException not supported.
@@ -236,7 +238,7 @@ public interface BulkDelete {
      * An exception covering at least one of the failures
      * encountered.
      */
-    private final IOException exception;
+    private final Exception exception;
 
     /**
      * Number of files deleted.
@@ -263,7 +265,7 @@ public interface BulkDelete {
 
     public Outcome(final boolean successful,
         final boolean aborted,
-        final IOException exception,
+        final Exception exception,
         final int deleted,
         final int failures,
         final int pageCount,
@@ -282,7 +284,7 @@ public interface BulkDelete {
       return successful;
     }
 
-    public IOException getException() {
+    public Exception getException() {
       return exception;
     }
 
