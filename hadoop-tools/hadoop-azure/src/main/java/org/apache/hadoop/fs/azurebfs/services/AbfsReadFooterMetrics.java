@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -43,7 +44,7 @@ public class AbfsReadFooterMetrics {
   private final AtomicLong dataLenRequested;
   private final AtomicLong offsetOfFirstRead;
   private final AtomicInteger readCount;
-  private final Map<String, AbfsReadFooterMetrics> metricsMap;
+  private final ConcurrentSkipListMap<String, AbfsReadFooterMetrics> metricsMap;
 
   public AbfsReadFooterMetrics() {
     this.isParquetFile = new AtomicBoolean(false);
@@ -56,7 +57,7 @@ public class AbfsReadFooterMetrics {
     this.collectMetricsForNextRead = new AtomicBoolean(false);
     this.collectLenMetrics = new AtomicBoolean(false);
     this.dataLenRequested = new AtomicLong(0);
-    this.metricsMap = new ConcurrentHashMap<>();
+    this.metricsMap = new ConcurrentSkipListMap<>();
   }
 
   public Map<String, AbfsReadFooterMetrics> getMetricsMap() {
