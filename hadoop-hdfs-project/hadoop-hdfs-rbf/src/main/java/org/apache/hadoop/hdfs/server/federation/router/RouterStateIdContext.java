@@ -101,6 +101,10 @@ class RouterStateIdContext implements AlignmentContext {
     return Collections.list(namespaceIdMap.keys());
   }
 
+  public ConcurrentHashMap<String,LongAccumulator> getNamespaceIdMap() {
+    return namespaceIdMap;
+  }
+
   public void removeNamespaceStateId(String nsId) {
     namespaceIdMap.remove(nsId);
   }
