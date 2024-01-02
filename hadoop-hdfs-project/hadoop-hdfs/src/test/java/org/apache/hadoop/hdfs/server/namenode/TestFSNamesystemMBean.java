@@ -308,9 +308,6 @@ public class TestFSNamesystemMBean {
       List<DataNode> dataNodes = cluster.getDataNodes();
       assertEquals(2, dataNodes.size());
 
-      DatanodeManager dnManager = fsNamesystem.getBlockManager().getDatanodeManager();
-
-      dnManager.addSlowPeers(dataNodes.get(1).getDatanodeUuid());
       dataNodes.get(0).getPeerMetrics().setTestOutliers(ImmutableMap.of(
           dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(),
           new OutlierMetrics(1.0, 2.0, 3.0, 4.0)));
@@ -347,6 +344,7 @@ public class TestFSNamesystemMBean {
       }, 100, 10000);
 
       cluster.getNameNode().reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "false");
+      DatanodeManager dnManager = fsNamesystem.getBlockManager().getDatanodeManager();
       assertEquals("{}", dnManager.getCollectSlowNodesIpAddrFrequencyMap().toString());
     }
   }
