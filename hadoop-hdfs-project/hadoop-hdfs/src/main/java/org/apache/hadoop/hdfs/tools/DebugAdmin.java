@@ -306,7 +306,6 @@ public class DebugAdmin extends Configured implements Tool {
             new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
                 smallBufferSize));
         BlockMetadataHeader.writeHeader(metaOut, checksum);
-        metaOut.close();
         FsDatasetUtil.computeChecksum(
             srcMeta, srcMeta, blockFile, smallBufferSize, conf);
         System.out.println(
