@@ -350,6 +350,14 @@ public class RpcMetrics {
     rpcClientBackoffDisconnected.incr();
   }
 
+  /**
+   * Returns the number of disconnected backoffs.
+   * @return long
+   */
+  public long getClientBackoffDisconnected() {
+    return rpcClientBackoffDisconnected.value();
+  }
+
 
   /**
    * Increments the Slow RPC counter.
