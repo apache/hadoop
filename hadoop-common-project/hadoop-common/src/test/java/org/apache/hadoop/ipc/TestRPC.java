@@ -1531,7 +1531,6 @@ public class TestRPC extends TestRpcBase {
           assertEquals(1L, server.getRpcMetrics().getClientBackoffDisconnected());
         } else {
           lastException = unwrapExeption;
-          lastException = unwrapExeption;
         }
       }
     } finally {
@@ -1541,7 +1540,6 @@ public class TestRPC extends TestRpcBase {
     if (lastException != null) {
       LOG.error("Last received non-RetriableException:", lastException);
     }
-
     assertTrue("RetriableException not received", succeeded);
   }
 
