@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -232,7 +232,7 @@ public class TestDFSHAAdminMiniCluster {
     assertEquals(0, runTool("-ns", "minidfs-ns", "-failover", "nn2", "nn1"));
 
     // Fencer has not run yet, since none of the above required fencing 
-    assertEquals("", Files.asCharSource(tmpFile, Charsets.UTF_8).read());
+    assertEquals("", Files.asCharSource(tmpFile, StandardCharsets.UTF_8).read());
 
     // Test failover with fencer and forcefence option
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
@@ -240,7 +240,7 @@ public class TestDFSHAAdminMiniCluster {
     // The fence script should run with the configuration from the target
     // node, rather than the configuration from the fencing node. Strip
     // out any trailing spaces and CR/LFs which may be present on Windows.
-    String fenceCommandOutput = Files.asCharSource(tmpFile, Charsets.UTF_8)
+    String fenceCommandOutput = Files.asCharSource(tmpFile, StandardCharsets.UTF_8)
         .read().replaceAll(" *[\r\n]+", "");
     assertEquals("minidfs-ns.nn1 " + nn1Port + " nn1", fenceCommandOutput);
     tmpFile.delete();
@@ -325,7 +325,7 @@ public class TestDFSHAAdminMiniCluster {
     errOutBytes.reset();
     LOG.info("Running: DFSHAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
-    errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
+    errOutput = new String(errOutBytes.toByteArray(), StandardCharsets.UTF_8);
     LOG.info("Output:\n" + errOutput);
     return ret;
   }

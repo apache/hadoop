@@ -23,6 +23,7 @@ import static org.junit.Assume.assumeTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -57,7 +58,7 @@ public class TestSecureIOUtils {
     for (File f : new File[] { testFilePathIs, testFilePathRaf,
         testFilePathFadis }) {
       FileOutputStream fos = new FileOutputStream(f);
-      fos.write("hello".getBytes("UTF-8"));
+      fos.write("hello".getBytes(StandardCharsets.UTF_8));
       fos.close();
     }
 

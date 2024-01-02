@@ -47,6 +47,8 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -406,16 +408,25 @@ public class ContainerLocalizer {
    * @param conf the configuration properties to launch the resource localizer.
    */
   public static List<String> getJavaOpts(Configuration conf) {
-    String opts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
+    String adminOpts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_DEFAULT);
+    String userOpts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
         YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT);
+
     boolean isExtraJDK17OptionsConfigured =
         conf.getBoolean(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY,
         YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT);
 
     if (Shell.isJavaVersionAtLeast(17) && isExtraJDK17OptionsConfigured) {
-      opts = opts.trim().concat(" " + ADDITIONAL_JDK17_PLUS_OPTIONS);
+      userOpts = userOpts.trim().concat(" " + ADDITIONAL_JDK17_PLUS_OPTIONS);
     }
-    return Arrays.asList(opts.split(" "));
+
+    List<String> adminOptionList = Arrays.asList(adminOpts.split("\\s+"));
+    List<String> userOptionList = Arrays.asList(userOpts.split("\\s+"));
+
+    return Stream.concat(adminOptionList.stream(), userOptionList.stream())
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toList());
   }
 
   /**

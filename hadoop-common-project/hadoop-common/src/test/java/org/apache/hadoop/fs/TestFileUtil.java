@@ -698,7 +698,7 @@ public class TestFileUtil {
     OutputStream os = new FileOutputStream(simpleTar);
     try (TarOutputStream tos = new TarOutputStream(os)) {
       TarEntry te = new TarEntry("/bar/foo");
-      byte[] data = "some-content".getBytes("UTF-8");
+      byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       te.setSize(data.length);
       tos.putNextEntry(te);
       tos.write(data);
@@ -782,7 +782,7 @@ public class TestFileUtil {
         ZipArchiveList.add(new ZipArchiveEntry("foo_" + i));
         ZipArchiveEntry archiveEntry = ZipArchiveList.get(i);
         archiveEntry.setUnixMode(count += 0100);
-        byte[] data = "some-content".getBytes("UTF-8");
+        byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
         archiveEntry.setSize(data.length);
         tos.putArchiveEntry(archiveEntry);
         tos.write(data);

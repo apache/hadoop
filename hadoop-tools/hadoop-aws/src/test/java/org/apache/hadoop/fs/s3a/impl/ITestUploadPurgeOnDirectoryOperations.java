@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -32,21 +31,20 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertFileHasLength;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_LIST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_LIST;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * Test behavior of purging uploads in rename and delete.
+ * S3 Express tests automatically set this; it is explicitly set for the rest.
  */
 public class ITestUploadPurgeOnDirectoryOperations extends AbstractS3ACostTest {
 
@@ -115,22 +113,6 @@ public class ITestUploadPurgeOnDirectoryOperations extends AbstractS3ACostTest {
 
     // and there isn't
     assertUploadCount(dir, 0);
-  }
-
-  /**
-   * Create a magic file of "real" length more than 0 bytes long.
-   * @param fs filesystem
-   * @param dir directory
-   * @return the path
-   * @throws IOException creation failure.p
-   */
-  private static Path createMagicFile(final S3AFileSystem fs, final Path dir) throws IOException {
-    Path magicFile = new Path(dir, MAGIC_PATH_PREFIX + "001/file.txt");
-    createFile(fs, magicFile, true, "123".getBytes(StandardCharsets.UTF_8));
-
-    // the file exists but is a 0 byte marker file.
-    assertFileHasLength(fs, magicFile, 0);
-    return magicFile;
   }
 
   /**

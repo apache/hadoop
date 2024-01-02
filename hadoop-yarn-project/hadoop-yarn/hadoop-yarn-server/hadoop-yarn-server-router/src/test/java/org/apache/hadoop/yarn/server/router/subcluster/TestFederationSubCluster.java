@@ -32,6 +32,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -39,6 +40,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfo
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.router.webapp.HTTPMethods;
 import org.apache.hadoop.yarn.server.router.webapp.JavaProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,11 +56,20 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_XML;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.APPS_NEW_APPLICATION;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.APPS;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RESERVATION_NEW;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.ADD_NODE_LABELS;
 import static org.apache.hadoop.yarn.server.router.webapp.TestRouterWebServicesREST.waitWebAppRunning;
 import static org.junit.Assert.assertEquals;
 
@@ -190,6 +207,8 @@ public class TestFederationSubCluster {
        final String queryValue) throws IOException, InterruptedException {
 
     Client clientToRouter = Client.create();
+    clientToRouter.setReadTimeout(5000);
+    clientToRouter.setConnectTimeout(5000);
     WebResource toRouter = clientToRouter.resource(routerAddress).path(path);
 
     final WebResource.Builder toRouterBuilder;
@@ -206,5 +225,121 @@ public class TestFederationSubCluster {
           assertEquals(SC_OK, response.getStatus());
           return response.getEntity(returnType);
         });
+  }
+
+  public static ClientResponse performCall(final String routerAddress, final String webAddress,
+      final String queryKey, final String queryValue, final Object context,
+      final HTTPMethods method) throws IOException, InterruptedException {
+
+    return UserGroupInformation.createRemoteUser(userName).doAs(
+        (PrivilegedExceptionAction<ClientResponse>) () -> {
+          Client clientToRouter = Client.create();
+          WebResource toRouter = clientToRouter.resource(routerAddress).path(webAddress);
+
+          WebResource toRouterWR = toRouter;
+          if (queryKey != null && queryValue != null) {
+            toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
+          }
+
+          WebResource.Builder builder;
+          if (context != null) {
+            builder = toRouterWR.entity(context, APPLICATION_JSON);
+            builder = builder.accept(APPLICATION_JSON);
+          } else {
+            builder = toRouterWR.accept(APPLICATION_JSON);
+          }
+
+          ClientResponse response = null;
+
+          switch (method) {
+            case DELETE:
+              response = builder.delete(ClientResponse.class);
+              break;
+            case POST:
+              response = builder.post(ClientResponse.class);
+              break;
+            case PUT:
+              response = builder.put(ClientResponse.class);
+              break;
+            default:
+              break;
+          }
+
+          return response;
+      });
+  }
+
+  public String getNodeId(String rmAddress) {
+    Client clientToRM = Client.create();
+    clientToRM.setConnectTimeout(3000);
+    clientToRM.setReadTimeout(3000);
+    WebResource toRM = clientToRM.resource(rmAddress).path(RM_WEB_SERVICE_PATH + NODES);
+    ClientResponse response =
+        toRM.accept(APPLICATION_XML).get(ClientResponse.class);
+    NodesInfo ci = response.getEntity(NodesInfo.class);
+    List<NodeInfo> nodes = ci.getNodes();
+    if (nodes.isEmpty()) {
+      return null;
+    }
+    clientToRM.destroy();
+    return nodes.get(0).getNodeId();
+  }
+
+  public NewApplication getNewApplicationId(String routerAddress) {
+    Client clientToRM = Client.create();
+    clientToRM.setConnectTimeout(3000);
+    clientToRM.setReadTimeout(3000);
+    WebResource toRM = clientToRM.resource(routerAddress).path(
+        RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION);
+    ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
+    clientToRM.destroy();
+    return response.getEntity(NewApplication.class);
+  }
+
+  public String submitApplication(String routerAddress) {
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    String appId = getNewApplicationId(routerAddress).getApplicationId();
+    context.setApplicationId(appId);
+    Client clientToRouter = Client.create();
+    clientToRouter.setConnectTimeout(3000);
+    clientToRouter.setReadTimeout(3000);
+    WebResource toRM = clientToRouter.resource(routerAddress).path(
+        RM_WEB_SERVICE_PATH + APPS);
+    toRM.entity(context, APPLICATION_XML).accept(APPLICATION_XML).post(ClientResponse.class);
+    clientToRouter.destroy();
+    return appId;
+  }
+
+  public NewReservation getNewReservationId(String routerAddress) {
+    Client clientToRM = Client.create();
+    clientToRM.setConnectTimeout(3000);
+    clientToRM.setReadTimeout(3000);
+    WebResource toRM = clientToRM.resource(routerAddress).
+        path(RM_WEB_SERVICE_PATH + RESERVATION_NEW);
+    ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
+    return response.getEntity(NewReservation.class);
+  }
+
+  public String addNodeLabel(String routerAddress) {
+    Client clientToRM = Client.create();
+    clientToRM.setConnectTimeout(3000);
+    clientToRM.setReadTimeout(3000);
+    WebResource toRM = clientToRM.resource(routerAddress)
+        .path(RM_WEB_SERVICE_PATH + ADD_NODE_LABELS);
+    List<NodeLabel> nodeLabels = new ArrayList<>();
+    nodeLabels.add(NodeLabel.newInstance("default"));
+    NodeLabelsInfo context = new NodeLabelsInfo(nodeLabels);
+    ClientResponse response = toRM
+        .entity(context, APPLICATION_XML)
+        .accept(APPLICATION_XML)
+        .post(ClientResponse.class);
+    return response.getEntity(String.class);
+  }
+
+  public static String format(String format, Object... args) {
+    Pattern p = Pattern.compile("\\{.*?}");
+    Matcher m = p.matcher(format);
+    String newFormat = m.replaceAll("%s");
+    return String.format(newFormat, args);
   }
 }

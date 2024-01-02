@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -100,6 +101,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private TracingContext tracingContext;
+  private final ContextEncryptionAdapter contextEncryptionAdapter;
 
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
@@ -159,6 +161,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
     this.fsBackRef = abfsInputStreamContext.getFsBackRef();
+    contextEncryptionAdapter = abfsInputStreamContext.getEncryptionAdapter();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
@@ -551,7 +554,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length,
-          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(), tracingContext);
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
+          contextEncryptionAdapter, tracingContext);
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
@@ -704,8 +708,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized void close() throws IOException {
     LOG.debug("Closing {}", this);
     closed = true;
-    buffer = null; // de-reference the buffer so it can be GC'ed sooner
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
+    buffer = null; // de-reference the buffer so it can be GC'ed sooner
+    if (contextEncryptionAdapter != null) {
+      contextEncryptionAdapter.destroy();
+    }
   }
 
   /**

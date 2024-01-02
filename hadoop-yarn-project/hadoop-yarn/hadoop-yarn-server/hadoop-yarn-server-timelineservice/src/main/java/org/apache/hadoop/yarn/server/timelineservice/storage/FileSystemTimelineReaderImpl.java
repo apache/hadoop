@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -174,7 +174,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             APP_FLOW_MAPPING_FILE);
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
-                 fs.open(appFlowMappingFilePath), Charset.forName("UTF-8")));
+                 fs.open(appFlowMappingFilePath), StandardCharsets.UTF_8));
          CSVParser parser = new CSVParser(reader, csvFormat)) {
       for (CSVRecord record : parser.getRecords()) {
         if (record.size() < 4) {
@@ -300,7 +300,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           }
           try (BufferedReader reader = new BufferedReader(
               new InputStreamReader(fs.open(entityFile),
-                  Charset.forName("UTF-8")))) {
+                  StandardCharsets.UTF_8))) {
             TimelineEntity entity = readEntityFromFile(reader);
             if (!entity.getType().equals(entityType)) {
               continue;
@@ -402,7 +402,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
-                 fs.open(entityFilePath), Charset.forName("UTF-8")))) {
+                 fs.open(entityFilePath), StandardCharsets.UTF_8))) {
       TimelineEntity entity = readEntityFromFile(reader);
       return createEntityToBeReturned(
           entity, dataToRetrieve.getFieldsToRetrieve());

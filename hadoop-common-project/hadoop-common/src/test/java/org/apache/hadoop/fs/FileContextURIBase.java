@@ -26,6 +26,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
@@ -129,7 +130,7 @@ public abstract class FileContextURIBase {
   }
 
   @Test
-  public void testCreateExistingFile() throws IOException {
+  public void testCreateExistingFile() throws Exception {
     String fileName = "testCreateExistingFile";
     Path testPath = qualifiedPath(fileName, fc2);
 
@@ -140,15 +141,11 @@ public abstract class FileContextURIBase {
     createFile(fc1, testPath);
 
     // Create same file with fc1
-    try {
-      createFile(fc2, testPath);
-      Assert.fail("Create existing file should throw an IOException.");
-    } catch (IOException e) {
-      // expected
-    }
+    LambdaTestUtils.intercept(IOException.class, () ->
+        createFile(fc2, testPath));
 
     // Ensure fc2 has the created file
-    Assert.assertTrue(exists(fc2, testPath));
+    fc2.getFileStatus(testPath);
   }
 
   @Test
@@ -167,7 +164,7 @@ public abstract class FileContextURIBase {
     Assert.assertTrue(isDir(fc2, testPath.getParent()));
     Assert.assertEquals("testCreateFileInNonExistingDirectory",
         testPath.getParent().getName());
-    Assert.assertTrue(exists(fc2, testPath));
+    fc2.getFileStatus(testPath);
 
   }
 
@@ -216,10 +213,11 @@ public abstract class FileContextURIBase {
     // TestCase - Create multiple directories
     String dirNames[] = { 
         "createTest/testDir", "createTest/test Dir",
-        "deleteTest/test*Dir", "deleteTest/test#Dir", 
-        "deleteTest/test1234", "deleteTest/test_DIr", 
-        "deleteTest/1234Test", "deleteTest/test)Dir",
-        "deleteTest/()&^%$#@!~_+}{><?", "  ", "^ " };
+        "createTest/test*Dir", "createTest/test#Dir",
+        "createTest/test1234", "createTest/test_DIr",
+        "createTest/1234Test", "createTest/test)Dir",
+        "createTest/()&^%$#@!~_+}{><?",
+        "createTest/  ", "createTest/^ " };
 
     for (String f : dirNames) {
       if (!isTestableFileNameOnPlatform(f)) {
@@ -237,6 +235,10 @@ public abstract class FileContextURIBase {
       Assert.assertTrue(exists(fc2, testPath));
       Assert.assertTrue(isDir(fc2, testPath));
     }
+    // delete the parent directory and verify that the dir no longer exists
+    final Path parent = qualifiedPath("createTest", fc2);
+    fc2.delete(parent, true);
+    Assert.assertFalse(exists(fc2, parent));
 
   }
 
@@ -392,7 +394,9 @@ public abstract class FileContextURIBase {
         "deleteTest/test*Dir", "deleteTest/test#Dir", 
         "deleteTest/test1234", "deleteTest/1234Test", 
         "deleteTest/test)Dir", "deleteTest/test_DIr",
-        "deleteTest/()&^%$#@!~_+}{><?", "  ", "^ " };
+        "deleteTest/()&^%$#@!~_+}{><?",
+        "deleteTest/  ",
+        "deleteTest/^ " };
 
     for (String f : dirNames) {
       if (!isTestableFileNameOnPlatform(f)) {

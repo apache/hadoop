@@ -27,6 +27,7 @@ import static org.apache.hadoop.fs.s3a.Constants.LIST_VERSION;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_LIST_V1_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 
 /**
  * S3A contract tests for getFileStatus, using the v1 List Objects API.
@@ -52,6 +53,7 @@ public class ITestS3AContractGetFileStatusV1List
     disableFilesystemCaching(conf);
     skipIfNotEnabled(conf, KEY_LIST_V1_ENABLED,
         "Skipping V1 listing tests");
+    skipIfS3ExpressBucket(conf);
     conf.setInt(Constants.MAX_PAGING_KEYS, 2);
 
     // Use v1 List Objects API

@@ -31,6 +31,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
@@ -92,6 +97,31 @@ public class TestRouterCLI {
               "SC-1:0.8,SC-2:0.2", "SC-1:0.6,SC-2:0.4", "1", queue, "test");
           weights.add(weight);
           return QueryFederationQueuePoliciesResponse.newInstance(1, 1, 1, 10, weights);
+        });
+
+    when(admin.getFederationSubClusters(any(GetSubClustersRequest.class)))
+        .thenAnswer((Answer<GetSubClustersResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          List<FederationSubCluster> subClustersList = new ArrayList<>();
+          // Add SC-1
+          FederationSubCluster subCluster1 = FederationSubCluster.newInstance("SC-1",
+              "RUNNING", new Date().toString());
+          // Add SC-2
+          FederationSubCluster subCluster2 = FederationSubCluster.newInstance("SC-2",
+              "RUNNING", new Date().toString());
+          subClustersList.add(subCluster1);
+          subClustersList.add(subCluster2);
+          return GetSubClustersResponse.newInstance(subClustersList);
+        });
+
+    when(admin.deleteFederationPoliciesByQueues(any(DeleteFederationQueuePoliciesRequest.class)))
+        .thenAnswer((Answer<DeleteFederationQueuePoliciesResponse>) invocationOnMock -> {
+          // Step1. parse request.
+          Object obj = invocationOnMock.getArgument(0);
+          DeleteFederationQueuePoliciesRequest request = (DeleteFederationQueuePoliciesRequest) obj;
+          List<String> queues = request.getQueues();
+          return DeleteFederationQueuePoliciesResponse.newInstance("queues = " +
+              StringUtils.join(queues, ",") + " delete success.");
         });
 
     Configuration config = new Configuration();
@@ -271,25 +301,53 @@ public class TestRouterCLI {
   @Test
   public void testBuildHelpMsg() throws Exception {
     Map<String, RouterCLI.RouterCmdUsageInfos> adminUsage = rmAdminCLI.getAdminUsage();
-    assertEquals(2, adminUsage.size());
+    assertEquals(3, adminUsage.size());
 
-    RouterCLI.RouterCmdUsageInfos deregisterSubClusterUsageInfos =
-        adminUsage.get("-deregisterSubCluster");
-    assertNotNull(deregisterSubClusterUsageInfos);
-    Map<String, List<String>> dsExamplesMap = deregisterSubClusterUsageInfos.getExamples();
+    RouterCLI.RouterCmdUsageInfos subClusterUsageInfos = adminUsage.get("-subCluster");
+    assertNotNull(subClusterUsageInfos);
+    Map<String, List<String>> dsExamplesMap = subClusterUsageInfos.getExamples();
     assertNotNull(dsExamplesMap);
-    assertEquals(1, dsExamplesMap.size());
-    List<String> dsExamples = dsExamplesMap.get("-deregisterSubCluster");
+    assertEquals(2, dsExamplesMap.size());
+    List<String> dsExamples = dsExamplesMap.get("-deregisterSubCluster <-sc|--subClusterId>");
     assertNotNull(dsExamples);
     assertEquals(2, dsExamples.size());
+    List<String> getSubClustersExamples = dsExamplesMap.get("-getSubClusters");
+    assertNotNull(getSubClustersExamples);
+    assertEquals(1, getSubClustersExamples.size());
 
     RouterCLI.RouterCmdUsageInfos policyUsageInfos = adminUsage.get("-policy");
     assertNotNull(policyUsageInfos);
     Map<String, List<String>> policyExamplesMap = policyUsageInfos.getExamples();
     assertNotNull(policyExamplesMap);
-    assertEquals(3, policyExamplesMap.size());
+    assertEquals(4, policyExamplesMap.size());
     policyExamplesMap.forEach((cmd, cmdExamples) -> {
       assertEquals(2, cmdExamples.size());
     });
+
+    RouterCLI.RouterCmdUsageInfos applicationUsageInfos = adminUsage.get("-application");
+    assertNotNull(applicationUsageInfos);
+    Map<String, List<String>> applicationExamplesMap = applicationUsageInfos.getExamples();
+    assertNotNull(applicationExamplesMap);
+    assertEquals(1, applicationExamplesMap.size());
+  }
+
+  @Test
+  public void testGetSubClusters() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+    String[] args = {"-subCluster", "-getSubClusters"};
+    assertEquals(0, rmAdminCLI.run(args));
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws Exception {
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+    String[] args = {"-policy", "-d", "--queue", "root.a"};
+    assertEquals(0, rmAdminCLI.run(args));
   }
 }
