@@ -353,6 +353,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
+
+  /**
+   * Directory allocator, bonded to directory list set in
+   * {@link Constants#BUFFER_DIR} and used for storing temporary files
+   * including: upload file blocks, stage committer files and cached read blocks.
+   */
   private LocalDirAllocator directoryAllocator;
   private String cannedACL;
 

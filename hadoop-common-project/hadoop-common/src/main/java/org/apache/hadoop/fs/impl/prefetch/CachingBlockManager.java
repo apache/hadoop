@@ -38,12 +38,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static java.util.Objects.requireNonNull;
-
 import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
@@ -113,6 +113,11 @@ public abstract class CachingBlockManager extends BlockManager {
   private final LocalDirAllocator localDirAllocator;
 
   /**
+   * The path of the underlying file; for logging.
+   */
+  private Path path;
+
+  /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
    * @param blockManagerParameters params for block manager.
@@ -123,6 +128,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
     Validate.checkPositiveInteger(blockManagerParameters.getBufferPoolSize(), "bufferPoolSize");
 
+    this.path = requireNonNull(blockManagerParameters.getPath());
     this.futurePool = requireNonNull(blockManagerParameters.getFuturePool());
     this.bufferPoolSize = blockManagerParameters.getBufferPoolSize();
     this.numCachingErrors = new AtomicInteger();
@@ -132,10 +138,10 @@ public abstract class CachingBlockManager extends BlockManager {
         blockManagerParameters.getPrefetchingStatistics());
     this.conf = requireNonNull(blockManagerParameters.getConf());
 
-    if (this.getBlockData().getFileSize() > 0) {
-      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
+    if (getBlockData().getFileSize() > 0) {
+      this.bufferPool = new BufferPool(bufferPoolSize, getBlockData().getBlockSize(),
           this.prefetchingStatistics);
-      this.cache = this.createCache(blockManagerParameters.getMaxBlocksCount(),
+      this.cache = createCache(blockManagerParameters.getMaxBlocksCount(),
           blockManagerParameters.getTrackerFactory());
     }
 
@@ -210,7 +216,7 @@ public abstract class CachingBlockManager extends BlockManager {
         return true;
       }
 
-      data.throwIfStateIncorrect(BufferData.State.BLANK);
+      data.throwIfStateIncorrect(BufferData.State.EMPTY);
       read(data);
       return true;
     }
@@ -269,23 +275,23 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     // We initiate a prefetch only if we can acquire a buffer from the shared pool.
-    LOG.debug("Requesting prefetch for block {}", blockNumber);
+    LOG.debug("{}: Requesting prefetch for block {}", path, blockNumber);
     BufferData data = bufferPool.tryAcquire(blockNumber);
     if (data == null) {
-      LOG.debug("no buffer acquired for block {}", blockNumber);
+      LOG.debug("{}: no buffer acquired for block {}", path, blockNumber);
       return;
     }
-    LOG.debug("acquired {}", data);
+    LOG.debug("{}: acquired {}", path, data);
 
     // Opportunistic check without locking.
-    if (!data.stateEqualsOneOf(BufferData.State.BLANK)) {
+    if (!data.stateEqualsOneOf(BufferData.State.EMPTY)) {
       // The block is ready or being prefetched/cached.
       return;
     }
 
     synchronized (data) {
       // Reconfirm state after locking.
-      if (!data.stateEqualsOneOf(BufferData.State.BLANK)) {
+      if (!data.stateEqualsOneOf(BufferData.State.EMPTY)) {
         // The block is ready or being prefetched/cached.
         return;
       }
@@ -306,7 +312,7 @@ public abstract class CachingBlockManager extends BlockManager {
    */
   @Override
   public void cancelPrefetches(final CancelReason reason) {
-    LOG.debug("Cancelling prefetches: {}", reason);
+    LOG.debug("{}: Cancelling prefetches: {}", path, reason);
     BlockOperations.Operation op = ops.cancelPrefetches();
 
     if (reason == CancelReason.RandomIO) {
@@ -328,9 +334,9 @@ public abstract class CachingBlockManager extends BlockManager {
   private void read(BufferData data) throws IOException {
     synchronized (data) {
       try {
-        readBlock(data, false, BufferData.State.BLANK);
+        readBlock(data, false, BufferData.State.EMPTY);
       } catch (IOException e) {
-        LOG.debug("error reading block {}", data.getBlockNumber(), e);
+        LOG.debug("{}: error reading block {}", path, data.getBlockNumber(), e);
         throw e;
       }
     }
@@ -432,7 +438,8 @@ public abstract class CachingBlockManager extends BlockManager {
   private void disableCaching(final BlockOperations.End endOp) {
     if (!cachingDisabled.getAndSet(true)) {
       String message = String.format(
-          "Caching disabled because of slow operation (%.1f sec)", endOp.duration());
+          "%s: Caching disabled because of slow operation (%.1f sec)",
+          path, endOp.duration());
       LOG_CACHING_DISABLED.info(message);
       prefetchingStatistics.setPrefetchDiskCachingState(false);
     }
@@ -445,7 +452,7 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Read task that is submitted to the future pool.
    */
-  private static class PrefetchTask implements Supplier<Void> {
+  private class PrefetchTask implements Supplier<Void> {
     private final BufferData data;
     private final CachingBlockManager blockManager;
     private final Instant taskQueuedStartTime;
@@ -461,8 +468,8 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        LOG.info("error prefetching block {}. {}", data.getBlockNumber(), e.getMessage());
-        LOG.debug("error prefetching block {}", data.getBlockNumber(), e);
+        LOG.info("{}: error prefetching block {}. {}", path, data.getBlockNumber(), e.getMessage());
+        LOG.debug("{}: error prefetching block {}", path , data.getBlockNumber(), e);
       }
       return null;
     }
@@ -492,7 +499,7 @@ public abstract class CachingBlockManager extends BlockManager {
     Validate.checkNotNull(data, "data");
 
     final int blockNumber = data.getBlockNumber();
-    LOG.debug("Block {}: request caching of {}", blockNumber, data);
+    LOG.debug("{}: Block {}: request caching of {}", path , blockNumber, data);
 
     if (isClosed() || isCachingDisabled()) {
       data.setDone();
@@ -501,21 +508,21 @@ public abstract class CachingBlockManager extends BlockManager {
 
     // Opportunistic check without locking.
     if (!data.stateEqualsOneOf(EXPECTED_STATE_AT_CACHING)) {
-      LOG.debug("Block {}: Block in wrong state to cache: {}",
-          blockNumber, data.getState());
+      LOG.debug("{}: Block {}: Block in wrong state to cache: {}",
+          path, blockNumber, data.getState());
       return;
     }
 
     synchronized (data) {
       // Reconfirm state after locking.
       if (!data.stateEqualsOneOf(EXPECTED_STATE_AT_CACHING)) {
-        LOG.debug("Block {}: Block in wrong state to cache: {}",
-            blockNumber, data.getState());
+        LOG.debug("{}: Block {}: Block in wrong state to cache: {}",
+            path, blockNumber, data.getState());
         return;
       }
 
       if (cache.containsBlock(data.getBlockNumber())) {
-        LOG.debug("Block {}: Block is already in cache", blockNumber);
+        LOG.debug("{}: Block {}: Block is already in cache", path, blockNumber);
         data.setDone();
         return;
       }
@@ -550,33 +557,33 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     final int blockNumber = data.getBlockNumber();
-    LOG.debug("Block {}: Preparing to cache block", blockNumber);
+    LOG.debug("{}: Block {}: Preparing to cache block", path, blockNumber);
 
     if (isCachingDisabled()) {
-      LOG.debug("Block {}: Preparing caching disabled, not prefetching", blockNumber);
+      LOG.debug("{}: Block {}: Preparing caching disabled, not prefetching", path, blockNumber);
       data.setDone();
       return;
     }
-    LOG.debug("Block {}: awaiting any read to complete", blockNumber);
+    LOG.debug("{}: Block {}: awaiting any read to complete", path, blockNumber);
 
     try {
       // wait for data; state of caching may change during this period.
       awaitFuture(blockFuture, TIMEOUT_MINUTES, TimeUnit.MINUTES);
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
-        LOG.debug("Block {}: prefetch failure", blockNumber);
+        LOG.debug("{}: Block {}: prefetch failure", path, blockNumber);
         return;
       }
     } catch (IOException | TimeoutException e) {
-      LOG.info("Error fetching block: {}. {}", data, e.toString());
-      LOG.debug("Error fetching block: {}", data, e);
+      LOG.info("{}: Error fetching block: {}. {}", path, data, e.toString());
+      LOG.debug("{}: Error fetching block: {}", path, data, e);
       data.setDone();
       return;
     }
 
     if (isCachingDisabled()) {
       // caching was disabled while waiting fro the read to complete.
-      LOG.debug("Block {}: caching disabled while reading data", blockNumber);
+      LOG.debug("{}: Block {}: caching disabled while reading data", path, blockNumber);
       data.setDone();
       return;
     }
@@ -586,12 +593,12 @@ public abstract class CachingBlockManager extends BlockManager {
     synchronized (data) {
       try {
         if (data.stateEqualsOneOf(BufferData.State.DONE)) {
-          LOG.debug("Block {}: block no longer in use; not adding", blockNumber);
+          LOG.debug("{}: Block {}: block no longer in use; not adding", path, blockNumber);
           return;
         }
 
         if (cache.containsBlock(blockNumber)) {
-          LOG.debug("Block {}: already in cache; not adding", blockNumber);
+          LOG.debug("{}: Block {}: already in cache; not adding", path, blockNumber);
           data.setDone();
           return;
         }
@@ -603,8 +610,8 @@ public abstract class CachingBlockManager extends BlockManager {
         data.setDone();
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
-        LOG.info("error adding block to cache: {}. {}", data, e.getMessage());
-        LOG.debug("error adding block to cache: {}", data, e);
+        LOG.info("{}: error adding block to cache: {}. {}", path, data, e.getMessage());
+        LOG.debug("{}: error adding block to cache: {}", path, data, e);
         data.setDone();
       }
 
@@ -625,7 +632,7 @@ public abstract class CachingBlockManager extends BlockManager {
     if (isClosed()) {
       return;
     }
-    LOG.debug("Block {}: Caching", buffer);
+    LOG.debug("{}: Block {}: Caching", path, buffer);
 
     cache.put(blockNumber, buffer, conf, localDirAllocator);
   }
@@ -701,18 +708,13 @@ public abstract class CachingBlockManager extends BlockManager {
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
 
-    sb.append("cache(");
-    sb.append(cache.toString());
-    sb.append("); ");
+    String sb = "path: " + path + "; "
+        + "; cache(" + cache + "); "
+        + "pool: " + bufferPool
+        + "; numReadErrors: " + numReadErrors.get()
+        + "; numCachingErrors: " + numCachingErrors.get();
 
-    sb.append("pool: ");
-    sb.append(bufferPool.toString());
-
-    sb.append("; numReadErrors: ").append(numReadErrors.get());
-    sb.append("; numCachingErrors: ").append(numCachingErrors.get());
-
-    return sb.toString();
+    return sb;
   }
 }
