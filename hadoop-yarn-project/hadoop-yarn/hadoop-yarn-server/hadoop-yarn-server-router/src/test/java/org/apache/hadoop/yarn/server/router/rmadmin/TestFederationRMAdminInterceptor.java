@@ -67,6 +67,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePol
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -1006,7 +1011,6 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         () -> interceptor.listFederationQueuePolicies(request8));
   }
 
-
   @Test
   public void testDeleteFederationApplication() throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(10, 1);
@@ -1028,5 +1032,61 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     assertNotNull(deleteFederationApplicationResponse);
     assertEquals("applicationId = " + applicationId2 + " delete success.",
         deleteFederationApplicationResponse.getMessage());
+  }
+
+  @Test
+  public void testGetFederationSubClusters() throws Exception {
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getFederationSubClusters Request.",
+        () -> interceptor.getFederationSubClusters(null));
+
+    GetSubClustersRequest request = GetSubClustersRequest.newInstance();
+    GetSubClustersResponse federationSubClusters = interceptor.getFederationSubClusters(request);
+    assertNotNull(federationSubClusters);
+
+    List<FederationSubCluster> federationSubClustersList =
+        federationSubClusters.getFederationSubClusters();
+    assertNotNull(federationSubClustersList);
+    assertEquals(4, federationSubClustersList.size());
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws IOException, YarnException {
+    // subClusters
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // generate queue A, queue B, queue C
+    FederationQueueWeight rootA = generateFederationQueueWeight("root.a", subClusterLists);
+    FederationQueueWeight rootB = generateFederationQueueWeight("root.b", subClusterLists);
+    FederationQueueWeight rootC = generateFederationQueueWeight("root.c", subClusterLists);
+
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    federationQueueWeights.add(rootA);
+    federationQueueWeights.add(rootB);
+    federationQueueWeights.add(rootC);
+
+    // Step1. Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // Step2. Delete the policy of root.c
+    List<String> deleteQueues = new ArrayList<>();
+    deleteQueues.add("root.c");
+    DeleteFederationQueuePoliciesRequest deleteRequest =
+        DeleteFederationQueuePoliciesRequest.newInstance(deleteQueues);
+    DeleteFederationQueuePoliciesResponse deleteResponse =
+        interceptor.deleteFederationPoliciesByQueues(deleteRequest);
+    assertNotNull(deleteResponse);
+    String message = deleteResponse.getMessage();
+    assertEquals("queues = root.c delete success.", message);
   }
 }

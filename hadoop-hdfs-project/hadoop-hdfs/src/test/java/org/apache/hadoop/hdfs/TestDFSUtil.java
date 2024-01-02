@@ -1127,14 +1127,36 @@ public class TestDFSUtil {
   @Test
   public void testAddTransferRateMetricForValidValues() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
-    verify(mockMetrics).addReadTransferRate(10000);
+    DFSUtil.addTransferRateMetric(mockMetrics, 3_251_854_872L, 129_593_000_000L);
+    verify(mockMetrics).addReadTransferRate(250_92_828L);
   }
 
   @Test
-  public void testAddTransferRateMetricForInvalidValue() {
+  public void testAddTransferRateMetricForZeroNSTransferDuration() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
-    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
+    DFSUtil.addTransferRateMetric(mockMetrics, 1L, 0);
+    verify(mockMetrics).addReadTransferRate(999_999_999L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricNegativeTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricZeroTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
+  }
+
+  @Test
+  public void testGetTransferRateInBytesPerSecond() {
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 1L));
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 0L));
+    assertEquals(102_400_000,
+        DFSUtil.getTransferRateInBytesPerSecond(512_000_000L, 5_000_000_000L));
   }
 }

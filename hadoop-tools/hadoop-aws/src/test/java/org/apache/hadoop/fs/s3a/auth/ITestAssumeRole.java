@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.E_FORBIDDEN_AWS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
@@ -102,6 +103,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    */
   protected static final String VALIDATION_ERROR
       = "ValidationError";
+
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, S3EXPRESS_CREATE_SESSION);
+    return conf;
+  }
 
   @Override
   public void setup() throws Exception {
@@ -181,6 +189,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
+    // disable create session so there's no need to
+    // add a role policy for it.
+    disableCreateSession(conf);
+
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
   }
@@ -737,12 +749,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
-
     bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
+
+    // getBucketLocation fails with error
+    assumeNotS3ExpressFileSystem(roleFS);
     forbidden("",
         () -> roleFS.getBucketLocation());
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);

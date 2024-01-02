@@ -83,11 +83,14 @@ public class ITestS3SelectCLI extends AbstractS3SelectTest {
     selectConf = new Configuration(getConfiguration());
     localFile = getTempFilename();
     landsatSrc = getLandsatGZ().toString();
+    final S3AFileSystem landsatFS = getLandsatFS();
     ChangeDetectionPolicy changeDetectionPolicy =
-        getLandsatFS().getChangeDetectionPolicy();
+        landsatFS.getChangeDetectionPolicy();
     Assume.assumeFalse("the standard landsat bucket doesn't have versioning",
         changeDetectionPolicy.getSource() == Source.VersionId
             && changeDetectionPolicy.isRequireVersion());
+    Assume.assumeTrue("S3 Select is not enabled",
+        landsatFS.hasPathCapability(new Path("/"), S3_SELECT_CAPABILITY));
   }
 
   @Override

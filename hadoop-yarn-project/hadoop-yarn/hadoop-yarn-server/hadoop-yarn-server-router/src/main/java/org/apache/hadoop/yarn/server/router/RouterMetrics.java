@@ -157,6 +157,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numListFederationQueuePoliciesFailedRetrieved;
   @Metric("# of deleteFederationApplication failed to be retrieved")
   private MutableGaugeInt numDeleteFederationApplicationFailedRetrieved;
+  @Metric("# of getFederationSubClusters failed to be retrieved")
+  private MutableGaugeInt numGetFederationSubClustersFailedRetrieved;
+  @Metric("# of deleteFederationPoliciesByQueues failed to be retrieved")
+  private MutableGaugeInt numDeleteFederationPoliciesByQueuesRetrieved;
   @Metric("# of refreshAdminAcls failed to be retrieved")
   private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
   @Metric("# of refreshServiceAcls failed to be retrieved")
@@ -311,6 +315,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededListFederationQueuePoliciesFailedRetrieved;
   @Metric("Total number of successful Retrieved DeleteFederationApplication and latency(ms)")
   private MutableRate totalSucceededDeleteFederationApplicationFailedRetrieved;
+  @Metric("Total number of successful Retrieved getFederationSubClusters and latency(ms)")
+  private MutableRate totalSucceededGetFederationSubClustersRetrieved;
+  @Metric("Total number of successful Retrieved DeleteFederationPoliciesByQueues and latency(ms)")
+  private MutableRate totalSucceededDeleteFederationPoliciesByQueuesRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;
   @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
@@ -401,6 +409,8 @@ public final class RouterMetrics {
   private MutableQuantiles batchSaveFederationQueuePoliciesLatency;
   private MutableQuantiles listFederationQueuePoliciesLatency;
   private MutableQuantiles deleteFederationApplicationLatency;
+  private MutableQuantiles getFederationSubClustersLatency;
+  private MutableQuantiles deleteFederationPoliciesByQueuesLatency;
   private MutableQuantiles refreshAdminAclsLatency;
   private MutableQuantiles refreshServiceAclsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
@@ -626,6 +636,14 @@ public final class RouterMetrics {
     deleteFederationApplicationLatency = registry.newQuantiles(
         "deleteFederationApplicationLatency",
         "latency of delete FederationApplication timeouts", "ops", "latency", 10);
+
+    getFederationSubClustersLatency = registry.newQuantiles(
+        "getFederationSubClustersLatency",
+        "latency of get FederationSubClusters timeouts", "ops", "latency", 10);
+
+    deleteFederationPoliciesByQueuesLatency = registry.newQuantiles(
+        "deleteFederationPoliciesByQueuesLatency",
+        "latency of delete FederationPoliciesByQueues timeouts", "ops", "latency", 10);
 
     refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
         "latency of refresh admin acls timeouts", "ops", "latency", 10);
@@ -974,6 +992,16 @@ public final class RouterMetrics {
   @VisibleForTesting
   public long getNumSucceededDeleteFederationApplicationFailedRetrieved() {
     return totalSucceededDeleteFederationApplicationFailedRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetFederationSubClustersRetrieved() {
+    return totalSucceededGetFederationSubClustersRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededDeleteFederationPoliciesByQueuesRetrieved() {
+    return totalSucceededDeleteFederationPoliciesByQueuesRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1342,6 +1370,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetFederationSubClustersRetrieved() {
+    return totalSucceededGetFederationSubClustersRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved() {
+    return totalSucceededDeleteFederationPoliciesByQueuesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshAdminAclsRetrieved() {
     return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
   }
@@ -1650,6 +1688,14 @@ public final class RouterMetrics {
 
   public int getDeleteFederationApplicationFailedRetrieved() {
     return numDeleteFederationApplicationFailedRetrieved.value();
+  }
+
+  public int getFederationSubClustersFailedRetrieved() {
+    return numGetFederationSubClustersFailedRetrieved.value();
+  }
+
+  public int getDeleteFederationPoliciesByQueuesRetrieved() {
+    return numDeleteFederationPoliciesByQueuesRetrieved.value();
   }
 
   public int getNumRefreshAdminAclsFailedRetrieved() {
@@ -2024,6 +2070,16 @@ public final class RouterMetrics {
     deleteFederationApplicationLatency.add(duration);
   }
 
+  public void succeededGetFederationSubClustersRetrieved(long duration) {
+    totalSucceededGetFederationSubClustersRetrieved.add(duration);
+    getFederationSubClustersLatency.add(duration);
+  }
+
+  public void succeededDeleteFederationPoliciesByQueuesRetrieved(long duration) {
+    totalSucceededDeleteFederationPoliciesByQueuesRetrieved.add(duration);
+    deleteFederationPoliciesByQueuesLatency.add(duration);
+  }
+
   public void succeededRefreshAdminAclsRetrieved(long duration) {
     totalSucceededRefreshAdminAclsRetrieved.add(duration);
     refreshAdminAclsLatency.add(duration);
@@ -2316,6 +2372,14 @@ public final class RouterMetrics {
 
   public void incrDeleteFederationApplicationFailedRetrieved() {
     numDeleteFederationApplicationFailedRetrieved.incr();
+  }
+
+  public void incrGetFederationSubClustersFailedRetrieved() {
+    numGetFederationSubClustersFailedRetrieved.incr();
+  }
+
+  public void incrDeleteFederationPoliciesByQueuesRetrieved() {
+    numDeleteFederationPoliciesByQueuesRetrieved.incr();
   }
 
   public void incrRefreshAdminAclsFailedRetrieved() {

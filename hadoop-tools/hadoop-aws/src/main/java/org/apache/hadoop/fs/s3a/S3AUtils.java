@@ -174,20 +174,6 @@ public final class S3AUtils {
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
 
-    // timeout issues
-    // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
-    // ApiCallTimeoutException: a request with any configured retries failed.
-    // The ApiCallTimeoutException exception should be the only one seen in
-    // the S3A code, but for due diligence both are handled and mapped to
-    // our own AWSApiCallTimeoutException.
-    if (exception instanceof ApiCallTimeoutException
-        || exception instanceof ApiCallAttemptTimeoutException) {
-      // An API call to an AWS service timed out.
-      // This is a subclass of ConnectTimeoutException so
-      // all retry logic for that exception is handled without
-      // having to look down the stack for a
-      return new AWSApiCallTimeoutException(message, exception);
-    }
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
       Exception innerCause = containsInterruptedException(exception);
@@ -213,6 +199,20 @@ public final class S3AUtils {
       ioe = maybeExtractIOException(path, exception);
       if (ioe != null) {
         return ioe;
+      }
+      // timeout issues
+      // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+      // ApiCallTimeoutException: a request with any configured retries failed.
+      // The ApiCallTimeoutException exception should be the only one seen in
+      // the S3A code, but for due diligence both are handled and mapped to
+      // our own AWSApiCallTimeoutException.
+      if (exception instanceof ApiCallTimeoutException
+          || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // This is a subclass of ConnectTimeoutException so
+        // all retry logic for that exception is handled without
+        // having to look down the stack for a
+        return new AWSApiCallTimeoutException(message, exception);
       }
       // no custom handling.
       return new AWSClientIOException(message, exception);
@@ -272,6 +272,11 @@ public final class S3AUtils {
         }
         break;
 
+      // Caused by duplicate create bucket call.
+      case SC_409_CONFLICT:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // this also surfaces sometimes and is considered to
       // be ~ a not found exception.
       case SC_410_GONE:
@@ -282,10 +287,16 @@ public final class S3AUtils {
       // errors which stores can return from requests which
       // the store does not support.
       case SC_405_METHOD_NOT_ALLOWED:
-      case SC_412_PRECONDITION_FAILED:
       case SC_415_UNSUPPORTED_MEDIA_TYPE:
       case SC_501_NOT_IMPLEMENTED:
         ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        break;
+
+      // precondition failure: the object is there, but the precondition
+      // (e.g. etag) didn't match. Assume remote file change during
+      // rename or status passed in to openfile had an etag which didn't match.
+      case SC_412_PRECONDITION_FAILED:
+        ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
 
       // out of range. This may happen if an object is overwritten with
@@ -865,7 +876,7 @@ public final class S3AUtils {
    */
   public static String stringify(S3Object s3Object) {
     StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
-    builder.append(s3Object.key()).append(' ');
+    builder.append("\"").append(s3Object.key()).append("\" ");
     builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
@@ -1648,4 +1659,5 @@ public final class S3AUtils {
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
   }
+
 }

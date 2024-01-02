@@ -1462,8 +1462,17 @@ public final class Constants {
   /**
    * Stream supports multipart uploads to the given path.
    */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+  public static final String STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED =
       "fs.s3a.capability.multipart.uploads.enabled";
+
+  /**
+   * Stream supports multipart uploads to the given path.
+   * This name is wrong, but it has shipped so must be
+   * retained.
+   */
+  @Deprecated
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED
+      = STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
 
   /**
    * Prefetch max blocks count config.
@@ -1509,4 +1518,29 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
+
+  /**
+   * Is this a v2 SDK build? value {@value}.
+   */
+  public static final String STORE_CAPABILITY_AWS_V2 =
+      "fs.s3a.capability.aws.v2";
+
+  /**
+   * Use the S3 Express createSession() operation to authenticate with
+   * S3Express storage?
+   * <p>
+   * Value: {@value}.
+   * <p>
+   * This is preferred as it is faster, but it does require extra IAM
+   * permissions and is not suited to some deployments, including some
+   * of the hadoop-aws test suites.
+   */
+  public static final String S3EXPRESS_CREATE_SESSION =
+      "fs.s3a.s3express.create.session";
+
+  /**
+   * Default value of {@link #S3EXPRESS_CREATE_SESSION}.
+   * Value: {@value}.
+   */
+  public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
 }

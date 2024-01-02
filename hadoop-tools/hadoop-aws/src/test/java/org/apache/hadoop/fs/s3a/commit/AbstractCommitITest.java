@@ -95,6 +95,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    disableFilesystemCaching(conf);
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
         MAGIC_COMMITTER_ENABLED,

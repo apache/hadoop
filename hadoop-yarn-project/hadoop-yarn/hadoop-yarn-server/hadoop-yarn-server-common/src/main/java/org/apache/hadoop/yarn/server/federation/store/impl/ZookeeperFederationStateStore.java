@@ -91,10 +91,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -784,6 +788,56 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     long end = clock.getTime();
     opDurations.addGetPoliciesConfigurationsDuration(start, end);
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
+  }
+
+  @Override
+  public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
+      DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    FederationPolicyStoreInputValidator.validate(request);
+    List<String> queues = request.getQueues();
+    for (String queue : queues) {
+      deletePolicyConfigurationByQueue(queue);
+    }
+    return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+  }
+
+  private void deletePolicyConfigurationByQueue(String queue) {
+    String policyZNode = getNodePath(policiesZNode, queue);
+
+    boolean exists = false;
+    try {
+      exists = zkManager.exists(policyZNode);
+    } catch (Exception e) {
+      LOG.error("An error occurred when checking whether the queue = {} policy exists.", queue, e);
+    }
+
+    if (!exists) {
+      LOG.error("The policy of the queue = {} does not exist.", queue);
+      return;
+    }
+
+    try {
+      zkManager.delete(policyZNode);
+    } catch (Exception e) {
+      LOG.error("Queue {} policy cannot be deleted.", queue, e);
+    }
+  }
+
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+
+    zkManager.delete(policiesZNode);
+
+    try {
+      List<ACL> zkAcl = ZKCuratorManager.getZKAcls(configuration);
+      zkManager.createRootDirRecursively(policiesZNode, zkAcl);
+    } catch (Exception e) {
+      String errMsg = "Cannot create base directories: " + e.getMessage();
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    return DeletePoliciesConfigurationsResponse.newInstance();
   }
 
   @Override
