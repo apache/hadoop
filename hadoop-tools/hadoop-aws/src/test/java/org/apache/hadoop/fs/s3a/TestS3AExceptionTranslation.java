@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
+import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
 import static org.junit.Assert.*;
 
 import java.io.EOFException;
@@ -37,6 +38,8 @@ import java.util.function.Consumer;
 import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -44,11 +47,12 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditOperationRejectedException;
 import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
-
+import org.apache.hadoop.io.retry.RetryPolicy;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 
@@ -328,6 +332,53 @@ public class TestS3AExceptionTranslation {
             maybeTranslateAuditException("/",
                 sdkClientException("", sdkClientException("not an audit exception", null))))
         .isNull();
+  }
+
+  /**
+   * 504 gateway timeout is translated to a {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void test504ToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/", createS3Exception(504)));
+    verifyCause(S3Exception.class, ex);
+  }
+
+  /**
+   * SDK ApiCallTimeoutException is translated to a
+   * {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void testApiCallTimeoutExceptionToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/",
+            ApiCallTimeoutException.builder()
+                .message("timeout")
+                .build()));
+    verifyCause(ApiCallTimeoutException.class, ex);
+  }
+
+  /**
+   * SDK ApiCallAttemptTimeoutException is translated to a
+   * {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void testApiCallAttemptTimeoutExceptionToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/",
+            ApiCallAttemptTimeoutException.builder()
+                .message("timeout")
+                .build()));
+    verifyCause(ApiCallAttemptTimeoutException.class, ex);
+
+    // and confirm these timeouts are retried.
+    final S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration(false));
+    Assertions.assertThat(retryPolicy.shouldRetry(ex, 0, 0, true).action)
+        .describedAs("retry policy for exception %s", ex)
+        .isEqualTo(RetryPolicy.RetryAction.RetryDecision.RETRY);
   }
 
 }

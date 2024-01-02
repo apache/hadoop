@@ -211,7 +211,7 @@ public class DatanodeManager {
   private SlowPeerTracker slowPeerTracker;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
-  private final long slowPeerCollectionInterval;
+  private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
 
   @Nullable
@@ -408,7 +408,7 @@ public class DatanodeManager {
     LOG.info("Slow peers collection thread start.");
   }
 
-  public void stopSlowPeerCollector() {
+  private void stopSlowPeerCollector() {
     LOG.info("Slow peers collection thread shutdown");
     if (slowPeerCollectorDaemon == null) {
       return;
@@ -420,6 +420,18 @@ public class DatanodeManager {
       LOG.error("Slow peers collection thread did not shutdown", e);
     } finally {
       slowPeerCollectorDaemon = null;
+      slowNodesUuidSet.clear();
+    }
+  }
+
+  public void restartSlowPeerCollector(long interval) {
+    Preconditions.checkNotNull(slowPeerCollectorDaemon,
+        "slowPeerCollectorDaemon thread is null, not support restart");
+    stopSlowPeerCollector();
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    this.slowPeerCollectionInterval = interval;
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
     }
   }
 
@@ -1852,11 +1864,11 @@ public class DatanodeManager {
         maxECReplicatedTransfers = maxTransfers;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (replicationBlocks * maxTransfers) / totalBlocks);
+          (double) replicationBlocks * maxTransfers / totalBlocks);
       int numEcReplicatedTasks = (int) Math.ceil(
-              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
+          (double) ecBlocksToBeReplicated * maxECReplicatedTransfers / totalBlocks);
       int numECReconstructedTasks = (int) Math.ceil(
-          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
+          (double) ecBlocksToBeErasureCoded * maxTransfers / totalBlocks);
       LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
                       "ec reconstruction tasks: {}.",
           numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
@@ -2287,5 +2299,10 @@ public class DatanodeManager {
   @VisibleForTesting
   public boolean isSlowPeerCollectorInitialized() {
     return slowPeerCollectorDaemon == null;
+  }
+
+  @VisibleForTesting
+  public long getSlowPeerCollectionInterval() {
+    return slowPeerCollectionInterval;
   }
 }

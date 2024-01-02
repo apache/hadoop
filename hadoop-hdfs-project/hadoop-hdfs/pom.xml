@@ -130,7 +130,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>

@@ -49,6 +49,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfEncryptionTestsDisabled(conf);
     S3ATestUtils.disableFilesystemCaching(conf);
     patchConfigurationEncryptionSettings(conf);
     return conf;

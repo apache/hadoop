@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -80,6 +82,7 @@ import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unsupportedConstructor;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
@@ -170,9 +173,9 @@ public final class S3AUtils {
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
-
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -191,10 +194,28 @@ public final class S3AUtils {
       ioe = maybeTranslateCredentialException(path, exception);
       if (ioe != null) {
         return ioe;
-      } else {
-        // no custom handling.
-        return new AWSClientIOException(message, exception);
       }
+      // network problems covered by an IOE inside the exception chain.
+      ioe = maybeExtractIOException(path, exception);
+      if (ioe != null) {
+        return ioe;
+      }
+      // timeout issues
+      // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+      // ApiCallTimeoutException: a request with any configured retries failed.
+      // The ApiCallTimeoutException exception should be the only one seen in
+      // the S3A code, but for due diligence both are handled and mapped to
+      // our own AWSApiCallTimeoutException.
+      if (exception instanceof ApiCallTimeoutException
+          || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // This is a subclass of ConnectTimeoutException so
+        // all retry logic for that exception is handled without
+        // having to look down the stack for a
+        return new AWSApiCallTimeoutException(message, exception);
+      }
+      // no custom handling.
+      return new AWSClientIOException(message, exception);
     } else {
       // "error response returned by an S3 or other service."
       // These contain more details and should be translated based
@@ -209,6 +230,8 @@ public final class S3AUtils {
       if (ase.awsErrorDetails() != null) {
         message = message + ":" + ase.awsErrorDetails().errorCode();
       }
+
+      // big switch on the HTTP status code.
       switch (status) {
 
       case SC_301_MOVED_PERMANENTLY:
@@ -242,10 +265,16 @@ public final class S3AUtils {
           // this is a missing bucket
           ioe = new UnknownStoreException(path, message, ase);
         } else {
-          // a normal unknown object
+          // a normal unknown object.
+          // Can also be raised by third-party stores when aborting an unknown multipart upload
           ioe = new FileNotFoundException(message);
           ioe.initCause(ase);
         }
+        break;
+
+      // Caused by duplicate create bucket call.
+      case SC_409_CONFLICT:
+        ioe = new AWSBadRequestException(message, ase);
         break;
 
       // this also surfaces sometimes and is considered to
@@ -255,10 +284,19 @@ public final class S3AUtils {
         ioe.initCause(ase);
         break;
 
-      // method not allowed; seen on S3 Select.
-      // treated as a bad request
+      // errors which stores can return from requests which
+      // the store does not support.
       case SC_405_METHOD_NOT_ALLOWED:
-        ioe = new AWSBadRequestException(message, s3Exception);
+      case SC_415_UNSUPPORTED_MEDIA_TYPE:
+      case SC_501_NOT_IMPLEMENTED:
+        ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        break;
+
+      // precondition failure: the object is there, but the precondition
+      // (e.g. etag) didn't match. Assume remote file change during
+      // rename or status passed in to openfile had an etag which didn't match.
+      case SC_412_PRECONDITION_FAILED:
+        ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
 
       // out of range. This may happen if an object is overwritten with
@@ -277,8 +315,14 @@ public final class S3AUtils {
         break;
 
       // throttling
-      case SC_503_SERVICE_UNAVAILABLE:
+      case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
+      case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // gateway timeout
+      case SC_504_GATEWAY_TIMEOUT:
+        ioe = new AWSApiCallTimeoutException(message, ase);
         break;
 
       // internal error
@@ -295,8 +339,15 @@ public final class S3AUtils {
         // other 200: FALL THROUGH
 
       default:
-        // no specific exit code. Choose an IOE subclass based on the class
-        // of the caught exception
+        // no specifically handled exit code.
+
+        // convert all unknown 500+ errors to a 500 exception
+        if (status > SC_500_INTERNAL_SERVER_ERROR) {
+          ioe = new AWSStatus500Exception(message, ase);
+          break;
+        }
+
+        // Choose an IOE subclass based on the class of the caught exception
         ioe = s3Exception != null
             ? new AWSS3IOException(message, s3Exception)
             : new AWSServiceIOException(message, ase);
@@ -825,7 +876,7 @@ public final class S3AUtils {
    */
   public static String stringify(S3Object s3Object) {
     StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
-    builder.append(s3Object.key()).append(' ');
+    builder.append("\"").append(s3Object.key()).append("\" ");
     builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
@@ -1421,6 +1472,11 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case DSSE_KMS:
+      LOG.debug("Using DSSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
@@ -1603,4 +1659,5 @@ public final class S3AUtils {
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
   }
+
 }

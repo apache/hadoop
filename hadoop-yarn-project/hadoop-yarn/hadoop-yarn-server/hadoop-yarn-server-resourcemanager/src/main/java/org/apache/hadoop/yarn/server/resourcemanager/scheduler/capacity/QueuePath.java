@@ -96,6 +96,11 @@ public class QueuePath implements Iterable<String> {
    * @return true if there is at least one empty part of the path
    */
   public boolean hasEmptyPart() {
+    // iterator will not contain an empty leaf queue, so check directly
+    if (leaf.isEmpty()) {
+      return true;
+    }
+
     for (String part : this) {
       if (part.isEmpty()) {
         return true;

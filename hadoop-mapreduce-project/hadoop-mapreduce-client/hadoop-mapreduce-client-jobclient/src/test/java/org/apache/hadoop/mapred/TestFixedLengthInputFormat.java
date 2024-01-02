@@ -97,7 +97,7 @@ public class TestFixedLengthInputFormat {
   @Test (timeout=5000)
   public void testNoRecordLength() throws IOException {
     localFs.delete(workDir, true);
-    Path file = new Path(workDir, new String("testFormat.txt"));
+    Path file = new Path(workDir, "testFormat.txt");
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
     JobConf job = new JobConf(defaultConf);
@@ -124,7 +124,7 @@ public class TestFixedLengthInputFormat {
   @Test (timeout=5000)
   public void testZeroRecordLength() throws IOException {
     localFs.delete(workDir, true);
-    Path file = new Path(workDir, new String("testFormat.txt"));
+    Path file = new Path(workDir, "testFormat.txt");
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
     JobConf job = new JobConf(defaultConf);
@@ -152,7 +152,7 @@ public class TestFixedLengthInputFormat {
   @Test (timeout=5000)
   public void testNegativeRecordLength() throws IOException {
     localFs.delete(workDir, true);
-    Path file = new Path(workDir, new String("testFormat.txt"));
+    Path file = new Path(workDir, "testFormat.txt");
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
     JobConf job = new JobConf(defaultConf);

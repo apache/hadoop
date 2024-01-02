@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.lib;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.zookeeper.CreateMode;
@@ -57,7 +57,7 @@ public class ZKClient {
   public void registerService(String path, String data) throws
     IOException, InterruptedException {
     try {
-      zkClient.create(path, data.getBytes(Charset.forName("UTF-8")),
+      zkClient.create(path, data.getBytes(StandardCharsets.UTF_8),
           ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
     } catch(KeeperException ke) {
       throw new IOException(ke);
@@ -114,7 +114,7 @@ public class ZKClient {
     try {
       Stat stat = new Stat();
       byte[] byteData = zkClient.getData(path, false, stat);
-      data = new String(byteData, Charset.forName("UTF-8"));
+      data = new String(byteData, StandardCharsets.UTF_8);
     } catch(KeeperException ke) {
       throw new IOException(ke);
     }

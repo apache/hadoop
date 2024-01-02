@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Date;
 
 import com.google.gson.Gson;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -67,7 +68,7 @@ class FederationBlock extends RouterBlock {
    * @param capability metric json obtained from RM.
    * @return ClusterMetricsInfo Object
    */
-  private ClusterMetricsInfo getClusterMetricsInfo(String capability) {
+  protected ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     try {
       if (capability != null && !capability.isEmpty()) {
         JSONJAXBContext jc = new JSONJAXBContext(
@@ -125,79 +126,10 @@ class FederationBlock extends RouterBlock {
         .__().__().tbody();
 
     try {
-
-      // Sort the SubClusters
-      List<SubClusterInfo> subclusters = getSubClusterInfoList();
-
-      for (SubClusterInfo subcluster : subclusters) {
-
-        Map<String, String> subclusterMap = new HashMap<>();
-
-        // Prepare subCluster
-        SubClusterId subClusterId = subcluster.getSubClusterId();
-        String subClusterIdText = subClusterId.getId();
-
-        // Prepare WebAppAddress
-        String webAppAddress = subcluster.getRMWebServiceAddress();
-        String herfWebAppAddress = "";
-        if (webAppAddress != null && !webAppAddress.isEmpty()) {
-          herfWebAppAddress =
-              WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAppAddress;
-        }
-
-        // Prepare Capability
-        String capability = subcluster.getCapability();
-        ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
-
-        // Prepare LastStartTime & LastHeartBeat
-        Date lastStartTime = new Date(subcluster.getLastStartTime());
-        Date lastHeartBeat = new Date(subcluster.getLastHeartBeat());
-
-        // Prepare Resource
-        long totalMB = subClusterInfo.getTotalMB();
-        String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
-        long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
-        String resources = String.format("<memory:%s, vCores:%s>", totalMBDesc, totalVirtualCores);
-
-        // Prepare Node
-        long totalNodes = subClusterInfo.getTotalNodes();
-        long activeNodes = subClusterInfo.getActiveNodes();
-        String nodes = String.format("<totalNodes:%s, activeNodes:%s>", totalNodes, activeNodes);
-
-        // Prepare HTML Table
-        String stateStyle = "color:#dc3545;font-weight:bolder";
-        SubClusterState state = subcluster.getState();
-        if (SubClusterState.SC_RUNNING == state) {
-          stateStyle = "color:#28a745;font-weight:bolder";
-        }
-
-        tbody.tr().$id(subClusterIdText)
-            .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
-            .td().$style(stateStyle).__(state.name()).__()
-            .td().__(lastStartTime).__()
-            .td().__(lastHeartBeat).__()
-            .td(resources)
-            .td(nodes)
-            .__();
-
-        // Formatted memory information
-        long allocatedMB = subClusterInfo.getAllocatedMB();
-        String allocatedMBDesc = StringUtils.byteDesc(allocatedMB * BYTES_IN_MB);
-        long availableMB = subClusterInfo.getAvailableMB();
-        String availableMBDesc = StringUtils.byteDesc(availableMB * BYTES_IN_MB);
-        long pendingMB = subClusterInfo.getPendingMB();
-        String pendingMBDesc = StringUtils.byteDesc(pendingMB * BYTES_IN_MB);
-        long reservedMB = subClusterInfo.getReservedMB();
-        String reservedMBDesc = StringUtils.byteDesc(reservedMB * BYTES_IN_MB);
-
-        subclusterMap.put("totalmemory", totalMBDesc);
-        subclusterMap.put("allocatedmemory", allocatedMBDesc);
-        subclusterMap.put("availablememory", availableMBDesc);
-        subclusterMap.put("pendingmemory", pendingMBDesc);
-        subclusterMap.put("reservedmemory", reservedMBDesc);
-        subclusterMap.put("subcluster", subClusterId.getId());
-        subclusterMap.put("capability", capability);
-        lists.add(subclusterMap);
+      if (isEnabled) {
+        initSubClusterPage(tbody, lists);
+      } else {
+        initLocalClusterPage(tbody, lists);
       }
     } catch (Exception e) {
       LOG.error("Cannot render Router Federation.", e);
@@ -210,4 +142,127 @@ class FederationBlock extends RouterBlock {
     tbody.__().__().div().p().$style("color:red")
         .__("*The application counts are local per subcluster").__().__();
   }
+
+  /**
+   * Initialize the Federation page of the local-cluster.
+   *
+   * @param tbody HTML tbody.
+   * @param lists subCluster page data list.
+   */
+  private void initLocalClusterPage(TBODY<TABLE<Hamlet>> tbody, List<Map<String, String>> lists) {
+    Configuration config = this.router.getConfig();
+    SubClusterInfo localCluster = getSubClusterInfoByLocalCluster(config);
+    if (localCluster != null) {
+      try {
+        initSubClusterPageItem(tbody, localCluster, lists);
+      } catch (Exception e) {
+        LOG.error("init LocalCluster = {} page data error.", localCluster, e);
+      }
+    }
+  }
+
+  /**
+   * Initialize the Federation page of the sub-cluster.
+   *
+   * @param tbody HTML tbody.
+   * @param lists subCluster page data list.
+   */
+  private void initSubClusterPage(TBODY<TABLE<Hamlet>> tbody, List<Map<String, String>> lists) {
+    // Sort the SubClusters
+    List<SubClusterInfo> subClusters = getSubClusterInfoList();
+
+    // Iterate through the sub-clusters and display data for each sub-cluster.
+    // If a sub-cluster cannot display data, skip it.
+    for (SubClusterInfo subCluster : subClusters) {
+      try {
+        initSubClusterPageItem(tbody, subCluster, lists);
+      } catch (Exception e) {
+        LOG.error("init subCluster = {} page data error.", subCluster, e);
+      }
+    }
+  }
+
+  /**
+   * We will initialize the specific SubCluster's data within this method.
+   *
+   * @param tbody HTML TBody.
+   * @param subClusterInfo Sub-cluster information.
+   * @param lists Used to record data that needs to be displayed in JS.
+   */
+  private void initSubClusterPageItem(TBODY<TABLE<Hamlet>> tbody,
+      SubClusterInfo subClusterInfo, List<Map<String, String>> lists) {
+
+    Map<String, String> subClusterMap = new HashMap<>();
+
+    // Prepare subCluster
+    SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+    String subClusterIdText = subClusterId.getId();
+
+    // Prepare WebAppAddress
+    String webAppAddress = subClusterInfo.getRMWebServiceAddress();
+    String herfWebAppAddress = "";
+    if (webAppAddress != null && !webAppAddress.isEmpty()) {
+      herfWebAppAddress =
+          WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAppAddress;
+    }
+
+    // Prepare Capability
+    String capability = subClusterInfo.getCapability();
+    ClusterMetricsInfo subClusterMetricsInfo = getClusterMetricsInfo(capability);
+
+    if (subClusterMetricsInfo == null) {
+      return;
+    }
+
+    // Prepare LastStartTime & LastHeartBeat
+    Date lastStartTime = new Date(subClusterInfo.getLastStartTime());
+    Date lastHeartBeat = new Date(subClusterInfo.getLastHeartBeat());
+
+    // Prepare Resource
+    long totalMB = subClusterMetricsInfo.getTotalMB();
+    String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
+    long totalVirtualCores = subClusterMetricsInfo.getTotalVirtualCores();
+    String resources = String.format("<memory:%s, vCores:%s>", totalMBDesc, totalVirtualCores);
+
+    // Prepare Node
+    long totalNodes = subClusterMetricsInfo.getTotalNodes();
+    long activeNodes = subClusterMetricsInfo.getActiveNodes();
+    String nodes = String.format("<totalNodes:%s, activeNodes:%s>", totalNodes, activeNodes);
+
+    // Prepare HTML Table
+    String stateStyle = "color:#dc3545;font-weight:bolder";
+    SubClusterState state = subClusterInfo.getState();
+    if (SubClusterState.SC_RUNNING == state) {
+      stateStyle = "color:#28a745;font-weight:bolder";
+    }
+
+    tbody.tr().$id(subClusterIdText)
+        .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
+        .td().$style(stateStyle).__(state.name()).__()
+        .td().__(lastStartTime).__()
+        .td().__(lastHeartBeat).__()
+        .td(resources)
+        .td(nodes)
+        .__();
+
+    // Formatted memory information
+    long allocatedMB = subClusterMetricsInfo.getAllocatedMB();
+    String allocatedMBDesc = StringUtils.byteDesc(allocatedMB * BYTES_IN_MB);
+    long availableMB = subClusterMetricsInfo.getAvailableMB();
+    String availableMBDesc = StringUtils.byteDesc(availableMB * BYTES_IN_MB);
+    long pendingMB = subClusterMetricsInfo.getPendingMB();
+    String pendingMBDesc = StringUtils.byteDesc(pendingMB * BYTES_IN_MB);
+    long reservedMB = subClusterMetricsInfo.getReservedMB();
+    String reservedMBDesc = StringUtils.byteDesc(reservedMB * BYTES_IN_MB);
+
+    subClusterMap.put("totalmemory", totalMBDesc);
+    subClusterMap.put("allocatedmemory", allocatedMBDesc);
+    subClusterMap.put("availablememory", availableMBDesc);
+    subClusterMap.put("pendingmemory", pendingMBDesc);
+    subClusterMap.put("reservedmemory", reservedMBDesc);
+    subClusterMap.put("subcluster", subClusterId.getId());
+    subClusterMap.put("capability", capability);
+    lists.add(subClusterMap);
+  }
+
 }

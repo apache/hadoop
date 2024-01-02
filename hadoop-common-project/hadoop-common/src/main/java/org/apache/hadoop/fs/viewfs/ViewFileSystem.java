@@ -1370,6 +1370,24 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public Path getEnclosingRoot(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+    } catch (FileNotFoundException ex) {
+      NotInMountpointException mountPointEx =
+          new NotInMountpointException(path,
+              String.format("getEnclosingRoot - %s", ex.getMessage()));
+      mountPointEx.initCause(ex);
+      throw mountPointEx;
+    }
+    Path mountPath = new Path(res.resolvedPath);
+    Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));
+    return fixRelativePart(this.makeQualified(enclosingPath.depth() > mountPath.depth()
+        ?  enclosingPath : mountPath));
+  }
+
   /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
@@ -1918,6 +1936,25 @@ public class ViewFileSystem extends FileSystem {
         }
       }
       return allPolicies;
+    }
+
+    @Override
+    public Path getEnclosingRoot(Path path) throws IOException {
+      InodeTree.ResolveResult<FileSystem> res;
+      try {
+        res = fsState.resolve((path.toString()), true);
+      } catch (FileNotFoundException ex) {
+        NotInMountpointException mountPointEx =
+            new NotInMountpointException(path,
+            String.format("getEnclosingRoot - %s", ex.getMessage()));
+        mountPointEx.initCause(ex);
+        throw mountPointEx;
+      }
+      Path fullPath = new Path(res.resolvedPath);
+      Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+      return enclosingPath.depth() > fullPath.depth()
+          ?  enclosingPath
+          : fullPath;
     }
   }
 

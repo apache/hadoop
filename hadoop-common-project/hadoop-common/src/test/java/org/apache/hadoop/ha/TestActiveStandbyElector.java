@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -29,12 +31,15 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event;
+import org.apache.zookeeper.client.ZKClientConfig;
+import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -63,7 +68,7 @@ public class TestActiveStandbyElector {
         KeeperException {
       super(hostPort, timeout, parent, acl, Collections
           .<ZKAuthInfo> emptyList(), app,
-          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, null);
     }
 
     @Override
@@ -777,7 +782,7 @@ public class TestActiveStandbyElector {
     try {
       new ActiveStandbyElector("127.0.0.1", 2000, ZK_PARENT_NAME,
           Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), mockApp,
-          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT) {
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, null) {
 
           @Override
           protected ZooKeeper createZooKeeper() throws IOException {
@@ -808,5 +813,86 @@ public class TestActiveStandbyElector {
     // joinElection should not be called.
     Mockito.verify(mockZK, Mockito.times(0)).create(ZK_LOCK_NAME, null,
         Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
+  }
+
+  /**
+   * We want to test if we create an ActiveStandbyElector with null as a TruststoreKeystore,
+   * then we are creating a ZooKeeper without the SSL configs in ActiveStandbyElector and the other
+   * configs are the same as the default values.
+   * We do this by checking the ZKClientConfig properties.
+   * @throws Exception
+   */
+  @Test
+  public void testWithoutTruststoreKeystore() throws Exception {
+    ZKClientConfig defaultConfig = new ZKClientConfig();
+    ClientX509Util clientX509Util = new ClientX509Util();
+    System.out.println(defaultConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    ActiveStandbyElector e = Mockito.spy(new ActiveStandbyElector("localhost", 1, "",
+            Collections.emptyList(), null, Mockito.mock(ActiveStandbyElectorCallback.class),
+            1, null) {
+      @Override
+      protected synchronized ZooKeeper connectToZooKeeper() {
+        return null;
+      }
+    });
+
+    e.createZooKeeper();
+
+    ArgumentCaptor<ZKClientConfig> configArgumentCaptor
+            = ArgumentCaptor.forClass(ZKClientConfig.class);
+    Mockito.verify(e).initiateZookeeper(configArgumentCaptor.capture());
+    ZKClientConfig clientConfig = configArgumentCaptor.getValue();
+    Assert.assertEquals(defaultConfig.getProperty(ZKClientConfig.SECURE_CLIENT),
+            clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
+    Assert.assertEquals(defaultConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET),
+            clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
+    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
+    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
+    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
+  }
+
+  /**
+   * We want to test if we create an ActiveStandbyElector with a TruststoreKeystore, which already
+   * has the SSL configuration set, then we are creating a ZooKeeper with the correct SSL configs
+   * in ActiveStandbyElector. We do this by checking the ZKClientConfig properties.
+   * @throws Exception
+   */
+  @Test
+  public void testWithTruststoreKeystore() throws Exception {
+    Configuration conf = new Configuration();
+    ClientX509Util clientX509Util = new ClientX509Util();
+    conf.set(CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION, "keystore_location");
+    conf.set(CommonConfigurationKeys.ZK_SSL_KEYSTORE_PASSWORD, "keystore_password");
+    conf.set(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_LOCATION, "truststore_location");
+    conf.set(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_PASSWORD, "truststore_password");
+    SecurityUtil.TruststoreKeystore truststoreKeystore = new SecurityUtil.TruststoreKeystore(conf);
+    ActiveStandbyElector e = Mockito.spy(new ActiveStandbyElector("localhost", 1, "",
+            Collections.emptyList(), null, Mockito.mock(ActiveStandbyElectorCallback.class),
+            1, truststoreKeystore) {
+      @Override
+      protected synchronized ZooKeeper connectToZooKeeper() {
+        return null;
+      }
+    });
+
+    e.createZooKeeper();
+
+    ArgumentCaptor<ZKClientConfig> configArgumentCaptor
+            = ArgumentCaptor.forClass(ZKClientConfig.class);
+    Mockito.verify(e).initiateZookeeper(configArgumentCaptor.capture());
+    ZKClientConfig clientConfig = configArgumentCaptor.getValue();
+    Assert.assertEquals("true", clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
+    Assert.assertEquals("org.apache.zookeeper.ClientCnxnSocketNetty",
+            clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    Assert.assertEquals("keystore_location",
+            clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
+    Assert.assertEquals("keystore_password",
+            clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
+    Assert.assertEquals("truststore_location",
+            clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
+    Assert.assertEquals("truststore_password",
+            clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
+
   }
 }

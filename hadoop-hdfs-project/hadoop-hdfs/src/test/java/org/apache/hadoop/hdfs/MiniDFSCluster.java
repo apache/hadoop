@@ -248,7 +248,10 @@ public class MiniDFSCluster implements AutoCloseable {
             "MiniDFSCluster base directory cannot be null");
       }
       String cdir = conf.get(HDFS_MINIDFS_BASEDIR);
-      if (cdir != null) {
+      // There are tests which restart server, and we want to allow them to restart with the same
+      // configuration.  Although it is an error if the base directory is already set, we'll ignore
+      // cases where the base directory is the same.
+      if (cdir != null && !cdir.equals(basedir.getAbsolutePath())) {
         throw new IllegalArgumentException(
             "MiniDFSCluster base directory already defined (" + cdir + ")");
       }
@@ -2087,6 +2090,25 @@ public class MiniDFSCluster implements AutoCloseable {
     Preconditions.checkArgument(dn != null);
     return FsDatasetTestUtils.Factory.getFactory(conf)
         .newInstance(dn);
+  }
+
+  /**
+   * Wait for the datanodes in the cluster to process any block
+   * deletions that have already been asynchronously queued.
+   */
+  public void waitForDNDeletions()
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        for (DataNode dn : getDataNodes()) {
+          if (getFsDatasetTestUtils(dn).getPendingAsyncDeletions() > 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }, 1000, 10000);
   }
 
   /**

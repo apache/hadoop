@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.qjournal;
 
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
-import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.File;
@@ -64,7 +63,12 @@ public final class MiniJournalCluster implements Closeable {
     public Builder(Configuration conf) {
       this.conf = conf;
     }
-    
+
+    public Builder(Configuration conf, File baseDir) {
+      this.conf = conf;
+      baseDir(baseDir.toString());
+    }
+
     public Builder baseDir(String d) {
       this.baseDir = d;
       return this;
@@ -289,7 +293,8 @@ public final class MiniJournalCluster implements Closeable {
           }
         }, 50, 3000);
       } catch (TimeoutException e) {
-        fail("Time out while waiting for journal node " + index + " to start.");
+        throw new AssertionError("Time out while waiting for journal node " + index +
+            " to start.");
       } catch (InterruptedException ite) {
         LOG.warn("Thread interrupted when waiting for node start", ite);
       }

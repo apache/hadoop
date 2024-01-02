@@ -160,7 +160,7 @@ public class TestDatanodeReport {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       Path p = new Path("/testDatanodeReportMissingBlock");
-      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      DFSTestUtil.writeFile(fs, p, "testdata");
       LocatedBlock lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
       assertEquals(3, lb.getLocations().length);
       ExtendedBlock b = lb.getBlock();

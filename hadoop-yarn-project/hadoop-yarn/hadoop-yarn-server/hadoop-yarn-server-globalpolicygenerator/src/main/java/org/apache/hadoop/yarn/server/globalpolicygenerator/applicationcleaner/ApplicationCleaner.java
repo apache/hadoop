@@ -27,9 +27,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -46,6 +48,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
   private Configuration conf;
   private GPGContext gpgContext;
+  private FederationRegistryClient registryClient;
 
   private int minRouterSuccessCount;
   private int maxRouterRetry;
@@ -56,6 +59,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
     this.gpgContext = context;
     this.conf = config;
+    this.registryClient = context.getRegistryClient();
 
     String routerSpecString =
         this.conf.get(YarnConfiguration.GPG_APPCLEANER_CONTACT_ROUTER_SPEC,
@@ -80,15 +84,18 @@ public abstract class ApplicationCleaner implements Runnable {
           + this.minRouterSuccessCount + " should be positive");
     }
 
-    LOG.info(
-        "Initialized AppCleaner with Router query with min success {}, "
-            + "max retry {}, retry interval {}",
-        this.minRouterSuccessCount, this.maxRouterRetry,
+    LOG.info("Initialized AppCleaner with Router query with min success {}, " +
+        "max retry {}, retry interval {}.", this.minRouterSuccessCount,
+        this.maxRouterRetry,
         DurationFormatUtils.formatDurationISO(this.routerQueryIntevalMillis));
   }
 
   public GPGContext getGPGContext() {
     return this.gpgContext;
+  }
+
+  public FederationRegistryClient getRegistryClient() {
+    return this.registryClient;
   }
 
   /**
@@ -100,9 +107,9 @@ public abstract class ApplicationCleaner implements Runnable {
   public Set<ApplicationId> getAppsFromRouter() throws YarnRuntimeException {
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
 
-    LOG.info(String.format("Contacting router at: %s", webAppAddress));
-    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, "apps", AppsInfo.class, conf,
-        DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
+    LOG.info("Contacting router at: {}.", webAppAddress);
+    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.APPS,
+        AppsInfo.class, conf, DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
 
     Set<ApplicationId> appSet = new HashSet<>();
     for (AppInfo appInfo : appsInfo.getApps()) {

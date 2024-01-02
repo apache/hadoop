@@ -79,7 +79,6 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.eclipse.jetty.http.HttpHeader;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -336,7 +335,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         SecretKey tokenSecret = ctx.secretManager.retrieveTokenSecret(TEST_JOB_ID);
         headers.set(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH,
             SecureShuffleUtils.generateHash(
-                request.headers().get(HTTP_HEADER_URL_HASH).getBytes(Charsets.UTF_8),
+                request.headers().get(HTTP_HEADER_URL_HASH).getBytes(StandardCharsets.UTF_8),
                 tokenSecret));
       } catch (SecretManager.InvalidToken e) {
         fail("Could not generate reply hash");

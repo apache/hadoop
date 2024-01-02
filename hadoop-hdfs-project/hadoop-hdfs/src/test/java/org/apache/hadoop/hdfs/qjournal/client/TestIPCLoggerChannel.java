@@ -24,12 +24,13 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
-import org.apache.hadoop.hdfs.qjournal.client.LoggerTooFarBehindException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -177,5 +178,21 @@ public class TestIPCLoggerChannel {
     assertFalse(ch.isOutOfSync());
 
     ch.sendEdits(3L, 3L, 1, FAKE_DATA).get();
+  }
+
+  @Test
+  public void testMetricsRemovedOnClose() {
+    MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
+    String sourceName = "IPCLoggerChannel-"
+        + FAKE_ADDR.getAddress().getHostAddress()
+        + "-" + FAKE_ADDR.getPort();
+    // Ensure the metrics exist
+    MetricsSource source = metricsSystem.getSource(sourceName);
+    assertNotNull(source);
+
+    ch.close();
+    // ensure the metrics are removed.
+    source = metricsSystem.getSource(sourceName);
+    assertNull(source);
   }
 }
