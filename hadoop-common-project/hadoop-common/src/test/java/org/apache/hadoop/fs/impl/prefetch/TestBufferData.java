@@ -75,7 +75,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
     ByteBuffer buffer = ByteBuffer.allocate(1);
     BufferData data = new BufferData(1, buffer);
 
-    assertEquals(BufferData.State.BLANK, data.getState());
+    assertEquals(BufferData.State.EMPTY, data.getState());
 
     CompletableFuture<Void> actionFuture = new CompletableFuture<>();
     actionFuture.complete(null);
@@ -92,7 +92,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
     assertNotSame(actionFuture, actionFuture2);
 
     List<BufferData.State> states = Arrays.asList(
-        BufferData.State.BLANK,
+        BufferData.State.EMPTY,
         BufferData.State.PREFETCHING,
         BufferData.State.CACHING,
         BufferData.State.READY
@@ -116,7 +116,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
     actionFuture.complete(null);
     testInvalidStateUpdatesHelper(
         (d) -> d.setPrefetch(actionFuture),
-        BufferData.State.BLANK,
+        BufferData.State.EMPTY,
         BufferData.State.READY);
 
     testInvalidStateUpdatesHelper(
@@ -137,7 +137,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
     assertNotEquals(BufferData.State.READY, data.getState());
     assertEquals(0, data.getChecksum());
 
-    data.setReady(BufferData.State.BLANK);
+    data.setReady(BufferData.State.EMPTY);
     assertEquals(BufferData.State.READY, data.getState());
     assertNotEquals(0, data.getChecksum());
 
@@ -151,7 +151,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
     ExceptionAsserts.assertThrows(
         IllegalStateException.class,
         "Checksum cannot be changed once set",
-        () -> data.setReady(BufferData.State.BLANK));
+        () -> data.setReady(BufferData.State.EMPTY));
 
     // Verify that we detect post READY buffer modification.
     buffer.array()[2] = (byte) 42;
@@ -197,7 +197,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
     ByteBuffer buffer = ByteBuffer.allocate(1);
     BufferData data = new BufferData(1, buffer);
-    data.updateState(validFromState[0], BufferData.State.BLANK);
+    data.updateState(validFromState[0], BufferData.State.EMPTY);
     List<BufferData.State> states = this.getStatesExcept(validFromState);
     BufferData.State prevState = validFromState[0];
     String expectedMessage =
@@ -217,7 +217,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
   static final List<BufferData.State> ALL_STATES = Arrays.asList(
       BufferData.State.UNKNOWN,
-      BufferData.State.BLANK,
+      BufferData.State.EMPTY,
       BufferData.State.PREFETCHING,
       BufferData.State.CACHING,
       BufferData.State.READY

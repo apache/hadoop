@@ -392,7 +392,8 @@ public class SingleFilePerBlockCache implements BlockCache {
 
     Validate.checkPositiveInteger(buffer.limit(), "buffer.limit()");
 
-    Path blockFilePath = getCacheFilePath(conf, localDirAllocator);
+    String blockInfo = String.format("-block-%04d", blockNumber);
+    Path blockFilePath = getCacheFilePath(conf, localDirAllocator, blockInfo, buffer.limit());
     long size = Files.size(blockFilePath);
     if (size != 0) {
       String message =
@@ -490,17 +491,20 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   /**
    * Return temporary file created based on the file path retrieved from local dir allocator.
-   *
    * @param conf The configuration object.
    * @param localDirAllocator Local dir allocator instance.
+   * @param blockInfo info about block to use in filename
+   * @param fileSize size or -1 if unknown
    * @return Path of the temporary file created.
    * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
    * from local FS or file creation fails or permission set fails.
    */
   protected Path getCacheFilePath(final Configuration conf,
-      final LocalDirAllocator localDirAllocator)
+      final LocalDirAllocator localDirAllocator,
+      final String blockInfo,
+      final long fileSize)
       throws IOException {
-    return getTempFilePath(conf, localDirAllocator);
+    return getTempFilePath(conf, localDirAllocator, blockInfo, fileSize);
   }
 
   @Override
@@ -516,6 +520,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   private void deleteCacheFiles() {
     int numFilesDeleted = 0;
+    LOG.debug("Prefetch cache close: Deleting {} cache files", blocks.size());
     for (Entry entry : blocks.values()) {
       boolean lockAcquired =
           entry.takeLock(Entry.LockType.WRITE, PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
@@ -617,29 +622,6 @@ public class SingleFilePerBlockCache implements BlockCache {
   @VisibleForTesting
   public static final String CACHE_FILE_PREFIX = "fs-cache-";
 
-  /**
-   * Determine if the cache space is available on the local FS.
-   *
-   * @param fileSize The size of the file.
-   * @param conf The configuration.
-   * @param localDirAllocator Local dir allocator instance.
-   * @return True if the given file size is less than the available free space on local FS,
-   * False otherwise.
-   */
-  public static boolean isCacheSpaceAvailable(long fileSize, Configuration conf,
-      LocalDirAllocator localDirAllocator) {
-    try {
-      Path cacheFilePath = getTempFilePath(conf, localDirAllocator);
-      long freeSpace = new File(cacheFilePath.toString()).getUsableSpace();
-      LOG.info("fileSize = {}, freeSpace = {}", fileSize, freeSpace);
-      Files.deleteIfExists(cacheFilePath);
-      return fileSize < freeSpace;
-    } catch (IOException e) {
-      LOG.error("isCacheSpaceAvailable", e);
-      return false;
-    }
-  }
-
   // The suffix (file extension) of each serialized index file.
   private static final String BINARY_FILE_SUFFIX = ".bin";
 
@@ -647,20 +629,23 @@ public class SingleFilePerBlockCache implements BlockCache {
    * Create temporary file based on the file path retrieved from local dir allocator
    * instance. The file is created with .bin suffix. The created file has been granted
    * posix file permissions available in TEMP_FILE_ATTRS.
-   *
    * @param conf the configuration.
    * @param localDirAllocator the local dir allocator instance.
+   * @param blockInfo info about block to use in filename
+   * @param fileSize size or -1 if unknown
    * @return path of the file created.
    * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
    * from local FS or file creation fails or permission set fails.
    */
   private static Path getTempFilePath(final Configuration conf,
-      final LocalDirAllocator localDirAllocator) throws IOException {
+      final LocalDirAllocator localDirAllocator,
+      final String blockInfo,
+      final long fileSize) throws IOException {
     org.apache.hadoop.fs.Path path =
-        localDirAllocator.getLocalPathForWrite(CACHE_FILE_PREFIX, conf);
+        localDirAllocator.getLocalPathForWrite(CACHE_FILE_PREFIX, fileSize, conf);
     File dir = new File(path.getParent().toUri().getPath());
     String prefix = path.getName();
-    File tmpFile = File.createTempFile(prefix, BINARY_FILE_SUFFIX, dir);
+    File tmpFile = File.createTempFile(prefix, blockInfo + BINARY_FILE_SUFFIX, dir);
     Path tmpFilePath = Paths.get(tmpFile.toURI());
     return Files.setPosixFilePermissions(tmpFilePath, TEMP_FILE_ATTRS);
   }

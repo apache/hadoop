@@ -92,8 +92,6 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     this.numBlocksToPrefetch = getContext().getPrefetchBlockCount();
     demandCreateBlockManager();
 
-    this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
-
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
         fileSize);
@@ -108,20 +106,22 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
    */
   private synchronized void demandCreateBlockManager() {
     if (blockManager == null) {
-      LOG.debug("{}: creating block manager", getName());    int bufferPoolSize = this.numBlocksToPrefetch + BLOCKS_TO_PREFETCH_AFTER_SEEK;
-          BlockManagerParameters blockManagerParamsBuilder =
-              new BlockManagerParameters()
-                  .withFuturePool(this.getContext().getFuturePool())
-                  .withBlockData(this.getBlockData())
-                  .withBufferPoolSize(bufferPoolSize)
-                  .withConf(conf)
-                  .withLocalDirAllocator(localDirAllocator)
-                  .withMaxBlocksCount(
-                      conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
-                  .withPrefetchingStatistics(getS3AStreamStatistics())
-                  .withTrackerFactory(getS3AStreamStatistics());
-          this.blockManager = this.createBlockManager(blockManagerParamsBuilder,
-              this.getReader());
+      LOG.debug("{}: creating block manager", getName());
+      int bufferPoolSize = this.numBlocksToPrefetch + BLOCKS_TO_PREFETCH_AFTER_SEEK;
+      final S3AReadOpContext readOpContext = this.getContext();
+      BlockManagerParameters blockManagerParamsBuilder =
+          new BlockManagerParameters()
+              .withPath(readOpContext.getPath())
+              .withFuturePool(readOpContext.getFuturePool())
+              .withBlockData(getBlockData())
+              .withBufferPoolSize(bufferPoolSize)
+              .withConf(conf)
+              .withLocalDirAllocator(localDirAllocator)
+              .withMaxBlocksCount(
+                  conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+              .withPrefetchingStatistics(getS3AStreamStatistics())
+              .withTrackerFactory(getS3AStreamStatistics());
+      blockManager = createBlockManager(blockManagerParamsBuilder, getReader());
     }
   }
 
@@ -234,8 +234,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     }
 
     BufferData data = invokeTrackingDuration(
-        getS3AStreamStatistics()
-            .trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
+        getS3AStreamStatistics().trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
         () -> blockManager.get(toBlockNumber));
 
     filePosition.setData(data, startOffset, readPos);
@@ -259,12 +258,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   /**
    * Construct an instance of a {@code S3ACachingBlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
-   * @param reader reader that reads from S3 file.
-   * @param blockData information about each block of the S3 file.
-   * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
-   * @param configuration the configuration.
-   * @param dirAllocator the local dir allocator instance.
+   * @param blockManagerParameters block manager parameters
    * @return the block manager
    * @throws IllegalArgumentException if reader is null.
    */

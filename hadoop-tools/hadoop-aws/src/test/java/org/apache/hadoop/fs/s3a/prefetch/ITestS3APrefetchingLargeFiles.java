@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -106,17 +107,18 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
-        PREFETCH_ENABLED_KEY, PREFETCH_BLOCK_SIZE_KEY);
+        PREFETCH_ENABLED_KEY, PREFETCH_BLOCK_SIZE_KEY, BUFFER_DIR);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
     conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.set(BUFFER_DIR, tmpFileDir.getAbsolutePath());
     return conf;
   }
 
   @Override
   public void setup() throws Exception {
+    tmpFileDir = tempFolder.newFolder("cache");
     super.setup();
 
-    tmpFileDir = tempFolder.newFolder("cache");
 
     ioStatisticsContext = getCurrentIOStatisticsContext();
     ioStatisticsContext.reset();
@@ -298,6 +300,7 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
 
     int prefetchBlockSize = BLOCK_SIZE;
     final Path path = createLargeFile();
+    LOG.info("Opening file {}", path);
 
     try (FSDataInputStream in = getFileSystem().open(path)) {
       byte[] buffer = new byte[prefetchBlockSize];
@@ -311,17 +314,24 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
       in.readFully(buffer, 0, prefetchBlockSize - S_1K);
       LOG.info("stream stats after a read {}", ioStatisticsToPrettyString(ioStats));
 
-      // there's been at least one fetch so far
+      // there's been at least one fetch so far; others may be in progress.
       assertThatStatisticCounter(ioStats, ACTION_HTTP_GET_REQUEST)
           .isGreaterThanOrEqualTo(1);
 
-      // a file is cached
-      // verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 1);
 
-      assertCacheFileExists();
+      //assertCacheFileExists();
+
+      LOG.info("reading rest of file");
 
       in.readFully(prefetchBlockSize * 2, buffer, 0, prefetchBlockSize);
 
+      LOG.info("stream stats after reading whole file {}", ioStatisticsToPrettyString(ioStats));
+
+      // and at least one block is in cache
+      assertThatStatisticGauge(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE)
+          .isGreaterThanOrEqualTo(1);
+
+      // a file which must be under the tempt dir
       assertCacheFileExists();
     }
   }
@@ -344,8 +354,10 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
       try (FileSystem localFs = FileSystem.getLocal(conf)) {
         FileStatus stat = localFs.getFileStatus(path);
         ContractTestUtils.assertIsFile(path, stat);
-        assertEquals("File length not matching with prefetchBlockSize", BLOCK_SIZE,
-            stat.getLen());
+        Assertions.assertThat(stat.getLen())
+            .describedAs("%s: File length not matching with prefetchBlockSize", path)
+            .isEqualTo(BLOCK_SIZE);
+
         assertEquals("User permissions should be RW", FsAction.READ_WRITE,
             stat.getPermission().getUserAction());
         assertEquals("Group permissions should be NONE", FsAction.NONE,
