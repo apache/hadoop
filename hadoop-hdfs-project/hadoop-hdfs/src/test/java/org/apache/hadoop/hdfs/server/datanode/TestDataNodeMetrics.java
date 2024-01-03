@@ -835,7 +835,8 @@ public class TestDataNodeMetrics {
         }
       });
       PipelineAck.ECN ecn = cluster.getDataNodes().get(0).getECN();
-      MetricsRecordBuilder dnMetrics = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+      MetricsRecordBuilder dnMetrics = getMetrics(cluster.getDataNodes().get(0)
+          .getMetrics().name());
       Assert.assertEquals(1L, getLongCounter("CongestedCount", dnMetrics));
     } finally {
       if (cluster != null) {
