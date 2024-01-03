@@ -978,7 +978,7 @@ public abstract class Server {
     // Serialized RouterFederatedStateProto message to
     // store last seen states for multiple namespaces.
     private ByteString federatedNamespaceState;
-    private boolean isStable;
+    private boolean isStale;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -1012,15 +1012,15 @@ public abstract class Server {
       this.callerContext = callerContext;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
-      this.isStable = false;
+      this.isStale = false;
     }
 
-    public boolean isStable() {
-      return isStable;
+    public boolean isStale() {
+      return isStale;
     }
 
-    public void setStable(boolean stable) {
-      isStable = stable;
+    public void setStale(boolean stale) {
+      isStale = stale;
     }
 
     /**
@@ -1255,7 +1255,7 @@ public abstract class Server {
       ResponseParams responseParams = new ResponseParams();
 
       try {
-        if (isStable()) {
+        if (isStale()) {
           throw new ObserverRetryOnActiveException("The rpc call in observer is stable.");
         }
         value = call(
@@ -3193,7 +3193,7 @@ public abstract class Server {
              * commutative.
              */
             if (rpcStableEnable && startTimeNanos - call.timestampNanos > rpcStableInterval) {
-              call.setStable(true);
+              call.setStale(true);
               rpcMetrics.incrStableCalls();
             } else {
               // Re-queue the call and continue
@@ -3362,12 +3362,12 @@ public abstract class Server {
         CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
 
     this.rpcStableEnable =
-        conf.getBoolean(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE,
-            CommonConfigurationKeys.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE_DEFAULT);
+        conf.getBoolean(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_ENABLE,
+            CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_ENABLE_DEFAULT);
     if (this.rpcStableEnable) {
       this.rpcStableInterval =
-          conf.getTimeDuration(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL,
-              CommonConfigurationKeys.IPC_SERVER_OBSERVER_STABLE_RPC_DEFAULT, TimeUnit.NANOSECONDS);
+          conf.getTimeDuration(CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL,
+              CommonConfigurationKeys.IPC_SERVER_OBSERVER_STALE_RPC_DEFAULT, TimeUnit.NANOSECONDS);
     } else {
       this.rpcStableInterval = -1;
     }

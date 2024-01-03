@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STALE_RPC_ENABLE;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
@@ -110,8 +108,8 @@ public class TestObserverNode {
     // Observer and immediately try to read from it.
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
-    conf.setBoolean(IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE, true);
-    conf.setTimeDuration(IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL,
+    conf.setBoolean(IPC_SERVER_OBSERVER_STALE_RPC_ENABLE, true);
+    conf.setTimeDuration(IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL,
         TimeUnit.SECONDS.toNanos(10), TimeUnit.NANOSECONDS);
     qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 1, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
@@ -178,7 +176,7 @@ public class TestObserverNode {
   }
 
   @Test
-  public void testObserverStableRpc() throws Exception {
+  public void testObserverStaleRpc() throws Exception {
     FSNamesystem observerFsNS = dfsCluster.getNamesystem(2);
     RpcMetrics obRpcMetrics = ((NameNodeRpcServer)dfsCluster
         .getNameNodeRpc(2)).getClientRpcServer().getRpcMetrics();
@@ -195,13 +193,13 @@ public class TestObserverNode {
       FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
       assertSentTo(0);
       assertNotNull(fileStatus);
-      assertEquals(1, obRpcMetrics.getRpcStableCalls());
+      assertEquals(1, obRpcMetrics.getRpcStaleCalls());
 
       observerFsNS.getEditLogTailer().doTailEdits();
       fileStatus = dfs.getFileStatus(tmpTestPath);
       assertSentTo(2);
       assertNotNull(fileStatus);
-      assertEquals(1, obRpcMetrics.getRpcStableCalls());
+      assertEquals(1, obRpcMetrics.getRpcStaleCalls());
     } finally {
       EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
       observerFsNS.setEditLogTailerForTests(editLogTailer);

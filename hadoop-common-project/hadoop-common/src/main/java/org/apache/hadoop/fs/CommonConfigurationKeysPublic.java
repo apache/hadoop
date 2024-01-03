@@ -1079,12 +1079,12 @@ public class CommonConfigurationKeysPublic {
       "ipc.server.metrics.update.runner.interval";
   public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
 
-  public static final String IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE =
-      "ipc.server.observer.stable.rpc.enable";
-  public static final boolean IPC_SERVER_OBSERVER_STABLE_RPC_ENABLE_DEFAULT = false;
-  public static final String IPC_SERVER_OBSERVER_STABLE_RPC_INTERVAL =
-      "ipc.server.observer.stable.rpc.interval";
-  public static final long IPC_SERVER_OBSERVER_STABLE_RPC_DEFAULT = TimeUnit.SECONDS.toNanos(15);
+  public static final String IPC_SERVER_OBSERVER_STALE_RPC_ENABLE =
+      "ipc.server.observer.stale.rpc.enable";
+  public static final boolean IPC_SERVER_OBSERVER_STALE_RPC_ENABLE_DEFAULT = false;
+  public static final String IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL =
+      "ipc.server.observer.stale.rpc.interval";
+  public static final long IPC_SERVER_OBSERVER_STALE_RPC_DEFAULT = TimeUnit.SECONDS.toNanos(15);
 
   /**
    * @see
