@@ -1102,7 +1102,8 @@ public class DataNode extends ReconfigurableBase
     double load = ManagementFactory.getOperatingSystemMXBean()
         .getSystemLoadAverage();
     double threshold = NUM_CORES * congestionRatio;
-    if (load > threshold) {
+
+    if (load > threshold || DataNodeFaultInjector.get().mockCongestedForTest()) {
       metrics.incrCongestedCount();
     }
     return load > threshold ? PipelineAck.ECN.CONGESTED :

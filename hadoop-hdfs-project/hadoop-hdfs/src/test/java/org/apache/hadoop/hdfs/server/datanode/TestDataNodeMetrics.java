@@ -42,9 +42,11 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Lists;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -814,6 +816,32 @@ public class TestDataNodeMetrics {
           return readXceiversCount == 0;
         }
       }, 100, 10000);
+    }
+  }
+
+  @Test
+  public void testCongestedCount() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED, true);
+    MiniDFSCluster cluster = null;
+    DataNodeFaultInjector old = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      old = DataNodeFaultInjector.get();
+      DataNodeFaultInjector.set(new DataNodeFaultInjector(){
+        @Override
+        public boolean mockCongestedForTest() {
+          return true;
+        }
+      });
+      PipelineAck.ECN ecn = cluster.getDataNodes().get(0).getECN();
+      MetricsRecordBuilder dnMetrics = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+      Assert.assertEquals(1L, getLongCounter("CongestedCount", dnMetrics));
+    } finally {
+      if (cluster != null) {
+        DataNodeFaultInjector.set(old);
+        cluster.shutdown();
+      }
     }
   }
 }
