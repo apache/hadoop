@@ -1381,9 +1381,6 @@ public class NameNode extends ReconfigurableBase implements
     
     Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
-    List<URI> dirsToPrompt = new ArrayList<URI>();
-    dirsToPrompt.addAll(nameDirsToFormat);
-    dirsToPrompt.addAll(sharedDirs);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
 
@@ -1426,9 +1423,7 @@ public class NameNode extends ReconfigurableBase implements
       LOG.warn("Encountered exception during format", ioe);
       throw ioe;
     } finally {
-      if (fsImage != null) {
-        fsImage.close();
-      }
+      fsImage.close();
       if (fsn != null) {
         fsn.close();
       }

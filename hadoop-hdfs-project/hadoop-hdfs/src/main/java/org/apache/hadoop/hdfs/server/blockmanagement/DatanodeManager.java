@@ -1864,11 +1864,11 @@ public class DatanodeManager {
         maxECReplicatedTransfers = maxTransfers;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (replicationBlocks * maxTransfers) / totalBlocks);
+          (double) replicationBlocks * maxTransfers / totalBlocks);
       int numEcReplicatedTasks = (int) Math.ceil(
-              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
+          (double) ecBlocksToBeReplicated * maxECReplicatedTransfers / totalBlocks);
       int numECReconstructedTasks = (int) Math.ceil(
-          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
+          (double) ecBlocksToBeErasureCoded * maxTransfers / totalBlocks);
       LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
                       "ec reconstruction tasks: {}.",
           numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
