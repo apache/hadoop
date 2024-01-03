@@ -101,7 +101,7 @@ class RouterStateIdContext implements AlignmentContext {
     return Collections.list(namespaceIdMap.keys());
   }
 
-  public ConcurrentHashMap<String,LongAccumulator> getNamespaceIdMap() {
+  public ConcurrentHashMap<String, LongAccumulator> getNamespaceIdMap() {
     return namespaceIdMap;
   }
 
