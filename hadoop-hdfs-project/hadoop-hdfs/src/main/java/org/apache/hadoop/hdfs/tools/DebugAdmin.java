@@ -317,7 +317,6 @@ public class DebugAdmin extends Configured implements Tool {
       } finally {
         IOUtils.cleanupWithLogger(null, metaOut);
       }
-
     }
   }
 
