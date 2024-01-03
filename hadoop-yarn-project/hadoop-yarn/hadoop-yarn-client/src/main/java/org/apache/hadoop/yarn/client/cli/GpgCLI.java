@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class GpgCLI extends Configured implements Tool {
 
@@ -34,19 +35,47 @@ public class GpgCLI extends Configured implements Tool {
 
   private static void printHelp() {
     StringBuilder summary = new StringBuilder();
-    summary.append("router-admin is the command to execute " +
-        "YARN Federation administrative commands.\n");
+    summary.append("gpgadmin command line for YARN Federation Policy management.\n");
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
-    helpBuilder.append("   -help [cmd]: Displays help for the given command or all commands" +
+    helpBuilder.append(" -help [cmd]: Displays help for the given command or all commands" +
         " if none is specified.");
     System.out.println(helpBuilder);
     System.out.println();
     ToolRunner.printGenericCommandUsage(System.out);
   }
 
+  private static void printUsage() {
+    StringBuilder usageBuilder = new StringBuilder();
+    buildUsageMsg(usageBuilder);
+    System.err.println(usageBuilder);
+    ToolRunner.printGenericCommandUsage(System.err);
+  }
+
+  private static void buildUsageMsg(StringBuilder builder) {
+    builder.append("gpgadmin is only used in Yarn Federation Mode.\n");
+    builder.append("Usage: gpgadmin\n");
+    builder.append("   -help" + " [cmd]\n");
+  }
+
   @Override
   public int run(String[] args) throws Exception {
+    YarnConfiguration yarnConf = getConf() == null ?
+        new YarnConfiguration() : new YarnConfiguration(getConf());
+    boolean isFederationEnabled = yarnConf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+
+    if (args.length < 1 || !isFederationEnabled) {
+      printUsage();
+      return -1;
+    }
+
+    String cmd = args[0];
+    if ("-help".equals(cmd)) {
+      printHelp();
+      return 0;
+    }
+
     return 0;
   }
 }
