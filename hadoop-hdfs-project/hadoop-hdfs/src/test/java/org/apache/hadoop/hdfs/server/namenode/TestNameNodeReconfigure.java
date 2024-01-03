@@ -34,6 +34,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
@@ -745,6 +749,117 @@ public class TestNameNodeReconfigure {
     nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
         "20000");
     assertEquals(nnrs.getClientRpcServer().getLogSlowRPCThresholdTime(), 20000);
+  }
+
+  @Test
+  public void testReconfigureFSNamesystemLockMetricsParameters()
+      throws ReconfigurationException, IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, false);
+    long defaultReadLockMS = 1000L;
+    conf.setLong(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY, defaultReadLockMS);
+    long defaultWriteLockMS = 1000L;
+    conf.setLong(DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, defaultWriteLockMS);
+
+    try (MiniDFSCluster newCluster = new MiniDFSCluster.Builder(conf).build()) {
+      newCluster.waitActive();
+      final NameNode nameNode = newCluster.getNameNode();
+      final FSNamesystem fsNamesystem = nameNode.getNamesystem();
+      // verify default value.
+      assertFalse(fsNamesystem.isMetricsEnabled());
+      assertEquals(defaultReadLockMS, fsNamesystem.getReadLockReportingThresholdMs());
+      assertEquals(defaultWriteLockMS, fsNamesystem.getWriteLockReportingThresholdMs());
+
+      // try invalid metricsEnabled.
+      try {
+        nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
+            "non-boolean");
+        fail("should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals(
+            "Could not change property dfs.namenode.lock.detailed-metrics.enabled from " +
+                "'false' to 'non-boolean'", e.getMessage());
+      }
+
+      // try correct metricsEnabled.
+      nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, "true");
+      assertTrue(fsNamesystem.isMetricsEnabled());
+
+      nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, null);
+      assertFalse(fsNamesystem.isMetricsEnabled());
+
+      // try invalid readLockMS.
+      try {
+        nameNode.reconfigureProperty(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+            "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.read-lock-reporting-threshold-ms from '" +
+            defaultReadLockMS + "' to 'non-numeric'", e.getMessage());
+      }
+
+      // try correct readLockMS.
+      nameNode.reconfigureProperty(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+          "20000");
+      assertEquals(fsNamesystem.getReadLockReportingThresholdMs(), 20000);
+
+
+      // try invalid writeLockMS.
+      try {
+        nameNode.reconfigureProperty(
+            DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.write-lock-reporting-threshold-ms from '" +
+            defaultWriteLockMS + "' to 'non-numeric'", e.getMessage());
+      }
+
+      // try correct writeLockMS.
+      nameNode.reconfigureProperty(
+          DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, "100000");
+      assertEquals(fsNamesystem.getWriteLockReportingThresholdMs(), 100000);
+    }
+  }
+
+  @Test
+  public void testReconfigureSlowPeerCollectInterval() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager =
+        nameNode.namesystem.getBlockManager().getDatanodeManager();
+
+    assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertTrue(datanodeManager.isSlowPeerCollectorInitialized());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    } catch (NullPointerException e) {
+      assertEquals("slowPeerCollectorDaemon thread is null, not support restart", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(1800000, datanodeManager.getSlowPeerCollectionInterval());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "non-numeric");
+    } catch (ReconfigurationException e) {
+      assertEquals("Could not change property dfs.namenode.slowpeer.collect.interval from "
+          + "'30m' to 'non-numeric'", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, null);
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    // set to the value of the current system
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
   }
 
   @After

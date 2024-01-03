@@ -96,6 +96,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -343,7 +344,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -1982,7 +1982,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         File file = new File(System.getProperty("hadoop.log.dir"), filename);
         PrintWriter out = new PrintWriter(new BufferedWriter(
                 new OutputStreamWriter(Files.newOutputStream(file.toPath()),
-                        Charsets.UTF_8)));
+                        StandardCharsets.UTF_8)));
         metaSave(out);
         out.flush();
         out.close();
@@ -3815,7 +3815,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
         // We can remove this block and close the file.
-        pendingFile.removeLastBlock(lastBlock);
+        BlockInfo lastBlockInfo = pendingFile.removeLastBlock(lastBlock);
+        if (lastBlockInfo != null) {
+          blockManager.removeBlock(lastBlockInfo);
+        }
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
         if (uc.getNumExpectedLocations() == 0) {
@@ -4217,7 +4220,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public byte[] getSrcPathsHash(String[] srcs) {
     synchronized (digest) {
       for (String src : srcs) {
-        digest.update(src.getBytes(Charsets.UTF_8));
+        digest.update(src.getBytes(StandardCharsets.UTF_8));
       }
       byte[] result = digest.digest();
       digest.reset();
@@ -9123,5 +9126,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } else {
       return new Path("/");
     }
+  }
+
+  public void setMetricsEnabled(boolean metricsEnabled) {
+    this.fsLock.setMetricsEnabled(metricsEnabled);
+  }
+
+  @VisibleForTesting
+  public boolean isMetricsEnabled() {
+    return this.fsLock.isMetricsEnabled();
+  }
+
+  public void setReadLockReportingThresholdMs(long readLockReportingThresholdMs) {
+    this.fsLock.setReadLockReportingThresholdMs(readLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getReadLockReportingThresholdMs() {
+    return this.fsLock.getReadLockReportingThresholdMs();
+  }
+
+  public void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs) {
+    this.fsLock.setWriteLockReportingThresholdMs(writeLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getWriteLockReportingThresholdMs() {
+    return this.fsLock.getWriteLockReportingThresholdMs();
   }
 }

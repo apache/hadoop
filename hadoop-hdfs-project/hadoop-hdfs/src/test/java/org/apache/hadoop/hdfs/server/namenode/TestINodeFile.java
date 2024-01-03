@@ -1163,7 +1163,7 @@ public class TestINodeFile {
           HdfsFileStatus.EMPTY_NAME, false);
       assertTrue(dl.getPartialListing().length == 3);
 
-      String f2 = new String("f2");
+      String f2 = "f2";
       dl = cluster.getNameNodeRpc().getListing("/tmp", f2.getBytes(), false);
       assertTrue(dl.getPartialListing().length == 1);
 

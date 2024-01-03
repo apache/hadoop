@@ -1530,7 +1530,7 @@
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>96</value>
+  <value>200</value>
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
@@ -1608,14 +1608,21 @@
 
 <property>
   <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
+  <value>5s</value>
+  <description>Socket connection setup timeout in milliseconds; this will be retried
+    more than once.</description>
 </property>
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
+  <value>200s</value>
+  <description>Socket connection timeout.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.ttl</name>
+  <value>5m</value>
+  <description>Expiry time for any active connection.</description>
 </property>
 
 <property>
@@ -1639,14 +1646,14 @@
 
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>64</value>
+  <value>96</value>
   <description>The total number of threads available in the filesystem for data
     uploads *or any other queued filesystem operation*.</description>
 </property>
 
 <property>
   <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
+  <value>60s</value>
   <description>Number of seconds a thread can be idle before being
     terminated.</description>
 </property>
@@ -1726,7 +1733,7 @@
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>
@@ -2091,18 +2098,15 @@
 
 <property>
   <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
+  <value>0s</value>
   <description>
     Time out on HTTP requests to the AWS service; 0 means no timeout.
-    Measured in seconds; the usual time suffixes are all supported
 
     Important: this is the maximum duration of any AWS service call,
     including upload and copy operations. If non-zero, it must be larger
     than the time to upload multi-megabyte blocks to S3 from the client,
     and to rename many-GB files. Use with care.
 
-    Values that are larger than Integer.MAX_VALUE milliseconds are
-    converged to Integer.MAX_VALUE milliseconds
   </description>
 </property>
 
@@ -4253,6 +4257,18 @@ The switch to turn S3A auditing on or off.
     <description>
       Kerberos keytab for zookeeper connection.
     </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.enabled</name>
+    <decription>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: this setting overrides dfs.ha.zkfc.client.ssl.enabled,
+      yarn.resourcemanager.zk-client-ssl.enabled and also
+      hadoop.kms.authentication.zk-dt-secret-manager.ssl.enabled in order to unify the SSL based
+      Zookeeper access across Hadoop. Leaving this property empty ensures that service specific
+      enablement can be done separately.
+    </decription>
   </property>
 
   <property>
