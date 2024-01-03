@@ -116,7 +116,7 @@ public class StateStoreService extends CompositeService {
   /** Service to maintain State Store caches. */
   private StateStoreCacheUpdateService cacheUpdater;
   /** Time the cache was last successfully updated. */
-  private long cacheLastUpdateTime = 0;
+  private long cacheLastUpdateTime;
   /** List of internal caches to update. */
   private final List<StateStoreCache> cachesToUpdateInternal;
   /** List of external caches to update. */
@@ -132,6 +132,8 @@ public class StateStoreService extends CompositeService {
     // Caches to maintain
     this.cachesToUpdateInternal = new ArrayList<>();
     this.cachesToUpdateExternal = new ArrayList<>();
+
+    this.cacheLastUpdateTime = 0;
   }
 
   /**
