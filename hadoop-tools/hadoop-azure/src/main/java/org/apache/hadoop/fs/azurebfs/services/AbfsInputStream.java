@@ -71,6 +71,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String path;
   private final long contentLength;
   private final int bufferSize; // default buffer size
+  private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
@@ -140,6 +141,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.path = path;
     this.contentLength = contentLength;
     this.bufferSize = abfsInputStreamContext.getReadBufferSize();
+    this.footerReadSize = abfsInputStreamContext.getFooterReadBufferSize();
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
@@ -361,6 +363,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return optimisedRead(b, off, len, 0, contentLength);
   }
 
+  // To do footer read of files when enabled.
   private int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
@@ -373,10 +376,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
-    long lastBlockStart = max(0, contentLength - bufferSize);
+    long lastBlockStart = max(0, contentLength - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
     // 0 if contentlength is < buffersize
-    long actualLenToRead = min(bufferSize, contentLength);
+    long actualLenToRead = min(footerReadSize, contentLength);
     return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
   }
 
@@ -817,6 +820,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public int getBufferSize() {
     return bufferSize;
+  }
+
+  @VisibleForTesting
+  protected int getFooterReadBufferSize() {
+    return footerReadSize;
   }
 
   @VisibleForTesting
