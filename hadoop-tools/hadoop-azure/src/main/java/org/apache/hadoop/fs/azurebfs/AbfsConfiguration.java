@@ -118,6 +118,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
 
+  @IntegerConfigurationValidatorAnnotation(
+          ConfigurationKey = AZURE_FOOTER_READ_BUFFER_SIZE,
+          DefaultValue = DEFAULT_FOOTER_READ_BUFFER_SIZE)
+  private int footerReadBufferSize;
+
   @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
@@ -646,6 +651,10 @@ public class AbfsConfiguration{
 
   public boolean optimizeFooterRead() {
     return this.optimizeFooterRead;
+  }
+
+  public int getFooterReadBufferSize() {
+    return this.footerReadBufferSize;
   }
 
   public int getReadBufferSize() {
@@ -1180,6 +1189,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setOptimizeFooterRead(boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
+  }
+
+  @VisibleForTesting
+  public void setFooterReadBufferSize(int footerReadBufferSize) {
+    this.footerReadBufferSize = footerReadBufferSize;
   }
 
   @VisibleForTesting

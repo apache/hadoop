@@ -104,7 +104,22 @@ public final class ConfigurationKeys {
   public static final String AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = "fs.azure.write.enableappendwithflush";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
+  /**
+   * When parquet files are read, first few read are metadata reads before
+   * reading the actual data. First the read is done of last 8 bytes of parquet
+   * file to get the postion of metadta and next read is done for reading that
+   * metadata. With this optimization these two reads can be combined into 1.
+   * Value: {@value}
+   */
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+  /**
+   * In case of footer reads it was not required to read full buffer size.
+   * Most of the metadata information required was within 256 KB and it will be
+   * more performant to read less. 512 KB is a sweet spot.
+   * This config is used to define how much footer length the user wants to read.
+   * Value: {@value}
+   */
+  public static final String AZURE_FOOTER_READ_BUFFER_SIZE = "fs.azure.footer.read.request.size";
 
   /**
    * Read ahead range parameter which can be set by user.
