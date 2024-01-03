@@ -97,6 +97,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
+
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
   private String xMsVersion = DECEMBER_2019_API_VERSION;
@@ -201,23 +202,6 @@ public class AbfsClient implements Closeable {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext);
     this.sasTokenProvider = sasTokenProvider;
-  }
-
-  private byte[] getSHA256Hash(String key) throws IOException {
-    try {
-      final MessageDigest digester = MessageDigest.getInstance("SHA-256");
-      return digester.digest(key.getBytes(StandardCharsets.UTF_8));
-    } catch (NoSuchAlgorithmException e) {
-      throw new AbfsDriverException(e);
-    }
-  }
-
-  private String getBase64EncodedString(String key) {
-    return getBase64EncodedString(key.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private String getBase64EncodedString(byte[] bytes) {
-    return Base64.getEncoder().encodeToString(bytes);
   }
 
   @Override
@@ -1079,14 +1063,11 @@ public class AbfsClient implements Closeable {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
+    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
+        contextEncryptionAdapter, tracingContext);
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
-    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        contextEncryptionAdapter, tracingContext);
-    requestHeaders.add(new AbfsHttpHeader(RANGE,
-            String.format("bytes=%d-%d", position, position + bufferLength - 1)));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     // Add request header to fetch MD5 Hash of data returned by server.

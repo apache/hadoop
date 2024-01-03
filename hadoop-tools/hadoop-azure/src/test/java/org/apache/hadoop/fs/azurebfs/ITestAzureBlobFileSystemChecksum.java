@@ -174,7 +174,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
       byte[] data, AzureBlobFileSystem fs, final int offset) throws Exception {
     AppendRequestParameters reqParams = new AppendRequestParameters(
         0, offset, data.length - offset, APPEND_MODE, false, null, true);
-    client.append(path.toUri().getPath(), data, reqParams, null,
+    client.append(path.toUri().getPath(), data, reqParams, null, null,
         getTestTracingContext(fs, false));
   }
 
@@ -200,7 +200,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     final int readLength = bufferLength - offset;
 
     client.read(path.toUri().getPath(), position, readBuffer, offset, readLength,
-        "*", null, getTestTracingContext(fs, false));
+        "*", null, null, getTestTracingContext(fs, false));
 
     byte[] actual = Arrays.copyOfRange(readBuffer, offset, offset + readLength);
     byte[] expected = Arrays.copyOfRange(data, position, readLength + position);
