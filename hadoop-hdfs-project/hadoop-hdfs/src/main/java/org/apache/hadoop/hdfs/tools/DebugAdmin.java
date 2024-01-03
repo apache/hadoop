@@ -295,24 +295,29 @@ public class DebugAdmin extends Configured implements Tool {
       }
 
       DataOutputStream metaOut = null;
-      final Configuration conf = new Configuration();
-      final Options.ChecksumOpt checksumOpt =
-          DfsClientConf.getChecksumOptFromConf(conf);
-      final DataChecksum checksum = createChecksum(checksumOpt);
+      try {
+        final Configuration conf = new Configuration();
+        final Options.ChecksumOpt checksumOpt =
+                DfsClientConf.getChecksumOptFromConf(conf);
+        final DataChecksum checksum = createChecksum(checksumOpt);
 
-      final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
-      metaOut = new DataOutputStream(
-          new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
-              smallBufferSize));
-      BlockMetadataHeader.writeHeader(metaOut, checksum);
-      metaOut.close();
-      metaOut = null;
-      FsDatasetUtil.computeChecksum(
-          srcMeta, srcMeta, blockFile, smallBufferSize, conf);
-      System.out.println(
-          "Checksum calculation succeeded on block file " + name
-              + " saved metadata to meta file " + outFile);
-      return 0;
+        final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
+        metaOut = new DataOutputStream(
+                new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
+                        smallBufferSize));
+        BlockMetadataHeader.writeHeader(metaOut, checksum);
+        metaOut.close();
+        metaOut = null;
+        FsDatasetUtil.computeChecksum(
+                srcMeta, srcMeta, blockFile, smallBufferSize, conf);
+        System.out.println(
+                "Checksum calculation succeeded on block file " + name
+                        + " saved metadata to meta file " + outFile);
+        return 0;
+      } finally {
+        IOUtils.cleanupWithLogger(null, metaOut);
+      }
+
     }
   }
 
