@@ -117,6 +117,10 @@
           <groupId>com.fasterxml.jackson.jaxrs</groupId>
           <artifactId>jackson-jaxrs-json-provider</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -224,6 +228,10 @@
         <exclusion>
           <groupId>org.javassist</groupId>
           <artifactId>javassist</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.cedarsoftware</groupId>
+          <artifactId>java-util</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

@@ -83,44 +83,43 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       boolean includeInHeader) throws Exception {
     Configuration conf = getRawConfiguration();
     conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf)) {
 
-    String correlationID = fs.getClientCorrelationId();
-    if (includeInHeader) {
-      Assertions.assertThat(correlationID)
-          .describedAs("Correlation ID should match config when valid")
-          .isEqualTo(clientCorrelationId);
-    } else {
-      Assertions.assertThat(correlationID)
-          .describedAs("Invalid ID should be replaced with empty string")
-          .isEqualTo(EMPTY_STRING);
+      String correlationID = fs.getClientCorrelationId();
+      if (includeInHeader) {
+        Assertions.assertThat(correlationID)
+                .describedAs("Correlation ID should match config when valid")
+                .isEqualTo(clientCorrelationId);
+      } else {
+        Assertions.assertThat(correlationID)
+                .describedAs("Invalid ID should be replaced with empty string")
+                .isEqualTo(EMPTY_STRING);
+      }
+      TracingContext tracingContext = new TracingContext(clientCorrelationId,
+              fs.getFileSystemId(), FSOperationType.TEST_OP,
+              TracingHeaderFormat.ALL_ID_FORMAT, null);
+      boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
+      String path = getRelativePath(new Path("/testDir"));
+      AzureBlobFileSystemStore.Permissions permissions
+          = new AzureBlobFileSystemStore.Permissions(isNamespaceEnabled,
+          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+
+      //request should not fail for invalid clientCorrelationID
+      AbfsRestOperation op = fs.getAbfsClient()
+          .createPath(path, false, true, permissions, false, null, null,
+              tracingContext);
+
+      int statusCode = op.getResult().getStatusCode();
+      Assertions.assertThat(statusCode).describedAs("Request should not fail")
+              .isEqualTo(HTTP_CREATED);
+
+      String requestHeader = op.getResult().getClientRequestId().replace("[", "")
+              .replace("]", "");
+      Assertions.assertThat(requestHeader)
+              .describedAs("Client Request Header should match TracingContext")
+              .isEqualTo(op.getLastTracingContext().getHeader());
+
     }
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fs.getFileSystemId(), FSOperationType.TEST_OP,
-        TracingHeaderFormat.ALL_ID_FORMAT, null);
-    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
-    String path = getRelativePath(new Path("/testDir"));
-    String permission = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getDirDefault())
-        : null;
-    String umask = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getUMask(fs.getConf()))
-        : null;
-
-    //request should not fail for invalid clientCorrelationID
-    AbfsRestOperation op = fs.getAbfsClient()
-        .createPath(path, false, true, permission, umask, false, null,
-            tracingContext);
-
-    int statusCode = op.getResult().getStatusCode();
-    Assertions.assertThat(statusCode).describedAs("Request should not fail")
-        .isEqualTo(HTTP_CREATED);
-
-    String requestHeader = op.getResult().getClientRequestId().replace("[", "")
-        .replace("]", "");
-    Assertions.assertThat(requestHeader)
-        .describedAs("Client Request Header should match TracingContext")
-        .isEqualTo(tracingContext.getHeader());
   }
 
   @Ignore

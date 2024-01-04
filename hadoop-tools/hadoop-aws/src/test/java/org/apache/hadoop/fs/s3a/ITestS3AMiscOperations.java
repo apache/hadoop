@@ -19,30 +19,26 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -52,7 +48,6 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITH
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
-import static org.hamcrest.Matchers.nullValue;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -106,15 +101,15 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
     try (AuditSpan span = span()) {
-      ObjectMetadata metadata = fs.newObjectMetadata(-1);
-      metadata.setContentLength(-1);
+      RequestFactory factory = RequestFactoryImpl.builder().withBucket(fs.getBucket()).build();
       Path path = path("putDirect");
-      final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
-          path.toUri().getPath(),
-          new ByteArrayInputStream("PUT".getBytes()),
-          metadata);
+      PutObjectRequest.Builder putObjectRequestBuilder =
+          factory.newPutObjectRequestBuilder(path.toUri().getPath(), null, -1, false);
+      putObjectRequestBuilder.contentLength(-1L);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs(), null));
+          () -> fs.putObjectDirect(putObjectRequestBuilder.build(), PutObjectOptions.keepingDirs(),
+              new S3ADataBlocks.BlockUploadData(new ByteArrayInputStream("PUT".getBytes())),
+              false, null));
       assertPathDoesNotExist("put object was created", path);
     }
   }
@@ -148,45 +143,6 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     final Path f = path(name);
     createFile(getFileSystem(), f, true, data);
     return f;
-  }
-
-  /**
-   * The assumption here is that 0-byte files uploaded in a single PUT
-   * always have the same checksum, including stores with encryption.
-   * This will be skipped if the bucket has S3 default encryption enabled.
-   * @throws Throwable on a failure
-   */
-  @Test
-  public void testEmptyFileChecksums() throws Throwable {
-    assumeNoDefaultEncryption();
-    final S3AFileSystem fs = getFileSystem();
-    Path file1 = touchFile("file1");
-    EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
-    LOG.info("Checksum for {}: {}", file1, checksum1);
-    assertHasPathCapabilities(fs, file1,
-        CommonPathCapabilities.FS_CHECKSUMS);
-    assertNotNull("Null file 1 checksum", checksum1);
-    assertNotEquals("file 1 checksum", 0, checksum1.getLength());
-    assertEquals("checksums of empty files", checksum1,
-        fs.getFileChecksum(touchFile("file2"), 0));
-    Assertions.assertThat(fs.getXAttr(file1, XA_ETAG))
-        .describedAs("etag from xattr")
-        .isEqualTo(checksum1.getBytes());
-  }
-
-  /**
-   * Skip a test if we can get the default encryption on a bucket and it is
-   * non-null.
-   */
-  private void assumeNoDefaultEncryption() throws IOException {
-    try {
-      skipIfClientSideEncryption();
-      Assume.assumeThat(getDefaultEncryption(), nullValue());
-    } catch (AccessDeniedException e) {
-      // if the user can't check the default encryption, assume that it is
-      // null and keep going
-      LOG.warn("User does not have permission to call getBucketEncryption()");
-    }
   }
 
   /**
@@ -227,24 +183,6 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Assertions.assertThat(fs.getXAttr(file3, XA_ETAG))
         .describedAs("etag from xattr")
         .isEqualTo(checksum1.getBytes());
-  }
-
-  /**
-   * Verify that on an unencrypted store, the checksum of two non-empty
-   * (single PUT) files is the same if the data is the same.
-   * This will be skipped if the bucket has S3 default encryption enabled.
-   * @throws Throwable failure
-   */
-  @Test
-  public void testNonEmptyFileChecksumsUnencrypted() throws Throwable {
-    Assume.assumeTrue(encryptionAlgorithm().equals(S3AEncryptionMethods.NONE));
-    assumeNoDefaultEncryption();
-    final S3AFileSystem fs = getFileSystem();
-    final EtagChecksum checksum1 =
-        fs.getFileChecksum(mkFile("file5", HELLO), 0);
-    assertNotNull("file 3 checksum", checksum1);
-    assertEquals("checksums", checksum1,
-        fs.getFileChecksum(mkFile("file6", HELLO), 0));
   }
 
   private S3AEncryptionMethods encryptionAlgorithm() {
@@ -400,22 +338,6 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertFalse(role + " has trailing slash " + s,
         s.endsWith("/"));
     return o;
-  }
-
-  /**
-   * Gets default encryption settings for the bucket or returns null if default
-   * encryption is disabled.
-   */
-  private GetBucketEncryptionResult getDefaultEncryption() throws IOException {
-    S3AFileSystem fs = getFileSystem();
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("check default encryption");
-    try {
-      return Invoker.once("getBucketEncryption()",
-          fs.getBucket(),
-          () -> s3.getBucketEncryption(fs.getBucket()));
-    } catch (FileNotFoundException e) {
-      return null;
-    }
   }
 
 }

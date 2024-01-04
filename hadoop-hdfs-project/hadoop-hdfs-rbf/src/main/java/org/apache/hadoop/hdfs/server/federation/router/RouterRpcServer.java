@@ -341,11 +341,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .build();
 
     // Add all the RPC protocols that the Router implements
-    DFSUtil.addPBProtocol(
+    DFSUtil.addInternalPBProtocol(
         conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
         refreshUserMappingService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, GetUserMappingsProtocolPB.class,
         getUserMappingService, this.rpcServer);
 
     // Set service-level authorization security policy
@@ -1610,11 +1610,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getSlowDatanodeReport();
   }
 
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src) throws IOException {
+    return clientProto.getEnclosingRoot(src);
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+      long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
     return nnProto.getBlocks(datanode, size, minBlockSize,
-            hotBlockTimeInterval);
+            hotBlockTimeInterval, storageType);
   }
 
   @Override // NamenodeProtocol

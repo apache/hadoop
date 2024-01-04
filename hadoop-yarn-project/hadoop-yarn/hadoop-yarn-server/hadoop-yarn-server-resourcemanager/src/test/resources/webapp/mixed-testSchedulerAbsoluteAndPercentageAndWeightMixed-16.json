@@ -7,6 +7,16 @@
       "maxCapacity" : 100,
       "weight" : -1,
       "normalizedWeight" : 0,
+      "queueCapacityVectorInfo" : {
+        "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+        "capacityVectorEntries" : [ {
+          "resourceName" : "memory-mb",
+          "resourceValue" : "100.0%"
+        }, {
+          "resourceName" : "vcores",
+          "resourceValue" : "100.0%"
+        } ]
+      },
       "queueName" : "root",
       "queuePath" : "root",
       "maxParallelApps" : 2147483647,
@@ -59,6 +69,16 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=1.0w,vcores=4.0]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "1.0w"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "4.0"
+                } ]
+              },
               "capacity" : 0,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
@@ -528,6 +548,16 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=3.0w,vcores=12.0]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "3.0w"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "12.0"
+                } ]
+              },
               "capacity" : 0,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
@@ -1013,6 +1043,16 @@
               "capacities" : {
                 "queueCapacitiesByPartition" : [ {
                   "partitionName" : "",
+                  "queueCapacityVectorInfo" : {
+                    "configuredCapacityVector" : "[memory-mb=1.0w,vcores=1.0w]",
+                    "capacityVectorEntries" : [ {
+                      "resourceName" : "memory-mb",
+                      "resourceValue" : "1.0w"
+                    }, {
+                      "resourceName" : "vcores",
+                      "resourceValue" : "1.0w"
+                    } ]
+                  },
                   "capacity" : 12.5,
                   "usedCapacity" : 0,
                   "maxCapacity" : 100,
@@ -1482,6 +1522,16 @@
               "capacities" : {
                 "queueCapacitiesByPartition" : [ {
                   "partitionName" : "",
+                  "queueCapacityVectorInfo" : {
+                    "configuredCapacityVector" : "[memory-mb=50.0%,vcores=2.0]",
+                    "capacityVectorEntries" : [ {
+                      "resourceName" : "memory-mb",
+                      "resourceValue" : "50.0%"
+                    }, {
+                      "resourceName" : "vcores",
+                      "resourceValue" : "2.0"
+                    } ]
+                  },
                   "capacity" : 12.5,
                   "usedCapacity" : 0,
                   "maxCapacity" : 100,
@@ -1951,6 +2001,16 @@
               "capacities" : {
                 "queueCapacitiesByPartition" : [ {
                   "partitionName" : "",
+                  "queueCapacityVectorInfo" : {
+                    "configuredCapacityVector" : "[memory-mb=12288.0,vcores=86.0%]",
+                    "capacityVectorEntries" : [ {
+                      "resourceName" : "memory-mb",
+                      "resourceValue" : "12288.0"
+                    }, {
+                      "resourceName" : "vcores",
+                      "resourceValue" : "86.0%"
+                    } ]
+                  },
                   "capacity" : 75,
                   "usedCapacity" : 0,
                   "maxCapacity" : 100,
@@ -2406,6 +2466,16 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
+              "queueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=16384.0,vcores=100.0%]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "16384.0"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "100.0%"
+                } ]
+              },
               "capacity" : 100,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
@@ -2680,6 +2750,16 @@
       "capacities" : {
         "queueCapacitiesByPartition" : [ {
           "partitionName" : "",
+          "queueCapacityVectorInfo" : {
+            "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+            "capacityVectorEntries" : [ {
+              "resourceName" : "memory-mb",
+              "resourceValue" : "100.0%"
+            }, {
+              "resourceName" : "vcores",
+              "resourceValue" : "100.0%"
+            } ]
+          },
           "capacity" : 100,
           "usedCapacity" : 0,
           "maxCapacity" : 100,

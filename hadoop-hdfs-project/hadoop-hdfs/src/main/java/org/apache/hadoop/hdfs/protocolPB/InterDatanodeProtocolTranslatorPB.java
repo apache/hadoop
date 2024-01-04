@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.UpdateR
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
@@ -42,7 +41,8 @@ import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -79,11 +79,7 @@ public class InterDatanodeProtocolTranslatorPB implements
     InitReplicaRecoveryRequestProto req = InitReplicaRecoveryRequestProto
         .newBuilder().setBlock(PBHelper.convert(rBlock)).build();
     InitReplicaRecoveryResponseProto resp;
-    try {
-      resp = rpcProxy.initReplicaRecovery(NULL_CONTROLLER, req);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    resp = ipc(() -> rpcProxy.initReplicaRecovery(NULL_CONTROLLER, req));
     if (!resp.getReplicaFound()) {
       // No replica found on the remote node.
       return null;
@@ -108,12 +104,9 @@ public class InterDatanodeProtocolTranslatorPB implements
         .setBlock(PBHelperClient.convert(oldBlock))
         .setNewLength(newLength).setNewBlockId(newBlockId)
         .setRecoveryId(recoveryId).build();
-    try {
-      return rpcProxy.updateReplicaUnderRecovery(NULL_CONTROLLER, req
-          ).getStorageUuid();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return ipc(() -> rpcProxy.updateReplicaUnderRecovery(NULL_CONTROLLER, req)
+        .getStorageUuid());
+
   }
 
   @Override

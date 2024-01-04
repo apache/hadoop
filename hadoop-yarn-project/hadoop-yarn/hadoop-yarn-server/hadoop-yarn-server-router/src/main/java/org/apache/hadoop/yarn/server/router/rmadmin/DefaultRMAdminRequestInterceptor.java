@@ -62,6 +62,14 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,5 +232,30 @@ public class DefaultRMAdminRequestInterceptor
   public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
       BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
     return rmAdminProxy.batchSaveFederationQueuePolicies(request);
+  }
+
+  @Override
+  public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    return rmAdminProxy.listFederationQueuePolicies(request);
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request)
+      throws YarnException, IOException {
+    return rmAdminProxy.deleteFederationApplication(request);
+  }
+
+  @Override
+  public GetSubClustersResponse getFederationSubClusters(
+      GetSubClustersRequest request) throws YarnException, IOException {
+    return rmAdminProxy.getFederationSubClusters(request);
+  }
+
+  @Override
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
+    return rmAdminProxy.deleteFederationPoliciesByQueues(request);
   }
 }

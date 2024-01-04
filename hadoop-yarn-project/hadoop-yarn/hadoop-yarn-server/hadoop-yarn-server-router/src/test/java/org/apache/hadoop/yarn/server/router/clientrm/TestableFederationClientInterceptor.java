@@ -37,6 +37,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -126,6 +128,11 @@ public class TestableFederationClientInterceptor
       throw new ConnectException("RM is stopped");
     }
 
+    @Override
+    public GetClusterMetricsResponse getClusterMetrics(GetClusterMetricsRequest request)
+        throws YarnException {
+      throw new YarnException("RM is stopped");
+    }
   }
 
   /**
@@ -245,6 +252,6 @@ public class TestableFederationClientInterceptor
         TimeUnit.MILLISECONDS);
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, conf);
   }
 }

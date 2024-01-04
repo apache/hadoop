@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshResponse;
@@ -34,9 +33,9 @@ import org.apache.hadoop.ipc.GenericRefreshProtocol;
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshRequestProto;
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshResponseProto;
 import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshResponseCollectionProto;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 public class GenericRefreshProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, GenericRefreshProtocol, Closeable {
@@ -59,17 +58,13 @@ public class GenericRefreshProtocolClientSideTranslatorPB implements
   public Collection<RefreshResponse> refresh(String identifier, String[] args) throws IOException {
     List<String> argList = Arrays.asList(args);
 
-    try {
-      GenericRefreshRequestProto request = GenericRefreshRequestProto.newBuilder()
-        .setIdentifier(identifier)
-        .addAllArgs(argList)
-        .build();
+    GenericRefreshRequestProto request = GenericRefreshRequestProto.newBuilder()
+        .setIdentifier(identifier).addAllArgs(argList).build();
 
-      GenericRefreshResponseCollectionProto resp = rpcProxy.refresh(NULL_CONTROLLER, request);
-      return unpack(resp);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    GenericRefreshResponseCollectionProto resp = ipc(() ->
+        rpcProxy.refresh(NULL_CONTROLLER, request));
+    return unpack(resp);
+
   }
 
   private Collection<RefreshResponse> unpack(GenericRefreshResponseCollectionProto collection) {

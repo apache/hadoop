@@ -82,8 +82,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private int expectedBytesToBeSent;
   private long bytesReceived;
 
-  // optional trace enabled metrics
-  private final boolean isTraceEnabled;
   private long connectionTimeMs;
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
@@ -108,7 +106,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   protected AbfsHttpOperation(final URL url,
       final String method,
       final int httpStatus) {
-    this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
     this.statusCode = httpStatus;
@@ -192,14 +189,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(getClientRequestId());
     sb.append(",rid=");
     sb.append(requestId);
-    if (isTraceEnabled) {
-      sb.append(",connMs=");
-      sb.append(connectionTimeMs);
-      sb.append(",sendMs=");
-      sb.append(sendRequestTimeMs);
-      sb.append(",recvMs=");
-      sb.append(recvResponseTimeMs);
-    }
+    sb.append(",connMs=");
+    sb.append(connectionTimeMs);
+    sb.append(",sendMs=");
+    sb.append(sendRequestTimeMs);
+    sb.append(",recvMs=");
+    sb.append(recvResponseTimeMs);
     sb.append(",sent=");
     sb.append(bytesSent);
     sb.append(",recv=");
@@ -222,18 +217,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" ci=")
       .append(getClientRequestId())
       .append(" ri=")
-      .append(requestId);
+      .append(requestId)
 
-    if (isTraceEnabled) {
-      sb.append(" ct=")
-        .append(connectionTimeMs)
-        .append(" st=")
-        .append(sendRequestTimeMs)
-        .append(" rt=")
-        .append(recvResponseTimeMs);
-    }
+      .append(" ct=")
+      .append(connectionTimeMs)
+      .append(" st=")
+      .append(sendRequestTimeMs)
+      .append(" rt=")
+      .append(recvResponseTimeMs)
 
-    sb.append(" bs=")
+      .append(" bs=")
       .append(bytesSent)
       .append(" br=")
       .append(bytesReceived)
@@ -275,7 +268,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
-    this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
 
@@ -323,9 +315,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     // send the request body
 
     long startTime = 0;
-    if (this.isTraceEnabled) {
-      startTime = System.nanoTime();
-    }
+    startTime = System.nanoTime();
     OutputStream outputStream = null;
     // Updates the expected bytes to be sent based on length.
     this.expectedBytesToBeSent = length;
@@ -376,9 +366,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       if (outputStream != null) {
         outputStream.close();
       }
-      if (this.isTraceEnabled) {
-        this.sendRequestTimeMs = elapsedTimeMs(startTime);
-      }
+      this.sendRequestTimeMs = elapsedTimeMs(startTime);
     }
   }
 
@@ -405,15 +393,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       final int length) throws IOException {
     // get the response
     long startTime = 0;
-    if (this.isTraceEnabled) {
-      startTime = System.nanoTime();
-    }
+    startTime = System.nanoTime();
 
     this.statusCode = getConnResponseCode();
-
-    if (this.isTraceEnabled) {
-      this.recvResponseTimeMs = elapsedTimeMs(startTime);
-    }
+    this.recvResponseTimeMs = elapsedTimeMs(startTime);
 
     this.statusDescription = getConnResponseMessage();
 
@@ -430,15 +413,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       return;
     }
 
-    if (this.isTraceEnabled) {
-      startTime = System.nanoTime();
-    }
+    startTime = System.nanoTime();
 
     if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
       processStorageErrorResponse();
-      if (this.isTraceEnabled) {
-        this.recvResponseTimeMs += elapsedTimeMs(startTime);
-      }
+      this.recvResponseTimeMs += elapsedTimeMs(startTime);
       this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
     } else {
       // consume the input stream to release resources
@@ -480,9 +459,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         LOG.debug("IO Error: ", ex);
         throw ex;
       } finally {
-        if (this.isTraceEnabled) {
-          this.recvResponseTimeMs += elapsedTimeMs(startTime);
-        }
+        this.recvResponseTimeMs += elapsedTimeMs(startTime);
         this.bytesReceived = totalBytesRead;
       }
     }
@@ -498,9 +475,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
-    if (!isTraceEnabled) {
-      return (HttpURLConnection) url.openConnection();
-    }
     long start = System.nanoTime();
     try {
       return (HttpURLConnection) url.openConnection();

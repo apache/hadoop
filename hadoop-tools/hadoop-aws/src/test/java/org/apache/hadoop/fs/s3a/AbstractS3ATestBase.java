@@ -211,6 +211,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   /**
+   * Get the {@link S3AInternals} internal access for the
+   * test filesystem.
+   * @return internals.
+   */
+  public S3AInternals getS3AInternals() {
+    return getFileSystem().getS3AInternals();
+  }
+  /**
    * Describe a test in the logs.
    * @param text text to print
    * @param args arguments to format in the printing

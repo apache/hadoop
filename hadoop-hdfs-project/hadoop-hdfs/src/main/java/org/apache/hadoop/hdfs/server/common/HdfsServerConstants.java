@@ -42,6 +42,8 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public interface HdfsServerConstants {
+  // Will be set by
+  // {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY}.
   int MIN_BLOCKS_FOR_WRITE = 1;
 
   long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms
@@ -61,6 +63,12 @@ public interface HdfsServerConstants {
    */
   int NAMENODE_LAYOUT_VERSION
       = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+  /**
+  * Current minimum compatible version for NameNode
+  * Please see {@link NameNodeLayoutVersion.Feature} on adding new layout version.
+  */
+  int MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION
+      = NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION;
   /**
    * Path components that are reserved in HDFS.
    * <p>

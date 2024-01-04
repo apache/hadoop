@@ -78,7 +78,8 @@ public class TimelineConnector extends AbstractService {
   private static final Joiner JOINER = Joiner.on("");
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineConnector.class);
-  public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
+  @VisibleForTesting
+  public static int DEFAULT_SOCKET_TIMEOUT = 60_000; // 1 minute
 
   private SSLFactory sslFactory;
   Client client;

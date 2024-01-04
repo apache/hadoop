@@ -85,7 +85,7 @@ public final class ConfigurationKeys {
   /**
    * What data block buffer to use.
    * <br>
-   * Options include: "disk"(Default), "array", and "bytebuffer".
+   * Options include: "disk", "array", and "bytebuffer"(Default).
    * <br>
    * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
    * Value: {@value}
@@ -104,7 +104,22 @@ public final class ConfigurationKeys {
   public static final String AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = "fs.azure.write.enableappendwithflush";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
+  /**
+   * When parquet files are read, first few read are metadata reads before
+   * reading the actual data. First the read is done of last 8 bytes of parquet
+   * file to get the postion of metadta and next read is done for reading that
+   * metadata. With this optimization these two reads can be combined into 1.
+   * Value: {@value}
+   */
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+  /**
+   * In case of footer reads it was not required to read full buffer size.
+   * Most of the metadata information required was within 256 KB and it will be
+   * more performant to read less. 512 KB is a sweet spot.
+   * This config is used to define how much footer length the user wants to read.
+   * Value: {@value}
+   */
+  public static final String AZURE_FOOTER_READ_BUFFER_SIZE = "fs.azure.footer.read.request.size";
 
   /**
    * Read ahead range parameter which can be set by user.
@@ -203,8 +218,14 @@ public final class ConfigurationKeys {
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
-  /** Server side encryption key */
-  public static final String FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY = "fs.azure.client-provided-encryption-key";
+  /** Server side encryption key encoded in Base6format {@value}.*/
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY =
+      "fs.azure.encryption.encoded.client-provided-key";
+  /** SHA256 hash of encryption key encoded in Base64format */
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA =
+      "fs.azure.encryption.encoded.client-provided-key-sha";
+  /** Custom EncryptionContextProvider type */
+  public static final String FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE = "fs.azure.encryption.context.provider.type";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";

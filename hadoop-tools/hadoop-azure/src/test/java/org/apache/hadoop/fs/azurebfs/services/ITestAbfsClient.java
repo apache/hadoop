@@ -59,6 +59,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -135,7 +136,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, (AccessTokenProvider) null, abfsClientContext);
+        config, (AccessTokenProvider) null, null, abfsClientContext);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -341,6 +342,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+            null,
         abfsClientContext);
 
     return testClient;
@@ -383,6 +385,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // override baseurl
     client = ITestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
+
+    // override xMsVersion
+    client = ITestAbfsClient.setAbfsClientField(client, "xMsVersion",
+        baseAbfsClientInstance.getxMsVersion());
 
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
@@ -593,7 +599,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
         .when(testClient)
-        .getAbfsRestOperationForAppend(Mockito.any(),
+        .getAbfsRestOperation(eq(AbfsRestOperationType.Append),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.nullable(int.class), Mockito.nullable(int.class),
             Mockito.any());
@@ -608,7 +614,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .isTrue();
 
     intercept(AzureBlobFileSystemException.class,
-        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, tracingContext));
+        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, null, tracingContext));
 
     // Verify that the request was not exponentially retried because of user error.
     Assertions.assertThat(tracingContext.getRetryCount())

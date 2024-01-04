@@ -26,10 +26,12 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +58,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -122,7 +125,6 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -1067,14 +1069,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
         fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
         tokenKind, tokenService,
-        noredirect, startAfter);
+        noredirect, startAfter, allUsers);
   }
 
   /** Handle HTTP GET request. */
@@ -1124,12 +1128,14 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -1138,7 +1144,7 @@ public class NamenodeWebHdfsMethods {
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirect, startAfter);
+            tokenKind, tokenService, noredirect, startAfter, allUsers);
       }
     });
   }
@@ -1172,7 +1178,8 @@ public class NamenodeWebHdfsMethods {
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
@@ -1322,11 +1329,17 @@ public class NamenodeWebHdfsMethods {
       final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
       return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETTRASHROOTS: {
+      Boolean value = allUsers.getValue();
+      final Collection<FileStatus> trashPaths = getTrashRoots(conf, value);
+      final String js = JsonUtil.toJsonString(trashPaths);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case LISTSTATUS_BATCH:
     {
       byte[] start = HdfsFileStatus.EMPTY_NAME;
       if (startAfter != null && startAfter.getValue() != null) {
-        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+        start = startAfter.getValue().getBytes(StandardCharsets.UTF_8);
       }
       final DirectoryListing listing = getDirectoryListing(cp, fullpath, start);
       final String js = JsonUtil.toJsonString(listing);
@@ -1519,7 +1532,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-            outstream, Charsets.UTF_8));
+            outstream, StandardCharsets.UTF_8));
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 
@@ -1556,6 +1569,12 @@ public class NamenodeWebHdfsMethods {
         out.flush();
       }
     };
+  }
+
+  private Collection<FileStatus> getTrashRoots(Configuration conf, boolean allUsers)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoots(allUsers);
   }
 
 

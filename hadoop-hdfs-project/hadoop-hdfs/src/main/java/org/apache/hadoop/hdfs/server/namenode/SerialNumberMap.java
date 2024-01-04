@@ -61,17 +61,22 @@ public class SerialNumberMap<T> {
     }
     Integer sn = t2i.get(t);
     if (sn == null) {
-      sn = current.getAndIncrement();
-      if (sn > max) {
-        current.getAndDecrement();
-        throw new IllegalStateException(name + ": serial number map is full");
+      synchronized (this) {
+        sn = t2i.get(t);
+        if (sn == null) {
+          sn = current.getAndIncrement();
+          if (sn > max) {
+            current.getAndDecrement();
+            throw new IllegalStateException(name + ": serial number map is full");
+          }
+          Integer old = t2i.putIfAbsent(t, sn);
+          if (old != null) {
+            current.getAndDecrement();
+            return old;
+          }
+          i2t.put(sn, t);
+        }
       }
-      Integer old = t2i.putIfAbsent(t, sn);
-      if (old != null) {
-        current.getAndDecrement();
-        return old;
-      }
-      i2t.put(sn, t);
     }
     return sn;
   }

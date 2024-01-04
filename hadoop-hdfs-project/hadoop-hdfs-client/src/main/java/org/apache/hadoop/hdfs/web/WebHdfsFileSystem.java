@@ -137,7 +137,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 
 /** A FileSystem for HDFS over the web. */
@@ -1792,7 +1791,7 @@ public class WebHdfsFileSystem extends FileSystem
     }
     DirectoryListing listing = new FsPathResponseRunner<DirectoryListing>(
         GetOpParam.Op.LISTSTATUS_BATCH,
-        f, new StartAfterParam(new String(prevKey, Charsets.UTF_8))) {
+        f, new StartAfterParam(new String(prevKey, StandardCharsets.UTF_8))) {
       @Override
       DirectoryListing decodeResponse(Map<?, ?> json) throws IOException {
         return JsonUtilClient.toDirectoryListing(json);
@@ -1953,6 +1952,26 @@ public class WebHdfsFileSystem extends FileSystem
       LOG.warn("Cannot find trash root of " + path, e);
       // keep the same behavior with dfs
       return super.getTrashRoot(path).makeQualified(getUri(), null);
+    }
+  }
+
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOTS);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETTRASHROOTS;
+    try {
+      Collection<FileStatus> trashRoots =
+          new FsPathResponseRunner<Collection<FileStatus>>(op, null,
+              new AllUsersParam(allUsers)) {
+            @Override
+            Collection<FileStatus> decodeResponse(Map<?, ?> json) throws IOException {
+              return JsonUtilClient.getTrashRoots(json);
+            }
+          }.run();
+      return trashRoots;
+    } catch (IOException e) {
+      return super.getTrashRoots(allUsers);
     }
   }
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_EXPIRATION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_EXTENSION;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.deleteStateStore;
@@ -70,6 +71,9 @@ public class TestRouterSafemode {
     // 200 ms cache refresh
     conf.setTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
         200, TimeUnit.MILLISECONDS);
+    // 100 ms safemode checkperiod
+    conf.setTimeDuration(DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
+        100, TimeUnit.MILLISECONDS);
     // 1 sec post cache update before entering safemode (2 intervals)
     conf.setTimeDuration(DFS_ROUTER_SAFEMODE_EXPIRATION,
         TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
@@ -133,7 +137,7 @@ public class TestRouterSafemode {
     long interval =
         conf.getTimeDuration(DFS_ROUTER_SAFEMODE_EXTENSION,
             TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS) +
-        conf.getTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
+        conf.getTimeDuration(DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
             TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
     Thread.sleep(interval);
 
