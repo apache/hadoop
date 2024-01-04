@@ -247,6 +247,11 @@ public final class ConfigurationKeys {
   /** Add extra resilience to rename failures, at the expense of performance. */
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
+  /**
+   * Specify whether paginated behavior is to be expected or not in delete path.
+   */
+  public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
+
   public static String accountProperty(String property, String account) {
     return property + "." + account;
   }

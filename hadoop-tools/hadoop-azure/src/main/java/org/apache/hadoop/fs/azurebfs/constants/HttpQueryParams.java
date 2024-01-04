@@ -40,6 +40,7 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_CLOSE = "close";
   public static final String QUERY_PARAM_UPN = "upn";
   public static final String QUERY_PARAM_BLOBTYPE = "blobtype";
+  public static final String QUERY_PARAM_PAGINATED = "paginated";
 
   //query params for SAS
   public static final String QUERY_PARAM_SAOID = "saoid";

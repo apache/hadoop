@@ -121,6 +121,7 @@ public final class AbfsHttpConstants {
   public static final char CHAR_PLUS = '+';
   public static final String DECEMBER_2019_API_VERSION = "2019-12-12";
   public static final String APRIL_2021_API_VERSION = "2021-04-10";
+  public static final String AUGUST_2023_API_VERSION = "2023-08-03";
 
   /**
    * Value that differentiates categories of the http_status.

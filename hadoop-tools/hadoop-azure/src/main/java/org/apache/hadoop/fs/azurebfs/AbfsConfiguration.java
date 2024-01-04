@@ -338,6 +338,10 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
   private String clientProvidedEncryptionKey;
 
   private String clientProvidedEncryptionKeySHA;
@@ -1191,7 +1195,12 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
+  }
+
+  @VisibleForTesting
+  public void setIsPaginatedDeleteEnabled(boolean isPaginatedDeleteEnabled) {
+    this.isPaginatedDeleteEnabled = isPaginatedDeleteEnabled;
   }
 }

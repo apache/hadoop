@@ -1053,12 +1053,24 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation deletePath(final String path, final boolean recursive, final String continuation,
+  public AbfsRestOperation deletePath(final String path, final boolean recursive,
+                                      final String continuation,
                                       TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    if (abfsConfiguration.isPaginatedDeleteEnabled() && recursive) {
+      // Change the x-ms-version to "2023-08-03" if its less than that.
+      if (xMsVersion.compareTo(AUGUST_2023_API_VERSION) < 0) {
+        requestHeaders.removeIf(header -> header.getName().equalsIgnoreCase(X_MS_VERSION));
+        requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, AUGUST_2023_API_VERSION));
+      }
+
+      // Add paginated query parameter
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
+    }
+
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     String operation = recursive ? SASTokenProvider.DELETE_RECURSIVE_OPERATION : SASTokenProvider.DELETE_OPERATION;
