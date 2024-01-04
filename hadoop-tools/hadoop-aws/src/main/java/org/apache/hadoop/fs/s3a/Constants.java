@@ -68,6 +68,10 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
+  // aws credentials providers mapping with key/value pairs
+  public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
+      "fs.s3a.aws.credentials.provider.mapping";
+
   /**
    * Extra set of security credentials which will be prepended to that
    * set in {@code "hadoop.security.credential.provider.path"}.

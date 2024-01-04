@@ -25,6 +25,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,14 +48,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.fs.s3a.auth.delegation.CountInvocationsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER_MAPPING;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_CSVTEST_FILE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.authenticationContains;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.buildClassListString;
@@ -204,6 +208,52 @@ public class TestS3AAWSCredentialsProvider {
             EnvironmentVariableCredentialsProvider.class),
         Sets.newHashSet());
     assertTrue("empty credentials", credentials.size() > 0);
+  }
+
+  @Test
+  public void testAssumedRoleWithRemap() throws Throwable {
+    Configuration conf = new Configuration(false);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
+        "custom.assume.role.key1,custom.assume.role.key2,custom.assume.role.key3");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "custom.assume.role.key1="
+            + CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V2
+            + " ,custom.assume.role.key2 ="
+            + CountInvocationsProvider.NAME
+            + ", custom.assume.role.key3= "
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V1);
+    final AWSCredentialProviderList credentials =
+        buildAWSProviderList(
+            new URI("s3a://bucket1"),
+            conf,
+            ASSUMED_ROLE_CREDENTIALS_PROVIDER,
+            new ArrayList<>(),
+            new HashSet<>());
+    assertEquals("Credentials not matching", 3, credentials.size());
+  }
+
+  @Test
+  public void testAwsCredentialProvidersWithRemap() throws Throwable {
+    Configuration conf = new Configuration(false);
+    conf.set(AWS_CREDENTIALS_PROVIDER,
+        "custom.aws.creds.key1,custom.aws.creds.key2,custom.aws.creds.key3,custom.aws.creds.key4");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "custom.aws.creds.key1="
+            + CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V2
+            + " ,\ncustom.aws.creds.key2="
+            + CountInvocationsProvider.NAME
+            + "\n, custom.aws.creds.key3="
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V1
+            + ",custom.aws.creds.key4 = "
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V2);
+    final AWSCredentialProviderList credentials =
+        buildAWSProviderList(
+            new URI("s3a://bucket1"),
+            conf,
+            AWS_CREDENTIALS_PROVIDER,
+            new ArrayList<>(),
+            new HashSet<>());
+    assertEquals("Credentials not matching", 4, credentials.size());
   }
 
   @Test
