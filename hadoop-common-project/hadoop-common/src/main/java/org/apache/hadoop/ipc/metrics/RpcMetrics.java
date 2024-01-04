@@ -207,6 +207,7 @@ public class RpcMetrics {
   // abstract class if we decide to do custom instrumentation classes a la
   // JobTrackerInstrumentation. The methods with //@Override comment are
   // candidates for abstract methods in a abstract instrumentation class.
+
   /**
    * One authentication failure event
    */
