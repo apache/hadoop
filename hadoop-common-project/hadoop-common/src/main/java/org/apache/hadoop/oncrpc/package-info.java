@@ -17,8 +17,8 @@
  */
 
 /**
- * This package provides ONC RPC implementation with simple UDP/TCP 
- * Servers and clients. 
+ * This package provides ONC RPC implementation with simple UDP/TCP
+ * Servers and clients.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
