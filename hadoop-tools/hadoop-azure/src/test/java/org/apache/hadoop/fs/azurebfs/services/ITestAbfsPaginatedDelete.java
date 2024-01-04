@@ -132,7 +132,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(this.firstTestUserFs, true);
     Path testPath;
     if (isEmptyDir) {
-      testPath = new Path("/emptyPath");
+      testPath = new Path("/emptyPath" + StringUtils.right(
+          UUID.randomUUID().toString(), 10));
       fs.mkdirs(testPath);
     } else {
       testPath = createSmallDir();
@@ -151,13 +152,12 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
     // Assert that appropriate xMsVersion and query param was used to make request
     if (isPaginatedDeleteEnabled && xMsVersion.compareTo(AUGUST_2023_API_VERSION) < 0) {
-      Assertions.assertThat(xMsVersionUsed)
-          .describedAs("Request was made with wrong x-ms-version")
-          .isEqualTo(AUGUST_2023_API_VERSION);
       Assertions.assertThat(urlUsed)
           .describedAs("Url must have paginated = true as query param")
           .contains(QUERY_PARAM_PAGINATED);
-
+      Assertions.assertThat(xMsVersionUsed)
+          .describedAs("Request was made with wrong x-ms-version")
+          .isEqualTo(AUGUST_2023_API_VERSION);
     } else if (isPaginatedDeleteEnabled && xMsVersion.compareTo(AUGUST_2023_API_VERSION) >= 0) {
       Assertions.assertThat(urlUsed)
           .describedAs("Url must have paginated = true as query param")
@@ -166,12 +166,12 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
           .describedAs("Request was made with wrong x-ms-version")
           .isEqualTo(xMsVersion);
     } else {
-      Assertions.assertThat(xMsVersionUsed)
-          .describedAs("Request was made with wrong x-ms-version")
-          .isEqualTo(xMsVersion);
       Assertions.assertThat(urlUsed)
           .describedAs("Url must not have paginated = true as query param")
           .doesNotContain(QUERY_PARAM_PAGINATED);
+      Assertions.assertThat(xMsVersionUsed)
+          .describedAs("Request was made with wrong x-ms-version")
+          .isEqualTo(xMsVersion);
     }
 
     // Assert that deletion was successful in every scenario.
@@ -195,7 +195,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     // Getting the url that was used to make the request
     String urlUsed = op.getUrl().toString();
 
-    // Assert that appropriate query param was used to make request
+    // Assert that paginated query param was not set to make request
     Assertions.assertThat(urlUsed)
           .describedAs("Url must not have paginated as query param")
           .doesNotContain(QUERY_PARAM_PAGINATED);
@@ -214,7 +214,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(this.firstTestUserFs, true);
 
     AbfsClient client = fs.getAbfsStore().getClient();
-    client.getAbfsConfiguration().setIsPaginatedDeleteEnabled(true);
+    client.getAbfsConfiguration().setIsPaginatedDeleteEnabled(isPaginatedEnabled);
 
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
         client.deletePath(smallDirPath.toString(), true, randomCT, testTracingContext));

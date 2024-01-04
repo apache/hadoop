@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_VERSION;
-
 public final class AbfsClientUtils {
   private AbfsClientUtils() {
 
