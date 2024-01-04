@@ -203,7 +203,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
           return op;
         })
         .when(spiedClient)
-        .getAbfsRestOperationForAppend(Mockito.any(AbfsRestOperationType.class),
+        .getAbfsRestOperation(Mockito.any(AbfsRestOperationType.class),
             Mockito.anyString(), Mockito.any(
                 URL.class), Mockito.anyList(), Mockito.any(byte[].class),
             Mockito.anyInt(), Mockito.anyInt(), Mockito.nullable(String.class));
