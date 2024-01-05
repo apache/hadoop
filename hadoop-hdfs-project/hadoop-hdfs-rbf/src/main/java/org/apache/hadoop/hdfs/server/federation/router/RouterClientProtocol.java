@@ -1954,7 +1954,7 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("msync");
     Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = allNamespaces
         .stream()
-        .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
+        .filter(ns -> RouterRpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
         .collect(Collectors.toSet());
     if (namespacesEligibleForObserverReads.isEmpty()) {
       return;
