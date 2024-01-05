@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 import org.apache.hadoop.fs.RawPathHandle;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -143,10 +144,10 @@ public abstract class AbstractContractPathHandleTest
     PathHandle fd = getHandleOrSkip(stat);
 
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect content change", data.allowChange());
+      Assertions.assertThat(data.allowChange()).withFailMessage("Failed to detect content change").isTrue();
       verifyRead(in, b12, 0, b12.length);
     } catch (InvalidPathHandleException e) {
-      assertFalse("Failed to allow content change", data.allowChange());
+      Assertions.assertThat(data.allowChange()).withFailMessage("Failed to allow content change").isFalse();
     }
   }
 
@@ -164,10 +165,10 @@ public abstract class AbstractContractPathHandleTest
     PathHandle fd = getHandleOrSkip(stat);
 
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect location change", loc.allowChange());
+      Assertions.assertThat(loc.allowChange()).withFailMessage("Failed to detect location change").isTrue();
       verifyRead(in, B1, 0, B1.length);
     } catch (InvalidPathHandleException e) {
-      assertFalse("Failed to allow location change", loc.allowChange());
+      Assertions.assertThat(loc.allowChange()).withFailMessage("Failed to allow location change").isFalse();
     }
   }
 
@@ -189,15 +190,15 @@ public abstract class AbstractContractPathHandleTest
     byte[] b12 = Arrays.copyOf(B1, B1.length + B2.length);
     System.arraycopy(B2, 0, b12, B1.length, B2.length);
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect location change", loc.allowChange());
-      assertTrue("Failed to detect content change", data.allowChange());
+      Assertions.assertThat(loc.allowChange()).withFailMessage("Failed to detect location change").isTrue();
+      Assertions.assertThat(data.allowChange()).withFailMessage("Failed to detect content change").isTrue();
       verifyRead(in, b12, 0, b12.length);
     } catch (InvalidPathHandleException e) {
       if (data.allowChange()) {
-        assertFalse("Failed to allow location change", loc.allowChange());
+        Assertions.assertThat(loc.allowChange()).withFailMessage("Failed to allow location change").isFalse();
       }
       if (loc.allowChange()) {
-        assertFalse("Failed to allow content change", data.allowChange());
+        Assertions.assertThat(data.allowChange()).withFailMessage("Failed to allow content change").isFalse();
       }
     }
   }
@@ -206,8 +207,8 @@ public abstract class AbstractContractPathHandleTest
     Path path = path(methodName.getMethodName());
     createFile(getFileSystem(), path, false, content);
     FileStatus stat = getFileSystem().getFileStatus(path);
-    assertNotNull(stat);
-    assertEquals(path, stat.getPath());
+    Assertions.assertThat(stat).isNotNull();
+    Assertions.assertThat(stat.getPath()).isEqualTo(path);
     return stat;
   }
 
@@ -264,9 +265,9 @@ public abstract class AbstractContractPathHandleTest
                 testFile(B1)))
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals("Wrong number of bytes read value",
-        TEST_FILE_LEN,
-        (long) readAllBytes.get());
+    Assertions.assertThat((long) readAllBytes.get())
+        .withFailMessage("Wrong number of bytes read value")
+        .isEqualTo(TEST_FILE_LEN);
   }
 
   @Test
@@ -305,9 +306,9 @@ public abstract class AbstractContractPathHandleTest
                 stat))
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals("Wrong number of bytes read value",
-        TEST_FILE_LEN,
-        (long) readAllBytes.get());
+    Assertions.assertThat((long) readAllBytes.get())
+        .withFailMessage("Wrong number of bytes read value")
+        .isEqualTo(TEST_FILE_LEN);
   }
 
 }

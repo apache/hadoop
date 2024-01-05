@@ -264,8 +264,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     } else {
       // otherwise, the same or other uploader can try again.
       PathHandle fd2 = complete(completer, uploadHandle, file, partHandles);
-      assertArrayEquals("Path handles differ", fd.toByteArray(),
-          fd2.toByteArray());
+      Assertions.assertThat(fd2.toByteArray())
+          .withFailMessage("Path handles differ")
+          .isEqualTo(fd.toByteArray());
     }
   }
 
@@ -799,7 +800,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     }
     Map<Integer, PartHandle> partHandles2 = new HashMap<>();
 
-    assertNotEquals("Upload handles match", upload1, upload2);
+    Assertions.assertThat(upload2)
+        .withFailMessage("Upload handles match")
+        .isNotEqualTo(upload1);
 
     // put part 1
     partHandles1.put(partId1, putPart(file, upload1, partId1, payload1));

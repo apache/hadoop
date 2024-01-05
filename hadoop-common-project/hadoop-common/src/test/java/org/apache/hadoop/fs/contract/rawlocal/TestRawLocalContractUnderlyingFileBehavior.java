@@ -20,13 +20,13 @@ package org.apache.hadoop.fs.contract.rawlocal;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Assert;
+import org.assertj.core.api.Assertions;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
 
-public class TestRawLocalContractUnderlyingFileBehavior extends Assert {
+public class TestRawLocalContractUnderlyingFileBehavior {
 
   private static File testDirectory;
 
@@ -36,14 +36,16 @@ public class TestRawLocalContractUnderlyingFileBehavior extends Assert {
       new RawlocalFSContract(new Configuration());
     testDirectory = contract.getTestDirectory();
     testDirectory.mkdirs();
-    assertTrue(testDirectory.isDirectory());
+    Assertions.assertThat(testDirectory).isDirectory();
 
   }
 
   @Test
   public void testDeleteEmptyPath() throws Throwable {
     File nonexistent = new File(testDirectory, "testDeleteEmptyPath");
-    assertFalse(nonexistent.exists());
-    assertFalse("nonexistent.delete() returned true", nonexistent.delete());
+    Assertions.assertThat(nonexistent).doesNotExist();
+    Assertions.assertThat(nonexistent.delete())
+        .withFailMessage("nonexistent.delete() returned true")
+        .isFalse();
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.Path;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -49,9 +50,10 @@ public abstract class AbstractContractDeleteTest extends
     Path path = path("testDeleteNonexistentPathRecursive");
     assertPathDoesNotExist("leftover", path);
     ContractTestUtils.rejectRootOperation(path);
-    assertFalse("Returned true attempting to recursively delete"
-                + " a nonexistent path " + path,
-                getFileSystem().delete(path, true));
+    Assertions.assertThat(getFileSystem().delete(path, true))
+        .withFailMessage("Returned true attempting to recursively delete"
+            + " a nonexistent path " + path)
+        .isFalse();
   }
 
   @Test
@@ -59,9 +61,10 @@ public abstract class AbstractContractDeleteTest extends
     Path path = path("testDeleteNonexistentPathNonRecursive");
     assertPathDoesNotExist("leftover", path);
     ContractTestUtils.rejectRootOperation(path);
-    assertFalse("Returned true attempting to non recursively delete"
-                + " a nonexistent path " + path,
-                getFileSystem().delete(path, false));
+    Assertions.assertThat(getFileSystem().delete(path, false))
+        .withFailMessage("Returned true attempting to non recursively delete"
+            + " a nonexistent path " + path)
+        .isFalse();
   }
 
   @Test

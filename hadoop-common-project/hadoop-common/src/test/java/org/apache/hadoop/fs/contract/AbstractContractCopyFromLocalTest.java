@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.assertj.core.api.Assertions;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -65,12 +66,15 @@ public abstract class AbstractContractCopyFromLocalTest extends
     Path dest = copyFromLocal(file, true);
 
     assertPathExists("uploaded file not found", dest);
-    assertTrue("source file deleted", Files.exists(file.toPath()));
+    Assertions.assertThat(file.toPath())
+        .withFailMessage("source file deleted")
+        .exists();
 
     FileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(dest);
-    assertEquals("File length not equal " + status,
-        message.getBytes(ASCII).length, status.getLen());
+    Assertions.assertThat(status.getLen())
+        .withFailMessage("File length not equal " + status)
+        .isEqualTo(message.getBytes(ASCII).length);
     assertFileTextEquals(dest, message);
   }
 
@@ -109,7 +113,9 @@ public abstract class AbstractContractCopyFromLocalTest extends
     file = createTempFile("test");
     copyFromLocal(file, false, true);
 
-    assertFalse("Source file not deleted", Files.exists(file.toPath()));
+    Assertions.assertThat(file.toPath())
+        .withFailMessage("Source file not deleted")
+        .doesNotExist();
   }
 
   @Test
@@ -215,7 +221,9 @@ public abstract class AbstractContractCopyFromLocalTest extends
     copyFromLocal(source, false, true);
     Path dest = fileToPath(child, source.getParentFile());
 
-    assertFalse("Directory not deleted", Files.exists(source.toPath()));
+    Assertions.assertThat(source.toPath())
+        .withFailMessage("Directory not deleted")
+        .doesNotExist();
     assertFileTextEquals(dest, contents);
   }
 
@@ -258,8 +266,9 @@ public abstract class AbstractContractCopyFromLocalTest extends
     Path dst = path(srcDir.getFileName().toString());
     getFileSystem().copyFromLocalFile(true, true, src, dst);
 
-    assertFalse("Source directory was not deleted",
-        Files.exists(srcDir));
+    Assertions.assertThat(srcDir)
+        .withFailMessage("Source directory was not deleted")
+        .doesNotExist();
   }
 
   @Test
@@ -330,7 +339,8 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   private void assertFileTextEquals(Path path, String expected)
       throws IOException {
-    assertEquals("Wrong data in " + path,
-        expected, IOUtils.toString(getFileSystem().open(path), ASCII));
+    Assertions.assertThat(IOUtils.toString(getFileSystem().open(path), ASCII))
+        .withFailMessage("Wrong data in " + path)
+        .isEqualTo(expected);
   }
 }

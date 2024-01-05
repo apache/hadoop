@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -191,15 +192,18 @@ public abstract class AbstractFSContractTestBase extends Assert
     assumeEnabled();
     //extract the test FS
     fileSystem = contract.getTestFileSystem();
-    assertNotNull("null filesystem", fileSystem);
+    Assertions.assertThat(fileSystem)
+        .withFailMessage("null filesystem")
+        .isNotNull();
     URI fsURI = fileSystem.getUri();
     LOG.info("Test filesystem = {} implemented by {}",
         fsURI, fileSystem);
     //sanity check to make sure that the test FS picked up really matches
     //the scheme chosen. This is to avoid defaulting back to the localFS
     //which would be drastic for root FS tests
-    assertEquals("wrong filesystem of " + fsURI,
-                 contract.getScheme(), fsURI.getScheme());
+    Assertions.assertThat(fsURI.getScheme())
+        .withFailMessage("wrong filesystem of " + fsURI)
+        .isEqualTo(contract.getScheme());
     //create the test path
     testPath = getContract().getTestPath();
     mkdirs(testPath);
@@ -360,7 +364,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @throws IOException IO problems during file operations
    */
   protected void mkdirs(Path path) throws IOException {
-    assertTrue("Failed to mkdir " + path, fileSystem.mkdirs(path));
+    Assertions.assertThat(fileSystem.mkdirs(path))
+        .withFailMessage("Failed to mkdir " + path)
+        .isTrue();
   }
 
   /**
@@ -381,7 +387,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @param result read result to validate
    */
   protected void assertMinusOne(String text, int result) {
-    assertEquals(text + " wrong read result " + result, -1, result);
+    Assertions.assertThat(result)
+        .withFailMessage(text + " wrong read result " + result)
+        .isEqualTo(-1);
   }
 
   protected boolean rename(Path src, Path dst) throws IOException {
@@ -400,4 +408,5 @@ public abstract class AbstractFSContractTestBase extends Assert
     }
     return destDirLS;
   }
+
 }

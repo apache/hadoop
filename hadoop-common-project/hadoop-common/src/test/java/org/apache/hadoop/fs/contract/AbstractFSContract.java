@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +84,9 @@ public abstract class AbstractFSContract extends Configured {
    */
   protected void addConfResource(String resource) {
     boolean found = maybeAddConfResource(resource);
-    Assert.assertTrue("Resource not found " + resource, found);
+    Assertions.assertThat(found)
+        .withFailMessage("Resource not found " + resource)
+        .isTrue();
   }
 
   /**
@@ -195,7 +197,7 @@ public abstract class AbstractFSContract extends Configured {
     try {
       return new URI(getScheme(),path, null);
     } catch (URISyntaxException e) {
-      throw new IOException(e.toString() + " with " + path, e);
+      throw new IOException(e + " with " + path, e);
     }
   }
 
