@@ -69,8 +69,8 @@
     <jersey.version>1.19.4</jersey.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.12.7</jackson2.version>
-    <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
+    <jackson2.version>2.14.3</jackson2.version>
+    <jackson2.databind.version>2.14.3</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -901,7 +901,7 @@
       <dependency>
         <groupId>com.github.pjfanning</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>1.20</version>
+        <version>1.21.0</version>
         <exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -2382,7 +2382,8 @@
                     <include>com.google.inject:guice:4.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
-                    <include>com.github.pjfanning:jersey-json:1.20</include>
+                    <include>com.github.pjfanning:jersey-json:1.21.0</include>
+                    <include>com.github.pjfanning:jsr311-compat:0.1.0</include>
                     <include>com.sun.jersey:jersey-server:1.19.4</include>
                     <include>com.sun.jersey:jersey-client:1.19.4</include>
                     <include>com.sun.jersey:jersey-grizzly2:1.19.4</include>
