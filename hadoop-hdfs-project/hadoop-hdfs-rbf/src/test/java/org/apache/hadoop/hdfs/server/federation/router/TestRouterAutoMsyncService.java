@@ -20,14 +20,15 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Test the service that msync to all nameservices.
@@ -77,10 +78,10 @@ public class TestRouterAutoMsyncService {
   }
 
   @Test
-  public void testMsync() throws InterruptedException, IOException {
-    Thread.sleep(msyncInterval);
-    long ops = router.getRouterClientMetrics().getMsyncOps();
-    // For a interval, router send one msync to active namenode
-    Assert.assertTrue(ops >= 1);
+  public void testMsync() throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> {
+      long ops = router.getRouterClientMetrics().getMsyncOps();
+      return ops >= 1;
+    }, 500, msyncInterval);
   }
 }
