@@ -21,8 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import static org.apache.hadoop.fs.permission.FsAction.*;
 
@@ -32,24 +32,24 @@ public class TestFsPermission {
   public void testFsAction() {
     //implies
     for(FsAction a : FsAction.values()) {
-      assertTrue(ALL.implies(a));
+      Assertions.assertThat(ALL.implies(a)).isTrue();
     }
     for(FsAction a : FsAction.values()) {
-      assertTrue(a == NONE? NONE.implies(a): !NONE.implies(a));
+      Assertions.assertThat(NONE.implies(a)).isEqualTo((a == NONE));
     }
     for(FsAction a : FsAction.values()) {
-      assertTrue(a == READ_EXECUTE || a == READ || a == EXECUTE || a == NONE?
-          READ_EXECUTE.implies(a): !READ_EXECUTE.implies(a));
+      Assertions.assertThat(READ_EXECUTE.implies(a))
+          .isEqualTo((a == READ_EXECUTE || a == READ || a == EXECUTE || a == NONE));
     }
 
     //masks
-    assertEquals(EXECUTE, EXECUTE.and(READ_EXECUTE));
-    assertEquals(READ, READ.and(READ_EXECUTE));
-    assertEquals(NONE, WRITE.and(READ_EXECUTE));
+    Assertions.assertThat(EXECUTE.and(READ_EXECUTE)).isEqualTo(EXECUTE);
+    Assertions.assertThat(READ.and(READ_EXECUTE)).isEqualTo(READ);
+    Assertions.assertThat(WRITE.and(READ_EXECUTE)).isEqualTo(NONE);
 
-    assertEquals(READ, READ_EXECUTE.and(READ_WRITE));
-    assertEquals(NONE, READ_EXECUTE.and(WRITE));
-    assertEquals(WRITE_EXECUTE, ALL.and(WRITE_EXECUTE));
+    Assertions.assertThat(READ_EXECUTE.and(READ_WRITE)).isEqualTo(READ);
+    Assertions.assertThat(READ_EXECUTE.and(WRITE)).isEqualTo(NONE);
+    Assertions.assertThat(ALL.and(WRITE_EXECUTE)).isEqualTo(WRITE_EXECUTE);
   }
 
   /**
@@ -59,9 +59,9 @@ public class TestFsPermission {
   @Test
   public void testConvertingPermissions() {
     for(short s = 0; s <= 01777; s++) {
-      assertEquals(s, new FsPermission(s).toShort());
+      Assertions.assertThat(new FsPermission(s).toShort()).isEqualTo(s);
       // check string formats
-      assertEquals(s, new FsPermission(String.format("%03o", s)).toShort());
+      Assertions.assertThat(new FsPermission(String.format("%03o", s)).toShort()).isEqualTo(s);
     }
 
     short s = 0;
@@ -72,16 +72,16 @@ public class TestFsPermission {
           for(FsAction o : FsAction.values()) {
             // Cover constructor with sticky bit.
             FsPermission f = new FsPermission(u, g, o, sb);
-            assertEquals(s, f.toShort());
+            Assertions.assertThat(f.toShort()).isEqualTo(s);
             FsPermission f2 = new FsPermission(f);
-            assertEquals(s, f2.toShort());
+            Assertions.assertThat(f2.toShort()).isEqualTo(s);
 
             s++;
           }
         }
       }
     }
-    assertEquals(02000, s);
+    Assertions.assertThat(s).isEqualTo((short) 02000);
   }
 
   @Test
@@ -95,15 +95,15 @@ public class TestFsPermission {
 
             // Check that sticky bit is represented correctly.
             if (f.getStickyBit() && f.getOtherAction().implies(EXECUTE))
-              assertEquals('t', fString.charAt(8));
+              Assertions.assertThat(fString.charAt(8)).isEqualTo('t');
             else if (f.getStickyBit() && !f.getOtherAction().implies(EXECUTE))
-              assertEquals('T', fString.charAt(8));
+              Assertions.assertThat(fString.charAt(8)).isEqualTo('T');
             else if (!f.getStickyBit() && f.getOtherAction().implies(EXECUTE))
-              assertEquals('x', fString.charAt(8));
+              Assertions.assertThat(fString.charAt(8)).isEqualTo('x');
             else
-              assertEquals('-', fString.charAt(8));
+              Assertions.assertThat(fString.charAt(8)).isEqualTo('-');
 
-            assertEquals(9, fString.length());
+            Assertions.assertThat(fString.length()).isEqualTo(9);
           }
         }
 
@@ -134,7 +134,7 @@ public class TestFsPermission {
         b.setCharAt(9, replacement);
       }
 
-      assertEquals(i, FsPermission.valueOf(b.toString()).toShort());
+      Assertions.assertThat(FsPermission.valueOf(b.toString()).toShort()).isEqualTo((short) i);
     }
   }
 
@@ -145,52 +145,52 @@ public class TestFsPermission {
 
     //Added both Octal and short representation to show with sticky bit
 
-    assertEquals(777, new FsPermission("+rwx").toOctal());
-    assertEquals(0777, new FsPermission("+rwx").toShort());
+    Assertions.assertThat(new FsPermission("+rwx").toOctal()).isEqualTo((short) 777);
+    Assertions.assertThat(new FsPermission("+rwx").toShort()).isEqualTo((short) 0777);
 
-    assertEquals(444, new FsPermission("+r").toOctal());
-    assertEquals(0444, new FsPermission("+r").toShort());
+    Assertions.assertThat(new FsPermission("+r").toOctal()).isEqualTo((short) 444);
+    Assertions.assertThat(new FsPermission("+r").toShort()).isEqualTo((short) 0444);
 
-    assertEquals(222, new FsPermission("+w").toOctal());
-    assertEquals(0222, new FsPermission("+w").toShort());
+    Assertions.assertThat(new FsPermission("+w").toOctal()).isEqualTo((short) 222);
+    Assertions.assertThat(new FsPermission("+w").toShort()).isEqualTo((short) 0222);
 
-    assertEquals(111, new FsPermission("+x").toOctal());
-    assertEquals(0111, new FsPermission("+x").toShort());
+    Assertions.assertThat(new FsPermission("+x").toOctal()).isEqualTo((short) 111);
+    Assertions.assertThat(new FsPermission("+x").toShort()).isEqualTo((short) 0111);
 
-    assertEquals(666, new FsPermission("+rw").toOctal());
-    assertEquals(0666, new FsPermission("+rw").toShort());
+    Assertions.assertThat(new FsPermission("+rw").toOctal()).isEqualTo((short) 666);
+    Assertions.assertThat(new FsPermission("+rw").toShort()).isEqualTo((short) 0666);
 
-    assertEquals(333, new FsPermission("+wx").toOctal());
-    assertEquals(0333, new FsPermission("+wx").toShort());
+    Assertions.assertThat(new FsPermission("+wx").toOctal()).isEqualTo((short) 333);
+    Assertions.assertThat(new FsPermission("+wx").toShort()).isEqualTo((short) 0333);
 
-    assertEquals(555, new FsPermission("+rx").toOctal());
-    assertEquals(0555, new FsPermission("+rx").toShort());
+    Assertions.assertThat(new FsPermission("+rx").toOctal()).isEqualTo((short) 555);
+    Assertions.assertThat(new FsPermission("+rx").toShort()).isEqualTo((short) 0555);
 
 
     // Test case is to test with repeated values in mode.
     // Repeated value in input will be ignored as duplicate.
 
-    assertEquals(666, new FsPermission("+rwr").toOctal());
-    assertEquals(0666, new FsPermission("+rwr").toShort());
+    Assertions.assertThat(new FsPermission("+rwr").toOctal()).isEqualTo((short) 666);
+    Assertions.assertThat(new FsPermission("+rwr").toShort()).isEqualTo((short) 0666);
 
-    assertEquals(000, new FsPermission("-rwr").toOctal());
-    assertEquals(0000, new FsPermission("-rwr").toShort());
+    Assertions.assertThat(new FsPermission("-rwr").toOctal()).isEqualTo((short) 000);
+    Assertions.assertThat(new FsPermission("-rwr").toShort()).isEqualTo((short) 0000);
 
-    assertEquals(1666, new FsPermission("+rwrt").toOctal());
-    assertEquals(01666, new FsPermission("+rwrt").toShort());
+    Assertions.assertThat(new FsPermission("+rwrt").toOctal()).isEqualTo((short) 1666);
+    Assertions.assertThat(new FsPermission("+rwrt").toShort()).isEqualTo((short) 01666);
 
-    assertEquals(000, new FsPermission("-rwrt").toOctal());
-    assertEquals(0000, new FsPermission("-rwrt").toShort());
+    Assertions.assertThat(new FsPermission("-rwrt").toOctal()).isEqualTo((short) 000);
+    Assertions.assertThat(new FsPermission("-rwrt").toShort()).isEqualTo((short) 0000);
 
-    assertEquals(1777, new FsPermission("+rwxt").toOctal());
-    assertEquals(01777, new FsPermission("+rwxt").toShort());
+    Assertions.assertThat(new FsPermission("+rwxt").toOctal()).isEqualTo((short) 1777);
+    Assertions.assertThat(new FsPermission("+rwxt").toShort()).isEqualTo((short) 01777);
 
 
-    assertEquals(000, new FsPermission("-rt").toOctal());
-    assertEquals(0000, new FsPermission("-rt").toShort());
+    Assertions.assertThat(new FsPermission("-rt").toOctal()).isEqualTo((short) 000);
+    Assertions.assertThat(new FsPermission("-rt").toShort()).isEqualTo((short) 0000);
 
-    assertEquals(000, new FsPermission("-rwx").toOctal());
-    assertEquals(0000, new FsPermission("-rwx").toShort());
+    Assertions.assertThat(new FsPermission("-rwx").toOctal()).isEqualTo((short) 000);
+    Assertions.assertThat(new FsPermission("-rwx").toShort()).isEqualTo((short) 0000);
 
   }
 
@@ -200,13 +200,13 @@ public class TestFsPermission {
     for (int i = 0; i < SYMBOLIC.length; ++i) {
       short val = 0777;
       val &= ~Short.valueOf(SYMBOLIC[i][1], 8);
-      assertEquals(val, new FsPermission(SYMBOLIC[i][0]).toShort());
+      Assertions.assertThat(new FsPermission(SYMBOLIC[i][0]).toShort()).isEqualTo(val);
     }
     // add sticky bit to "other" when exec enabled
     for (int i = 1; i < SYMBOLIC.length; i += 2) {
       short val = 01777;
       val &= ~Short.valueOf(SYMBOLIC[i][1], 8);
-      assertEquals(val, new FsPermission(SYMBOLIC[i][0] + "t").toShort());
+      Assertions.assertThat(new FsPermission(SYMBOLIC[i][0] + "t").toShort()).isEqualTo(val);
     }
   }
 
@@ -222,7 +222,7 @@ public class TestFsPermission {
           String asOctal = String.format("%1$03o", f.toShort());
           conf.set(FsPermission.UMASK_LABEL, asOctal);
           FsPermission fromConf = FsPermission.getUMask(conf);
-          assertEquals(f, fromConf);
+          Assertions.assertThat(fromConf).isEqualTo(f);
         }
       }
     }
@@ -236,10 +236,10 @@ public class TestFsPermission {
     for (int i = 0; i < SYMBOLIC.length; ++i) {
       conf.set(FsPermission.UMASK_LABEL, SYMBOLIC[i][0]);
       short val = Short.valueOf(SYMBOLIC[i][1], 8);
-      assertEquals(val, FsPermission.getUMask(conf).toShort());
+      Assertions.assertThat(FsPermission.getUMask(conf).toShort()).isEqualTo(val);
     }
     conf.set(FsPermission.UMASK_LABEL, "a+rw");
-    assertEquals(0111, FsPermission.getUMask(conf).toShort());
+    Assertions.assertThat(FsPermission.getUMask(conf).toShort()).isEqualTo((short) 0111);
   }
 
   @Test
@@ -250,10 +250,12 @@ public class TestFsPermission {
       conf.set(FsPermission.UMASK_LABEL, b); 
       try {
         FsPermission.getUMask(conf);
-        fail("Shouldn't have been able to parse bad umask");
+        Assertions.fail("Shouldn't have been able to parse bad umask");
       } catch(IllegalArgumentException iae) {
-        assertTrue("Exception should specify parsing error and invalid umask: " 
-            + iae.getMessage(), isCorrectExceptionMessage(iae.getMessage(), b));
+        Assertions.assertThat(isCorrectExceptionMessage(iae.getMessage(), b))
+            .withFailMessage("Exception should specify parsing error and invalid umask: "
+                + iae.getMessage())
+            .isTrue();
       }
     }
   }
@@ -290,8 +292,8 @@ public class TestFsPermission {
       int masked_permission_value = permission_mask_map[1];
       boolean hasStickyBit = permission_mask_map[2] == 1;
       FsPermission fsPermission = new FsPermission(original_permission_value);
-      assertEquals(masked_permission_value, fsPermission.toShort());
-      assertEquals(hasStickyBit, fsPermission.getStickyBit());
+      Assertions.assertThat(fsPermission.toShort()).isEqualTo((short) masked_permission_value);
+      Assertions.assertThat(fsPermission.getStickyBit()).isEqualTo(hasStickyBit);
     }
   }
 
