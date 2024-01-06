@@ -378,24 +378,32 @@ public class TestRouterHandlersFairness {
 
   private static Map<String, Integer> expectedHandlerPerNs(String str) {
     Map<String, Integer> handlersPerNsMap = new HashMap<>();
-    if (str != null) {
-      String[] tmpStrs = str.split(", ");
-      for(String tmpStr : tmpStrs) {
-        String[] handlersPerNs = tmpStr.split(":");
-        handlersPerNsMap.put(handlersPerNs[0], Integer.valueOf(handlersPerNs[1]));
+    if (str == null) {
+      return handlersPerNsMap;
+    }
+    String[] tmpStrs = str.split(", ");
+    for(String tmpStr : tmpStrs) {
+      String[] handlersPerNs = tmpStr.split(":");
+      if (handlersPerNs.length != 2) {
+        continue;
       }
+      handlersPerNsMap.put(handlersPerNs[0], Integer.valueOf(handlersPerNs[1]));
     }
     return handlersPerNsMap;
   }
 
   private static Map<String, String> setConfiguration(String str) {
     Map<String, String> conf = new HashMap<>();
-    if (str != null) {
-      String[] tmpStrs = str.split(", ");
-      for(String tmpStr : tmpStrs) {
-        String[] configKV = tmpStr.split("=");
-        conf.put(configKV[0], configKV[1]);
+    if (str == null) {
+      return conf;
+    }
+    String[] tmpStrs = str.split(", ");
+    for(String tmpStr : tmpStrs) {
+      String[] configKV = tmpStr.split("=");
+      if (configKV.length != 2) {
+        continue;
       }
+      conf.put(configKV[0], configKV[1]);
     }
     return conf;
   }

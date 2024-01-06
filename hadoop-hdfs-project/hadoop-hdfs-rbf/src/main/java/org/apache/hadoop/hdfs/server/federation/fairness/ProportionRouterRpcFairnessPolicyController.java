@@ -85,17 +85,15 @@ public class ProportionRouterRpcFairnessPolicyController extends
   public boolean acquirePermit(String nsId) {
     if (contains(nsId)) {
       return super.acquirePermit(nsId);
-    }else {
-      return super.acquirePermit(DEFAULT_NS);
     }
+    return super.acquirePermit(DEFAULT_NS);
   }
 
   @Override
   public void releasePermit(String nsId) {
     if (contains(nsId)) {
       super.releasePermit(nsId);
-    }else {
-      super.releasePermit(DEFAULT_NS);
     }
+    super.releasePermit(DEFAULT_NS);
   }
 }
