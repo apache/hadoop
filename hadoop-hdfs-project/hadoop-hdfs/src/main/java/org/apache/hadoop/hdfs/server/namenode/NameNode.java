@@ -1380,7 +1380,6 @@ public class NameNode extends ReconfigurableBase implements
     }
     
     Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
 
