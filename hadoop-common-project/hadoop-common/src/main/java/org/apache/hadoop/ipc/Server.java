@@ -3133,6 +3133,13 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
+      // Clients that are directly put into lowest priority queue are backed off and disconnected.
+      if (cqe.getCause() instanceof RpcServerException) {
+        RpcServerException ex = (RpcServerException) cqe.getCause();
+        if (ex.getRpcStatusProto() == RpcStatusProto.FATAL) {
+          rpcMetrics.incrClientBackoffDisconnected();
+        }
+      }
       // unwrap retriable exception.
       throw cqe.getCause();
     }
