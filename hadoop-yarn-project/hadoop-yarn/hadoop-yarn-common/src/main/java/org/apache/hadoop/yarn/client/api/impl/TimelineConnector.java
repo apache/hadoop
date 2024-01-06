@@ -78,8 +78,8 @@ public class TimelineConnector extends AbstractService {
   private static final Joiner JOINER = Joiner.on("");
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineConnector.class);
-  @VisibleForTesting
-  public static int DEFAULT_SOCKET_TIMEOUT = 60_000; // 1 minute
+
+  private int socketTimeOut = 60_000;
 
   private SSLFactory sslFactory;
   Client client;
@@ -145,14 +145,14 @@ public class TimelineConnector extends AbstractService {
         @Override
         public HttpURLConnection configure(HttpURLConnection conn)
             throws IOException {
-          setTimeouts(conn, DEFAULT_SOCKET_TIMEOUT);
+          setTimeouts(conn, 60_000);
           return conn;
         }
       };
 
   private ConnectionConfigurator getConnConfigurator(SSLFactory sslFactoryObj) {
     try {
-      return initSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, sslFactoryObj);
+      return initSslConnConfigurator(socketTimeOut, sslFactoryObj);
     } catch (Exception e) {
       LOG.debug("Cannot load customized ssl related configuration. "
           + "Fallback to system-generic settings.", e);
@@ -456,5 +456,10 @@ public class TimelineConnector extends AbstractService {
       return (e instanceof ConnectException
           || e instanceof SocketTimeoutException);
     }
+  }
+
+  @VisibleForTesting
+  public void setSocketTimeOut(int socketTimeOut) {
+    this.socketTimeOut = socketTimeOut;
   }
 }
