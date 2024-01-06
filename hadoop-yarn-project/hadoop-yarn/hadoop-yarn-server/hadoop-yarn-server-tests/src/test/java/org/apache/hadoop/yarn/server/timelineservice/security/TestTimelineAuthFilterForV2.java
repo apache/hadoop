@@ -211,7 +211,8 @@ public class TestTimelineAuthFilterForV2 {
     }
     UserGroupInformation.setConfiguration(conf);
     collectorManager = new DummyNodeTimelineCollectorManager();
-    auxService = PerNodeTimelineCollectorsAuxService.launchServer(
+    PerNodeTimelineCollectorsAuxService as = new PerNodeTimelineCollectorsAuxService();
+    auxService = as.launchServer(
         new String[0], collectorManager, conf);
     if (withKerberosLogin) {
       SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
