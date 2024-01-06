@@ -1039,13 +1039,13 @@ public class DataNode extends ReconfigurableBase
         result = Boolean.toString(enable);
       } else if (property.equals(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL)) {
         if (newVal == null) {
-          // set to default
+          // set to the value of the current system or default
           long defaultInterval = getConf().getTimeDuration(
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT,
               TimeUnit.MILLISECONDS);
           getDiskBalancer().setPlanValidityInterval(defaultInterval);
-          result = DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
+          result = Long.toString(defaultInterval);
         } else {
           long newInterval = getConf()
               .getTimeDurationHelper(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,

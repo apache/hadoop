@@ -228,7 +228,7 @@ public abstract class ReconfigurableBase
       synchronized(getConf()) {
         getConf().get(property);
         String effectiveValue = reconfigurePropertyImpl(property, newVal);
-        if (newVal != null) {
+        if (effectiveValue != null) {
           getConf().set(property, effectiveValue);
         } else {
           getConf().unset(property);
