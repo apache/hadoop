@@ -37,7 +37,6 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
-import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +64,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Utilities used across test cases.
@@ -522,19 +522,19 @@ public class ContractTestUtils extends Assert {
    * exception for the Junit test runner to mark as failed.
    * @param message text message
    * @param failure what failed
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void downgrade(String message, Throwable failure) {
     LOG.warn("Downgrading test " + message, failure);
-    AssumptionViolatedException ave =
-        new AssumptionViolatedException(message, failure);
-    throw ave;
+    assumeThat(false)
+        .withFailMessage(message)
+        .isTrue();
   }
 
   /**
    * report an overridden test as unsupported.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void unsupported(String message) {
     skip(message);
@@ -543,11 +543,13 @@ public class ContractTestUtils extends Assert {
   /**
    * report a test has been skipped for some reason.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void skip(String message) {
     LOG.info("Skipping: {}", message);
-    throw new AssumptionViolatedException(message);
+    assumeThat(false)
+        .withFailMessage(message)
+        .isTrue();
   }
 
   /**

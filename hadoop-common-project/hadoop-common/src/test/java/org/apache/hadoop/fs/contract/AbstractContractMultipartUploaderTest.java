@@ -30,7 +30,6 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +54,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests of multipart uploads.
@@ -89,9 +89,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
     final FileSystem fs = getFileSystem();
     Path testPath = getContract().getTestPath();
-    Assume.assumeTrue("Multipart uploader is not supported",
-        fs.hasPathCapability(testPath,
-            CommonPathCapabilities.FS_MULTIPART_UPLOADER));
+    assumeThat(fs.hasPathCapability(testPath, CommonPathCapabilities.FS_MULTIPART_UPLOADER))
+        .withFailMessage("Multipart uploader is not supported")
+        .isTrue();
     uploader0 = fs.createMultipartUploader(testPath).build();
     uploader1 = fs.createMultipartUploader(testPath).build();
   }
@@ -786,9 +786,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     UploadHandle upload2;
     try {
       upload2 = startUpload(file);
-      Assume.assumeTrue(
-          "The Filesystem is unexpectedly supporting concurrent uploads",
-          concurrent);
+      assumeThat(concurrent)
+          .withFailMessage("The Filesystem is unexpectedly supporting concurrent uploads")
+          .isTrue();
     } catch (IOException e) {
       if (!concurrent) {
         // this is expected, so end the test

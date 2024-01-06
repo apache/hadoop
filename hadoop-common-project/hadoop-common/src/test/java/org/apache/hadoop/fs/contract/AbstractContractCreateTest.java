@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.StreamCapabilities;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test creating files, overwrite options etc.
@@ -171,10 +171,10 @@ public abstract class AbstractContractCreateTest extends
     try {
       assertIsDirectory(path);
     } catch (AssertionError failure) {
-      if (isSupported(CREATE_OVERWRITES_DIRECTORY)) {
-        // file/directory hack surfaces here
-        throw new AssumptionViolatedException(failure.toString(), failure);
-      }
+      // file/directory hack surfaces here
+      assumeThat(isSupported(CREATE_OVERWRITES_DIRECTORY))
+          .withFailMessage(failure.toString())
+          .isFalse();
       // else: rethrow
       throw failure;
     }

@@ -28,7 +28,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -40,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.cleanup;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * This is the base class for all the contract tests.
@@ -150,8 +150,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Include at the start of tests to skip them if the FS is not enabled.
    */
   protected void assumeEnabled() {
-    if (!contract.isEnabled())
-      throw new AssumptionViolatedException("test cases disabled for " + contract);
+    assumeThat(contract.isEnabled())
+        .withFailMessage("test cases disabled for " + contract)
+        .isTrue();
   }
 
   /**
