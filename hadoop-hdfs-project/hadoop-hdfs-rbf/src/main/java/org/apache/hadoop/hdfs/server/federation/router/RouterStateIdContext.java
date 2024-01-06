@@ -85,7 +85,11 @@ class RouterStateIdContext implements AlignmentContext {
       return;
     }
     RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
-    namespaceIdMap.forEach((k, v) -> builder.putNamespaceStateIds(k, v.get()));
+    namespaceIdMap.forEach((k, v) -> {
+      if (v.get() != Long.MIN_VALUE) {
+        builder.putNamespaceStateIds(k, v.get());
+      }
+    });
     headerBuilder.setRouterFederatedState(builder.build().toByteString());
   }
 
@@ -95,6 +99,10 @@ class RouterStateIdContext implements AlignmentContext {
 
   public List<String> getNamespaces() {
     return Collections.list(namespaceIdMap.keys());
+  }
+
+  public ConcurrentHashMap<String, LongAccumulator> getNamespaceIdMap() {
+    return namespaceIdMap;
   }
 
   public void removeNamespaceStateId(String nsId) {
