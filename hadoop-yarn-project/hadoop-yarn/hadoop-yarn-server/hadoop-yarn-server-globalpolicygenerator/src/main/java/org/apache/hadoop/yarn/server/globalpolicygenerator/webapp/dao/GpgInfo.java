@@ -30,13 +30,13 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GpgInfo {
-  protected String gpgVersion;
-  protected String gpgBuildVersion;
-  protected String gpgVersionBuiltOn;
-  protected String hadoopVersion;
-  protected String hadoopBuildVersion;
-  protected String hadoopVersionBuiltOn;
-  protected long gpgStartupTime;
+  private String gpgVersion;
+  private String gpgBuildVersion;
+  private String gpgVersionBuiltOn;
+  private String hadoopVersion;
+  private String hadoopBuildVersion;
+  private String hadoopVersionBuiltOn;
+  private long gpgStartupTime;
 
   public GpgInfo() {
   } // JAXB needs this
