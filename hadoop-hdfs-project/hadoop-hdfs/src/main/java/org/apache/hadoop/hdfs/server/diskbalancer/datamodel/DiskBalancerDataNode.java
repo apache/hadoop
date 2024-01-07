@@ -238,6 +238,10 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
    * @param volume - volume
    */
   public void addVolume(DiskBalancerVolume volume) throws Exception {
+    addVolume(volume, false);
+  }
+
+  public void addVolume(DiskBalancerVolume volume, boolean computeDensity) throws Exception {
     Preconditions.checkNotNull(volume, "volume cannot be null");
     Preconditions.checkNotNull(volumeSets, "volume sets cannot be null");
     Preconditions
@@ -254,7 +258,9 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
     }
 
     vSet.addVolume(volume);
-    computeNodeDensity();
+    if (computeDensity) {
+      computeNodeDensity();
+    }
   }
 
   /**
