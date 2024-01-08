@@ -55,6 +55,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Worker class for Disk Balancer.
@@ -80,7 +81,7 @@ public class DiskBalancer {
   private final FsDatasetSpi<?> dataset;
   private final String dataNodeUUID;
   private final BlockMover blockMover;
-  private final ReentrantLock lock;
+  private final ReentrantReadWriteLock rwLock;
   private final ConcurrentHashMap<VolumePair, DiskBalancerWorkItem> workMap;
   private volatile boolean isDiskBalancerEnabled = false;
   private ExecutorService scheduler;
@@ -108,7 +109,7 @@ public class DiskBalancer {
     this.dataset = this.blockMover.getDataset();
     this.dataNodeUUID = dataNodeUUID;
     scheduler = Executors.newSingleThreadExecutor();
-    lock = new ReentrantLock();
+    rwLock = new ReentrantReadWriteLock();
     workMap = new ConcurrentHashMap<>();
     this.planID = "";  // to keep protobuf happy.
     this.planFile = "";  // to keep protobuf happy.
@@ -128,7 +129,7 @@ public class DiskBalancer {
    * Shutdown  disk balancer services.
    */
   public void shutdown() {
-    lock.lock();
+    rwLock.writeLock().lock();
     boolean needShutdown = false;
     try {
       this.isDiskBalancerEnabled = false;
@@ -140,7 +141,7 @@ public class DiskBalancer {
         needShutdown = true;
       }
     } finally {
-      lock.unlock();
+      rwLock.writeLock().unlock();
     }
     // no need to hold lock while shutting down executor.
     if (needShutdown) {
@@ -180,7 +181,7 @@ public class DiskBalancer {
   public void submitPlan(String planId, long planVersion, String planFileName,
                          String planData, boolean force)
           throws DiskBalancerException {
-    lock.lock();
+    rwLock.writeLock().lock();
     try {
       checkDiskBalancerEnabled();
       if ((this.future != null) && (!this.future.isDone())) {
@@ -196,7 +197,7 @@ public class DiskBalancer {
       this.currentResult = Result.PLAN_UNDER_PROGRESS;
       executePlan();
     } finally {
-      lock.unlock();
+      rwLock.writeLock().unlock();
     }
   }
 
@@ -230,7 +231,7 @@ public class DiskBalancer {
    * @throws DiskBalancerException
    */
   public DiskBalancerWorkStatus queryWorkStatus() throws DiskBalancerException {
-    lock.lock();
+    rwLock.readLock().lock();
     try {
       checkDiskBalancerEnabled();
       // if we had a plan in progress, check if it is finished.
@@ -253,7 +254,7 @@ public class DiskBalancer {
       }
       return status;
     } finally {
-      lock.unlock();
+      rwLock.readLock().unlock();
     }
   }
 
@@ -264,7 +265,7 @@ public class DiskBalancer {
    * @throws DiskBalancerException
    */
   public void cancelPlan(String planID) throws DiskBalancerException {
-    lock.lock();
+    rwLock.writeLock().lock();
     boolean needShutdown = false;
     try {
       checkDiskBalancerEnabled();
@@ -283,7 +284,7 @@ public class DiskBalancer {
         needShutdown = true;
       }
     } finally {
-      lock.unlock();
+      rwLock.writeLock().unlock();
     }
     // no need to hold lock while shutting down executor.
     if (needShutdown) {
@@ -298,7 +299,7 @@ public class DiskBalancer {
    * @throws DiskBalancerException
    */
   public String getVolumeNames() throws DiskBalancerException {
-    lock.lock();
+    rwLock.readLock().lock();
     try {
       checkDiskBalancerEnabled();
       return JsonUtil.toJsonString(getStorageIDToVolumeBasePathMap());
@@ -309,7 +310,7 @@ public class DiskBalancer {
           "create JSON string.", e,
           DiskBalancerException.Result.INTERNAL_ERROR);
     } finally {
-      lock.unlock();
+      rwLock.readLock().unlock();
     }
   }
 
@@ -320,12 +321,12 @@ public class DiskBalancer {
    * @throws DiskBalancerException
    */
   public long getBandwidth() throws DiskBalancerException {
-    lock.lock();
+    rwLock.readLock().lock();
     try {
       checkDiskBalancerEnabled();
       return this.bandwidth;
     } finally {
-      lock.unlock();
+      rwLock.readLock().unlock();
     }
   }
 
@@ -407,7 +408,7 @@ public class DiskBalancer {
   private NodePlan verifyPlan(String planID, long planVersion, String plan,
                               boolean force) throws DiskBalancerException {
 
-    Preconditions.checkState(lock.isHeldByCurrentThread());
+    Preconditions.checkState(rwLock.writeLock().isHeldByCurrentThread());
     verifyPlanVersion(planVersion);
     NodePlan nodePlan = verifyPlanHash(planID, plan);
     if (!force) {
@@ -511,7 +512,7 @@ public class DiskBalancer {
    * @param plan - Node Plan
    */
   private void createWorkPlan(NodePlan plan) throws DiskBalancerException {
-    Preconditions.checkState(lock.isHeldByCurrentThread());
+    Preconditions.checkState(rwLock.writeLock().isHeldByCurrentThread());
 
     // Cleanup any residual work in the map.
     workMap.clear();
@@ -574,7 +575,7 @@ public class DiskBalancer {
    * Starts Executing the plan, exits when the plan is done executing.
    */
   private void executePlan() {
-    Preconditions.checkState(lock.isHeldByCurrentThread());
+    Preconditions.checkState(rwLock.writeLock().isHeldByCurrentThread());
     this.blockMover.setRunnable();
     if (this.scheduler.isShutdown()) {
       this.scheduler = Executors.newSingleThreadExecutor();
