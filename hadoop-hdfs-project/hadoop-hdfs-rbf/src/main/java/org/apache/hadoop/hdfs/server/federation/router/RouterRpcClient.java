@@ -136,9 +136,9 @@ public class RouterRpcClient {
   /** Field separator of CallerContext. */
   private final String contextFieldSeparator;
   /** Observer read enabled. Default for all nameservices. */
-  private static boolean observerReadEnabledDefault;
+  private final boolean observerReadEnabledDefault;
   /** Nameservice specific overrides of the default setting for enabling observer reads. */
-  private static HashSet<String> observerReadEnabledOverrides = new HashSet<>();
+  private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
   /**
    * Period to refresh namespace stateID using active namenode.
    * This ensures the namespace stateID is fresh even when an
@@ -1811,7 +1811,7 @@ public class RouterRpcClient {
    * @param nsId namespaceID
    * @return whether the 'namespace' has observer reads enabled.
    */
-  static boolean isNamespaceObserverReadEligible(String nsId) {
+  boolean isNamespaceObserverReadEligible(String nsId) {
     return observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
   }
 
