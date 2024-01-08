@@ -284,12 +284,12 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
     fs.s3a.aws.credentials.provider config, and it will be translated into
     the specified value of credential provider class based on the key-value
     pair provided by this config.
-    
+
     Example:
     com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
     com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
     com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
-    
+
     With the above key-value pairs, if fs.s3a.aws.credentials.provider specifies
     com.amazonaws.auth.AnonymousAWSCredentials, it will be remapped to
     org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider by S3A while
