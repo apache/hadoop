@@ -406,16 +406,23 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Perform lazy seek and adjust stream to correct position for reading.
-   *
+   * If an EOF Exception is raised there are two possibilities
+   * <ol>
+   *   <li>the stream is at the end of the file</li>
+   *   <li>something went wrong with the network connection</li>
+   * </ol>
+   * This method does not attempt to distinguish; it assumes that an EOF
+   * exception is always "end of file".
    * @param targetPos position from where data should be read
    * @param len length of the content that needs to be read
+   * @throws RangeNotSatisfiableEOFException GET is out of range
+   * @throws IOException anything else.
    */
   @Retries.RetryTranslated
   private void lazySeek(long targetPos, long len) throws IOException {
 
     Invoker invoker = context.getReadInvoker();
-    invoker.maybeRetry(streamStatistics.getOpenOperations() == 0,
-        "lazySeek", pathStr, true,
+    invoker.retry("lazySeek", pathStr, true,
         () -> {
           //For lazy seek
           seekInStream(targetPos, len);
@@ -449,7 +456,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, 1);
-    } catch (EOFException e) {
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
+      LOG.debug("Downgrading 416 response attempt to read at {} to -1 response", nextReadPos);
       return -1;
     }
 
@@ -465,9 +474,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           }
           try {
             b = wrappedStream.read();
-          } catch (EOFException e) {
-            return -1;
-          } catch (SocketTimeoutException e) {
+          } catch (HttpChannelEOFException | SocketTimeoutException e) {
             onReadFailure(e, true);
             throw e;
           } catch (IOException e) {
@@ -534,8 +541,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, len);
-    } catch (EOFException e) {
-      // the end of the file has moved
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
       return -1;
     }
 
