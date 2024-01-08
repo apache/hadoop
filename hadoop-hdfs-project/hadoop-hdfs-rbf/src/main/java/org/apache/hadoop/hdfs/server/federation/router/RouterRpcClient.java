@@ -136,7 +136,7 @@ public class RouterRpcClient {
   /** Field separator of CallerContext. */
   private final String contextFieldSeparator;
   /** Observer read enabled. Default for all nameservices. */
-  private static boolean observerReadEnabledDefault = RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE;
+  private static boolean observerReadEnabledDefault;
   /** Nameservice specific overrides of the default setting for enabling observer reads. */
   private static HashSet<String> observerReadEnabledOverrides = new HashSet<>();
   /**
@@ -221,7 +221,7 @@ public class RouterRpcClient {
         failoverSleepBaseMillis, failoverSleepMaxMillis);
     String[] ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
     this.enableProxyUser = ipProxyUsers != null && ipProxyUsers.length > 0;
-    observerReadEnabledDefault = conf.getBoolean(
+    this.observerReadEnabledDefault = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE);
     String[] observerReadOverrides =
@@ -229,7 +229,7 @@ public class RouterRpcClient {
     if (observerReadOverrides != null) {
       observerReadEnabledOverrides.addAll(Arrays.asList(observerReadOverrides));
     }
-    if (observerReadEnabledDefault) {
+    if (this.observerReadEnabledDefault) {
       LOG.info("Observer read is enabled for router.");
     }
     this.activeNNStateIdRefreshPeriodMs = conf.getTimeDuration(
