@@ -28,11 +28,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readStream;
@@ -56,6 +59,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AOpenCost.class);
 
+  public static final String TEXT = "0123456789ABCDEF";
+
   private Path testFile;
 
   private FileStatus testFileStatus;
@@ -76,7 +81,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     testFile = methodPath();
 
-    writeTextFile(fs, testFile, "openfile", true);
+    writeTextFile(fs, testFile, TEXT, true);
     testFileStatus = fs.getFileStatus(testFile);
     fileLength = testFileStatus.getLen();
   }
@@ -137,15 +142,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     int offset = 2;
     long shortLen = fileLength - offset;
     // open the file
-    FSDataInputStream in2 = verifyMetrics(() ->
-            fs.openFile(testFile)
-                .must(FS_OPTION_OPENFILE_READ_POLICY,
-                    FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .mustLong(FS_OPTION_OPENFILE_LENGTH, shortLen)
-                .build()
-                .get(),
-        always(NO_HEAD_OR_LIST),
-        with(STREAM_READ_OPENED, 0));
+    FSDataInputStream in2 = openFile(shortLen,
+            FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL);
 
     // verify that the statistics are in range
     IOStatistics ioStatistics = extractStatistics(in2);
@@ -171,39 +169,118 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testOpenFileLongerLength() throws Throwable {
-    // do a second read with the length declared as longer
+  public void testOpenFileLongerLengthReadFully() throws Throwable {
+    // do a read with the length declared as longer
     // than it is.
     // An EOF will be read on readFully(), -1 on a read()
 
-    S3AFileSystem fs = getFileSystem();
-    // set a length past the actual file length
-    long longLen = fileLength + 10;
-    FSDataInputStream in3 = verifyMetrics(() ->
-            fs.openFile(testFile)
-                .must(FS_OPTION_OPENFILE_READ_POLICY,
-                    FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .mustLong(FS_OPTION_OPENFILE_LENGTH, longLen)
-                .build()
-                .get(),
-        always(NO_HEAD_OR_LIST));
+    final int extra = 10;
+    long longLen = fileLength + extra;
+
 
     // assert behaviors of seeking/reading past the file length.
     // there is no attempt at recovery.
     verifyMetrics(() -> {
-      byte[] out = new byte[(int) longLen];
-      intercept(EOFException.class,
-          () -> in3.readFully(0, out));
-      in3.seek(longLen - 1);
-      assertEquals("read past real EOF on " + in3,
-          -1, in3.read());
-      in3.close();
-      return in3.toString();
-    },
+          try (FSDataInputStream in = openFile(longLen,
+              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
+            byte[] out = new byte[(int) (longLen)];
+            intercept(EOFException.class,
+                () -> in.readFully(0, out));
+            in.seek(longLen - 1);
+            assertEquals("read past real EOF on " + in,
+                -1, in.read());
+            return in.toString();
+          }
+        },
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
         with(STREAM_READ_OPENED, 2));
+
+    // now on a new stream, try a full read from after the EOF
+    verifyMetrics(() -> {
+          try (FSDataInputStream in = openFile(longLen,
+              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
+            byte[] out = new byte[extra];
+            intercept(EOFException.class,
+                () -> in.readFully(fileLength, out));
+            return in.toString();
+          }
+        },
+        // two GET calls were made, one for readFully,
+        // the second on the read() past the EOF
+        // the operation has got as far as S3
+        with(STREAM_READ_OPENED, 2));
+
+
+  }
+
+  /**
+   * Open a file.
+   * @param longLen length to declare
+   * @param policy read policy
+   * @return file handle
+   */
+  private FSDataInputStream openFile(final long longLen, String policy)
+      throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    // set a length past the actual file length
+    return verifyMetrics(() ->
+            fs.openFile(testFile)
+                .must(FS_OPTION_OPENFILE_READ_POLICY, policy)
+                .mustLong(FS_OPTION_OPENFILE_LENGTH, longLen)
+                .build()
+                .get(),
+        always(NO_HEAD_OR_LIST));
+  }
+
+  /**
+   * Read a file read() by read and expect it all to work through the file, -1 afterwards.
+   */
+  @Test
+  public void testOpenFileLongerLengthReadCalls() throws Throwable {
+
+    // set a length past the actual file length
+    final int extra = 10;
+    long longLen = fileLength + extra;
+    try (FSDataInputStream in = openFile(longLen,
+        FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+      for (int i = 0; i < fileLength; i++) {
+        assertEquals("read() at " + i,
+            TEXT.charAt(i), in.read());
+      }
+    }
+
+    // now open and read after the EOF; this is
+    // expected to return -1 on each read; there's a GET per call.
+    // as the counters are updated on close(), the stream must be closed
+    // within the verification clause.
+    // note how there's no attempt to alter file expected length...
+    // instead the call always goes to S3.
+    // there's no information in the exception from the SDK
+    describe("reading past the end of the file");
+
+    verifyMetrics(() -> {
+          try (FSDataInputStream in =
+                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+            for (int i = 0; i < extra; i++) {
+              final long p = fileLength + i;
+              in.seek(p);
+
+              assertEquals("read() at " + p,
+                  -1, in.read());
+            }
+            return in.toString();
+          }
+
+        },
+        with(Statistic.ACTION_HTTP_GET_REQUEST, extra));
+
+    // now, next corner case. Do a block read() of more bytes than the file length.
+    try (FSDataInputStream in =
+                       openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+
+    }
 
   }
 }

@@ -43,8 +43,6 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.http.NoHttpResponseException;
 
-
-import static java.lang.Math.min;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.requestRange;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.sdkClientException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_416_RANGE_NOT_SATISFIABLE;
@@ -54,10 +52,13 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * Tests S3AInputStream retry behavior on read failure.
+ * <p>
  * These tests are for validating expected behavior of retrying the
  * S3AInputStream read() and read(b, off, len), it tests that the read should
  * reopen the input stream and retry the read when IOException is thrown
  * during the read process.
+ * <p>
+ * This includes handling of out of range requests.
  */
 public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
@@ -111,7 +112,6 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    */
   @Test
   public void testReadMultipleSeeksNoHttpResponse() throws Throwable {
-    final int l = INPUT.length();
     final RuntimeException ex = sdkClientException(new NoHttpResponseException("no response"));
     // fail on even reads
     S3AInputStream stream = getMockedS3AInputStream(

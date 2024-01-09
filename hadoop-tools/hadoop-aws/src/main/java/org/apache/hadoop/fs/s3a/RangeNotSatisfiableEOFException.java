@@ -20,17 +20,19 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.EOFException;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Status code 416, range not satisfiable.
  * Subclass of {@link EOFException} so that any code which expects that to
  * be the outcome of a 416 failure will continue to work.
  */
+@InterfaceAudience.Private
 public class RangeNotSatisfiableEOFException extends EOFException {
+
   public RangeNotSatisfiableEOFException(
       String operation,
-      AwsServiceException cause) {
+      Exception cause) {
     super(operation);
     initCause(cause);
   }

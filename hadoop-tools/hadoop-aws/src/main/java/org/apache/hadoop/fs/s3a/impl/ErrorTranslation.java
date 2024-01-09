@@ -61,6 +61,7 @@ public final class ErrorTranslation {
    */
   private static final String SHADED_NO_HTTP_RESPONSE_EXCEPTION =
       "software.amazon.awssdk.thirdparty.org.apache.http.NoHttpResponseException";
+
   /**
    * Private constructor for utility class.
    */

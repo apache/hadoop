@@ -309,6 +309,9 @@ public final class S3AUtils {
       // out of range. This may happen if an object is overwritten with
       // a shorter one while it is being read or openFile() was invoked
       // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
       case SC_416_RANGE_NOT_SATISFIABLE:
         ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;

@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.EOFException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Http channel exception; subclass of EOFException.
  * In particular:
@@ -28,6 +30,7 @@ import java.io.EOFException;
  * The http client library exceptions may be shaded/unshaded; this is the
  * exception used in retry policies.
  */
+@InterfaceAudience.Private
 public class HttpChannelEOFException extends EOFException {
 
   public HttpChannelEOFException(final String path,

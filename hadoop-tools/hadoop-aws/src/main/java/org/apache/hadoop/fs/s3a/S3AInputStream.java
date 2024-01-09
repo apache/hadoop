@@ -422,7 +422,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void lazySeek(long targetPos, long len) throws IOException {
 
     Invoker invoker = context.getReadInvoker();
-    invoker.retry("lazySeek", pathStr, true,
+    invoker.retry("lazySeek to " + targetPos, pathStr, true,
         () -> {
           //For lazy seek
           seekInStream(targetPos, len);
@@ -560,12 +560,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           }
           try {
             bytes = wrappedStream.read(buf, off, len);
+          } catch (HttpChannelEOFException | SocketTimeoutException e) {
+            onReadFailure(e, true);
+            throw e;
           } catch (EOFException e) {
             // the base implementation swallows EOFs.
             return -1;
-          } catch (SocketTimeoutException e) {
-            onReadFailure(e, true);
-            throw e;
           } catch (IOException e) {
             onReadFailure(e, false);
             throw e;
@@ -994,7 +994,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
               range.getOffset(), range.getLength(), pathStr);
       LOG.warn(errMsg);
-      throw new EOFException(errMsg);
+      throw new RangeNotSatisfiableEOFException(errMsg, null);
     }
   }
 
