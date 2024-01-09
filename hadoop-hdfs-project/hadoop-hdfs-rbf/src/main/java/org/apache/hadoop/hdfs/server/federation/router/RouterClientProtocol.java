@@ -1105,6 +1105,9 @@ public class RouterClientProtocol implements ClientProtocol {
             dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
           datanodesMap.put(nodeId, dn);
         } else {
+          oldDn.getDatanodeInfo().setNumBlocks(
+              oldDn.getDatanodeInfo().getNumBlocks() +
+                  dnInfo.getNumBlocks());
           LOG.debug("{} is in multiple subclusters", nodeId);
         }
       }

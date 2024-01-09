@@ -2270,6 +2270,9 @@ public class DatanodeManager {
       reports[i] = new DatanodeStorageReport(
           new DatanodeInfoBuilder().setFrom(d).setNumBlocks(d.numBlocks()).build(),
           d.getStorageReports());
+      if (d.getSoftwareVersion() != null) {
+        reports[i].getDatanodeInfo().setSoftwareVersion(d.getSoftwareVersion());
+      }
     }
     return reports;
   }

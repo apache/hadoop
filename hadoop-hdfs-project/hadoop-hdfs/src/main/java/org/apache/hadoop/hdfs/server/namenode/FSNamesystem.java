@@ -4981,6 +4981,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     for (int i = 0; i < datanodeInfos.length; i++) {
       datanodeInfos[i] = new DatanodeInfoBuilder().setFrom(results.get(i)).build();
       datanodeInfos[i].setNumBlocks(results.get(i).numBlocks());
+      datanodeInfos[i].setSoftwareVersion(results.get(i).getSoftwareVersion());
     }
     return datanodeInfos;
   }

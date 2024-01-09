@@ -385,6 +385,9 @@ public class PBHelperClient {
     if (info.getUpgradeDomain() != null) {
       builder.setUpgradeDomain(info.getUpgradeDomain());
     }
+    if (info.getSoftwareVersion() != null) {
+      builder.setSoftwareVersion(info.getSoftwareVersion());
+    }
     builder
         .setId(convert((DatanodeID) info))
         .setCapacity(info.getCapacity())
@@ -795,7 +798,12 @@ public class PBHelperClient {
       long nonDFSUsed = di.getCapacity() - di.getDfsUsed() - di.getRemaining();
       dinfo.setNonDfsUsed(nonDFSUsed < 0 ? 0 : nonDFSUsed);
     }
-    return dinfo.build();
+
+    DatanodeInfo buildInfo = dinfo.build();
+    if (di.hasSoftwareVersion()) {
+      buildInfo.setSoftwareVersion(di.getSoftwareVersion());
+    }
+    return buildInfo;
   }
 
   public static StorageType[] convertStorageTypes(
