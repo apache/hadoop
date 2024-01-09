@@ -397,6 +397,8 @@ public interface HdfsClientConfigKeys {
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
     String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
     boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
+    String DFS_CLIENT_LAZY_RESOLVED = PREFIX + "lazy.resolved";
+    boolean DFS_CLIENT_LAZY_RESOLVED_DEFAULT = false;
   }
 
   /** dfs.client.write configuration properties */
