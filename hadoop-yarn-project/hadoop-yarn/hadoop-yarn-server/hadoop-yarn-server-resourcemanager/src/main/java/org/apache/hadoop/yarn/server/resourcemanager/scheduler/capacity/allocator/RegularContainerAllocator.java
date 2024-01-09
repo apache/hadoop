@@ -873,7 +873,11 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (reservedContainer == null) {
         result = preCheckForNodeCandidateSet(node,
             schedulingMode, resourceLimits, schedulerKey);
-        if (null != result) {
+        if (result.getAllocationState() == AllocationState.PRIORITY_SKIPPED
+            || result.getAllocationState() == AllocationState.APP_SKIPPED
+            || result.getAllocationState() == AllocationState.QUEUE_SKIPPED) {
+          break;
+        } else {
           continue;
         }
       } else {
