@@ -1159,4 +1159,26 @@ public class TestDFSUtil {
     assertEquals(102_400_000,
         DFSUtil.getTransferRateInBytesPerSecond(512_000_000L, 5_000_000_000L));
   }
+
+  @Test
+  public void testLazyResolve(){
+    final String ns1Nn1 = "localhost:8020";
+    final String ns1Nn2 = "127.0.0.1:8020";
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setBoolean(HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED, true);
+    conf.set(DFS_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"), "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), ns1Nn1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), ns1Nn2);
+    Map<String, Map<String, InetSocketAddress>> addresses =
+        DFSUtilClient.getAddresses(conf, null, DFS_NAMENODE_RPC_ADDRESS_KEY);
+    Map<String, InetSocketAddress> inetSocketAddressMap = addresses.get("ns1");
+    // Address is null, because it has not been resolved yet
+    for(Map.Entry<String, InetSocketAddress> entry : inetSocketAddressMap.entrySet()) {
+      assertNull(entry.getValue().getAddress());
+      assertEquals(entry.getValue().getPort(), 8020);
+    }
+  }
 }
