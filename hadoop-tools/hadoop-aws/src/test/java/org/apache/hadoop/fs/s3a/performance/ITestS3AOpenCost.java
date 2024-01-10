@@ -276,7 +276,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             }
             return in.toString();
           }
-
         },
         with(Statistic.ACTION_HTTP_GET_REQUEST, extra));
   }

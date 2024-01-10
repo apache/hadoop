@@ -54,7 +54,8 @@ public final class ErrorTranslation {
   /**
    * Classname of unshaded Http Client exception: {@value}.
    */
-  private static final String RAW_NO_HTTP_RESPONSE_EXCEPTION = "org.apache.http.NoHttpResponseException";
+  private static final String RAW_NO_HTTP_RESPONSE_EXCEPTION =
+      "org.apache.http.NoHttpResponseException";
 
   /**
    * Classname of shaded Http Client exception: {@value}.
