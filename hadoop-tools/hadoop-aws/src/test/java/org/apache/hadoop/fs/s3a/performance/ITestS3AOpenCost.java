@@ -22,7 +22,6 @@ package org.apache.hadoop.fs.s3a.performance;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
