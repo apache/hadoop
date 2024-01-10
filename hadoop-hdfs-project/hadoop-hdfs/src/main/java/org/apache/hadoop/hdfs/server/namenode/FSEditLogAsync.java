@@ -215,7 +215,9 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
           int permits = overflowMutex.drainPermits();
           try {
             do {
-              this.wait(1000); // will be notified by next logSync.
+              synchronized (this) {
+                this.wait(1000); // will be notified by next logSync.
+              }
             } while (!editPendingQ.offer(edit));
           } finally {
             overflowMutex.release(permits);
