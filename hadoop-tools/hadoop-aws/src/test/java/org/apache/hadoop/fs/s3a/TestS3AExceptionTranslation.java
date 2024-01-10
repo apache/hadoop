@@ -278,7 +278,6 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
                 .build()));
   }
 
-
   @Test
   public void testTranslateCredentialException() throws Throwable {
     verifyExceptionClass(AccessDeniedException.class,

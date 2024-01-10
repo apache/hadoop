@@ -1760,7 +1760,7 @@ public final class S3ATestUtils {
       if (values.length == 2) {
         try {
           long start = Long.parseUnsignedLong(values[0]);
-          long end = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[1]);
           return Pair.of(start, end);
         } catch (NumberFormatException e) {
           LOG.warn("Failed to parse range header {}", rangeHeader, e);

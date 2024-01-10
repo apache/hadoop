@@ -22,6 +22,8 @@ package org.apache.hadoop.fs.s3a.performance;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -32,12 +34,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
@@ -54,6 +58,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_FILE_OPENED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 /**
  * Cost of openFile().
@@ -311,9 +316,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
   }
 
-
   /**
-   * Test {@code PositionedReadable#read()} past EOF in a file.
+   * Test {@code PositionedReadable.read()} past EOF in a file.
    */
   @Test
   public void testPositionedReadableReadPastEOF() throws Throwable {
@@ -349,6 +353,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
   /**
    * Test Vector Read past EOF in a file.
+   * See related tests in {@code ITestS3AContractVectoredRead}
    */
   @Test
   public void testVectorReadPastEOF() throws Throwable {
@@ -361,16 +366,21 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     verifyMetrics(() -> {
           try (FSDataInputStream in =
                    openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
-            byte[] buf = new byte[(int) (longLen + 1)];
+            assertS3StreamClosed(in);
+            byte[] buf = new byte[(int) (longLen)];
             ByteBuffer bb = ByteBuffer.wrap(buf);
             final FileRange range = FileRange.createFileRange(0, longLen);
             in.readVectored(Arrays.asList(range), (i) -> bb);
+            interceptFuture(EOFException.class,
+                EOF_IN_READ_FULLY,
+                ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+                TimeUnit.SECONDS,
+                range.getData());
             assertS3StreamClosed(in);
             return "vector read past EOF";
           }
-
         },
-        with(Statistic.ACTION_HTTP_GET_REQUEST, 0)); // vector stats don't add this
+        with(Statistic.ACTION_HTTP_GET_REQUEST, 1));
   }
 
   /**
