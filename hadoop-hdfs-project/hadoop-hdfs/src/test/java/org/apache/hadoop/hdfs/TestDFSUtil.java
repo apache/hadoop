@@ -1161,24 +1161,49 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testLazyResolve(){
+  public void testLazyResolved() {
+    // Not lazy resolved.
+    testLazyResolved(false);
+    // Lazy resolved.
+    testLazyResolved(true);
+  }
+
+  private void testLazyResolved(boolean isLazy) {
     final String ns1Nn1 = "localhost:8020";
     final String ns1Nn2 = "127.0.0.1:8020";
+    final String ns2Nn1 = "127.0.0.2:8020";
+    final String ns2Nn2 = "127.0.0.3:8020";
+
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED, true);
-    conf.set(DFS_NAMESERVICES, "ns1");
+
+    conf.set(DFS_NAMESERVICES, "ns1,ns2");
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"), "nn1,nn2");
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), ns1Nn1);
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), ns1Nn2);
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns2"), "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "nn1"), ns2Nn1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "nn2"), ns2Nn2);
+
+    conf.setBoolean(HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED, isLazy);
+
     Map<String, Map<String, InetSocketAddress>> addresses =
         DFSUtilClient.getAddresses(conf, null, DFS_NAMENODE_RPC_ADDRESS_KEY);
-    Map<String, InetSocketAddress> inetSocketAddressMap = addresses.get("ns1");
-    // Address is null, because it has not been resolved yet
-    for(Map.Entry<String, InetSocketAddress> entry : inetSocketAddressMap.entrySet()) {
-      assertNull(entry.getValue().getAddress());
-      assertEquals(entry.getValue().getPort(), 8020);
-    }
+
+    addresses.forEach((ns, inetSocketAddressMap) -> {
+      inetSocketAddressMap.forEach((nn, inetSocketAddress) -> {
+        if (isLazy) {
+          // Lazy resolved. There is no need to change host->ip in advance.
+          assertTrue(inetSocketAddress.isUnresolved());
+        }else {
+          // Need resolve all host->ip.
+          assertFalse(inetSocketAddress.isUnresolved());
+        }
+        assertEquals(inetSocketAddress.getPort(), 8020);
+      });
+    });
   }
 }
