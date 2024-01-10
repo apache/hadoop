@@ -173,6 +173,11 @@ public class ConnectionManager {
     }
   }
 
+  @VisibleForTesting
+  public void closeConnectionCreator(){
+    this.creator.shutdown();
+  }
+
   /**
    * Fetches the next available proxy client in the pool. Each client connection
    * is reserved for a single user and cannot be reused until free.
