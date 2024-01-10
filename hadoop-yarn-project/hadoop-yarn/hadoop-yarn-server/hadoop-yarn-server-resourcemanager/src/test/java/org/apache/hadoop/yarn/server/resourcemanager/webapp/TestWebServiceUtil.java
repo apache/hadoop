@@ -26,6 +26,10 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.ws.rs.core.MediaType;
@@ -40,12 +44,15 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
@@ -94,7 +101,6 @@ public final class TestWebServiceUtil {
   public static void runTest(String template, String name,
       MockRM rm,
       WebResource resource) throws Exception {
-    final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
     try {
       boolean legacyQueueMode = ((CapacityScheduler) rm.getResourceScheduler())
           .getConfiguration().isLegacyQueueMode();
@@ -105,16 +111,10 @@ public final class TestWebServiceUtil {
 
       MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
       rm.registerNode("h2:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
       assertJsonResponse(sendRequest(resource),
           getExpectedResourceFile(template, name, "16", legacyQueueMode));
       rm.registerNode("h3:1234", 8 * GB, 8);
       MockNM nm4 = rm.registerNode("h4:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
 
       assertJsonResponse(sendRequest(resource),
           getExpectedResourceFile(template, name, "32", legacyQueueMode));
@@ -213,6 +213,7 @@ public final class TestWebServiceUtil {
       IOException {
     assertJsonType(response);
     JSONObject json = response.getEntity(JSONObject.class);
+    sortQueuesLexically(json);
     String actual = prettyPrintJson(json.toString(2));
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
@@ -220,8 +221,66 @@ public final class TestWebServiceUtil {
         actual);
   }
 
+  /**
+   * Sorts the "queue": [ {}, {}, {} ] parts recursively by the queuePath key.
+   *
+   * <p>
+   * There was a marshalling error described in YARN-4785 in CapacitySchedulerInfo.getQueues().
+   * If that issue still present, we can't sort the queues there, but only sort the leaf queues
+   * then the non-leaf queues which would make a consistent output, but hard to document.
+   * Instead we make sure the test data is at least ordered by queue names.
+   * </p>
+   *
+   * @param object the json object to sort.
+   * @throws JSONException when
+   */
+  private static void sortQueuesLexically(JSONObject object) throws JSONException {
+    Iterator<?> keys = object.keys();
+    while (keys.hasNext()) {
+      String key = (String) keys.next();
+      Object o = object.get(key);
+      if (key.equals("queue") && (o instanceof JSONArray)) {
+        JSONArray original = (JSONArray) o;
+
+        List<JSONObject> queues = new ArrayList<>(original.length());
+        for (int i = 0; i < original.length(); i++) {
+          if (original.get(i) instanceof  JSONObject) {
+            queues.add((JSONObject) original.get(i));
+          }
+        }
+        queues.sort(new Comparator<JSONObject>() {
+          private static final String SORT_BY_KEY = "queuePath";
+
+          @Override
+          public int compare(JSONObject a, JSONObject b) {
+            String vA = "";
+            String vB = "";
+
+            try {
+              vA = (String) a.get(SORT_BY_KEY);
+              vB = (String) b.get(SORT_BY_KEY);
+            } catch (JSONException ignored) {
+            }
+
+            return vA.compareTo(vB);
+          }
+        });
+
+        JSONArray sortedArray = new JSONArray(queues.size());
+        for (JSONObject queue : queues) {
+          sortedArray.put(queue);
+        }
+
+        object.put("queue", sortedArray);
+      } if (o instanceof JSONObject) {
+        sortQueuesLexically((JSONObject) o);
+      }
+    }
+  }
+
   private static String prettyPrintJson(String in) throws JsonProcessingException {
     ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     return objectMapper
         .writerWithDefaultPrettyPrinter()
         .writeValueAsString(objectMapper.readTree(in));
@@ -293,12 +352,10 @@ public final class TestWebServiceUtil {
     return rm;
   }
 
-  public static MockRM createMutableRM(Configuration conf) throws IOException {
+  public static MockRM createMutableRM(Configuration conf) {
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    MockRM rm = createRM(new CapacitySchedulerConfiguration(conf));
-    reinitialize(rm, conf);
-    return rm;
+    return createRM(new CapacitySchedulerConfiguration(conf));
   }
 
   public static void reinitialize(MockRM rm, Configuration conf) throws IOException {
