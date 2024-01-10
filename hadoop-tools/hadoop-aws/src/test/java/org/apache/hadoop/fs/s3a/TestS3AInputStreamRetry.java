@@ -107,11 +107,29 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   }
 
   /**
-   * seek and read repeatedly with every second GET failing; this is effective
-   * in simulating reopen() failures.
+   * Seek and read repeatedly with every second GET failing with {@link NoHttpResponseException}.
+   * This should be effective in simulating {@code reopen()} failures caused by network problems.
    */
   @Test
   public void testReadMultipleSeeksNoHttpResponse() throws Throwable {
+    final RuntimeException ex = sdkClientException(new NoHttpResponseException("no response"));
+    // fail on even reads
+    S3AInputStream stream = getMockedS3AInputStream(
+        maybeFailInGetCallback(ex, (index) -> (index % 2 == 0)));
+    // 10 reads with repeated failures.
+    for (int i = 0; i < 10; i++) {
+      stream.seek(0);
+      final int r = stream.read();
+      assertReadValueMatchesOffset(r, 0, "read attempt " + i + " of " + stream);
+    }
+  }
+
+  /**
+   * Seek and read repeatedly with every second GET failing with {@link NoHttpResponseException}.
+   * This should be effective in simulating {@code reopen()} failures caused by network problems.
+   */
+  @Test
+  public void testReadMultipleSeeksStreamClosed() throws Throwable {
     final RuntimeException ex = sdkClientException(new NoHttpResponseException("no response"));
     // fail on even reads
     S3AInputStream stream = getMockedS3AInputStream(

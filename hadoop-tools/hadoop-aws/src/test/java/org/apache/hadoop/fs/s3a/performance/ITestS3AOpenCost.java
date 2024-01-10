@@ -20,16 +20,20 @@ package org.apache.hadoop.fs.s3a.performance;
 
 
 import java.io.EOFException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -65,7 +69,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
   private FileStatus testFileStatus;
 
-  private long fileLength;
+  private int fileLength;
 
   public ITestS3AOpenCost() {
     super(true);
@@ -83,7 +87,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     writeTextFile(fs, testFile, TEXT, true);
     testFileStatus = fs.getFileStatus(testFile);
-    fileLength = testFileStatus.getLen();
+    fileLength = (int)testFileStatus.getLen();
   }
 
   /**
@@ -195,7 +199,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
-        with(STREAM_READ_OPENED, 2));
+        with(STREAM_READ_OPENED, 1 + 1));
 
     // now on a new stream, try a full read from after the EOF
     verifyMetrics(() -> {
@@ -210,9 +214,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
-        with(STREAM_READ_OPENED, 2));
-
-
+        with(STREAM_READ_OPENED, 1));
   }
 
   /**
@@ -235,19 +237,21 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   }
 
   /**
-   * Read a file read() by read and expect it all to work through the file, -1 afterwards.
+   * Open a file with a length declared as longer than the actual file length.
+   * Validate input stream.read() semantics.
    */
   @Test
-  public void testOpenFileLongerLengthReadCalls() throws Throwable {
+  public void testReadPastEOF() throws Throwable {
 
     // set a length past the actual file length
     final int extra = 10;
-    long longLen = fileLength + extra;
+    int longLen = fileLength + extra;
     try (FSDataInputStream in = openFile(longLen,
         FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
       for (int i = 0; i < fileLength; i++) {
-        assertEquals("read() at " + i,
-            TEXT.charAt(i), in.read());
+        Assertions.assertThat(in.read())
+            .describedAs("read() at %d", i)
+            .isEqualTo(TEXT.charAt(i));
       }
     }
 
@@ -264,23 +268,131 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
           try (FSDataInputStream in =
                    openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
             for (int i = 0; i < extra; i++) {
-              final long p = fileLength + i;
+              final int p = fileLength + i;
               in.seek(p);
-
-              assertEquals("read() at " + p,
-                  -1, in.read());
+              Assertions.assertThat(in.read())
+                  .describedAs("read() at %d", p)
+                  .isEqualTo(-1);
             }
             return in.toString();
           }
 
         },
         with(Statistic.ACTION_HTTP_GET_REQUEST, extra));
+  }
 
-    // now, next corner case. Do a block read() of more bytes than the file length.
-    try (FSDataInputStream in =
-                       openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+  /**
+   * Test {@code PositionedReadable.readFully()} past EOF in a file.
+   */
+  @Test
+  public void testPositionedReadableReadFullyPastEOF() throws Throwable {
+    // now, next corner case. Do a readFully() of more bytes than the file length.
+    // we expect failure.
+    // this codepath does a GET to the end of the (expected) file length, and when
+    // that GET returns -1 from the read because the bytes returned is less than
+    // expected then the readFully call fails.
+    describe("PositionedReadable.readFully() past the end of the file");
+    // set a length past the actual file length
+    final int extra = 10;
+    int longLen = fileLength + extra;
+    verifyMetrics(() -> {
+          try (FSDataInputStream in =
+                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+            byte[] buf = new byte[(int) (longLen + 1)];
 
-    }
+            // readFully will fail
+            intercept(EOFException.class, () -> {
+              in.readFully(0, buf);
+              return in;
+            });
+            assertS3StreamClosed(in);
+            return "readFully past EOF";
+          }
+        },
+        with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
+  }
 
+
+  /**
+   * Test {@code PositionedReadable#read()} past EOF in a file.
+   */
+  @Test
+  public void testPositionedReadableReadPastEOF() throws Throwable {
+
+    // set a length past the actual file length
+    final int extra = 10;
+    int longLen = fileLength + extra;
+
+    describe("PositionedReadable.read() past the end of the file");
+
+    verifyMetrics(() -> {
+          try (FSDataInputStream in =
+                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+            byte[] buf = new byte[(int) (longLen + 1)];
+
+            // readFully will read to the end of the file
+            Assertions.assertThat(in.read(0, buf, 0, buf.length))
+                .isEqualTo(fileLength);
+            assertS3StreamOpen(in);
+
+            // now attempt to read after EOF
+            Assertions.assertThat(in.read(fileLength, buf, 0, buf.length))
+                .describedAs("PositionedReadable.read() past EOF")
+                .isEqualTo(-1);
+            // stream is closed as part of this failure
+            assertS3StreamClosed(in);
+
+            return "PositionedReadable.read()) past EOF";
+          }
+        },
+        with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
+  }
+
+  /**
+   * Test Vector Read past EOF in a file.
+   */
+  @Test
+  public void testVectorReadPastEOF() throws Throwable {
+
+    // set a length past the actual file length
+    final int extra = 10;
+    int longLen = fileLength + extra;
+
+    describe("Vector read past the end of the file");
+    verifyMetrics(() -> {
+          try (FSDataInputStream in =
+                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+            byte[] buf = new byte[(int) (longLen + 1)];
+            ByteBuffer bb = ByteBuffer.wrap(buf);
+            final FileRange range = FileRange.createFileRange(0, longLen);
+            in.readVectored(Arrays.asList(range), (i) -> bb);
+            assertS3StreamClosed(in);
+            return "vector read past EOF";
+          }
+
+        },
+        with(Statistic.ACTION_HTTP_GET_REQUEST, 0)); // vector stats don't add this
+  }
+
+  /**
+   * Assert that the inner S3 Stream is closed.
+   * @param in input stream
+   */
+  private static void assertS3StreamClosed(final FSDataInputStream in) {
+    S3AInputStream s3ain = (S3AInputStream) in.getWrappedStream();
+    Assertions.assertThat(s3ain.isObjectStreamOpen())
+        .describedAs("stream is open")
+        .isFalse();
+  }
+
+  /**
+   * Assert that the inner S3 Stream is open.
+   * @param in input stream
+   */
+  private static void assertS3StreamOpen(final FSDataInputStream in) {
+    S3AInputStream s3ain = (S3AInputStream) in.getWrappedStream();
+    Assertions.assertThat(s3ain.isObjectStreamOpen())
+        .describedAs("stream is closed")
+        .isTrue();
   }
 }

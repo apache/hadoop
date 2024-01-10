@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
@@ -92,13 +94,15 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testEOFRanges416Handling() throws Exception {
     FileSystem fs = getFileSystem();
 
+    final int extendedLen = DATASET_LEN + 1024;
     CompletableFuture<FSDataInputStream> builder =
         fs.openFile(path(VECTORED_READ_FILE_NAME))
-            .mustLong(FS_OPTION_OPENFILE_LENGTH, DATASET_LEN + 1024)
+            .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
             .build();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
 
+    describe("Read starting from past EOF");
     try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, getAllocate());
       FileRange res = fileRanges.get(0);
@@ -109,8 +113,22 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
           TimeUnit.SECONDS,
           data);
     }
-  }
 
+    describe("Read starting 0 continuing past EOF");
+    try (FSDataInputStream in = fs.openFile(path(VECTORED_READ_FILE_NAME))
+                .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+                .build().get()) {
+      final FileRange range = FileRange.createFileRange(0, extendedLen);
+      in.readVectored(Arrays.asList(range), getAllocate());
+      CompletableFuture<ByteBuffer> data = range.getData();
+      interceptFuture(EOFException.class,
+          EOF_IN_READ_FULLY,
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+          TimeUnit.SECONDS,
+          data);
+    }
+
+  }
 
   @Test
   public void testMinSeekAndMaxSizeConfigsPropagation() throws Exception {
