@@ -52,7 +52,6 @@ public class TestMapReduceChildJVM {
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
-    conf.setBoolean(MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT, false);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
