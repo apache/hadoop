@@ -177,6 +177,11 @@ public interface S3ClientFactory {
     private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
 
     /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
      * Is FIPS enabled?
      */
     private boolean fipsEnabled;
@@ -451,6 +456,20 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
     @Override
     public String toString() {
       return "S3ClientCreationParameters{" +
@@ -464,6 +483,7 @@ public interface S3ClientFactory {
           ", multipartCopy=" + multipartCopy +
           ", region='" + region + '\'' +
           ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
           '}';
     }
 

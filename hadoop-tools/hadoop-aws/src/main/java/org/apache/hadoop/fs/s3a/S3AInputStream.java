@@ -1305,6 +1305,17 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   * Get the wrapped stream.
+   * This is for testing only.
+   *
+   * @return the wrapped stream, or null if there is none.
+   */
+  @VisibleForTesting
+  public ResponseInputStream<GetObjectResponse> getWrappedStream() {
+    return wrappedStream;
+  }
+
+  /**
    * Callbacks for input stream IO.
    */
   public interface InputStreamCallbacks extends Closeable {
