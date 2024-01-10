@@ -244,8 +244,8 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   @Override
   public void run() {
     try {
+      NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
       while (true) {
-        NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
         boolean doSync;
         Edit edit = dequeueEdit();
         if (edit != null) {
@@ -258,6 +258,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
           doSync = !syncWaitQ.isEmpty();
           metrics.setPendingEditsCount(0);
         }
+        metrics.setPendingSyncEditsCount(syncWaitQ.size());
         if (doSync) {
           // normally edit log exceptions cause the NN to terminate, but tests
           // relying on ExitUtil.terminate need to see the exception.
