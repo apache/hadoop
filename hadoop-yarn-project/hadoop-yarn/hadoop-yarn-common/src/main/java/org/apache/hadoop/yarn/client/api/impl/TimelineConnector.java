@@ -140,15 +140,11 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  private static final ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
-    = new ConnectionConfigurator() {
-        @Override
-        public HttpURLConnection configure(HttpURLConnection conn)
-            throws IOException {
-          setTimeouts(conn, 60_000);
-          return conn;
-        }
-      };
+  private ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
+    = conn -> {
+      setTimeouts(conn, socketTimeOut);
+      return conn;
+    };
 
   private ConnectionConfigurator getConnConfigurator(SSLFactory sslFactoryObj) {
     try {
