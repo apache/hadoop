@@ -38,6 +38,7 @@ import java.util.zip.Checksum;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -598,7 +599,9 @@ class BlockReceiver implements Closeable {
       return 0;
     }
 
-    datanode.metrics.incrPacketsReceived();
+    if (seqno != DFSPacket.HEART_BEAT_SEQNO) {
+      datanode.metrics.incrPacketsReceived();
+    }
     //First write the packet to the mirror:
     if (mirrorOut != null && !mirrorError) {
       try {
