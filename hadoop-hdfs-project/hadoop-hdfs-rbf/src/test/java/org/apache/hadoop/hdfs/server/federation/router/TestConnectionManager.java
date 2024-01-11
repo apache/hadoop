@@ -366,7 +366,8 @@ public class TestConnectionManager {
   @Test
   public void testConnectionCreatorWithSamePool() throws IOException {
     Configuration tmpConf = new Configuration();
-    // Set DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY to 0 for make pool will be offered in the creatorQueue
+    // Set DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY to 0
+    // for ensuring a pool will be offered in the creatorQueue
     tmpConf.setInt(
         RBFConfigKeys.DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY, 0);
     ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
