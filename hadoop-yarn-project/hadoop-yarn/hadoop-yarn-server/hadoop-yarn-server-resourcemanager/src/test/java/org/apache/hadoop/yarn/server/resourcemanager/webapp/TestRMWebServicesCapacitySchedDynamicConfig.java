@@ -41,6 +41,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.reinitialize;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
@@ -72,6 +73,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   public TestRMWebServicesCapacitySchedDynamicConfig(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
+    getCapacitySchedulerConfigFileInTarget().delete();
   }
 
   @Test

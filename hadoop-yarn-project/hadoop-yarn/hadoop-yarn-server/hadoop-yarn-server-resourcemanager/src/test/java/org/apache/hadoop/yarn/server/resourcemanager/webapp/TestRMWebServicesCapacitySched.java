@@ -45,6 +45,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertXmlResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
@@ -60,6 +61,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   public TestRMWebServicesCapacitySched(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
+    getCapacitySchedulerConfigFileInTarget().delete();
   }
 
   @Test

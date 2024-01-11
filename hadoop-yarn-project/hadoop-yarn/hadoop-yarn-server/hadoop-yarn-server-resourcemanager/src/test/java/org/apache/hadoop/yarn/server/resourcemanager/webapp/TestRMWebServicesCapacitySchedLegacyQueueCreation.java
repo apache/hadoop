@@ -40,6 +40,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
@@ -55,6 +56,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   public TestRMWebServicesCapacitySchedLegacyQueueCreation(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
+    getCapacitySchedulerConfigFileInTarget().delete();
   }
 
   @Test
