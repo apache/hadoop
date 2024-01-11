@@ -43,8 +43,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
@@ -53,9 +56,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -203,15 +203,23 @@ public final class TestWebServiceUtil {
   }
 
   public static void assertJsonResponse(ClientResponse response,
-      String expectedResourceFilename) throws JSONException,
-      IOException {
+      String expectedResourceFilename) throws IOException {
     assertJsonType(response);
-    JSONObject json = response.getEntity(JSONObject.class);
-    sortQueuesLexically(json);
-    String actual = prettyPrintJson(json.toString(2));
+    final ObjectMapper mapper = new ObjectMapper()
+        .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+
+    JsonNode jsonNode = mapper.readTree(response.getEntity(String.class));
+    sortQueuesLexically(mapper, (ObjectNode) jsonNode);
+
+    String actual = writer.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
-        prettyPrintJson(getResourceAsString(expectedResourceFilename)),
+        // Deserialize/serialise again with the exact same settings
+        // to make sure jackson upgrade doesn't break the test
+        writer.writeValueAsString(
+            mapper.readTree(
+                Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
         actual);
   }
 
@@ -225,59 +233,35 @@ public final class TestWebServiceUtil {
    * Instead we make sure the test data is at least ordered by queue names.
    * </p>
    *
+   * @param mapper the object mapper to use.
    * @param object the json object to sort.
-   * @throws JSONException when
    */
-  private static void sortQueuesLexically(JSONObject object) throws JSONException {
-    Iterator<?> keys = object.keys();
+  private static void sortQueuesLexically(ObjectMapper mapper, ObjectNode object) {
+    Iterator<String> keys = object.fieldNames();
     while (keys.hasNext()) {
-      String key = (String) keys.next();
-      Object o = object.get(key);
-      if (key.equals("queue") && (o instanceof JSONArray)) {
-        JSONArray original = (JSONArray) o;
-
-        List<JSONObject> queues = new ArrayList<>(original.length());
-        for (int i = 0; i < original.length(); i++) {
-          if (original.get(i) instanceof  JSONObject) {
-            queues.add((JSONObject) original.get(i));
+      String key = keys.next();
+      JsonNode o = object.get(key);
+      if (key.equals("queue") && o.isArray()) {
+        ArrayNode original = (ArrayNode) o;
+        List<ObjectNode> queues = new ArrayList<>(original.size());
+        for (int i = 0; i < original.size(); i++) {
+          if (original.get(i).isObject()) {
+            queues.add((ObjectNode) original.get(i));
           }
         }
-        queues.sort(new Comparator<JSONObject>() {
+        queues.sort(new Comparator<ObjectNode>() {
           private static final String SORT_BY_KEY = "queuePath";
-
           @Override
-          public int compare(JSONObject a, JSONObject b) {
-            String vA = "";
-            String vB = "";
-
-            try {
-              vA = (String) a.get(SORT_BY_KEY);
-              vB = (String) b.get(SORT_BY_KEY);
-            } catch (JSONException ignored) {
-            }
-
-            return vA.compareTo(vB);
+          public int compare(ObjectNode a, ObjectNode b) {
+            return a.get(SORT_BY_KEY).asText().compareTo(b.get(SORT_BY_KEY).asText());
           }
         });
 
-        JSONArray sortedArray = new JSONArray(queues.size());
-        for (JSONObject queue : queues) {
-          sortedArray.put(queue);
-        }
-
-        object.put("queue", sortedArray);
-      } else if (o instanceof JSONObject) {
-        sortQueuesLexically((JSONObject) o);
+        object.set("queue", mapper.createObjectNode().arrayNode().addAll(queues));
+      } else if (o.isObject()) {
+        sortQueuesLexically(mapper, (ObjectNode) o);
       }
     }
-  }
-
-  private static String prettyPrintJson(String in) throws JsonProcessingException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    return objectMapper
-        .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(objectMapper.readTree(in));
   }
 
   public static void assertJsonType(ClientResponse response) {
