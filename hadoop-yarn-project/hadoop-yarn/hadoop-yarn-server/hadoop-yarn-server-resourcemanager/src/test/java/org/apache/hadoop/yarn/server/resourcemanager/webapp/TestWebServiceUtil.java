@@ -72,8 +72,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.MEMORY_CONFIGURATION_STORE;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 
@@ -161,11 +159,6 @@ public final class TestWebServiceUtil {
       return text + "-legacy";
     }
     return text;
-  }
-
-  public static boolean isMutableConfig(Configuration config) {
-    return Objects.equals(config.get(SCHEDULER_CONFIGURATION_STORE_CLASS),
-        MEMORY_CONFIGURATION_STORE);
   }
 
   public static ClientResponse sendRequest(WebResource resource) {
