@@ -214,4 +214,19 @@ public class TestQueueCapacityConfigParser {
         Lists.newArrayList(nonSetCapacity.iterator());
     Assert.assertEquals(nonSetResources.size(), 0);
   }
+
+  @Test
+  public void testZeroAbsoluteCapacityConfig() {
+    QueueCapacityVector weightCapacityVector =
+        capacityConfigParser.parse(String.format(MEMORY_VCORE_TEMPLATE, 0, 0), QUEUE);
+
+    QueueCapacityVectorEntry memory = weightCapacityVector.getResource(MEMORY_URI);
+    QueueCapacityVectorEntry vcore = weightCapacityVector.getResource(VCORES_URI);
+
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE, memory.getVectorResourceType());
+    Assert.assertEquals(0, memory.getResourceValue(), EPSILON);
+
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE, vcore.getVectorResourceType());
+    Assert.assertEquals(0, vcore.getResourceValue(), EPSILON);
+  }
 }
