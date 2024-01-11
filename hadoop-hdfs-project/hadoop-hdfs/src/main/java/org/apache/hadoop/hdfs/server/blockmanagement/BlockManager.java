@@ -1463,8 +1463,12 @@ public class BlockManager implements BlockStatsMXBean {
         b.getReason(), b.getReasonCode());
 
     NumberReplicas numberOfReplicas = countNodes(b.getStored());
-    boolean hasEnoughLiveReplicas = numberOfReplicas.liveReplicas() >=
-        expectedReplicas;
+    final int numUsableReplicas = numberOfReplicas.liveReplicas() +
+        numberOfReplicas.decommissioning() +
+        numberOfReplicas.liveEnteringMaintenanceReplicas();
+    boolean hasEnoughLiveReplicas = numUsableReplicas >=
+        expectedRedundancies;
+
     boolean minReplicationSatisfied =
         numberOfReplicas.liveReplicas() >= minReplication;
     boolean hasMoreCorruptReplicas = minReplicationSatisfied &&
@@ -1472,12 +1476,15 @@ public class BlockManager implements BlockStatsMXBean {
         expectedReplicas;
     boolean corruptedDuringWrite = minReplicationSatisfied &&
         b.isCorruptedDuringWrite();
-    // case 1: have enough number of live replicas
-    // case 2: corrupted replicas + live replicas > Replication factor
+    // case 1: have enough number of usable replicas
+    // case 2: corrupted replicas + usable replicas > Replication factor
     // case 3: Block is marked corrupt due to failure while writing. In this
     //         case genstamp will be different than that of valid block.
     // In all these cases we can delete the replica.
-    // In case of 3, rbw block will be deleted and valid block can be replicated
+    // In case 3, rbw block will be deleted and valid block can be replicated.
+    // Note NN only becomes aware of corrupt blocks when the block report is sent,
+    // this means that by default it can take up to 6 hours for a corrupt block to
+    // be invalidated, after which the valid block can be replicated.
     if (hasEnoughLiveReplicas || hasMoreCorruptReplicas
         || corruptedDuringWrite) {
       // the block is over-replicated so invalidate the replicas immediately
