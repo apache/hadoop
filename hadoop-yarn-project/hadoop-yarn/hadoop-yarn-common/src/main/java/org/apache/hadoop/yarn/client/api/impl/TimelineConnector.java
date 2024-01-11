@@ -113,7 +113,7 @@ public class TimelineConnector extends AbstractService {
       sslFactory = getSSLFactory(conf);
       connConfigurator = getConnConfigurator(sslFactory);
     } else {
-      connConfigurator = DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+      connConfigurator = default_timeout_conn_configurator;
     }
     String defaultAuth = UserGroupInformation.isSecurityEnabled() ?
             KerberosAuthenticationHandler.TYPE :
@@ -140,11 +140,10 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  private ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
-    = conn -> {
-      setTimeouts(conn, socketTimeOut);
-      return conn;
-    };
+  private ConnectionConfigurator default_timeout_conn_configurator = conn -> {
+    setTimeouts(conn, socketTimeOut);
+    return conn;
+  };
 
   private ConnectionConfigurator getConnConfigurator(SSLFactory sslFactoryObj) {
     try {
@@ -152,7 +151,7 @@ public class TimelineConnector extends AbstractService {
     } catch (Exception e) {
       LOG.debug("Cannot load customized ssl related configuration. "
           + "Fallback to system-generic settings.", e);
-      return DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+      return default_timeout_conn_configurator;
     }
   }
 

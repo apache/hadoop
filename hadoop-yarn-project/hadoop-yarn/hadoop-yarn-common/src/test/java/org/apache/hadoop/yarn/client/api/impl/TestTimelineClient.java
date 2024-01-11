@@ -89,7 +89,7 @@ public class TestTimelineClient {
     if (isSSLConfigured()) {
       KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     }
-    client.getConnector().setSocketTimeOut(60_1000);
+    client.getConnector().setSocketTimeOut(60_000);
   }
 
   @Test
