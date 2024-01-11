@@ -101,8 +101,9 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
       throws IOException {
     File file = new File(tokenFile);
     String clientAssertion = FileUtils.readFileToString(file, "UTF-8");
-    if (Strings.isNullOrEmpty(clientAssertion))
+    if (Strings.isNullOrEmpty(clientAssertion)) {
         throw new IOException("Empty token file.");
+    }
     return clientAssertion;
   }
 }
