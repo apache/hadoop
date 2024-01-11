@@ -272,7 +272,7 @@ public final class TestWebServiceUtil {
         }
 
         object.put("queue", sortedArray);
-      } if (o instanceof JSONObject) {
+      } else if (o instanceof JSONObject) {
         sortQueuesLexically((JSONObject) o);
       }
     }
