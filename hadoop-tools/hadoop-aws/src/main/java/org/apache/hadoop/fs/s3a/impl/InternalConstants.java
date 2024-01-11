@@ -286,4 +286,10 @@ public final class InternalConstants {
           FS_S3A_CREATE_PERFORMANCE_ENABLED,
           DIRECTORY_OPERATIONS_PURGE_UPLOADS,
           ENABLE_MULTI_DELETE));
+
+  /**
+   * AWS V4 Auth Scheme to use when creating signers: {@value}.
+   */
+  public static final String AUTH_SCHEME_AWS_SIGV_4 = "aws.auth#sigv4";
+
 }

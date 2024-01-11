@@ -1543,4 +1543,20 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
+
+  /**
+   * Flag to switch to a v2 SDK HTTP signer. Value {@value}.
+   */
+  public static final String HTTP_SIGNER_ENABLED = "fs.s3a.http.signer.enabled";
+
+  /**
+   * Default value of {@link #HTTP_SIGNER_ENABLED}: {@value}.
+   */
+  public static final boolean HTTP_SIGNER_ENABLED_DEFAULT = false;
+
+  /**
+   * Classname of the http signer to use when {@link #HTTP_SIGNER_ENABLED}
+   * is true: {@value}.
+   */
+  public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
 }
