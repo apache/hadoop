@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
-import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
