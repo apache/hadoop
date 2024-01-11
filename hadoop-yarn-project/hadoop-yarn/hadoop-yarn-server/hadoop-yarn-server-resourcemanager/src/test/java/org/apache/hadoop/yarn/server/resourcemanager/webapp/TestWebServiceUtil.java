@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -358,5 +359,9 @@ public final class TestWebServiceUtil {
     // Therefore CS will think there's only the default queue there.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     cs.reinitialize(conf, rm.getRMContext(), true);
+  }
+
+  public static File getCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE);
   }
 }

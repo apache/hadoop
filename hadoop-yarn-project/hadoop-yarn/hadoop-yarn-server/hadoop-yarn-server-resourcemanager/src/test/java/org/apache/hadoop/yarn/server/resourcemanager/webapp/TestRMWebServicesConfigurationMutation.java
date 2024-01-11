@@ -67,6 +67,7 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -80,11 +81,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   private static final Logger LOG = LoggerFactory
           .getLogger(TestRMWebServicesConfigurationMutation.class);
-
-  private static final File CONF_FILE = new File(new File("target",
-      "test-classes"), YarnConfiguration.CS_CONFIGURATION_FILE);
-  private static final File OLD_CONF_FILE = new File(new File("target",
-      "test-classes"), YarnConfiguration.CS_CONFIGURATION_FILE + ".tmp");
   private static final String LABEL_1 = "label1";
   public static final QueuePath ROOT = new QueuePath("root");
   public static final QueuePath ROOT_A = new QueuePath("root", "a");
@@ -117,12 +113,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
           YarnConfiguration.MEMORY_CONFIGURATION_STORE);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
       try {
-        if (CONF_FILE.exists()) {
-          if (!CONF_FILE.renameTo(OLD_CONF_FILE)) {
-            throw new RuntimeException("Failed to rename conf file");
-          }
-        }
-        FileOutputStream out = new FileOutputStream(CONF_FILE);
+        FileOutputStream out = new FileOutputStream(getCapacitySchedulerConfigFileInTarget());
         csConf.writeXml(out);
         out.close();
       } catch (IOException e) {
@@ -1070,10 +1061,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     if (rm != null) {
       rm.stop();
     }
-    CONF_FILE.delete();
-    if (!OLD_CONF_FILE.renameTo(CONF_FILE)) {
-      throw new RuntimeException("Failed to re-copy old configuration file");
-    }
+    getCapacitySchedulerConfigFileInTarget().delete();
     super.tearDown();
   }
 }
