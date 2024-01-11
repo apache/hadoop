@@ -77,6 +77,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 
 public final class TestWebServiceUtil {
+  private static final ObjectMapper mapper = new ObjectMapper()
+      .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+  private static final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+
   private TestWebServiceUtil(){
   }
 
@@ -205,12 +209,9 @@ public final class TestWebServiceUtil {
   public static void assertJsonResponse(ClientResponse response,
       String expectedResourceFilename) throws IOException {
     assertJsonType(response);
-    final ObjectMapper mapper = new ObjectMapper()
-        .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
 
     JsonNode jsonNode = mapper.readTree(response.getEntity(String.class));
-    sortQueuesLexically(mapper, (ObjectNode) jsonNode);
+    sortQueuesLexically((ObjectNode) jsonNode);
 
     String actual = writer.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
@@ -233,10 +234,9 @@ public final class TestWebServiceUtil {
    * Instead we make sure the test data is at least ordered by queue names.
    * </p>
    *
-   * @param mapper the object mapper to use.
    * @param object the json object to sort.
    */
-  private static void sortQueuesLexically(ObjectMapper mapper, ObjectNode object) {
+  private static void sortQueuesLexically(ObjectNode object) {
     Iterator<String> keys = object.fieldNames();
     while (keys.hasNext()) {
       String key = keys.next();
@@ -259,7 +259,7 @@ public final class TestWebServiceUtil {
 
         object.set("queue", mapper.createObjectNode().arrayNode().addAll(queues));
       } else if (o.isObject()) {
-        sortQueuesLexically(mapper, (ObjectNode) o);
+        sortQueuesLexically((ObjectNode) o);
       }
     }
   }
