@@ -225,7 +225,7 @@ public class TestCrcComposer {
     // boundary in a single CRC, which is not allowed, since we'd lack a
     // CRC corresponding to the actual cellSize boundary.
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalStateException.class,
         "stripe",
         () -> digester.update(crcsByChunk[1], cellSize));
   }
@@ -236,7 +236,7 @@ public class TestCrcComposer {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
 
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalArgumentException.class,
         "length",
         () -> digester.update(crcBytesByChunk, 0, 6, chunkSize));
   }

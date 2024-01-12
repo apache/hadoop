@@ -117,8 +117,6 @@ public class DataChecksum implements Checksum {
    * @param type type.
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
-   * @throws IOException if there is no CRC polynomial applicable
-   *     to the given {@code type}.
    */
   public static int getCrcPolynomialForType(Type type) {
     switch (type) {
@@ -155,6 +153,7 @@ public class DataChecksum implements Checksum {
    * @param bytes bytes.
    * @param offset offset.
    * @return DataChecksum of the type in the array or null in case of an error.
+   * @throws InvalidChecksumSizeException when the stored checksum is invalid.
    */
   public static DataChecksum newDataChecksum(byte[] bytes, int offset)
       throws InvalidChecksumSizeException {
