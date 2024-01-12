@@ -183,8 +183,11 @@ public class DefaultS3ClientFactory extends Configured
         .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
         .build();
 
+    final ClientOverrideConfiguration.Builder override =
+        createClientOverrideConfiguration(parameters, conf);
+
     S3BaseClientBuilder s3BaseClientBuilder = builder
-        .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
+        .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
