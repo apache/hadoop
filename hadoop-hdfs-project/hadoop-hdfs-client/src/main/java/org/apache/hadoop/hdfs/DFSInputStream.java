@@ -1122,8 +1122,8 @@ public class DFSInputStream extends FSInputStream
     return errMsgr.toString();
   }
 
-  protected void fetchBlockByteRange(LocatedBlock block, long start, long end,
-      ByteBuffer buf, CorruptedBlocks corruptedBlocks)
+  protected void fetchBlockByteRange(LocatedBlock block, long start, long end, ByteBuffer buf,
+      CorruptedBlocks corruptedBlocks, final Map<InetSocketAddress, List<IOException>> exceptionMap)
       throws IOException {
     while (true) {
       DNAddrPair addressPair = chooseDataNode(block, null);
@@ -1131,7 +1131,7 @@ public class DFSInputStream extends FSInputStream
       block = addressPair.block;
       try {
         actualGetFromOneDataNode(addressPair, start, end, buf,
-            corruptedBlocks);
+            corruptedBlocks, exceptionMap);
         return;
       } catch (IOException e) {
         checkInterrupted(e); // check if the read has been interrupted
@@ -1145,12 +1145,13 @@ public class DFSInputStream extends FSInputStream
       final LocatedBlock block, final long start, final long end,
       final ByteBuffer bb,
       final CorruptedBlocks corruptedBlocks,
+      final Map<InetSocketAddress, List<IOException>> ioExceptionMap,
       final int hedgedReadId) {
     return new Callable<ByteBuffer>() {
       @Override
       public ByteBuffer call() throws Exception {
         DFSClientFaultInjector.get().sleepBeforeHedgedGet();
-        actualGetFromOneDataNode(datanode, start, end, bb, corruptedBlocks);
+        actualGetFromOneDataNode(datanode, start, end, bb, corruptedBlocks, ioExceptionMap);
         return bb;
       }
     };
@@ -1167,7 +1168,8 @@ public class DFSInputStream extends FSInputStream
    *                          block replica
    */
   void actualGetFromOneDataNode(final DNAddrPair datanode, final long startInBlk,
-      final long endInBlk, ByteBuffer buf, CorruptedBlocks corruptedBlocks)
+      final long endInBlk, ByteBuffer buf, CorruptedBlocks corruptedBlocks,
+      final Map<InetSocketAddress, List<IOException>> exceptionMap)
       throws IOException {
     DFSClientFaultInjector.get().startFetchFromDatanode();
     int refetchToken = 1; // only need to get a new access token once
@@ -1236,9 +1238,16 @@ public class DFSInputStream extends FSInputStream
             // ignore IOE, since we can retry it later in a loop
           }
         } else {
-          String msg = "Failed to connect to " + datanode.addr + " for file "
-              + src + " for block " + block.getBlock() + ":" + e;
-          DFSClient.LOG.warn("Connection failure: " + msg, e);
+          String msg = String.format("Failed to read block %s for file %s from datanode %s. "
+                  + "Exception is %s. Retry with the next available datanode.",
+              block.getBlock().getBlockName(), src, datanode.addr, e);
+          DFSClient.LOG.warn(msg);
+
+          // Add the exception to the exceptionMap
+          if (!exceptionMap.containsKey(datanode.addr)) {
+            exceptionMap.put(datanode.addr, new LinkedList<IOException>());
+          }
+          exceptionMap.get(datanode.addr).add(e);
           addToLocalDeadNodes(datanode.info);
           dfsClient.addNodeToDeadNodeDetector(this, datanode.info);
           throw new IOException(msg);
@@ -1270,9 +1279,9 @@ public class DFSInputStream extends FSInputStream
    * 'hedged' read if the first read is taking longer than configured amount of
    * time. We then wait on which ever read returns first.
    */
-  private void hedgedFetchBlockByteRange(LocatedBlock block, long start,
-      long end, ByteBuffer buf, CorruptedBlocks corruptedBlocks)
-      throws IOException {
+  private void hedgedFetchBlockByteRange(LocatedBlock block, long start, long end, ByteBuffer buf,
+      CorruptedBlocks corruptedBlocks,
+      final Map<InetSocketAddress, List<IOException>> ioExceptionMap) throws IOException {
     final DfsClientConf conf = dfsClient.getConf();
     ArrayList<Future<ByteBuffer>> futures = new ArrayList<>();
     CompletionService<ByteBuffer> hedgedService =
@@ -1295,7 +1304,7 @@ public class DFSInputStream extends FSInputStream
         bb = ByteBuffer.allocate(len);
         Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
             chosenNode, block, start, end, bb,
-            corruptedBlocks, hedgedReadId++);
+            corruptedBlocks, ioExceptionMap, hedgedReadId++);
         Future<ByteBuffer> firstRequest = hedgedService
             .submit(getFromDataNodeCallable);
         futures.add(firstRequest);
@@ -1336,7 +1345,7 @@ public class DFSInputStream extends FSInputStream
             bb = ByteBuffer.allocate(len);
             Callable<ByteBuffer> getFromDataNodeCallable =
                 getFromOneDataNode(chosenNode, block, start, end, bb,
-                    corruptedBlocks, hedgedReadId++);
+                    corruptedBlocks, ioExceptionMap, hedgedReadId++);
             Future<ByteBuffer> oneMoreRequest =
                 hedgedService.submit(getFromDataNodeCallable);
             futures.add(oneMoreRequest);
@@ -1486,6 +1495,8 @@ public class DFSInputStream extends FSInputStream
     List<LocatedBlock> blockRange = getBlockRange(position, realLen);
     int remaining = realLen;
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
+    // A map to record all IOExceptions happened at each datanode when fetching a block.
+    Map<InetSocketAddress, List<IOException>> ioExceptionMap = new HashMap<>();
     for (LocatedBlock blk : blockRange) {
       long targetStart = position - blk.getStartOffset();
       int bytesToRead = (int) Math.min(remaining,
@@ -1494,12 +1505,30 @@ public class DFSInputStream extends FSInputStream
       try {
         if (dfsClient.isHedgedReadsEnabled() && !blk.isStriped()) {
           hedgedFetchBlockByteRange(blk, targetStart,
-              targetEnd, buffer, corruptedBlocks);
+              targetEnd, buffer, corruptedBlocks, ioExceptionMap);
         } else {
           fetchBlockByteRange(blk, targetStart, targetEnd,
-              buffer, corruptedBlocks);
+              buffer, corruptedBlocks, ioExceptionMap);
         }
-      } finally {
+      } catch (IOException e) {
+        // When we reach here, it means we fail to fetch the current block from all available
+        // datanodes. Send IOExceptions in ioExceptionMap to the log and rethrow the exception to
+        // fail this request.
+        String msg = String.format("Failed to read from all available datanodes for block %s "
+            + "in file %s", blk.getBlock().getBlockName(), src);
+        DFSClient.LOG.error(msg);
+        for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
+            ioExceptionMap.entrySet()) {
+          List<IOException> exceptions = dataNodeExceptions.getValue();
+          for (IOException ex: exceptions) {
+            msg = String.format("Exception when fetching file %s for block %s at datanode %s:",
+                src, blk.getBlock().getBlockName(), dataNodeExceptions.getKey());
+            DFSClient.LOG.error(msg, ex);
+          }
+        }
+        throw e;
+      }
+      finally {
         // Check and report if any block replicas are corrupted.
         // BlockMissingException may be caught if all block replicas are
         // corrupted.
@@ -1507,6 +1536,8 @@ public class DFSInputStream extends FSInputStream
             false);
       }
 
+      // Reset ioExceptionMap before fetching the next block.
+      ioExceptionMap.clear();
       remaining -= bytesToRead;
       position += bytesToRead;
     }
