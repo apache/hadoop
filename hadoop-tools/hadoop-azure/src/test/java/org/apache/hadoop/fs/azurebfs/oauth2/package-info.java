@@ -17,6 +17,6 @@
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.oauth2;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
