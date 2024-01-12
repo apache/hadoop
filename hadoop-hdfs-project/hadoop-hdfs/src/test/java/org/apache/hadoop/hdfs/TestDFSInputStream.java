@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -136,7 +137,23 @@ public class TestDFSInputStream {
     Path path = new Path("/testfile");
     DFSTestUtil.createFile(fs, path, 1024, (short) 3, 0);
     DFSInputStream fin = fs.dfs.open("/testfile");
+    ConcurrentHashMap<DatanodeInfo, DatanodeInfo> localDeadNodes
+        = fin.getLocalDeadNodes();
     try {
+      // Loop to check if there are dead nodes.
+      Thread deadNodesDetector = new Thread(() -> {
+        while (!Thread.interrupted()) {
+          try {
+            Thread.sleep(10);
+          } catch (InterruptedException e) {
+            break;
+          }
+          // There are no dead nodes in the execution of
+          // the SeekToNewSource method.
+          assertTrue(localDeadNodes.isEmpty());
+        }
+      });
+      deadNodesDetector.start();
       fin.seekToNewSource(100);
       assertEquals(100, fin.getPos());
       DatanodeInfo firstNode = fin.getCurrentDatanode();
@@ -144,6 +161,7 @@ public class TestDFSInputStream {
       fin.seekToNewSource(100);
       assertEquals(100, fin.getPos());
       assertFalse(firstNode.equals(fin.getCurrentDatanode()));
+      deadNodesDetector.interrupt();
     } finally {
       fin.close();
       cluster.shutdown();
