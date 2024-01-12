@@ -151,7 +151,7 @@ public final class AzureADAuthenticator {
     qp.add("client_assertion_type", JWT_BEARER_ASSERTION);
     LOG.debug("AADToken: starting to fetch token using client assertion for client ID " + clientId);
 
-    return getTokenCall(authEndpoint, qp.serialize(), null, null);
+    return getTokenCall(authEndpoint, qp.serialize(), null, "POST");
   }
 
   /**
