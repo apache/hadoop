@@ -189,17 +189,15 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     // assert behaviors of seeking/reading past the file length.
     // there is no attempt at recovery.
     verifyMetrics(() -> {
-          try (FSDataInputStream in = openFile(longLen,
-              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
-            byte[] out = new byte[(int) (longLen)];
-            intercept(EOFException.class,
-                () -> in.readFully(0, out));
-            in.seek(longLen - 1);
-            assertEquals("read past real EOF on " + in,
-                -1, in.read());
-            return in.toString();
-          }
-        },
+      try (FSDataInputStream in = openFile(longLen,
+          FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
+        byte[] out = new byte[(int) (longLen)];
+        intercept(EOFException.class, () -> in.readFully(0, out));
+        in.seek(longLen - 1);
+        assertEquals("read past real EOF on " + in, -1, in.read());
+        return in.toString();
+      }
+    },
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
@@ -207,17 +205,17 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     // now on a new stream, try a full read from after the EOF
     verifyMetrics(() -> {
-          try (FSDataInputStream in = openFile(longLen,
-              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
-            byte[] out = new byte[extra];
-            intercept(EOFException.class,
-                () -> in.readFully(fileLength, out));
-            return in.toString();
-          }
-        },
+      try (FSDataInputStream in =
+               openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
+        byte[] out = new byte[extra];
+        intercept(EOFException.class, () -> in.readFully(fileLength, out));
+        return in.toString();
+      }
+    },
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
+
         with(STREAM_READ_OPENED, 1));
   }
 
@@ -269,18 +267,18 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     describe("reading past the end of the file");
 
     verifyMetrics(() -> {
-          try (FSDataInputStream in =
-                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
-            for (int i = 0; i < extra; i++) {
-              final int p = fileLength + i;
-              in.seek(p);
-              Assertions.assertThat(in.read())
-                  .describedAs("read() at %d", p)
-                  .isEqualTo(-1);
-            }
-            return in.toString();
-          }
-        },
+      try (FSDataInputStream in =
+               openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+        for (int i = 0; i < extra; i++) {
+          final int p = fileLength + i;
+          in.seek(p);
+          Assertions.assertThat(in.read())
+              .describedAs("read() at %d", p)
+              .isEqualTo(-1);
+        }
+        return in.toString();
+      }
+    },
         with(Statistic.ACTION_HTTP_GET_REQUEST, extra));
   }
 
@@ -299,19 +297,18 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     final int extra = 10;
     int longLen = fileLength + extra;
     verifyMetrics(() -> {
-          try (FSDataInputStream in =
-                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
-            byte[] buf = new byte[(int) (longLen + 1)];
-
-            // readFully will fail
-            intercept(EOFException.class, () -> {
-              in.readFully(0, buf);
-              return in;
-            });
-            assertS3StreamClosed(in);
-            return "readFully past EOF";
-          }
-        },
+      try (FSDataInputStream in =
+               openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+        byte[] buf = new byte[(int) (longLen + 1)];
+        // readFully will fail
+        intercept(EOFException.class, () -> {
+          in.readFully(0, buf);
+          return in;
+        });
+        assertS3StreamClosed(in);
+        return "readFully past EOF";
+      }
+    },
         with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
   }
 
@@ -328,25 +325,25 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     describe("PositionedReadable.read() past the end of the file");
 
     verifyMetrics(() -> {
-          try (FSDataInputStream in =
-                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
-            byte[] buf = new byte[(int) (longLen + 1)];
+      try (FSDataInputStream in =
+               openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+        byte[] buf = new byte[(int) (longLen + 1)];
 
-            // readFully will read to the end of the file
-            Assertions.assertThat(in.read(0, buf, 0, buf.length))
-                .isEqualTo(fileLength);
-            assertS3StreamOpen(in);
+        // readFully will read to the end of the file
+        Assertions.assertThat(in.read(0, buf, 0, buf.length))
+            .isEqualTo(fileLength);
+        assertS3StreamOpen(in);
 
-            // now attempt to read after EOF
-            Assertions.assertThat(in.read(fileLength, buf, 0, buf.length))
-                .describedAs("PositionedReadable.read() past EOF")
-                .isEqualTo(-1);
-            // stream is closed as part of this failure
-            assertS3StreamClosed(in);
+        // now attempt to read after EOF
+        Assertions.assertThat(in.read(fileLength, buf, 0, buf.length))
+            .describedAs("PositionedReadable.read() past EOF")
+            .isEqualTo(-1);
+        // stream is closed as part of this failure
+        assertS3StreamClosed(in);
 
-            return "PositionedReadable.read()) past EOF";
-          }
-        },
+        return "PositionedReadable.read()) past EOF";
+      }
+    },
         with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
   }
 
@@ -363,22 +360,22 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     describe("Vector read past the end of the file");
     verifyMetrics(() -> {
-          try (FSDataInputStream in =
-                   openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
-            assertS3StreamClosed(in);
-            byte[] buf = new byte[(int) (longLen)];
-            ByteBuffer bb = ByteBuffer.wrap(buf);
-            final FileRange range = FileRange.createFileRange(0, longLen);
-            in.readVectored(Arrays.asList(range), (i) -> bb);
-            interceptFuture(EOFException.class,
-                EOF_IN_READ_FULLY,
-                ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
-                TimeUnit.SECONDS,
-                range.getData());
-            assertS3StreamClosed(in);
-            return "vector read past EOF";
-          }
-        },
+      try (FSDataInputStream in =
+               openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
+        assertS3StreamClosed(in);
+        byte[] buf = new byte[longLen];
+        ByteBuffer bb = ByteBuffer.wrap(buf);
+        final FileRange range = FileRange.createFileRange(0, longLen);
+        in.readVectored(Arrays.asList(range), (i) -> bb);
+        interceptFuture(EOFException.class,
+            EOF_IN_READ_FULLY,
+            ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            TimeUnit.SECONDS,
+            range.getData());
+        assertS3StreamClosed(in);
+        return "vector read past EOF";
+      }
+    },
         with(Statistic.ACTION_HTTP_GET_REQUEST, 1));
   }
 
