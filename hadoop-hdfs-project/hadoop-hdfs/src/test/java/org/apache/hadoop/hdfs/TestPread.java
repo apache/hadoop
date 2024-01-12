@@ -586,8 +586,8 @@ public class TestPread {
   }
 
   /**
-   * Each failed IOException would result in a WARN log of "Failed to connect to XXX. Continue
-   * with the next available DN". We verify the number of such log lines match the number of
+   * Each failed IOException would result in a WARN log of "Failed to connect to XXX. Retry with
+   * the next available datanode.". We verify the number of such log lines match the number of
    * failed DNs.
    * <p>
    * @param ioExceptions number of IOExceptions to throw during a test.
