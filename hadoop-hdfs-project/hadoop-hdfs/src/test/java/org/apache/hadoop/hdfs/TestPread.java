@@ -656,7 +656,7 @@ public class TestPread {
 
   /**
    * We verify that BlockMissingException is threw and there is one ERROR log line of
-   * "FFailed to read from all available datanodes for block"
+   * "Failed to read from all available datanodes for block"
    * and 3 * (max_block_acquire_failures+1) ERROR log lines of
    * "Exception when fetching file /testfile.dat for block".
    * <p>
