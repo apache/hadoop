@@ -62,7 +62,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from JWT Assertion");
-    String clientAssertion = getClientAssertion(tokenFile);
+    String clientAssertion = getClientAssertion();
     AzureADToken token = AzureADAuthenticator
         .getTokenUsingJWTAssertion(authEndpoint, clientId, clientAssertion);
     tokenFetchTime = System.currentTimeMillis();
@@ -97,7 +97,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
     return expiring;
   }
 
-  private static String getClientAssertion(String tokenFile)
+  private String getClientAssertion()
       throws IOException {
     File file = new File(tokenFile);
     String clientAssertion = FileUtils.readFileToString(file, "UTF-8");
