@@ -61,7 +61,7 @@ RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.1
 RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.6-bin.zip
+RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.zip -OutFile $Env:TEMP\apache-maven-3.6.3-bin.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.6.3-bin.zip -DestinationPath "C:\Maven"
 
 # Install CMake 3.19.0.
@@ -123,7 +123,7 @@ ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
 ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
 RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
-RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.6\bin"
+RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.6.3\bin"
 RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx path "%PATH%;C:\Python3"
