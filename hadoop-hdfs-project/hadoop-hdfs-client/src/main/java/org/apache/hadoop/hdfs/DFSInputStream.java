@@ -771,7 +771,7 @@ public class DFSInputStream extends FSInputStream
    * ChecksumFileSystem
    */
   private synchronized int readBuffer(ReaderStrategy reader, int len,
-                                      CorruptedBlocks corruptedBlocks)
+      CorruptedBlocks corruptedBlocks, final Map<InetSocketAddress, List<IOException>> exceptionMap)
       throws IOException {
     IOException ioe;
 
@@ -786,6 +786,7 @@ public class DFSInputStream extends FSInputStream
     while (true) {
       // retry as many times as seekToNewSource allows.
       try {
+        DFSClientFaultInjector.get().fetchFromDatanodeException();
         return reader.readFromBlock(blockReader, len);
       } catch (ChecksumException ce) {
         DFSClient.LOG.warn("Found Checksum error for "
@@ -796,11 +797,18 @@ public class DFSInputStream extends FSInputStream
         // we want to remember which block replicas we have tried
         corruptedBlocks.addCorruptedBlock(getCurrentBlock(), currentNode);
       } catch (IOException e) {
-        if (!retryCurrentNode) {
-          DFSClient.LOG.warn("Exception while reading from "
-              + getCurrentBlock() + " of " + src + " from "
-              + currentNode, e);
+        String msg = String.format("Failed to read block %s for file %s from datanode %s. "
+                + "Exception is %s. Retry with the current or next available datanode.",
+            getCurrentBlock().getBlockName(), src, currentNode.getXferAddr(), e);
+        DFSClient.LOG.warn(msg);
+
+        // Add the exception to exceptionMap for this datanode.
+        InetSocketAddress datanode = currentNode.getResolvedAddress();
+        if (!exceptionMap.containsKey(datanode)) {
+          exceptionMap.put(datanode, new LinkedList<IOException>());
         }
+        exceptionMap.get(datanode).add(e);
+
         ioe = e;
       }
       boolean sourceFound;
@@ -831,6 +839,9 @@ public class DFSInputStream extends FSInputStream
 
     int len = strategy.getTargetLength();
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
+    // A map to record IOExceptions when fetching from each datanode. Key is the socketAddress of
+    // a datanode.
+    Map<InetSocketAddress, List<IOException>> exceptionMap = new HashMap<>();
     failures = 0;
 
     maybeRegisterBlockRefresh();
@@ -852,7 +863,7 @@ public class DFSInputStream extends FSInputStream
             }
           }
           long beginReadMS = Time.monotonicNow();
-          int result = readBuffer(strategy, realLen, corruptedBlocks);
+          int result = readBuffer(strategy, realLen, corruptedBlocks, exceptionMap);
           long readTimeMS = Time.monotonicNow() - beginReadMS;
           if (result >= 0) {
             pos += result;
@@ -880,6 +891,20 @@ public class DFSInputStream extends FSInputStream
             dfsClient.addNodeToDeadNodeDetector(this, currentNode);
           }
           if (--retries == 0) {
+            // Fail the request
+            String msg = String.format("Failed to read from all available datanodes for file %s "
+                + "at position=%d", src, pos);
+            DFSClient.LOG.error(msg);
+            for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
+                exceptionMap.entrySet()) {
+              List<IOException> exceptions = dataNodeExceptions.getValue();
+              for (IOException ex: exceptions) {
+                msg =
+                    String.format("Exception when fetching file %s at position=%d at datanode %s:",
+                        src, pos, dataNodeExceptions.getKey());
+                DFSClient.LOG.error(msg, ex);
+              }
+            }
             throw e;
           }
         } finally {
@@ -1496,6 +1521,9 @@ public class DFSInputStream extends FSInputStream
     int remaining = realLen;
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
     // A map to record all IOExceptions happened at each datanode when fetching a block.
+    // In HDFS-17332, we worked on populating this map only for DFSInputStream, but not for
+    // DFSStripedInputStream. If you need the same function for DFSStripedInputStream, please
+    // work on it yourself (fetchBlockByteRange() in DFSStripedInputStream).
     Map<InetSocketAddress, List<IOException>> ioExceptionMap = new HashMap<>();
     for (LocatedBlock blk : blockRange) {
       long targetStart = position - blk.getStartOffset();
