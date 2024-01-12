@@ -656,21 +656,20 @@ public class TestPread {
 
   /**
    * We verify that BlockMissingException is threw and there is one ERROR log line of
-   * "Failed to fetch block XXX from all available datanodes."
+   * "FFailed to read from all available datanodes for block"
    * and 3 * (max_block_acquire_failures+1) ERROR log lines of
-   * "Exception when fetching from datanode XXX".
+   * "Exception when fetching file /testfile.dat for block".
    * <p>
    * max_block_acquire_failures determines how many times we can retry when we fail to read from
    * all three data nodes.
    * <ul>
    *   <li>max_block_acquire_failures = 0: no retry. We will only read from each of the three
-   *   data
-   *   nodes only once. We expect to see 3 ERROR log lines of "Exception when fetching from
-   *   datanode XXX".
+   *   data nodes only once. We expect to see 3 ERROR log lines of "Exception when fetching file
+   *   /testfile.dat for block".
    *   </li>
    *   <li>max_block_acquire_failures = 1: 1 retry. We will read from each of the three data
-   *   nodes
-   *   twice. We expect to see 6 ERROR log lines of "Exception when fetching from datanode XXX".
+   *   nodes twice. We expect to see 6 ERROR log lines of "Exception when fetching file
+   *   /testfile.dat for block".
    *   </li>
    * </ul>
    */
