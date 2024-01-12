@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
@@ -107,6 +109,7 @@ public class MountTableResolver
   private String defaultNameService = "";
   /** If use default nameservice to read and write files. */
   private boolean defaultNSEnable = true;
+  private boolean listAllNameservicesTrash;
 
   /** Synchronization for both the tree and the cache. */
   private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -153,6 +156,9 @@ public class MountTableResolver
     } else {
       this.locationCache = null;
     }
+
+    listAllNameservicesTrash = conf.getBoolean(DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH,
+        DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH_DEFAULT);
 
     registerCacheExternal();
     initDefaultNameService(conf);
@@ -456,7 +462,7 @@ public class MountTableResolver
     readLock.lock();
     try {
       // First process user trash root path.
-      if (MountTableResolver.isTrashRoot(path)) {
+      if (listAllNameservicesTrash && MountTableResolver.isTrashRoot(path)) {
         return lookupLocationForUserTrashRoot(path);
       }
 
