@@ -22,8 +22,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-
 /**
  * Test the refresh logic of workload identity tokens.
  */
