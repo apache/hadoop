@@ -71,20 +71,28 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
   /**
    * Checks if the token is about to expire as per base expiry logic.
-   * Otherwise try to expire every 1 hour.
+   * Otherwise try to expire if enough time has elapsed since the last refresh.
    *
    * @return true if the token is expiring in next 1 hour or if a token has
    * never been fetched
    */
   @Override
   protected boolean isTokenAboutToExpire() {
-    if (tokenFetchTime == -1 || super.isTokenAboutToExpire()) {
+    return super.isTokenAboutToExpire() || hasEnoughTimeElapsedSinceLastRefresh();
+  }
+
+  /**
+   * Checks to see if enough time has elapsed since the last token refresh.
+   *
+   * @return true if the token was last refreshed more than an hour ago.
+   */
+  protected boolean hasEnoughTimeElapsedSinceLastRefresh() {
+    if (getTokenFetchTime() == -1) {
       return true;
     }
-
     boolean expiring = false;
     long elapsedTimeSinceLastTokenRefreshInMillis =
-        System.currentTimeMillis() - tokenFetchTime;
+        System.currentTimeMillis() - getTokenFetchTime();
     // In case token is not refreshed for 1 hr or any clock skew issues,
     // refresh token.
     expiring = elapsedTimeSinceLastTokenRefreshInMillis >= ONE_HOUR
@@ -93,7 +101,6 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
       LOG.debug("JWTToken: token renewing. Time elapsed since last token fetch:"
           + " {} milliseconds", elapsedTimeSinceLastTokenRefreshInMillis);
     }
-
     return expiring;
   }
 
@@ -105,5 +112,15 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
         throw new IOException("Empty token file.");
     }
     return clientAssertion;
+  }
+
+  /**
+   * Returns the last time the token was fetched from the token file.
+   * This method exists to make unit testing possible.
+   *
+   * @return the time the token was last fetched.
+   */
+  protected long getTokenFetchTime() {
+    return tokenFetchTime;
   }
 }
