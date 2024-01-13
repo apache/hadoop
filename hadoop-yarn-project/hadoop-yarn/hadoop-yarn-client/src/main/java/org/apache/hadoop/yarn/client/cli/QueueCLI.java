@@ -168,7 +168,7 @@ public class QueueCLI extends YarnCLI {
       throws YarnException, IOException {
     int rc;
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
     QueueInfo queueInfo = client.getQueueInfo(queueName, subClusterId);
     if (queueInfo != null) {
       if (isYarnFederationEnabled(getConf())) {
@@ -200,7 +200,7 @@ public class QueueCLI extends YarnCLI {
   private int listChildQueues(String parentQueueName) throws IOException, YarnException {
     int exitCode;
     PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-        sysout, Charset.forName(StandardCharsets.UTF_8.name())));
+        sysout, StandardCharsets.UTF_8));
     if (parentQueueName.equalsIgnoreCase(ALLTAG)) {
       List<QueueInfo> queueInfos = client.getAllQueues();
       if (queueInfos != null) {

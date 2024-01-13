@@ -483,7 +483,7 @@ public class RouterCLI extends Configured implements Tool {
 
   private int handleGetSubClusters() throws IOException, YarnException {
     PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-        System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+        System.out, StandardCharsets.UTF_8));
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     GetSubClustersRequest request = GetSubClustersRequest.newInstance();
     GetSubClustersResponse response = adminProtocol.getFederationSubClusters(request);
@@ -527,7 +527,7 @@ public class RouterCLI extends Configured implements Tool {
   private int deregisterSubCluster(String subClusterId)
       throws IOException, YarnException {
     PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-        System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+        System.out, StandardCharsets.UTF_8));
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     DeregisterSubClusterRequest request =
         DeregisterSubClusterRequest.newInstance(subClusterId);
@@ -911,7 +911,7 @@ public class RouterCLI extends Configured implements Tool {
         pageSize, currentPage, queue, queues);
     try {
       PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-          System.out, Charset.forName(StandardCharsets.UTF_8.name())));
+          System.out, StandardCharsets.UTF_8));
       QueryFederationQueuePoliciesRequest request =
           QueryFederationQueuePoliciesRequest.newInstance(pageSize, currentPage, queue, queues);
       ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
