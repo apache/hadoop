@@ -842,7 +842,7 @@ class BlockReceiver implements Closeable {
           
           replicaInfo.setLastChecksumAndDataLen(offsetInBlock, lastCrc);
 
-          datanode.metrics.incrBytesWritten(len);
+          datanode.metrics.incrBytesWritten(numBytesToDisk);
           datanode.metrics.incrTotalWriteTime(duration);
 
           manageWriterOsCache(offsetInBlock, seqno);
