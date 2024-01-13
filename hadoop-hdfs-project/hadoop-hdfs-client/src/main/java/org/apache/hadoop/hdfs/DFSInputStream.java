@@ -834,20 +834,20 @@ public class DFSInputStream extends FSInputStream
    * Send IOExceptions happened at each individual datanode to DFSClient.LOG for a failed read
    * request. Used in both readWithStrategy() and pread(), to record the exceptions when a read
    * request failed to be served.
-   * @param pos position in the file where we fail to read
+   * @param position offset in the file where we fail to read
    * @param exceptionMap a map which stores the list of IOExceptions for each datanode
    */
-  private void logDataNodeExceptionsOnReadError(long pos, final Map<InetSocketAddress,
+  private void logDataNodeExceptionsOnReadError(long position, final Map<InetSocketAddress,
       List<IOException>> exceptionMap) {
     String msg = String.format("Failed to read from all available datanodes for file %s "
-        + "at position=%d after retrying.", src, pos);
+        + "at position=%d after retrying.", src, position);
     DFSClient.LOG.error(msg);
     for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
         exceptionMap.entrySet()) {
       List<IOException> exceptions = dataNodeExceptions.getValue();
       for (IOException ex : exceptions) {
         msg = String.format("Exception when fetching file %s at position=%d at datanode %s:", src,
-            pos, dataNodeExceptions.getKey());
+            position, dataNodeExceptions.getKey());
         DFSClient.LOG.error(msg, ex);
       }
     }

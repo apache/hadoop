@@ -572,13 +572,13 @@ public class TestPread {
    */
   @Test(timeout=120000)
   public void testGetFromOneDataNodeExceptionLogging() throws IOException {
-    // With max_block_acquire_failures = 0, we would try on each datanode only once and if
+    // With maxBlockAcquireFailures = 0, we would try on each datanode only once and if
     // we fail on all three datanodes, we fail the read request.
     testGetFromOneDataNodeExceptionLogging(0, 0);
     testGetFromOneDataNodeExceptionLogging(1, 0);
     testGetFromOneDataNodeExceptionLogging(2, 0);
 
-    // With max_block_acquire_failures = 1, we will re-try each datanode a second time.
+    // With maxBlockAcquireFailures = 1, we will re-try each datanode a second time.
     // So, we can tolerate up to 5 datanode fetch failures.
     testGetFromOneDataNodeExceptionLogging(3, 1);
     testGetFromOneDataNodeExceptionLogging(4, 1);
@@ -657,28 +657,28 @@ public class TestPread {
   /**
    * We verify that BlockMissingException is threw and there is one ERROR log line of
    * "Failed to read from all available datanodes for file"
-   * and 3 * (max_block_acquire_failures+1) ERROR log lines of
+   * and 3 * (maxBlockAcquireFailures+1) ERROR log lines of
    * "Exception when fetching file /testfile.dat at position".
    * <p>
-   * max_block_acquire_failures determines how many times we can retry when we fail to read from
+   * maxBlockAcquireFailures determines how many times we can retry when we fail to read from
    * all three data nodes.
    * <ul>
-   *   <li>max_block_acquire_failures = 0: no retry. We will only read from each of the three
+   *   <li>maxBlockAcquireFailures = 0: no retry. We will only read from each of the three
    *   data nodes only once. We expect to see 3 ERROR log lines of "Exception when fetching file
    *   /testfile.dat at position".
    *   </li>
-   *   <li>max_block_acquire_failures = 1: 1 retry. We will read from each of the three data
+   *   <li>maxBlockAcquireFailures = 1: 1 retry. We will read from each of the three data
    *   nodes twice. We expect to see 6 ERROR log lines of "Exception when fetching file
    *   /testfile.dat at position".
    *   </li>
    * </ul>
    */
-  private void testFetchFromDataNodeExceptionLoggingFailedRequest(int max_block_acquire_failures)
+  private void testFetchFromDataNodeExceptionLoggingFailedRequest(int maxBlockAcquireFailures)
       throws IOException {
     dfsClientLog.clearOutput();
 
     Configuration conf = new Configuration();
-    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, max_block_acquire_failures);
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
     // Set up the InjectionHandler
     DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
     DFSClientFaultInjector injector = DFSClientFaultInjector.get();
@@ -707,11 +707,11 @@ public class TestPread {
       // Logging from pread
       assertEquals(1, StringUtils.countMatches(dfsClientLog.getOutput(),
           "Failed to read from all available datanodes for file"));
-      assertEquals(3 * (max_block_acquire_failures + 1),
+      assertEquals(3 * (maxBlockAcquireFailures + 1),
           StringUtils.countMatches(dfsClientLog.getOutput(),
               "Exception when fetching file /testfile.dat at position"));
       // Logging from actualGetFromOneDataNode
-      assertEquals(3 * (max_block_acquire_failures + 1),
+      assertEquals(3 * (maxBlockAcquireFailures + 1),
           StringUtils.countMatches(dfsClientLog.getOutput(),
               "Retry with the next available datanode."));
     } finally {
