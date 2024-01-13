@@ -830,6 +830,29 @@ public class DFSInputStream extends FSInputStream
     }
   }
 
+  /**
+   * Send IOExceptions happened at each individual datanode to DFSClient.LOG for a failed read
+   * request. Used in both readWithStrategy() and pread(), to record the exceptions when a read
+   * request failed to be served.
+   * @param pos position in the file where we fail to read
+   * @param exceptionMap a map which stores the list of IOExceptions for each datanode
+   */
+  private void logDataNodeExceptionsOnReadError(long pos, final Map<InetSocketAddress,
+      List<IOException>> exceptionMap) {
+    String msg = String.format("Failed to read from all available datanodes for file %s "
+        + "at position=%d after retrying.", src, pos);
+    DFSClient.LOG.error(msg);
+    for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
+        exceptionMap.entrySet()) {
+      List<IOException> exceptions = dataNodeExceptions.getValue();
+      for (IOException ex : exceptions) {
+        msg = String.format("Exception when fetching file %s at position=%d at datanode %s:", src,
+            pos, dataNodeExceptions.getKey());
+        DFSClient.LOG.error(msg, ex);
+      }
+    }
+  }
+
   protected synchronized int readWithStrategy(ReaderStrategy strategy)
       throws IOException {
     dfsClient.checkOpen();
@@ -892,19 +915,7 @@ public class DFSInputStream extends FSInputStream
           }
           if (--retries == 0) {
             // Fail the request
-            String msg = String.format("Failed to read from all available datanodes for file %s "
-                + "at position=%d", src, pos);
-            DFSClient.LOG.error(msg);
-            for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
-                exceptionMap.entrySet()) {
-              List<IOException> exceptions = dataNodeExceptions.getValue();
-              for (IOException ex: exceptions) {
-                msg =
-                    String.format("Exception when fetching file %s at position=%d at datanode %s:",
-                        src, pos, dataNodeExceptions.getKey());
-                DFSClient.LOG.error(msg, ex);
-              }
-            }
+            logDataNodeExceptionsOnReadError(pos, exceptionMap);
             throw e;
           }
         } finally {
@@ -1524,7 +1535,7 @@ public class DFSInputStream extends FSInputStream
     // In HDFS-17332, we worked on populating this map only for DFSInputStream, but not for
     // DFSStripedInputStream. If you need the same function for DFSStripedInputStream, please
     // work on it yourself (fetchBlockByteRange() in DFSStripedInputStream).
-    Map<InetSocketAddress, List<IOException>> ioExceptionMap = new HashMap<>();
+    Map<InetSocketAddress, List<IOException>> exceptionMap = new HashMap<>();
     for (LocatedBlock blk : blockRange) {
       long targetStart = position - blk.getStartOffset();
       int bytesToRead = (int) Math.min(remaining,
@@ -1533,27 +1544,16 @@ public class DFSInputStream extends FSInputStream
       try {
         if (dfsClient.isHedgedReadsEnabled() && !blk.isStriped()) {
           hedgedFetchBlockByteRange(blk, targetStart,
-              targetEnd, buffer, corruptedBlocks, ioExceptionMap);
+              targetEnd, buffer, corruptedBlocks, exceptionMap);
         } else {
           fetchBlockByteRange(blk, targetStart, targetEnd,
-              buffer, corruptedBlocks, ioExceptionMap);
+              buffer, corruptedBlocks, exceptionMap);
         }
       } catch (IOException e) {
         // When we reach here, it means we fail to fetch the current block from all available
-        // datanodes. Send IOExceptions in ioExceptionMap to the log and rethrow the exception to
+        // datanodes. Send IOExceptions in exceptionMap to the log and rethrow the exception to
         // fail this request.
-        String msg = String.format("Failed to read from all available datanodes for block %s "
-            + "in file %s", blk.getBlock().getBlockName(), src);
-        DFSClient.LOG.error(msg);
-        for (Map.Entry<InetSocketAddress, List<IOException>> dataNodeExceptions :
-            ioExceptionMap.entrySet()) {
-          List<IOException> exceptions = dataNodeExceptions.getValue();
-          for (IOException ex: exceptions) {
-            msg = String.format("Exception when fetching file %s for block %s at datanode %s:",
-                src, blk.getBlock().getBlockName(), dataNodeExceptions.getKey());
-            DFSClient.LOG.error(msg, ex);
-          }
-        }
+        logDataNodeExceptionsOnReadError(position, exceptionMap);
         throw e;
       }
       finally {
@@ -1565,7 +1565,7 @@ public class DFSInputStream extends FSInputStream
       }
 
       // Reset ioExceptionMap before fetching the next block.
-      ioExceptionMap.clear();
+      exceptionMap.clear();
       remaining -= bytesToRead;
       position += bytesToRead;
     }

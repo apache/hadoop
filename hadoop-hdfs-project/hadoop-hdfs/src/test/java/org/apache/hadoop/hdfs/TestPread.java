@@ -656,20 +656,20 @@ public class TestPread {
 
   /**
    * We verify that BlockMissingException is threw and there is one ERROR log line of
-   * "Failed to read from all available datanodes for block"
+   * "Failed to read from all available datanodes for file"
    * and 3 * (max_block_acquire_failures+1) ERROR log lines of
-   * "Exception when fetching file /testfile.dat for block".
+   * "Exception when fetching file /testfile.dat at position".
    * <p>
    * max_block_acquire_failures determines how many times we can retry when we fail to read from
    * all three data nodes.
    * <ul>
    *   <li>max_block_acquire_failures = 0: no retry. We will only read from each of the three
    *   data nodes only once. We expect to see 3 ERROR log lines of "Exception when fetching file
-   *   /testfile.dat for block".
+   *   /testfile.dat at position".
    *   </li>
    *   <li>max_block_acquire_failures = 1: 1 retry. We will read from each of the three data
    *   nodes twice. We expect to see 6 ERROR log lines of "Exception when fetching file
-   *   /testfile.dat for block".
+   *   /testfile.dat at position".
    *   </li>
    * </ul>
    */
@@ -706,10 +706,10 @@ public class TestPread {
     } catch (BlockMissingException expected) {
       // Logging from pread
       assertEquals(1, StringUtils.countMatches(DFSClientLog.getOutput(),
-          "Failed to read from all available datanodes for block"));
+          "Failed to read from all available datanodes for file"));
       assertEquals(3 * (max_block_acquire_failures + 1),
           StringUtils.countMatches(DFSClientLog.getOutput(),
-              "Exception when fetching file /testfile.dat for block"));
+              "Exception when fetching file /testfile.dat at position"));
       // Logging from actualGetFromOneDataNode
       assertEquals(3 * (max_block_acquire_failures + 1),
           StringUtils.countMatches(DFSClientLog.getOutput(),
