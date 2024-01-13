@@ -80,7 +80,7 @@ public class TestPread {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestPread.class.getName());
-  private final GenericTestUtils.LogCapturer DFSClientLog =
+  private final GenericTestUtils.LogCapturer dfsClientLog =
       GenericTestUtils.LogCapturer.captureLogs(DFSClient.LOG);
   @BeforeClass
   public static void setLogLevel() {
@@ -591,20 +591,20 @@ public class TestPread {
    * failed DNs.
    * <p>
    * @param ioExceptions number of IOExceptions to throw during a test.
-   * @param max_block_acquire_failures number of refreshLocation we would perform once we mark
+   * @param maxBlockAcquireFailures number of refreshLocation we would perform once we mark
    *                                   all current data nodes as dead.
    */
   private void testGetFromOneDataNodeExceptionLogging(final int ioExceptions,
-      int max_block_acquire_failures)
+      int maxBlockAcquireFailures)
       throws IOException {
-    DFSClientLog.clearOutput();
+    dfsClientLog.clearOutput();
 
-    if (ioExceptions < 0 || ioExceptions >= 3 * (max_block_acquire_failures+1)) {
+    if (ioExceptions < 0 || ioExceptions >= 3 * (maxBlockAcquireFailures+1)) {
       return;
     }
 
     Configuration conf = new Configuration();
-    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, max_block_acquire_failures);
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
     final int[] count = {0};
     // Set up the InjectionHandler
     DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
@@ -633,14 +633,14 @@ public class TestPread {
       byte[] buffer = new byte[fileSize];
       input = dfsClient.open(file.toString());
       input.read(0, buffer, 0, fileSize);
-      assertEquals(ioExceptions, StringUtils.countMatches(DFSClientLog.getOutput(),
+      assertEquals(ioExceptions, StringUtils.countMatches(dfsClientLog.getOutput(),
           "Retry with the next available datanode."));
     } finally {
       Mockito.reset(injector);
       IOUtils.cleanupWithLogger(LOG, input);
       fileSys.close();
       cluster.shutdown();
-      DFSClientLog.clearOutput();
+      dfsClientLog.clearOutput();
     }
   }
 
@@ -675,7 +675,7 @@ public class TestPread {
    */
   private void testFetchFromDataNodeExceptionLoggingFailedRequest(int max_block_acquire_failures)
       throws IOException {
-    DFSClientLog.clearOutput();
+    dfsClientLog.clearOutput();
 
     Configuration conf = new Configuration();
     conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, max_block_acquire_failures);
@@ -705,22 +705,21 @@ public class TestPread {
       fail();
     } catch (BlockMissingException expected) {
       // Logging from pread
-      assertEquals(1, StringUtils.countMatches(DFSClientLog.getOutput(),
+      assertEquals(1, StringUtils.countMatches(dfsClientLog.getOutput(),
           "Failed to read from all available datanodes for file"));
       assertEquals(3 * (max_block_acquire_failures + 1),
-          StringUtils.countMatches(DFSClientLog.getOutput(),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
               "Exception when fetching file /testfile.dat at position"));
       // Logging from actualGetFromOneDataNode
       assertEquals(3 * (max_block_acquire_failures + 1),
-          StringUtils.countMatches(DFSClientLog.getOutput(),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
               "Retry with the next available datanode."));
-    }
-    finally {
+    } finally {
       Mockito.reset(injector);
       IOUtils.cleanupWithLogger(LOG, input);
       fileSys.close();
       cluster.shutdown();
-      DFSClientLog.clearOutput();
+      dfsClientLog.clearOutput();
     }
   }
 

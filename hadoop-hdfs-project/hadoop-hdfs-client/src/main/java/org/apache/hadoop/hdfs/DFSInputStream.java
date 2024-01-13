@@ -1178,11 +1178,10 @@ public class DFSInputStream extends FSInputStream
   }
 
   private Callable<ByteBuffer> getFromOneDataNode(final DNAddrPair datanode,
-      final LocatedBlock block, final long start, final long end,
+      final long start, final long end,
       final ByteBuffer bb,
       final CorruptedBlocks corruptedBlocks,
-      final Map<InetSocketAddress, List<IOException>> exceptionMap,
-      final int hedgedReadId) {
+      final Map<InetSocketAddress, List<IOException>> exceptionMap) {
     return new Callable<ByteBuffer>() {
       @Override
       public ByteBuffer call() throws Exception {
@@ -1325,7 +1324,6 @@ public class DFSInputStream extends FSInputStream
     ArrayList<DatanodeInfo> ignored = new ArrayList<>();
     ByteBuffer bb;
     int len = (int) (end - start + 1);
-    int hedgedReadId = 0;
     while (true) {
       // see HDFS-6591, this metric is used to verify/catch unnecessary loops
       hedgedReadOpsLoopNumForTesting++;
@@ -1338,9 +1336,8 @@ public class DFSInputStream extends FSInputStream
         // Latest block, if refreshed internally
         block = chosenNode.block;
         bb = ByteBuffer.allocate(len);
-        Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
-            chosenNode, block, start, end, bb,
-            corruptedBlocks, exceptionMap, hedgedReadId++);
+        Callable<ByteBuffer> getFromDataNodeCallable =
+            getFromOneDataNode(chosenNode, start, end, bb, corruptedBlocks, exceptionMap);
         Future<ByteBuffer> firstRequest = hedgedService
             .submit(getFromDataNodeCallable);
         futures.add(firstRequest);
@@ -1380,8 +1377,7 @@ public class DFSInputStream extends FSInputStream
             block = chosenNode.block;
             bb = ByteBuffer.allocate(len);
             Callable<ByteBuffer> getFromDataNodeCallable =
-                getFromOneDataNode(chosenNode, block, start, end, bb,
-                    corruptedBlocks, exceptionMap, hedgedReadId++);
+                getFromOneDataNode(chosenNode, start, end, bb, corruptedBlocks, exceptionMap);
             Future<ByteBuffer> oneMoreRequest =
                 hedgedService.submit(getFromDataNodeCallable);
             futures.add(oneMoreRequest);
@@ -1555,8 +1551,7 @@ public class DFSInputStream extends FSInputStream
         // fail this request.
         logDataNodeExceptionsOnReadError(position, exceptionMap);
         throw e;
-      }
-      finally {
+      } finally {
         // Check and report if any block replicas are corrupted.
         // BlockMissingException may be caught if all block replicas are
         // corrupted.
