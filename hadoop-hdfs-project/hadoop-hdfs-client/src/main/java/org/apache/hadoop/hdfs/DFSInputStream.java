@@ -1661,7 +1661,9 @@ public class DFSInputStream extends FSInputStream
     if (currentNode == null) {
       return seekToBlockSource(targetPos);
     }
-    DatanodeInfo newNode = blockSeekTo(targetPos, Collections.singletonList(currentNode));
+    List<DatanodeInfo> ignoredNodes = new ArrayList<>(1);
+    ignoredNodes.add(currentNode);
+    DatanodeInfo newNode = blockSeekTo(targetPos, ignoredNodes);
     if (!currentNode.getDatanodeUuid().equals(newNode.getDatanodeUuid())) {
       currentNode = newNode;
       return true;
