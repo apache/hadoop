@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -331,12 +332,12 @@ public class TestTextInputFormat {
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
+                                             (str.getBytes(StandardCharsets.UTF_8)),
                                            defaultConf);
   }
   private static LineReader makeStream(String str, int bufsz) throws IOException {
     return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
+                                             (str.getBytes(StandardCharsets.UTF_8)),
                                            bufsz);
   }
 

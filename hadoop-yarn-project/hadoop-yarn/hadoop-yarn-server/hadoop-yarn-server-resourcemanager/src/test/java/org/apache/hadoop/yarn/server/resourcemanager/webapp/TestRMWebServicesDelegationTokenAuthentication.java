@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -490,7 +491,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       conn.setRequestProperty("Content-Type", contentType + ";charset=UTF8");
       if (body != null && !body.isEmpty()) {
         OutputStream stream = conn.getOutputStream();
-        stream.write(body.getBytes("UTF8"));
+        stream.write(body.getBytes(StandardCharsets.UTF_8));
         stream.close();
       }
     }

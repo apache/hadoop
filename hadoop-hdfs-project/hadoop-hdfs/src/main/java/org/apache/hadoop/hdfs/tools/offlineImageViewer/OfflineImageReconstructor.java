@@ -900,7 +900,7 @@ class OfflineImageReconstructor {
         }
         val = new HexBinaryAdapter().unmarshal(valHex);
       } else {
-        val = valStr.getBytes("UTF8");
+        val = valStr.getBytes(StandardCharsets.UTF_8);
       }
       b.setValue(ByteString.copyFrom(val));
 

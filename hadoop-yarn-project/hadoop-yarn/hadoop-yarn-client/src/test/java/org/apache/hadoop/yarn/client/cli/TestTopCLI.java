@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -157,7 +158,7 @@ public class TestTopCLI {
       System.setErr(out);
       topcli.showTopScreen();
       out.flush();
-      actual = outStream.toString("UTF-8");
+      actual = outStream.toString(StandardCharsets.UTF_8);
     }
 
     String expected = "NodeManager(s)"
