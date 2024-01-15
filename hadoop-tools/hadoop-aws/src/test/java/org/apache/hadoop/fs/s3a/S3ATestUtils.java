@@ -76,7 +76,6 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.internal.io.ChecksumValidatingInputStream;
-import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.internal.checksums.S3ChecksumValidatingInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
