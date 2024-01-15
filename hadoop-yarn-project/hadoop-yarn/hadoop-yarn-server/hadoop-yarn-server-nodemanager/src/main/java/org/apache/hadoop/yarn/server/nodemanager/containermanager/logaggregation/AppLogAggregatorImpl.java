@@ -476,12 +476,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // loss of logs
       LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
-    } catch (Exception e) {
-      // do post clean up of log directories on any other exception
-      LOG.error("Error occurred while aggregating the log for the application "
-          + appId, e);
-      doAppLogAggregationPostCleanUp();
-    } finally {
       if (!this.appAggregationFinished.get() && !this.aborted.get()) {
         LOG.warn("Log aggregation did not complete for application " + appId);
         this.dispatcher.getEventHandler().handle(
@@ -489,6 +483,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                 ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
       }
       this.appAggregationFinished.set(true);
+    } catch (Exception e) {
+      // do post clean up of log directories on any other exception
+      LOG.error("Error occurred while aggregating the log for the application "
+          + appId, e);
+      doAppLogAggregationPostCleanUp();
     }
   }
 
@@ -505,6 +504,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             uploadLogsForContainers(false);
           } else {
             wait(THREAD_SLEEP_TIME);
+            return;
           }
         } catch (InterruptedException e) {
           LOG.warn("PendingContainers queue is interrupted");
@@ -612,6 +612,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   @Override
   public boolean isAggregationEnabled() {
     return !logAggregationDisabled;
+  }
+
+  @Override
+  public boolean isDone() {
+    return appAggregationFinished.get() || aborted.get();
   }
 
   @Private
