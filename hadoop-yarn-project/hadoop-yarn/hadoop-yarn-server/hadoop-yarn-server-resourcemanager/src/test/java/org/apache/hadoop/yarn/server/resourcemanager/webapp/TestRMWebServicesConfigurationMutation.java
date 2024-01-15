@@ -1074,7 +1074,6 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     if (rm != null) {
       rm.stop();
     }
-    getCapacitySchedulerConfigFileInTarget().delete();
     super.tearDown();
   }
 }
