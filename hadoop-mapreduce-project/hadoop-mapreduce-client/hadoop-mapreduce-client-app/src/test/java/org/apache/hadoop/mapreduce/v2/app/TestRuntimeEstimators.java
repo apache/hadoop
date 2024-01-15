@@ -78,8 +78,8 @@ import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,16 +152,16 @@ public class TestRuntimeEstimators {
     conf.setDouble(MRJobConfig.SPECULATIVECAP_TOTAL_TASKS, 0.001);
     conf.setInt(MRJobConfig.SPECULATIVE_MINIMUM_ALLOWED_TASKS, 5);
     speculator = new DefaultSpeculator(conf, myAppContext, estimator, clock);
-    Assert.assertEquals("wrong SPECULATIVE_RETRY_AFTER_NO_SPECULATE value",
-        500L, speculator.getSoonestRetryAfterNoSpeculate());
-    Assert.assertEquals("wrong SPECULATIVE_RETRY_AFTER_SPECULATE value",
-        5000L, speculator.getSoonestRetryAfterSpeculate());
+    Assertions.assertEquals(500L, speculator.getSoonestRetryAfterNoSpeculate(),
+        "wrong SPECULATIVE_RETRY_AFTER_NO_SPECULATE value");
+    Assertions.assertEquals(5000L, speculator.getSoonestRetryAfterSpeculate(),
+        "wrong SPECULATIVE_RETRY_AFTER_SPECULATE value");
     assertThat(speculator.getProportionRunningTasksSpeculatable())
         .isCloseTo(0.1, offset(0.00001));
     assertThat(speculator.getProportionTotalTasksSpeculatable())
         .isCloseTo(0.001, offset(0.00001));
-    Assert.assertEquals("wrong SPECULATIVE_MINIMUM_ALLOWED_TASKS value",
-        5, speculator.getMinimumAllowedSpeculativeTasks());
+    Assertions.assertEquals(5, speculator.getMinimumAllowedSpeculativeTasks(),
+        "wrong SPECULATIVE_MINIMUM_ALLOWED_TASKS value");
 
     dispatcher.register(Speculator.EventType.class, speculator);
 
@@ -244,8 +244,8 @@ public class TestRuntimeEstimators {
       }
     }
 
-    Assert.assertEquals("We got the wrong number of successful speculations.",
-        expectedSpeculations, successfulSpeculations.get());
+    Assertions.assertEquals(expectedSpeculations, successfulSpeculations.get(),
+        "We got the wrong number of successful speculations.");
   }
 
   @Test
@@ -279,8 +279,8 @@ public class TestRuntimeEstimators {
       TaskId taskID = event.getTaskID();
       Task task = myJob.getTask(taskID);
 
-      Assert.assertEquals
-          ("Wrong type event", TaskEventType.T_ADD_SPEC_ATTEMPT, event.getType());
+      Assertions.assertEquals
+          (TaskEventType.T_ADD_SPEC_ATTEMPT, event.getType(), "Wrong type event");
 
       System.out.println("SpeculationRequestEventHandler.handle adds a speculation task for " + taskID);
 

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -40,8 +40,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -214,11 +214,11 @@ public class TestTaskHeartbeatHandler {
       JobId jobId = MRBuilderUtils.newJobId(appId, 4);
       TaskId tid = MRBuilderUtils.newTaskId(jobId, 3, TaskType.MAP);
       final TaskAttemptId taid = MRBuilderUtils.newTaskAttemptId(tid, 2);
-      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      Assertions.assertFalse(hb.hasRecentlyUnregistered(taid));
       hb.register(taid);
-      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      Assertions.assertFalse(hb.hasRecentlyUnregistered(taid));
       hb.unregister(taid);
-      Assert.assertTrue(hb.hasRecentlyUnregistered(taid));
+      Assertions.assertTrue(hb.hasRecentlyUnregistered(taid));
       long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
           MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
       clock.setTime(unregisterTimeout + 1);
@@ -260,7 +260,7 @@ public class TestTaskHeartbeatHandler {
         new TaskHeartbeatHandler(null, SystemClock.getInstance(), 1);
     hb.init(conf);
 
-    Assert.assertTrue("The value of the task timeout is incorrect.",
-        hb.getTaskTimeOut() == expectedTimeout);
+    Assertions.assertTrue(hb.getTaskTimeOut() == expectedTimeout,
+        "The value of the task timeout is incorrect.");
   }
 }

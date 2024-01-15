@@ -220,6 +220,7 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
+    <mockito-all.version>1.10.19</mockito-all.version>
   </properties>
 
   <dependencyManagement>
@@ -1296,7 +1297,25 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
-        <version>1.10.19</version>
+        <version>${mockito-all.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <version>4.11.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>uk.org.webcompere</groupId>
+        <artifactId>system-stubs-core</artifactId>
+        <version>1.1.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>uk.org.webcompere</groupId>
+        <artifactId>system-stubs-jupiter</artifactId>
+        <version>1.1.0</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>

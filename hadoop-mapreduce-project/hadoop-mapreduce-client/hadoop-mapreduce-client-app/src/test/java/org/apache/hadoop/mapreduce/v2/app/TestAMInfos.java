@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.v2.app.TestRecovery.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestAMInfos {
 
@@ -50,7 +50,7 @@ public class TestAMInfos {
 
     long am1StartTime = app.getAllAMInfos().get(0).getStartTime();
 
-    Assert.assertEquals("No of tasks not correct", 1, job.getTasks().size());
+    Assertions.assertEquals(1, job.getTasks().size(), "No of tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     app.waitForState(mapTask, TaskState.RUNNING);
@@ -71,14 +71,14 @@ public class TestAMInfos {
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("No of tasks not correct", 1, job.getTasks().size());
+    Assertions.assertEquals(1, job.getTasks().size(), "No of tasks not correct");
     it = job.getTasks().values().iterator();
     mapTask = it.next();
     // There should be two AMInfos
     List<AMInfo> amInfos = app.getAllAMInfos();
-    Assert.assertEquals(2, amInfos.size());
+    Assertions.assertEquals(2, amInfos.size());
     AMInfo amInfoOne = amInfos.get(0);
-    Assert.assertEquals(am1StartTime, amInfoOne.getStartTime());
+    Assertions.assertEquals(am1StartTime, amInfoOne.getStartTime());
     app.stop();
   }
 }

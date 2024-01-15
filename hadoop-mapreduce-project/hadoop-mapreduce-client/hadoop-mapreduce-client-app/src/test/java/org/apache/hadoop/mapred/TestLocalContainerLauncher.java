@@ -53,10 +53,11 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -75,7 +76,7 @@ public class TestLocalContainerLauncher {
     fs.delete(p, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTestDirs() throws IOException {
     testWorkDir = new File("target",
         TestLocalContainerLauncher.class.getCanonicalName());
@@ -89,7 +90,7 @@ public class TestLocalContainerLauncher {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTestDirs() throws IOException {
     if (testWorkDir != null) {
       delete(testWorkDir);
@@ -97,7 +98,8 @@ public class TestLocalContainerLauncher {
   }
 
   @SuppressWarnings("rawtypes")
-  @Test(timeout=10000)
+  @Test
+  @Timeout(10000)
   public void testKillJob() throws Exception {
     JobConf conf = new JobConf();
     AppContext context = mock(AppContext.class);
@@ -198,8 +200,8 @@ public class TestLocalContainerLauncher {
     final Path mapOut = mrOutputFiles.getOutputFileForWrite(1);
     conf.set(MRConfig.LOCAL_DIR, localDirs[1].toString());
     final Path mapOutIdx = mrOutputFiles.getOutputIndexFileForWrite(1);
-    Assert.assertNotEquals("Paths must be different!",
-        mapOut.getParent(), mapOutIdx.getParent());
+    Assertions.assertNotEquals(mapOut.getParent(), mapOutIdx.getParent(),
+        "Paths must be different!");
 
     // make both dirs part of LOCAL_DIR
     conf.setStrings(MRConfig.LOCAL_DIR, localDirs);

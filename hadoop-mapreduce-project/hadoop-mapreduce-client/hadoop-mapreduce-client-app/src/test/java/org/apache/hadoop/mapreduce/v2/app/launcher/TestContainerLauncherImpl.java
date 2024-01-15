@@ -79,8 +79,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,7 @@ public class TestContainerLauncherImpl {
   private Map<String, ByteBuffer> serviceResponse =
       new HashMap<String, ByteBuffer>();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     serviceResponse.clear();
     serviceResponse.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
@@ -168,7 +169,8 @@ public class TestContainerLauncherImpl {
     return MRBuilderUtils.newTaskAttemptId(tID, id);
   }
   
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testHandle() throws Exception {
     LOG.info("STARTING testHandle");
     AppContext mockContext = mock(AppContext.class);
@@ -226,7 +228,8 @@ public class TestContainerLauncherImpl {
     }
   }
   
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testOutOfOrder() throws Exception {
     LOG.info("STARTING testOutOfOrder");
     AppContext mockContext = mock(AppContext.class);
@@ -300,7 +303,8 @@ public class TestContainerLauncherImpl {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testMyShutdown() throws Exception {
     LOG.info("in test Shutdown");
 
@@ -352,7 +356,8 @@ public class TestContainerLauncherImpl {
   }
   
   @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testContainerCleaned() throws Exception {
     LOG.info("STARTING testContainerCleaned");
     

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.speculate;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestDataStatistics {
 
@@ -28,21 +28,21 @@ public class TestDataStatistics {
   @Test
   public void testEmptyDataStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics();
-    Assert.assertEquals(0, statistics.count(), TOL);
-    Assert.assertEquals(0, statistics.mean(), TOL);
-    Assert.assertEquals(0, statistics.var(), TOL);
-    Assert.assertEquals(0, statistics.std(), TOL);
-    Assert.assertEquals(0, statistics.outlier(1.0f), TOL);
+    Assertions.assertEquals(0, statistics.count(), TOL);
+    Assertions.assertEquals(0, statistics.mean(), TOL);
+    Assertions.assertEquals(0, statistics.var(), TOL);
+    Assertions.assertEquals(0, statistics.std(), TOL);
+    Assertions.assertEquals(0, statistics.outlier(1.0f), TOL);
   }
   
   @Test
   public void testSingleEntryDataStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics(17.29);
-    Assert.assertEquals(1, statistics.count(), TOL);
-    Assert.assertEquals(17.29, statistics.mean(), TOL);
-    Assert.assertEquals(0, statistics.var(), TOL);
-    Assert.assertEquals(0, statistics.std(), TOL);
-    Assert.assertEquals(17.29, statistics.outlier(1.0f), TOL);
+    Assertions.assertEquals(1, statistics.count(), TOL);
+    Assertions.assertEquals(17.29, statistics.mean(), TOL);
+    Assertions.assertEquals(0, statistics.var(), TOL);
+    Assertions.assertEquals(0, statistics.std(), TOL);
+    Assertions.assertEquals(17.29, statistics.outlier(1.0f), TOL);
   }
   
   @Test
@@ -50,24 +50,24 @@ public class TestDataStatistics {
     DataStatistics statistics = new DataStatistics();
     statistics.add(17);
     statistics.add(29);
-    Assert.assertEquals(2, statistics.count(), TOL);
-    Assert.assertEquals(23.0, statistics.mean(), TOL);
-    Assert.assertEquals(36.0, statistics.var(), TOL);
-    Assert.assertEquals(6.0, statistics.std(), TOL);
-    Assert.assertEquals(29.0, statistics.outlier(1.0f), TOL);
+    Assertions.assertEquals(2, statistics.count(), TOL);
+    Assertions.assertEquals(23.0, statistics.mean(), TOL);
+    Assertions.assertEquals(36.0, statistics.var(), TOL);
+    Assertions.assertEquals(6.0, statistics.std(), TOL);
+    Assertions.assertEquals(29.0, statistics.outlier(1.0f), TOL);
  }
   
   @Test
   public void testUpdateStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics(17);
     statistics.add(29);
-    Assert.assertEquals(2, statistics.count(), TOL);
-    Assert.assertEquals(23.0, statistics.mean(), TOL);
-    Assert.assertEquals(36.0, statistics.var(), TOL);
+    Assertions.assertEquals(2, statistics.count(), TOL);
+    Assertions.assertEquals(23.0, statistics.mean(), TOL);
+    Assertions.assertEquals(36.0, statistics.var(), TOL);
 
     statistics.updateStatistics(17, 29);
-    Assert.assertEquals(2, statistics.count(), TOL);
-    Assert.assertEquals(29.0, statistics.mean(), TOL);
-    Assert.assertEquals(0.0, statistics.var(), TOL);
+    Assertions.assertEquals(2, statistics.count(), TOL);
+    Assertions.assertEquals(29.0, statistics.mean(), TOL);
+    Assertions.assertEquals(0.0, statistics.var(), TOL);
   }
 }

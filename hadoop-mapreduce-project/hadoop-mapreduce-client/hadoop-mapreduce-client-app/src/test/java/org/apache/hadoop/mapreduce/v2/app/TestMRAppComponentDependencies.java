@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -35,11 +35,13 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestMRAppComponentDependencies {
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(20000)
   public void testComponentStopOrder() throws Exception {
     @SuppressWarnings("resource")
     TestMRApp app = new TestMRApp(1, 1, true, this.getClass().getName(), true);
@@ -54,8 +56,8 @@ public class TestMRAppComponentDependencies {
     }
 
     // assert JobHistoryEventHandlerStopped and then clientServiceStopped
-    Assert.assertEquals(1, app.JobHistoryEventHandlerStopped);
-    Assert.assertEquals(2, app.clientServiceStopped);
+    Assertions.assertEquals(1, app.JobHistoryEventHandlerStopped);
+    Assertions.assertEquals(2, app.clientServiceStopped);
   }
 
   private final class TestMRApp extends MRApp {
