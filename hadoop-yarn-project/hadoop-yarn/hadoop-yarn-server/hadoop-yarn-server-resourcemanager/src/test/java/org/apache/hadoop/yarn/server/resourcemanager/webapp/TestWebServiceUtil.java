@@ -348,4 +348,27 @@ public final class TestWebServiceUtil {
   public static File getCapacitySchedulerConfigFileInTarget() {
     return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE);
   }
+
+  public static File getBackupCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE + ".tmp");
+  }
+
+  public static void backupSchedulerConfigFileInTarget() {
+    final File file = getCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      if (!file.renameTo(getBackupCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to backup configuration file");
+      }
+    }
+  }
+
+  public static void restoreSchedulerConfigFileInTarget() {
+    File file = getBackupCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      getCapacitySchedulerConfigFileInTarget().delete();
+      if (!file.renameTo(getCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to restore configuration file");
+      }
+    }
+  }
 }

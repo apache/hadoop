@@ -25,6 +25,8 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.ClientResponse;
+
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -38,9 +40,10 @@ import org.junit.runners.Parameterized;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
@@ -56,7 +59,12 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   public TestRMWebServicesCapacitySchedLegacyQueueCreation(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
-    getCapacitySchedulerConfigFileInTarget().delete();
+    backupSchedulerConfigFileInTarget();
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    restoreSchedulerConfigFileInTarget();
   }
 
   @Test

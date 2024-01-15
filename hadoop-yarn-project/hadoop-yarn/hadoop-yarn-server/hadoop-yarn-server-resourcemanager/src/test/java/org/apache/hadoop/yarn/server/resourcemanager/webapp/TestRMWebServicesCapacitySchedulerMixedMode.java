@@ -23,12 +23,14 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
 
 /**
@@ -48,7 +50,12 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
 
   public TestRMWebServicesCapacitySchedulerMixedMode() {
     super(createWebAppDescriptor());
-    getCapacitySchedulerConfigFileInTarget().delete();
+    backupSchedulerConfigFileInTarget();
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    restoreSchedulerConfigFileInTarget();
   }
 
 
