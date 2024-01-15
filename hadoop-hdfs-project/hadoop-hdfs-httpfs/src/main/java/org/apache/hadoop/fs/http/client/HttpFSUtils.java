@@ -106,7 +106,7 @@ public class HttpFSUtils {
     if (multiValuedParams != null) {
       for (Map.Entry<String, List<String>> multiValuedEntry : 
         multiValuedParams.entrySet()) {
-        String name = URLEncoder.encode(multiValuedEntry.getKey(), "UTF8");
+        String name = URLEncoder.encode(multiValuedEntry.getKey(), StandardCharsets.UTF_8);
         List<String> values = multiValuedEntry.getValue();
         for (String value : values) {
           sb.append(separator).append(name).append("=").

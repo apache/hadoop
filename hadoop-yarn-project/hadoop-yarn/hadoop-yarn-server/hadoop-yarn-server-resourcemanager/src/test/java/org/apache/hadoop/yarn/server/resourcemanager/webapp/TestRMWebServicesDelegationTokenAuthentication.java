@@ -251,7 +251,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       InputStream errorStream = conn.getErrorStream();
       String error = "";
       BufferedReader reader = null;
-      reader = new BufferedReader(new InputStreamReader(errorStream, "UTF8"));
+      reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8));
       for (String line; (line = reader.readLine()) != null;) {
         error += line;
       }
@@ -357,7 +357,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         BufferedReader reader = null;
         try {
-          reader = new BufferedReader(new InputStreamReader(response, "UTF8"));
+          reader = new BufferedReader(new InputStreamReader(response, StandardCharsets.UTF_8));
           for (String line; (line = reader.readLine()) != null;) {
             JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
@@ -433,7 +433,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-            response, "UTF8"))) {
+            response, StandardCharsets.UTF_8))) {
           String line;
           while ((line = reader.readLine()) != null) {
             JSONObject obj = new JSONObject(line);

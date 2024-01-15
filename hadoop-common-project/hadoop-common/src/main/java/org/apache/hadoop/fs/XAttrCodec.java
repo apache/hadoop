@@ -115,7 +115,7 @@ public enum XAttrCodec {
     } else if (encoding == BASE64) {
       return BASE64_PREFIX + base64.encodeToString(value);
     } else {
-      return "\"" + new String(value, "utf-8") + "\"";
+      return "\"" + new String(value, StandardCharsets.UTF_8) + "\"";
     }
   }
 }

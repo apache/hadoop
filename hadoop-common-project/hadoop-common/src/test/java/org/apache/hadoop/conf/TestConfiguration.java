@@ -387,7 +387,7 @@ public class TestConfiguration {
       String name = "multi_byte_\u611b_name";
       String value = "multi_byte_\u0641_value";
       out = new BufferedWriter(new OutputStreamWriter(
-        new FileOutputStream(CONFIG_MULTI_BYTE), "UTF-8"));
+        new FileOutputStream(CONFIG_MULTI_BYTE), StandardCharsets.UTF_8));
       startConfig();
       declareProperty(name, value, value);
       endConfig();

@@ -158,7 +158,7 @@ public class TestTopCLI {
       System.setErr(out);
       topcli.showTopScreen();
       out.flush();
-      actual = outStream.toString(StandardCharsets.UTF_8);
+      actual = outStream.toString(StandardCharsets.UTF_8.name());
     }
 
     String expected = "NodeManager(s)"
