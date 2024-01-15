@@ -603,16 +603,11 @@ public class TestObserverWithRouter {
     namespaceIdMap.put("ns1", new LongAccumulator(Math::max, 100));
     namespaceIdMap.put("ns2", new LongAccumulator(Math::max, Long.MIN_VALUE));
 
-    Map<String, Long> mockMapping = new HashMap<>();
-    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
-    mockMapping.forEach(builder::putNamespaceStateIds);
-
     RpcHeaderProtos.RpcResponseHeaderProto.Builder responseHeaderBuilder =
         RpcHeaderProtos.RpcResponseHeaderProto
             .newBuilder()
             .setCallId(1)
-            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
-            .setRouterFederatedState(builder.build().toByteString());
+            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS);
     routerStateIdContext.updateResponseState(responseHeaderBuilder);
 
     Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
