@@ -77,9 +77,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 
 public final class TestWebServiceUtil {
-  private static final ObjectMapper mapper = new ObjectMapper()
+  private static final ObjectMapper MAPPER = new ObjectMapper()
       .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-  private static final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+  private static final ObjectWriter OBJECT_WRITER =
+      MAPPER.writerWithDefaultPrettyPrinter();
 
   private TestWebServiceUtil(){
   }
@@ -210,16 +211,16 @@ public final class TestWebServiceUtil {
       String expectedResourceFilename) throws IOException {
     assertJsonType(response);
 
-    JsonNode jsonNode = mapper.readTree(response.getEntity(String.class));
+    JsonNode jsonNode = MAPPER.readTree(response.getEntity(String.class));
     sortQueuesLexically((ObjectNode) jsonNode);
 
-    String actual = writer.writeValueAsString(jsonNode);
+    String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
         // Deserialize/serialise again with the exact same settings
         // to make sure jackson upgrade doesn't break the test
-        writer.writeValueAsString(
-            mapper.readTree(
+        OBJECT_WRITER.writeValueAsString(
+            MAPPER.readTree(
                 Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
         actual);
   }
@@ -257,7 +258,7 @@ public final class TestWebServiceUtil {
           }
         });
 
-        object.set("queue", mapper.createObjectNode().arrayNode().addAll(queues));
+        object.set("queue", MAPPER.createObjectNode().arrayNode().addAll(queues));
       } else if (o.isObject()) {
         sortQueuesLexically((ObjectNode) o);
       }
