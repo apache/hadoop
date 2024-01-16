@@ -104,6 +104,14 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
     return expiring;
   }
 
+  /**
+   * Gets the client assertion from the token file.  The token in the file
+   * is automatically refreshed by Azure at least once every 24 hours.
+   * See https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments
+   *
+   * @return the client assertion.
+   * @throws IOException
+   */
   private String getClientAssertion()
       throws IOException {
     File file = new File(tokenFile);
