@@ -294,6 +294,11 @@ public class AWSRequestAnalyzer {
 
   private static final String BYTES_PREFIX = "bytes=";
 
+  /**
+   * Given a range header, determine the size of the request.
+   * @param rangeHeader header string
+   * @return parsed size or -1 for problems
+   */
   private static Number sizeFromRangeHeader(String rangeHeader) {
     if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
       String[] values = rangeHeader
@@ -302,7 +307,7 @@ public class AWSRequestAnalyzer {
       if (values.length == 2) {
         try {
           long start = Long.parseUnsignedLong(values[0]);
-          long end = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[1]);
           return end - start;
         } catch(NumberFormatException e) {
         }
