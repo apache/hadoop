@@ -152,7 +152,13 @@ public final class Constants {
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
+
+  /**
+   * Default value for {@link #MAXIMUM_CONNECTIONS}: {@value}.
+   * Future releases are likely to increase this value.
+   * Keep in sync with the value in {@code core-default.xml}
+   */
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 500;
 
   /**
    * Configuration option to configure expiration time of
