@@ -167,12 +167,19 @@ public final class S3AUtils {
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(@Nullable String operation,
-      String path,
+      @Nullable String path,
       SdkException exception) {
     String message = String.format("%s%s: %s",
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
+    if (path == null || path.isEmpty()) {
+      // handle null path by giving it a stub value.
+      // not ideal/informative, but ensures that the path is never null in
+      // exceptions constructed.
+      path = "/";
+    }
 
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
@@ -196,7 +203,7 @@ public final class S3AUtils {
         return ioe;
       }
       // network problems covered by an IOE inside the exception chain.
-      ioe = maybeExtractIOException(path, exception);
+      ioe = maybeExtractIOException(path, exception, message);
       if (ioe != null) {
         return ioe;
       }
@@ -300,10 +307,13 @@ public final class S3AUtils {
         break;
 
       // out of range. This may happen if an object is overwritten with
-      // a shorter one while it is being read.
+      // a shorter one while it is being read or openFile() was invoked
+      // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
       case SC_416_RANGE_NOT_SATISFIABLE:
-        ioe = new EOFException(message);
-        ioe.initCause(ase);
+        ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;
 
       // this has surfaced as a "no response from server" message.
@@ -673,7 +683,7 @@ public final class S3AUtils {
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
       } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "", (SdkException) targetException);
+        throw translateException("Instantiate " + className, "/", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
         throw instantiationException(uri, className, configKey, targetException);

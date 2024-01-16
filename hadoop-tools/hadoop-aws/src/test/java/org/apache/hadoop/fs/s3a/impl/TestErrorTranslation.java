@@ -67,7 +67,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
             new UnknownHostException("bottom")));
     final IOException ioe = intercept(UnknownHostException.class, "top",
         () -> {
-          throw maybeExtractIOException("", thrown);
+          throw maybeExtractIOException("", thrown, "");
         });
 
     // the wrapped exception is the top level one: no stack traces have
@@ -85,7 +85,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p2",
               sdkException("top",
                   sdkException("middle",
-                      new NoRouteToHostException("bottom"))));
+                      new NoRouteToHostException("bottom"))), null);
         });
   }
 
@@ -96,7 +96,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new ConnectException("bottom"))));
+                      new ConnectException("bottom"))), null);
         });
   }
 
@@ -113,7 +113,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
                   new UncheckedIOException(
                       new SocketTimeoutException("bottom"))));
           throw maybeExtractIOException("p1",
-              new NoAwsCredentialsException("IamProvider", thrown.toString(), thrown));
+              new NoAwsCredentialsException("IamProvider", thrown.toString(), thrown), null);
         });
   }
 
@@ -124,7 +124,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new NoConstructorIOE())));
+                      new NoConstructorIOE())), null);
         });
   }
 
