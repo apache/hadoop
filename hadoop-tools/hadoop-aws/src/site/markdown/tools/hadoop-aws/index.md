@@ -33,6 +33,7 @@ full details.
 
 ## <a name="documents"></a> Documents
 
+* [Connecting](./connecting.html)
 * [Encryption](./encryption.html)
 * [Performance](./performance.html)
 * [The upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
@@ -222,6 +223,10 @@ Do not inadvertently share these credentials through means such as:
 
 If you do any of these: change your credentials immediately!
 
+
+## Connecting to Amazon S3 or a third-party store
+
+See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.md).
 
 ## <a name="authenticating"></a> Authenticating with S3
 
@@ -835,59 +840,13 @@ Here are some the S3A properties for use in production.
 </property>
 
 <property>
-  <name>fs.s3a.connection.ssl.enabled</name>
-  <value>true</value>
-  <description>Enables or disables SSL connections to AWS services.
-    Also sets the default port to use for the s3a proxy settings,
-    when not explicitly set in fs.s3a.proxy.port.</description>
-</property>
-
-<property>
-  <name>fs.s3a.endpoint</name>
-  <description>AWS S3 endpoint to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the standard region (s3.amazonaws.com) is assumed.
+  <name>fs.s3a.connection.maximum</name>
+  <value>96</value>
+  <description>Controls the maximum number of simultaneous connections to S3.
+    This must be bigger than the value of fs.s3a.threads.max so as to stop
+    threads being blocked waiting for new HTTPS connections.
+    Why not equal? The AWS SDK transfer manager also uses these connections.
   </description>
-</property>
-
-<property>
-  <name>fs.s3a.path.style.access</name>
-  <value>false</value>
-  <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
-    Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.host</name>
-  <description>Hostname of the (optional) proxy server for S3 connections.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.port</name>
-  <description>Proxy server port. If this property is not set
-    but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
-    the value of fs.s3a.connection.ssl.enabled).</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.username</name>
-  <description>Username for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.password</name>
-  <description>Password for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.domain</name>
-  <description>Domain for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.workstation</name>
-  <description>Workstation for authenticating with proxy server.</description>
 </property>
 
 <property>
@@ -1003,14 +962,6 @@ Here are some the S3A properties for use in production.
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
-</property>
-
-<property>
-  <name>fs.s3a.accesspoint.required</name>
-  <value>false</value>
-  <description>Require that all S3 access is made through Access Points and not through
-  buckets directly. If enabled, use per-bucket overrides to allow bucket access to a specific set
-  of buckets.</description>
 </property>
 
 <property>
@@ -1215,23 +1166,6 @@ Here are some the S3A properties for use in production.
   <description>
     Select which version of the S3 SDK's List Objects API to use.  Currently
     support 2 (default) and 1 (older API).
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
-  <description>
-    Time out on HTTP requests to the AWS service; 0 means no timeout.
-    Measured in seconds; the usual time suffixes are all supported
-
-    Important: this is the maximum duration of any AWS service call,
-    including upload and copy operations. If non-zero, it must be larger
-    than the time to upload multi-megabyte blocks to S3 from the client,
-    and to rename many-GB files. Use with care.
-
-    Values that are larger than Integer.MAX_VALUE milliseconds are
-    converged to Integer.MAX_VALUE milliseconds
   </description>
 </property>
 
@@ -1698,179 +1632,6 @@ For a site configuration of:
 
 The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
 `arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
-
-###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
-
-S3 Buckets are hosted in different "regions", the default being "US-East".
-The S3A client talks to this region by default, issuing HTTP requests
-to the server `s3.amazonaws.com`.
-
-S3A can work with buckets from any region. Each region has its own
-S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
-
-1. Applications running in EC2 infrastructure do not pay for IO to/from
-*local S3 buckets*. They will be billed for access to remote buckets. Always
-use local buckets and local copies of data, wherever possible.
-1. The default S3 endpoint can support data IO with any bucket when the V1 request
-signing protocol is used.
-1. When the V4 signing protocol is used, AWS requires the explicit region endpoint
-to be used —hence S3A must be configured to use the specific endpoint. This
-is done in the configuration option `fs.s3a.endpoint`.
-1. All endpoints other than the default endpoint only support interaction
-with buckets local to that S3 instance.
-
-While it is generally simpler to use the default endpoint, working with
-V4-signing-only regions (Frankfurt, Seoul) requires the endpoint to be identified.
-Expect better performance from direct connections —traceroute will give you some insight.
-
-If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
-or as a 400 Bad Request: take these as cues to check the endpoint setting of
-a bucket.
-
-Here is a list of properties defining all AWS S3 regions, current as of June 2017:
-
-```xml
-<!--
- This is the default endpoint, which can be used to interact
- with any v2 region.
- -->
-<property>
-  <name>central.endpoint</name>
-  <value>s3.amazonaws.com</value>
-</property>
-
-<property>
-  <name>canada.endpoint</name>
-  <value>s3.ca-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>frankfurt.endpoint</name>
-  <value>s3.eu-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ireland.endpoint</name>
-  <value>s3-eu-west-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>london.endpoint</name>
-  <value>s3.eu-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>mumbai.endpoint</name>
-  <value>s3.ap-south-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ohio.endpoint</name>
-  <value>s3.us-east-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>oregon.endpoint</name>
-  <value>s3-us-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sao-paolo.endpoint</name>
-  <value>s3-sa-east-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>seoul.endpoint</name>
-  <value>s3.ap-northeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>singapore.endpoint</name>
-  <value>s3-ap-southeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sydney.endpoint</name>
-  <value>s3-ap-southeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>tokyo.endpoint</name>
-  <value>s3-ap-northeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>virginia.endpoint</name>
-  <value>${central.endpoint}</value>
-</property>
-```
-
-This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
-
-```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>${central.endpoint}</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
-</property>
-
-<property>
-  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
-  <value>${ireland.endpoint}</value>
-  <description>The endpoint for s3a://eu-dataset URLs</description>
-</property>
-```
-
-Why explicitly declare a bucket bound to the central endpoint? It ensures
-that if the default endpoint is changed to a new region, data store in
-US-east is still reachable.
-
-## <a name="accesspoints"></a>Configuring S3 AccessPoints usage with S3A
-S3a now supports [S3 Access Point](https://aws.amazon.com/s3/features/access-points/) usage which
-improves VPC integration with S3 and simplifies your data's permission model because different
-policies can be applied now on the Access Point level. For more information about why to use and
-how to create them make sure to read the official documentation.
-
-Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name.
-You can set the Access Point ARN property using the following per bucket configuration property:
-```xml
-<property>
-    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
-This configures access to the `sample-bucket` bucket for S3A, to go through the
-new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
-configured ARN when getting data from S3 instead of your bucket.
-
-The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
-Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
-to known sources of data defined through Access Points. In case there is a need to access a bucket
-directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
-
-```xml
-<!-- Require access point only access -->
-<property>
-    <name>fs.s3a.accesspoint.required</name>
-    <value>true</value>
-</property>
-<!-- Disable it on a per-bucket basis if needed -->
-<property>
-    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
-    <value>false</value>
-</property>
-```
-
-Before using Access Points make sure you're not impacted by the following:
-- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
-- The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
-`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
-considering endpoints, if you have any custom signers that use the host endpoint property make
-sure to update them if needed;
 
 ## <a name="requester_pays"></a>Requester Pays buckets
 
