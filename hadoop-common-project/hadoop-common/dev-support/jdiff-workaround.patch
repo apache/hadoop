@@ -14,7 +14,7 @@ index a277abd6e13..1d131d5db6e 100644
 -   *              the annotations of the source object.)
 -   * @param desc  the description of the source (or null. See above.)
 -   * @return the source object
--   * @exception MetricsException
+-   * @exception MetricsException Metrics Exception.
 -   */
 -  public abstract <T> T register(String name, String desc, T source);
 -
@@ -38,7 +38,7 @@ index a277abd6e13..1d131d5db6e 100644
 +   *              the annotations of the source object.)
 +   * @param desc  the description of the source (or null. See above.)
 +   * @return the source object
-    * @exception MetricsException
+    * @exception MetricsException Metrics Exception.
     */
 -  public abstract <T extends MetricsSink>
 -  T register(String name, String desc, T sink);
@@ -65,7 +65,6 @@ index a6edf08e5a7..5b87be1ec67 100644
 -      }
 -      return sink;
 -    }
--    allSinks.put(name, sink);
 -    if (config != null) {
 -      registerSink(name, description, sink);
 -    }
