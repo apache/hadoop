@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -72,6 +73,7 @@ import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 import java.io.Closeable;
 import java.io.File;
@@ -456,6 +458,8 @@ public final class S3ATestUtils {
         .describedAs("Exception expected of class %s", clazz)
         .isNotNull();
     if (!(ex.getClass().equals(clazz))) {
+      LOG.warn("Rethrowing exception: {} as it is not an instance of {}",
+          ex, clazz, ex);
       throw ex;
     }
     return (E)ex;
@@ -1710,5 +1714,60 @@ public final class S3ATestUtils {
     Preconditions.checkArgument(status instanceof EtagSource,
         "Not an EtagSource: %s", status);
     return ((EtagSource) status).getEtag();
+  }
+
+  /**
+   * Create an SDK client exception.
+   * @param message message
+   * @param cause nullable cause
+   * @return the exception
+   */
+  public static SdkClientException sdkClientException(
+      String message, Throwable cause) {
+    return SdkClientException.builder()
+        .message(message)
+        .cause(cause)
+        .build();
+  }
+
+  /**
+   * Create an SDK client exception using the string value of the cause
+   * as the message.
+   * @param cause nullable cause
+   * @return the exception
+   */
+  public static SdkClientException sdkClientException(
+      Throwable cause) {
+    return SdkClientException.builder()
+        .message(cause.toString())
+        .cause(cause)
+        .build();
+  }
+
+  private static final String BYTES_PREFIX = "bytes=";
+
+  /**
+   * Given a range header, split into start and end.
+   * Based on AWSRequestAnalyzer.
+   * @param rangeHeader header string
+   * @return parse range, or (-1, -1) for problems
+   */
+  public static Pair<Long, Long> requestRange(String rangeHeader) {
+    if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
+      String[] values = rangeHeader
+          .substring(BYTES_PREFIX.length())
+          .split("-");
+      if (values.length == 2) {
+        try {
+          long start = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[1]);
+          return Pair.of(start, end);
+        } catch (NumberFormatException e) {
+          LOG.warn("Failed to parse range header {}", rangeHeader, e);
+        }
+      }
+    }
+    // error case
+    return Pair.of(-1L, -1L);
   }
 }
