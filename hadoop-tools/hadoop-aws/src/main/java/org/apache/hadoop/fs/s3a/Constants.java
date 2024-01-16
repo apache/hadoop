@@ -1336,6 +1336,15 @@ public final class Constants {
   public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
 
   /**
+   * Is the endpoint a FIPS endpoint?
+   * Can be queried as a path capability.
+   * Value {@value}.
+   */
+  public static final String FIPS_ENDPOINT = "fs.s3a.endpoint.fips";
+
+  public static final boolean ENDPOINT_FIPS_DEFAULT = false;
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";

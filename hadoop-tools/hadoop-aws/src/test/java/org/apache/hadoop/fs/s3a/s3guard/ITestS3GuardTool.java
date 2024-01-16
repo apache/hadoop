@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
@@ -94,6 +96,20 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     String output = exec(cmd, cmd.getName(),
         "-" + BucketInfo.UNGUARDED_FLAG,
         getFileSystem().getUri().toString());
+    LOG.info("Exec output=\n{}", output);
+  }
+
+  @Test
+  public void testStoreInfoFips() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    if (!fs.hasPathCapability(new Path("/"), FIPS_ENDPOINT)) {
+      skip("FIPS not enabled");
+    }
+    S3GuardTool.BucketInfo cmd =
+        toClose(new S3GuardTool.BucketInfo(fs.getConf()));
+    String output = exec(cmd, cmd.getName(),
+        "-" + BucketInfo.FIPS_FLAG,
+        fs.getUri().toString());
     LOG.info("Exec output=\n{}", output);
   }
 
