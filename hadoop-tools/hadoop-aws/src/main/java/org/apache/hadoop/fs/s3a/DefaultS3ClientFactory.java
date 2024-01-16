@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED_DEFAULT;
@@ -63,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 
 /**
@@ -101,6 +104,13 @@ public class DefaultS3ClientFactory extends Configured
 
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
+
+  /**
+   * Error message when an endpoint is set with FIPS enabled: {@value}.
+   */
+  @VisibleForTesting
+  public static final String ERROR_ENDPOINT_WITH_FIPS =
+      "An endpoint cannot set when " + FIPS_ENDPOINT + " is true";
 
   @Override
   public S3Client createS3Client(
@@ -248,6 +258,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf  conf configuration object
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
+   * @throws IllegalArgumentException if endpoint is set when FIPS is enabled.
    */
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
@@ -263,7 +274,18 @@ public class DefaultS3ClientFactory extends Configured
       region = Region.of(configuredRegion);
     }
 
+    // FIPs? Log it, then reject any attempt to set an endpoint
+    final boolean fipsEnabled = parameters.isFipsEnabled();
+    if (fipsEnabled) {
+      LOG.debug("Enabling FIPS mode");
+    }
+    // always setting it guarantees the value is non-null,
+    // which tests expect.
+    builder.fipsEnabled(fipsEnabled);
+
     if (endpoint != null) {
+      checkArgument(!fipsEnabled,
+          "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
       builder.endpointOverride(endpoint);
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {

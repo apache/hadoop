@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.CommonPathCapabilities.FS_MULTIPART_UPLOADER;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
@@ -272,6 +273,7 @@ public final class InternalConstants {
           FS_CHECKSUMS,
           FS_MULTIPART_UPLOADER,
           DIRECTORY_LISTING_INCONSISTENT,
+          FIPS_ENDPOINT,
 
           // s3 specific
           STORE_CAPABILITY_AWS_V2,

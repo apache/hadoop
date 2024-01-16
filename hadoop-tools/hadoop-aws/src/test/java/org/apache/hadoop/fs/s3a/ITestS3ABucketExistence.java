@@ -39,6 +39,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
@@ -138,6 +139,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(conf,
         S3A_BUCKET_PROBE,
         ENDPOINT,
+        FIPS_ENDPOINT,
         AWS_REGION,
         PATH_STYLE_ACCESS);
     conf.setInt(S3A_BUCKET_PROBE, probe);

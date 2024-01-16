@@ -462,6 +462,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean isMultipartCopyEnabled;
 
   /**
+   * Is FIPS enabled?
+   */
+  private boolean fipsEnabled;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -613,6 +618,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       configuredRegion = accessPoint == null
           ? conf.getTrimmed(AWS_REGION)
           : accessPoint.getRegion();
+
+      fipsEnabled = conf.getBoolean(FIPS_ENDPOINT, ENDPOINT_FIPS_DEFAULT);
 
       // is this an S3Express store?
       s3ExpressStore = isS3ExpressStore(bucket, endpoint);
@@ -1046,6 +1053,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartThreshold(multiPartThreshold)
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(configuredRegion)
+        .withFipsEnabled(fipsEnabled)
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT));
 
@@ -5520,6 +5528,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // is the optimized copy from local enabled.
     case OPTIMIZED_COPY_FROM_LOCAL:
       return optimizedCopyFromLocal;
+
+    // probe for a fips endpoint
+    case FIPS_ENDPOINT:
+      return fipsEnabled;
 
     default:
       return super.hasPathCapability(p, cap);

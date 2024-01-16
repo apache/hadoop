@@ -56,6 +56,12 @@
     <description>Do not add the referrer header to landsat operations</description>
   </property>
 
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
+    <value>true</value>
+    <description>Use the fips endpoint</description>
+  </property>
+
   <!-- Per-bucket configurations: usgs-landsat -->
   <property>
     <name>fs.s3a.bucket.usgs-landsat.endpoint.region</name>
