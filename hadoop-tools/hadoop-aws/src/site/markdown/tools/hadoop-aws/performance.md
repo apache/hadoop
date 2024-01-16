@@ -226,7 +226,7 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 
 | Property                                | Default | V2  | Meaning                                               |
 |-----------------------------------------|---------|:----|-------------------------------------------------------|
-| `fs.s3a.connection.maximum`             | `200`   |     | Connection pool size                                  |
+| `fs.s3a.connection.maximum`             | `500`   |     | Connection pool size                                  |
 | `fs.s3a.connection.keepalive`           | `false` | `*` | Use TCP keepalive on open channels                    |
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
 | `fs.s3a.connection.establish.timeout`   | `30s`   |     | Time to establish the TCP/TLS connection              |
