@@ -482,7 +482,7 @@ public class LogAggregationService extends AbstractService implements
     return logAggregationFileController;
   }
 
-  class StoreUnexecutedPolicy implements RejectedExecutionHandler {
+  public static class StoreUnexecutedPolicy implements RejectedExecutionHandler {
 
     List<Runnable> unexecutedTasks = new ArrayList<>();
 
