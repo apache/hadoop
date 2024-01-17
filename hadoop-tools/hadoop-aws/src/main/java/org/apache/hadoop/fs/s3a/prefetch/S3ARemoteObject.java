@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -36,7 +37,6 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
 
@@ -161,8 +161,6 @@ public class S3ARemoteObject {
 
   /**
    * Opens a section of the file for reading.
-   * The s3 object response is cached in {@link #s3Objects} so that
-   * GC does not close the input stream.
    *
    * @param offset Start offset (0 based) of the section to read.
    * @param size Size of the section to read.
@@ -173,6 +171,7 @@ public class S3ARemoteObject {
    * @throws IllegalArgumentException if offset is greater than or equal to file size.
    * @throws IllegalArgumentException if size is greater than the remaining bytes.
    */
+  @Retries.OnceTranslated
   public ResponseInputStream<GetObjectResponse> openForRead(long offset, int size)
       throws IOException {
     Validate.checkNotNegative(offset, "offset");
@@ -188,8 +187,7 @@ public class S3ARemoteObject {
 
     String operation = String.format(
         "%s %s at %d size %d", S3AInputStream.OPERATION_OPEN, uri, offset, size);
-    DurationTracker tracker = streamStatistics.initiateGetRequest();
-    ResponseInputStream<GetObjectResponse> object = null;
+    ResponseInputStream<GetObjectResponse> object;
 
     // initiate the GET. This completes once the request returns the response headers;
     // the data is read later.

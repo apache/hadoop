@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.prefetch;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ import static org.apache.hadoop.test.Sizes.S_4K;
 
 /**
  * Test the prefetching input stream, validates that the
- * S3AInMemoryInputStream is working as expected.
+ * {@link S3AInMemoryInputStream} is working as expected.
  */
 public class ITestInMemoryInputStream extends AbstractS3ACostTest {
 
@@ -215,8 +216,9 @@ public class ITestInMemoryInputStream extends AbstractS3ACostTest {
       assertEquals("Stream stats retrieved through stream before and after closing should match",
           inputStreamStatistics, newInputStreamStatistics);
 
-      assertFalse("seekToNewSource() not supported with prefetch", in.seekToNewSource(10));
-
+      Assertions.assertThat(in.seekToNewSource(10))
+          .describedAs("seekToNewSource() not supported with prefetch: %s", in)
+          .isFalse();
     }
 
   }
