@@ -41,8 +41,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
@@ -153,20 +153,26 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         new Path("gopher:///localhost/" + testFile.getName()));
 
     // no IO in open
-    FSDataInputStream in = verifyMetrics(() ->
-            fs.openFile(testFile)
-                .withFileStatus(st2)
-                .build()
-                .get(),
-        always(NO_HEAD_OR_LIST),
-        with(STREAM_READ_OPENED, 0));
+    FSDataInputStream in = null;
+    try {
+      in = verifyMetrics(() ->
+              fs.openFile(testFile)
+                  .withFileStatus(st2)
+                  .build()
+                  .get(),
+          always(NO_HEAD_OR_LIST),
+          with(STREAM_READ_OPENED, 0));
 
-    // the stream gets opened during read
-    long readLen = verifyMetrics(() ->
-            readStream(in),
-        always(NO_HEAD_OR_LIST),
-        with(STREAM_READ_OPENED, 1));
-    assertEquals("bytes read from file", fileLength, readLen);
+      // the stream gets opened during read
+      final FSDataInputStream s = in;
+      long readLen = verifyMetrics(() ->
+              readStream(s),
+          always(NO_HEAD_OR_LIST),
+          with(STREAM_READ_OPENED, 1));
+      assertEquals("bytes read from file", fileLength, readLen);
+    } finally {
+      IOUtils.closeStream(in);
+    }
   }
 
   @Test

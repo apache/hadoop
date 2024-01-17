@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.HttpChannelEOFException;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -78,13 +80,14 @@ public class S3ARemoteObjectReader implements Closeable {
    * @param offset the absolute offset into the underlying file where reading starts.
    * @param size the number of bytes to be read.
    *
-   * @return number of bytes actually read.
+   * @return number of bytes actually read. -1 if the file is closed.
    * @throws IOException if there is an error reading from the file.
    *
    * @throws IllegalArgumentException if buffer is null.
    * @throws IllegalArgumentException if offset is outside of the range [0, file size].
    * @throws IllegalArgumentException if size is zero or negative.
    */
+  @Retries.RetryTranslated
   public int read(ByteBuffer buffer, long offset, int size) throws IOException {
     Validate.checkNotNull(buffer, "buffer");
     Validate.checkWithinRange(offset, "offset", 0, this.remoteObject.size());
@@ -103,6 +106,21 @@ public class S3ARemoteObjectReader implements Closeable {
     this.closed = true;
   }
 
+  /**
+   * Reads one block from S3.
+   * <p>
+   * There are no retries on base EOFExceptions.
+   * {@link HttpChannelEOFException} will be retried.
+   * {@link RangeNotSatisfiableEOFException} will be downgraded to
+   * partial read, so data may be returned.
+   * @param buffer destination.
+   * @param offset object offset
+   * @param size size to retrieve.
+   * @return bytes read.
+   * @throws EOFException if this was raised.
+   * @throws IOException IO failure.
+   */
+  @Retries.RetryTranslated
   private int readOneBlockWithRetries(ByteBuffer buffer, long offset, int size)
       throws IOException {
 
@@ -110,7 +128,7 @@ public class S3ARemoteObjectReader implements Closeable {
     Invoker invoker = this.remoteObject.getReadInvoker();
 
     final String path = this.remoteObject.getPath();
-    int invokerResponse =
+    EOFException invokerResponse =
         invoker.retry(String.format("read %s [%d-%d]", path, offset, size),
             path, true,
             trackDurationOfOperation(streamStatistics,
@@ -118,16 +136,17 @@ public class S3ARemoteObjectReader implements Closeable {
                   try {
                     this.readOneBlock(buffer, offset, size);
                   } catch (HttpChannelEOFException e) {
+                    // EOF subclasses with are rethrown as errors.
                     this.remoteObject.getStatistics().readException();
                     throw e;
                   } catch (EOFException e) {
                     // the base implementation swallows EOFs.
-                    return -1;
+                    return e;
                   } catch (IOException e) {
                     this.remoteObject.getStatistics().readException();
                     throw e;
                   }
-                  return 0;
+                  return null;
                 }));
 
     int numBytesRead = buffer.position();
@@ -139,13 +158,28 @@ public class S3ARemoteObjectReader implements Closeable {
     this.remoteObject.getStatistics()
         .readOperationCompleted(size, numBytesRead);
 
-    if (invokerResponse < 0) {
-      return invokerResponse;
-    } else {
-      return numBytesRead;
+    if (invokerResponse != null) {
+      if (invokerResponse instanceof RangeNotSatisfiableEOFException) {
+        // the range wasn't satisfiable, but some may have been read.
+        return numBytesRead;
+      } else {
+        throw invokerResponse;
+      }
     }
+
+    // how much was read?
+    return numBytesRead;
   }
 
+  /**
+   * GET one block from S3.
+   * @param buffer buffer to fill up.
+   * @param offset offset within the object.
+   * @param size size to retrieve.
+   * @throws IOException IO failure.
+   * @throws HttpChannelEOFException if the channel is closed during the read.
+   */
+  @Retries.OnceTranslated
   private void readOneBlock(ByteBuffer buffer, long offset, int size)
       throws IOException {
     int readSize = Math.min(size, buffer.remaining());
