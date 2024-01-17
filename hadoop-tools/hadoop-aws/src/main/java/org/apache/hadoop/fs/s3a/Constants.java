@@ -1568,4 +1568,19 @@ public final class Constants {
    * is true: {@value}.
    */
   public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
+
+  /**
+   * Should checksums be validated on download?
+   * This is slower and not needed on TLS connections.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_VALIDATION =
+      "fs.s3a.checksum.validation";
+
+  /**
+   * Default value of {@link #CHECKSUM_VALIDATION}.
+   * Value: {@value}.
+   */
+  public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
+
 }
