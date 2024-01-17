@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +45,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 
 public class TestMRKeyValueTextInputFormat {
@@ -254,9 +254,7 @@ public class TestMRKeyValueTextInputFormat {
   }
 
   private LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                           (str.getBytes(StandardCharsets.UTF_8)),
-                                           defaultConf);
+    return new LineReader(new ByteArrayInputStream(str.getBytes(UTF_8)), defaultConf);
   }
   
   @Test

@@ -95,7 +95,7 @@ public final class DockerClient {
           TMP_FILE_SUFFIX, cmdDir);
       try (
         Writer writer = new OutputStreamWriter(
-            new FileOutputStream(dockerCommandFile.toString()), StandardCharsets.UTF_8);
+              new FileOutputStream(dockerCommandFile.toString()), StandardCharsets.UTF_8);
         PrintWriter printWriter = new PrintWriter(writer);
       ) {
         printWriter.println("[docker-command-execution]");

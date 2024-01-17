@@ -195,9 +195,9 @@ public class UpgradeUtilities {
   public static Configuration initializeStorageStateConf(int numDirs,
                                                          Configuration conf) {
     StringBuilder nameNodeDirs =
-      new StringBuilder(new File(TEST_ROOT_DIR, "name1").toString());
+        new StringBuilder(new File(TEST_ROOT_DIR, "name1").toString());
     StringBuilder dataNodeDirs =
-      new StringBuilder(new File(TEST_ROOT_DIR, "data1").toString());
+        new StringBuilder(new File(TEST_ROOT_DIR, "data1").toString());
     for (int i = 2; i <= numDirs; i++) {
       nameNodeDirs.append("," + new File(TEST_ROOT_DIR, "name"+i));
       dataNodeDirs.append("," + new File(TEST_ROOT_DIR, "data"+i));

@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +42,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 
 public class TestTextInputFormat {
@@ -331,14 +331,10 @@ public class TestTextInputFormat {
   }
 
   private static LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes(StandardCharsets.UTF_8)),
-                                           defaultConf);
+    return new LineReader(new ByteArrayInputStream(str.getBytes(UTF_8)), defaultConf);
   }
   private static LineReader makeStream(String str, int bufsz) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes(StandardCharsets.UTF_8)),
-                                           bufsz);
+    return new LineReader(new ByteArrayInputStream(str.getBytes(UTF_8)), bufsz);
   }
 
   @Test (timeout=5000)
