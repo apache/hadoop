@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE;
@@ -289,7 +290,9 @@ public final class InternalConstants {
           STORE_CAPABILITY_S3_EXPRESS_STORAGE,
           FS_S3A_CREATE_PERFORMANCE_ENABLED,
           DIRECTORY_OPERATIONS_PURGE_UPLOADS,
-          ENABLE_MULTI_DELETE));
+          ENABLE_MULTI_DELETE,
+          PREFETCH_ENABLED_KEY
+          ));
 
   /**
    * AWS V4 Auth Scheme to use when creating signers: {@value}.

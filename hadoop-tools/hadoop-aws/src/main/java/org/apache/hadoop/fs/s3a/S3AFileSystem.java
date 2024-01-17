@@ -5475,7 +5475,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case CommonPathCapabilities.ETAGS_AVAILABLE:
       return true;
 
-       /*
+    // Is prefetching enabled?
+    case PREFETCH_ENABLED_KEY:
+      return prefetchEnabled;
+
+    /*
      * Marker policy capabilities are handed off.
      */
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
