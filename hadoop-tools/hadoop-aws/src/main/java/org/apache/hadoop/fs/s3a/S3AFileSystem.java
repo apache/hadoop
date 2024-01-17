@@ -1055,7 +1055,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRegion(configuredRegion)
         .withFipsEnabled(fipsEnabled)
         .withExpressCreateSession(
-            conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT));
+            conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
+        .withChecksumValidationEnabled(
+            conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT));
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
