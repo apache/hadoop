@@ -73,13 +73,19 @@ import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.internal.io.ChecksumValidatingInputStream;
+import software.amazon.awssdk.services.s3.internal.checksums.S3ChecksumValidatingInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -1661,6 +1667,54 @@ public final class S3ATestUtils {
     } else {
       throw new AssertionError("Not an S3AInputStream: " + inner);
     }
+  }
+
+  /**
+   * Get the inner stream of a FilterInputStream.
+   * Uses reflection to access a protected field.
+   * @param fis input stream.
+   * @return the inner stream.
+   */
+  public static InputStream getInnerStream(FilterInputStream fis) {
+    try {
+      final Field field = FilterInputStream.class.getDeclaredField("in");
+      field.setAccessible(true);
+      return (InputStream) field.get(fis);
+    } catch (IllegalAccessException | NoSuchFieldException e) {
+      throw new AssertionError("Failed to get inner stream: " + e, e);
+    }
+  }
+
+  /**
+   * Get the innermost stream of a chain of FilterInputStreams.
+   * This allows tests into the internals of an AWS SDK stream chain.
+   * @param fis input stream.
+   * @return the inner stream.
+   */
+  public static InputStream getInnermostStream(FilterInputStream fis) {
+    InputStream inner = fis;
+    while (inner instanceof FilterInputStream) {
+      inner = getInnerStream((FilterInputStream) inner);
+    }
+    return inner;
+  }
+
+  /**
+   * Verify that an s3a stream is not checksummed.
+   * The inner stream must be active.
+   */
+  public static void assertStreamIsNotChecksummed(final S3AInputStream wrappedS3A) {
+    final ResponseInputStream<GetObjectResponse> wrappedStream =
+        wrappedS3A.getWrappedStream();
+    Assertions.assertThat(wrappedStream)
+        .describedAs("wrapped stream is not open: call read() on %s", wrappedS3A)
+        .isNotNull();
+
+    final InputStream inner = getInnermostStream(wrappedStream);
+    Assertions.assertThat(inner)
+        .describedAs("innermost stream of %s", wrappedS3A)
+        .isNotInstanceOf(ChecksumValidatingInputStream.class)
+        .isNotInstanceOf(S3ChecksumValidatingInputStream.class);
   }
 
   /**

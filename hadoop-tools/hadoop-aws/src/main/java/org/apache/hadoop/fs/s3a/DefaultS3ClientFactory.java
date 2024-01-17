@@ -179,11 +179,15 @@ public class DefaultS3ClientFactory extends Configured
     configureEndpointAndRegion(builder, parameters, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
-            .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-            .build();
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
+        .build();
+
+    final ClientOverrideConfiguration.Builder override =
+        createClientOverrideConfiguration(parameters, conf);
 
     S3BaseClientBuilder s3BaseClientBuilder = builder
-        .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
+        .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
@@ -204,8 +208,9 @@ public class DefaultS3ClientFactory extends Configured
    * @throws IOException any IOE raised, or translated exception
    * @throws RuntimeException some failures creating an http signer
    * @return the override configuration
+   * @throws IOException any IOE raised, or translated exception
    */
-  protected ClientOverrideConfiguration createClientOverrideConfiguration(
+  protected ClientOverrideConfiguration.Builder createClientOverrideConfiguration(
       S3ClientCreationParameters parameters, Configuration conf) throws IOException {
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
         AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3);
@@ -237,7 +242,7 @@ public class DefaultS3ClientFactory extends Configured
     final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
     clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
 
-    return clientOverrideConfigBuilder.build();
+    return clientOverrideConfigBuilder;
   }
 
   /**
