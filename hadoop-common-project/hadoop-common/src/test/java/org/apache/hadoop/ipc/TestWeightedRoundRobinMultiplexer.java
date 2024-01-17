@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +53,44 @@ public class TestWeightedRoundRobinMultiplexer {
 
     // ask for 3 weights with 2 queues
     mux = new WeightedRoundRobinMultiplexer(2, "namespace", conf);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInstantiateNegativeReservedMux() {
+    mux = new WeightedRoundRobinMultiplexer(0, -1,"", new Configuration());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testParseIllegalQueueWeights() {
+    Configuration conf = new Configuration();
+    conf.setStrings("ns." + IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY, "1", "2", "3");
+    conf.setStrings("ns." + CommonConfigurationKeys.IPC_CALLQUEUE_WRRMUX_RESERVED_WEIGHTS_KEY, "3");
+    mux = new WeightedRoundRobinMultiplexer(3, 2,"ns", conf);
+  }
+
+  @Test
+  public void testParseQueueWeights() {
+    Configuration conf = new Configuration();
+    conf.setStrings("ns." + IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY, "1", "2", "3");
+    conf.setStrings("ns." + CommonConfigurationKeys.IPC_CALLQUEUE_WRRMUX_RESERVED_WEIGHTS_KEY, "2", "2");
+    mux = new WeightedRoundRobinMultiplexer(3, 2,"ns", conf);
+
+
+    for(int i = 0; i < 5; i++) {
+      // Shared queue: 0x1, 1x2, 2x3
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(0);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(1);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(1);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(2);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(2);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(2);
+
+      // Reserved queue: 3x2, 4x2
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(3);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(3);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(4);
+      assertThat(mux.getAndAdvanceCurrentIndex()).isEqualTo(4);
+    } // Ensure pattern repeats
   }
 
   @Test

@@ -118,6 +118,16 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CALLQUEUE_CAPACITY_WEIGHTS_KEY =
       "callqueue.capacity.weights";
 
+  public static final String IPC_CALLQUEUE_RESERVED_USERS_KEY =
+      "faircallqueue.reserved.users";
+  public static final String IPC_CALLQUEUE_RESERVED_USERS_MAX_KEY =
+      "faircallqueue.reserved.users.max";
+  public static final int IPC_CALLQUEUE_RESERVED_USERS_MAX_KEY_DEFAULT = 10;
+  public static final String IPC_CALLQUEUE_RESERVED_USERS_CAPACITIES_KEY =
+      "faircallqueue.reserved.users.capacities";
+  public static final String IPC_CALLQUEUE_WRRMUX_RESERVED_WEIGHTS_KEY =
+      "faircallqueue.multiplexer.reserved.weights";
+
   /**
    * IPC scheduler priority levels.
    */
