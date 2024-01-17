@@ -22,13 +22,13 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
+import org.apache.hadoop.fs.s3a.HttpChannelEOFException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
@@ -117,11 +117,12 @@ public class S3ARemoteObjectReader implements Closeable {
                 STREAM_READ_REMOTE_BLOCK_READ, () -> {
                   try {
                     this.readOneBlock(buffer, offset, size);
+                  } catch (HttpChannelEOFException e) {
+                    this.remoteObject.getStatistics().readException();
+                    throw e;
                   } catch (EOFException e) {
                     // the base implementation swallows EOFs.
                     return -1;
-                  } catch (SocketTimeoutException e) {
-                    throw e;
                   } catch (IOException e) {
                     this.remoteObject.getStatistics().readException();
                     throw e;
@@ -168,7 +169,7 @@ public class S3ARemoteObjectReader implements Closeable {
           String message = String.format(
               "Unexpected end of stream: buffer[%d], readSize = %d, numRemainingBytes = %d",
               buffer.capacity(), readSize, numRemainingBytes);
-          throw new EOFException(message);
+          throw new HttpChannelEOFException(remoteObject.getPath(), message, null);
         }
 
         if (numBytes > 0) {

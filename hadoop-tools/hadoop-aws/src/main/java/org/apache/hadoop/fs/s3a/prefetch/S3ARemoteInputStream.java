@@ -290,12 +290,18 @@ public abstract class S3ARemoteInputStream
   public int read() throws IOException {
     throwIfClosed();
 
-    if (remoteObject.size() == 0
-        || nextReadPos >= remoteObject.size()) {
+    if (remoteObject.size() == 0) {
+      LOG.debug("Rejecting read on empty file");
+      return -1;
+    }
+
+    if (nextReadPos >= remoteObject.size()) {
+      LOG.debug("Rejecting read past EOF");
       return -1;
     }
 
     if (!ensureCurrentBuffer()) {
+      LOG.debug("Empty buffer in cache");
       return -1;
     }
 
@@ -338,12 +344,18 @@ public abstract class S3ARemoteInputStream
       return 0;
     }
 
-    if (remoteObject.size() == 0
-        || nextReadPos >= remoteObject.size()) {
+    if (remoteObject.size() == 0) {
+      LOG.debug("Rejecting read on empty file");
+      return -1;
+    }
+
+    if (nextReadPos >= remoteObject.size()) {
+      LOG.debug("Rejecting read past EOF");
       return -1;
     }
 
     if (!ensureCurrentBuffer()) {
+      LOG.debug("Empty buffer in cache");
       return -1;
     }
 
