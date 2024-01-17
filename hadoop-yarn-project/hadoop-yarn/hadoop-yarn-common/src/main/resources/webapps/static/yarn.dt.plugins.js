@@ -14,96 +14,127 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-if (!jQuery.fn.dataTableExt.fnVersionCheck("1.7.5")) {
-  alert("These plugins requires dataTables 1.7.5+");
-}
-
-// don't filter on hidden html elements for an sType of title-numeric
-$.fn.dataTableExt.ofnSearch['title-numeric'] = function ( sData ) {
-   return sData.replace(/\n/g," ").replace( /<.*?>/g, "" );
-}
-
-// 'title-numeric' sort type
-jQuery.fn.dataTableExt.oSort['title-numeric-asc']  = function(a,b) {
-  var x = a.match(/title=["']?(-?\d+\.?\d*)/)[1];
-  var y = b.match(/title=["']?(-?\d+\.?\d*)/)[1];
-  x = parseFloat( x );
-  y = parseFloat( y );
-  return ((x < y) ? -1 : ((x > y) ?  1 : 0));
-};
-
-jQuery.fn.dataTableExt.oSort['title-numeric-desc'] = function(a,b) {
-  var x = a.match(/title=["']?(-?\d+\.?\d*)/)[1];
-  var y = b.match(/title=["']?(-?\d+\.?\d*)/)[1];
-  x = parseFloat( x );
-  y = parseFloat( y );
-  return ((x < y) ?  1 : ((x > y) ? -1 : 0));
-};
-
-// 'numeric-ignore-strings' sort type
-jQuery.fn.dataTableExt.oSort['num-ignore-str-asc'] = function(a, b) {
-  if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
-
-  if (isNaN(a)) return 1;
-  if (isNaN(b)) return -1;
-
-  x = parseFloat(a);
-  y = parseFloat(b);
-  return ((x < y) ? -1 : ((x > y) ? 1 : 0));
-};
-
-jQuery.fn.dataTableExt.oSort['num-ignore-str-desc'] = function(a, b) {
-  if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
-
-  if (isNaN(a)) return 1;
-  if (isNaN(b)) return -1;
-
-  x = parseFloat(a);
-  y = parseFloat(b);
-  return ((x < y) ? 1 : ((x > y) ? -1 : 0));
-};
-
-jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay ) {
-  var
-  _that = this,
-  iDelay = (typeof iDelay == 'undefined') ? 250 : iDelay;
-
-  this.each( function ( i ) {
-    $.fn.dataTableExt.iApiIndex = i;
-    var
-    $this = this,
-    oTimerId = null,
-    sPreviousSearch = null,
-    anControl = $( 'input', _that.fnSettings().aanFeatures.f );
-
-    anControl.unbind( 'keyup' ).bind( 'keyup', function() {
-      var $$this = $this;
-
-      if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
-        window.clearTimeout(oTimerId);
-        sPreviousSearch = anControl.val();
-        oSettings.oApi._fnProcessingDisplay(oSettings, true);
-        oTimerId = window.setTimeout(function() {
-          $.fn.dataTableExt.iApiIndex = i;
-          _that.fnFilter( anControl.val() );
-          oSettings.oApi._fnProcessingDisplay(oSettings, false);
-        }, iDelay);
+function naturalSort (a, b) {
+  var diff = a.length - b.length;
+  if (diff != 0) {
+    var splitA = a.split("_");
+    var splitB = b.split("_");
+    if (splitA.length != splitB.length) {
+      return a.localeCompare(b);
+    }
+    for (var i=1; i < splitA.length; i++) {
+      var splitdiff = splitA[i].length - splitB[i].length;
+      if (splitdiff != 0) {
+        return splitdiff;
       }
+      var splitCompare = splitA[i].localeCompare(splitB[i]);
+      if (splitCompare != 0) {
+        return splitCompare;
+      }
+    }
+    return diff;
+  }
+  return a.localeCompare(b);
+}
+
+var yarnDt = function (dtObject) {
+  // don't filter on hidden html elements for an sType of title-numeric
+  
+  dtObject.ofnSearch['title-numeric'] = function (sData) {
+    return sData.replace(/\n/g, " ").replace(/<.*?>/g, "");
+  }
+
+  // 'title-numeric' sort type
+  dtObject.oSort['title-numeric-asc'] = function (a, b) {
+    var x = a.match(/title=["']?(-?\d+\.?\d*)/)[1];
+    var y = b.match(/title=["']?(-?\d+\.?\d*)/)[1];
+    x = parseFloat(x);
+    y = parseFloat(y);
+    return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+  };
+
+  dtObject.oSort['title-numeric-desc'] = function (a, b) {
+    var x = a.match(/title=["']?(-?\d+\.?\d*)/)[1];
+    var y = b.match(/title=["']?(-?\d+\.?\d*)/)[1];
+    x = parseFloat(x);
+    y = parseFloat(y);
+    return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+  };
+
+  // 'numeric-ignore-strings' sort type
+  dtObject.oSort['num-ignore-str-asc'] = function (a, b) {
+    if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
+
+    if (isNaN(a)) return 1;
+    if (isNaN(b)) return -1;
+
+    x = parseFloat(a);
+    y = parseFloat(b);
+    return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+  };
+
+  dtObject.oSort['num-ignore-str-desc'] = function (a, b) {
+    if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
+
+    if (isNaN(a)) return 1;
+    if (isNaN(b)) return -1;
+
+    x = parseFloat(a);
+    y = parseFloat(b);
+    return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+  };
+
+  dtObject.oSort["natural-asc"] = function ( a, b ) {
+    return naturalSort(a,b);
+  }
+
+  dtObject.oSort["natural-desc"] = function ( a, b ) {
+    return naturalSort(a,b) * -1;
+  }
+
+  dtObject.oApi.fnSetFilteringDelay = function (oSettings, iDelay) {
+    var
+      _that = this,
+      iDelay = (typeof iDelay == 'undefined') ? 250 : iDelay;
+
+    this.each(function (i) {
+      $.fn.dataTableExt.iApiIndex = i;
+      var
+        $this = this,
+        oTimerId = null,
+        sPreviousSearch = null,
+        anControl = $('input', _that.fnSettings().aanFeatures.f);
+
+      anControl.unbind('keyup').bind('keyup', function () {
+        var $$this = $this;
+
+        if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
+          window.clearTimeout(oTimerId);
+          sPreviousSearch = anControl.val();
+          oSettings.oApi._fnProcessingDisplay(oSettings, true);
+          oTimerId = window.setTimeout(function () {
+            $.fn.dataTableExt.iApiIndex = i;
+            _that.fnFilter(anControl.val());
+            oSettings.oApi._fnProcessingDisplay(oSettings, false);
+          }, iDelay);
+        }
+      });
+      return this;
     });
     return this;
-  } );
-  return this;
+  }
+
+  return dtObject
 }
 
 function renderHadoopDate(data, type, full) {
   if (type === 'display' || type === 'filter') {
-    if(data === '0'|| data === '-1') {
+    if (data === '0' || data === '-1') {
       return "N/A";
     }
     var date = new Date(parseInt(data));
     var monthList = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     var weekdayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var offsetMinutes = date.getTimezoneOffset();
     var offset
@@ -115,17 +146,17 @@ function renderHadoopDate(data, type, full) {
 
     // EEE MMM dd HH:mm:ss Z yyyy
     return weekdayList[date.getDay()] + " " +
-        monthList[date.getMonth()] + " " +
-        date.getDate() + " " +
-        zeroPad(date.getHours(), 2) + ":" +
-        zeroPad(date.getMinutes(), 2) + ":" +
-        zeroPad(date.getSeconds(), 2) + " " +
-        offset + " " +
-        date.getFullYear();
+      monthList[date.getMonth()] + " " +
+      date.getDate() + " " +
+      zeroPad(date.getHours(), 2) + ":" +
+      zeroPad(date.getMinutes(), 2) + ":" +
+      zeroPad(date.getSeconds(), 2) + " " +
+      offset + " " +
+      date.getFullYear();
   }
   // 'sort', 'type' and undefined all just use the number
   // If date is 0, then for purposes of sorting it should be consider max_int
-  return data === '0' ? '9007199254740992' : data;  
+  return data === '0' ? '9007199254740992' : data;
 }
 
 function zeroPad(n, width) {
@@ -136,21 +167,21 @@ function zeroPad(n, width) {
 function renderHadoopElapsedTime(data, type, full) {
   if (type === 'display' || type === 'filter') {
     var timeDiff = parseInt(data);
-    if(timeDiff < 0)
+    if (timeDiff < 0)
       return "N/A";
-    
-    var hours = Math.floor(timeDiff / (60*60*1000));
-    var rem = (timeDiff % (60*60*1000));
-    var minutes =  Math.floor(rem / (60*1000));
-    rem = rem % (60*1000);
+
+    var hours = Math.floor(timeDiff / (60 * 60 * 1000));
+    var rem = (timeDiff % (60 * 60 * 1000));
+    var minutes = Math.floor(rem / (60 * 1000));
+    rem = rem % (60 * 1000);
     var seconds = Math.floor(rem / 1000);
-    
+
     var toReturn = "";
-    if (hours != 0){
+    if (hours != 0) {
       toReturn += hours;
       toReturn += "hrs, ";
     }
-    if (minutes != 0){
+    if (minutes != 0) {
       toReturn += minutes;
       toReturn += "mins, ";
     }
@@ -159,7 +190,6 @@ function renderHadoopElapsedTime(data, type, full) {
     return toReturn;
   }
   // 'sort', 'type' and undefined all just use the number
-  return data;  
 }
 
 //JSON array element is formatted like
@@ -170,7 +200,7 @@ function parseHadoopID(data, type, full) {
     return data;
   }
 
-  var splits =  data.split('>');
+  var splits = data.split('>');
   // Return original string if there is no HTML tag
   if (splits.length === 1) return data;
 
