@@ -71,14 +71,17 @@ public class JQueryUI extends HtmlBlock {
 //        .script(root_url("static/jquery/jquery-3.6.0.min.js"))
 //        .script(root_url("static/jquery/jquery-ui-1.13.2.custom.min.js"))
 //        .script(root_url("static/dt-1.11.5/js/jquery.dataTables.min.js"))
-            .script(root_url("static/datatables.min.js"))
+            // .script(root_url("static/datatables.min.js"))
             .script(root_url("static/yarn.dt.plugins.js"))
-            .script(root_url("static/dt-sorting/natural.js"))
+            .script(root_url("static/customjs/DataTable.js"))
+            // .script(root_url("static/dt-sorting/natural.js"))
             .script(root_url("static/customjs/UtilsUI.js"))
             .style("#jsnotice { padding: 0.2em; text-align: center; }",
                     ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
     List<String> list = Lists.newArrayList();
+    list.add("var appsTableData = []");
+//    list.add("(var appsTableData !== undefined) ? appsTableData : [];")
     initAccordions(list);
     initDataTables(list);
 //    initDialogs(list);
@@ -107,7 +110,7 @@ public class JQueryUI extends HtmlBlock {
                     + " Please enable javascript on your browser.").__();
     html.
             script().$type("text/javascript").
-            __("function() {document.getElementById('jsnotice').style.display = 'none';}").__();
+            __("document.getElementById('jsnotice').style.display = 'none'").__();
   }
 
   protected void initAccordions(List<String> list) {
@@ -168,7 +171,7 @@ public class JQueryUI extends HtmlBlock {
 //  }
 
   protected void initDataTables(List<String> list) {
-    String defaultInit = "{bJQueryUI: true, sPaginationType: 'full_numbers'}";
+    String defaultInit = "{sPaginationType: 'full_numbers'}";
     String stateSaveInit = "bStateSave : true, " +
             "\"fnStateSave\": function (oSettings, oData) { " +
             " data = oData.aoSearchCols;"
@@ -188,8 +191,9 @@ public class JQueryUI extends HtmlBlock {
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;
         init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
-        list.add(join(id, "DataTable =  new DataTable('#", id, "', ", init,
-                ").fnSetFilteringDelay(188);"));
+        String appsTableEle = "var " + id + "Table = document.querySelector(\"#"+ id + "\");";
+        list.add(join(appsTableEle, "\n", id, "DataTable =  new DataTable(", id, "Table", ", ", init,
+                ").fnSetFilteringDelay(188);", "yarnDt(", id, "DataTable", ")"));
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
           list.add(postInit);
@@ -260,7 +264,7 @@ public class JQueryUI extends HtmlBlock {
   }
 
   public static StringBuilder tableInit() {
-    return new StringBuilder("{bJQueryUI:true, ").
+    return new StringBuilder("{ ").
             append("sPaginationType: 'full_numbers', iDisplayLength:20, ").
             append("aLengthMenu:[20, 40, 60, 80, 100]");
   }
