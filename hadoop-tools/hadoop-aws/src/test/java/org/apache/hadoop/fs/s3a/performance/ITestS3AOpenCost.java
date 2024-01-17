@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
@@ -52,6 +54,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.readStream;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assertStreamIsNotChecksummed;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
@@ -60,10 +63,12 @@ import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPENED;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_SEEK_BYTES_SKIPPED;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertDurationRange;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_FILE_OPENED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
@@ -83,6 +88,11 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   private FileStatus testFileStatus;
 
   private int fileLength;
+
+  /**
+   * Is prefetching enabled?
+   */
+  private boolean prefetching;
 
   public ITestS3AOpenCost() {
     super(true);
@@ -111,6 +121,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     writeTextFile(fs, testFile, TEXT, true);
     testFileStatus = fs.getFileStatus(testFile);
     fileLength = (int)testFileStatus.getLen();
+    prefetching = prefetching();
   }
 
   /**
@@ -239,7 +250,10 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       try (FSDataInputStream in = openFile(longLen,
           FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
         byte[] out = new byte[(int) (longLen)];
-        intercept(EOFException.class, () -> in.readFully(0, out));
+        intercept(EOFException.class, () -> {
+          in.readFully(0, out);
+          return in;
+        });
         in.seek(longLen - 1);
         assertEquals("read past real EOF on " + in, -1, in.read());
         return in.toString();
@@ -248,7 +262,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
-        with(STREAM_READ_OPENED, 1 + 1));
+        probe(!prefetching(), STREAM_READ_OPENED, 1 + 1));
 
     // now on a new stream, try a full read from after the EOF
     verifyMetrics(() -> {
@@ -293,15 +307,17 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   public void testReadPastEOF() throws Throwable {
 
     // set a length past the actual file length
+    describe("read() up to the end of the real file");
     final int extra = 10;
     int longLen = fileLength + extra;
     try (FSDataInputStream in = openFile(longLen,
         FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
       for (int i = 0; i < fileLength; i++) {
         Assertions.assertThat(in.read())
-            .describedAs("read() at %d", i)
+            .describedAs("read() at %d from stream %s", i, in)
             .isEqualTo(TEXT.charAt(i));
       }
+      LOG.info("Statistics after EOF {}", ioStatisticsToPrettyString(in.getIOStatistics()));
     }
 
     // now open and read after the EOF; this is
@@ -323,10 +339,11 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
               .describedAs("read() at %d", p)
               .isEqualTo(-1);
         }
+        LOG.info("Statistics after EOF {}", ioStatisticsToPrettyString(in.getIOStatistics()));
         return in.toString();
       }
     },
-        with(Statistic.ACTION_HTTP_GET_REQUEST, extra));
+        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, extra));
   }
 
   /**
@@ -353,10 +370,11 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
           return in;
         });
         assertS3StreamClosed(in);
-        return "readFully past EOF";
+        return "readFully past EOF with statistics"
+            + ioStatisticsToPrettyString(in.getIOStatistics());
       }
     },
-        with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
+        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
   }
 
   /**
@@ -370,7 +388,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     int longLen = fileLength + extra;
 
     describe("PositionedReadable.read() past the end of the file");
-
     verifyMetrics(() -> {
       try (FSDataInputStream in =
                openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
@@ -388,10 +405,10 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // stream is closed as part of this failure
         assertS3StreamClosed(in);
 
-        return "PositionedReadable.read()) past EOF";
+        return "PositionedReadable.read()) past EOF with " + in;
       }
     },
-        with(Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
+        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, 1)); // no attempt to re-open
   }
 
   /**
@@ -405,7 +422,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     final int extra = 10;
     int longLen = fileLength + extra;
 
-    describe("Vector read past the end of the file");
+    describe("Vector read past the end of the file, expecting an EOFException");
+
     verifyMetrics(() -> {
       try (FSDataInputStream in =
                openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {
@@ -420,10 +438,20 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             TimeUnit.SECONDS,
             range.getData());
         assertS3StreamClosed(in);
-        return "vector read past EOF";
+        return "vector read past EOF with " + in;
       }
     },
-        with(Statistic.ACTION_HTTP_GET_REQUEST, 1));
+        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, 1));
+  }
+
+  /**
+   * Probe the FS for supporting prefetching.
+   * @return true if the fs has prefetching enabled.
+   * @throws IOException IO problem.
+   */
+  private boolean prefetching() throws IOException {
+    return getFileSystem().hasPathCapability(new Path("/"),
+        PREFETCH_ENABLED_KEY);
   }
 
   /**
@@ -431,10 +459,13 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
    * @param in input stream
    */
   private static void assertS3StreamClosed(final FSDataInputStream in) {
-    S3AInputStream s3ain = (S3AInputStream) in.getWrappedStream();
-    Assertions.assertThat(s3ain.isObjectStreamOpen())
-        .describedAs("stream is open")
-        .isFalse();
+    final InputStream wrapped = in.getWrappedStream();
+    if (wrapped instanceof S3AInputStream) {
+      S3AInputStream s3ain = (S3AInputStream) wrapped;
+      Assertions.assertThat(s3ain.isObjectStreamOpen())
+          .describedAs("stream is open")
+          .isFalse();
+    }
   }
 
   /**
@@ -442,9 +473,12 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
    * @param in input stream
    */
   private static void assertS3StreamOpen(final FSDataInputStream in) {
-    S3AInputStream s3ain = (S3AInputStream) in.getWrappedStream();
-    Assertions.assertThat(s3ain.isObjectStreamOpen())
-        .describedAs("stream is closed")
-        .isTrue();
+    final InputStream wrapped = in.getWrappedStream();
+    if (wrapped instanceof S3AInputStream) {
+      S3AInputStream s3ain = (S3AInputStream) wrapped;
+      Assertions.assertThat(s3ain.isObjectStreamOpen())
+          .describedAs("stream is closed")
+          .isTrue();
+    }
   }
 }
