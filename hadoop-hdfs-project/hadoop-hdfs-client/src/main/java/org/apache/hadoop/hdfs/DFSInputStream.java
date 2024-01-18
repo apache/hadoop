@@ -914,7 +914,7 @@ public class DFSInputStream extends FSInputStream
             dfsClient.addNodeToDeadNodeDetector(this, currentNode);
           }
           if (--retries == 0) {
-            // Fail the request
+            // Fail the request and log all exceptions
             logDataNodeExceptionsOnReadError(pos, exceptionMap);
             throw e;
           }
