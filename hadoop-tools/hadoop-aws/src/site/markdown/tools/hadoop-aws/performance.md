@@ -218,6 +218,7 @@ everything uses the same HTTP connection pool.
 | `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation                         |
 | `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued excluding prefetching operations |
 
+### <a name="timeouts"></a> Timeouts.
 
 Network timeout options can be tuned to make the client fail faster *or* retry more.
 The choice is yours. Generally recovery is better, but sometimes fail-fast is more useful.
@@ -225,7 +226,7 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 
 | Property                                | Default | V2  | Meaning                                               |
 |-----------------------------------------|---------|:----|-------------------------------------------------------|
-| `fs.s3a.connection.maximum`             | `200`   |     | Connection pool size                                  |
+| `fs.s3a.connection.maximum`             | `500`   |     | Connection pool size                                  |
 | `fs.s3a.connection.keepalive`           | `false` | `*` | Use TCP keepalive on open channels                    |
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
 | `fs.s3a.connection.establish.timeout`   | `30s`   |     | Time to establish the TCP/TLS connection              |
