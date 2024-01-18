@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
@@ -247,6 +248,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (info == null || !info.metadataExists()) {
       return null;
     }
+    DataNodeFaultInjector.get().delayGetMetaDataInputStream();
     return info.getMetadataInputStream(0);
   }
 
@@ -2403,8 +2405,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    *
    * @param bpid the block pool ID.
    * @param block The block to be invalidated.
+   * @param checkFiles Whether to check data and meta files.
    */
-  public void invalidateMissingBlock(String bpid, Block block) {
+  public void invalidateMissingBlock(String bpid, Block block, boolean checkFiles) {
 
     // The replica seems is on its volume map but not on disk.
     // We can't confirm here is block file lost or disk failed.
@@ -2416,9 +2419,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // So remove if from volume map notify namenode is ok.
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
         bpid)) {
-      ReplicaInfo replica = volumeMap.remove(bpid, block);
-      invalidate(bpid, replica);
+      // Check if this block is on the volume map.
+      ReplicaInfo replica = volumeMap.get(bpid, block);
+      // Double-check block or meta file existence when checkFiles as true.
+      if (replica != null && (!checkFiles ||
+          (!replica.blockDataExists() || !replica.metadataExists()))) {
+        volumeMap.remove(bpid, block);
+        invalidate(bpid, replica);
+      }
     }
+  }
+
+  public void invalidateMissingBlock(String bpid, Block block) {
+    invalidateMissingBlock(bpid, block, true);
   }
 
   /**
