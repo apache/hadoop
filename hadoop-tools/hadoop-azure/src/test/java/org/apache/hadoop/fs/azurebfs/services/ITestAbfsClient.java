@@ -402,7 +402,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
 
     // override user agent
-    String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
+    String userAgent = "APN/1.0 Azure Blob FS/3.5.0-SNAPSHOT (PrivateBuild "
         + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
         + "UNKNOWN/UNKNOWN) MSFT";
     client = ITestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
