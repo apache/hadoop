@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.util.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.Scheduler;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.Scheduler;
+import org.apache.hadoop.util.Time;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.lang.Math.abs;
 import static org.hamcrest.core.Is.is;
@@ -52,6 +51,7 @@ public class TestBpServiceActorScheduler {
   public Timeout timeout = new Timeout(300000);
 
   private static final long HEARTBEAT_INTERVAL_MS = 5000;      // 5 seconds
+  private static final long HEARTBEAT_REREGISTER_INTERVAL_MS = 5000*3;      // 5 seconds
   private static final long LIFELINE_INTERVAL_MS = 3 * HEARTBEAT_INTERVAL_MS;
   private static final long BLOCK_REPORT_INTERVAL_MS = 10000;  // 10 seconds
   private static final long OUTLIER_REPORT_INTERVAL_MS = 10000;  // 10 seconds
@@ -209,7 +209,8 @@ public class TestBpServiceActorScheduler {
   public void testScheduleLifelineScheduleTime() {
     Scheduler mockScheduler = spy(new Scheduler(
         HEARTBEAT_INTERVAL_MS, LIFELINE_INTERVAL_MS,
-        BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS));
+        BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS,
+        HEARTBEAT_REREGISTER_INTERVAL_MS));
     long now = Time.monotonicNow();
     mockScheduler.scheduleNextLifeline(now);
     long mockMonotonicNow = now + LIFELINE_INTERVAL_MS * 2;
@@ -234,7 +235,8 @@ public class TestBpServiceActorScheduler {
     LOG.info("Using now = " + now);
     Scheduler mockScheduler = spy(new Scheduler(
         HEARTBEAT_INTERVAL_MS, LIFELINE_INTERVAL_MS,
-        BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS));
+        BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS,
+        HEARTBEAT_REREGISTER_INTERVAL_MS));
     doReturn(now).when(mockScheduler).monotonicNow();
     mockScheduler.setNextBlockReportTime(now);
     mockScheduler.nextHeartbeatTime = now;

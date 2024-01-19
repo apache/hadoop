@@ -103,8 +103,9 @@ class BPServiceActor implements Runnable {
   
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
-  private final Object sendIBRLock;
+  private final Object sendBRLock;
   private final ExecutorService ibrExecutorService;
+  private final ExecutorService fbrExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -121,7 +122,8 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
-  private long fullBlockReportLeaseId;
+  private volatile long fullBlockReportLeaseId;
+  private volatile boolean shouldSendFBR = true;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -148,9 +150,10 @@ class BPServiceActor implements Runnable {
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     fullBlockReportLeaseId = 0;
+    shouldSendFBR = true;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
-        dnConf.outliersReportIntervalMs);
+        dnConf.outliersReportIntervalMs, dnConf.heartBeatReRegisterInterval);
     // get the value of maxDataLength.
     this.maxDataLength = dnConf.getMaxDataLength();
     if (serviceId != null) {
@@ -161,10 +164,13 @@ class BPServiceActor implements Runnable {
     }
     commandProcessingThread = new CommandProcessingThread(this);
     commandProcessingThread.start();
-    sendIBRLock = new Object();
+    sendBRLock = new Object();
     ibrExecutorService = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("ibr-executor-%d").build());
+    fbrExecutorService = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat("fbr-executor-%d").build());
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -397,10 +403,8 @@ class BPServiceActor implements Runnable {
     // we have a chance that we will miss the delHint information
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
-    synchronized (sendIBRLock) {
-      ibrManager.sendIBRs(bpNamenode, bpRegistration,
-          bpos.getBlockPoolId(), getRpcMetricSuffix());
-    }
+    ibrManager.sendIBRs(bpNamenode, bpRegistration,
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -636,6 +640,9 @@ class BPServiceActor implements Runnable {
     if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
     }
+    if (fbrExecutorService != null && !fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
+    }
   }
   
   //This must be called only by blockPoolManager
@@ -661,6 +668,9 @@ class BPServiceActor implements Runnable {
     bpos.shutdownActor(this);
     if (!ibrExecutorService.isShutdown()) {
       ibrExecutorService.shutdownNow();
+    }
+    if (!fbrExecutorService.isShutdown()) {
+      fbrExecutorService.shutdownNow();
     }
   }
 
@@ -758,17 +768,15 @@ class BPServiceActor implements Runnable {
           }
         }
 
-        List<DatanodeCommand> cmds = null;
         boolean forceFullBr =
             scheduler.forceFullBlockReport.getAndSet(false);
         if (forceFullBr) {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
-        if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          cmds = blockReport(fullBlockReportLeaseId);
-          fullBlockReportLeaseId = 0;
+        if ((fullBlockReportLeaseId != 0 && shouldSendFBR) || forceFullBr) {
+          shouldSendFBR = false;
+          fbrExecutorService.submit(new FBRTaskHandler());
         }
-        commandProcessingThread.enqueue(cmds);
 
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();
@@ -794,6 +802,7 @@ class BPServiceActor implements Runnable {
         }
         if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
           fullBlockReportLeaseId = 0;
+          shouldSendFBR = true;
         }
         LOG.warn("RemoteException in offerService", re);
         sleepAfterException();
@@ -868,6 +877,7 @@ class BPServiceActor implements Runnable {
     // reset lease id whenever registered to NN.
     // ask for a new lease id at the next heartbeat.
     fullBlockReportLeaseId = 0;
+    shouldSendFBR = true;
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs, true);
@@ -965,20 +975,25 @@ class BPServiceActor implements Runnable {
 
   void reRegister() throws IOException {
     if (shouldRun()) {
-      // re-retrieve namespace info to make sure that, if the NN
-      // was restarted, we still match its version (HDFS-2120)
-      NamespaceInfo nsInfo = retrieveNamespaceInfo();
-      // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
-      // for sometime.
-      if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
-        ibrManager.clearIBRs();
+      if (scheduler.shouldReRegister()) {
+        // re-retrieve namespace info to make sure that, if the NN
+        // was restarted, we still match its version (HDFS-2120)
+        NamespaceInfo nsInfo = retrieveNamespaceInfo();
+        // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
+        // for sometime.
+        if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
+          ibrManager.clearIBRs();
+        }
+        // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
+        // some blocks report to Standby util next FBR.
+        // and re-register
+        register(nsInfo);
+        scheduler.setReRegisterTime(monotonicNow());
+        scheduler.scheduleHeartbeat();
+        DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
+      } else {
+        LOG.info("DNA_REGISTER execution interval is too short. Skip.");
       }
-      // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
-      // some blocks report to Standby util next FBR.
-      // and re-register
-      register(nsInfo);
-      scheduler.scheduleHeartbeat();
-      DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
     }
   }
 
@@ -1170,7 +1185,7 @@ class BPServiceActor implements Runnable {
           final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
           if (!dn.areIBRDisabledForTests() &&
               (ibrManager.sendImmediately() || sendHeartbeat)) {
-            synchronized (sendIBRLock) {
+            synchronized (sendBRLock) {
               ibrManager.sendIBRs(bpNamenode, bpRegistration,
                   bpos.getBlockPoolId(), getRpcMetricSuffix());
             }
@@ -1185,6 +1200,35 @@ class BPServiceActor implements Runnable {
       }
     }
 
+  }
+
+  final class FBRTaskHandler implements Runnable {
+
+    private FBRTaskHandler() {
+    }
+
+    @Override
+    public void run() {
+      LOG.debug("Start sending full blockreport.");
+      List<DatanodeCommand> cmds = null;
+      try {
+        synchronized (sendBRLock) {
+          cmds = blockReport(fullBlockReportLeaseId);
+        }
+        fullBlockReportLeaseId = 0;
+        commandProcessingThread.enqueue(cmds);
+        shouldSendFBR = true;
+      } catch (Throwable t) {
+        fullBlockReportLeaseId = 0;
+        shouldSendFBR = true;
+        LOG.warn("InterruptedException in FBR Task Handler.", t);
+        sleepAndLogInterrupts(5000, "offering FBR service");
+        synchronized(ibrManager) {
+          scheduler.forceFullBlockReportNow();
+          ibrManager.notifyAll();
+        }
+      }
+    }
   }
 
   /**
@@ -1226,13 +1270,16 @@ class BPServiceActor implements Runnable {
     private final long lifelineIntervalMs;
     private volatile long blockReportIntervalMs;
     private volatile long outliersReportIntervalMs;
+    private final long heartBeatReRegisterIntervalMs;
+    private long reRegisterTime = 0;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
-              long blockReportIntervalMs, long outliersReportIntervalMs) {
+              long blockReportIntervalMs, long outliersReportIntervalMs, long heartBeatReRegisterIntervalMs ) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
       this.outliersReportIntervalMs = outliersReportIntervalMs;
+      this.heartBeatReRegisterIntervalMs = heartBeatReRegisterIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
     }
 
@@ -1409,6 +1456,14 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     long getOutliersReportIntervalMs() {
       return this.outliersReportIntervalMs;
+    }
+
+    private boolean shouldReRegister() {
+      return monotonicNow() - reRegisterTime > this.heartBeatReRegisterIntervalMs;
+    }
+
+    public void setReRegisterTime(long reRegisterTime) {
+      this.reRegisterTime = reRegisterTime;
     }
 
     /**
