@@ -337,7 +337,7 @@ public class TestTimelineAuthFilterForV2 {
       try {
         publishAndVerifyEntity(appId, entityTypeDir, entityType, numEntities);
       } catch (YarnException e) {
-        Thread.sleep(50);
+        Thread.sleep(100);
         continue;
       }
       return true;
