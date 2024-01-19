@@ -125,14 +125,6 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
   }
 
   @Override
-  public void teardown() throws Exception {
-    SLEEP_DURATION.set(0);
-    AWSClientConfig.resetMinimumOperationDuration();
-
-    super.teardown();
-  }
-
-  @Override
   protected void deleteTestDirInTeardown() {
     // no-op
   }
