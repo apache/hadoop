@@ -143,7 +143,7 @@ public class NNBench extends Configured implements Tool {
    * 
    * @throws IOException on error
    */
-  private void createControlFiles() throws ExecutionException, InterruptedException {
+  private void createControlFiles() {
     LOG.info("Creating " + numberOfMaps + " control files");
 
     List<Future<Void>> list = new ArrayList<>();
@@ -160,8 +160,7 @@ public class NNBench extends Configured implements Tool {
       try {
         list.get(i).get();
       } catch (InterruptedException | ExecutionException e) {
-        LOG.error("Creating control files Error.");
-        throw e;
+        LOG.error("Creating control files Error.", e);
       }
     }
 
