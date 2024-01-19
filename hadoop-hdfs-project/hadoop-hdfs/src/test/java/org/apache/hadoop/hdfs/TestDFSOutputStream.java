@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -64,7 +65,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -184,40 +184,6 @@ public class TestDFSOutputStream {
     configuredWritePacketSize = 1000 * 1024 * 1024;
     finalWritePacketSize = PacketReceiver.MAX_PACKET_SIZE;
     runAdjustChunkBoundary(configuredWritePacketSize, finalWritePacketSize);
-  }
-
-  @Test(timeout=60000)
-  public void testFirstPacketSizeInNewBlocks() throws IOException {
-    final long blockSize = 1L * 1024 * 1024;
-    final int numDataNodes = 3;
-    final Configuration dfsConf = new Configuration();
-    dfsConf.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
-    MiniDFSCluster dfsCluster = null;
-    dfsCluster = new MiniDFSCluster.Builder(dfsConf).numDataNodes(numDataNodes).build();
-    dfsCluster.waitActive();
-
-    DistributedFileSystem fs = dfsCluster.getFileSystem();
-    Path fileName = new Path("/testfile.dat");
-    FSDataOutputStream fos = fs.create(fileName);
-    DataChecksum crc32c = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 512);
-
-    long loop = 0;
-    Random r = new Random();
-    byte[] buf = new byte[1 * 1024 * 1024];
-    r.nextBytes(buf);
-    fos.write(buf);
-    fos.hflush();
-
-    while (loop < 20) {
-      r.nextBytes(buf);
-      fos.write(buf);
-      fos.hflush();
-      loop++;
-      Assert.assertNotEquals(crc32c.getBytesPerChecksum() + crc32c.getChecksumSize(),
-          ((DFSOutputStream)fos.getWrappedStream()).packetSize);
-    }
-
-    fos.close();
   }
 
   /**
@@ -542,6 +508,45 @@ public class TestDFSOutputStream {
         assertFalse(isFileClosed("/testExceptionInCloseWithoutRecoverLease"));
       }
     }
+  }
+
+  @Test(timeout=60000)
+  public void testFirstPacketSizeInNewBlocks() throws IOException {
+    final long blockSize = (long) 1024 * 1024;
+    MiniDFSCluster dfsCluster = cluster;
+    DistributedFileSystem fs = dfsCluster.getFileSystem();
+    Configuration dfsConf = fs.getConf();
+
+    EnumSet<CreateFlag> flags = EnumSet.of(CreateFlag.CREATE);
+    try(FSDataOutputStream fos = fs.create(new Path("/testfile.dat"),
+        FsPermission.getDefault(),
+        flags, 512, (short)3, blockSize, null)) {
+
+      DataChecksum crc32c = DataChecksum.newDataChecksum(
+          DataChecksum.Type.CRC32C, 512);
+
+      long loop = 0;
+      Random r = new Random();
+      byte[] buf = new byte[(int) blockSize];
+      r.nextBytes(buf);
+      fos.write(buf);
+      fos.hflush();
+
+      int chunkSize = crc32c.getBytesPerChecksum() + crc32c.getChecksumSize();
+      int packetContentSize = (dfsConf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
+          DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT) -
+          PacketHeader.PKT_MAX_HEADER_LEN) / chunkSize * chunkSize;
+
+      while (loop < 20) {
+        r.nextBytes(buf);
+        fos.write(buf);
+        fos.hflush();
+        loop++;
+        Assert.assertEquals(((DFSOutputStream) fos.getWrappedStream()).packetSize,
+            packetContentSize);
+      }
+    }
+    fs.delete(new Path("/testfile.dat"), true);
   }
 
   @AfterClass
