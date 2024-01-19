@@ -171,7 +171,8 @@ public class TestDatanodeReport {
       } catch (IOException e) {
         // all bad datanodes
       }
-      cluster.triggerHeartbeats(); // IBR delete ack
+      // ibr thread is seperated from heart beat thread, use BlockReports to trigger deletion ibr
+      cluster.triggerBlockReports();
       int retries = 0;
       while (true) {
         lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
