@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -74,13 +76,19 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
   /**
    * How long to sleep in requests?
    */
-  private static final AtomicLong SLEEP_DURATION = new AtomicLong(10000);
+  private static final AtomicLong SLEEP_DURATION = new AtomicLong(
+      Duration.ofSeconds(20).toMillis());
 
   /**
    * Flag set if the sleep was interrupted during signing.
    */
   private static final AtomicBoolean SLEEP_INTERRUPTED = new AtomicBoolean(false);
 
+  /**
+   * Create a configuration with a 10 millisecond timeout on API calls
+   * and a custom signer which sleeps much longer than that.
+   * @return the configuration.
+   */
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
@@ -91,6 +99,7 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
         HTTP_SIGNER_ENABLED,
         REQUEST_TIMEOUT,
         RETRY_LIMIT,
+        S3A_BUCKET_PROBE,
         S3EXPRESS_CREATE_SESSION,
         SIGNING_ALGORITHM_S3
     );
@@ -105,21 +114,14 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
     return conf;
   }
 
-  /**
-   * Make this a no-op to avoid IO.
-   * @param path path path
-   */
-  @Override
-  protected void mkdirs(Path path) {
-
-  }
-
   @Override
   public void setup() throws Exception {
+    // remove the safety check on minimum durations.
     AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
     try {
       super.setup();
     } finally {
+      // restore the safety check on minimum durations.
       AWSClientConfig.resetMinimumOperationDuration();
     }
   }
@@ -129,26 +131,40 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
     // no-op
   }
 
+  /**
+   * Make this a no-op to avoid IO.
+   * @param path path path
+   */
+  @Override
+  protected void mkdirs(Path path) {
+
+  }
+
   @Test
   public void testSlowSigningTriggersTimeout() throws Throwable {
 
     final S3AFileSystem fs = getFileSystem();
-    DurationInfo d = new DurationInfo(LOG, true, "Create session");
-    final AWSApiCallTimeoutException t = intercept(AWSApiCallTimeoutException.class,
+    DurationInfo call = new DurationInfo(LOG, true, "Create session");
+    final AWSApiCallTimeoutException thrown = intercept(AWSApiCallTimeoutException.class,
         () -> fs.getFileStatus(path("testShortTimeout")));
-    d.finished();
+    call.finished();
+    LOG.info("Exception raised after {}", call, thrown);
     // if the timeout took too long, fail with details and include the original
     // exception
-    if (d.value() > TIMEOUT_EXCEPTION_THRESHOLD) {
-      LOG.warn("Duration of create session {} ms exceeds threshold {} ms",
-          d.value(), TIMEOUT_EXCEPTION_THRESHOLD);
-      throw new AssertionError("Duration of create session " + d.getDurationString()
-          + " exceeds threshold " + TIMEOUT_EXCEPTION_THRESHOLD + " ms: " + t, t);
+    if (call.value() > TIMEOUT_EXCEPTION_THRESHOLD) {
+      throw new AssertionError("Duration of create session " + call.getDurationString()
+          + " exceeds threshold " + TIMEOUT_EXCEPTION_THRESHOLD + " ms: " + thrown, thrown);
     }
     Assertions.assertThat(SLEEP_INTERRUPTED.get())
         .describedAs("Sleep interrupted during signing")
         .isTrue();
 
+    // now scan the inner exception stack for "createSession"
+    Arrays.stream(thrown.getCause().getStackTrace())
+        .filter(e -> e.getMethodName().equals("createSession"))
+        .findFirst()
+        .orElseThrow(() ->
+            new AssertionError("No createSession() in inner stack trace of", thrown));
   }
 
   /**
@@ -161,7 +177,7 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
       try (DurationInfo d = new DurationInfo(LOG, true, "Sleep for %d ms", sleep)) {
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted", e);
+        LOG.info("Interrupted", e);
         SLEEP_INTERRUPTED.set(true);
         Thread.currentThread().interrupt();
       }
