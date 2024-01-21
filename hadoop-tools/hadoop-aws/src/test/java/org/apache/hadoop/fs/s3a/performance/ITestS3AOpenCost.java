@@ -477,13 +477,13 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     if (wrapped instanceof S3AInputStream) {
       S3AInputStream s3ain = (S3AInputStream) wrapped;
       Assertions.assertThat(s3ain.isObjectStreamOpen())
-          .describedAs("stream is open")
+          .describedAs("stream is open: %s", s3ain)
           .isFalse();
     }
   }
 
   /**
-   * Assert that the inner S3 Stream is open.
+   * Assert that the inner S3 Stream is closed.
    * @param in input stream
    */
   private static void assertS3StreamOpen(final FSDataInputStream in) {
@@ -491,7 +491,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     if (wrapped instanceof S3AInputStream) {
       S3AInputStream s3ain = (S3AInputStream) wrapped;
       Assertions.assertThat(s3ain.isObjectStreamOpen())
-          .describedAs("stream is closed")
+          .describedAs("stream is closed: %s", s3ain)
           .isTrue();
     }
   }
