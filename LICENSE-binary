@@ -335,6 +335,9 @@ org.apache.kerby:kerby-pkix:2.0.3
 org.apache.kerby:kerby-util:2.0.3
 org.apache.kerby:kerby-xdr:2.0.3
 org.apache.kerby:token-provider:2.0.3
+org.apache.sshd:sshd-common:2.11.0
+org.apache.sshd:sshd-core:2.11.0
+org.apache.sshd:sshd-sftp:2.11.0
 org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.8.3
