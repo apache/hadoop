@@ -458,6 +458,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `BlockReportsAvgTime` | Average time of block report operations in milliseconds |
 | `BlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of block report operations to specific serviceId and nnId |
 | `BlockReports`*ServiceId*`-`*NNId*`AvgTime` | Average time of block report operations to specific serviceId and nnId in milliseconds |
+| `BlockReportsCreateCostMillsNumOps` | Total number of block report creating operations |
+| `BlockReportsCreateCostMillsAvgTime` | Average time of block report creating operations in milliseconds |
 | `IncrementalBlockReportsNumOps` | Total number of incremental block report operations |
 | `IncrementalBlockReportsAvgTime` | Average time of incremental block report operations in milliseconds |
 | `IncrementalBlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of incremental block report operations to specific serviceId and nnId |
