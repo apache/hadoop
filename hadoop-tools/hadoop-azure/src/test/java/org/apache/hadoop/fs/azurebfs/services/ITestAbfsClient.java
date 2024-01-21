@@ -48,6 +48,7 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
@@ -586,7 +587,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .getConnResponseMessage();
 
     // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
-    Mockito.doThrow(new ProtocolException("Server rejected Operation"))
+    Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
         .when(abfsHttpOperation)
         .getConnOutputStream();
 
