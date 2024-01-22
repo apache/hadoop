@@ -320,6 +320,10 @@ public class DefaultS3ClientFactory extends Configured
       origin = "SDK region chain";
     }
 
+    if (parameters.getEndpoint().endsWith(CENTRAL_ENDPOINT)) {
+      builder.crossRegionAccessEnabled(true);
+    }
+
     LOG.debug("Setting region to {} from {}", region, origin);
   }
 
