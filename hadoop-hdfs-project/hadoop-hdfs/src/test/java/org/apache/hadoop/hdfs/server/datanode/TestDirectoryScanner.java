@@ -603,7 +603,7 @@ public class TestDirectoryScanner {
       DataNodeFaultInjector.set(dnFaultInjector);
       ExecutorService executorService = Executors.newFixedThreadPool(2);
       try {
-        Future<?> blockReaderFuture = executorService.submit(() -> {
+        Future<?> directoryScannerFuture = executorService.submit(() -> {
           try {
             // Submit tasks run directory scanner.
             scanner = new DirectoryScanner(fds, conf);
@@ -614,7 +614,7 @@ public class TestDirectoryScanner {
           }
         });
 
-        Future<?> finalizeBlockFuture = executorService.submit(() -> {
+        Future<?> appendBlockFuture = executorService.submit(() -> {
           try {
             // Submit tasks run append file.
             DFSTestUtil.appendFile(fs, path, 50);
@@ -624,8 +624,8 @@ public class TestDirectoryScanner {
         });
 
         // Wait for both tasks to complete.
-        blockReaderFuture.get();
-        finalizeBlockFuture.get();
+        directoryScannerFuture.get();
+        appendBlockFuture.get();
       } finally {
         executorService.shutdown();
       }
