@@ -295,10 +295,11 @@ public class DefaultS3ClientFactory extends Configured
       builder.endpointOverride(endpoint);
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {
-        region = getS3RegionFromEndpoint(endpointStr);
+        boolean endpointEndsWithCentral = endpointStr.endsWith(CENTRAL_ENDPOINT);
+        region = getS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral);
         if (region != null) {
           origin = "endpoint";
-          if (endpointStr.endsWith(CENTRAL_ENDPOINT)) {
+          if (endpointEndsWithCentral) {
             builder.crossRegionAccessEnabled(true);
             LOG.debug("Enabling cross region access for endpoint {}", endpointStr);
           }
@@ -362,11 +363,12 @@ public class DefaultS3ClientFactory extends Configured
    * If endpoint is the central one, use US_EAST_2.
    *
    * @param endpoint the configure endpoint.
+   * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region, null if unable to resolve from endpoint.
    */
-  private static Region getS3RegionFromEndpoint(String endpoint) {
+  private static Region getS3RegionFromEndpoint(String endpoint, boolean endpointEndsWithCentral) {
 
-    if(!endpoint.endsWith(CENTRAL_ENDPOINT)) {
+    if (!endpointEndsWithCentral) {
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }

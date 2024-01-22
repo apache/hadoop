@@ -58,6 +58,7 @@ public class ITestS3ACrossRegionAccess extends AbstractS3ATestBase {
         out.write(new byte[] {1, 2, 3, 4, 5});
       }
       ContractTestUtils.assertIsFile(getFileSystem(), new Path(srcDir, file));
+      newFs.delete(srcDir, true);
     }
   }
 
