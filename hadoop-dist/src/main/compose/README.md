@@ -6,7 +6,7 @@ This is meant for testing code changes locally and debugging.
 
 The image used by the Docker setup is built as part of the maven lifecycle.
 
-In order to start the docker environment you need to do the following 
+In order to start the docker environment you need to do the following
 * Build the project, which will also build the docker image
   * ```shell
     > mvn clean install -Dmaven.javadoc.skip=true -DskipTests -DskipShade -Pdist,src
