@@ -603,6 +603,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   private void recoverLogAggregator(ContainerId containerId) {
+    LOG.info("Recovering log aggregator for " + containerId);
     dispatcher.getEventHandler().handle(new LogHandlerContainerRecoveredEvent(containerId));
   }
 
