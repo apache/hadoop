@@ -209,6 +209,9 @@ public class FederationClientInterceptor
   private boolean returnPartialReport;
   private long submitIntervalTime;
   private boolean allowPartialResult;
+  private boolean overrideMaxClusterCapability;
+  private long overrideMaxClusterMemoryCapability;
+  private int overrideMaxClusterVCoreCapability;
 
   @Override
   public void init(String userName) {
@@ -268,6 +271,18 @@ public class FederationClientInterceptor
     allowPartialResult = conf.getBoolean(
         YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
+
+    overrideMaxClusterCapability = conf.getBoolean(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
+
+    overrideMaxClusterMemoryCapability = conf.getLong(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
+
+    overrideMaxClusterVCoreCapability = conf.getInt(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
   }
 
   @Override
@@ -362,6 +377,11 @@ public class FederationClientInterceptor
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
+
+        if (overrideMaxClusterCapability && response.getMaximumResourceCapability() != null) {
+          response.getMaximumResourceCapability().setMemorySize(overrideMaxClusterMemoryCapability);
+          response.getMaximumResourceCapability().setVirtualCores(overrideMaxClusterVCoreCapability);
+        }
         return response;
       }
     } catch (Exception e) {

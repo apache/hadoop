@@ -4081,6 +4081,24 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  public static final String FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY =
+          FEDERATION_PREFIX + "override.maximum.cluster.capability.enabled";
+
+  public static final boolean FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY =
+          false;
+
+  public static final String FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB =
+          FEDERATION_PREFIX + "override.maximum.cluster.capability.enabled";
+
+  public static final String FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES =
+          FEDERATION_PREFIX + "override.maximum.cluster.capability.enabled";
+
+  public static final long FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB =
+          8192;
+
+  public static final int FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES =
+          4;
+
   // Prefix for configs related to selecting SC based on load
   public static final String LOAD_BASED_SC_SELECTOR_PREFIX =
       NM_PREFIX + "least-load-policy-selector.";
