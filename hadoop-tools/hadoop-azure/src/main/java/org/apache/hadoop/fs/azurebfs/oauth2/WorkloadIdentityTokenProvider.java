@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -63,10 +64,23 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from JWT Assertion");
     String clientAssertion = getClientAssertion();
-    AzureADToken token = AzureADAuthenticator
-        .getTokenUsingJWTAssertion(authEndpoint, clientId, clientAssertion);
+    AzureADToken token = getTokenUsingJWTAssertion(clientAssertion);
     tokenFetchTime = System.currentTimeMillis();
     return token;
+  }
+
+  /**
+   * Gets the Azure AD token from a client assertion in JWT format.
+   * This method exists to make unit testing possible.
+   *
+   * @param clientAssertion the client assertion.
+   * @return the Azure AD token.
+   * @throws IOException if there is a failure in connecting to Azure AD.
+   */
+  @VisibleForTesting
+  AzureADToken getTokenUsingJWTAssertion(String clientAssertion) throws IOException {
+    return AzureADAuthenticator
+        .getTokenUsingJWTAssertion(authEndpoint, clientId, clientAssertion);
   }
 
   /**
@@ -107,10 +121,10 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   /**
    * Gets the client assertion from the token file.  The token in the file
    * is automatically refreshed by Azure at least once every 24 hours.
-   * See https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments
+   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">Azure Workload Identity FAQ</a>.
    *
    * @return the client assertion.
-   * @throws IOException
+   * @throws IOException if the token file is empty.
    */
   private String getClientAssertion()
       throws IOException {
@@ -128,7 +142,8 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
    *
    * @return the time the token was last fetched.
    */
-  protected long getTokenFetchTime() {
+  @VisibleForTesting
+  long getTokenFetchTime() {
     return tokenFetchTime;
   }
 }

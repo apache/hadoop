@@ -322,8 +322,8 @@ The authentication mechanism is set in `fs.azure.account.auth.type` (or the
 account specific variant). The possible values are SharedKey, OAuth, Custom
 and SAS. For the various OAuth options use the config `fs.azure.account
 .oauth.provider.type`. Following are the implementations supported
-ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and
-RefreshTokenBasedTokenProvider. An IllegalArgumentException is thrown if
+ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider,
+RefreshTokenBasedTokenProvider and WorkloadIdentityTokenProvider. An IllegalArgumentException is thrown if
 the specified provider type is not one of the supported.
 
 All secrets can be stored in JCEKS files. These are encrypted and password
@@ -587,21 +587,21 @@ The Azure Portal/CLI is used to create the service identity.
 </property>
 <property>
   <name>fs.azure.account.oauth2.msi.tenant</name>
-  <value></value>
+  <value>${env.AZURE_TENANT_ID}</value>
   <description>
   Optional MSI Tenant ID
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.id</name>
-  <value></value>
+  <value>${env.AZURE_CLIENT_ID}</value>
   <description>
   Optional Client ID
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.token.file</name>
-  <value></value>
+  <value>${env.AZURE_FEDERATED_TOKEN_FILE}</value>
   <description>
   Token file path
   </description>

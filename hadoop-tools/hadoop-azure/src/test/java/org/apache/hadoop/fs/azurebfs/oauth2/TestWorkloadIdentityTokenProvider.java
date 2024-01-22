@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.oauth2;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Test the refresh logic of workload identity tokens.
@@ -31,6 +36,7 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
   private static final String TENANT_ID = "00000000-0000-0000-0000-000000000000";
   private static final String CLIENT_ID = "00000000-0000-0000-0000-000000000000";
   private static final String TOKEN_FILE = "/tmp/does_not_exist";
+  private static final String TOKEN = "dummy-token";
 
   public TestWorkloadIdentityTokenProvider() throws Exception {
   }
@@ -76,5 +82,46 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
         .when(provider).getTokenFetchTime();
 
     assertFalse(provider.hasEnoughTimeElapsedSinceLastRefresh());
+  }
+
+  /**
+   * Test that the correct token is read from the token file.
+   *
+   * @throws IOException if the token file is empty or file I/O fails.
+   */
+  @Test
+  public void testGetToken() throws IOException {
+    long startTime = System.currentTimeMillis();
+    File tokenFile = File.createTempFile("azure-identity-token", "txt");
+    FileUtils.write(tokenFile, TOKEN, StandardCharsets.UTF_8);
+    AzureADToken azureAdToken = new AzureADToken();
+    WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath()));
+    Mockito.doReturn(azureAdToken)
+        .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
+    assertEquals(azureAdToken, tokenProvider.getToken());
+    assertTrue("token fetch time was not set correctly", tokenProvider.getTokenFetchTime() > startTime);
+  }
+
+  /**
+   * Test that an exception is thrown when the token file is empty.
+   *
+   * @throws IOException if file I/O fails.
+   */
+  @Test
+  public void testGetTokenThrowsWhenClientAssertionIsEmpty() throws IOException {
+    File tokenFile = File.createTempFile("azure-identity-token", "txt");
+    AzureADToken azureAdToken = new AzureADToken();
+    WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath()));
+    Mockito.doReturn(azureAdToken)
+        .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
+    boolean exception = false;
+    try {
+      tokenProvider.getToken();
+    } catch (IOException e) {
+      exception = true;
+    }
+    assertTrue(exception);
   }
 }
