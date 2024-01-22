@@ -325,6 +325,14 @@ public abstract class NMStateStoreService extends AbstractService {
     }
   }
 
+  public static class RecoveredLogAggregatorState {
+    List<ContainerId> logAggregators;
+
+    public List<ContainerId> getLogAggregators() {
+      return logAggregators;
+    }
+  }
+
   /**
    * Recovered states for AMRMProxy.
    */
@@ -720,6 +728,31 @@ public abstract class NMStateStoreService extends AbstractService {
    * @throws IOException
    */
   public abstract void removeLogDeleter(ApplicationId appId)
+      throws IOException;
+
+  /**
+   * Load the state of the log aggregators
+   * @return recovered log aggregator state
+   * @throws IOException
+   */
+  public abstract RecoveredLogAggregatorState loadLogAggregatorState()
+      throws IOException;
+
+  /**
+   * Store the state of a log deleter
+   * @param appId the application ID for the log deleter
+   * @param proto the serialized state of the log deleter
+   * @throws IOException
+   */
+  public abstract void storeLogAggregator(ContainerId containerId) 
+      throws IOException;
+
+  /**
+   * Remove the state of a log deleter
+   * @param appId the application ID for the log deleter
+   * @throws IOException
+   */
+  public abstract void removeLogAggregator(ContainerId containerId)
       throws IOException;
 
   /**

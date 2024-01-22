@@ -371,6 +371,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         // remove it from containerLogAggregators.
         if (finishedContainers.contains(container)) {
           containerLogAggregators.remove(container);
+          try {
+            context.getNMStateStore().removeLogAggregator(container);
+          } catch (IOException e) {
+            LOG.error("Unable to remove log aggregator {} from store.", container, e);
+          }
         }
       }
 
@@ -581,8 +586,18 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     if (shouldUploadLogs(logContext)) {
       LOG.info("Considering container " + logContext.getContainerId()
           + " for log-aggregation");
+      try {
+        context.getNMStateStore().storeLogAggregator(logContext.getContainerId());
+      } catch (IOException e) {
+        LOG.error("Unable to add log aggregator {} to store.", logContext.getContainerId(), e);
+      }
       this.pendingContainers.add(logContext.getContainerId());
     }
+  }
+
+  @Override
+  public void recoverContainerLogAggregation(ContainerId containerId) {
+    this.pendingContainers.add(containerId);
   }
 
   @Override
