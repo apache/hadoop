@@ -116,10 +116,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
@@ -378,9 +375,9 @@ public class FederationClientInterceptor
 
         // Since we fetch getNewApplication response from a random subcluster each time, we
         // can consolidate on the response returned by Router here
-        if (overrideMaxClusterCapability && response.getMaximumResourceCapability() != null) {
-          response.getMaximumResourceCapability().setMemorySize(overrideMaxClusterMemoryCapability);
-          response.getMaximumResourceCapability().setVirtualCores(overrideMaxClusterVCoreCapability);
+        if (overrideMaxClusterCapability) {
+          response.setMaximumResourceCapability(Resource.newInstance(overrideMaxClusterMemoryCapability,
+                  overrideMaxClusterVCoreCapability));
         }
 
         long stopTime = clock.getTime();
