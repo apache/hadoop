@@ -298,6 +298,10 @@ public class DefaultS3ClientFactory extends Configured
         region = getS3RegionFromEndpoint(endpointStr);
         if (region != null) {
           origin = "endpoint";
+          if (endpointStr.endsWith(CENTRAL_ENDPOINT)) {
+            builder.crossRegionAccessEnabled(true);
+            LOG.debug("Enabling cross region access for endpoint {}", endpointStr);
+          }
         }
       }
       LOG.debug("Setting endpoint to {}", endpoint);
@@ -319,11 +323,6 @@ public class DefaultS3ClientFactory extends Configured
       WARN_OF_DEFAULT_REGION_CHAIN.warn(SDK_REGION_CHAIN_IN_USE);
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
-    }
-
-    if (endpointStr != null && endpointStr.endsWith(CENTRAL_ENDPOINT)) {
-      builder.crossRegionAccessEnabled(true);
-      LOG.debug("Enabling cross region access for endpoint {}", endpointStr);
     }
 
     LOG.debug("Setting region to {} from {}", region, origin);
@@ -360,7 +359,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Parses the endpoint to get the region.
-   * If endpoint is the central one, use US_EAST_1.
+   * If endpoint is the central one, use US_EAST_2.
    *
    * @param endpoint the configure endpoint.
    * @return the S3 region, null if unable to resolve from endpoint.
@@ -372,8 +371,8 @@ public class DefaultS3ClientFactory extends Configured
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }
 
-    // endpoint is for US_EAST_1;
-    return Region.US_EAST_1;
+    // endpoint is for US_EAST_2;
+    return Region.US_EAST_2;
   }
 
 }
