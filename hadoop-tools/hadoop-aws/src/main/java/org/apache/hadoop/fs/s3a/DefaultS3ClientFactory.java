@@ -267,7 +267,8 @@ public class DefaultS3ClientFactory extends Configured
    */
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
-    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
+    final String endpointStr = parameters.getEndpoint();
+    URI endpoint = getS3Endpoint(endpointStr, conf);
 
     String configuredRegion = parameters.getRegion();
     Region region = null;
@@ -294,7 +295,7 @@ public class DefaultS3ClientFactory extends Configured
       builder.endpointOverride(endpoint);
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {
-        region = getS3RegionFromEndpoint(parameters.getEndpoint());
+        region = getS3RegionFromEndpoint(endpointStr);
         if (region != null) {
           origin = "endpoint";
         }
@@ -320,9 +321,9 @@ public class DefaultS3ClientFactory extends Configured
       origin = "SDK region chain";
     }
 
-    if (parameters.getEndpoint() != null && parameters.getEndpoint().endsWith(CENTRAL_ENDPOINT)) {
+    if (endpointStr != null && endpointStr.endsWith(CENTRAL_ENDPOINT)) {
       builder.crossRegionAccessEnabled(true);
-      LOG.debug("Enabling cross region access for endpoint {}", parameters.getEndpoint());
+      LOG.debug("Enabling cross region access for endpoint {}", endpointStr);
     }
 
     LOG.debug("Setting region to {} from {}", region, origin);
