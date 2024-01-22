@@ -378,6 +378,8 @@ public class FederationClientInterceptor
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
 
+        // Since we fetch getNewApplication response from a random subcluster each time, we
+        // can align on the response returned by Router via static config here
         if (overrideMaxClusterCapability && response.getMaximumResourceCapability() != null) {
           response.getMaximumResourceCapability().setMemorySize(overrideMaxClusterMemoryCapability);
           response.getMaximumResourceCapability().setVirtualCores(overrideMaxClusterVCoreCapability);
