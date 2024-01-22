@@ -146,7 +146,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_1, false);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_2, false);
 
     expectInterceptorException(client);
   }
@@ -272,7 +272,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null) {
+      if (endpoint != null && !endpoint.equals(CENTRAL_ENDPOINT)) {
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
             .describedAs("Endpoint not overridden").isTrue();

@@ -291,15 +291,25 @@ public class DefaultS3ClientFactory extends Configured
     if (endpoint != null) {
       checkArgument(!fipsEnabled,
           "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
-      builder.endpointOverride(endpoint);
-      // No region was configured, try to determine it from the endpoint.
-      if (region == null) {
-        region = getS3RegionFromEndpoint(parameters.getEndpoint());
-        if (region != null) {
-          origin = "endpoint";
-        }
+      if(parameters.getEndpoint().equals(CENTRAL_ENDPOINT)){
+        // this will cause some issues, override this and ignore the endpoint setting
+        // this is to make it similar to cross region access.
+        region = Region.of(AWS_S3_DEFAULT_REGION);
+        builder.crossRegionAccessEnabled(true);
+        builder.region(region);
+        origin = "cross region access fallback because of global endpoint";
       }
-      LOG.debug("Setting endpoint to {}", endpoint);
+      else {
+        builder.endpointOverride(endpoint);
+        // No region was configured, try to determine it from the endpoint.
+        if (region == null) {
+          region = getS3RegionFromEndpoint(parameters.getEndpoint());
+          if (region != null) {
+            origin = "endpoint";
+          }
+        }
+        LOG.debug("Setting endpoint to {}", endpoint);
+      }
     }
 
     if (region != null) {
