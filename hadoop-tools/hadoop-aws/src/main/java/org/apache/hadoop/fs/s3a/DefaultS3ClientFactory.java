@@ -322,6 +322,7 @@ public class DefaultS3ClientFactory extends Configured
 
     if (parameters.getEndpoint().endsWith(CENTRAL_ENDPOINT)) {
       builder.crossRegionAccessEnabled(true);
+      LOG.debug("Enabling cross region access for endpoint {}", parameters.getEndpoint());
     }
 
     LOG.debug("Setting region to {} from {}", region, origin);

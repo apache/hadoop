@@ -49,7 +49,7 @@ public class ITestS3ACrossRegionAccess extends AbstractS3ATestBase {
       newFs.initialize(getFileSystem().getUri(), newConf);
 
       final String file = getMethodName();
-      Path basePath = new Path("basePath" + getMethodName());
+      Path basePath = new Path("basePath-" + getMethodName());
       final Path srcDir = new Path(basePath, "srcdir");
       newFs.mkdirs(srcDir);
       Path src = new Path(srcDir, file);
