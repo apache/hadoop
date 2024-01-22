@@ -121,7 +121,8 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   /**
    * Gets the client assertion from the token file.  The token in the file
    * is automatically refreshed by Azure at least once every 24 hours.
-   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">Azure Workload Identity FAQ</a>.
+   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">
+   * Azure Workload Identity FAQ</a>.
    *
    * @return the client assertion.
    * @throws IOException if the token file is empty.
