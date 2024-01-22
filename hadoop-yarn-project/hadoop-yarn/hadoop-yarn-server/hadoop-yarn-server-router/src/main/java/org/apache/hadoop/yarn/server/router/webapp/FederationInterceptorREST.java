@@ -64,12 +64,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -87,39 +82,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -219,6 +182,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private int appInfosCacheCount;
   private boolean allowPartialResult;
   private long submitIntervalTime;
+  private boolean overrideMaxClusterCapability;
+  private long overrideMaxClusterMemoryCapability;
+  private int overrideMaxClusterVCoreCapability;
+
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -278,6 +245,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     submitIntervalTime = conf.getTimeDuration(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
         YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
+
+    overrideMaxClusterCapability = conf.getBoolean(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
+
+    overrideMaxClusterMemoryCapability = conf.getLong(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
+
+    overrideMaxClusterVCoreCapability = conf.getInt(
+            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
+            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
   }
 
   @VisibleForTesting
@@ -399,6 +378,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // If the response is not empty and the status is SC_OK,
       // this request can be returned directly.
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+
+        // Since we fetch getNewApplication response from a random subcluster each time, we
+        // can consolidate on the response returned by Router here
+        if (overrideMaxClusterCapability) {
+          NewApplication appId =
+                  new NewApplication(getApplicationIdFromGetNewApplicationResponse(response).toString(),
+                          new ResourceInfo(Resource.newInstance(overrideMaxClusterMemoryCapability, overrideMaxClusterVCoreCapability)));
+          return Response.status(Status.OK).entity(appId).build();
+
+        }
+
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
@@ -466,6 +456,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String msg = String.format("Unable to create a new ApplicationId in SubCluster %s.",
         subClusterId.getId());
     throw new YarnException(msg);
+  }
+
+  private ApplicationId getApplicationIdFromGetNewApplicationResponse(Response response) {
+    return ApplicationId.fromString(response.getEntity().toString());
   }
 
   /**

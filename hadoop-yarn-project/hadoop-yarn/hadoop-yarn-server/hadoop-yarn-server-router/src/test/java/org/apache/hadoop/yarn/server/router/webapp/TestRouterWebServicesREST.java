@@ -173,6 +173,9 @@ public class TestRouterWebServicesREST {
 
   private static Configuration conf;
 
+  private final static long FEDERATION_MAX_MEMORY_CAPABILITY = 10000;
+  private final static int FEDERATION_MAX_CPU_CAPABILITY = 8;
+
   /**
    * Wait until the webservice is up and running.
    */
@@ -229,6 +232,11 @@ public class TestRouterWebServicesREST {
     nm = new JavaProcess(NodeManager.class, nmOutput);
     nmAddress = "http://" + getNMWebAppURLWithoutScheme(conf);
     waitWebAppRunning(nmAddress, "/ws/v1/node");
+
+    conf.setBoolean(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY, true);
+    conf.setLong(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB, FEDERATION_MAX_MEMORY_CAPABILITY);
+    conf.setInt(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB, FEDERATION_MAX_CPU_CAPABILITY);
+
   }
 
   @AfterClass
@@ -629,6 +637,8 @@ public class TestRouterWebServicesREST {
     assertEquals(SC_OK, response.getStatus());
     NewApplication ci = response.getEntity(NewApplication.class);
     assertNotNull(ci);
+    assertEquals(ci.getMaximumResourceCapability().getMemorySize(), FEDERATION_MAX_MEMORY_CAPABILITY);
+    assertEquals(ci.getMaximumResourceCapability().getvCores(), FEDERATION_MAX_CPU_CAPABILITY);
   }
 
   /**

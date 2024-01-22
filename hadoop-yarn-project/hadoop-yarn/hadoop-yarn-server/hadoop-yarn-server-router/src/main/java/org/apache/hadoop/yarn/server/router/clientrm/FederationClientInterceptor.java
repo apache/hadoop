@@ -375,8 +375,6 @@ public class FederationClientInterceptor
           runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
-        long stopTime = clock.getTime();
-        routerMetrics.succeededAppsCreated(stopTime - startTime);
 
         // Since we fetch getNewApplication response from a random subcluster each time, we
         // can consolidate on the response returned by Router here
@@ -384,6 +382,9 @@ public class FederationClientInterceptor
           response.getMaximumResourceCapability().setMemorySize(overrideMaxClusterMemoryCapability);
           response.getMaximumResourceCapability().setVirtualCores(overrideMaxClusterVCoreCapability);
         }
+
+        long stopTime = clock.getTime();
+        routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
     } catch (Exception e) {
