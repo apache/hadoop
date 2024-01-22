@@ -1327,7 +1327,7 @@ public final class Constants {
    * The special S3 region which can be used to talk to any bucket.
    * Value {@value}.
    */
-  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-2";
 
   /**
    * The default S3 region when using cross region client.
