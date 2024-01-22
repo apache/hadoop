@@ -152,6 +152,16 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCentralEndpointWithRegion() throws Throwable {
+    describe("Create a client with the central endpoint but also specify region");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_WEST_2, false);
+
+    expectInterceptorException(client);
+  }
+
+  @Test
   public void testWithRegionConfig() throws Throwable {
     describe("Create a client with a configured region");
     Configuration conf = getConfiguration();
