@@ -33,6 +33,7 @@
     <fork.mode>once</fork.mode>
     <hadoop.component>yarn</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <yarn.ui.packaging>pom</yarn.ui.packaging>
   </properties>
 
   <modules>
@@ -90,6 +91,64 @@
       <artifactId>hadoop-yarn-applications-catalog-webapp</artifactId>
       <type>war</type>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-applications-unmanaged-am-launcher</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-tests</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.errorprone</groupId>
+          <artifactId>error_prone_annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>animal-sniffer-annotations</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-csi</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-documentstore</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-tests</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-ui</artifactId>
+      <version>${project.version}</version>
+      <type>${yarn.ui.packaging}</type>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -123,6 +182,32 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>yarn-ui</id>
+      <properties>
+        <yarn.ui.packaging>war</yarn.ui.packaging>
+      </properties>
+    </profile>
+    <profile>
+      <id>hbase1</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>hbase2</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>dist</id>
       <activation>
