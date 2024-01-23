@@ -15,6 +15,8 @@
 
 FROM apache/hadoop-runner:@docker.hadoop-runner.version@
 
-ADD --chown=hadoop . /opt/hadoop
+COPY . /opt/hadoop
 
 WORKDIR /opt/hadoop
+
+RUN sudo chown -R hadoop:users /opt/hadoop
