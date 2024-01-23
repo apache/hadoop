@@ -53,6 +53,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean optimizeFooterRead;
 
+  private int footerReadBufferSize;
+
   private boolean bufferedPreadDisabled;
 
   /** A BackReference to the FS instance that created this OutputStream. */
@@ -110,6 +112,11 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext withOptimizeFooterRead(
       final boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
+    return this;
+  }
+
+  public AbfsInputStreamContext withFooterReadBufferSize(final int footerReadBufferSize) {
+    this.footerReadBufferSize = footerReadBufferSize;
     return this;
   }
 
@@ -188,6 +195,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean optimizeFooterRead() {
     return this.optimizeFooterRead;
+  }
+
+  public int getFooterReadBufferSize() {
+    return footerReadBufferSize;
   }
 
   public boolean shouldReadBufferSizeAlways() {

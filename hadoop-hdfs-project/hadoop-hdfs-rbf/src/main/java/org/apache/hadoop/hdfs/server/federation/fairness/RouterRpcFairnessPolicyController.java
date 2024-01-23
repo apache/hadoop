@@ -77,4 +77,12 @@ public interface RouterRpcFairnessPolicyController {
    * @return the available handler for each name service.
    */
   int getAvailablePermits(String nsId);
+
+  /**
+   * Determine whether ns has registered handlers.
+   *
+   * @param nsId name service id.
+   * @return true if the ns has registered handlers, false in other cases.
+   */
+  boolean contains(String nsId);
 }
