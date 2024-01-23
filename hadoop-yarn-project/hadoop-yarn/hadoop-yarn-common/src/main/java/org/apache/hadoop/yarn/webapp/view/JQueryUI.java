@@ -80,7 +80,7 @@ public class JQueryUI extends HtmlBlock {
                     ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
     List<String> list = Lists.newArrayList();
-    list.add("var appsTableData = []");
+//    list.add("var appsTableData = []");
 //    list.add("(var appsTableData !== undefined) ? appsTableData : [];")
     initAccordions(list);
     initDataTables(list);
@@ -170,6 +170,53 @@ public class JQueryUI extends HtmlBlock {
 //    }
 //  }
 
+//  protected void initDataTables(List<String> list) {
+//    String defaultInit = "{sPaginationType: 'full_numbers'}";
+//    String stateSaveInit = "bStateSave : true, " +
+//            "\"fnStateSave\": function (oSettings, oData) { " +
+//            " data = oData.aoSearchCols;"
+//            + "for(i =0 ; i < data.length; i ++) {"
+//            + "data[i].sSearch = \"\""
+//            + "}"
+//            + " sessionStorage.setItem( oSettings.sTableId, JSON.stringify(oData) ); }, " +
+//            "\"fnStateLoad\": function (oSettings) { " +
+//            "return JSON.parse( sessionStorage.getItem(oSettings.sTableId) );}, ";
+//
+//    for (String id : split($(DATATABLES_ID))) {
+//      if (Html.isValidId(id)) {
+//        String init = $(initID(DATATABLES, id));
+//        if (init.isEmpty()) {
+//          init = defaultInit;
+//        }
+//        // for inserting stateSaveInit
+//        int pos = init.indexOf('{') + 1;
+//        init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
+////        list.add(join(id, "DataTable =  DataTableHelper('#", id,"'", init,
+////                ").fnSetFilteringDelay(188);", "yarnDt(", id, "DataTable", ")"));
+////        list.add(join(id, "DataTable =  DataTableHelper('#", id,"', ", init,
+////                ").fnSetFilteringDelay(188);", "yarnDt(", id, "DataTable", ")"));
+//        list.add(join(id, "DataTable =  DataTableHelper('#", id,"', ", init,
+//                ");\n", "yarnDt(", id, "DataTable", ")"));
+//        String postInit = $(postInitID(DATATABLES, id));
+//        if(!postInit.isEmpty()) {
+//          list.add(postInit);
+//        }
+//      }
+//    }
+//    String selector = $(DATATABLES_SELECTOR);
+//    if (!selector.isEmpty()) {
+//      String init = $(initSelector(DATATABLES));
+//      if (init.isEmpty()) {
+//        init = defaultInit;
+//      }
+//      int pos = init.indexOf('{') + 1;
+//      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
+//      list.add(join("  new DataTable('", escapeEcmaScript(selector), "', ", init,
+//              ").fnSetFilteringDelay(288);"));
+//
+//    }
+//  }
+
   protected void initDataTables(List<String> list) {
     String defaultInit = "{sPaginationType: 'full_numbers'}";
     String stateSaveInit = "bStateSave : true, " +
@@ -191,9 +238,8 @@ public class JQueryUI extends HtmlBlock {
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;
         init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
-        String appsTableEle = "var " + id + "Table = document.querySelector(\"#"+ id + "\");";
-        list.add(join(appsTableEle, "\n", id, "DataTable =  new DataTable(", id, "Table", ", ", init,
-                ").fnSetFilteringDelay(188);", "yarnDt(", id, "DataTable", ")"));
+        list.add(join(id, "DataTable =  DataTableHelper('#", id,"', ", init,
+                ");"));
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
           list.add(postInit);
