@@ -590,7 +590,12 @@ public class TestObserverWithRouter {
   @Test
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testRouterResponseHeaderState() {
-    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(new Configuration());
+    // This conf makes ns1 that is not eligible for observer reads.
+    Configuration conf = new Configuration();
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    conf.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns1");
+
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
     ConcurrentHashMap<String, LongAccumulator> namespaceIdMap =
         routerStateIdContext.getNamespaceIdMap();
@@ -598,26 +603,18 @@ public class TestObserverWithRouter {
     namespaceIdMap.put("ns1", new LongAccumulator(Math::max, 100));
     namespaceIdMap.put("ns2", new LongAccumulator(Math::max, Long.MIN_VALUE));
 
-    Map<String, Long> mockMapping = new HashMap<>();
-    mockMapping.put("ns0", 10L);
-    mockMapping.put("ns2", 100L);
-    mockMapping.put("ns3", Long.MIN_VALUE);
-    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
-    mockMapping.forEach(builder::putNamespaceStateIds);
-
     RpcHeaderProtos.RpcResponseHeaderProto.Builder responseHeaderBuilder =
         RpcHeaderProtos.RpcResponseHeaderProto
             .newBuilder()
             .setCallId(1)
-            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
-            .setRouterFederatedState(builder.build().toByteString());
+            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS);
     routerStateIdContext.updateResponseState(responseHeaderBuilder);
 
     Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
         responseHeaderBuilder.build().getRouterFederatedState());
-    Assertions.assertEquals(2, latestFederateState.size());
+    // Only ns0 will be in latestFederateState
+    Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
-    Assertions.assertEquals(100L, latestFederateState.get("ns1"));
   }
 
   @EnumSource(ConfigSetting.class)
