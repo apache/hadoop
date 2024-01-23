@@ -39,7 +39,9 @@ function naturalSort (a, b) {
 
 var yarnDt = function (dtObject) {
   // don't filter on hidden html elements for an sType of title-numeric
-  
+  dtObject.ofnSearch={}
+  dtObject.oSort={}
+//  var dtObject.oApi.fnSetFilteringDelay={}
   dtObject.ofnSearch['title-numeric'] = function (sData) {
     return sData.replace(/\n/g, " ").replace(/<.*?>/g, "");
   }
@@ -92,37 +94,37 @@ var yarnDt = function (dtObject) {
     return naturalSort(a,b) * -1;
   }
 
-  dtObject.oApi.fnSetFilteringDelay = function (oSettings, iDelay) {
-    var
-      _that = this,
-      iDelay = (typeof iDelay == 'undefined') ? 250 : iDelay;
-
-    this.each(function (i) {
-      $.fn.dataTableExt.iApiIndex = i;
-      var
-        $this = this,
-        oTimerId = null,
-        sPreviousSearch = null,
-        anControl = $('input', _that.fnSettings().aanFeatures.f);
-
-      anControl.unbind('keyup').bind('keyup', function () {
-        var $$this = $this;
-
-        if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
-          window.clearTimeout(oTimerId);
-          sPreviousSearch = anControl.val();
-          oSettings.oApi._fnProcessingDisplay(oSettings, true);
-          oTimerId = window.setTimeout(function () {
-            $.fn.dataTableExt.iApiIndex = i;
-            _that.fnFilter(anControl.val());
-            oSettings.oApi._fnProcessingDisplay(oSettings, false);
-          }, iDelay);
-        }
-      });
-      return this;
-    });
-    return this;
-  }
+//  dtObject.oApi.fnSetFilteringDelay = function (oSettings, iDelay) {
+//    var
+//      _that = this,
+//      iDelay = (typeof iDelay == 'undefined') ? 250 : iDelay;
+//
+//    this.each(function (i) {
+//      $.fn.dataTableExt.iApiIndex = i;
+//      var
+//        $this = this,
+//        oTimerId = null,
+//        sPreviousSearch = null,
+//        anControl = $('input', _that.fnSettings().aanFeatures.f);
+//
+//      anControl.unbind('keyup').bind('keyup', function () {
+//        var $$this = $this;
+//
+//        if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
+//          window.clearTimeout(oTimerId);
+//          sPreviousSearch = anControl.val();
+//          oSettings.oApi._fnProcessingDisplay(oSettings, true);
+//          oTimerId = window.setTimeout(function () {
+//            $.fn.dataTableExt.iApiIndex = i;
+//            _that.fnFilter(anControl.val());
+//            oSettings.oApi._fnProcessingDisplay(oSettings, false);
+//          }, iDelay);
+//        }
+//      });
+//      return this;
+//    });
+//    return this;
+//  }
 
   return dtObject
 }

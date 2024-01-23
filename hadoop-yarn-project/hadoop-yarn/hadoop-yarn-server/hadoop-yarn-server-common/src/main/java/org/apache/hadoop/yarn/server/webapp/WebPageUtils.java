@@ -42,7 +42,7 @@ public class WebPageUtils {
     // FairSchedulerPage's table is a bit different
     // This is define in RMAppsBlock.COLUMNS for the RM
     return tableInit()
-      .append(", 'aaData': appsTableData")
+      .append(", 'data': appsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
       .append("\n, aoColumnDefs: ")
