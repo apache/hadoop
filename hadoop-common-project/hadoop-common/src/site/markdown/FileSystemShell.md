@@ -289,7 +289,7 @@ rather than the default filesystem and checkpoint is created.
 For example
 
 ```
-hadoop fs -expunge --immediate -fs s3a://landsat-pds/
+hadoop fs -expunge -immediate -fs s3a://landsat-pds/
 ```
 
 Refer to the

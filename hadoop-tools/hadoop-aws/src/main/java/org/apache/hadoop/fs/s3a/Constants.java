@@ -173,7 +173,7 @@ public final class Constants {
    * Future releases are likely to increase this value.
    * Keep in sync with the value in {@code core-default.xml}
    */
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 500;
 
   /**
    * Configuration option to configure expiration time of
@@ -1336,6 +1336,15 @@ public final class Constants {
   public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
 
   /**
+   * Is the endpoint a FIPS endpoint?
+   * Can be queried as a path capability.
+   * Value {@value}.
+   */
+  public static final String FIPS_ENDPOINT = "fs.s3a.endpoint.fips";
+
+  public static final boolean ENDPOINT_FIPS_DEFAULT = false;
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
@@ -1543,4 +1552,35 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
+
+  /**
+   * Flag to switch to a v2 SDK HTTP signer. Value {@value}.
+   */
+  public static final String HTTP_SIGNER_ENABLED = "fs.s3a.http.signer.enabled";
+
+  /**
+   * Default value of {@link #HTTP_SIGNER_ENABLED}: {@value}.
+   */
+  public static final boolean HTTP_SIGNER_ENABLED_DEFAULT = false;
+
+  /**
+   * Classname of the http signer to use when {@link #HTTP_SIGNER_ENABLED}
+   * is true: {@value}.
+   */
+  public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
+
+  /**
+   * Should checksums be validated on download?
+   * This is slower and not needed on TLS connections.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_VALIDATION =
+      "fs.s3a.checksum.validation";
+
+  /**
+   * Default value of {@link #CHECKSUM_VALIDATION}.
+   * Value: {@value}.
+   */
+  public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
+
 }

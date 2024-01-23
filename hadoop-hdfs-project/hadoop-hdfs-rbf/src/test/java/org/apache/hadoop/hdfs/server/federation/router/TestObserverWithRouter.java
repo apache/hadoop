@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAccumulator;
 
@@ -584,6 +585,39 @@ public class TestObserverWithRouter {
         clientGSIContext.getRouterFederatedState());
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testRouterResponseHeaderState() {
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(new Configuration());
+
+    ConcurrentHashMap<String, LongAccumulator> namespaceIdMap =
+        routerStateIdContext.getNamespaceIdMap();
+    namespaceIdMap.put("ns0", new LongAccumulator(Math::max, 10));
+    namespaceIdMap.put("ns1", new LongAccumulator(Math::max, 100));
+    namespaceIdMap.put("ns2", new LongAccumulator(Math::max, Long.MIN_VALUE));
+
+    Map<String, Long> mockMapping = new HashMap<>();
+    mockMapping.put("ns0", 10L);
+    mockMapping.put("ns2", 100L);
+    mockMapping.put("ns3", Long.MIN_VALUE);
+    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
+    mockMapping.forEach(builder::putNamespaceStateIds);
+
+    RpcHeaderProtos.RpcResponseHeaderProto.Builder responseHeaderBuilder =
+        RpcHeaderProtos.RpcResponseHeaderProto
+            .newBuilder()
+            .setCallId(1)
+            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+            .setRouterFederatedState(builder.build().toByteString());
+    routerStateIdContext.updateResponseState(responseHeaderBuilder);
+
+    Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
+        responseHeaderBuilder.build().getRouterFederatedState());
+    Assertions.assertEquals(2, latestFederateState.size());
+    Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+    Assertions.assertEquals(100L, latestFederateState.get("ns1"));
   }
 
   @EnumSource(ConfigSetting.class)

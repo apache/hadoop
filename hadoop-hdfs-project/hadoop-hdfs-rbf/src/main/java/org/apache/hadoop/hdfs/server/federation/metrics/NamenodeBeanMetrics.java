@@ -481,7 +481,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("adminState", node.getAdminState().toString());
         innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
         innerinfo.put("capacity", node.getCapacity());
-        innerinfo.put("numBlocks", -1); // node.numBlocks()
+        innerinfo.put("numBlocks", node.getNumBlocks());
         innerinfo.put("version", (node.getSoftwareVersion() == null ?
                         "UNKNOWN" : node.getSoftwareVersion()));
         innerinfo.put("used", node.getDfsUsed());

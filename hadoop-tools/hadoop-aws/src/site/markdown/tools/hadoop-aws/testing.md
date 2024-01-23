@@ -1142,7 +1142,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
-1. Update AWS SDK versions in NOTICE.txt.
+1. Update AWS SDK versions in NOTICE.txt and LICENSE.binary
 1. Do a clean build and rerun all the `hadoop-aws` tests.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
@@ -1164,11 +1164,18 @@ your IDE or via maven.
   `mvn dependency:tree -Dverbose > target/dependencies.txt`.
   Examine the `target/dependencies.txt` file to verify that no new
   artifacts have unintentionally been declared as dependencies
-  of the shaded `aws-java-sdk-bundle` artifact.
+  of the shaded `software.amazon.awssdk:bundle:jar` artifact.
 1. Run a full AWS-test suite with S3 client-side encryption enabled by
  setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
   Key ID in `fs.s3a.encryption.key`.
 
+The dependency chain of the `hadoop-aws` module should be similar to this, albeit
+with different version numbers:
+```
+[INFO] +- org.apache.hadoop:hadoop-aws:jar:3.4.0-SNAPSHOT:compile
+[INFO] |  +- software.amazon.awssdk:bundle:jar:2.23.5:compile
+[INFO] |  \- org.wildfly.openssl:wildfly-openssl:jar:1.1.3.Final:compile
+```
 ### Basic command line regression testing
 
 We need a run through of the CLI to see if there have been changes there
@@ -1365,5 +1372,5 @@ Don't be surprised if this happens, don't worry too much, and,
 while that rollback option is there to be used, ideally try to work forwards.
 
 If the problem is with the SDK, file issues with the
- [AWS SDK Bug tracker](https://github.com/aws/aws-sdk-java/issues).
+ [AWS V2 SDK Bug tracker](https://github.com/aws/aws-sdk-java-v2/issues).
 If the problem can be fixed or worked around in the Hadoop code, do it there too.

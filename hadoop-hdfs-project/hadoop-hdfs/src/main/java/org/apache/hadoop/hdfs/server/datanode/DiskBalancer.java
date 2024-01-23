@@ -184,7 +184,8 @@ public class DiskBalancer {
     try {
       checkDiskBalancerEnabled();
       if ((this.future != null) && (!this.future.isDone())) {
-        LOG.error("Disk Balancer - Executing another plan, submitPlan failed.");
+        LOG.error("Disk Balancer - Executing another plan (Plan File: {}, Plan ID: {}), " +
+            "submitPlan failed.", planFile, planID);
         throw new DiskBalancerException("Executing another plan",
             DiskBalancerException.Result.PLAN_ALREADY_IN_PROGRESS);
       }
@@ -523,7 +524,7 @@ public class DiskBalancer {
 
       String sourceVolBasePath = storageIDToVolBasePathMap.get(sourceVolUuid);
       if (sourceVolBasePath == null) {
-        final String errMsg = "Disk Balancer - Unable to find volume: "
+        final String errMsg = "Disk Balancer - Unable to find source volume: "
             + step.getSourceVolume().getPath() + ". SubmitPlan failed.";
         LOG.error(errMsg);
         throw new DiskBalancerException(errMsg,
@@ -532,7 +533,7 @@ public class DiskBalancer {
 
       String destVolBasePath = storageIDToVolBasePathMap.get(destVolUuid);
       if (destVolBasePath == null) {
-        final String errMsg = "Disk Balancer - Unable to find volume: "
+        final String errMsg = "Disk Balancer - Unable to find dest volume: "
             + step.getDestinationVolume().getPath() + ". SubmitPlan failed.";
         LOG.error(errMsg);
         throw new DiskBalancerException(errMsg,
@@ -1058,7 +1059,7 @@ public class DiskBalancer {
       FsVolumeSpi source = getFsVolume(this.dataset, sourceVolUuid);
       if (source == null) {
         final String errMsg = "Disk Balancer - Unable to find source volume: "
-            + pair.getDestVolBasePath();
+            + pair.getSourceVolBasePath();
         LOG.error(errMsg);
         item.setErrMsg(errMsg);
         return;

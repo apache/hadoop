@@ -169,7 +169,7 @@ public class RouterSafemodeService extends PeriodicService {
     }
     StateStoreService stateStore = router.getStateStore();
     long cacheUpdateTime = stateStore.getCacheUpdateTime();
-    boolean isCacheStale = (now - cacheUpdateTime) > this.staleInterval;
+    boolean isCacheStale = (cacheUpdateTime == 0) || (now - cacheUpdateTime) > this.staleInterval;
 
     // Always update to indicate our cache was updated
     if (isCacheStale) {
