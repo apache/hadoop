@@ -1324,16 +1324,16 @@ public final class Constants {
   public static final String AWS_REGION = "fs.s3a.endpoint.region";
 
   /**
+   * The special S3 region which can be used to talk to any bucket.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
+
+  /**
    * The default S3 region when using cross region client.
    * Value {@value}.
    */
   public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
-
-  /**
-   * The special S3 region which can be used to talk to any bucket.
-   * Value {@value}.
-   */
-  public static final String AWS_S3_CENTRAL_REGION = AWS_S3_DEFAULT_REGION;
 
   /**
    * Is the endpoint a FIPS endpoint?

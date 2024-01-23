@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -367,15 +366,24 @@ public class DefaultS3ClientFactory extends Configured
    * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region, null if unable to resolve from endpoint.
    */
-  private static Region getS3RegionFromEndpoint(String endpoint, boolean endpointEndsWithCentral) {
+  private static Region getS3RegionFromEndpoint(final String endpoint,
+      final boolean endpointEndsWithCentral) {
 
     if (!endpointEndsWithCentral) {
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }
 
-    // endpoint for central region
-    return Region.of(AWS_S3_CENTRAL_REGION);
+    // Select default region here to enable cross-region access.
+    // If both "fs.s3a.endpoint" and "fs.s3a.endpoint.region" are empty,
+    // Spark sets "fs.s3a.endpoint" to "s3.amazonaws.com".
+    // ref:
+    // https://github.com/apache/spark/blob/v3.5.0/core/src/main/scala/org/apache/spark/deploy/SparkHadoopUtil.scala#L528
+    // If we do not allow cross region access, Spark would not be able to
+    // access any bucket that is not present in the given region.
+    // Hence, we should use default region us-east-2 to allow cross-region
+    // access.
+    return Region.of(AWS_S3_DEFAULT_REGION);
   }
 
 }

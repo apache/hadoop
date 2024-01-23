@@ -38,10 +38,14 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -159,6 +163,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_WEST_2, false);
 
     expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_1, false);
+
+    expectInterceptorException(client);
   }
 
   @Test
@@ -265,6 +273,33 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2, false);
 
     expectInterceptorException(client);
+  }
+
+  @Test
+  public void testCentralEndpointCrossRegionAccess() throws Throwable {
+    describe("Create bucket on different region and access it using central endpoint");
+    Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
+
+    Configuration newConf = new Configuration(conf);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    final String file = getMethodName();
+    Path basePath = new Path("basePath-" + getMethodName());
+    final Path srcDir = new Path(basePath, "srcdir");
+    newFS.mkdirs(srcDir);
+    Path src = new Path(srcDir, file);
+
+    try (FSDataOutputStream out = newFS.create(src)) {
+      out.write(new byte[] {1, 2, 3});
+    }
+
+    ContractTestUtils.assertIsFile(getFileSystem(), new Path(srcDir, file));
+    newFS.delete(srcDir, true);
   }
 
   private final class RegionInterceptor implements ExecutionInterceptor {
