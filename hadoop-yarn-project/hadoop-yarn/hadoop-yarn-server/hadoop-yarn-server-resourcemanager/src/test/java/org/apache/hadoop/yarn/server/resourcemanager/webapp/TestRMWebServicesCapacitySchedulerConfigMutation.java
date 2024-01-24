@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -66,17 +67,21 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     return Arrays.asList(true, false);
   }
 
-  public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
-      throws IOException {
-    super(createWebAppDescriptor());
-    this.legacyQueueMode = legacyQueueMode;
-    userName = UserGroupInformation.getCurrentUser().getShortUserName();
+  @BeforeClass
+  public static void beforeClass() {
     backupSchedulerConfigFileInTarget();
   }
 
   @AfterClass
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
+  }
+
+  public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
+      throws IOException {
+    super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
+    userName = UserGroupInformation.getCurrentUser().getShortUserName();
   }
 
   @Test
