@@ -103,6 +103,10 @@ public enum Statistic {
       StoreStatisticNames.OP_ACCESS,
       "Calls of access()",
       TYPE_DURATION),
+  INVOCATION_BULK_DELETE(
+      StoreStatisticNames.OP_BULK_DELETE,
+      "Calls of bulk delete()",
+      TYPE_COUNTER),
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",
