@@ -103,6 +103,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BulkDelete;
+import org.apache.hadoop.fs.BulkDeleteSource;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -120,6 +122,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
+import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
@@ -283,7 +286,8 @@ import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemot
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource,
-    AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A> {
+    AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A>,
+    BulkDeleteSource {
 
   /**
    * Default blocksize as used in blocksize and FS status queries.
@@ -3403,6 +3407,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // exit fast if there are no keys to delete
       return;
     }
+    if (keysToDelete.size() == 1) {
+      // single object is a single delete call.
+      // this is more informative in server logs and may be more efficient..
+      deleteObject(keysToDelete.get(0).key());
+      noteDeleted(1, deleteFakeDir);
+      return;
+    }
     for (ObjectIdentifier objectIdentifier : keysToDelete) {
       blockRootDelete(objectIdentifier.key());
     }
@@ -5481,7 +5492,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
-      // multi object delete flag
+    // this is always true, even if multi object
+    // delete is disabled -the page size is simply reduced to 1.
+    case CommonPathCapabilities.BULK_DELETE:
+      return true;
+
     case ENABLE_MULTI_DELETE:
       return enableMultiObjectsDelete;
 
@@ -5768,4 +5783,50 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return isMultipartUploadEnabled;
   }
 
+  @Override
+  public BulkDelete createBulkDelete(final Path path)
+      throws IllegalArgumentException, IOException {
+
+    final Path p = makeQualified(path);
+    final AuditSpanS3A span = createSpan("bulkdelete", p.toString(), null);
+    return new BulkDeleteOperation(
+        createStoreContext(),
+        createBulkDeleteCallbacks(span),
+        p,
+        enableMultiObjectsDelete ? 1: pageSize,
+        span);
+  }
+
+  /**
+   * Override point for mocking.
+   * @param span span for operations.
+   * @return an instance of the Bulk Delette callbacks.
+   */
+  protected BulkDeleteOperation.BulkDeleteOperationCallbacks createBulkDeleteCallbacks(
+      final AuditSpanS3A span) {
+    return new BulkDeleteOperationCallbacksImpl(span);
+  }
+
+  /**
+   * Callbacks for the bulk delete operation.
+   */
+  protected class BulkDeleteOperationCallbacksImpl implements
+      BulkDeleteOperation.BulkDeleteOperationCallbacks {
+
+    /** span for operations. */
+    private final AuditSpan span;
+
+    protected BulkDeleteOperationCallbacksImpl(AuditSpan span) {
+      this.span = span;
+    }
+
+    @Override
+    @Retries.RetryTranslated
+    public void bulkDelete(final List<ObjectIdentifier> keys)
+        throws MultiObjectDeleteException, IOException, IllegalArgumentException {
+      span.activate();
+      once("bulkDelete", "", () ->
+          S3AFileSystem.this.removeKeys(keys, false));
+    }
+  }
 }
