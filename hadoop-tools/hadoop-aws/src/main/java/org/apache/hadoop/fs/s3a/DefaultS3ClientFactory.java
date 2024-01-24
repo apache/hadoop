@@ -37,6 +37,7 @@ import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -53,6 +54,8 @@ import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -177,6 +180,8 @@ public class DefaultS3ClientFactory extends Configured
       throws IOException {
 
     configureEndpointAndRegion(builder, parameters, conf);
+
+    applyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
@@ -401,4 +406,17 @@ public class DefaultS3ClientFactory extends Configured
     return Region.of(AWS_S3_DEFAULT_REGION);
   }
 
+  public static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
+  applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
+    boolean s3agEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
+    if (s3agEnabled) {
+      boolean s3agFallbackEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
+      S3AccessGrantsPlugin accessGrantsPlugin =
+          S3AccessGrantsPlugin.builder().enableFallback(s3agFallbackEnabled).build();
+      builder.addPlugin(accessGrantsPlugin);
+      LOG.info("s3ag plugin is added to s3 client with fallback: {}", s3agFallbackEnabled);
+    } else {
+      LOG.debug("s3ag plugin is not added to s3 client.");
+    }
+  }
 }
