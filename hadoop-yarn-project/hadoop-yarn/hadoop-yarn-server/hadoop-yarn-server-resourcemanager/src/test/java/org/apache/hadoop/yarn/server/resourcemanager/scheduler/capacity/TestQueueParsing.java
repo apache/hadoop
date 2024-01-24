@@ -54,7 +54,46 @@ public class TestQueueParsing {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestQueueParsing.class);
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String C_PATH = CapacitySchedulerConfiguration.ROOT + ".c";
+  private static final String A1_PATH = A_PATH + ".a1";
+  private static final String A2_PATH = A_PATH + ".a2";
+  private static final String B1_PATH = B_PATH + ".b1";
+  private static final String B2_PATH = B_PATH + ".b2";
+  private static final String B3_PATH = B_PATH + ".b3";
+  private static final String B4_PATH = B_PATH + ".b4";
+  private static final String C1_PATH = C_PATH + ".c1";
+  private static final String C2_PATH = C_PATH + ".c2";
+  private static final String C3_PATH = C_PATH + ".c3";
+  private static final String C4_PATH = C_PATH + ".c4";
+  private static final String C11_PATH = C1_PATH + ".c11";
+  private static final String C12_PATH = C1_PATH + ".c12";
+  private static final String C13_PATH = C1_PATH + ".c13";
+  private static final String AX_PATH = "root.a.x";
+  private static final String AY_PATH = "root.a.y";
+  private static final String X_PATH = "root.x";
 
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
+  private static final QueuePath C = new QueuePath(C_PATH);
+  private static final QueuePath A1 = new QueuePath(A1_PATH);
+  private static final QueuePath A2 = new QueuePath(A2_PATH);
+  private static final QueuePath B1 = new QueuePath(B1_PATH);
+  private static final QueuePath B2 = new QueuePath(B2_PATH);
+  private static final QueuePath B3 = new QueuePath(B3_PATH);
+  private static final QueuePath B4 = new QueuePath(B4_PATH);
+  private static final QueuePath C1 = new QueuePath(C1_PATH);
+  private static final QueuePath C2 = new QueuePath(C2_PATH);
+  private static final QueuePath C3 = new QueuePath(C3_PATH);
+  private static final QueuePath C4 = new QueuePath(C4_PATH);
+  private static final QueuePath C11 = new QueuePath(C11_PATH);
+  private static final QueuePath C12 = new QueuePath(C12_PATH);
+  private static final QueuePath C13 = new QueuePath(C13_PATH);
+  private static final QueuePath AX = new QueuePath(AX_PATH);
+  private static final QueuePath AY = new QueuePath(AY_PATH);
+  private static final QueuePath X = new QueuePath(X_PATH);
   private static final double DELTA = 0.001;
   private static final int GB = 1024;
 
@@ -75,33 +114,23 @@ public class TestQueueParsing {
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    conf.setQueues(ROOT, new String[] {"a", "b", "c"});
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
-
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
-
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
     conf.setMaximumCapacity(C, 70);
 
     LOG.info("Setup top-level queues");
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setMaximumCapacity(A1, 45);
     conf.setCapacity(A2, 70);
     conf.setMaximumCapacity(A2, 85);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
     conf.setQueues(B, new String[] {"b1", "b2", "b3"});
     conf.setCapacity(B1, 50);
     conf.setMaximumCapacity(B1, 85);
@@ -110,10 +139,6 @@ public class TestQueueParsing {
     conf.setCapacity(B3, 20);
     conf.setMaximumCapacity(B3, 35);
 
-    final String C1 = C + ".c1";
-    final String C2 = C + ".c2";
-    final String C3 = C + ".c3";
-    final String C4 = C + ".c4";
     conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
     conf.setCapacity(C1, 50);
     conf.setMaximumCapacity(C1, 55);
@@ -127,9 +152,6 @@ public class TestQueueParsing {
     LOG.info("Setup 2nd-level queues");
 
     // Define 3rd-level queues
-    final String C11 = C1 + ".c11";
-    final String C12 = C1 + ".c12";
-    final String C13 = C1 + ".c13";
     conf.setQueues(C1, new String[] {"c11", "c12", "c13"});
     conf.setCapacity(C11, 15);
     conf.setMaximumCapacity(C11, 30);
@@ -145,18 +167,12 @@ public class TestQueueParsing {
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-            CapacitySchedulerConfiguration
-                    .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            QueuePrefixes.getQueuePrefix(ROOT)
                     + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
-
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
-
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
     conf.setMaximumCapacity(C, 70);
   }
@@ -165,57 +181,40 @@ public class TestQueueParsing {
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-            CapacitySchedulerConfiguration
-                    .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            QueuePrefixes.getQueuePrefix(ROOT)
                     + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
-
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
-
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
     conf.setMaximumCapacity(C, 70);
 
     // sub queues for A
-    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A)
+    conf.set(QueuePrefixes.getQueuePrefix(A)
             + CapacitySchedulerConfiguration.QUEUES, "a1, a2 ");
 
-    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a.a1";
     conf.setCapacity(A1, 60);
-
-    final String A2 = CapacitySchedulerConfiguration.ROOT + ".a.a2";
     conf.setCapacity(A2, 40);
   }
 
   private void setupQueueConfigurationWithoutLabels(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+    conf.setQueues(ROOT, new String[] {"a", "b"});
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
-
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
 
     LOG.info("Setup top-level queues");
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setMaximumCapacity(A1, 45);
     conf.setCapacity(A2, 70);
     conf.setMaximumCapacity(A2, 85);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
     conf.setQueues(B, new String[] {"b1", "b2", "b3"});
     conf.setCapacity(B1, 50);
     conf.setMaximumCapacity(B1, 85);
@@ -227,22 +226,17 @@ public class TestQueueParsing {
 
   private void setupQueueConfigurationWithLabels(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "red", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "blue", 100);
+    conf.setQueues(ROOT, new String[] {"a", "b"});
+    conf.setCapacityByLabel(ROOT, "red", 100);
+    conf.setCapacityByLabel(ROOT, "blue", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
-
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
 
     LOG.info("Setup top-level queues");
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setAccessibleNodeLabels(A, ImmutableSet.of("red", "blue"));
     conf.setCapacityByLabel(A, "red", 50);
@@ -260,9 +254,6 @@ public class TestQueueParsing {
     conf.setCapacityByLabel(A2, "red", 50);
     conf.setMaximumCapacityByLabel(A2, "red", 60);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
     conf.setQueues(B, new String[] {"b1", "b2", "b3"});
     conf.setAccessibleNodeLabels(B, ImmutableSet.of("red", "blue"));
     conf.setCapacityByLabel(B, "red", 50);
@@ -287,24 +278,20 @@ public class TestQueueParsing {
   private void setupQueueConfigurationWithLabelsAndReleaseCheck(
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "red", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "blue", 100);
+    conf.setQueues(ROOT, new String[] {"a", "b"});
+    conf.setCapacityByLabel(ROOT, "red", 100);
+    conf.setCapacityByLabel(ROOT, "blue", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     // The cap <= max-cap check is not needed
     conf.setCapacity(A, 50);
     conf.setMaximumCapacity(A, 100);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 50);
     conf.setMaximumCapacity(B, 100);
 
     LOG.info("Setup top-level queues");
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setAccessibleNodeLabels(A, ImmutableSet.of("red", "blue"));
     conf.setCapacityByLabel(A, "red", 50);
@@ -325,9 +312,6 @@ public class TestQueueParsing {
     conf.setCapacityByLabel(A2, "red", 40);
     conf.setMaximumCapacityByLabel(A2, "red", 60);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
     conf.setQueues(B, new String[] {"b1", "b2", "b3"});
     conf.setAccessibleNodeLabels(B, ImmutableSet.of("red", "blue"));
     conf.setCapacityByLabel(B, "red", 50);
@@ -356,12 +340,11 @@ public class TestQueueParsing {
   private void setupQueueConfigurationWithLabelsInherit(
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "red", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "blue", 100);
+    conf.setQueues(ROOT, new String[] {"a", "b"});
+    conf.setCapacityByLabel(ROOT, "red", 100);
+    conf.setCapacityByLabel(ROOT, "blue", 100);
 
     // Set A configuration
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
     conf.setQueues(A, new String[] {"a1", "a2"});
@@ -370,14 +353,10 @@ public class TestQueueParsing {
     conf.setCapacityByLabel(A, "blue", 100);
 
     // Set B configuraiton
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
     conf.setAccessibleNodeLabels(B, CommonNodeLabelsManager.EMPTY_STRING_SET);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
-
     conf.setCapacity(A1, 30);
     conf.setMaximumCapacity(A1, 45);
     conf.setCapacityByLabel(A1, "red", 50);
@@ -392,10 +371,9 @@ public class TestQueueParsing {
   private void setupQueueConfigurationWithSingleLevel(
           CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+    conf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set A configuration
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
     conf.setAccessibleNodeLabels(A, ImmutableSet.of("red", "blue"));
@@ -403,7 +381,6 @@ public class TestQueueParsing {
     conf.setCapacityByLabel(A, "blue", 90);
 
     // Set B configuraiton
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
     conf.setAccessibleNodeLabels(B, ImmutableSet.of("red", "blue"));
     conf.setCapacityByLabel(B, "red", 10);
@@ -469,7 +446,7 @@ public class TestQueueParsing {
   public void testRootQueueParsing() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     // non-100 percent value will throw IllegalArgumentException
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT, 90);
+    csConf.setCapacity(ROOT, 90);
   }
   
   @Test
@@ -712,7 +689,7 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
-    csConf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT, labels);
+    csConf.setAccessibleNodeLabels(ROOT, labels);
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithLabels(conf, labels);
@@ -807,7 +784,7 @@ public class TestQueueParsing {
     // some of the resources of a parent queue unallocated
     assumeThat(csConf.isLegacyQueueMode(), is(true));
     setupQueueConfiguration(csConf);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c2", 5);
+    csConf.setCapacity(C2, 5);
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithLabels(conf, ImmutableSet.of("red", "blue"));
@@ -829,8 +806,7 @@ public class TestQueueParsing {
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     setupQueueConfigurationWithLabels(csConf);
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT + ".b.b3",
-            "red", 24);
+    csConf.setCapacityByLabel(B3, "red", 24);
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithLabels(conf, ImmutableSet.of("red", "blue"));
@@ -852,12 +828,9 @@ public class TestQueueParsing {
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     setupQueueConfigurationWithLabels(csConf);
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT + ".b.b3",
-            "red", 24);
-    csConf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT,
-            ImmutableSet.of(RMNodeLabelsManager.ANY));
-    csConf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT + ".b",
-            ImmutableSet.of(RMNodeLabelsManager.ANY));
+    csConf.setCapacityByLabel(B3, "red", 24);
+    csConf.setAccessibleNodeLabels(ROOT, ImmutableSet.of(RMNodeLabelsManager.ANY));
+    csConf.setAccessibleNodeLabels(B, ImmutableSet.of(RMNodeLabelsManager.ANY));
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithLabels(conf, ImmutableSet.of("red", "blue"));
@@ -868,21 +841,21 @@ public class TestQueueParsing {
   public void testQueueParsingWithMoveQueue() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues("root", new String[] { "a" });
-    csConf.setQueues("root.a", new String[] { "x", "y" });
-    csConf.setCapacity("root.a", 100);
-    csConf.setCapacity("root.a.x", 50);
-    csConf.setCapacity("root.a.y", 50);
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setQueues(A, new String[] {"x", "y"});
+    csConf.setCapacity(A, 100);
+    csConf.setCapacity(AX, 50);
+    csConf.setCapacity(AY, 50);
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithoutLabels(conf);
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
-    csConf.setQueues("root", new String[] { "a", "x" });
-    csConf.setQueues("root.a", new String[] { "y" });
-    csConf.setCapacity("root.x", 50);
-    csConf.setCapacity("root.a", 50);
-    csConf.setCapacity("root.a.y", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "x"});
+    csConf.setQueues(A, new String[] {"y"});
+    csConf.setCapacity(X, 50);
+    csConf.setCapacity(A, 50);
+    csConf.setCapacity(AY, 100);
     
     capacityScheduler.reinitialize(csConf, rm.getRMContext());
     ServiceOperations.stopQuietly(rm);
@@ -899,12 +872,11 @@ public class TestQueueParsing {
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "y", 100);
+    csConf.setCapacityByLabel(ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 100);
     csConf.setAccessibleNodeLabels(A, labels);
     csConf.setCapacityByLabel(A, "x", 100);
@@ -928,9 +900,9 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // Add a new b4 queue
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".b",
+    csConf.setQueues(B,
         new String[] { "b1", "b2", "b3", "b4" });
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b.b4", 0f);
+    csConf.setCapacity(B4, 0f);
     ParentQueue bQ = (ParentQueue) capacityScheduler.getQueue("b");
     checkEqualsToQueueSet(bQ.getChildQueues(),
         new String[] { "b1", "b2", "b3" });
@@ -955,12 +927,11 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
-    csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    csConf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setLabeledQueueWeight(ROOT, "x", 100);
+    csConf.setLabeledQueueWeight(ROOT, "y", 100);
+    csConf.setLabeledQueueWeight(ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setNonLabeledQueueWeight(A, 100);
     csConf.setAccessibleNodeLabels(A, labels);
     csConf.setLabeledQueueWeight(A, "x", 100);
@@ -975,10 +946,10 @@ public class TestQueueParsing {
     verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "y", 1f);
     verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "z", 1f);
 
-    verifyQueueAbsCapacity(rm, A, "", 1f);
-    verifyQueueAbsCapacity(rm, A, "x", 1f);
-    verifyQueueAbsCapacity(rm, A, "y", 1f);
-    verifyQueueAbsCapacity(rm, A, "z", 1f);
+    verifyQueueAbsCapacity(rm, A_PATH, "", 1f);
+    verifyQueueAbsCapacity(rm, A_PATH, "x", 1f);
+    verifyQueueAbsCapacity(rm, A_PATH, "y", 1f);
+    verifyQueueAbsCapacity(rm, A_PATH, "z", 1f);
     ServiceOperations.stopQuietly(rm);
   }
 
@@ -991,17 +962,17 @@ public class TestQueueParsing {
     final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set default value
     csConf.setDefaultUserLimit(20);
     csConf.setDefaultUserLimitFactor(2.0f);
 
     // Set A configuration and let B use default values
-    csConf.setCapacity(queueA, 50);
-    csConf.setUserLimit(queueA, 15);
-    csConf.setUserLimitFactor(queueA, 1.5f);
-    csConf.setCapacity(queueB, 50);
+    csConf.setCapacity(A, 50);
+    csConf.setUserLimit(A, 15);
+    csConf.setUserLimitFactor(A, 1.5f);
+    csConf.setCapacity(B, 50);
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     MockRM rm = createMockRMWithoutLabels(conf);
@@ -1010,33 +981,33 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     Assert.assertEquals(15,
-            ((LeafQueue)capacityScheduler.getQueue(queueA)).getUserLimit(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimit(), DELTA);
     Assert.assertEquals(1.5,
-            ((LeafQueue)capacityScheduler.getQueue(queueA)).getUserLimitFactor(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimitFactor(), DELTA);
     Assert.assertEquals(20,
-            ((LeafQueue)capacityScheduler.getQueue(queueB)).getUserLimit(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimit(), DELTA);
     Assert.assertEquals(2.0,
-            ((LeafQueue)capacityScheduler.getQueue(queueB)).getUserLimitFactor(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimitFactor(), DELTA);
 
     // Use hadoop default value
     csConf = new CapacitySchedulerConfiguration();
 
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    csConf.setCapacity(queueA, 50);
-    csConf.setUserLimit(queueA, 15);
-    csConf.setUserLimitFactor(queueA, 1.5f);
-    csConf.setCapacity(queueB, 50);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacity(A, 50);
+    csConf.setUserLimit(A, 15);
+    csConf.setUserLimitFactor(A, 1.5f);
+    csConf.setCapacity(B, 50);
 
     capacityScheduler.reinitialize(csConf, rm.getRMContext());
 
     Assert.assertEquals(15,
-            ((LeafQueue)capacityScheduler.getQueue(queueA)).getUserLimit(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimit(), DELTA);
     Assert.assertEquals(1.5,
-            ((LeafQueue)capacityScheduler.getQueue(queueA)).getUserLimitFactor(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimitFactor(), DELTA);
     Assert.assertEquals(100,
-            ((LeafQueue)capacityScheduler.getQueue(queueB)).getUserLimit(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimit(), DELTA);
     Assert.assertEquals(1,
-            ((LeafQueue)capacityScheduler.getQueue(queueB)).getUserLimitFactor(), DELTA);
+            ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimitFactor(), DELTA);
   }
 
   private void verifyQueueAbsCapacity(MockRM rm, String queuePath, String label,

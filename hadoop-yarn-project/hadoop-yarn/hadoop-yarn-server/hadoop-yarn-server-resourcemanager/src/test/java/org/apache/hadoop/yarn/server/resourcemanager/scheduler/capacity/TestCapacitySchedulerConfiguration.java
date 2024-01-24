@@ -24,15 +24,15 @@ import org.junit.Test;
 
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class TestCapacitySchedulerConfiguration {
 
-  private static final String ROOT_TEST = ROOT + ".test";
+  private static final String ROOT_TEST_PATH = CapacitySchedulerConfiguration.ROOT + ".test";
+  private static final QueuePath ROOT_TEST = new QueuePath(ROOT_TEST_PATH);
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final String EMPTY_ACL = "";
   private static final String SPACE_ACL = " ";
   private static final String USER1 = "user1";
@@ -47,29 +47,29 @@ public class TestCapacitySchedulerConfiguration {
     return new CapacitySchedulerConfiguration(new Configuration(false), false);
   }
 
-  private AccessControlList getSubmitAcl(CapacitySchedulerConfiguration csConf, String queue) {
+  private AccessControlList getSubmitAcl(CapacitySchedulerConfiguration csConf, QueuePath queue) {
     return csConf.getAcl(queue, QueueACL.SUBMIT_APPLICATIONS);
   }
 
-  private void setSubmitAppsConfig(CapacitySchedulerConfiguration csConf, String queue,
+  private void setSubmitAppsConfig(CapacitySchedulerConfiguration csConf, QueuePath queue,
       String value) {
     csConf.set(getSubmitAppsConfigKey(queue), value);
   }
 
-  private String getSubmitAppsConfigKey(String queue) {
-    return getQueuePrefix(queue) + "acl_submit_applications";
+  private String getSubmitAppsConfigKey(QueuePath queue) {
+    return QueuePrefixes.getQueuePrefix(queue) + "acl_submit_applications";
   }
 
-  private void testWithGivenAclNoOneHasAccess(String queue, String aclValue) {
+  private void testWithGivenAclNoOneHasAccess(QueuePath queue, String aclValue) {
     testWithGivenAclNoOneHasAccessInternal(queue, queue, aclValue);
   }
 
-  private void testWithGivenAclNoOneHasAccess(String queueToSet, String queueToVerify,
+  private void testWithGivenAclNoOneHasAccess(QueuePath queueToSet, QueuePath queueToVerify,
       String aclValue) {
     testWithGivenAclNoOneHasAccessInternal(queueToSet, queueToVerify, aclValue);
   }
 
-  private void testWithGivenAclNoOneHasAccessInternal(String queueToSet, String queueToVerify,
+  private void testWithGivenAclNoOneHasAccessInternal(QueuePath queueToSet, QueuePath queueToVerify,
       String aclValue) {
     CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     setSubmitAppsConfig(csConf, queueToSet, aclValue);
@@ -79,14 +79,14 @@ public class TestCapacitySchedulerConfiguration {
     assertFalse(acl.isAllAllowed());
   }
 
-  private void testWithGivenAclCorrectUserAndGroupHasAccess(String queue, String aclValue,
+  private void testWithGivenAclCorrectUserAndGroupHasAccess(QueuePath queue, String aclValue,
       Set<String> expectedUsers, Set<String> expectedGroups) {
     testWithGivenAclCorrectUserAndGroupHasAccessInternal(queue, queue, aclValue, expectedUsers,
         expectedGroups);
   }
 
-  private void testWithGivenAclCorrectUserAndGroupHasAccessInternal(String queueToSet,
-      String queueToVerify, String aclValue, Set<String> expectedUsers,
+  private void testWithGivenAclCorrectUserAndGroupHasAccessInternal(QueuePath queueToSet,
+      QueuePath queueToVerify, String aclValue, Set<String> expectedUsers,
       Set<String> expectedGroups) {
     CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     setSubmitAppsConfig(csConf, queueToSet, aclValue);

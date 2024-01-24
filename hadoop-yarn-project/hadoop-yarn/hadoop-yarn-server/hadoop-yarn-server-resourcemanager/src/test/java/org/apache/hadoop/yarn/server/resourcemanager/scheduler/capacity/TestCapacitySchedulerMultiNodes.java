@@ -64,6 +64,7 @@ public class TestCapacitySchedulerMultiNodes {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCapacitySchedulerMultiNodes.class);
+  private static final QueuePath DEFAULT = new QueuePath("root.default");
   private CapacitySchedulerConfiguration conf;
   private static final String POLICY_CLASS_NAME =
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy";
@@ -204,7 +205,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 
@@ -290,7 +291,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 
@@ -361,7 +362,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 
@@ -490,7 +491,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default", 1.0f);
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
     newConf.set(CapacitySchedulerConfiguration.SKIP_ALLOCATE_ON_NODES_WITH_RESERVED_CONTAINERS,
         "true");
     MockRM rm1 = new MockRM(newConf);

@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -97,6 +98,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String QUEUE_A = "Qa";
   private static final String LABEL_LY = "Ly";
   private static final String LABEL_LX = "Lx";
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
   private static final String DOT = ".";
@@ -121,60 +124,63 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.setLegacyQueueModeEnabled(legacyQueueMode);
 
     // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    config.setQueues(ROOT_QUEUE_PATH,
         new String[] { QUEUE_A, QUEUE_B, QUEUE_C });
     String interMediateQueueC =
         CapacitySchedulerConfiguration.ROOT + "." + QUEUE_C;
-    config.setQueues(interMediateQueueC,
+    QueuePath interMediateQueueCPath = new QueuePath(interMediateQueueC);
+    config.setQueues(interMediateQueueCPath,
         new String[] { LEAF_QUEUE_C1, LEAF_QUEUE_C2 });
-    config.setCapacityByLabel(
-        CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
-    config.setCapacityByLabel(
-        CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
+    config.setCapacityByLabel(ROOT_QUEUE_PATH, LABEL_LX, 100);
+    config.setCapacityByLabel(ROOT_QUEUE_PATH, LABEL_LY, 100);
 
     String leafQueueA = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_A;
-    config.setCapacity(leafQueueA, 30);
-    config.setMaximumCapacity(leafQueueA, 50);
+    QueuePath leafQueueAPath = new QueuePath(leafQueueA);
+    config.setCapacity(leafQueueAPath, 30);
+    config.setMaximumCapacity(leafQueueAPath, 50);
 
     String leafQueueB = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_B;
-    config.setCapacity(leafQueueB, 30);
-    config.setMaximumCapacity(leafQueueB, 50);
+    QueuePath leafQueueBPath = new QueuePath(leafQueueB);
+    config.setCapacity(leafQueueBPath, 30);
+    config.setMaximumCapacity(leafQueueBPath, 50);
 
-    config.setCapacity(interMediateQueueC, 40);
-    config.setMaximumCapacity(interMediateQueueC, 50);
+    config.setCapacity(interMediateQueueCPath, 40);
+    config.setMaximumCapacity(interMediateQueueCPath, 50);
 
     String leafQueueC1 = interMediateQueueC + "." + LEAF_QUEUE_C1;
-    config.setCapacity(leafQueueC1, 50);
-    config.setMaximumCapacity(leafQueueC1, 60);
+    QueuePath leafQueueC1Path = new QueuePath(leafQueueC1);
+    config.setCapacity(leafQueueC1Path, 50);
+    config.setMaximumCapacity(leafQueueC1Path, 60);
 
     String leafQueueC2 = interMediateQueueC + "." + LEAF_QUEUE_C2;
-    config.setCapacity(leafQueueC2, 50);
-    config.setMaximumCapacity(leafQueueC2, 70);
+    QueuePath leafQueueC2Path = new QueuePath(leafQueueC2);
+    config.setCapacity(leafQueueC2Path, 50);
+    config.setMaximumCapacity(leafQueueC2Path, 70);
 
     // Define label specific configuration
     config.setAccessibleNodeLabels(
-        leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
-    config.setAccessibleNodeLabels(leafQueueB, ImmutableSet.of(LABEL_LX));
-    config.setAccessibleNodeLabels(interMediateQueueC,
+        leafQueueAPath, ImmutableSet.of(DEFAULT_PARTITION));
+    config.setAccessibleNodeLabels(leafQueueBPath, ImmutableSet.of(LABEL_LX));
+    config.setAccessibleNodeLabels(interMediateQueueCPath,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setAccessibleNodeLabels(leafQueueC1,
+    config.setAccessibleNodeLabels(leafQueueC1Path,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setAccessibleNodeLabels(leafQueueC2,
+    config.setAccessibleNodeLabels(leafQueueC2Path,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setDefaultNodeLabelExpression(leafQueueB, LABEL_LX);
-    config.setDefaultNodeLabelExpression(leafQueueC1, LABEL_LX);
-    config.setDefaultNodeLabelExpression(leafQueueC2, LABEL_LY);
+    config.setDefaultNodeLabelExpression(leafQueueBPath, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC1Path, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC2Path, LABEL_LY);
 
-    config.setCapacityByLabel(leafQueueB, LABEL_LX, 30);
-    config.setCapacityByLabel(interMediateQueueC, LABEL_LX, 70);
-    config.setCapacityByLabel(leafQueueC1, LABEL_LX, 40);
-    config.setCapacityByLabel(leafQueueC2, LABEL_LX, 60);
+    config.setCapacityByLabel(leafQueueBPath, LABEL_LX, 30);
+    config.setCapacityByLabel(interMediateQueueCPath, LABEL_LX, 70);
+    config.setCapacityByLabel(leafQueueC1Path, LABEL_LX, 40);
+    config.setCapacityByLabel(leafQueueC2Path, LABEL_LX, 60);
 
-    config.setCapacityByLabel(interMediateQueueC, LABEL_LY, 100);
-    config.setCapacityByLabel(leafQueueC1, LABEL_LY, 50);
-    config.setCapacityByLabel(leafQueueC2, LABEL_LY, 50);
-    config.setMaximumCapacityByLabel(leafQueueC1, LABEL_LY, 75);
-    config.setMaximumCapacityByLabel(leafQueueC2, LABEL_LY, 75);
+    config.setCapacityByLabel(interMediateQueueCPath, LABEL_LY, 100);
+    config.setCapacityByLabel(leafQueueC1Path, LABEL_LY, 50);
+    config.setCapacityByLabel(leafQueueC2Path, LABEL_LY, 50);
+    config.setMaximumCapacityByLabel(leafQueueC1Path, LABEL_LY, 75);
+    config.setMaximumCapacityByLabel(leafQueueC2Path, LABEL_LY, 75);
   }
 
   @Before

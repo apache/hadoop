@@ -69,6 +69,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestCapacitySchedulerPerf {
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT
+          + ".default");
   private final int GB = 1024;
 
   private String getResourceName(int idx) {
@@ -448,16 +451,16 @@ public class TestCapacitySchedulerPerf {
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
     csconf.setResourceComparator(DominantResourceCalculator.class);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setCapacity("root.default", 0.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csconf.setCapacity(DEFAULT, 0.0f);
     csconf.setOffSwitchPerHeartbeatLimit(numQueues);
 
     float capacity = 100.0f / numQueues;
     String[] subQueues = new String[numQueues];
     for (int i = 0; i < numQueues; i++) {
       String queueName = String.format("%03d", i);
-      String queuePath = "root." + queueName;
+      QueuePath queuePath = new QueuePath("root." + queueName);
       subQueues[i] = queueName;
       csconf.setMaximumApplicationMasterResourcePerQueuePercent(
           queuePath, 100.0f);
@@ -467,7 +470,7 @@ public class TestCapacitySchedulerPerf {
       csconf.setMaximumCapacity(queuePath, 100.0f);
     }
 
-    csconf.setQueues("root", subQueues);
+    csconf.setQueues(ROOT, subQueues);
 
     return csconf;
   }

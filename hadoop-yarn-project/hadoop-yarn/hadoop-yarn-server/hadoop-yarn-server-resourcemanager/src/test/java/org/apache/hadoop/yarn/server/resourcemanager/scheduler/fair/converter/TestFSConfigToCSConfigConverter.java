@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -123,6 +124,14 @@ public class TestFSConfigToCSConfigConverter {
       new File("src/test/resources/conversion-rules.properties")
         .getAbsolutePath();
 
+  private static final QueuePath ROOT = new QueuePath("root");
+  private static final QueuePath DEFAULT = new QueuePath("root.default");
+  private static final QueuePath USERS = new QueuePath("root.users");
+  private static final QueuePath USERS_JOE = new QueuePath("root.users.joe");
+  private static final QueuePath USERS_JOHN = new QueuePath("root.users.john");
+  private static final QueuePath ADMINS_ALICE = new QueuePath("root.admins.alice");
+  private static final QueuePath ADMINS_BOB = new QueuePath("root.admins.bob");
+
   private ConversionOptions createDefaultConversionOptions() {
     return new ConversionOptions(new DryRunResultHolder(), false);
   }
@@ -177,13 +186,13 @@ public class TestFSConfigToCSConfigConverter {
     assertEquals("Default max AM share", 0.16f, maxAmShare, 0.0f);
 
     assertEquals("root.admins.alice max-am-resource-percent", 0.15f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent("root.admins.alice"),
+        conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_ALICE),
             0.0f);
 
     //root.users.joe don’t have maximum-am-resource-percent set
     // so falling back to the global value
     assertEquals("root.users.joe maximum-am-resource-percent", 0.16f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent("root.users.joe"),
+        conf.getMaximumApplicationMasterResourcePerQueuePercent(USERS_JOE),
             0.0f);
   }
 
@@ -194,20 +203,20 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("root.users user-limit-factor", 1.0f,
-            conf.getUserLimitFactor("root.users"), 0.0f);
+            conf.getUserLimitFactor(USERS), 0.0f);
     assertEquals("root.users auto-queue-creation-v2.enabled", true,
-            conf.isAutoQueueCreationV2Enabled("root.users"));
+            conf.isAutoQueueCreationV2Enabled(USERS));
 
     assertEquals("root.default user-limit-factor", -1.0f,
-            conf.getUserLimitFactor("root.default"), 0.0f);
+            conf.getUserLimitFactor(DEFAULT), 0.0f);
 
     assertEquals("root.users.joe user-limit-factor", -1.0f,
-            conf.getUserLimitFactor("root.users.joe"), 0.0f);
+            conf.getUserLimitFactor(USERS_JOE), 0.0f);
 
     assertEquals("root.admins.bob user-limit-factor", -1.0f,
-            conf.getUserLimitFactor("root.admins.bob"), 0.0f);
+            conf.getUserLimitFactor(ADMINS_BOB), 0.0f);
     assertEquals("root.admin.bob auto-queue-creation-v2.enabled", false,
-            conf.isAutoQueueCreationV2Enabled("root.admin.bob"));
+            conf.isAutoQueueCreationV2Enabled(ADMINS_BOB));
   }
 
   @Test
@@ -227,15 +236,15 @@ public class TestFSConfigToCSConfigConverter {
 
     // root.admins.bob is unset,so falling back to the global value
     assertEquals("root.admins.bob maximum-am-resource-percent", 1.0f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent("root.admins.bob"), 0.0f);
+        conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_BOB), 0.0f);
 
     // root.admins.alice 0.15 != -1.0
     assertEquals("root.admins.alice max-am-resource-percent", 0.15f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent("root.admins.alice"), 0.0f);
+        conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_ALICE), 0.0f);
 
     // root.users.joe is unset,so falling back to the global value
     assertEquals("root.users.joe maximum-am-resource-percent", 1.0f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent("root.users.joe"), 0.0f);
+        conf.getMaximumApplicationMasterResourcePerQueuePercent(USERS_JOE), 0.0f);
   }
 
   @Test
@@ -246,33 +255,33 @@ public class TestFSConfigToCSConfigConverter {
 
     // root
     assertEquals("root submit ACL", "alice,bob,joe,john hadoop_users",
-        conf.getAcl("root", QueueACL.SUBMIT_APPLICATIONS).getAclString());
+        conf.getAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root admin ACL", "alice,bob,joe,john hadoop_users",
-        conf.getAcl("root", QueueACL.ADMINISTER_QUEUE).getAclString());
+        conf.getAcl(ROOT, QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.admins.bob
     assertEquals("root.admins.bob submit ACL", "bob ",
-        conf.getAcl("root.admins.bob", QueueACL.SUBMIT_APPLICATIONS).getAclString());
+        conf.getAcl(ADMINS_BOB, QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.admins.bob admin ACL", "bob ",
-        conf.getAcl("root.admins.bob", QueueACL.ADMINISTER_QUEUE).getAclString());
+        conf.getAcl(ADMINS_BOB, QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.admins.alice
     assertEquals("root.admins.alice submit ACL", "alice ",
-        conf.getAcl("root.admins.alice", QueueACL.SUBMIT_APPLICATIONS).getAclString());
+        conf.getAcl(ADMINS_ALICE, QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.admins.alice admin ACL", "alice ",
-        conf.getAcl("root.admins.alice", QueueACL.ADMINISTER_QUEUE).getAclString());
+        conf.getAcl(ADMINS_ALICE, QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.john
     assertEquals("root.users.john submit ACL", "*",
-        conf.getAcl("root.users.john", QueueACL.SUBMIT_APPLICATIONS).getAclString());
+        conf.getAcl(USERS_JOHN, QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.users.john admin ACL", "*",
-        conf.getAcl("root.users.john", QueueACL.ADMINISTER_QUEUE).getAclString());
+        conf.getAcl(USERS_JOHN, QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.joe
     assertEquals("root.users.joe submit ACL", "joe ",
-        conf.getAcl("root.users.joe", QueueACL.SUBMIT_APPLICATIONS).getAclString());
+        conf.getAcl(USERS_JOE, QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.users.joe admin ACL", "joe ",
-        conf.getAcl("root.users.joe", QueueACL.ADMINISTER_QUEUE).getAclString());
+        conf.getAcl(USERS_JOE, QueueACL.ADMINISTER_QUEUE).getAclString());
   }
 
   @Test
@@ -292,7 +301,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("root.admins.alice max parallel apps", 2,
-        conf.getMaxParallelAppsForQueue("root.admins.alice"), 0);
+        conf.getMaxParallelAppsForQueue(ADMINS_ALICE), 0);
   }
 
   @Test

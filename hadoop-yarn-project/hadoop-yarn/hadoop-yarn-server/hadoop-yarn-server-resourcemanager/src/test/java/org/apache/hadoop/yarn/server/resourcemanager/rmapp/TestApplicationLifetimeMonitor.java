@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Times;
 import org.slf4j.event.Level;
@@ -75,6 +76,10 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class TestApplicationLifetimeMonitor {
   private final long maxLifetime = 30L;
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final String CQ1 = "child1";
+  private static final QueuePath CQ1_QUEUE_PATH = ROOT.createNewLeaf(CQ1);
+  private static final QueuePath DEFAULT_QUEUE_PATH = ROOT.createNewLeaf("default");
 
   private YarnConfiguration conf;
 
@@ -390,7 +395,6 @@ public class TestApplicationLifetimeMonitor {
     }
   }
 
-  static final String CQ1 = "child1";
   @Test(timeout = 120000)
   public void testInheritAppLifetimeFromParentQueue() throws Exception {
     YarnConfiguration yarnConf = conf;
@@ -399,13 +403,10 @@ public class TestApplicationLifetimeMonitor {
     if (scheduler.equals(CapacityScheduler.class)) {
       CapacitySchedulerConfiguration csConf =
           new CapacitySchedulerConfiguration();
-      csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[] {CQ1});
-      csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + CQ1, 100);
-      csConf.setMaximumLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT, maxRootLifetime);
-      csConf.setDefaultLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT, defaultRootLifetime);
+      csConf.setQueues(ROOT, new String[] {CQ1});
+      csConf.setCapacity(CQ1_QUEUE_PATH, 100);
+      csConf.setMaximumLifetimePerQueue(ROOT, maxRootLifetime);
+      csConf.setDefaultLifetimePerQueue(ROOT, defaultRootLifetime);
       yarnConf = new YarnConfiguration(csConf);
     }
 
@@ -465,17 +466,12 @@ public class TestApplicationLifetimeMonitor {
     if (scheduler.equals(CapacityScheduler.class)) {
       CapacitySchedulerConfiguration csConf =
           new CapacitySchedulerConfiguration();
-      csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[] {CQ1});
-      csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + CQ1, 100);
-      csConf.setMaximumLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT, maxRootLifetime);
-      csConf.setMaximumLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT + "." + CQ1, maxChildLifetime);
-      csConf.setDefaultLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT, defaultRootLifetime);
-      csConf.setDefaultLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT + "." + CQ1, maxChildLifetime);
+      csConf.setQueues(ROOT, new String[] {CQ1});
+      csConf.setCapacity(CQ1_QUEUE_PATH, 100);
+      csConf.setMaximumLifetimePerQueue(ROOT, maxRootLifetime);
+      csConf.setMaximumLifetimePerQueue(CQ1_QUEUE_PATH, maxChildLifetime);
+      csConf.setDefaultLifetimePerQueue(ROOT, defaultRootLifetime);
+      csConf.setDefaultLifetimePerQueue(CQ1_QUEUE_PATH, maxChildLifetime);
       yarnConf = new YarnConfiguration(csConf);
     }
 
@@ -529,16 +525,11 @@ public class TestApplicationLifetimeMonitor {
     if (scheduler.equals(CapacityScheduler.class)) {
       CapacitySchedulerConfiguration csConf =
           new CapacitySchedulerConfiguration();
-      csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[] {CQ1});
-      csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + CQ1, 100);
-      csConf.setMaximumLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT, maxRootLifetime);
-      csConf.setMaximumLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT + "." + CQ1, maxChildLifetime);
-      csConf.setDefaultLifetimePerQueue(
-          CapacitySchedulerConfiguration.ROOT + "." + CQ1,
-          defaultChildLifetime);
+      csConf.setQueues(ROOT, new String[] {CQ1});
+      csConf.setCapacity(CQ1_QUEUE_PATH, 100);
+      csConf.setMaximumLifetimePerQueue(ROOT, maxRootLifetime);
+      csConf.setMaximumLifetimePerQueue(CQ1_QUEUE_PATH, maxChildLifetime);
+      csConf.setDefaultLifetimePerQueue(CQ1_QUEUE_PATH, defaultChildLifetime);
       yarnConf = new YarnConfiguration(csConf);
     }
 
@@ -592,13 +583,11 @@ public class TestApplicationLifetimeMonitor {
       long defaultLifetime) {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"default"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".default", 100);
-    csConf.setMaximumLifetimePerQueue(
-        CapacitySchedulerConfiguration.ROOT + ".default", maxLifetime);
-    csConf.setDefaultLifetimePerQueue(
-        CapacitySchedulerConfiguration.ROOT + ".default", defaultLifetime);
+    csConf.setCapacity(DEFAULT_QUEUE_PATH, 100);
+    csConf.setMaximumLifetimePerQueue(DEFAULT_QUEUE_PATH, maxLifetime);
+    csConf.setDefaultLifetimePerQueue(DEFAULT_QUEUE_PATH, defaultLifetime);
 
     return csConf;
   }

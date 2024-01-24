@@ -50,6 +50,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1_B1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
@@ -57,6 +58,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ExpectedCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.findQueue;
@@ -129,9 +131,9 @@ public class TestCapacitySchedulerQueues {
     cs.init(conf);
     cs.start();
 
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a.a1", new String[]{"b1"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
-    conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
+    conf.setQueues(A1, new String[]{"b1"});
+    conf.setCapacity(A1_B1, 100.0f);
+    conf.setUserLimitFactor(A1_B1, 100.0f);
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
         null, new RMContainerTokenSecretManager(conf),
@@ -169,7 +171,8 @@ public class TestCapacitySchedulerQueues {
     checkQueueStructureCapacities(cs);
 
     // Add a new queue b4
-    final String b4 = B + ".b4";
+    final String b4Path = B + ".b4";
+    final QueuePath b4 = new QueuePath(b4Path);
     final float b4Capacity = 10;
     final float modifiedB3Capacity = B3_CAPACITY - b4Capacity;
 
@@ -187,15 +190,15 @@ public class TestCapacitySchedulerQueues {
       final float capB = 20f / 100.0f;
       Map<String, ExpectedCapacities> expectedCapacities =
           getDefaultCapacities(capA, capB);
-      expectedCapacities.put(B3,
+      expectedCapacities.put(B3.getFullPath(),
           new ExpectedCapacities(modifiedB3Capacity / 100.0f, capB));
-      expectedCapacities.put(b4, new ExpectedCapacities(b4Capacity / 100.0f, capB));
+      expectedCapacities.put(b4Path, new ExpectedCapacities(b4Capacity / 100.0f, capB));
       checkQueueStructureCapacities(cs, expectedCapacities);
 
       // Verify parent for B4
       CSQueue rootQueue = cs.getRootQueue();
-      CSQueue queueB = findQueue(rootQueue, B);
-      CSQueue queueB4 = findQueue(queueB, b4);
+      CSQueue queueB = findQueue(rootQueue, B.getFullPath());
+      CSQueue queueB4 = findQueue(queueB, b4Path);
 
       assertEquals(queueB, queueB4.getParent());
     } finally {
@@ -226,8 +229,8 @@ public class TestCapacitySchedulerQueues {
         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize());
 
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueA1 = findQueue(queueA, A1);
+    CSQueue queueA = findQueue(rootQueue, A.getFullPath());
+    CSQueue queueA1 = findQueue(queueA, A1.getFullPath());
     assertEquals("queue max allocation", ((LeafQueue) queueA1)
         .getMaximumAllocation().getMemorySize(), 8192);
 
@@ -309,8 +312,8 @@ public class TestCapacitySchedulerQueues {
     checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueA1 = findQueue(queueA, A1);
+    CSQueue queueA = findQueue(rootQueue, A.getFullPath());
+    CSQueue queueA1 = findQueue(queueA, A1.getFullPath());
 
     assertEquals("max capability MB in CS",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -430,11 +433,11 @@ public class TestCapacitySchedulerQueues {
         cs.getMaximumResourceCapability().getVirtualCores());
 
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueA1 = findQueue(queueA, A1);
-    CSQueue queueA2 = findQueue(queueA, A2);
-    CSQueue queueB2 = findQueue(queueB, B2);
+    CSQueue queueA = findQueue(rootQueue, A.getFullPath());
+    CSQueue queueB = findQueue(rootQueue, B.getFullPath());
+    CSQueue queueA1 = findQueue(queueA, A1.getFullPath());
+    CSQueue queueA2 = findQueue(queueA, A2.getFullPath());
+    CSQueue queueB2 = findQueue(queueB, B2.getFullPath());
 
     assertEquals("queue A1 max allocation MB", 4096,
         queueA1.getMaximumAllocation().getMemorySize());
@@ -520,8 +523,8 @@ public class TestCapacitySchedulerQueues {
           + " a queue WITHOUT running apps");
     }
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueB3 = findQueue(queueB, B1);
+    CSQueue queueB = findQueue(rootQueue, B.getFullPath());
+    CSQueue queueB3 = findQueue(queueB, B1.getFullPath());
     assertNull("Refresh needs to support delete of leaf queue ", queueB3);
 
     // reset back to default configuration for testing parent queue delete
@@ -571,7 +574,7 @@ public class TestCapacitySchedulerQueues {
           + " a queue without running apps");
     }
     rootQueue = cs.getRootQueue();
-    queueB = findQueue(rootQueue, B);
+    queueB = findQueue(rootQueue, B.getFullPath());
     String message =
         "Refresh needs to support delete of Parent queue and its children.";
     assertNull(message, queueB);
@@ -640,7 +643,7 @@ public class TestCapacitySchedulerQueues {
           + " all children of a parent queue(without running apps).");
     }
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueB = findQueue(rootQueue, B);
+    CSQueue queueB = findQueue(rootQueue, B.getFullPath());
     assertNotNull("Parent Queue B should not be deleted", queueB);
     Assert.assertTrue("As Queue'B children are not deleted",
         queueB instanceof LeafQueue);
@@ -724,7 +727,7 @@ public class TestCapacitySchedulerQueues {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
     // Test the child queue overrides
-    setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
+    setMaxAllocation(conf, ROOT,
         "memory-mb=4096,vcores=2");
     setMaxAllocation(conf, A1, "memory-mb=6144,vcores=2");
     setMaxAllocation(conf, B, "memory-mb=5120, vcores=2");
@@ -736,12 +739,12 @@ public class TestCapacitySchedulerQueues {
     checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueA1 = findQueue(queueA, A1);
-    CSQueue queueA2 = findQueue(queueA, A2);
-    CSQueue queueB1 = findQueue(queueB, B1);
-    CSQueue queueB2 = findQueue(queueB, B2);
+    CSQueue queueA = findQueue(rootQueue, A.getFullPath());
+    CSQueue queueB = findQueue(rootQueue, B.getFullPath());
+    CSQueue queueA1 = findQueue(queueA, A1.getFullPath());
+    CSQueue queueA2 = findQueue(queueA, A2.getFullPath());
+    CSQueue queueB1 = findQueue(queueB, B1.getFullPath());
+    CSQueue queueB2 = findQueue(queueB, B2.getFullPath());
 
     assertEquals("max capability MB in CS",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -771,7 +774,7 @@ public class TestCapacitySchedulerQueues {
     unsetMaxAllocation(conf, A1);
     unsetMaxAllocation(conf, B);
     unsetMaxAllocation(conf, B1);
-    setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
+    setMaxAllocation(conf, ROOT,
         "memory-mb=6144,vcores=2");
     setMaxAllocation(conf, A, "memory-mb=8192,vcores=2");
 
@@ -797,7 +800,7 @@ public class TestCapacitySchedulerQueues {
         queueB1.getMaximumAllocation().getVirtualCores());
 
     // Test the default
-    unsetMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT);
+    unsetMaxAllocation(conf, ROOT);
     unsetMaxAllocation(conf, A);
     unsetMaxAllocation(conf, A1);
     cs.reinitialize(conf, rm.getRMContext());
@@ -845,7 +848,7 @@ public class TestCapacitySchedulerQueues {
     cs.reinitialize(conf, rm.getRMContext());
     checkQueueStructureCapacities(cs);
 
-    setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
+    setMaxAllocation(conf, ROOT,
         "memory-mb=" + largerMem + ",vcores=2");
     try {
       cs.reinitialize(conf, rm.getRMContext());
@@ -855,7 +858,7 @@ public class TestCapacitySchedulerQueues {
           e.getCause().getMessage().contains("maximum allocation"));
     }
 
-    setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
+    setMaxAllocation(conf, ROOT,
         "memory-mb=4096,vcores=2");
     setMaxAllocation(conf, A, "memory-mb=6144,vcores=2");
     setMaxAllocation(conf, A1, "memory-mb=" + largerMem + ",vcores=2");

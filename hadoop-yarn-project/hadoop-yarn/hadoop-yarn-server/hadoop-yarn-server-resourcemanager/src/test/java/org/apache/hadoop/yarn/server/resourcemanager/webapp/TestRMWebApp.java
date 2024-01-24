@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -329,50 +330,51 @@ public class TestRMWebApp {
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf,
       boolean useDRC) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a", "b", "c"});
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 10);
+    final QueuePath a = root.createNewLeaf("a");
+    conf.setCapacity(a, 10);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B, 20);
+    final QueuePath b = root.createNewLeaf("b");
+    conf.setCapacity(b, 20);
 
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
-    conf.setCapacity(C, 70);
+    final QueuePath c = root.createNewLeaf("c");
+    conf.setCapacity(c, 70);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
-    conf.setQueues(A, new String[] {"a1", "a2"});
-    conf.setCapacity(A1, 30);
-    conf.setCapacity(A2, 70);
+    final QueuePath a1 = a.createNewLeaf("a1");
+    final QueuePath a2 = a.createNewLeaf("a2");
+    conf.setQueues(a, new String[] {"a1", "a2"});
+    conf.setCapacity(a1, 30);
+    conf.setCapacity(a2, 70);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
-    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
-    conf.setCapacity(B1, 50);
-    conf.setCapacity(B2, 30);
-    conf.setCapacity(B3, 20);
+    final QueuePath b1 = b.createNewLeaf("b1");
+    final QueuePath b2 = b.createNewLeaf("b2");
+    final QueuePath b3 = b.createNewLeaf("b3");
+    conf.setQueues(b, new String[] {"b1", "b2", "b3"});
+    conf.setCapacity(b1, 50);
+    conf.setCapacity(b2, 30);
+    conf.setCapacity(b3, 20);
 
-    final String C1 = C + ".c1";
-    final String C2 = C + ".c2";
-    final String C3 = C + ".c3";
-    final String C4 = C + ".c4";
-    conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
-    conf.setCapacity(C1, 50);
-    conf.setCapacity(C2, 10);
-    conf.setCapacity(C3, 35);
-    conf.setCapacity(C4, 5);
+    final QueuePath c1 = c.createNewLeaf("c1");
+    final QueuePath c2 = c.createNewLeaf("c2");
+    final QueuePath c3 = c.createNewLeaf("c3");
+    final QueuePath c4 = c.createNewLeaf("c4");
+    conf.setQueues(c, new String[] {"c1", "c2", "c3", "c4"});
+    conf.setCapacity(c1, 50);
+    conf.setCapacity(c2, 10);
+    conf.setCapacity(c3, 35);
+    conf.setCapacity(c4, 5);
 
     // Define 3rd-level queues
-    final String C11 = C1 + ".c11";
-    final String C12 = C1 + ".c12";
-    final String C13 = C1 + ".c13";
-    conf.setQueues(C1, new String[] {"c11", "c12", "c13"});
-    conf.setCapacity(C11, 15);
-    conf.setCapacity(C12, 45);
-    conf.setCapacity(C13, 40);
+    final QueuePath c11 = c1.createNewLeaf("c11");
+    final QueuePath c12 = c1.createNewLeaf("c12");
+    final QueuePath c13 = c1.createNewLeaf("c13");
+    conf.setQueues(c1, new String[] {"c11", "c12", "c13"});
+    conf.setCapacity(c11, 15);
+    conf.setCapacity(c12, 45);
+    conf.setCapacity(c13, 40);
     if (useDRC) {
       conf.set("yarn.scheduler.capacity.resource-calculator",
           "org.apache.hadoop.yarn.util.resource.DominantResourceCalculator");
@@ -405,8 +407,8 @@ public class TestRMWebApp {
 
   static void setupFifoQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define default queue
-    conf.setQueues("default", new String[] {"default"});
-    conf.setCapacity("default", 100);
+    conf.setQueues(new QueuePath("default"), new String[] {"default"});
+    conf.setCapacity(new QueuePath("default"), 100);
   }
 
   public static void main(String[] args) throws Exception {
