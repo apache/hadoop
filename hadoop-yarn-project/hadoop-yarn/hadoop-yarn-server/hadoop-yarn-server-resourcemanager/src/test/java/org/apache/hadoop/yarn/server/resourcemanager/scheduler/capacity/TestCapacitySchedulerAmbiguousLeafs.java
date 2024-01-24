@@ -29,13 +29,25 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
-
 public class TestCapacitySchedulerAmbiguousLeafs {
   /**
    * Internal counter for incremental application id generation
    */
   int appId = 0;
+
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".default");
+  private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".a");
+  private static final QueuePath B = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".b");
+  private static final QueuePath A_UNIQUE = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".a.unique");
+  private static final QueuePath A_AMBI = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".a.ambi");
+  private static final QueuePath B_AMBI = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".b.ambi");
 
   /**
    * Helper method to submit applications via RMClientService, to make sure
@@ -79,19 +91,19 @@ public class TestCapacitySchedulerAmbiguousLeafs {
     schedulerConf.setAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     schedulerConf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, "forbidden forbidden");
 
-    schedulerConf.setQueues(ROOT + ".a", new String[] {"unique", "ambi"});
-    schedulerConf.setAcl(ROOT + ".a", QueueACL.SUBMIT_APPLICATIONS, "forbidden forbidden");
-    schedulerConf.setCapacity(ROOT + ".a", 45);
+    schedulerConf.setQueues(A, new String[] {"unique", "ambi"});
+    schedulerConf.setAcl(A, QueueACL.SUBMIT_APPLICATIONS, "forbidden forbidden");
+    schedulerConf.setCapacity(A, 45);
 
-    schedulerConf.setQueues(ROOT + ".b", new String[] {"ambi"});
-    schedulerConf.setCapacity(ROOT + ".b", 45);
-    schedulerConf.setCapacity(ROOT + ".default", 10);
+    schedulerConf.setQueues(B, new String[] {"ambi"});
+    schedulerConf.setCapacity(B, 45);
+    schedulerConf.setCapacity(DEFAULT, 10);
 
-    schedulerConf.setCapacity(ROOT + ".a.unique", 50);
-    schedulerConf.setAcl(ROOT + ".a.unique", QueueACL.SUBMIT_APPLICATIONS, "* *");
-    schedulerConf.setCapacity(ROOT + ".a.ambi", 50);
-    schedulerConf.setAcl(ROOT + ".a.ambi", QueueACL.SUBMIT_APPLICATIONS, "* *");
-    schedulerConf.setCapacity(ROOT + ".b.ambi", 100);
+    schedulerConf.setCapacity(A_UNIQUE, 50);
+    schedulerConf.setAcl(A_UNIQUE, QueueACL.SUBMIT_APPLICATIONS, "* *");
+    schedulerConf.setCapacity(A_AMBI, 50);
+    schedulerConf.setAcl(A_AMBI, QueueACL.SUBMIT_APPLICATIONS, "* *");
+    schedulerConf.setCapacity(B_AMBI, 100);
 
     schedulerConf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT, "json");
     //Simple %specified mapping rule for all submissions with skip fallback

@@ -52,11 +52,19 @@ import java.util.ArrayList;
 import java.util.Set;
 
 public class TestCapacitySchedulerWeightMode {
-  private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-  private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-  private static final String A1 = A + ".a1";
-  private static final String B1 = B + ".b1";
-  private static final String B2 = B + ".b2";
+  private static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String A1_PATH = A_PATH + ".a1";
+  private static final String B1_PATH = B_PATH + ".b1";
+  private static final String B2_PATH = B_PATH + ".b2";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
+  private static final QueuePath A1 = new QueuePath(A1_PATH);
+  private static final QueuePath B1 = new QueuePath(B1_PATH);
+  private static final QueuePath B2 = new QueuePath(B2_PATH);
 
   private YarnConfiguration conf;
 
@@ -82,7 +90,7 @@ public class TestCapacitySchedulerWeightMode {
         config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "a"});
 
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 100f);
@@ -114,11 +122,11 @@ public class TestCapacitySchedulerWeightMode {
         config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "a", "b" });
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setLabeledQueueWeight(ROOT, "x", 100);
+    conf.setLabeledQueueWeight(ROOT, "y", 100);
+    conf.setLabeledQueueWeight(ROOT, "z", 100);
 
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
@@ -173,11 +181,11 @@ public class TestCapacitySchedulerWeightMode {
         config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "a", "b" });
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setLabeledQueueWeight(ROOT, "x", 100);
+    conf.setLabeledQueueWeight(ROOT, "y", 100);
+    conf.setLabeledQueueWeight(ROOT, "z", 100);
 
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
@@ -232,11 +240,11 @@ public class TestCapacitySchedulerWeightMode {
         config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "a", "b" });
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setCapacityByLabel(ROOT, "x", 100);
+    conf.setCapacityByLabel(ROOT, "y", 100);
+    conf.setCapacityByLabel(ROOT, "z", 100);
 
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 10);
     conf.setMaximumCapacity(A, 10);
@@ -322,15 +330,15 @@ public class TestCapacitySchedulerWeightMode {
       rm.start();
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
-      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A.getFullPath()))
           .getCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, true);
 
-      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1.getFullPath()))
           .getCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, true);
 
-      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1.getFullPath()))
           .getExtendedCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, true);
     }
@@ -348,15 +356,15 @@ public class TestCapacitySchedulerWeightMode {
       rm.start();
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
-      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A.getFullPath()))
           .getCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, true);
 
-      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1.getFullPath()))
           .getCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, false);
 
-      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1.getFullPath()))
           .getExtendedCapacityOrWeightString();
       validateCapacityOrWeightString(capacityOrWeightString, false);
     }
@@ -379,7 +387,7 @@ public class TestCapacitySchedulerWeightMode {
 
     CapacityScheduler cs =
         (CapacityScheduler) rm.getRMContext().getScheduler();
-    LeafQueue b1 = (LeafQueue) cs.getQueue(B1);
+    LeafQueue b1 = (LeafQueue) cs.getQueue(B1.getFullPath());
 
     Assert.assertNotNull(b1);
     Assert.assertTrue(b1.getAccessibleNodeLabels().isEmpty());
@@ -422,11 +430,11 @@ public class TestCapacitySchedulerWeightMode {
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
         conf);
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"a", "b", "default"});
-    csConf.setNonLabeledQueueWeight("root.a", 1);
-    csConf.setNonLabeledQueueWeight("root.b", 2);
-    csConf.setNonLabeledQueueWeight("root.default", 3);
+    csConf.setNonLabeledQueueWeight(A, 1);
+    csConf.setNonLabeledQueueWeight(B, 2);
+    csConf.setNonLabeledQueueWeight(DEFAULT, 3);
 
     // Check queue info capacity
     CapacityScheduler cs =

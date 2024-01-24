@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Abstract
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
@@ -100,7 +101,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(parent, queueName, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(parent, new QueuePath(queuePath), conf));
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof AbstractParentQueue) {
