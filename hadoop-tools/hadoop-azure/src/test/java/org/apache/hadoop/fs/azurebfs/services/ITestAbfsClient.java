@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.API_VERSION.getCurrentVersion;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
@@ -372,7 +373,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     when(client.createRequestUrl(any(), any())).thenCallRealMethod();
     when(client.getAccessToken()).thenCallRealMethod();
     when(client.getSharedKeyCredentials()).thenCallRealMethod();
-    when(client.createDefaultHeaders()).thenCallRealMethod();
+    when(client.createDefaultHeaders(getCurrentVersion())).thenCallRealMethod();
     when(client.getAbfsConfiguration()).thenReturn(abfsConfig);
     when(client.getIntercept()).thenReturn(
         AbfsThrottlingInterceptFactory.getInstance(
@@ -446,7 +447,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    * @return List of AbfsHttpHeaders
    */
   public static List<AbfsHttpHeader> getTestRequestHeaders(AbfsClient client) {
-    return client.createDefaultHeaders();
+    return client.createDefaultHeaders(getCurrentVersion());
   }
 
   /**

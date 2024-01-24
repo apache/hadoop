@@ -120,9 +120,34 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
-  public static final String DECEMBER_2019_API_VERSION = "2019-12-12";
-  public static final String APRIL_2021_API_VERSION = "2021-04-10";
-  public static final String AUGUST_2023_API_VERSION = "2023-08-03";
+
+  /**
+   * Specifies the version of the REST protocol used for processing the request.
+   * Versions should be added in enum list in ascending chronological order.
+   * Latest one should be added last in the list.
+   * When upgrading the version for whole driver, update the getCurrentVersion;
+   */
+  public enum API_VERSION {
+
+    DEC_12_2019("2019-12-12"),
+    APR_10_2021("2021-04-10"),
+    AUG_03_2023("2023-08-03");
+
+    private final String xMsApiVersion;
+
+    API_VERSION(String xMsApiVersion) {
+      this.xMsApiVersion = xMsApiVersion;
+    }
+
+    @Override
+    public String toString() {
+      return xMsApiVersion;
+    }
+
+    public static final API_VERSION getCurrentVersion() {
+      return DEC_12_2019;
+    }
+  }
 
   /**
    * Value that differentiates categories of the http_status.
