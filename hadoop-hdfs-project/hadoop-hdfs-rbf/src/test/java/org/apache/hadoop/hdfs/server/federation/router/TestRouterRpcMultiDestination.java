@@ -475,7 +475,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
 
     String auditFlag = "src=" + dirPath.toString();
     String clientIpInfo = "clientIp:"
-        + InetAddress.getLocalHost().getHostAddress();
+        + InetAddress.getByName("localhost").getHostAddress();
     for (String line : auditLog.getOutput().split("\n")) {
       if (line.contains(auditFlag)) {
         // assert origin caller context exist in audit log

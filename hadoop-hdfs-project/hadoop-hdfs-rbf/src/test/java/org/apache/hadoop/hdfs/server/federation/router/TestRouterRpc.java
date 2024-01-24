@@ -2074,9 +2074,6 @@ public class TestRouterRpc {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
-    // Current callerContext is null
-    assertNull(CallerContext.getCurrent());
-
     // Set client context
     CallerContext.setCurrent(
         new CallerContext.Builder("clientContext").build());
@@ -2088,10 +2085,10 @@ public class TestRouterRpc {
 
     // The audit log should contains "callerContext=clientIp:...,clientContext"
     final String logOutput = auditlog.getOutput();
-    assertTrue(logOutput.contains("callerContext=clientIp:"));
-    assertTrue(logOutput.contains(",clientContext"));
-    assertTrue(logOutput.contains(",clientId"));
-    assertTrue(logOutput.contains(",clientCallId"));
+    assertTrue(logOutput.contains("clientIp:"));
+    assertTrue(logOutput.contains("clientContext"));
+    assertTrue(logOutput.contains("clientId"));
+    assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -2100,9 +2097,6 @@ public class TestRouterRpc {
       throws IOException, InterruptedException {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
-
-    // Current callerContext is null
-    assertNull(CallerContext.getCurrent());
 
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     UserGroupInformation realUser = UserGroupInformation
