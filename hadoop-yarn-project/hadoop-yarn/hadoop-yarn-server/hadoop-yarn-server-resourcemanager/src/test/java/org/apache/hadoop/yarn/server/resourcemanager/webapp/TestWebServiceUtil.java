@@ -337,7 +337,8 @@ public final class TestWebServiceUtil {
     config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     MockRM rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm, setCustomAuthFilter)));
+    GuiceServletConfig.setInjector(Guice.createInjector(
+        new WebServletModule(rm, setCustomAuthFilter)));
     rm.start();
     return rm;
   }

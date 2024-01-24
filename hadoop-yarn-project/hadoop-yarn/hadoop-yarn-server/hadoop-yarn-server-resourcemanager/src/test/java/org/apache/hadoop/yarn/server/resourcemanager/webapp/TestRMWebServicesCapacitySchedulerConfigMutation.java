@@ -66,7 +66,8 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     return Arrays.asList(true, false);
   }
 
-  public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode) throws IOException {
+  public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
+      throws IOException {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
     userName = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -96,8 +97,10 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
 
       SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
       Map<String, String> capacityChange = new HashMap<>();
-      capacityChange.put(CapacitySchedulerConfiguration.CAPACITY, "[memory=4096, vcores=4]");
-      capacityChange.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY, "[memory=32768, vcores=32]");
+      capacityChange.put(CapacitySchedulerConfiguration.CAPACITY,
+          "[memory=4096, vcores=4]");
+      capacityChange.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY,
+          "[memory=32768, vcores=32]");
       QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
       updateInfo.getUpdateQueueInfo().add(b);
 
