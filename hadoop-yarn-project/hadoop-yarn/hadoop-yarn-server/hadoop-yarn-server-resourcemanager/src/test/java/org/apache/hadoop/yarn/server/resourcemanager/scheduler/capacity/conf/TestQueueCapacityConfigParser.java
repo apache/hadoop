@@ -221,7 +221,7 @@ public class TestQueueCapacityConfigParser {
   @Test
   public void testZeroAbsoluteCapacityConfig() {
     QueueCapacityVector weightCapacityVector =
-        capacityConfigParser.parse(String.format(MEMORY_VCORE_TEMPLATE, 0, 0), QUEUE);
+        capacityConfigParser.parse(String.format(MEMORY_VCORE_TEMPLATE, 0, 0), QUEUE_PATH);
 
     QueueCapacityVectorEntry memory = weightCapacityVector.getResource(MEMORY_URI);
     QueueCapacityVectorEntry vcore = weightCapacityVector.getResource(VCORES_URI);
