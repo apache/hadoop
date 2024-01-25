@@ -229,8 +229,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
               "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
                   + " uses weight mode}. ");
         }
-        if (!queue.getQueueResourceQuotas().getConfiguredMinResource(nodeLabel)
-            .equals(Resources.none())) {
+        if (checkConfigTypeIsAbsoluteResource(queue.getQueuePath(), nodeLabel)) {
           absoluteMinResSet = true;
           // There's a special handling: when absolute resource is configured,
           // capacity will be calculated (and set) for UI/metrics purposes, so

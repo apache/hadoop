@@ -77,7 +77,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     conf.put("yarn.scheduler.capacity.root.managed.capacity", "75");
     conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(),
           "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
@@ -100,7 +100,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
         "user");
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
         "admin");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       rm.registerNode("h1:1234", 32 * GB, 32);
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
