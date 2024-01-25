@@ -71,9 +71,6 @@ import static org.junit.Assert.assertEquals;
  * */
 public class TestCSAllocateCustomResource {
 
-  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
-  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath A = new QueuePath(A_PATH);
   private YarnConfiguration conf;
 
   private RMNodeLabelsManager mgr;
@@ -120,7 +117,7 @@ public class TestCSAllocateCustomResource {
             .getConfigurationWithMultipleQueues(conf);
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class, ResourceCalculator.class);
-    newConf.set(QueuePrefixes.getQueuePrefix(A)
+    newConf.set(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
         + MAXIMUM_ALLOCATION_MB, "4096");
     // We must set this to false to avoid MockRM init configuration with
     // resource-types.xml by ResourceUtils.resetResourceTypes(conf);
@@ -301,7 +298,7 @@ public class TestCSAllocateCustomResource {
         Resource.newInstance(1000, 10, valuesMax);
 
     // Define top-level queues
-    newConf.setQueues(ROOT,
+    newConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"a", "b", "c"});
     newConf.setMinimumResourceRequirement("", new QueuePath("root", "a"),
         aMINRES);
@@ -319,10 +316,10 @@ public class TestCSAllocateCustomResource {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     Assert.assertEquals(aMINRES,
         cs.getConfiguration().
-            getMinimumResourceRequirement("", A, resourceTypes));
+            getMinimumResourceRequirement("", "root.a", resourceTypes));
     Assert.assertEquals(aMAXRES,
         cs.getConfiguration().
-            getMaximumResourceRequirement("", A, resourceTypes));
+            getMaximumResourceRequirement("", "root.a", resourceTypes));
 
     // Check the gpu resource of queue is right.
     Assert.assertEquals(aMINRES, cs.getQueue("root.a").
