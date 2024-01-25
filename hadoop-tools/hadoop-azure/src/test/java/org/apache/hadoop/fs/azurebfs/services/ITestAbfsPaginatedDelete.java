@@ -72,15 +72,19 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
   @Override
   public void setup() throws Exception {
-    isHnsEnabled = this.getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    isHnsEnabled = this.getConfiguration().getBoolean(
+        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     loadConfiguredFileSystem();
     super.setup();
     this.superUserFs = getFileSystem();
 
     // Test User Credentials.
-    String firstTestUserGuid = getConfiguration().get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
-    String clientId = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, "");
-    String clientSecret = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, "");
+    String firstTestUserGuid = getConfiguration().get(
+        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
+    String clientId = getConfiguration().getString(
+        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, "");
+    String clientSecret = getConfiguration().getString(
+        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, "");
 
     if (isHnsEnabled) {
       // setting up ACL permissions for test user
@@ -227,7 +231,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
-        spiedClient.deletePath(smallDirPath.toString(), true, randomCT, testTracingContext));
+        spiedClient.deletePath(
+            smallDirPath.toString(), true, randomCT, testTracingContext));
     Assertions.assertThat(e.getStatusCode())
         .describedAs("Request Should fail with Bad Request").isEqualTo(HTTP_BAD_REQUEST);
   }
@@ -254,7 +259,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_BLOB_FS_CLIENT_ID, clientId);
     conf.set(FS_AZURE_BLOB_FS_CLIENT_SECRET, clientSecret);
     conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.OAuth.name());
-    conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, ClientCredsTokenProvider.class.getName());
+    conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
+        ClientCredsTokenProvider.class.getName());
     conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,false);
     this.firstTestUserFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
   }
