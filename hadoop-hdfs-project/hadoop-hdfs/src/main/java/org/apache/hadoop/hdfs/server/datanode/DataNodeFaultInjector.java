@@ -162,4 +162,8 @@ public class DataNodeFaultInjector {
    * Just delay delete replica a while.
    */
   public void delayDeleteReplica() {}
+
+  public boolean mockCongestedForTest() {
+    return false;
+  }
 }

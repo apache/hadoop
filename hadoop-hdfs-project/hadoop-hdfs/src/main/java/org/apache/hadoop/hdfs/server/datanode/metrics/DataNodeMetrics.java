@@ -210,6 +210,8 @@ public class DataNodeMetrics {
   private MutableCounterLong replaceBlockOpOnSameMount;
   @Metric("Number of replaceBlock ops to another node")
   private MutableCounterLong replaceBlockOpToOtherHost;
+  @Metric("Number of congested count")
+  private MutableCounterLong congestedCount;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
@@ -807,4 +809,7 @@ public class DataNodeMetrics {
     replaceBlockOpToOtherHost.incr();
   }
 
+  public void incrCongestedCount() {
+    congestedCount.incr();
+  }
 }

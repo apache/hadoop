@@ -1101,7 +1101,12 @@ public class DataNode extends ReconfigurableBase
     }
     double load = ManagementFactory.getOperatingSystemMXBean()
         .getSystemLoadAverage();
-    return load > NUM_CORES * congestionRatio ? PipelineAck.ECN.CONGESTED :
+    double threshold = NUM_CORES * congestionRatio;
+
+    if (load > threshold || DataNodeFaultInjector.get().mockCongestedForTest()) {
+      metrics.incrCongestedCount();
+    }
+    return load > threshold ? PipelineAck.ECN.CONGESTED :
         PipelineAck.ECN.SUPPORTED;
   }
 
