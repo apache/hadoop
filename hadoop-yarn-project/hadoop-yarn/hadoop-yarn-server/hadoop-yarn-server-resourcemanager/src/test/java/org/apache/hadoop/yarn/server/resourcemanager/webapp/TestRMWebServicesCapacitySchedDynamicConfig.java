@@ -95,7 +95,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
     }
   }
@@ -111,7 +111,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
     }
   }
@@ -128,7 +128,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
     }
@@ -149,7 +149,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
 
     Configuration config = createConfiguration(conf);
     setupAQC(config, "yarn.scheduler.capacity.root.test2.");
-    try (MockRM rm = createMutableRM(config)) {
+    try (MockRM rm = createMutableRM(config, false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),

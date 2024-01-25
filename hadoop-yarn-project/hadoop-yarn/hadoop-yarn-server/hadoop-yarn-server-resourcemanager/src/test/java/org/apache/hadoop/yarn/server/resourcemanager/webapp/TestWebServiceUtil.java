@@ -87,9 +87,11 @@ public final class TestWebServiceUtil {
 
   public static class WebServletModule extends ServletModule {
     private final MockRM rm;
+    private final boolean setCustomAuthFilter;
 
-    WebServletModule(MockRM rm) {
+    WebServletModule(MockRM rm, boolean setCustomAuthFilter) {
       this.rm = rm;
+      this.setCustomAuthFilter = setCustomAuthFilter;
     }
 
     @Override
@@ -99,6 +101,11 @@ public final class TestWebServiceUtil {
       bind(GenericExceptionHandler.class);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
+
+      if (setCustomAuthFilter) {
+        filter("/*").through(TestRMWebServicesAppsModification
+            .TestRMCustomAuthFilter.class);
+      }
     }
   }
 
@@ -321,20 +328,25 @@ public final class TestWebServiceUtil {
   }
 
   public static MockRM createRM(Configuration config) {
+    return createRM(config, false);
+  }
+
+  public static MockRM createRM(Configuration config, boolean setCustomAuthFilter) {
     config.setClass(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class, ResourceScheduler.class);
     config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     MockRM rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
+    GuiceServletConfig.setInjector(Guice.createInjector(
+        new WebServletModule(rm, setCustomAuthFilter)));
     rm.start();
     return rm;
   }
 
-  public static MockRM createMutableRM(Configuration conf) {
+  public static MockRM createMutableRM(Configuration conf, boolean setCustomAuthFilter) {
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    return createRM(new CapacitySchedulerConfiguration(conf));
+    return createRM(new CapacitySchedulerConfiguration(conf), setCustomAuthFilter);
   }
 
   public static void reinitialize(MockRM rm, Configuration conf) throws IOException {
