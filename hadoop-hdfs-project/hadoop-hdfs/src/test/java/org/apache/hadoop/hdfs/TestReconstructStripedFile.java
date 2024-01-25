@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,10 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.*;
 
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -691,6 +691,99 @@ public class TestReconstructStripedFile {
       // before HDFS-15240, NPE will cause reconstruction fail(test timeout)
       StripedFileTestUtil
           .waitForReconstructionFinished(file, fs, groupSize);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testSocketLeakInReconstruction() throws Exception {
+    assumeTrue("Ignore case where num parity units <= 1",
+            ecPolicy.getNumParityUnits() > 1);
+    int stripedBufferSize = conf.getInt(
+            DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
+            cellSize);
+    ErasureCodingPolicy policy = ecPolicy;
+    fs.enableErasureCodingPolicy(policy.getName());
+    fs.getClient().setErasureCodingPolicy("/", policy.getName());
+
+    // StripedBlockReconstructor#reconstruct will loop 2 times
+    final int fileLen = stripedBufferSize * 2 * ecPolicy.getNumDataUnits();
+    String fileName = "/timeout-read-block";
+    Path file = new Path(fileName);
+    writeFile(fs, fileName, fileLen);
+    fs.getFileBlockLocations(file, 0, fileLen);
+
+    LocatedBlocks locatedBlocks =
+            StripedFileTestUtil.getLocatedBlocks(file, fs);
+    Assert.assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+    // The file only has one block group
+    LocatedBlock lblock = locatedBlocks.get(0);
+    DatanodeInfo[] datanodeinfos = lblock.getLocations();
+
+    // to reconstruct first block
+    DataNode dataNode = cluster.getDataNode(datanodeinfos[0].getIpcPort());
+
+    int stripedReadTimeoutInMills = conf.getInt(
+            DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
+            DFSConfigKeys.
+                    DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
+    Assert.assertTrue(
+            DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY
+                    + " must be greater than 2000",
+            stripedReadTimeoutInMills > 2000);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+
+    ConcurrentMap<Integer,Socket> socketInUse = new ConcurrentHashMap<>();
+    AtomicBoolean injected = new AtomicBoolean(false);
+
+    DataNodeFaultInjector ioInjector = new DataNodeFaultInjector() {
+      private final AtomicInteger counter = new AtomicInteger(0);
+      
+      @Override
+      public void collectSocket(Socket s) {
+        socketInUse.put(counter.incrementAndGet(),s);
+      }
+
+      @Override
+      public void injectIOException() throws IOException {
+        if (injected.compareAndSet(false,true)) {
+          throw new IOException("Inject Error");
+        }
+      }
+    };
+    DataNodeFaultInjector.set(ioInjector);
+
+    try {
+      shutdownDataNode(dataNode);
+      final int attempts = 60;
+      // Wait Until the IOException is injected
+      for (int i = 0; i < attempts; i++) {
+        if (injected.get()) {
+          break;
+        }
+        if (i == (attempts - 1)) {
+          Assert.fail("Should have injected the IOException");
+        }
+        Thread.sleep(1000);
+      }
+      // Wait Until the socket is released
+      for (int i = 0; i < attempts; i++) {
+        boolean allReleased = true;
+        for (Socket s : socketInUse.values()) {
+          if (!s.isClosed()) {
+            allReleased = false;
+          }
+        }
+        if (allReleased) {
+          break;
+        }
+        if (i == (attempts - 1)) {
+          Assert.fail("The socket is still not released");
+        }
+        Thread.sleep(1000);
+      }
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
