@@ -1212,9 +1212,4 @@ public class AbfsConfiguration{
   public boolean isPaginatedDeleteEnabled() {
     return isPaginatedDeleteEnabled;
   }
-
-  @VisibleForTesting
-  public void setIsPaginatedDeleteEnabled(boolean isPaginatedDeleteEnabled) {
-    this.isPaginatedDeleteEnabled = isPaginatedDeleteEnabled;
-  }
 }
