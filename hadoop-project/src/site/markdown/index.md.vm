@@ -57,6 +57,27 @@ We have enhanced the YARN Federation functionality for improved usability. The e
 6. The page function of the router has been enhanced.
 7. A set of commands has been added to the Router side for operating on SubClusters and Policies.
 
+YARN Capacity Scheduler improvements
+----------------------------------------
+
+[YARN-10496](https://issues.apache.org/jira/browse/YARN-10496) Support Flexible Auto Queue Creation in Capacity Scheduler
+
+Capacity Scheduler resource distribution mode was extended with a new allocation mode called weight mode.
+Defining queue capacities with weights allows the users to use the newly added flexible queue auto creation mode.
+Flexible mode now supports the dynamic creation of both **parent queues** and **leaf queues**, enabling the creation of
+complex queue hierarchies application submission time.
+
+[YARN-10888](https://issues.apache.org/jira/browse/YARN-10888) New capacity modes for Capacity Scheduler
+
+Capacity Scheduler's resource distribution was completely refactored to be more flexible and extensible. There is a new concept
+called Capacity Vectors, which allows the users to mix various resource types in the hierarchy, and also in a single queue. With
+this optionally enabled feature it is now possible to define different resources with different units, like memory with GBs, vcores with
+percentage values, and GPUs/FPGAs with weights, all in the same queue.
+
+[YARN-10889](https://issues.apache.org/jira/browse/YARN-10889) Queue Creation in Capacity Scheduler - Various improvements
+
+In addition to the two new features above, there were a number of commits for improvements and bug fixes in Capacity Scheduler.
+
 HDFS RBF: Code Enhancements, New Features, and Bug Fixes
 ----------------------------------------
 
