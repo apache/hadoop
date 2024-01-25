@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
@@ -76,18 +75,6 @@ public class ReservationSystemTestUtil {
 
   public final static String RESERVATION_Q_SHORT = "dedicated";
   public final static String reservationQ = "root." + RESERVATION_Q_SHORT;
-  public final static String DEDICATED_PATH = CapacitySchedulerConfiguration.ROOT
-          + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
-  private final static String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
-  private final static String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
-  private final static String A1_PATH = A_PATH + ".a1";
-  private final static String A2_PATH = A_PATH + ".a2";
-  private final static QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private final static QueuePath DEDICATED = new QueuePath(DEDICATED_PATH);
-  private final static QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
-  private final static QueuePath A = new QueuePath(A_PATH);
-  private final static QueuePath A1 = new QueuePath(A1_PATH);
-  private final static QueuePath A2 = new QueuePath(A2_PATH);
 
   public static ReservationId getNewReservationId() {
     return ReservationId.newInstance(rand.nextLong(), rand.nextLong());
@@ -100,11 +87,10 @@ public class ReservationSystemTestUtil {
     ReservationSchedulerConfiguration realConf =
         new CapacitySchedulerConfiguration();
     ReservationSchedulerConfiguration conf = spy(realConf);
-    QueuePath reservationQueuePath = new QueuePath(reservationQ);
-    when(conf.getReservationWindow(reservationQueuePath)).thenReturn(timeWindow);
-    when(conf.getInstantaneousMaxCapacity(reservationQueuePath))
+    when(conf.getReservationWindow(reservationQ)).thenReturn(timeWindow);
+    when(conf.getInstantaneousMaxCapacity(reservationQ))
         .thenReturn(instConstraint);
-    when(conf.getAverageCapacity(reservationQueuePath)).thenReturn(avgConstraint);
+    when(conf.getAverageCapacity(reservationQ)).thenReturn(avgConstraint);
 
     return conf;
   }
@@ -306,19 +292,25 @@ public class ReservationSystemTestUtil {
   public static void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf) {
     // Define default queue
-    final String defQPath = CapacitySchedulerConfiguration.ROOT + ".default";
-    final QueuePath defQ = new QueuePath(defQPath);
+    final String defQ = CapacitySchedulerConfiguration.ROOT + ".default";
     conf.setCapacity(defQ, 10);
 
     // Define top-level queues
-    conf.setQueues(ROOT,
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"default", "a", RESERVATION_Q_SHORT});
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
-    conf.setCapacity(DEDICATED, 80);
+
+    final String dedicated = CapacitySchedulerConfiguration.ROOT
+        + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
+    conf.setCapacity(dedicated, 80);
     // Set as reservation queue
-    conf.setReservable(DEDICATED, true);
+    conf.setReservable(dedicated, true);
 
     // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setCapacity(A2, 70);
@@ -327,20 +319,18 @@ public class ReservationSystemTestUtil {
   public static void setupDynamicQueueConfiguration(
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(ROOT,
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {RESERVATION_Q_SHORT});
-    conf.setCapacity(DEDICATED, 100);
+    final String dedicated = CapacitySchedulerConfiguration.ROOT
+        + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
+    conf.setCapacity(dedicated, 100);
     // Set as reservation queue
-    conf.setReservable(DEDICATED, true);
+    conf.setReservable(dedicated, true);
   }
 
   public static String getFullReservationQueueName() {
     return CapacitySchedulerConfiguration.ROOT
         + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
-  }
-
-  public static QueuePath getFullReservationQueuePath() {
-    return new QueuePath(getFullReservationQueueName());
   }
 
   public static String getReservationQueueName() {
@@ -351,23 +341,29 @@ public class ReservationSystemTestUtil {
       CapacitySchedulerConfiguration conf, String newQ) {
     // Define default queue
     final String prefix = CapacitySchedulerConfiguration.ROOT
-            + CapacitySchedulerConfiguration.DOT;
-    conf.setCapacity(DEFAULT, 5);
+        + CapacitySchedulerConfiguration.DOT;
+    final String defQ = prefix + "default";
+    conf.setCapacity(defQ, 5);
 
     // Define top-level queues
-    conf.setQueues(ROOT,
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"default", "a", RESERVATION_Q_SHORT, newQ});
-    conf.setCapacity(A, 5);
-    conf.setCapacity(DEDICATED, 10);
-    // Set as reservation queue
-    conf.setReservable(DEDICATED, true);
 
-    final QueuePath newQueue = new QueuePath(prefix + newQ);
-    conf.setCapacity(newQueue, 80);
+    final String A = prefix + "a";
+    conf.setCapacity(A, 5);
+
+    final String dedicated = prefix + RESERVATION_Q_SHORT;
+    conf.setCapacity(dedicated, 10);
     // Set as reservation queue
-    conf.setReservable(newQueue, true);
+    conf.setReservable(dedicated, true);
+
+    conf.setCapacity(prefix + newQ, 80);
+    // Set as reservation queue
+    conf.setReservable(prefix + newQ, true);
 
     // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
     conf.setQueues(A, new String[] { "a1", "a2" });
     conf.setCapacity(A1, 30);
     conf.setCapacity(A2, 70);

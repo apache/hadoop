@@ -25,8 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.util.Lists;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
 
 /**
  * A handler for storing and setting auto created queue template settings.
@@ -39,7 +41,7 @@ public class AutoCreatedQueueTemplate {
   public static final String AUTO_QUEUE_PARENT_TEMPLATE_PREFIX =
       AUTO_QUEUE_CREATION_V2_PREFIX + "parent-template.";
 
-  public static final String WILDCARD_QUEUE = "*";
+  private static final String WILDCARD_QUEUE = "*";
 
   private final Map<String, String> templateProperties = new HashMap<>();
   private final Map<String, String> leafOnlyProperties = new HashMap<>();
@@ -51,8 +53,9 @@ public class AutoCreatedQueueTemplate {
   }
 
   @VisibleForTesting
-  public static String getAutoQueueTemplatePrefix(QueuePath queuePath) {
-    return getQueuePrefix(queuePath) + AUTO_QUEUE_TEMPLATE_PREFIX;
+  public static String getAutoQueueTemplatePrefix(String queue) {
+    return CapacitySchedulerConfiguration.getQueuePrefix(queue)
+        + AUTO_QUEUE_TEMPLATE_PREFIX;
   }
 
   /**
@@ -86,7 +89,7 @@ public class AutoCreatedQueueTemplate {
    * @param childQueuePath child queue path used for prefixing the properties
    */
   public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
-                                         QueuePath childQueuePath) {
+                                         String childQueuePath) {
     setTemplateEntriesForChild(conf, childQueuePath, false);
   }
 
@@ -100,9 +103,9 @@ public class AutoCreatedQueueTemplate {
    * @param childQueuePath child queue path used for prefixing the properties
    */
   public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
-                                         QueuePath childQueuePath,
+                                         String childQueuePath,
                                          boolean isLeaf) {
-    if (childQueuePath.isRoot()) {
+    if (childQueuePath.equals(ROOT)) {
       return;
     }
 
@@ -111,7 +114,8 @@ public class AutoCreatedQueueTemplate {
 
     // Get all properties that are explicitly set
     Set<String> alreadySetProps = configurationProperties
-        .getPropertiesWithPrefix(getQueuePrefix(childQueuePath)).keySet();
+        .getPropertiesWithPrefix(CapacitySchedulerConfiguration
+            .getQueuePrefix(childQueuePath)).keySet();
 
     // Check template properties only set for leaf or parent queues
     Map<String, String> queueTypeSpecificTemplates = parentOnlyProperties;
@@ -125,7 +129,8 @@ public class AutoCreatedQueueTemplate {
       if (alreadySetProps.contains(entry.getKey())) {
         continue;
       }
-      conf.set(getQueuePrefix(childQueuePath) + entry.getKey(), entry.getValue());
+      conf.set(CapacitySchedulerConfiguration.getQueuePrefix(
+          childQueuePath) + entry.getKey(), entry.getValue());
     }
 
     for (Map.Entry<String, String> entry : templateProperties.entrySet()) {
@@ -135,7 +140,8 @@ public class AutoCreatedQueueTemplate {
           || queueTypeSpecificTemplates.containsKey(entry.getKey())) {
         continue;
       }
-      conf.set(getQueuePrefix(childQueuePath) + entry.getKey(), entry.getValue());
+      conf.set(CapacitySchedulerConfiguration.getQueuePrefix(
+          childQueuePath) + entry.getKey(), entry.getValue());
     }
   }
 
@@ -148,26 +154,46 @@ public class AutoCreatedQueueTemplate {
    */
   private void setTemplateConfigEntries(CapacitySchedulerConfiguration configuration,
                                         QueuePath queuePath) {
-    if (!queuePath.isInvalid()) {
-      ConfigurationProperties configurationProperties =
-          configuration.getConfigurationProperties();
+    ConfigurationProperties configurationProperties =
+        configuration.getConfigurationProperties();
 
-      int maxAutoCreatedQueueDepth = configuration
-          .getMaximumAutoCreatedQueueDepth(queuePath);
-      List<QueuePath> wildcardedQueuePaths =
-          queuePath.getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
+    List<String> queuePathParts = Lists.newArrayList(queuePath.iterator());
 
-      for (QueuePath templateQueuePath: wildcardedQueuePaths) {
-        // Get all configuration entries with
-        // yarn.scheduler.capacity.<queuePath> prefix
-        Map<String, String> queueProps = configurationProperties
-            .getPropertiesWithPrefix(getQueuePrefix(templateQueuePath));
+    if (queuePathParts.size() <= 1 && !queuePath.isRoot()) {
+      // This is an invalid queue path
+      return;
+    }
+    int queuePathMaxIndex = queuePathParts.size() - 1;
 
-        // Store template, parent-template and leaf-template properties
-        for (Map.Entry<String, String> entry : queueProps.entrySet()) {
-          storeConfiguredTemplates(entry.getKey(), entry.getValue());
-        }
+    // start with the most explicit format (without wildcard)
+    int wildcardLevel = 0;
+    // root can not be wildcarded
+    int supportedWildcardLevel = Math.min(queuePathMaxIndex,
+            configuration.getMaximumAutoCreatedQueueDepth(queuePath.getFullPath()));
+    // Allow root to have template properties
+    if (queuePath.isRoot()) {
+      supportedWildcardLevel = 0;
+    }
+
+    // Collect all template entries
+    while (wildcardLevel <= supportedWildcardLevel) {
+      String templateQueuePath = String.join(".", queuePathParts);
+      // Get all configuration entries with
+      // yarn.scheduler.capacity.<queuePath> prefix
+      Map<String, String> queueProps = configurationProperties
+          .getPropertiesWithPrefix(getQueuePrefix(templateQueuePath));
+
+      // Store template, parent-template and leaf-template properties
+      for (Map.Entry<String, String> entry : queueProps.entrySet()) {
+        storeConfiguredTemplates(entry.getKey(), entry.getValue());
       }
+
+      // Replace a queue part with a wildcard based on the wildcard level
+      // eg. root.a -> root.*
+      int queuePartToWildcard = queuePathMaxIndex - wildcardLevel;
+      queuePathParts.set(queuePartToWildcard, WILDCARD_QUEUE);
+
+      ++wildcardLevel;
     }
   }
 

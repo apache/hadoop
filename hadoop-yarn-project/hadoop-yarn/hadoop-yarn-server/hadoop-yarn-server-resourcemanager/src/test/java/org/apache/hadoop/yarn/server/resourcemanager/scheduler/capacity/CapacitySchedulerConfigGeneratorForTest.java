@@ -65,8 +65,8 @@ public final class CapacitySchedulerConfigGeneratorForTest {
   }
 
   public static void setMaxAllocMb(CapacitySchedulerConfiguration conf,
-                                   QueuePath queuePath, int maxAllocMb) {
-    String propName = QueuePrefixes.getQueuePrefix(queuePath)
+                                   String queueName, int maxAllocMb) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
         + MAXIMUM_ALLOCATION_MB;
     conf.setInt(propName, maxAllocMb);
   }
@@ -82,22 +82,22 @@ public final class CapacitySchedulerConfigGeneratorForTest {
   }
 
   public static void setMaxAllocVcores(CapacitySchedulerConfiguration conf,
-                                       QueuePath queuePath, int maxAllocVcores) {
-    String propName = QueuePrefixes.getQueuePrefix(queuePath)
+                                       String queueName, int maxAllocVcores) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
         + CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES;
     conf.setInt(propName, maxAllocVcores);
   }
 
   public static void setMaxAllocation(CapacitySchedulerConfiguration conf,
-                                      QueuePath queuePath, String maxAllocation) {
-    String propName = QueuePrefixes.getQueuePrefix(queuePath)
+                                      String queueName, String maxAllocation) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
         + MAXIMUM_ALLOCATION;
     conf.set(propName, maxAllocation);
   }
 
   public static void unsetMaxAllocation(CapacitySchedulerConfiguration conf,
-                                        QueuePath queuePath) {
-    String propName = QueuePrefixes.getQueuePrefix(queuePath)
+                                        String queueName) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
         + MAXIMUM_ALLOCATION;
     conf.unset(propName);
   }
