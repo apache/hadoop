@@ -77,15 +77,6 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestApplicationLimitsByPartition {
   final static int GB = 1024;
-  final static String A1_PATH = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
-  final static String B1_PATH = CapacitySchedulerConfiguration.ROOT + ".b" + ".b1";
-  final static String B2_PATH = CapacitySchedulerConfiguration.ROOT + ".b" + ".b2";
-  final static String C1_PATH = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
-  final static QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  final static QueuePath A1 = new QueuePath(A1_PATH);
-  final static QueuePath B1 = new QueuePath(B1_PATH);
-  final static QueuePath B2 = new QueuePath(B2_PATH);
-  final static QueuePath C1 = new QueuePath(C1_PATH);
 
   LeafQueue queue;
   RMNodeLabelsManager mgr;
@@ -145,6 +136,8 @@ public class TestApplicationLimitsByPartition {
 
     // After getting queue conf, configure AM resource percent for Queue A1
     // as 0.2 (Label X) and for Queue C1 as 0.2 (Empty Label)
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
+    final String C1 = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
     config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.2f);
     config.setMaximumApplicationMasterResourcePerQueuePercent(C1, 0.2f);
 
@@ -299,6 +292,8 @@ public class TestApplicationLimitsByPartition {
 
     // After getting queue conf, configure AM resource percent for Queue A1
     // as 0.15 (Label X) and for Queue C1 as 0.15 (Empty Label)
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
+    final String C1 = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
     config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.15f);
     config.setMaximumApplicationMasterResourcePerQueuePercent(C1, 0.15f);
     // inject node label manager
@@ -406,6 +401,7 @@ public class TestApplicationLimitsByPartition {
 
     // After getting queue conf, configure AM resource percent for Queue A1
     // as 0.2 (not for partition, rather in queue level)
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
     config.setMaximumApplicationMasterResourcePerQueuePercent(A1, 0.2f);
     // inject node label manager
     MockRM rm1 = new MockRM(config) {
@@ -487,6 +483,7 @@ public class TestApplicationLimitsByPartition {
     // as 0.4 (Label X). Also set userlimit as 50% for this queue. So when we
     // have two users submitting applications, each user will get 50%  of AM
     // resource which is available in this partition.
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
     config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.4f);
     config.setUserLimit(A1, 50);
 
@@ -628,6 +625,8 @@ public class TestApplicationLimitsByPartition {
      * A1  : 0.25
      * B2  : 0.15
      */
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
+    final String B1 = CapacitySchedulerConfiguration.ROOT + ".b" + ".b1";
     config.setMaximumAMResourcePercentPerPartition(A1, "y", 0.25f);
     config.setMaximumApplicationMasterResourcePerQueuePercent(B1, 0.15f);
 
@@ -757,6 +756,8 @@ public class TestApplicationLimitsByPartition {
     CapacitySchedulerConfiguration csConf =
         (CapacitySchedulerConfiguration) TestUtils
             .getComplexConfigurationWithQueueLabels(conf);
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
+    final String B2 = CapacitySchedulerConfiguration.ROOT + ".b" + ".b2";
     csConf.setUserLimit(A1, 25);
     csConf.setUserLimit(B2, 25);
 
@@ -940,9 +941,9 @@ public class TestApplicationLimitsByPartition {
         new CapacitySchedulerConfiguration();
     csconf.setResourceComparator(DominantResourceCalculator.class);
     String queueName = "a1";
-    csconf.setQueues(ROOT,
+    csconf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {queueName});
-    csconf.setCapacity(new QueuePath("root.a1"), 100);
+    csconf.setCapacity("root." + queueName, 100);
 
     ResourceInformation res0 = ResourceInformation.newInstance("memory-mb",
         ResourceInformation.MEMORY_MB.getUnits(), GB, Long.MAX_VALUE);

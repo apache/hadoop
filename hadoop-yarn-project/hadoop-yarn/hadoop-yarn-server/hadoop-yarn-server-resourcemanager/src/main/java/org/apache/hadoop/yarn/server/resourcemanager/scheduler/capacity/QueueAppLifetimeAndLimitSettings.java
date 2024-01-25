@@ -37,7 +37,7 @@ public class QueueAppLifetimeAndLimitSettings {
   public QueueAppLifetimeAndLimitSettings(CapacitySchedulerConfiguration configuration,
       AbstractCSQueue q, QueuePath queuePath) {
     // Store max parallel apps property
-    this.maxParallelApps = configuration.getMaxParallelAppsForQueue(queuePath);
+    this.maxParallelApps = configuration.getMaxParallelAppsForQueue(queuePath.getFullPath());
     this.maxApplicationLifetime = getInheritedMaxAppLifetime(q, configuration);
     this.defaultApplicationLifetime = setupInheritedDefaultAppLifetime(q, queuePath, configuration,
         maxApplicationLifetime);
@@ -45,7 +45,7 @@ public class QueueAppLifetimeAndLimitSettings {
 
   private long getInheritedMaxAppLifetime(CSQueue q, CapacitySchedulerConfiguration conf) {
     CSQueue parentQ = q.getParent();
-    long maxAppLifetime = conf.getMaximumLifetimePerQueue(q.getQueuePathObject());
+    long maxAppLifetime = conf.getMaximumLifetimePerQueue(q.getQueuePath());
 
     // If q is the root queue, then get max app lifetime from conf.
     if (q.getQueuePathObject().isRoot()) {
@@ -64,7 +64,7 @@ public class QueueAppLifetimeAndLimitSettings {
   private long setupInheritedDefaultAppLifetime(CSQueue q,
       QueuePath queuePath, CapacitySchedulerConfiguration conf, long myMaxAppLifetime) {
     CSQueue parentQ = q.getParent();
-    long defaultAppLifetime = conf.getDefaultLifetimePerQueue(queuePath);
+    long defaultAppLifetime = conf.getDefaultLifetimePerQueue(queuePath.getFullPath());
     defaultAppLifetimeWasSpecifiedInConfig =
         (defaultAppLifetime >= 0
             || (!queuePath.isRoot() &&

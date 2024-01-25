@@ -62,17 +62,6 @@ public class TestCapacitySchedulerSurgicalPreemption
     extends CapacitySchedulerPreemptionTestBase {
 
   private static final int NUM_NM = 5;
-
-  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT +
-      ".a");
-  private static final QueuePath B = new QueuePath(CapacitySchedulerConfiguration.ROOT +
-      ".b");
-  private static final QueuePath C = new QueuePath(CapacitySchedulerConfiguration.ROOT +
-      ".c");
-  private static final QueuePath D = new QueuePath(CapacitySchedulerConfiguration.ROOT +
-      ".d");
-
   @Override
   @Before
   public void setUp() throws Exception {
@@ -361,11 +350,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(ROOT,
+    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(C, 1);
+    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -481,12 +470,12 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(ROOT,
+    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionMoveReservation(true);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(C, 1);
+    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -621,11 +610,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(ROOT,
+    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(C, 1);
+    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -761,11 +750,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
 
     // A/B has higher priority
-    conf.setQueuePriority(A, 1);
-    conf.setQueuePriority(B, 2);
-    conf.setCapacity(A, 45f);
-    conf.setCapacity(B, 45f);
-    conf.setCapacity(C, 10f);
+    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".a" , 1);
+    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".b", 2);
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 45f);
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b", 45f);
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c", 10f);
 
     testPriorityPreemptionFromHighestPriorityQueueAndOldestContainer(new
         String[] {"a", "b", "c"}, new String[] {"user", "user", "user"});
@@ -781,7 +770,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(ROOT,
+    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     MockRM rm1 = new MockRM(conf) {
@@ -998,14 +987,12 @@ public class TestCapacitySchedulerSurgicalPreemption
 
   private void initializeConfProperties(CapacitySchedulerConfiguration conf)
       throws IOException {
-    QueuePath aQueuePath = new QueuePath("root.A");
-    QueuePath bQueuePath = new QueuePath("root.B");
 
-    conf.setQueues(ROOT, new String[] {"A", "B"});
-    conf.setCapacity(aQueuePath, 50);
-    conf.setCapacity(bQueuePath, 50);
-    conf.setQueuePriority(aQueuePath, 1);
-    conf.setQueuePriority(bQueuePath, 2);
+    conf.setQueues("root", new String[] {"A", "B"});
+    conf.setCapacity("root.A", 50);
+    conf.setCapacity("root.B", 50);
+    conf.setQueuePriority("root.A", 1);
+    conf.setQueuePriority("root.B", 2);
 
     conf.set(PREFIX + "root.ordering-policy", "priority-utilization");
     conf.set(PREFIX + "ordering-policy.priority-utilization.underutilized-preemption.enabled", "true");
@@ -1184,11 +1171,11 @@ public class TestCapacitySchedulerSurgicalPreemption
         this.conf);
     conf.setLong(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         1024 * 21);
-    conf.setQueues(ROOT, new String[] {"a", "b"});
-    conf.setCapacity(A, 50);
-    conf.setUserLimitFactor(A, 100);
-    conf.setCapacity(B, 50);
-    conf.setUserLimitFactor(B, 100);
+    conf.setQueues("root", new String[] { "a", "b" });
+    conf.setCapacity("root.a", 50);
+    conf.setUserLimitFactor("root.a", 100);
+    conf.setCapacity("root.b", 50);
+    conf.setUserLimitFactor("root.b", 100);
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();

@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.SecondaryGroupExi
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.FallbackResult;
@@ -467,7 +466,7 @@ public class TestQueuePlacementConverter {
     when(fsRule.getParentRule()).thenReturn(parent);
     when(fsRule.getCreateFlag()).thenReturn(true);
     initPlacementManagerMock(fsRule);
-    csConf.setQueues(new QueuePath("root.users"), new String[] {"hadoop"});
+    csConf.setQueues("root.users", new String[] {"hadoop"});
 
     convert();
 

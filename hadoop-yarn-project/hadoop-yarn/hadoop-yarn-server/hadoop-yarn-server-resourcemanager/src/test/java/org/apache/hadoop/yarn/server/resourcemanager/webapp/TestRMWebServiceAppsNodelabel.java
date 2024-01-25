@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -117,19 +116,19 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
       CapacitySchedulerConfiguration config) {
 
     // Define top-level queues
-    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    QueuePath queueA = root.createNewLeaf("a");
-    QueuePath defaultQueue = root.createNewLeaf("default");
-
-    config.setQueues(root,
+    config.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{"a", "default"});
 
+    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(queueA, 50f);
     config.setMaximumCapacity(queueA, 50);
 
+    final String defaultQueue =
+        CapacitySchedulerConfiguration.ROOT + ".default";
     config.setCapacity(defaultQueue, 50f);
-    config.setCapacityByLabel(root, "X", 100);
-    config.setMaximumCapacityByLabel(root, "X", 100);
+    config.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "X", 100);
+    config.setMaximumCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "X",
+        100);
     // set for default queue
     config.setCapacityByLabel(defaultQueue, "X", 100);
     config.setMaximumCapacityByLabel(defaultQueue, "X", 100);
