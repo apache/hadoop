@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -164,8 +163,7 @@ public class TestFairOrderingPolicy {
         new CapacitySchedulerConfiguration();
 
     // Define top-level queues
-    String defaultPath = CapacitySchedulerConfiguration.ROOT + ".default";
-    QueuePath queuePath = new QueuePath(defaultPath);
+    String queuePath = CapacitySchedulerConfiguration.ROOT + ".default";
     csConf.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
     csConf.setOrderingPolicy(queuePath,

@@ -36,7 +36,7 @@ public class QueueAllocationSettings {
     this.minimumAllocation = minimumAllocation;
   }
 
-  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration, QueuePath queuePath,
+  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration, String queuePath,
       CSQueue parent) {
     Resource clusterMax = ResourceUtils
         .fetchMaximumAllocationFromConfig(configuration);

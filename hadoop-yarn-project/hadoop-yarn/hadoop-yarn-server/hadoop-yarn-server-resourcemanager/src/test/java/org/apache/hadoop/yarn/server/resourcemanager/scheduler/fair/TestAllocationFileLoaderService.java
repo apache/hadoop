@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacemen
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueuePlacementPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueuePlacementRule;
@@ -890,10 +889,8 @@ public class TestAllocationFileLoaderService {
     AllocationConfiguration allocConf = confHolder.allocConf;
     String reservableQueueName = "root.reservable";
     String nonreservableQueueName = "root.other";
-    QueuePath nonreservableQueuePath = new QueuePath(nonreservableQueueName);
-    QueuePath reservableQueuePath = new QueuePath(reservableQueueName);
-    assertFalse(allocConf.isReservable(nonreservableQueuePath));
-    assertTrue(allocConf.isReservable(reservableQueuePath));
+    assertFalse(allocConf.isReservable(nonreservableQueueName));
+    assertTrue(allocConf.isReservable(reservableQueueName));
     Map<FSQueueType, Set<String>> configuredQueues =
         allocConf.getConfiguredQueues();
     assertTrue("reservable queue is expected be to a parent queue",
@@ -902,23 +899,23 @@ public class TestAllocationFileLoaderService {
         configuredQueues.get(FSQueueType.LEAF)
           .contains(reservableQueueName));
 
-    assertTrue(allocConf.getMoveOnExpiry(reservableQueuePath));
+    assertTrue(allocConf.getMoveOnExpiry(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration.DEFAULT_RESERVATION_WINDOW,
-        allocConf.getReservationWindow(reservableQueuePath));
+        allocConf.getReservationWindow(reservableQueueName));
     assertEquals(100,
-        allocConf.getInstantaneousMaxCapacity(reservableQueuePath), 0.0001);
+        allocConf.getInstantaneousMaxCapacity(reservableQueueName), 0.0001);
     assertEquals("DummyAgentName",
-        allocConf.getReservationAgent(reservableQueuePath));
-    assertEquals(100, allocConf.getAverageCapacity(reservableQueuePath), 0.001);
-    assertFalse(allocConf.getShowReservationAsQueues(reservableQueuePath));
+        allocConf.getReservationAgent(reservableQueueName));
+    assertEquals(100, allocConf.getAverageCapacity(reservableQueueName), 0.001);
+    assertFalse(allocConf.getShowReservationAsQueues(reservableQueueName));
     assertEquals("AnyAdmissionPolicy",
-        allocConf.getReservationAdmissionPolicy(reservableQueuePath));
+        allocConf.getReservationAdmissionPolicy(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration
         .DEFAULT_RESERVATION_PLANNER_NAME,
-        allocConf.getReplanner(reservableQueuePath));
+        allocConf.getReplanner(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration
         .DEFAULT_RESERVATION_ENFORCEMENT_WINDOW,
-        allocConf.getEnforcementWindow(reservableQueuePath));
+        allocConf.getEnforcementWindow(reservableQueueName));
   }
 
   /**

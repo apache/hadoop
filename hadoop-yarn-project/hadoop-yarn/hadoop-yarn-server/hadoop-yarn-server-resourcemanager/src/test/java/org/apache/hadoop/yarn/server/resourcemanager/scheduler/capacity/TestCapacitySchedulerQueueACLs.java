@@ -39,11 +39,13 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
   protected Configuration createConfiguration() {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(ROOT, new String[] {
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {
         QUEUEA, QUEUEB });
 
-    setQueueCapacity(csConf, 50, A_QUEUE_PATH);
-    setQueueCapacity(csConf, 50, B_QUEUE_PATH);
+    setQueueCapacity(csConf, 50,
+        CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
+    setQueueCapacity(csConf, 50,
+        CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
 
     Map<QueueACL, AccessControlList> aclsOnQueueA =
         new HashMap<QueueACL, AccessControlList>();
@@ -52,7 +54,8 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     AccessControlList adminACLonQueueA = new AccessControlList(QUEUE_A_ADMIN);
     aclsOnQueueA.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonQueueA);
     aclsOnQueueA.put(QueueACL.ADMINISTER_QUEUE, adminACLonQueueA);
-    csConf.setAcls(A_QUEUE_PATH, aclsOnQueueA);
+    csConf.setAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
+      aclsOnQueueA);
 
     Map<QueueACL, AccessControlList> aclsOnQueueB =
         new HashMap<QueueACL, AccessControlList>();
@@ -61,7 +64,8 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     AccessControlList adminACLonQueueB = new AccessControlList(QUEUE_B_ADMIN);
     aclsOnQueueB.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonQueueB);
     aclsOnQueueB.put(QueueACL.ADMINISTER_QUEUE, adminACLonQueueB);
-    csConf.setAcls(B_QUEUE_PATH, aclsOnQueueB);
+    csConf.setAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB,
+      aclsOnQueueB);
 
     Map<QueueACL, AccessControlList> aclsOnRootQueue =
         new HashMap<QueueACL, AccessControlList>();
@@ -69,7 +73,7 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     AccessControlList adminACLonRoot = new AccessControlList(ROOT_ADMIN);
     aclsOnRootQueue.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonRoot);
     aclsOnRootQueue.put(QueueACL.ADMINISTER_QUEUE, adminACLonRoot);
-    csConf.setAcls(ROOT, aclsOnRootQueue);
+    csConf.setAcls(CapacitySchedulerConfiguration.ROOT, aclsOnRootQueue);
 
     csConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     csConf.set(YarnConfiguration.RM_SCHEDULER,
@@ -106,30 +110,30 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     CapacitySchedulerConfiguration csConf =
         (CapacitySchedulerConfiguration) getConf();
     csConf.clear();
-    csConf.setQueues(ROOT,
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {QUEUED, QUEUEA, QUEUEB});
 
     String dPath = CapacitySchedulerConfiguration.ROOT + "." + QUEUED;
     String d1Path = dPath + "." + QUEUED1;
-    QueuePath dQueuePath = new QueuePath(dPath);
-    QueuePath d1QueuePath = new QueuePath(d1Path);
-
-    csConf.setQueues(dQueuePath, new String[] {QUEUED1});
-    setQueueCapacity(csConf, 100, d1QueuePath);
-    setQueueCapacity(csConf, 30, A_QUEUE_PATH);
-    setQueueCapacity(csConf, 50, B_QUEUE_PATH);
-    setQueueCapacity(csConf, 20, dQueuePath);
+    csConf.setQueues(dPath, new String[] {QUEUED1});
+    setQueueCapacity(csConf, 100, d1Path);
+    setQueueCapacity(csConf, 30, CapacitySchedulerConfiguration.ROOT
+                                     + "." + QUEUEA);
+    setQueueCapacity(csConf, 50, CapacitySchedulerConfiguration.ROOT
+                                     + "." + QUEUEB);
+    setQueueCapacity(csConf, 20, dPath);
 
     if (rootAcl != null) {
-      setAdminAndSubmitACL(csConf, rootAcl, ROOT);
+      setAdminAndSubmitACL(csConf, rootAcl,
+          CapacitySchedulerConfiguration.ROOT);
     }
 
     if (queueDAcl != null) {
-      setAdminAndSubmitACL(csConf, queueDAcl, dQueuePath);
+      setAdminAndSubmitACL(csConf, queueDAcl, dPath);
     }
 
     if (queueD1Acl != null) {
-      setAdminAndSubmitACL(csConf, queueD1Acl, d1QueuePath);
+      setAdminAndSubmitACL(csConf, queueD1Acl, d1Path);
     }
     resourceManager.getResourceScheduler()
         .reinitialize(csConf, resourceManager.getRMContext());
@@ -137,12 +141,12 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
 
 
   private void setQueueCapacity(CapacitySchedulerConfiguration csConf,
-               float capacity, QueuePath queuePath) {
+               float capacity, String queuePath) {
     csConf.setCapacity(queuePath, capacity);
   }
 
   private void setAdminAndSubmitACL(CapacitySchedulerConfiguration csConf,
-               String queueAcl, QueuePath queuePath) {
+               String queueAcl, String queuePath) {
     csConf.setAcl(queuePath, QueueACL.ADMINISTER_QUEUE, queueAcl);
     csConf.setAcl(queuePath, QueueACL.SUBMIT_APPLICATIONS, queueAcl);
   }

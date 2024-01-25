@@ -26,7 +26,6 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,11 +33,6 @@ import org.junit.Test;
 public class TestWeightToWeightConverter extends WeightConverterTestBase {
   private WeightToWeightConverter converter;
   private CapacitySchedulerConfiguration csConfig;
-
-  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  public static final QueuePath ROOT_A = new QueuePath("root", "a");
-  public static final QueuePath ROOT_B = new QueuePath("root", "b");
-  public static final QueuePath ROOT_C = new QueuePath("root", "c");
 
   @Before
   public void setup() {
@@ -53,7 +47,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     converter.convertWeightsForChildQueues(root, csConfig);
 
     assertEquals("root weight", 1.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root"), 0.0f);
     assertEquals("Converted items", 21,
         csConfig.getPropsWithPrefix(PREFIX).size());
   }
@@ -64,9 +58,9 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     converter.convertWeightsForChildQueues(root, csConfig);
 
     assertEquals("root weight", 1.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root"), 0.0f);
     assertEquals("root.a weight", 1.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT_A), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root.a"), 0.0f);
     assertEquals("Number of properties", 22,
         csConfig.getPropsWithPrefix(PREFIX).size());
   }
@@ -80,13 +74,13 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     assertEquals("Number of properties", 24,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root weight", 1.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root"), 0.0f);
     assertEquals("root.a weight", 1.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT_A), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root.a"), 0.0f);
     assertEquals("root.b weight", 2.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT_B), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root.b"), 0.0f);
     assertEquals("root.c weight", 3.0f,
-        csConfig.getNonLabeledQueueWeight(ROOT_C), 0.0f);
+        csConfig.getNonLabeledQueueWeight("root.c"), 0.0f);
   }
 
   @Test
@@ -95,7 +89,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     converter.convertWeightsForChildQueues(root, csConfig);
 
     assertTrue("root autocreate v2 enabled",
-        csConfig.isAutoQueueCreationV2Enabled(ROOT));
+        csConfig.isAutoQueueCreationV2Enabled("root"));
   }
 
   @Test
@@ -106,6 +100,6 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     assertEquals("Number of properties", 21,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertTrue("root autocreate v2 enabled",
-        csConfig.isAutoQueueCreationV2Enabled(ROOT));
+        csConfig.isAutoQueueCreationV2Enabled("root"));
   }
 }
