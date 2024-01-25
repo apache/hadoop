@@ -134,7 +134,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     this.childQueues = new ArrayList<>();
     this.allowZeroCapacitySum =
           queueContext.getConfiguration()
-              .getAllowZeroCapacitySum(getQueuePathObject());
+              .getAllowZeroCapacitySum(getQueuePath());
 
   }
 
@@ -168,7 +168,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
       // Initialize queue ordering policy
       queueOrderingPolicy = configuration.getQueueOrderingPolicy(
-          getQueuePathObject(), parent == null ?
+          getQueuePath(), parent == null ?
               null :
               ((AbstractParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
@@ -550,7 +550,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
    */
   public boolean isEligibleForAutoQueueCreation() {
     return isDynamicQueue() || queueContext.getConfiguration().
-        isAutoQueueCreationV2Enabled(getQueuePathObject());
+        isAutoQueueCreationV2Enabled(getQueuePath());
   }
 
   @Override
@@ -1618,7 +1618,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getChildQueues().size() == 0 &&
         queueContext.getConfiguration().
-            isAutoExpiredDeletionEnabled(this.getQueuePathObject());
+            isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 
   public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {

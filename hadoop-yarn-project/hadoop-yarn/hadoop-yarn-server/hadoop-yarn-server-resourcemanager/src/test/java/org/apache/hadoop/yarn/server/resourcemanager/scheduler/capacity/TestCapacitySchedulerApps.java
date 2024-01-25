@@ -97,7 +97,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.appHelper;
@@ -1043,7 +1042,7 @@ public class TestCapacitySchedulerApps {
     MockRM rm = setUpMove();
     ResourceScheduler scheduler = rm.getResourceScheduler();
     CapacityScheduler cs = (CapacityScheduler) scheduler;
-    cs.getQueueContext().getConfiguration().setInt(QueuePrefixes.getQueuePrefix(A1)
+    cs.getQueueContext().getConfiguration().setInt(CapacitySchedulerConfiguration.getQueuePrefix(A1)
         + CapacitySchedulerConfiguration.MAX_PARALLEL_APPLICATIONS, MAX_PARALLEL_APPS);
     cs.reinitialize(cs.getQueueContext().getConfiguration(), mockContext);
     List<ApplicationAttemptId> attemptIds = new ArrayList<>();
@@ -1174,7 +1173,7 @@ public class TestCapacitySchedulerApps {
         new CapacitySchedulerConfiguration(conf);
 
     // Define top-level queues
-    newConf.setQueues(ROOT,
+    newConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{"a", "b"});
 
     newConf.setCapacity(A, 50);
@@ -1470,7 +1469,7 @@ public class TestCapacitySchedulerApps {
         ResourceScheduler.class);
     conf.setQueues(A, new String[]{"a1", "a2", "b"});
     conf.setCapacity(A1, 20);
-    conf.setCapacity(new QueuePath("root.a.b"), 10);
+    conf.setCapacity("root.a.b", 10);
     MockRM rm = new MockRM(conf);
     rm.start();
 
@@ -1545,7 +1544,7 @@ public class TestCapacitySchedulerApps {
         new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    conf.setQueues(ROOT,
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{"a", "b"});
     conf.setCapacity(A, 50);
     conf.setCapacity(B, 50);

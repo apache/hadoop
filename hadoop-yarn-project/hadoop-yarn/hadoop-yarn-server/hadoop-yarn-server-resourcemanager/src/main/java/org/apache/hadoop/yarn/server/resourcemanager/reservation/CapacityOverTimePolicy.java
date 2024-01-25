@@ -23,7 +23,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.Map;
@@ -58,10 +57,9 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
   private float maxAvg;
 
   @Override
-  public void init(String reservationQueue,
+  public void init(String reservationQueuePath,
       ReservationSchedulerConfiguration conf) {
     this.conf = conf;
-    QueuePath reservationQueuePath = new QueuePath(reservationQueue);
     validWindow = this.conf.getReservationWindow(reservationQueuePath);
     maxInst = this.conf.getInstantaneousMaxCapacity(reservationQueuePath) / 100;
     maxAvg = this.conf.getAverageCapacity(reservationQueuePath) / 100;

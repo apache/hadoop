@@ -58,14 +58,14 @@ public class CSQueuePreemptionSettings {
     // on, then q does not have preemption disabled (default=false, below)
     // unless the preemption_disabled property is explicitly set.
     if (parentQ == null) {
-      return configuration.getPreemptionDisabled(q.getQueuePathObject(), false);
+      return configuration.getPreemptionDisabled(q.getQueuePath(), false);
     }
 
     // If this is not the root queue, inherit the default value for the
     // preemption_disabled property from the parent. Preemptability will be
     // inherited from the parent's hierarchy unless explicitly overridden at
     // this level.
-    return configuration.getPreemptionDisabled(q.getQueuePathObject(),
+    return configuration.getPreemptionDisabled(q.getQueuePath(),
         parentQ.getPreemptionDisabled());
   }
 
@@ -96,13 +96,13 @@ public class CSQueuePreemptionSettings {
     CSQueue parentQ = q.getParent();
     if (parentQ == null) {
       return configuration
-          .getIntraQueuePreemptionDisabled(q.getQueuePathObject(), false);
+          .getIntraQueuePreemptionDisabled(q.getQueuePath(), false);
     }
 
     // At this point, the master preemption switch is enabled down to this
     // queue's level. Determine whether intra-queue preemption is enabled
     // down to this queue's level and return that value.
-    return configuration.getIntraQueuePreemptionDisabled(q.getQueuePathObject(),
+    return configuration.getIntraQueuePreemptionDisabled(q.getQueuePath(),
         parentQ.getIntraQueuePreemptionDisabledInHierarchy());
   }
 

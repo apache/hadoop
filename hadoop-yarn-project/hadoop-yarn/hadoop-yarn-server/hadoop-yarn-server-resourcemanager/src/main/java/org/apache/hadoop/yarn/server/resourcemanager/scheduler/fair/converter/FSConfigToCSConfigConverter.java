@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
@@ -423,13 +422,13 @@ public class FSConfigToCSConfigConverter {
 
     if (!submitAcls.getGroups().isEmpty() ||
         !submitAcls.getUsers().isEmpty() || submitAcls.isAllAllowed()) {
-      capacitySchedulerConfig.setAcl(new QueuePath(queue), QueueACL.SUBMIT_APPLICATIONS,
+      capacitySchedulerConfig.setAcl(queue, QueueACL.SUBMIT_APPLICATIONS,
           submitAcls.getAclString());
     }
 
     if (!adminAcls.getGroups().isEmpty() ||
         !adminAcls.getUsers().isEmpty() || adminAcls.isAllAllowed()) {
-      capacitySchedulerConfig.setAcl(new QueuePath(queue), QueueACL.ADMINISTER_QUEUE,
+      capacitySchedulerConfig.setAcl(queue, QueueACL.ADMINISTER_QUEUE,
           adminAcls.getAclString());
     }
   }
