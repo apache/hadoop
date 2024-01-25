@@ -127,7 +127,7 @@ public final class AbfsHttpConstants {
    * Latest one should be added last in the list.
    * When upgrading the version for whole driver, update the getCurrentVersion;
    */
-  public enum API_VERSION {
+  public enum ApiVersion {
 
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
@@ -135,7 +135,7 @@ public final class AbfsHttpConstants {
 
     private final String xMsApiVersion;
 
-    API_VERSION(String xMsApiVersion) {
+    ApiVersion(String xMsApiVersion) {
       this.xMsApiVersion = xMsApiVersion;
     }
 
@@ -144,7 +144,7 @@ public final class AbfsHttpConstants {
       return xMsApiVersion;
     }
 
-    public static final API_VERSION getCurrentVersion() {
+    public static ApiVersion getCurrentVersion() {
       return DEC_12_2019;
     }
   }

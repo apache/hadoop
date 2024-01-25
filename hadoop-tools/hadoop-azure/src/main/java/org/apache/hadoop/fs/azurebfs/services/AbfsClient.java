@@ -92,7 +92,7 @@ public class AbfsClient implements Closeable {
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private API_VERSION xMsVersion = API_VERSION.getCurrentVersion();
+  private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -139,7 +139,7 @@ public class AbfsClient implements Closeable {
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = API_VERSION.APR_10_2021; // will be default once server change deployed
+      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -233,7 +233,7 @@ public class AbfsClient implements Closeable {
     return intercept;
   }
 
-  List<AbfsHttpHeader> createDefaultHeaders(API_VERSION xMsVersion) {
+  List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
@@ -1059,8 +1059,8 @@ public class AbfsClient implements Closeable {
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders
         = (isPaginatedDelete(tracingContext, recursive)
-        && xMsVersion.compareTo(API_VERSION.AUG_03_2023) < 0)
-        ? createDefaultHeaders(API_VERSION.AUG_03_2023)
+        && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
+        ? createDefaultHeaders(ApiVersion.AUG_03_2023)
         : createDefaultHeaders(xMsVersion);
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
 
@@ -1521,7 +1521,7 @@ public class AbfsClient implements Closeable {
     return abfsCounters;
   }
 
-  public API_VERSION getxMsVersion() {
+  public ApiVersion getxMsVersion() {
     return xMsVersion;
   }
 

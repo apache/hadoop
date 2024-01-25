@@ -82,7 +82,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     String clientId = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, "");
     String clientSecret = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, "");
 
-    if(isHnsEnabled) {
+    if (isHnsEnabled) {
       // setting up ACL permissions for test user
       setFirstTestUserFsAuth(clientId, clientSecret);
       setDefaultAclOnRoot(firstTestUserGuid);
@@ -98,17 +98,17 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
   @Test
   public void testRecursiveDeleteWithPagination() throws Exception {
     testRecursiveDeleteWithPaginationInternal(false, true,
-        AbfsHttpConstants.API_VERSION.DEC_12_2019);
+        AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(false, true,
-        AbfsHttpConstants.API_VERSION.AUG_03_2023);
+        AbfsHttpConstants.ApiVersion.AUG_03_2023);
     testRecursiveDeleteWithPaginationInternal(false, false,
-        AbfsHttpConstants.API_VERSION.DEC_12_2019);
+        AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(false, false,
-        AbfsHttpConstants.API_VERSION.AUG_03_2023);
+        AbfsHttpConstants.ApiVersion.AUG_03_2023);
     testRecursiveDeleteWithPaginationInternal(true, true,
-        AbfsHttpConstants.API_VERSION.DEC_12_2019);
+        AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(true, false,
-        AbfsHttpConstants.API_VERSION.AUG_03_2023);
+        AbfsHttpConstants.ApiVersion.AUG_03_2023);
   }
 
   /**
@@ -135,7 +135,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
   private void testRecursiveDeleteWithPaginationInternal(boolean isEmptyDir,
       boolean isPaginatedDeleteEnabled,
-      AbfsHttpConstants.API_VERSION xMsVersion) throws Exception {
+      AbfsHttpConstants.ApiVersion xMsVersion) throws Exception {
     final AzureBlobFileSystem fs = getUserFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, true);
     Path testPath;
@@ -164,11 +164,11 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
       Assertions.assertThat(urlUsed)
           .describedAs("Url must have paginated = true as query param")
           .contains(QUERY_PARAM_PAGINATED);
-      if (xMsVersion.compareTo(AbfsHttpConstants.API_VERSION.AUG_03_2023) < 0) {
+      if (xMsVersion.compareTo(AbfsHttpConstants.ApiVersion.AUG_03_2023) < 0) {
         Assertions.assertThat(xMsVersionUsed)
             .describedAs("Request was made with wrong x-ms-version")
-            .isEqualTo(AbfsHttpConstants.API_VERSION.AUG_03_2023.toString());
-      } else if (xMsVersion.compareTo(AbfsHttpConstants.API_VERSION.AUG_03_2023) >= 0) {
+            .isEqualTo(AbfsHttpConstants.ApiVersion.AUG_03_2023.toString());
+      } else if (xMsVersion.compareTo(AbfsHttpConstants.ApiVersion.AUG_03_2023) >= 0) {
         Assertions.assertThat(xMsVersionUsed)
             .describedAs("Request was made with wrong x-ms-version")
             .isEqualTo(xMsVersion.toString());
