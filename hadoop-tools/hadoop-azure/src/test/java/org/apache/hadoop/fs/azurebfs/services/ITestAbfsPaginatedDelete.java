@@ -66,7 +66,6 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
   private AzureBlobFileSystem superUserFs;
   private AzureBlobFileSystem firstTestUserFs;
-  private String firstTestUserGuid;
 
   private boolean isHnsEnabled;
   public ITestAbfsPaginatedDelete() throws Exception {
@@ -78,13 +77,16 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     loadConfiguredFileSystem();
     super.setup();
     this.superUserFs = getFileSystem();
-    this.firstTestUserGuid = getConfiguration()
-        .get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
+
+    // Test User Credentials.
+    String firstTestUserGuid = getConfiguration().get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
+    String clientId = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, "");
+    String clientSecret = getConfiguration().getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, "");
 
     if(isHnsEnabled) {
       // setting up ACL permissions for test user
-      setFirstTestUserFsAuth();
-      setDefaultAclOnRoot(this.firstTestUserGuid);
+      setFirstTestUserFsAuth(clientId, clientSecret);
+      setDefaultAclOnRoot(firstTestUserGuid);
     }
   }
 
@@ -149,7 +151,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     // Set the paginated enabled value and xMsVersion at spiedClient level.
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
     ITestAbfsClient.setAbfsClientField(spiedClient, "xMsVersion", xMsVersion);
-    spiedClient.getAbfsConfiguration().setIsPaginatedDeleteEnabled(isPaginatedDeleteEnabled);
+    Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
         testPath.toString(), true, null, testTracingContext);
@@ -196,7 +198,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
     // Set the paginated enabled value and xMsVersion at spiedClient level.
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
-    spiedClient.getAbfsConfiguration().setIsPaginatedDeleteEnabled(isPaginatedDeleteEnabled);
+    Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
         testPath.toString(), false, null, testTracingContext);
@@ -223,7 +225,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(this.firstTestUserFs, true);
 
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
-    spiedClient.getAbfsConfiguration().setIsPaginatedDeleteEnabled(isPaginatedEnabled);
+    Mockito.doReturn(isPaginatedEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
         spiedClient.deletePath(smallDirPath.toString(), true, randomCT, testTracingContext));
@@ -237,36 +239,30 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     return this.isHnsEnabled ? this.firstTestUserFs : this.superUserFs;
   }
 
-  private void setFirstTestUserFsAuth() throws IOException {
+  private void setFirstTestUserFsAuth(String clientId, String clientSecret) throws IOException {
     if (this.firstTestUserFs != null) {
       return;
     }
-    checkIfConfigIsSet(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT
-        + "." + getAccountName());
-    Configuration conf = getRawConfiguration();
-    setTestFsConf(FS_AZURE_BLOB_FS_CLIENT_ID, FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
-    setTestFsConf(FS_AZURE_BLOB_FS_CLIENT_SECRET,
-        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
-    conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.OAuth.name());
-    conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + "."
-        + getAccountName(), ClientCredsTokenProvider.class.getName());
-    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
-        false);
-    this.firstTestUserFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
-  }
 
-  private void setTestFsConf(final String fsConfKey,
-      final String testFsConfKey) {
-    final String confKeyWithAccountName = fsConfKey + "." + getAccountName();
-    final String confValue = getConfiguration()
-        .getString(testFsConfKey, "");
-    getRawConfiguration().set(confKeyWithAccountName, confValue);
+    // Check if OAuth Client Endpoint is provided.
+    String configKey = FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
+    String value = getConfiguration().get(configKey);
+    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
+        value != null && value.trim().length() > 1);
+
+    Configuration conf = getRawConfiguration();
+    conf.set(FS_AZURE_BLOB_FS_CLIENT_ID, clientId);
+    conf.set(FS_AZURE_BLOB_FS_CLIENT_SECRET, clientSecret);
+    conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.OAuth.name());
+    conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, ClientCredsTokenProvider.class.getName());
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,false);
+    this.firstTestUserFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
   }
 
   private void setDefaultAclOnRoot(String uid)
       throws IOException {
-    List<AclEntry> aclSpec =  Lists.newArrayList(AclTestHelpers
-            .aclEntry(AclEntryScope.ACCESS, AclEntryType.USER, uid, FsAction.ALL),
+    List<AclEntry> aclSpec =  Lists.newArrayList(AclTestHelpers.aclEntry(
+        AclEntryScope.ACCESS, AclEntryType.USER, uid, FsAction.ALL),
         AclTestHelpers.aclEntry(AclEntryScope.DEFAULT, AclEntryType.USER, uid, FsAction.ALL));
     this.superUserFs.modifyAclEntries(new Path("/"), aclSpec);
   }
@@ -283,12 +279,5 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
       this.superUserFs.create(new Path(filePath));
     }
     return new Path(rootPath);
-  }
-
-  private void checkIfConfigIsSet(String configKey){
-    AbfsConfiguration conf = getConfiguration();
-    String value = conf.get(configKey);
-    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
-        value != null && value.trim().length() > 1);
   }
 }

@@ -1411,9 +1411,13 @@ public class AbfsClient implements Closeable {
     return isNamespaceEnabled;
   }
 
+  protected Boolean getIsPaginatedDeleteEnabled() {
+    return abfsConfiguration.isPaginatedDeleteEnabled();
+  }
+
   private Boolean isPaginatedDeleteEnabled(TracingContext tracingContext,
       boolean isRecursiveDelete) throws AzureBlobFileSystemException {
-    return abfsConfiguration.isPaginatedDeleteEnabled()
+    return getIsPaginatedDeleteEnabled()
         && getIsNamespaceEnabled(tracingContext) && isRecursiveDelete;
   }
 
