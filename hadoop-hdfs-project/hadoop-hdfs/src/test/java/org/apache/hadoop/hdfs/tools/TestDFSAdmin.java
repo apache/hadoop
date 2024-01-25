@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
@@ -235,6 +236,60 @@ public class TestDFSAdmin {
       list.add(scanner.nextLine());
     }
     scanner.close();
+  }
+
+  @Test(timeout = 30000)
+  public void testTriggerDirectoryScanner() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+      resetStream();
+      final DataNode dn = cluster.getDataNodes().get(i);
+      final String addr = String.format("%s:%d", dn.getXferAddress()
+          .getHostString(), dn.getIpcPort());
+      final int ret = ToolRunner.run(dfsAdmin, new String[] {
+          "-triggerDirectoryScanner", addr});
+      assertEquals(0, ret);
+      /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
+      scanIntoList(out, outs);
+      assertThat(outs.get(0),
+          is(allOf(containsString("Trigger DirectoryScanner successfully."))));
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testDirectoryScannerAfterTriggerFailed() throws Exception {
+    redirectStream();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 3L);
+    restartCluster();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
+      @Override
+      public void throwIOExceptionWhenReconcile() throws IOException {
+        throw new IOException("mock IOException.");
+      }
+    };
+
+    try {
+      for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+        resetStream();
+        DataNodeFaultInjector.set(dnFaultInjector);
+        final DataNode dn = cluster.getDataNodes().get(i);
+        final String addr = String.format("%s:%d", dn.getXferAddress()
+            .getHostString(), dn.getIpcPort());
+        final int ret = ToolRunner.run(dfsAdmin, new String[] {
+            "-triggerDirectoryScanner", addr});
+        assertEquals(-1, ret);
+        DataNodeFaultInjector.set(oldInjector);
+        final int ret2 = ToolRunner.run(dfsAdmin, new String[] {
+            "-triggerDirectoryScanner", addr});
+        assertEquals(0, ret2);
+      }
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
   }
 
   @Test(timeout = 30000)

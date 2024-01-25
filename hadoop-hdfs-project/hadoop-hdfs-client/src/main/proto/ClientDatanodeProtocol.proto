@@ -146,6 +146,16 @@ message TriggerBlockReportRequestProto {
 message TriggerBlockReportResponseProto {
 }
 
+message TriggerDirectoryScannerRequestProto {
+}
+
+/**
+ * result - execution result.
+ */
+message TriggerDirectoryScannerResponseProto {
+  required string result = 1;
+}
+
 message GetBalancerBandwidthRequestProto {
 }
 
@@ -277,6 +287,13 @@ service ClientDatanodeProtocolService {
 
   rpc triggerBlockReport(TriggerBlockReportRequestProto)
       returns(TriggerBlockReportResponseProto);
+
+  /**
+   * Trigger an instant run of directory scanner if it's not running currently.
+   * Return the result of execute.
+   */
+  rpc triggerDirectoryScanner(TriggerDirectoryScannerRequestProto)
+      returns(TriggerDirectoryScannerResponseProto);
 
   /**
    * Returns the balancer bandwidth value of datanode.

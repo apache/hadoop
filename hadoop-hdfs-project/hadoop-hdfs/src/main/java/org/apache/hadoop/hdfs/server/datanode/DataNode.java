@@ -3478,7 +3478,7 @@ public class DataNode extends ReconfigurableBase
   }
 
   @VisibleForTesting
-  DirectoryScanner getDirectoryScanner() {
+  public DirectoryScanner getDirectoryScanner() {
     return directoryScanner;
   }
 
@@ -3919,6 +3919,12 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
+  }
+
+  @Override // ClientDatanodeProtocol
+  public String triggerDirectoryScanner() throws IOException {
+    checkSuperuserPrivilege();
+    return directoryScanner.triggerDirectoryScanner();
   }
 
   /**

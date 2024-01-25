@@ -50,6 +50,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerDirectoryScannerRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerDirectoryScannerResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeVolumeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
@@ -117,6 +119,9 @@ public class ClientDatanodeProtocolTranslatorPB implements
       GetBalancerBandwidthRequestProto.newBuilder().build();
   private final static EvictWritersRequestProto VOID_EVICT_WRITERS =
       EvictWritersRequestProto.newBuilder().build();
+  private static final TriggerDirectoryScannerRequestProto
+      VOID_TRIGGER_DIRECTORY_SCANNER =
+      TriggerDirectoryScannerRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
       Configuration conf, int socketTimeout, boolean connectToDnViaHostname,
@@ -287,6 +292,18 @@ public class ClientDatanodeProtocolTranslatorPB implements
       builder.setNnAddress(NetUtils.getHostPortString(options.getNamenodeAddr()));
     }
     ipc(() -> rpcProxy.triggerBlockReport(NULL_CONTROLLER, builder.build()));
+  }
+
+  @Override
+  public String triggerDirectoryScanner() throws IOException {
+    TriggerDirectoryScannerResponseProto responseProto;
+    try {
+      responseProto = rpcProxy.triggerDirectoryScanner(NULL_CONTROLLER,
+          VOID_TRIGGER_DIRECTORY_SCANNER);
+      return responseProto.getResult();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override
